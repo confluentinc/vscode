@@ -273,20 +273,6 @@ export class ResourceManager {
   }
 
   /**
-   * Get the list of available local Kafka clusters from extension state.
-   * @returns The list of local Kafka clusters
-   */
-  async getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
-    const plainJsonLocalClusters =
-      (await this.storage.getWorkspaceState<LocalKafkaCluster[]>(
-        WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
-      )) ?? [];
-
-    // Promote each member to be an instance of LocalKafkaCluster, return.
-    return plainJsonLocalClusters.map((cluster) => LocalKafkaCluster.create(cluster));
-  }
-
-  /**
    * Get a specific local Kafka cluster from extension state.
    * @param clusterId The ID of the cluster to get
    * @returns The local Kafka cluster, or null if the cluster is not found

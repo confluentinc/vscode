@@ -280,31 +280,6 @@ describe("ResourceManager Kafka cluster methods", function () {
     assert.deepStrictEqual(missingClusters, undefined);
   });
 
-  it("LOCAL: setLocalKafkaClusters() should correctly store Kafka clusters", async () => {
-    const resourceManager = getResourceManager();
-    await resourceManager.setLocalKafkaClusters(localClusters);
-    // verify the clusters were stored correctly
-    const storedClusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
-    assert.ok(storedClusters);
-    assert.deepStrictEqual(storedClusters, localClusters);
-  });
-
-  it("LOCAL: getLocalKafkaClusters() should correctly retrieve Kafka clusters", async () => {
-    const resourceManager = getResourceManager();
-    // set the clusters in the StorageManager before retrieving them
-    await resourceManager.setLocalKafkaClusters(localClusters);
-    // verify the clusters were retrieved correctly
-    const retrievedClusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
-    assert.deepStrictEqual(retrievedClusters, localClusters);
-  });
-
-  it("LOCAL: getLocalKafkaClusters() should return an empty array if no clusters are found", async () => {
-    const resourceManager = getResourceManager();
-    // verify no clusters are found
-    const clusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
-    assert.deepStrictEqual(clusters, []);
-  });
-
   it("LOCAL: getLocalKafkaCluster() should correctly retrieve a Kafka cluster", async () => {
     // set the clusters
     await getResourceManager().setLocalKafkaClusters(localClusters);
@@ -1008,12 +983,6 @@ describe("ResourceManager general utility methods", function () {
     assert.deepStrictEqual(missingSchemaRegistries, new Map());
     const missingTopics = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
     assert.deepStrictEqual(missingTopics, undefined);
-
-    // local resources should still be there
-    const existinglocalClusters: LocalKafkaCluster[] =
-      await resourceManager.getLocalKafkaClusters();
-    assert.ok(existinglocalClusters);
-    assert.equal(existinglocalClusters.length, 1);
 
     const existingLocalTopics = await resourceManager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
     assert.ok(existingLocalTopics);
