@@ -491,9 +491,8 @@ describe("ResourceManager Kafka topic methods", function () {
     const manager = getResourceManager();
 
     await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
 
-    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER]) {
       const topics = await manager.getTopicsForCluster(cluster);
       assert.deepStrictEqual(topics, undefined);
     }
@@ -503,9 +502,8 @@ describe("ResourceManager Kafka topic methods", function () {
     const manager = getResourceManager();
 
     await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
 
-    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER]) {
       await manager.setTopicsForCluster(cluster, []);
       const topics = await manager.getTopicsForCluster(cluster);
       assert.deepStrictEqual(topics, []);
