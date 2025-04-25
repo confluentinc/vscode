@@ -145,10 +145,7 @@ class FlinkStatementResultsViewModel extends ViewModel {
         index: index,
         title: () => col.name,
         children: (result: Record<string, any>) => {
-          console.log(`processing result: ${JSON.stringify(result)}`);
-          console.log(result);
           const value = result[col.name];
-          console.log(`Got value: ${JSON.stringify(value)}`);
           if (value === null) return "NULL";
           switch (col.type.type) {
             case "VARCHAR":

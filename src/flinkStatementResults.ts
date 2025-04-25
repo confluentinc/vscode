@@ -210,7 +210,6 @@ function flinkStatementResultsStartPollingCommand(
 
       os.batch(() => {
         // Log size of the results before update
-        logger.debug(`Results size before update: ${currentResults.size}`);
         parseResults({
           columns: statement.status?.traits?.schema?.columns ?? [],
           isAppendOnly: statement.status?.traits?.is_append_only ?? true,
@@ -220,7 +219,6 @@ function flinkStatementResultsStartPollingCommand(
           rows: resultsData.data,
         });
         // Log size of the results after update
-        logger.debug(`Results size after update: ${currentResults.size}`);
         latestError(null);
         // TODO: Wait 800 ms before re-triggering this watcher
         latestResult(response);
