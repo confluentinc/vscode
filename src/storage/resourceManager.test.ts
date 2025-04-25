@@ -503,8 +503,8 @@ describe("ResourceManager Kafka topic methods", function () {
     const manager = getResourceManager();
 
     await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-
-    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER]) {
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+    for (const cluster of [TEST_LOCAL_KAFKA_CLUSTER, TEST_CCLOUD_KAFKA_CLUSTER]) {
       const topics = await manager.getTopicsForCluster(cluster);
       assert.deepStrictEqual(topics, undefined);
     }
@@ -514,8 +514,9 @@ describe("ResourceManager Kafka topic methods", function () {
     const manager = getResourceManager();
 
     await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
 
-    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER]) {
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
       await manager.setTopicsForCluster(cluster, []);
       const topics = await manager.getTopicsForCluster(cluster);
       assert.deepStrictEqual(topics, []);
@@ -530,7 +531,7 @@ describe("ResourceManager Kafka topic methods", function () {
 
     // Learn first batch of topics from main cloud cluster
     await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
-
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
     const ccloudTopicsForMainCluster = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
     assert.deepEqual(
       ccloudTopicsForMainCluster,
@@ -555,6 +556,14 @@ describe("ResourceManager Kafka topic methods", function () {
       ccloudTopicsForMainClusterAfter,
       ccloudTopics,
       "Expected cloud topics to still be returned for the main cloud cluster",
+    );
+    await manager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
+
+    const localTopicsForCluster = await manager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+    assert.deepEqual(
+      localTopicsForCluster,
+      localTopics,
+      "Expected local topics to be returned for the local cluster",
     );
 
     // And meanwhile the cloud clusters should still have their topics. No
