@@ -369,6 +369,13 @@ export class ResourceManager {
   }
 
   /**
+   * Delete the list of available local Kafka clusters from extension state.
+   */
+  async deleteLocalKafkaClusters(): Promise<void> {
+    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS);
+  }
+
+  /**
    * Delete the list of available Schema Registries from extension state.
    * @param environment Optional: the ID of the environment for which to delete Schema Registries;
    * if not provided, all <environmentId, {@link CCloudSchemaRegistry}> pairs will be deleted
