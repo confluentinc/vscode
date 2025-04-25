@@ -16,6 +16,7 @@ import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError, showErrorNotificationWithButtons } from "./errors";
 import { Logger } from "./logging";
+import { FlinkStatement } from "./models/flinkStatement";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
 import { QuickPickItemWithValue } from "./quickpicks/types";
@@ -48,7 +49,9 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   ];
 }
 
-async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) {
+let isFlinkTemplate = false;
+
+async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic | FlinkStatement) {
   if (item instanceof KafkaCluster) {
     const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
     return await scaffoldProjectRequest({
@@ -69,6 +72,15 @@ async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) 
       cc_topic: item.name,
       topic: item.name,
     });
+  } else if (item instanceof FlinkStatement) {
+    // Handle Flink statements
+    isFlinkTemplate = true;
+    return await scaffoldProjectRequest({
+      flink_statement: item.name,
+      flink_statement_sql: item.sqlStatement,
+      environment_id: item.environmentId,
+      //TODO: proper options
+    });
   }
 }
 
@@ -87,6 +99,10 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
         const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
+        if (isFlinkTemplate) {
+          const hasFlinkTemplate = tags.includes("flink") || tags.includes("Flink");
+          return hasFlinkTemplate;
+        }
         return hasProducerOrConsumer;
       });
       pickedTemplate = await pickTemplate(templateList);
