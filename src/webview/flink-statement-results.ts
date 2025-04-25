@@ -56,7 +56,9 @@ class FlinkStatementResultsViewModel extends ViewModel {
   });
 
   /** Schema information for the current statement */
-  schema = this.resolve(() => post("GetSchema", {}), { columns: [] } as SqlV1ResultSchema);
+  schema = this.resolve(() => post("GetSchema", { timestamp: this.timestamp() }), {
+    columns: [],
+  } as SqlV1ResultSchema);
 
   /** Initial state of results collection. Stored separately so we can use to reset state. */
   emptySnapshot = { results: [] as any[] };
@@ -68,11 +70,12 @@ class FlinkStatementResultsViewModel extends ViewModel {
     return post("GetResults", {
       page: this.page(),
       pageSize: this.pageSize(),
+      timestamp: this.timestamp(),
     });
   }, this.emptySnapshot);
 
   /** Total count of results, along with count of filtered ones. */
-  resultCount = this.resolve(() => post("GetResultsCount", {}), {
+  resultCount = this.resolve(() => post("GetResultsCount", { timestamp: this.timestamp() }), {
     total: 0,
     filter: null,
   });
@@ -134,15 +137,18 @@ class FlinkStatementResultsViewModel extends ViewModel {
 
   /** List of all columns in the grid, with their content definition. */
   columns = this.derive(() => {
-    const schema = this.schema();
+    const schema: SqlV1ResultSchema = this.schema();
     const columns: Record<string, any> = {};
 
     schema?.columns?.forEach((col, index) => {
       columns[col.name] = {
         index: index,
         title: () => col.name,
-        children: (result: any) => {
+        children: (result: Record<string, any>) => {
+          console.log(`processing result: ${JSON.stringify(result)}`);
+          console.log(result);
           const value = result[col.name];
+          console.log(`Got value: ${JSON.stringify(value)}`);
           if (value === null) return "NULL";
           switch (col.type.type) {
             case "VARCHAR":
@@ -156,7 +162,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
               return JSON.stringify(value);
           }
         },
-        description: (result: any) => {
+        // TODO: What should go here?
+        description: (result: Record<string, any>) => {
           const value = result[col.name];
           if (value === null) return "NULL";
           return String(value);
@@ -210,28 +217,113 @@ class FlinkStatementResultsViewModel extends ViewModel {
     storage.set({ ...storage.get()!, columnVisibilityFlags: toggled });
   }
 
+  /** Handle column resizing events */
+  handleStartResize(event: PointerEvent, index: number) {
+    const target = event.target as HTMLElement;
+    target.setPointerCapture(event.pointerId);
+    // this is half of the computations for the new column width
+    // any new clientX added (via move event) provide the new width
+    const widths = this.colWidth();
+    this.resizeColumnDelta(widths[index] - event.clientX);
+  }
+
+  /** Triggered on each move event while resizing, dynamically changes column width. */
+  handleMoveResize(event: PointerEvent, index: number) {
+    const start = this.resizeColumnDelta();
+    // skip, if the pointer just passing by
+    if (start == null) return;
+    const widths = this.colWidth().slice();
+    const newWidth = Math.round(start + event.clientX);
+    // clamp new width in meaningful range so the user doesn't break the whole layout
+    widths[index] = Math.max(4 * 16, Math.min(newWidth, 16 * 16));
+    this.colWidth(widths);
+  }
+
+  /** Cleanup handler when the user stops resizing a column. */
+  handleStopResize(event: PointerEvent) {
+    const target = event.target as HTMLElement;
+    target.releasePointerCapture(event.pointerId);
+    // drop temporary state so the move event doesn't change anything after the pointer is released
+    this.resizeColumnDelta(null);
+    // persist changes to local storage
+    storage.set({ ...storage.get()!, colWidth: this.colWidth() });
+  }
+
+  /** Temporary state for resizing events. */
+  resizeColumnDelta = this.signal<number | null>(null);
+
+  /** Handle search input events */
+  search(value: string) {
+    // This is handled by the backend through the GetResults message
+    return value;
+  }
+
+  /** Handle keydown events in the search field */
+  handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      // Trigger a search update
+      this.snapshot(this.emptySnapshot);
+    }
+  }
+
+  /** Handle input events in the search field */
+  handleInput(event: InputEvent) {
+    // This is handled by the search function
+  }
+  /**
+   * List of columns width, in pixels. The final `value` column is not present,
+   * because it always takes the rest of the space available.
+   */
+  colWidth = this.signal(
+    storage.get()?.colWidth ?? this.calculateInitialColumnWidths(),
+    // skip extra re-renders if the user didn't move pointer too much
+    (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
+  );
+
+  /** Calculate initial column widths - equal width for all columns */
+  private calculateInitialColumnWidths(): number[] {
+    const schema = this.schema();
+    if (!schema?.columns) return [];
+
+    // Set specific widths for different column types
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // 3 rem default for all columns
+    return schema.columns.map((_: ColumnDetails) => 3 * 16);
+  }
+
+  /** The value can be set to `style` prop to pass values to CSS. */
+  gridTemplateColumns = this.derive(() => {
+    const columns = this.colWidth().reduce((string: string, width: number, index: number) => {
+      return this.isColumnVisible(index) ? `${string} ${width}px` : string;
+    }, "");
+    return `--grid-template-columns: ${columns} 1fr`;
+  });
   /** Numeric limit of results that need to be fetched. */
   resultLimit = this.resolve(async () => {
-    const maxSize = await post("GetMaxSize", {});
+    const maxSize = await post("GetMaxSize", { timestamp: this.timestamp() });
     return resultLimitLabel[maxSize];
   }, "100k");
 
   async handleResultLimitChange(value: ResultLimitType) {
-    await post("ResultLimitChange", { limit: resultLimitNumber[value] });
+    await post("ResultLimitChange", {
+      limit: resultLimitNumber[value],
+      timestamp: this.timestamp(),
+    });
     this.resultLimit(value);
     this.page(0);
     this.snapshot(this.emptySnapshot);
   }
 
   timer = this.resolve(() => {
-    return post("GetStreamTimer", {});
+    return post("GetStreamTimer", { timestamp: this.timestamp() });
   }, null);
   /** State of stream provided by the host: either running or paused. */
   streamState = this.resolve(() => {
-    return post("GetStreamState", {});
+    return post("GetStreamState", { timestamp: this.timestamp() });
   }, "running");
   streamError = this.resolve(() => {
-    return post("GetStreamError", {});
+    return post("GetStreamError", { timestamp: this.timestamp() });
   }, null);
   streamStateLabel = this.derive(() => {
     switch (this.streamState()) {
@@ -253,29 +345,38 @@ class FlinkStatementResultsViewModel extends ViewModel {
   handleStreamToggle(state: StreamState) {
     switch (state) {
       case "running":
-        return post("StreamPause", {});
+        return post("StreamPause", { timestamp: this.timestamp() });
       case "paused":
-        return post("StreamResume", {});
+        return post("StreamResume", { timestamp: this.timestamp() });
     }
   }
 }
 
-export function post(type: "GetStreamState", body: object): Promise<StreamState>;
-export function post(type: "GetStreamError", body: object): Promise<{ message: string } | null>;
+export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
+export function post(
+  type: "GetStreamError",
+  body: { timestamp?: number },
+): Promise<{ message: string } | null>;
 export function post(
   type: "GetStreamTimer",
-  body: object,
+  body: { timestamp?: number },
 ): Promise<{ start: number; offset: number }>;
 export function post(
   type: "GetResults",
-  body: { page: number; pageSize: number },
-): Promise<{ results: any[] }>;
-export function post(type: "GetResultsCount", body: object): Promise<ResultCount>;
-export function post(type: "GetSchema", body: object): Promise<SqlV1ResultSchema>;
-export function post(type: "GetMaxSize", body: object): Promise<keyof typeof resultLimitLabel>;
-export function post(type: "ResultLimitChange", body: { limit: number }): Promise<null>;
-export function post(type: "StreamPause", body: object): Promise<null>;
-export function post(type: "StreamResume", body: object): Promise<null>;
+  body: { page: number; pageSize: number; timestamp?: number },
+): Promise<{ results: Map<string, any>[] }>;
+export function post(type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
+export function post(type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
+export function post(
+  type: "GetMaxSize",
+  body: { timestamp?: number },
+): Promise<keyof typeof resultLimitLabel>;
+export function post(
+  type: "ResultLimitChange",
+  body: { limit: number; timestamp?: number },
+): Promise<null>;
+export function post(type: "StreamPause", body: { timestamp?: number }): Promise<null>;
+export function post(type: "StreamResume", body: { timestamp?: number }): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }

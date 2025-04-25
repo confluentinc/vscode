@@ -141,11 +141,11 @@
               <tr class="grid-row">
                 <template data-for="column of this.visibleColumns() by column">
                   <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
-                    <span data-text="this.columns[this.column()].title()"></span>
+                    <span data-text="this.columns()[this.column()].title()"></span>
                     <div
                       class="resize-handler"
-                      data-on-pointerdown="this.handleStartResize(event, this.columns[this.column()].index)"
-                      data-on-pointermove="this.handleMoveResize(event, this.columns[this.column()].index)"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns()[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns()[this.column()].index)"
                       data-on-pointerup="this.handleStopResize(event)"
                     ></div>
                   </th>
@@ -166,14 +166,14 @@
             <section popover id="columnSettings" class="column-control">
               <div class="flex-column" style="--gap: 0">
                 <label>Columns</label>
-                <template data-for="column of this.allColumns by column">
+                <template data-for="column of this.allColumns() by column">
                   <label class="checkbox">
                     <input
                       type="checkbox"
-                      data-prop-checked="this.isColumnVisible(this.columns[this.column()].index)"
-                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns[this.column()].index)"
+                      data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)"
                     />
-                    <span data-text="this.columns[this.column()].title()"></span>
+                    <span data-text="this.columns()[this.column()].title()"></span>
                   </label>
                 </template>
               </div>
@@ -181,13 +181,13 @@
 
             <tbody>
               <template data-for="result of this.snapshot().results">
-                <tr class="grid-row" data-on-dblclick="this.preview(this.result())">
+                <tr class="grid-row">
                   <template data-for="column of this.visibleColumns() by column">
                     <td
                       class="grid-cell cell-text-overflow"
                       tabindex="-1"
-                      data-children="this.columns[this.column()].children(this.result())"
-                      data-prop-title="this.columns[this.column()].description(this.result())"
+                      data-children="((this.columns())[this.column()]).children(this.result())"
+                      data-prop-title="((this.columns())[this.column()]).description(this.result())"
                     ></td>
                   </template>
                 </tr>
@@ -247,7 +247,7 @@
             </div>
           </template>
         </div>
-        <div>
+        <!-- <div>
           <vscode-button
             appearance="icon"
             aria-label="Open results as JSON"
@@ -256,7 +256,7 @@
           >
             <span class="codicon codicon-json"></span>
           </vscode-button>
-        </div>
+        </div> -->
       </footer>
     </main>
 
@@ -315,6 +315,20 @@
         display: flex;
         flex-direction: column;
       }
+      /* .histogram {
+        min-height: 65px;
+        padding: 6px 12px;
+        box-sizing: content-box;
+      }
+      .histogram-label {
+        padding: 0 12px;
+        color: var(--vscode-editor-foreground);
+        font-size: var(--vscode-font-size);
+        line-height: normal;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      } */
       .content {
         flex: 1;
         overflow: auto;
@@ -340,6 +354,9 @@
         flex-shrink: 0;
       }
 
+      #pageStatControl {
+        --gap: 0.5rem;
+      }
       .dropdown-container {
         box-sizing: border-box;
         display: flex;
@@ -348,14 +365,37 @@
         justify-content: flex-start;
       }
 
-      [popover].error-control,
-      [popover].column-control {
+      .fixed-min-width {
+        min-width: 8rem;
+      }
+      .fixed-min-width > * {
+        width: 100%;
+      }
+
+      [popover].partition-control {
         width: fit-content;
         min-width: 10rem;
+        /* for better alignment with sibling controls */
         margin-top: 1px;
         border-color: var(--focus-border);
         max-height: 20rem;
         overflow: auto;
+      }
+      .partition-sticky-header {
+        margin: -0.5rem -0.5rem 0 -0.5rem;
+        padding: 0.5rem;
+        background: var(--vscode-editor-background);
+        position: sticky;
+        top: -0.5rem;
+        z-index: 1;
+      }
+      .partition-sticky-footer {
+        margin: 0 -0.5rem -0.5rem -0.5rem;
+        padding: 0.5rem;
+        background: var(--vscode-editor-background);
+        position: sticky;
+        bottom: -0.5rem;
+        z-index: 1;
       }
 
       .dropdown-container > label {
@@ -402,6 +442,43 @@
         top: 0;
         right: 0;
         bottom: 0;
+      }
+
+      .control {
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+        background: var(--dropdown-background);
+        border: 1px solid var(--dropdown-border);
+        border-radius: calc(var(--corner-radius-round) * 1px);
+        color: var(--vscode-editor-foreground);
+        cursor: pointer;
+        font-family: var(--font-family);
+        font-size: var(--type-ramp-base-font-size);
+        line-height: var(--type-ramp-base-line-height);
+        height: calc(var(--input-height) * 1px);
+        padding: 2px 6px 2px 8px;
+        width: 100%;
+      }
+      .control:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+      .control:not(:disabled):hover {
+        background: var(--dropdown-background);
+        border-color: var(--dropdown-border);
+      }
+      .control:not(:disabled):focus {
+        border-color: var(--focus-border);
+      }
+      .control-label {
+        flex: 1;
+        text-align: left;
+      }
+
+      .grid-row .codicon {
+        display: flex;
+        font-size: 14px;
       }
 
       .timer {

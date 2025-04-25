@@ -1,20 +1,16 @@
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
-import {
-  commands,
-  ExtensionContext,
-  ViewColumn,
-  WebviewPanel,
-  window,
-} from "vscode";
+import { ExtensionContext, ViewColumn, WebviewPanel } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
-import { getExtensionContext } from "./context/extension";
 import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
-import { GetSqlv1StatementResult200Response, SqlV1StatementResultResults } from "./clients/flinkSql";
+import {
+  GetSqlv1StatementResult200Response,
+  SqlV1StatementResultResults,
+} from "./clients/flinkSql";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { WebviewPanelCache } from "./webview-cache";
@@ -22,8 +18,8 @@ import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/flink-statement-results";
 import flinkStatementResults from "./webview/flink-statement-results.html";
 import { logError, showErrorNotificationWithButtons } from "./errors";
-import { Stream } from "./stream/stream";
-import { parseResults, DEFAULT_RESULTS_LIMIT } from "./utils/flinkStatementResults";
+import { parseResults } from "./utils/flinkStatementResults";
+import { isStatementTerminal } from "./utils/flinkStatementUtils";
 
 const logger = new Logger("flink-statement-results");
 
@@ -105,6 +101,19 @@ function extractPageToken(nextUrl: string | undefined): string | undefined {
   }
 }
 
+/**
+ * Checks if we should continue polling based on stream state and statement status
+ * @param streamState The current stream state ("running" | "paused")
+ * @param statement The Flink statement being polled
+ * @returns true if we should continue polling, false otherwise
+ */
+function shouldContinuePolling(
+  streamState: "running" | "paused",
+  statement: FlinkStatement,
+): boolean {
+  return streamState === "running" && !isStatementTerminal(statement);
+}
+
 function flinkStatementResultsStartPollingCommand(
   panel: WebviewPanel,
   config: FlinkStatementResultsViewerConfig,
@@ -147,9 +156,11 @@ function flinkStatementResultsStartPollingCommand(
   /** Is stream currently running or being paused?  */
   const state = os.signal<"running" | "paused">("running");
   const timer = os.signal(Timer.create());
+  let timeoutId: NodeJS.Timeout | null = null;
 
   /** The results map that holds the statement results. */
-  const results = os.signal(new Map<string, any>());
+  const allResults = new Map<string, any>();
+  const results = os.signal(allResults);
   /** A boolean that indicates if the results reached its capacity. */
   const isResultsFull = os.signal(false);
 
@@ -181,31 +192,41 @@ function flinkStatementResultsStartPollingCommand(
   });
 
   os.watch(async (signal) => {
-    if (state() !== "running") return;
+    // TODO: Statement details need to be re-fetched every Nth fetch
+    //       of the statement results. 4 is what CCloud UI does.
+    if (!shouldContinuePolling(state(), statement)) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      return;
+    }
 
     try {
+      const currentResults = results();
       const nextPageToken = extractPageToken(latestResult()?.metadata?.next);
-      logger.info(`Fetching statement results for ${statement.name}`);
       const response = await schedule(() => fetchResults(nextPageToken, signal), signal);
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       os.batch(() => {
-        results(() =>
-          parseResults({
-            columns: statement.status?.traits?.schema?.columns ?? [],
-            isAppendOnly: statement.status?.traits?.is_append_only ?? true,
-            upsertColumns: statement.status?.traits?.upsert_columns ?? [],
-            limit: config.messageLimit,
-            map: results(),
-            rows: resultsData.data,
-          }),
-        );
+        // Log size of the results before update
+        logger.debug(`Results size before update: ${currentResults.size}`);
+        parseResults({
+          columns: statement.status?.traits?.schema?.columns ?? [],
+          isAppendOnly: statement.status?.traits?.is_append_only ?? true,
+          upsertColumns: statement.status?.traits?.upsert_columns,
+          limit: config.messageLimit,
+          map: currentResults,
+          rows: resultsData.data,
+        });
+        // Log size of the results after update
+        logger.debug(`Results size after update: ${currentResults.size}`);
         latestError(null);
+        // TODO: Wait 800 ms before re-triggering this watcher
+        latestResult(response);
         notifyUI();
       });
 
-      // Fetch statement results every 800 ms.
-      setTimeout(() => latestResult(response), 800);
     } catch (error) {
       let reportable: { message: string } | null = null;
       let shouldPause = false;
@@ -271,14 +292,23 @@ function flinkStatementResultsStartPollingCommand(
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const allResults = Array.from(results().values());
-        const paginatedResults = allResults.slice(offset, offset + limit);
+        const allResults = results();
+        // Convert Map to array of objects
+        const res = Array.from(allResults.values()).map((row: Map<string, any>) => {
+          // Convert Map to plain object
+          const obj: Record<string, any> = {};
+          row.forEach((value: any, key: string) => {
+            obj[key] = value;
+          });
+          return obj;
+        });
+        const paginatedResults = res.slice(offset, offset + limit);
         return {
-          results: paginatedResults,
+          results: paginatedResults as any[], // Type assertion needed due to Map conversion
         } satisfies MessageResponse<"GetResults">;
       }
       case "GetResultsCount": {
-        const count = results().size;
+        const count = allResults.size;
         return { total: count, filter: null } satisfies MessageResponse<"GetResultsCount">;
       }
       case "GetSchema": {
@@ -295,7 +325,8 @@ function flinkStatementResultsStartPollingCommand(
       case "ResultLimitChange": {
         const newLimit = body.limit;
         config = config.copy({ messageLimit: newLimit });
-        results(new Map());
+        allResults.clear();
+        results(allResults);
         isResultsFull(false);
         state("running");
         timer((timer) => timer.resume());
