@@ -27,7 +27,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,
     environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT_ID,
-    organizationId: overrides.organizationId || TEST_CCLOUD_ORGANIZATION.id as unknown as OrganizationId,
+    organizationId: overrides.organizationId || TEST_CCLOUD_ORGANIZATION.id,
     name: overrides.name || "statement0",
     metadata: {
       self: null,

@@ -280,7 +280,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
     const organization = await getCurrentOrganization();
     if (organization) {
-      this.organizationId = organization.id as unknown as OrganizationId;
+      this.organizationId = organization.id;
       return this.organizationId;
     }
     logger.error("getOrganizationId(): No current organization found.");
