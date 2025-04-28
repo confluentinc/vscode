@@ -1,6 +1,6 @@
 import { Disposable } from "vscode";
 
-import { ListSqlv1StatementsRequest, SqlV1StatementListDataInner } from "../clients/flinkSql";
+import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
@@ -9,9 +9,9 @@ import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement } from "../models/flinkStatement";
+import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId, IFlinkQueryable, OrganizationId, isCCloud } from "../models/resource";
+import { IFlinkQueryable, isCCloud, OrganizationId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar, SidecarHandle } from "../sidecar";
@@ -415,7 +415,7 @@ async function loadStatementsForProviderRegion(
 
     // Convert each Flink statement from the REST API representation to our codebase model.
     for (const restStatement of restResult.data) {
-      const statement = restFlinkStatementToModelFlinkStatement(restStatement);
+      const statement = restFlinkStatementToModel(restStatement);
       flinkStatements.push(statement);
     }
 
@@ -439,20 +439,4 @@ async function loadStatementsForProviderRegion(
   }
 
   return flinkStatements;
-}
-
-/** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
-function restFlinkStatementToModelFlinkStatement(
-  restFlinkStatement: SqlV1StatementListDataInner,
-): FlinkStatement {
-  return new FlinkStatement({
-    connectionId: CCLOUD_CONNECTION_ID,
-    connectionType: ConnectionType.Ccloud,
-    environmentId: restFlinkStatement.environment_id as EnvironmentId,
-    organizationId: restFlinkStatement.organization_id as OrganizationId,
-    name: restFlinkStatement.name,
-    spec: restFlinkStatement.spec,
-    metadata: restFlinkStatement.metadata,
-    status: restFlinkStatement.status,
-  });
 }
