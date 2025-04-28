@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { TelemetryTrustedValue } from "vscode";
 import { Logger } from "../logging";
 import { getTelemetryLogger } from "./telemetryLogger";

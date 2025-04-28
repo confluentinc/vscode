@@ -3,7 +3,7 @@ import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Timer } from "./timer/timer";
-import { ColumnDetails, SqlV1ResultSchema } from "../clients/flinkSql";
+import { SqlV1ResultSchema } from "../clients/flinkSql";
 
 customElements.define("flink-timer", Timer);
 

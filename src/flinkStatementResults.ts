@@ -101,21 +101,6 @@ function extractPageToken(nextUrl: string | undefined): string | undefined {
   }
 }
 
-/**
- * Checks if we should continue polling based on stream state and statement status
- * @param streamState The current stream state ("running" | "paused")
- * @param statement The Flink statement being polled
- * @returns true if we should continue polling, false otherwise
- */
-function shouldContinuePolling(
-  streamState: "running" | "paused",
-  statement: FlinkStatement,
-): boolean {
-  // TODO(rohitsanj): This will need to be updated to account for system statements
-  //       that are not long-running.
-  return streamState === "running" && !isStatementTerminal(statement);
-}
-
 function flinkStatementResultsStartPollingCommand(
   panel: WebviewPanel,
   config: FlinkStatementResultsViewerConfig,
@@ -157,12 +142,14 @@ function flinkStatementResultsStartPollingCommand(
 
   /** Is stream currently running or being paused?  */
   const state = os.signal<"running" | "paused">("running");
+  /** A signal that indicates if there are more results to fetch. */
+  const moreResults = os.signal(true);
+  const shouldPoll = os.derive<boolean>(() => state() === "running" && moreResults());
+
   const timer = os.signal(Timer.create());
-  let timeoutId: NodeJS.Timeout | null = null;
 
   /** The results map that holds the statement results. */
-  const allResults = new Map<string, any>();
-  const results = os.signal(allResults);
+  const results = os.signal(new Map<string, any>());
   /** A boolean that indicates if the results reached its capacity. */
   const isResultsFull = os.signal(false);
 
@@ -188,26 +175,22 @@ function flinkStatementResultsStartPollingCommand(
   os.watch(() => {
     onConfigChange(
       config.copy({
-        messageLimit: config.messageLimit,
+        resultLimit: config.resultLimit,
       }),
     );
   });
 
   os.watch(async (signal) => {
     // TODO(rohitsanj): Statement details need to be re-fetched every Nth fetch
-    //       of the statement results. 4 is what CCloud UI does.
-    if (!shouldContinuePolling(state(), statement)) {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
+    //                  of the statement results. 4 is what CCloud UI does.
+    if (!shouldPoll()) {
       return;
     }
 
     try {
       const currentResults = results();
-      const nextPageToken = extractPageToken(latestResult()?.metadata?.next);
-      const response = await schedule(() => fetchResults(nextPageToken, signal), signal);
+      const pageToken = extractPageToken(latestResult()?.metadata?.next);
+      const response = await schedule(() => fetchResults(pageToken, signal), signal);
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       os.batch(() => {
@@ -216,17 +199,18 @@ function flinkStatementResultsStartPollingCommand(
           columns: statement.status?.traits?.schema?.columns ?? [],
           isAppendOnly: statement.status?.traits?.is_append_only ?? true,
           upsertColumns: statement.status?.traits?.upsert_columns,
-          limit: config.messageLimit,
+          limit: config.resultLimit,
           map: currentResults,
           rows: resultsData.data,
         });
+        // Check if we have more results to fetch
+        moreResults(extractPageToken(response?.metadata?.next) !== undefined);
         // Log size of the results after update
         latestError(null);
         // TODO(rohitsanj): Wait 800 ms before re-triggering this watcher
         latestResult(response);
         notifyUI();
       });
-
     } catch (error) {
       let reportable: { message: string } | null = null;
       let shouldPause = false;
@@ -292,9 +276,8 @@ function flinkStatementResultsStartPollingCommand(
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const allResults = results();
         // Convert Map to array of objects
-        const res = Array.from(allResults.values()).map((row: Map<string, any>) => {
+        const res = Array.from(results().values()).map((row: Map<string, any>) => {
           // Convert Map to plain object
           const obj: Record<string, any> = {};
           row.forEach((value: any, key: string) => {
@@ -308,7 +291,7 @@ function flinkStatementResultsStartPollingCommand(
         } satisfies MessageResponse<"GetResults">;
       }
       case "GetResultsCount": {
-        const count = allResults.size;
+        const count = results().size;
         return { total: count, filter: null } satisfies MessageResponse<"GetResultsCount">;
       }
       case "GetSchema": {
@@ -320,13 +303,13 @@ function flinkStatementResultsStartPollingCommand(
         }) satisfies MessageResponse<"GetSchema">;
       }
       case "GetMaxSize": {
-        return String(config.messageLimit) satisfies MessageResponse<"GetMaxSize">;
+        return String(config.resultLimit) satisfies MessageResponse<"GetMaxSize">;
       }
       case "ResultLimitChange": {
         const newLimit = body.limit;
-        config = config.copy({ messageLimit: newLimit });
-        allResults.clear();
-        results(allResults);
+        config = config.copy({ resultLimit: newLimit });
+        results().clear();
+        results(new Map<string, any>());
         isResultsFull(false);
         state("running");
         timer((timer) => timer.resume());
@@ -374,17 +357,17 @@ function flinkStatementResultsStartPollingCommand(
  * Represents static snapshot of flink statement results viewer state that can be serialized.
  */
 export class FlinkStatementResultsViewerConfig extends Data {
-  messageLimit: number = 100_000;
+  resultLimit: number = 100_000;
 
   static fromQuery(params: URLSearchParams) {
     let value: string | null;
     let config: Partial<FlinkStatementResultsViewerConfig> = {};
 
-    value = params.get("messageLimit");
+    value = params.get("resultLimit");
     if (value != null) {
       const parsed = parseInt(value, 10);
       if (!Number.isNaN(parsed) && [1_000_000, 100_000, 10_000, 1_000, 100].includes(parsed)) {
-        config.messageLimit = parsed;
+        config.resultLimit = parsed;
       }
     }
 

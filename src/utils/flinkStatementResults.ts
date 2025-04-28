@@ -2,60 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { hashed } from "./cryptography";
-
-export class FlinkStatementTraitsSchema {
-  columns?: ColumnDetails[];
-}
-
-export interface RowFieldType {
-  /** The name of the field. */
-  name: string;
-  /** The data type of the field. */
-  field_type: DataType;
-  /** The description of the field. */
-  description?: string;
-}
-
-export interface DataType {
-  /** The data type of the column. */
-  type: string;
-  /** Indicates whether values in this column can be null. */
-  nullable: boolean;
-  /** The length of the data type. */
-  length?: number;
-  /** The precision of the data type. */
-  precision?: number;
-  /** The scale of the data type. */
-  scale?: number;
-  /** The type of the key in the data type (if applicable). */
-  key_type?: DataType;
-  /** The type of the value in the data type (if applicable). */
-  value_type?: DataType;
-  /** The type of the element in the data type (if applicable). */
-  element_type?: DataType;
-  /** The fields of the element in the data type (if applicable). */
-  fields?: RowFieldType[];
-  /** The resolution of the data type (if applicable). */
-  resolution?: string;
-  /** The fractional precision of the data type (if applicable). */
-  fractional_precision?: number;
-}
-
-/** A column in the results schema.*/
-export interface ColumnDetails {
-  /** The name of the SQL table column. */
-  name: string;
-  /** JSON object in TableSchema format; describes the data returned by the results serving API. */
-  type: DataType;
-}
-
-export type Statement = {
-  statementName: string;
-  columns: ColumnDetails[];
-  data?: Map<string, any>;
-  isAppendOnly: boolean;
-  upsertColumns: number[];
-};
+import { ColumnDetails } from "../clients/flinkSql";
 
 export enum Operation {
   Insert = 0,
@@ -69,12 +16,11 @@ export type StatementResultsRow = { op: Operation; row: any[] };
 export const DEFAULT_RESULTS_LIMIT = 10_000;
 export const INTERNAL_COUNT_KEEP_LAST_ROW = "INTERNAL_COUNT_KEEP_LAST_ROW";
 
-export const generateRowId = (row: any, upsertColumns?: number[]): string => {
+export const generateRowId = (row: any[], upsertColumns?: number[]): string => {
   let result = row;
   // If upsertColumns exists, use that to generate row ID/key.
   if (upsertColumns) {
-    // @ts-ignore
-    result = row.filter((_val, idx) => upsertColumns.includes(idx));
+    result = row.filter((_, idx) => upsertColumns.includes(idx));
   }
 
   // Trade CPU for memory and hash the concatenated row values.
@@ -100,7 +46,7 @@ const isInsertOperation = (op: Operation) => {
 };
 
 const UUID_REGEX = new RegExp(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
 );
 
 /**
@@ -194,9 +140,7 @@ export const parseResults = ({
       // Check all keys for a match with rowId, remove UUID to compare for duplicates as well
       // Delete most recently inserted matching rowId
       const keyToDelete = Array.from(map.keys())
-        .filter((key) => {
-          return key === rowId || (key.startsWith(rowId) && UUID_REGEX.test(key.split("-").at(-1) || ""));
-        })
+        .filter((key) => key.startsWith(rowId) && UUID_REGEX.test(key.split("-").at(-1) || ""))
         .pop();
       if (keyToDelete) {
         map.delete(keyToDelete);
