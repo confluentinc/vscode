@@ -831,8 +831,7 @@
         },
         {
           "command": "confluent.statements.create",
-          "when": "false",
-          "consider_allowing_from_keybindings": "XXX todo"
+          "when": "false"
         },
         {
           "command": "confluent.schemaViewer.viewLocally",
