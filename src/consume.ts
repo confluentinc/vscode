@@ -40,12 +40,13 @@ import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
-import { hashed, logUsage, UserEvent } from "./telemetry/events";
+import { logUsage, UserEvent } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 import { logError, showErrorNotificationWithButtons } from "./errors";
+import { hashed } from "./utils/cryptography";
 
 const logger = new Logger("consume");
 

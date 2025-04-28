@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { TelemetryTrustedValue } from "vscode";
 import { Logger } from "../logging";
 import { getTelemetryLogger } from "./telemetryLogger";
@@ -27,9 +26,4 @@ export function logUsage(event: UserEvent, data?: Record<string, any | Telemetry
 
   // May or may send to Segment based on user settings. See checkTelemetrySettings().
   getTelemetryLogger().logUsage(event, data);
-}
-
-/** Compute a hex-encoded SHA-256 hash of a client-side string to accompany telemetry data. */
-export function hashed(input: string): string {
-  return createHash("sha256").update(input).digest("hex");
 }
