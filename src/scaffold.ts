@@ -49,8 +49,6 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   ];
 }
 
-let isFlinkTemplate = false;
-
 async function resourceScaffoldProjectRequest(
   item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
 ) {
@@ -59,11 +57,11 @@ async function resourceScaffoldProjectRequest(
     return await scaffoldProjectRequest({
       bootstrap_server: bootstrapServers,
       cc_bootstrap_server: bootstrapServers,
+      templateType: "kafka",
     });
   } else if (item instanceof KafkaTopic) {
     const cluster = await getResourceManager().getClusterForTopic(item);
     if (!cluster) {
-      // shouldn't happen if we have the topic, but just in case
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
     }
@@ -73,21 +71,22 @@ async function resourceScaffoldProjectRequest(
       cc_bootstrap_server: bootstrapServers,
       cc_topic: item.name,
       topic: item.name,
+      templateType: "kafka",
     });
   } else if (item instanceof CCloudFlinkComputePool) {
-    // Handle Flink statements
-    isFlinkTemplate = true;
     return await scaffoldProjectRequest({
       cc_environment_id: item.environmentId,
       cloud_region: item.region,
       cloud_provider: item.provider,
       cc_compute_pool_id: item.id,
+      templateType: "flink",
     });
   }
 }
 
 export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledTemplateOptions) => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
+  const templateType = templateRequestOptions?.templateType;
   try {
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
@@ -100,13 +99,17 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
       // templates that are tagged as producer or consumer but with a quickpick
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
-        const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
-        if (isFlinkTemplate) {
-          const hasFlinkTemplate = tags.includes("apache flink") || tags.includes("table api");
-          return hasFlinkTemplate;
+
+        if (templateType === "flink") {
+          return tags.includes("apache flink") || tags.includes("table api");
+        } else if (templateType === "kafka") {
+          return tags.includes("producer") || tags.includes("consumer");
         }
-        return hasProducerOrConsumer;
+
+        // If no specific type, show all templates with producer or consumer tags
+        return tags.includes("producer") || tags.includes("consumer");
       });
+
       pickedTemplate = await pickTemplate(templateList);
     } else if (templateRequestOptions && templateRequestOptions.templateName) {
       // Handling from a URI where there is a template name matched and quickpick is not needed
