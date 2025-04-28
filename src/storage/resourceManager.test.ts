@@ -491,7 +491,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     }
   });
 
-  it("CCLOUD: deleteCCloudTopics() should correctly delete only ccloud Kafka topics", async () => {
+  it("CCLOUD: deleteCCloudTopics() should correctly delete all ccloud Kafka topics", async () => {
     // set the topics in the StorageManager before deleting them
     const resourceManager = getResourceManager();
     const otherCcloudCluster = CCloudKafkaCluster.create({
