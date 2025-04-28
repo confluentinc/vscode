@@ -15,7 +15,9 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError, showErrorNotificationWithButtons } from "./errors";
+import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
+import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
 import { QuickPickItemWithValue } from "./quickpicks/types";
@@ -36,6 +38,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 interface PrefilledTemplateOptions {
   templateCollection?: string;
   templateName?: string;
+  templateType?: string;
   [key: string]: string | undefined;
 }
 const logger = new Logger("scaffold");
@@ -48,17 +51,19 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   ];
 }
 
-async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) {
+async function resourceScaffoldProjectRequest(
+  item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
+) {
   if (item instanceof KafkaCluster) {
     const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
     return await scaffoldProjectRequest({
       bootstrap_server: bootstrapServers,
       cc_bootstrap_server: bootstrapServers,
+      templateType: "kafka",
     });
   } else if (item instanceof KafkaTopic) {
     const cluster = await getResourceManager().getClusterForTopic(item);
     if (!cluster) {
-      // shouldn't happen if we have the topic, but just in case
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
     }
@@ -68,12 +73,24 @@ async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) 
       cc_bootstrap_server: bootstrapServers,
       cc_topic: item.name,
       topic: item.name,
+      templateType: "kafka",
+    });
+  } else if (item instanceof CCloudFlinkComputePool) {
+    const organizationId = await CCloudResourceLoader.getInstance().getOrganizationId();
+    return await scaffoldProjectRequest({
+      cc_environment_id: item.environmentId,
+      cc_organization_id: organizationId,
+      cloud_region: item.region,
+      cloud_provider: item.provider,
+      cc_compute_pool_id: item.id,
+      templateType: "flink",
     });
   }
 }
 
 export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledTemplateOptions) => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
+  const templateType = templateRequestOptions?.templateType;
   try {
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
@@ -86,9 +103,17 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
       // templates that are tagged as producer or consumer but with a quickpick
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
-        const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
-        return hasProducerOrConsumer;
+
+        if (templateType === "flink") {
+          return tags.includes("apache flink") || tags.includes("table api");
+        } else if (templateType === "kafka") {
+          return tags.includes("producer") || tags.includes("consumer");
+        }
+
+        // If no specific type, show all templates with producer or consumer tags
+        return tags.includes("producer") || tags.includes("consumer");
       });
+
       pickedTemplate = await pickTemplate(templateList);
     } else if (templateRequestOptions && templateRequestOptions.templateName) {
       // Handling from a URI where there is a template name matched and quickpick is not needed
@@ -176,6 +201,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
         value = optionValue || "";
       }
       optionValues[option] = value;
+      properties.initial_value = typeof value === "boolean" ? value.toString() : value;
     } else {
       optionValues[option] = properties.initial_value ?? "";
     }
