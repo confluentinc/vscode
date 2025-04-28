@@ -20,11 +20,7 @@ import { registerDiffCommands } from "./commands/diffs";
 import { registerDockerCommands } from "./commands/docker";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
-import {
-  promptChooseDefaultComputePool,
-  registerFlinkComputePoolCommands,
-  registerFlinkSqlDocumentListener,
-} from "./commands/flinkComputePools";
+import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";

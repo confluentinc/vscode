@@ -4,6 +4,7 @@ import { getResourceManager } from "../storage/resourceManager";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ContextValues, getContextValue } from "../context/values";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { ENABLE_FLINK } from "../preferences/constants";
 
 const logger = new Logger("flink.flinkConfigurationManager");
 
@@ -59,6 +60,21 @@ export class FlinkConfigurationManager implements Disposable {
         if (e.affectsConfiguration("confluent.flink")) {
           logger.debug("Flink configuration changed");
           await this.checkFlinkResourcesAvailability();
+        }
+      }),
+    );
+
+    // Monitor the Flink enabled setting
+    this.disposables.push(
+      workspace.onDidChangeConfiguration(async (e) => {
+        if (e.affectsConfiguration(ENABLE_FLINK)) {
+          const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
+          if (isFlinkEnabled) {
+            this.hasPromptedForSettings = false;
+            await this.validateFlinkSettings();
+          } else {
+            logger.debug("Flink was disabled, no further actions needed");
+          }
         }
       }),
     );
