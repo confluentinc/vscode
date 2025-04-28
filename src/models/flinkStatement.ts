@@ -31,8 +31,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   status: SqlV1StatementStatus;
   spec: SqlV1StatementSpec;
 
-  // TODO: add more properties as needed
-
   constructor(
     props: Pick<
       FlinkStatement,
