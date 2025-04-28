@@ -1,11 +1,6 @@
 import { Disposable } from "vscode";
 
-import {
-  ListSqlv1StatementsRequest,
-  SqlV1StatementListDataInner,
-  SqlV1StatementSpec,
-  SqlV1StatementTraits,
-} from "../clients/flinkSql";
+import { ListSqlv1StatementsRequest, SqlV1StatementListDataInner } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";

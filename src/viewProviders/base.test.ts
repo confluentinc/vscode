@@ -14,10 +14,7 @@ import { ContextValues } from "../context/values";
 import { ccloudConnected } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
-import {
-  FlinkStatement,
-  FlinkStatementTreeItem,
-} from "../models/flinkStatement";
+import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
 import { SqlV1StatementStatus } from "../clients/flinkSql";
 

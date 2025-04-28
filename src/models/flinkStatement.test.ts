@@ -17,7 +17,7 @@ import {
 } from "./flinkStatement";
 import { CustomMarkdownString, KeyValuePairArray } from "./main";
 import { EnvironmentId } from "./resource";
-import { SqlV1Statement, SqlV1StatementStatus } from "../clients/flinkSql";
+import { SqlV1StatementStatus } from "../clients/flinkSql";
 
 describe("FlinkStatement", () => {
   it("uses name as id", () => {
