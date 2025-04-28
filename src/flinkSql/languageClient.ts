@@ -10,66 +10,13 @@ import {
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
 import { WebsocketTransport } from "./websocketTransport";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
-import { SIDECAR_PORT } from "../sidecar/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { getCurrentOrganization } from "../graphql/organizations";
-import { getEnvironments } from "../graphql/environments";
 
 const logger = new Logger("flinkSql.languageClient");
 
 let languageClient: LanguageClient | null = null;
-export interface FlinkSqlSettings {
-  database: string;
-  computePoolId: string;
-}
-export function getFlinkSqlSettings(): FlinkSqlSettings {
-  const config = vscode.workspace.getConfiguration("confluent.flink");
-  return {
-    database: config.get<string>("database", ""),
-    computePoolId: config.get<string>("computePoolId", ""),
-  };
-}
-
-/**
- * Builds the WebSocket URL for the Flink SQL Language Server based on current settings
- * @param computePoolId - The ID of the compute pool used to determine URL query params
- * @returns The WebSocket URL for the Flink SQL Language Server
- * @throws Error if the environment or organization ID cannot be found
- * @throws Error if the compute pool ID is not found in any environment
- */
-export async function buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<string> {
-  let organizationId = "";
-  let environmentId = "";
-  let region = "";
-  let provider = "";
-  // Get the current org
-  const currentOrg = await getCurrentOrganization();
-  organizationId = currentOrg?.id ?? "";
-  // Find the environment containing this compute pool
-  const environments = await getEnvironments();
-  if (!environments || environments.length === 0) {
-    logger.error("No environments found");
-  }
-  for (const env of environments) {
-    const foundPool = env.flinkComputePools.find(
-      (pool: CCloudFlinkComputePool) => pool.id === computePoolId,
-    );
-    if (foundPool) {
-      environmentId = env.id;
-      region = foundPool.region;
-      provider = foundPool.provider;
-      break;
-    }
-  }
-  if (!environmentId || !organizationId) {
-    throw new Error(`Could not find environment containing compute pool ${computePoolId}`);
-  }
-  return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
-}
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed
@@ -77,7 +24,7 @@ export async function buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<
  * - User is authenticated with CCloud
  * - User has selected a compute pool
  */
-export async function initializeLanguageClient(): Promise<vscode.Disposable | null> {
+export async function initializeLanguageClient(url: string): Promise<vscode.Disposable | null> {
   if (!hasCCloudAuthSession()) {
     logger.warn("Cannot initialize language client: User not authenticated with CCloud");
     return null;
@@ -86,23 +33,6 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable | nu
   if (languageClient) {
     logger.info("Language client already initialized");
     return languageClient;
-  }
-
-  const settings = getFlinkSqlSettings();
-  if (!settings.computePoolId) {
-    logger.warn("Cannot initialize language client: No compute pool configured");
-    return null;
-  }
-
-  let addr: string;
-  try {
-    addr = await buildFlinkSqlWebSocketUrl(settings.computePoolId);
-  } catch (error) {
-    logger.error("Failed to build WebSocket URL:", error);
-    vscode.window.showErrorMessage(
-      `Failed to initialize Flink SQL language client: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    return null;
   }
 
   let accessToken: string | undefined = await getStorageManager().getSecret(
@@ -116,7 +46,7 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable | nu
     return null;
   }
   return new Promise((resolve, reject) => {
-    const conn = new WebSocket(addr, {
+    const conn = new WebSocket(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
     conn.onerror = (error) => {
@@ -151,7 +81,7 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable | nu
               return next(event);
             },
             provideCompletionItem: (document, position, context, token, next) => {
-              // Server adds backticks to all Entities, so we need to see
+              // Server adds backticks to all Entity completions, so we check
               // if the character before the word range start is a backtick & if so, adjust the position
               const range = document.getWordRangeAtPosition(position);
               const line = document.lineAt(position.line).text;
