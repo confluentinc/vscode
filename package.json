@@ -510,15 +510,9 @@
         "category": "Confluent: Flink SQL"
       },
       {
-        "command": "confluent.document.flinksql.setCCloudEnv",
+        "command": "confluent.document.flinksql.setCCloudComputePool",
         "icon": "$(confluent-logo)",
-        "title": "Set CCloud Environment for Flink Statement",
-        "category": "Confluent: Flink SQL"
-      },
-      {
-        "command": "confluent.document.flinksql.setCCloudRegionProvider",
-        "icon": "$(confluent-logo)",
-        "title": "Set CCloud Region/Provider for Flink Statement",
+        "title": "Set CCloud Flink Compute Pool for Flink Statement",
         "category": "Confluent: Flink SQL"
       }
     ],
@@ -930,11 +924,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.document.flinksql.setCCloudEnv",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.flinksql.setCCloudRegionProvider",
+          "command": "confluent.document.flinksql.setCCloudComputePool",
           "when": "false"
         }
       ],
