@@ -58,7 +58,7 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   6) Raise error box if any immediate submission errors.
   7) Refresh the statements view if the view is set to include the cluster
    */
-export async function sumbitFlinkStatementCommand(): Promise<void> {
+export async function submitFlinkStatementCommand(): Promise<void> {
   // 1. Choose the document with the SQL to submit
   const uriSchemes = ["file", "untitled"];
   // XXX todo find out if we have constant for our flinksql language id.
@@ -189,6 +189,6 @@ export async function sumbitFlinkStatementCommand(): Promise<void> {
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
-    registerCommandWithLogging("confluent.statements.create", sumbitFlinkStatementCommand),
+    registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
   ];
 }
