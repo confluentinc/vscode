@@ -43,6 +43,7 @@ import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
+import { DocumentMetadataManager } from "./documentMetadataManager";
 import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
@@ -287,6 +288,9 @@ async function _activateExtension(
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
   context.subscriptions.push(getCCloudStatusBarItem());
+
+  const docManager = DocumentMetadataManager.getInstance();
+  context.subscriptions.push(...docManager.disposables);
 
   const provider = new FlinkSqlCodelensProvider();
   context.subscriptions.push(
