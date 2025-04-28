@@ -15,6 +15,7 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError, showErrorNotificationWithButtons } from "./errors";
+import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
@@ -37,6 +38,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 interface PrefilledTemplateOptions {
   templateCollection?: string;
   templateName?: string;
+  templateType?: string;
   [key: string]: string | undefined;
 }
 const logger = new Logger("scaffold");
@@ -74,8 +76,11 @@ async function resourceScaffoldProjectRequest(
       templateType: "kafka",
     });
   } else if (item instanceof CCloudFlinkComputePool) {
+    const organizationId = await CCloudResourceLoader.getInstance().getOrganizationId();
+
     return await scaffoldProjectRequest({
       cc_environment_id: item.environmentId,
+      cc_organization_id: organizationId,
       cloud_region: item.region,
       cloud_provider: item.provider,
       cc_compute_pool_id: item.id,
