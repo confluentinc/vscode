@@ -1,5 +1,3 @@
-// (Copyright) Confluent, Inc.
-
 import { randomUUID } from "crypto";
 import { ColumnDetails } from "../clients/flinkSql";
 
