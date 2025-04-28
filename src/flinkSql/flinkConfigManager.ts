@@ -124,10 +124,7 @@ export class FlinkConfigurationManager implements Disposable {
       logger.debug("Flink is not enabled in settings, skipping configuration prompt");
       return;
     }
-    const config = workspace.getConfiguration("confluent.flink");
-    const computePoolId = config.get<string>("computePoolId");
-    const database = config.get<string>("database");
-
+    const { computePoolId, database } = this.getFlinkSqlSettings();
     // If default settings are missing, prompt the user
     if (!computePoolId || !database) {
       // TODO NC: should we skip as long as compute pool set? Branch off for DB?
@@ -144,10 +141,7 @@ export class FlinkConfigurationManager implements Disposable {
     if (!hasCCloudAuthSession()) {
       return; // This method should not be called if not authenticated
     }
-
-    const config = workspace.getConfiguration("confluent.flink");
-    const computePoolId = config.get<string>("computePoolId");
-
+    const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
       return;
     }
@@ -276,8 +270,8 @@ export class FlinkConfigurationManager implements Disposable {
       return;
     }
 
-    const settings = workspace.getConfiguration("confluent.flink");
-    const computePoolId = settings.get<string>("computePoolId");
+    const { computePoolId } = this.getFlinkSqlSettings();
+
     if (!computePoolId) {
       logger.debug("No compute pool ID configured, not initializing language client");
       return;
