@@ -77,7 +77,6 @@ async function resourceScaffoldProjectRequest(
     });
   } else if (item instanceof CCloudFlinkComputePool) {
     const organizationId = await CCloudResourceLoader.getInstance().getOrganizationId();
-
     return await scaffoldProjectRequest({
       cc_environment_id: item.environmentId,
       cc_organization_id: organizationId,
@@ -202,6 +201,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
         value = optionValue || "";
       }
       optionValues[option] = value;
+      properties.initial_value = typeof value === "boolean" ? value.toString() : value;
     } else {
       optionValues[option] = properties.initial_value ?? "";
     }
