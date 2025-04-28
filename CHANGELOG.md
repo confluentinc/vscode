@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Configurable default settings for `compute pool` and `database` for FlinkSQL operations
+
 ## 1.2.0
 
 ### Added
