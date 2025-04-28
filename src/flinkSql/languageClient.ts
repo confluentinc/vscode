@@ -14,10 +14,10 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { SIDECAR_PORT } from "../sidecar/constants";
-import { getResourceManager } from "../storage/resourceManager";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getCurrentOrganization } from "../graphql/organizations";
+import { getEnvironments } from "../graphql/environments";
 
 const logger = new Logger("flinkSql.languageClient");
 
@@ -50,8 +50,10 @@ export async function buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<
   const currentOrg = await getCurrentOrganization();
   organizationId = currentOrg?.id ?? "";
   // Find the environment containing this compute pool
-  const resourceManager = getResourceManager();
-  const environments = await resourceManager.getCCloudEnvironments();
+  const environments = await getEnvironments();
+  if (!environments || environments.length === 0) {
+    logger.error("No environments found");
+  }
   for (const env of environments) {
     const foundPool = env.flinkComputePools.find(
       (pool: CCloudFlinkComputePool) => pool.id === computePoolId,
