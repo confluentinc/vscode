@@ -1,6 +1,13 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import {
+  CreateSqlv1Statement201Response,
+  SqlV1StatementListDataInner,
+  SqlV1StatementMetadata,
+  SqlV1StatementSpec,
+  SqlV1StatementStatus,
+} from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString, IdItem } from "./main";
 import {
   ConnectionId,
@@ -9,11 +16,6 @@ import {
   ISearchable,
   OrganizationId,
 } from "./resource";
-import {
-  SqlV1StatementMetadata,
-  SqlV1StatementSpec,
-  SqlV1StatementStatus,
-} from "../clients/flinkSql";
 
 /**
  * Model for a Flink statement.
@@ -25,7 +27,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   organizationId!: OrganizationId;
 
   name: string;
-  metadata: SqlV1StatementMetadata;
+  metadata: SqlV1StatementMetadata | undefined;
   status: SqlV1StatementStatus;
   spec: SqlV1StatementSpec;
 
@@ -87,12 +89,16 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
     return this.status.traits?.sql_kind?.replace(/_/g, " ");
   }
 
+  get sqlKind(): string | undefined {
+    return this.status.traits?.sql_kind;
+  }
+
   get createdAt(): Date | undefined {
-    return this.metadata.created_at;
+    return this.metadata?.created_at;
   }
 
   get updatedAt(): Date | undefined {
-    return this.metadata.updated_at;
+    return this.metadata?.updated_at;
   }
 }
 
@@ -187,6 +193,9 @@ export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
 
 // Statement phases
+// TODO make convience boolean properies in FlinkStatement class
+// so that we can do things like `statement.isRunning()` or `statement.isFailed()`
+
 export const RUNNING_PHASE = "RUNNING";
 export const DEGRADED_PHASE = "DEGRADED";
 export const COMPLETED_PHASE = "COMPLETED";
@@ -198,3 +207,19 @@ export const DELETING_PHASE = "DELETING";
 export const PENDING_PHASE = "PENDING";
 
 export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
+
+/** Convert a from-REST API depiction of a Flink statement to our codebase's FlinkStatement model. */
+export function restFlinkStatementToModel(
+  restFlinkStatement: SqlV1StatementListDataInner | CreateSqlv1Statement201Response,
+): FlinkStatement {
+  return new FlinkStatement({
+    connectionId: CCLOUD_CONNECTION_ID,
+    connectionType: ConnectionType.Ccloud,
+    environmentId: restFlinkStatement.environment_id as EnvironmentId,
+    organizationId: restFlinkStatement.organization_id as OrganizationId,
+    name: restFlinkStatement.name!,
+    spec: restFlinkStatement.spec,
+    metadata: restFlinkStatement.metadata,
+    status: restFlinkStatement.status,
+  });
+}

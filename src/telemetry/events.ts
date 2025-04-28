@@ -19,6 +19,7 @@ export enum UserEvent {
   CCloudAuthentication = "CCloud Authentication",
   ViewSearchAction = "View Search Action",
   SchemaAction = "Schema Action",
+  FlinkStatementAction = "Flink Statement Action",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */
