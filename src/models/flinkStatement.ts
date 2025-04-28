@@ -205,7 +205,7 @@ export const PENDING_PHASE = "PENDING";
 
 export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
 
-/** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
+/** Convert a from-REST API depiction of a Flink statement to our codebase's FlinkStatement model. */
 export function restFlinkStatementToModel(
   restFlinkStatement: SqlV1StatementListDataInner | CreateSqlv1Statement201Response,
 ): FlinkStatement {
