@@ -32,7 +32,7 @@ const resultLimitLabel = Object.fromEntries(
   labels.map((label, index) => [numbers[index], label]),
 ) as Record<string, ResultLimitType>;
 
-type StreamState = "running" | "paused" | "errored";
+type StreamState = "running" | "paused" | "errored" | "completed";
 
 /**
  * Top level view model for Flink Statement Results Viewer. It composes shared state and logic
@@ -320,6 +320,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
         return "Pause";
       case "paused":
         return "Resume";
+      case "completed":
+        return "Completed";
     }
   });
   streamStateTooltip = this.derive(() => {
@@ -328,6 +330,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
         return "Fetching results";
       case "paused":
         return "Result fetching is paused. Click to resume from last result received.";
+      case "completed":
+        return "All results have been fetched";
     }
   });
 
@@ -337,6 +341,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
         return post("StreamPause", { timestamp: this.timestamp() });
       case "paused":
         return post("StreamResume", { timestamp: this.timestamp() });
+      case "completed":
+        return null; // No action for completed state
     }
   }
 }
