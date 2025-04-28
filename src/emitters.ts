@@ -5,7 +5,6 @@ import { KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
-import { ProviderRegion } from "./types";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
@@ -123,17 +122,5 @@ export const schemaSearchSet = new vscode.EventEmitter<string | null>();
 
 export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 
-export const uriCCloudOrgSet = new vscode.EventEmitter<{
-  uri: vscode.Uri;
-  orgId: string | null;
-}>();
-
-export const uriCCloudEnvSet = new vscode.EventEmitter<{
-  uri: vscode.Uri;
-  envId: EnvironmentId | null;
-}>();
-
-export const uriCCloudRegionProviderSet = new vscode.EventEmitter<{
-  uri: vscode.Uri;
-  region: ProviderRegion | null;
-}>();
+/** Metadata for a given {@link vscode.Uri} has been updated. */
+export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
