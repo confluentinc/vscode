@@ -15,7 +15,7 @@ import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema"
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
-import { hashed, logUsage, UserEvent } from "../telemetry/events";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
@@ -24,6 +24,7 @@ import {
   confirmSchemaVersionDeletion,
   hardDeletionQuickPick,
 } from "./utils/schemas";
+import { hashed } from "../utils/cryptography";
 
 const logger = new Logger("commands.schemas");
 

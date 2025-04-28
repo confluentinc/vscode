@@ -15,9 +15,10 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
-import { hashed, logUsage, UserEvent } from "../telemetry/events";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { hashed } from "../utils/cryptography";
 
 const logger = new Logger("commands.schemaUpload");
 
