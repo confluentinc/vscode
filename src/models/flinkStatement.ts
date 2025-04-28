@@ -193,6 +193,9 @@ export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
 
 // Statement phases
+// TODO make convience boolean properies in FlinkStatement class
+// so that we can do things like `statement.isRunning()` or `statement.isFailed()`
+
 export const RUNNING_PHASE = "RUNNING";
 export const DEGRADED_PHASE = "DEGRADED";
 export const COMPLETED_PHASE = "COMPLETED";

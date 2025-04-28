@@ -8,7 +8,7 @@ import {
   showErrorNotificationWithButtons,
 } from "../errors";
 import { Logger } from "../logging";
-import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { kafkaClusterQuickPick } from "../quickpicks/kafkaClusters";
@@ -44,24 +44,19 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
 }
 
 /**
-   * Proposed user flow:
-  1. Open / create new document
-  2. User types in SQL, preferrably with language server help.
-  3. Hits new 'submit statement' button in the flink statement titlebar -- use the 'cloud' icon
-  4. Quickpick flow:
-
-	  1) Chose document
-    2) Statement name (auto-generated from template pattern, but user can override)
+  * Submit a Flink statement to a Flink cluster. Flow:
+  * Quickpick flow:
+	*  1) Chose flinksql, sql, or text document, preferring the current foreground editor.
+  *  2) Statement name (auto-generated from template pattern, but user can override)
 	  2) the Flink cluster to send to
     3) also need to know at least the 'current database' (cluster name) to submit along with the catalog name (the env, infer-able from the chosen Flink cluster).
   5) Submit!
   6) Raise error box if any immediate submission errors.
   7) Refresh the statements view if the view is set to include the cluster
-   */
+*/
 export async function submitFlinkStatementCommand(): Promise<void> {
   // 1. Choose the document with the SQL to submit
   const uriSchemes = ["file", "untitled"];
-  // XXX todo find out if we have constant for our flinksql language id.
   const languageIds = ["plaintext", "flinksql", "sql"];
   const fileFilters = {
     "FlinkSQL files": [".flinksql", ".sql"],
@@ -78,11 +73,8 @@ export async function submitFlinkStatementCommand(): Promise<void> {
   const document = await getEditorOrFileContents(statementBodyUri);
   const statement = document.content;
 
-  logger.info("sumbitFlinkStatementCommand", `statementBodyUri: ${statementBodyUri.toString()}`);
-
   // 2. Choose the statement name
   const statementName = await determineFlinkStatementName();
-  logger.info("sumbitFlinkStatementCommand", `statementName: ${statementName}`);
 
   // 3. Choose the Flink cluster to send to
   const computePool = await flinkComputePoolQuickPick();
@@ -90,7 +82,6 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     logger.error("sumbitFlinkStatementCommand", "computePool is undefined");
     return;
   }
-  logger.info("sumbitFlinkStatementCommand", `computePool: ${computePool.name}`);
 
   // 4. Choose the current / default database / aka kafka cluster
   // within the environment.
@@ -123,18 +114,19 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     properties: new FlinkSpecProperties({
       currentDatabase,
       currentCatalog: computePool.environmentId,
-      localTimezone: "GMT-04:00",
+      // TODO get at the user's local timezone
+      // localTimezone: "GMT-04:00",
     }),
   };
-  logger.info("sumbitFlinkStatementCommand", `submission: ${JSON.stringify(submission)}`);
 
   try {
     const restResponse = await submitFlinkStatement(submission);
-    logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(restResponse, null, 2)}`);
+    // logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(restResponse, null, 2)}`);
     const newStatement = restFlinkStatementToModel(restResponse);
 
-    if (newStatement.status.phase === "FAILED") {
-      // Immediate death of the statement.
+    if (newStatement.status.phase === FAILED_PHASE) {
+      // Immediate failure of the statement. User gave us something
+      // bad, like perhaps a bad table / column name, etc..
 
       logUsage(UserEvent.FlinkStatementAction, {
         action: "submit_failure",
@@ -142,10 +134,6 @@ export async function submitFlinkStatementCommand(): Promise<void> {
         failure_reason: newStatement.status.detail,
       });
 
-      logger.error(
-        "sumbitFlinkStatementCommand",
-        `Statement failed: ${newStatement.status.detail}`,
-      );
       await showErrorNotificationWithButtons(
         `Error submitting statement: ${newStatement.status.detail}`,
       );
