@@ -82,6 +82,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
 
 const logger = new Logger("extension");
 
@@ -185,9 +186,9 @@ async function _activateExtension(
     ...resourceViewProvider.disposables,
     ...topicViewProvider.disposables,
     ...schemasViewProvider.disposables,
+    ...supportViewProvider.disposables,
     ...statementsViewProvider.disposables,
     ...artifactsViewProvider.disposables,
-    ...supportViewProvider.disposables,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
@@ -236,6 +237,7 @@ async function _activateExtension(
   context.subscriptions.push(
     uriHandler,
     WebsocketManager.getInstance(),
+    initializeFlinkConfigManager(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
