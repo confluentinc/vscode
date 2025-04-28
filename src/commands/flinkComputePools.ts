@@ -1,11 +1,16 @@
-import { commands, Disposable } from "vscode";
+import { commands, Disposable, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   currentFlinkArtifactsPoolChanged,
   currentFlinkStatementsResourceChanged,
 } from "../emitters";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { flinkComputePoolQuickPickWithViewProgress } from "../quickpicks/flinkComputePools";
+import {
+  flinkComputePoolQuickPick,
+  flinkComputePoolQuickPickWithViewProgress,
+} from "../quickpicks/flinkComputePools";
+import { Logger } from "../logging";
+const logger = new Logger("flinkComputePools.ts");
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
@@ -60,6 +65,36 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
   commands.executeCommand("confluent-flink-artifacts.focus");
 }
 
+/**
+ * Show a quickpick to select a default {@link FlinkComputePool} and database
+ * for Flink SQL operations.
+ */
+export async function configureFlinkDefaults() {
+  const config: Record<string, any> = await workspace.getConfiguration("confluent");
+  const flinkConfig = config["flink"] || {};
+
+  const computePool = await flinkComputePoolQuickPick();
+  await workspace
+    .getConfiguration()
+    .update("confluent.flink.computePoolId", computePool?.id, false);
+
+  // TODO NC db can be switched to filtered quickpick when available
+  const database = await window.showInputBox({
+    prompt: "Name or ID for default CCloud database (topic) to use for Flink SQL operations",
+    value: flinkConfig["database"],
+  });
+  await workspace.getConfiguration().update("confluent.flink.database", database, false);
+
+  window.showInformationMessage("Flink SQL settings updated.", "View").then((selection) => {
+    if (selection === "View") {
+      commands.executeCommand(
+        "workbench.action.openSettings",
+        "@ext:confluentinc.vscode-confluent flink",
+      );
+    }
+  });
+}
+
 export function registerFlinkComputePoolCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
@@ -74,5 +109,35 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
       "confluent.artifacts.flink-compute-pool.select",
       selectPoolForArtifactsViewCommand,
     ),
+    registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),
   ];
+}
+
+/**
+ * Show notification prompting user to select default compute pool for Flink SQL.
+ * Can be called when a user opens a Flink SQL file or when certain commands are executed.
+ */
+export async function promptChooseDefaultComputePool(): Promise<void> {
+  const selection = await window.showInformationMessage(
+    "Choose your CCloud Flink Compute Pool and other defaults to quickly run & view Flink SQL queries.",
+    "Update Flink Settings",
+    "Cancel",
+  );
+
+  if (selection === "Update Flink Settings") {
+    await commands.executeCommand("confluent.flink.configureFlinkDefaults");
+  } else if (selection === "Cancel") {
+    logger.info("Flink SQL configuration cancelled");
+  }
+}
+
+/**
+ * Register event listener for flinksql file opening
+ */
+export function registerFlinkSqlDocumentListener(): Disposable {
+  return workspace.onDidOpenTextDocument(async (document) => {
+    if (document.languageId === "flinksql") {
+      await promptChooseDefaultComputePool();
+    }
+  });
 }
