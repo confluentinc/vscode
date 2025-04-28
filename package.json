@@ -1654,6 +1654,7 @@
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
     "vscode-json-languageservice": "^5.4.2",
+    "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "ws": "^8.18.0"
   }
