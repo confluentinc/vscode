@@ -404,6 +404,133 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     assert.strictEqual(missingSchemaRegistry, null);
   });
 
+  it("CCLOUD: getTopicsForCluster() should return undefined if no cached topics for this cluster", async () => {
+    const manager = getResourceManager();
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+
+    const topics = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepStrictEqual(topics, undefined);
+  });
+
+  it("CCLOUD: getTopicsForCluster() should return empty array of topics if empty array is set", async () => {
+    const manager = getResourceManager();
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+
+    await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, []);
+    const topics = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepStrictEqual(topics, []);
+  });
+
+  it("CCLOUD: getTopicsForCluster() should return the correct cloud topics", async () => {
+    const manager = getResourceManager();
+
+    const otherCcloudCluster = CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "other-cluster-id",
+    });
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+
+    const ccloudTopics = [
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+    ];
+
+    const otherCcloudClusterTopics = [
+      KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        name: "test-ccloud-topic-3",
+        clusterId: otherCcloudCluster.id,
+      }),
+    ];
+
+    await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+
+    await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+
+    const ccloudTopicsForMainCluster = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepEqual(
+      ccloudTopicsForMainCluster,
+      ccloudTopics,
+      "Expected cloud topics to be returned for the cloud cluster",
+    );
+
+    // Now set another batch of topics for a different cloud cluster
+    await manager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
+
+    const ccloudTopicsForOtherCluster = await manager.getTopicsForCluster(otherCcloudCluster);
+    assert.deepEqual(
+      ccloudTopicsForOtherCluster,
+      otherCcloudClusterTopics,
+      "Expected cloud topics to be returned for the other cloud cluster",
+    );
+
+    // and meanwhile the main cloud cluster should still have its topics
+    const ccloudTopicsForMainClusterAfter =
+      await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepEqual(
+      ccloudTopicsForMainClusterAfter,
+      ccloudTopics,
+      "Expected cloud topics to still be returned for the main cloud cluster",
+    );
+
+    // No cross-contamination between different cloud clusters
+    const clustersAndExpectedTopics: [KafkaCluster, KafkaTopic[]][] = [
+      [TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics],
+      [otherCcloudCluster, otherCcloudClusterTopics],
+    ];
+    for (const [cluster, topics] of clustersAndExpectedTopics) {
+      const topicsForCluster = await manager.getTopicsForCluster(cluster);
+      assert.deepEqual(
+        topicsForCluster,
+        topics,
+        "Expected right topics to still be returned for each cloud cluster",
+      );
+    }
+  });
+
+  it("CCLOUD: deleteCCloudTopics() should correctly delete only ccloud Kafka topics", async () => {
+    // set the topics in the StorageManager before deleting them
+    const resourceManager = getResourceManager();
+    const otherCcloudCluster = CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "other-cluster-id",
+    });
+    await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+    const ccloudTopics = [
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+    ];
+    await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+    // Define otherCcloudClusterTopics for this test scope
+    const otherCcloudClusterTopics = [
+      KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        name: "test-ccloud-topic-3",
+        clusterId: otherCcloudCluster.id,
+      }),
+    ];
+    await resourceManager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
+
+    // Verify topics were set
+    let topicsForMainCluster = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepStrictEqual(topicsForMainCluster, ccloudTopics);
+
+    let topicsForOtherCluster = await resourceManager.getTopicsForCluster(otherCcloudCluster);
+    assert.deepStrictEqual(topicsForOtherCluster, otherCcloudClusterTopics);
+
+    // Delete cloud topics
+    await resourceManager.deleteCCloudTopics();
+
+    // verify the ccloud topics were deleted correctly
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]) {
+      const shouldBeUndefined = await resourceManager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(shouldBeUndefined, undefined);
+    }
+  });
+
   it("CCLOUD: getCCloudSchemaRegistryById() should correctly retrieve a Schema Registry by its ID", async () => {
     // set the Schema Registry
     await getResourceManager().setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
