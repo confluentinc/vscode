@@ -131,5 +131,5 @@ export async function submitFlinkStatement(
   const statementsClient = handle.getFlinkSqlStatementsApi(params.computePool);
   const response = await statementsClient.createSqlv1Statement(request);
 
-  return response; // TODO: Handle the response and show a notification to the user
+  return response;
 }
