@@ -1,13 +1,19 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
-import { extractResponseBody, isResponseError, showErrorNotificationWithButtons } from "../errors";
+import {
+  extractResponseBody,
+  isResponseError,
+  logError,
+  showErrorNotificationWithButtons,
+} from "../errors";
 import { Logger } from "../logging";
-import { FlinkStatement } from "../models/flinkStatement";
+import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { kafkaClusterQuickPick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { selectPoolForStatementsViewCommand } from "./flinkComputePools";
 import {
@@ -123,31 +129,47 @@ export async function sumbitFlinkStatementCommand(): Promise<void> {
   logger.info("sumbitFlinkStatementCommand", `submission: ${JSON.stringify(submission)}`);
 
   try {
-    const response = await submitFlinkStatement(submission);
+    const restResponse = await submitFlinkStatement(submission);
+    logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(restResponse, null, 2)}`);
+    const newStatement = restFlinkStatementToModel(restResponse);
 
-    if (response.status.phase === "FAILED") {
+    if (newStatement.status.phase === "FAILED") {
       // Immediate death of the statement.
-      logger.error("sumbitFlinkStatementCommand", `Statement failed: ${response.status.detail}`);
+
+      logUsage(UserEvent.FlinkStatementAction, {
+        action: "submit_failure",
+        compute_pool_id: computePool.id,
+        failure_reason: newStatement.status.detail,
+      });
+
+      logger.error(
+        "sumbitFlinkStatementCommand",
+        `Statement failed: ${newStatement.status.detail}`,
+      );
       await showErrorNotificationWithButtons(
-        `Error submitting statement: ${response.status.detail}`,
+        `Error submitting statement: ${newStatement.status.detail}`,
       );
       return;
     }
 
-    logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(response, null, 2)}`);
+    logUsage(UserEvent.FlinkStatementAction, {
+      action: "submit_success",
+      sql_kind: newStatement.sqlKind,
+      compute_pool_id: computePool.id,
+    });
 
     // Refresh the statements view onto the compute pool in question,
     // which will then show the new statement.
     await selectPoolForStatementsViewCommand(computePool);
 
-    // TODO telemetry event here.
-
     // TODO indicate to the view to highlight the new statement
     // (similar to how we did we creating new schema subjects or versions)
+    // Something like:
+    // await FlinkStatementsViewProvider.getInstance().revealStatement(newStatement);
 
-    // TODO open up statement results view (Rohit work here)
+    // TODO open up statement results view (invoke Rohit work here once both in main)
   } catch (err) {
-    logger.error("sumbitFlinkStatementCommand", `Error submitting statement: ${err}`);
+    logError(err, "Submit Flink statement unexpected error");
 
     if (isResponseError(err) && err.response.status === 400) {
       // will be array of objs with 'details' human readable messages.
@@ -158,6 +180,8 @@ export async function sumbitFlinkStatementCommand(): Promise<void> {
         .map((e: { detail: string }) => e.detail)
         .join("\n");
       await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
+    } else {
+      await showErrorNotificationWithButtons(`Error submitting statement: ${err}`);
     }
   }
 }
