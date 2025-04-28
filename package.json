@@ -259,6 +259,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.create",
+        "icon": "$(cloud-upload)",
+        "title": "Submit Flink Statement",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
         "category": "Confluent: Flink Statements"
@@ -824,6 +830,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.create",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -1046,19 +1056,24 @@
           "group": "2_copy@3"
         },
         {
-          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+          "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@1"
         },
         {
-          "command": "confluent.statements.flink-compute-pool.select",
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@2"
         },
         {
-          "command": "confluent.statements.refresh",
+          "command": "confluent.statements.flink-compute-pool.select",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@3"
+        },
+        {
+          "command": "confluent.statements.refresh",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "group": "navigation@4"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
