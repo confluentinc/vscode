@@ -64,6 +64,16 @@ export class FlinkStatementsViewProvider
   async getChildren(): Promise<FlinkStatement[]> {
     const children: FlinkStatement[] = Array.from(this.resourcesInTreeView.values());
 
+    // Sort by statement creation time descending.
+    children.sort((a: FlinkStatement, b: FlinkStatement) => {
+      // These really should never be undefined, but just in case.
+      if (a.createdAt === undefined || b.createdAt === undefined) {
+        return 0;
+      }
+
+      return b.createdAt!.valueOf() - a.createdAt!.valueOf();
+    });
+
     return this.filterChildren(undefined, children);
   }
 
