@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; font-src ${cspSource}; style-src 'nonce-${nonce}'; style-src-attr 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';"
+    />
+    <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
+  </head>
+  <body>
+    <main class="wrapper">
+      <header class="results-viewer-settings">
+        <section class="flink-settings">
+          <h4>Statement Results Settings</h4>
+
+          <div class="flex-row">
+            <div class="dropdown-container">
+              <label for="results-limit">Max results</label>
+              <vscode-dropdown
+                id="results-limit"
+                data-prop-value="this.resultLimit()"
+                data-on-change="this.handleResultLimitChange(event.target.value)"
+              >
+                <vscode-option value="100">100</vscode-option>
+                <vscode-option value="1k">1,000</vscode-option>
+                <vscode-option value="10k">10,000</vscode-option>
+                <vscode-option value="100k">100,000</vscode-option>
+                <vscode-option value="1m">1,000,000</vscode-option>
+              </vscode-dropdown>
+            </div>
+
+            <div class="dropdown-container">
+              <!-- Empty label for aligned layout with the rest of controls -->
+              <label for="stream-toggle"><span>&nbsp;</span></label>
+              <vscode-button
+                appearance="primary"
+                id="stream-toggle"
+                data-on-click="this.handleStreamToggle(this.streamState())"
+                data-text="this.streamStateLabel()"
+                data-attr-title="this.streamStateTooltip()"
+              >
+              </vscode-button>
+            </div>
+
+            <template data-if="this.streamError() != null">
+              <div class="dropdown-container">
+                <!-- Empty label for aligned layout with the rest of controls -->
+                <label for="stream-toggle"><span>&nbsp;</span></label>
+                <vscode-button
+                  appearance="secondary"
+                  popovertarget="errorLog"
+                  data-on-click="window.errorLog.togglePopover()"
+                >
+                  <span class="codicon codicon-error"></span>
+                  <label>&nbsp;An error occurred</label>
+                </vscode-button>
+
+                <div popover id="errorLog" class="error-control">
+                  <div class="flex-column">
+                    <p data-text="this.streamError().message"></p>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template data-if="this.timer() != null">
+              <div class="dropdown-container">
+                <label>Time elapsed</label>
+                <flink-timer
+                  class="timer"
+                  data-attr-class="'timer ' + this.streamState()"
+                  data-prop-time="this.timer()"
+                  data-prop-state="this.streamState()"
+                ></flink-timer>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <!-- TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1571
+        <section>
+          <h4>Results Quick Search</h4>
+          <div class="flex-row">
+            <vscode-text-field
+              id="results-search"
+              placeholder="Search across results…"
+              type="search"
+              size="50"
+              data-prop-value="this.search()"
+              data-on-change="this.search(event.target.value)"
+              data-on-keydown="this.handleKeydown(event)"
+              data-on-input="this.handleInput(event)"
+              >Search</vscode-text-field
+            >
+          </div>
+        </section>
+        -->
+      </header>
+
+      <section class="content">
+        <template
+          data-if="this.waitingForResults() && this.streamState() === 'running' && this.streamError() == null"
+        >
+          <div class="grid-banner">
+            <vscode-progress-ring></vscode-progress-ring>
+            <label>Waiting for results…</label>
+          </div>
+        </template>
+
+        <template
+          data-if="this.waitingForResults() && this.streamState() === 'paused' && this.streamError() == null"
+        >
+          <div class="grid-banner">
+            <span class="codicon codicon-debug-pause banner-pending"></span>
+            <label>Paused</label>
+          </div>
+        </template>
+
+        <template data-if="this.waitingForResults() && this.streamError() != null">
+          <div class="grid-banner">
+            <span class="codicon codicon-error banner-error"></span>
+            <label>Failed to load results.</label>
+            <label data-text="this.streamError().message"></label>
+          </div>
+        </template>
+
+        <template data-if="this.emptyFilterResult()">
+          <div class="grid-banner">
+            <p>Unable to find results for current search</p>
+          </div>
+        </template>
+
+        <template data-if="this.hasResults()">
+          <table
+            class="grid"
+            cellpadding="0"
+            cellspacing="0"
+            data-prop-style="this.gridTemplateColumns()"
+          >
+            <thead class="sticky-table-header">
+              <tr class="grid-row">
+                <template data-for="column of this.visibleColumns() by column">
+                  <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
+                    <span data-text="this.columns()[this.column()].title()"></span>
+                    <div
+                      class="resize-handler"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns()[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns()[this.column()].index)"
+                      data-on-pointerup="this.handleStopResize(event)"
+                    ></div>
+                  </th>
+                </template>
+
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
+                  popovertarget="columnSettings"
+                  data-on-click="window.columnSettings.togglePopover()"
+                  data-position="bottom-end"
+                  tabindex="-1"
+                >
+                  <span class="codicon codicon-gear"></span>
+                </th>
+              </tr>
+            </thead>
+
+            <section popover id="columnSettings" class="column-control">
+              <div class="flex-column" style="--gap: 0">
+                <label>Columns</label>
+                <template data-for="column of this.allColumns() by column">
+                  <label class="checkbox">
+                    <input
+                      type="checkbox"
+                      data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)"
+                    />
+                    <span data-text="this.columns()[this.column()].title()"></span>
+                  </label>
+                </template>
+              </div>
+            </section>
+
+            <tbody>
+              <template data-for="result of this.snapshot().results">
+                <tr class="grid-row">
+                  <template data-for="column of this.visibleColumns() by column">
+                    <td
+                      class="grid-cell cell-text-overflow"
+                      tabindex="-1"
+                      data-children="((this.columns())[this.column()]).children(this.result())"
+                      data-prop-title="((this.columns())[this.column()]).title()"
+                    ></td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
+      </section>
+
+      <footer class="results-viewer-pagination">
+        <div class="flex-row" style="flex-wrap: wrap">
+          <div class="no-shrink">
+            <vscode-button
+              appearance="icon"
+              aria-label="Previous page"
+              title="Previous page"
+              id="prevPage"
+              data-on-click="this.page((v) => v - 1)"
+              data-attr-disabled="!this.prevPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-left"></span>
+            </vscode-button>
+
+            <vscode-button
+              appearance="icon"
+              aria-label="Next page"
+              title="Next page"
+              id="nextPage"
+              data-on-click="this.page((v) => v + 1)"
+              data-attr-disabled="!this.nextPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-right"></span>
+            </vscode-button>
+
+            <template data-for="pageButton of this.pageButtons() by pageButton">
+              <vscode-button
+                appearance="icon"
+                data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-on-click="this.page(this.pageButton())"
+                data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
+                data-attr-disabled="!this.isPageButton(this.pageButton())"
+                data-attr-active="this.page() === this.pageButton()"
+                style="white-space: nowrap"
+              ></vscode-button>
+            </template>
+          </div>
+          <template data-if="this.pageStatLabel() != null">
+            <div class="no-shrink">
+              <vscode-button
+                appearance="icon"
+                aria-label="Results stats"
+                title="Results stats"
+                id="pageOutput"
+                data-text="this.pageStatLabel()"
+              ></vscode-button>
+            </div>
+          </template>
+        </div>
+        <!-- <div>
+          <vscode-button
+            appearance="icon"
+            aria-label="Open results as JSON"
+            title="Open results as JSON"
+            data-on-click="this.previewJSON()"
+          >
+            <span class="codicon codicon-json"></span>
+          </vscode-button>
+        </div> -->
+      </footer>
+    </main>
+
+    <style nonce="${nonce}">
+      html,
+      body,
+      main {
+        height: 100%;
+      }
+      body {
+        padding: 0; /* override */
+      }
+
+      h4 {
+        text-transform: uppercase;
+        margin: 0 0 0.5rem 0;
+        font-size: 95%;
+      }
+      p {
+        margin: 0;
+      }
+
+      .results-viewer-settings {
+        display: flex;
+        flex-direction: column;
+      }
+      .results-viewer-settings > * {
+        padding: 12px;
+      }
+      .results-viewer-pagination {
+        padding: 6px 12px;
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+        background: var(--vscode-sideBarTitle-background);
+        border-top: 1px solid var(--vscode-sideBar-border);
+      }
+      .results-viewer-pagination vscode-button {
+        min-width: 22px;
+      }
+      .results-viewer-pagination [active="true"] {
+        background: var(--vscode-list-activeSelectionBackground, #094771);
+        color: var(--vscode-list-activeSelectionForeground, #ffffff);
+      }
+      .flink-settings {
+        background: var(--vscode-sideBarTitle-background);
+        border-bottom: 1px solid var(--vscode-sideBar-border);
+      }
+      .sticky-table-header {
+        position: sticky;
+        top: 0;
+        background: var(--vscode-editor-background);
+        z-index: 1;
+      }
+      .wrapper {
+        display: flex;
+        flex-direction: column;
+      }
+      /* .histogram {
+        min-height: 65px;
+        padding: 6px 12px;
+        box-sizing: content-box;
+      }
+      .histogram-label {
+        padding: 0 12px;
+        color: var(--vscode-editor-foreground);
+        font-size: var(--vscode-font-size);
+        line-height: normal;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      } */
+      .content {
+        flex: 1;
+        overflow: auto;
+      }
+
+      .cell-text-overflow {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .flex-row {
+        display: flex;
+        flex-direction: row;
+        column-gap: var(--gap, 1rem);
+      }
+      .flex-column {
+        display: flex;
+        flex-direction: column;
+        row-gap: var(--gap, 1rem);
+      }
+      .no-shrink {
+        flex-shrink: 0;
+      }
+
+      #pageStatControl {
+        --gap: 0.5rem;
+      }
+      .dropdown-container {
+        box-sizing: border-box;
+        display: flex;
+        flex-flow: column nowrap;
+        align-items: flex-start;
+        justify-content: flex-start;
+      }
+
+      .fixed-min-width {
+        min-width: 8rem;
+      }
+      .fixed-min-width > * {
+        width: 100%;
+      }
+
+      .dropdown-container > label {
+        display: block;
+        color: var(--vscode-editor-foreground);
+        cursor: pointer;
+        font-size: var(--vscode-font-size);
+        line-height: normal;
+        margin-bottom: 2px;
+        white-space: nowrap;
+      }
+
+      .grid-banner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 10rem;
+        gap: 1rem;
+      }
+      .codicon.banner-error {
+        font-size: 28px;
+        color: var(--vscode-editorError-foreground);
+      }
+      .codicon.banner-pending {
+        font-size: 28px;
+        color: var(--vscode-progressBar-background);
+      }
+      .grid-settings-control {
+        grid-column: -1;
+        grid-row: 1;
+        justify-self: end;
+        cursor: pointer;
+      }
+      .grid-settings-control:hover {
+        background: var(--dropdown-background);
+        border-color: var(--dropdown-border);
+      }
+
+      .resize-handler {
+        cursor: ew-resize;
+        width: 4px;
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+      }
+
+      .control {
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+        background: var(--dropdown-background);
+        border: 1px solid var(--dropdown-border);
+        border-radius: calc(var(--corner-radius-round) * 1px);
+        color: var(--vscode-editor-foreground);
+        cursor: pointer;
+        font-family: var(--font-family);
+        font-size: var(--type-ramp-base-font-size);
+        line-height: var(--type-ramp-base-line-height);
+        height: calc(var(--input-height) * 1px);
+        padding: 2px 6px 2px 8px;
+        width: 100%;
+      }
+      .control:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+      .control:not(:disabled):hover {
+        background: var(--dropdown-background);
+        border-color: var(--dropdown-border);
+      }
+      .control:not(:disabled):focus {
+        border-color: var(--focus-border);
+      }
+      .control-label {
+        flex: 1;
+        text-align: left;
+      }
+
+      .grid-row .codicon {
+        display: flex;
+        font-size: 14px;
+      }
+
+      .timer {
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 2px 0;
+        line-height: 1;
+        flex: 1;
+        align-items: center;
+        display: flex;
+        color: var(--vscode-editor-foreground);
+      }
+      .timer.paused {
+        opacity: 0.5;
+      }
+    </style>
+    <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
+    <script type="module" nonce="${nonce}" src="${path('flink-statement-results.js')}"></script>
+  </body>
+</html>
