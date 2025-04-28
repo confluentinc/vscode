@@ -8,7 +8,6 @@ import {
 import { IconNames } from "../constants";
 import {
   FlinkStatement,
-  FlinkStatementStatus,
   FlinkStatementTreeItem,
   STATUS_BLUE,
   STATUS_GRAY,
@@ -18,6 +17,7 @@ import {
 } from "./flinkStatement";
 import { CustomMarkdownString, KeyValuePairArray } from "./main";
 import { EnvironmentId } from "./resource";
+import { SqlV1Statement, SqlV1StatementStatus } from "../clients/flinkSql";
 
 describe("FlinkStatement", () => {
   it("uses name as id", () => {
@@ -151,6 +151,6 @@ describe("FlinkStatementTreeItem", () => {
   });
 });
 
-function makeStatus(phase: string): FlinkStatementStatus {
+function makeStatus(phase: string): SqlV1StatementStatus {
   return createFlinkStatement({ phase: phase }).status;
 }

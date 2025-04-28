@@ -13,6 +13,7 @@ import {
 } from "../clients/flinkSql";
 import * as sidecar from "../sidecar";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
+import { OrganizationId } from "../models/resource";
 
 describe("CCloudResourceLoader", () => {
   describe("getFlinkStatements", () => {
@@ -33,7 +34,7 @@ describe("CCloudResourceLoader", () => {
       mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkStatementsApiStub);
       sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
 
-      sandbox.stub(resourceLoader, "getOrganizationId").resolves(testOrgId);
+      sandbox.stub(resourceLoader, "getOrganizationId").resolves(testOrgId as OrganizationId);
     });
 
     afterEach(() => {
