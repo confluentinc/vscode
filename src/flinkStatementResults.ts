@@ -8,6 +8,7 @@ import { FlinkStatement } from "./models/flinkStatement";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import {
+  FetchError,
   GetSqlv1StatementResult200Response,
   SqlV1StatementResultResults,
 } from "./clients/flinkSql";
@@ -19,13 +20,14 @@ import { type post } from "./webview/flink-statement-results";
 import flinkStatementResults from "./webview/flink-statement-results.html";
 import { logError, showErrorNotificationWithButtons } from "./errors";
 import { parseResults } from "./utils/flinkStatementResults";
-import { isStatementTerminal } from "./utils/flinkStatementUtils";
 
 const logger = new Logger("flink-statement-results");
 
 export function activateFlinkStatementResultsViewer(context: ExtensionContext) {
   const schedule = scheduler(4, 500);
 
+  // These variables are unused in the current implementation,
+  // but are kept for future use. Can be removed later if deemed unnecessary.
   let activeStatement: FlinkStatement | null = null;
   let activeConfig: FlinkStatementResultsViewerConfig | null = null;
   const cache = new WebviewPanelCache();
@@ -215,7 +217,7 @@ function flinkStatementResultsStartPollingCommand(
       let reportable: { message: string } | null = null;
       let shouldPause = false;
 
-      if (error instanceof Error && error.name === "AbortError") return;
+      if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
 
       if (error instanceof ResponseError) {
         const payload = await error.response.json();
