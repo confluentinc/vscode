@@ -1,6 +1,7 @@
 import {
   CodeLens,
   CodeLensProvider,
+  Command,
   Disposable,
   Event,
   EventEmitter,
@@ -8,19 +9,15 @@ import {
   Range,
   TextDocument,
 } from "vscode";
-import { DocumentMetadataManager } from "../documentMetadataManager";
-import {
-  ccloudConnected,
-  uriCCloudEnvSet,
-  uriCCloudOrgSet,
-  uriCCloudRegionProviderSet,
-} from "../emitters";
+import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudOrganization } from "../models/organization";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { ProviderRegion } from "../types";
+import { UriMetadataKeys } from "../storage/constants";
+import { ResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("codelens.flinkSqlProvider");
 
@@ -37,25 +34,12 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
       logger.debug("ccloudConnected event fired, updating codelenses", { connected });
       this._onDidChangeCodeLenses.fire();
     });
-    const uriCCloudOrgSetSub: Disposable = uriCCloudOrgSet.event(() => {
-      logger.debug("uriCCloudOrgSet event fired, updating codelenses");
-      this._onDidChangeCodeLenses.fire();
-    });
-    const uriCCloudEnvSetSub: Disposable = uriCCloudEnvSet.event(() => {
-      logger.debug("uriCCloudEnvSet event fired, updating codelenses");
-      this._onDidChangeCodeLenses.fire();
-    });
-    const uriCCloudRegionProviderSetSub: Disposable = uriCCloudRegionProviderSet.event(() => {
-      logger.debug("uriCCloudRegionProviderSet event fired, updating codelenses");
+    const uriMetadataSetSub: Disposable = uriMetadataSet.event(() => {
+      logger.debug("uriMetadataSet event fired, updating codelenses");
       this._onDidChangeCodeLenses.fire();
     });
 
-    this.disposables.push(
-      ccloudConnectedSub,
-      uriCCloudOrgSetSub,
-      uriCCloudEnvSetSub,
-      uriCCloudRegionProviderSetSub,
-    );
+    this.disposables.push(ccloudConnectedSub, uriMetadataSetSub);
   }
 
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
@@ -65,70 +49,65 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     const range = new Range(new Position(0, 0), new Position(0, 0));
 
     if (!hasCCloudAuthSession()) {
-      // show single codelens to sign in
+      // show single codelens to sign in to CCloud since we need to be able to list CCloud resources
+      // in the other codelenses (via quickpicks) below
       const signInLens = new CodeLens(range, {
         title: "Sign in to Confluent Cloud",
         command: "confluent.connections.ccloud.signIn",
         tooltip: "Sign in to Confluent Cloud",
         arguments: [],
-      });
-      codeLenses.push(signInLens);
-    } else {
-      // show current org, environment, and region/provider
-      const org: CCloudOrganization = await CCloudResourceLoader.getInstance().getOrganization();
-      const orgLens = new CodeLens(range, {
-        title: `CCloud Org: "${org.name}"`,
-        command: "confluent.document.setCCloudOrg",
-        tooltip: "Set CCloud Organization for Flink Statement",
+      } as Command);
+      return [signInLens];
+    }
+
+    // codelens for changing org
+    const org: CCloudOrganization = await CCloudResourceLoader.getInstance().getOrganization();
+    const orgLens = new CodeLens(range, {
+      title: org.name,
+      command: "confluent.document.setCCloudOrg",
+      tooltip: "Set CCloud Organization for Flink Statement",
+      arguments: [document.uri],
+    } as Command);
+    codeLenses.push(orgLens);
+
+    let computePool: CCloudFlinkComputePool | undefined;
+
+    // look up document metadata from extension state
+    const rm = ResourceManager.getInstance();
+    const uriMetadata: Record<UriMetadataKeys, any> | undefined = await rm.getUriMetadata(
+      document.uri,
+    );
+    logger.debug("doc metadata", document.uri.toString(), {
+      uriMetadata,
+    });
+
+    // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
+    // needed for various Flink operations (env ID, provider/region, etc)
+    const computePoolString: string | undefined = uriMetadata?.[UriMetadataKeys.COMPUTE_POOL_ID];
+    if (computePoolString) {
+      const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
+      const env: CCloudEnvironment | undefined = envs.find((e) =>
+        e.flinkComputePools.some((pool) => pool.id === computePoolString),
+      );
+      const computePools: CCloudFlinkComputePool[] = env?.flinkComputePools || [];
+      computePool = computePools.find((p) => p.id === computePoolString);
+    }
+    const computePoolLens = new CodeLens(range, {
+      title: computePoolString ? computePoolString : "Set Compute Pool",
+      command: "confluent.document.flinksql.setCCloudComputePool",
+      tooltip: "Set CCloud Compute Pool for Flink Statement",
+      arguments: [document.uri],
+    } as Command);
+    codeLenses.push(computePoolLens);
+
+    if (computePool) {
+      const submitLens = new CodeLens(range, {
+        title: "▶️ Submit Statement",
+        command: "confluent.flinksql.submitStatement",
+        tooltip: "Submit Flink Statement to CCloud",
         arguments: [document.uri],
-      });
-
-      let env: CCloudEnvironment | undefined;
-      let providerRegion: ProviderRegion | undefined;
-
-      const metadata: Record<string, any> =
-        DocumentMetadataManager.getInstance().getMetadata(document);
-      logger.debug("doc metadata", { uri: document.uri.toString(), metadata });
-
-      const envIdString: string | undefined = metadata.ccloudEnvId;
-      if (envIdString) {
-        const envs: CCloudEnvironment[] =
-          await CCloudResourceLoader.getInstance().getEnvironments();
-        env = envs.find((e) => e.id === envIdString);
-      }
-      const envLens = new CodeLens(range, {
-        title: env ? `Env: "${env.name}"` : "Set Environment",
-        command: "confluent.document.flinksql.setCCloudEnv",
-        tooltip: "Set CCloud Environment for Flink Statement",
-        arguments: [document.uri, true], // onlyFlinkEnvs=true
-      });
-
-      const providerRegionString: string | undefined = metadata.ccloudProviderRegion as
-        | string
-        | undefined;
-      if (providerRegionString) {
-        providerRegion = JSON.parse(providerRegionString) as ProviderRegion;
-      }
-
-      const providerRegionLens = new CodeLens(range, {
-        title: providerRegion
-          ? `Provider & Region: "${providerRegion.provider}.${providerRegion.region}"`
-          : "Set Region/Provider",
-        command: "confluent.document.flinksql.setCCloudRegionProvider",
-        tooltip: "Set CCloud Region/Provider for Flink Statement",
-        arguments: [document.uri],
-      });
-      codeLenses.push(orgLens, envLens, providerRegionLens);
-
-      if (env && providerRegion) {
-        const submitLens = new CodeLens(range, {
-          title: "▶️ Submit Statement",
-          command: "confluent.flinksql.submitStatement",
-          tooltip: "Submit Flink Statement to CCloud",
-          arguments: [document.uri],
-        });
-        codeLenses.push(submitLens);
-      }
+      } as Command);
+      codeLenses.unshift(submitLens);
     }
 
     return codeLenses;
