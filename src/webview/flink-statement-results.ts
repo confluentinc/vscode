@@ -273,8 +273,9 @@ class FlinkStatementResultsViewModel extends ViewModel {
    */
   colWidth = this.signal(
     // conveniently expressed in rems (1rem = 16px)
-    // TODO(rohitsanj): This needs to be set dynamically
-    //                  based on the number of columns.
+    // TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1567
+    //                                       Dynamic column widths should be handled by the reusable
+    //                                       component.
     storage.get()?.colWidth ?? [13 * 16, 5.5 * 16, 6.5 * 16, 6 * 16],
     // skip extra re-renders if the user didn't move pointer too much
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),

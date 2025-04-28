@@ -183,8 +183,7 @@ function flinkStatementResultsStartPollingCommand(
   });
 
   os.watch(async (signal) => {
-    // TODO(rohitsanj): Statement details need to be re-fetched every Nth fetch
-    //                  of the statement results. 4 is what CCloud UI does.
+    // TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1588
     if (!shouldPoll()) {
       return;
     }
@@ -196,7 +195,6 @@ function flinkStatementResultsStartPollingCommand(
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       os.batch(() => {
-        // Log size of the results before update
         parseResults({
           columns: statement.status?.traits?.schema?.columns ?? [],
           isAppendOnly: statement.status?.traits?.is_append_only ?? true,
@@ -207,9 +205,8 @@ function flinkStatementResultsStartPollingCommand(
         });
         // Check if we have more results to fetch
         moreResults(extractPageToken(response?.metadata?.next) !== undefined);
-        // Log size of the results after update
         latestError(null);
-        // TODO(rohitsanj): Wait 800 ms before re-triggering this watcher
+        // TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1591
         latestResult(response);
         notifyUI();
       });
