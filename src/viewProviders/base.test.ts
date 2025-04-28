@@ -14,12 +14,9 @@ import { ContextValues } from "../context/values";
 import { ccloudConnected } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
-import {
-  FlinkStatement,
-  FlinkStatementStatus,
-  FlinkStatementTreeItem,
-} from "../models/flinkStatement";
+import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
+import { SqlV1StatementStatus } from "../clients/flinkSql";
 
 /** Sample view provider subclass for testing {@link BaseViewProvider}. */
 class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement> {
@@ -395,6 +392,6 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   });
 });
 
-function makeStatus(phase: string): FlinkStatementStatus {
+function makeStatus(phase: string): SqlV1StatementStatus {
   return createFlinkStatement({ phase: phase }).status;
 }
