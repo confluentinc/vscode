@@ -1,6 +1,7 @@
 // (Copyright) Confluent, Inc.
 
 import { randomUUID } from "crypto";
+import { hashed } from "./cryptography";
 
 export class FlinkStatementTraitsSchema {
   columns?: ColumnDetails[];
@@ -69,14 +70,15 @@ export const DEFAULT_RESULTS_LIMIT = 10_000;
 export const INTERNAL_COUNT_KEEP_LAST_ROW = "INTERNAL_COUNT_KEEP_LAST_ROW";
 
 export const generateRowId = (row: any, upsertColumns?: number[]): string => {
-  // TODO (jvoronin): optimize with hashing?
   let result = row;
   // If upsertColumns exists, use that to generate row ID/key.
   if (upsertColumns) {
     // @ts-ignore
     result = row.filter((_val, idx) => upsertColumns.includes(idx));
   }
-  return JSON.stringify(result.join("-")).replace(/[\\"]/g, "");
+
+  // Trade CPU for memory and hash the concatenated row values.
+  return hashed(JSON.stringify(result.join("-")).replace(/[\\"]/g, ""));
 };
 
 export const mapColumnsToRowData = (
