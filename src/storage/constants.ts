@@ -11,8 +11,6 @@ export enum WorkspaceStorageKeys {
 
   /** CCloud Kafka topics */
   CCLOUD_KAFKA_TOPICS = "ccloudKafkaTopics",
-  /** Local Kafka topics, should be removed in #638 */
-  LOCAL_KAFKA_TOPICS = "localKafkaTopics",
 
   /** CCloud schema registries */
   CCLOUD_SCHEMA_REGISTRIES = "ccloudSchemaRegistries",
