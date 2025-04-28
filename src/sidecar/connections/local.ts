@@ -15,7 +15,6 @@ import {
 import { MANAGED_CONTAINER_LABEL } from "../../docker/constants";
 import { getContainersForImage } from "../../docker/containers";
 import { Logger } from "../../logging";
-
 const logger = new Logger("sidecar.connections.local");
 
 /** Create the local {@link Connection} and return it. */
