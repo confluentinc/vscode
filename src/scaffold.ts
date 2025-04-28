@@ -16,7 +16,7 @@ import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError, showErrorNotificationWithButtons } from "./errors";
 import { Logger } from "./logging";
-import { FlinkStatement } from "./models/flinkStatement";
+import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
 import { QuickPickItemWithValue } from "./quickpicks/types";
@@ -51,7 +51,9 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
 
 let isFlinkTemplate = false;
 
-async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic | FlinkStatement) {
+async function resourceScaffoldProjectRequest(
+  item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
+) {
   if (item instanceof KafkaCluster) {
     const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
     return await scaffoldProjectRequest({
@@ -72,14 +74,14 @@ async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic |
       cc_topic: item.name,
       topic: item.name,
     });
-  } else if (item instanceof FlinkStatement) {
+  } else if (item instanceof CCloudFlinkComputePool) {
     // Handle Flink statements
     isFlinkTemplate = true;
     return await scaffoldProjectRequest({
-      flink_statement: item.name,
-      flink_statement_sql: item.sqlStatement,
-      environment_id: item.environmentId,
-      //TODO: proper options
+      cc_environment_id: item.environmentId,
+      cloud_region: item.region,
+      cloud_provider: item.provider,
+      cc_compute_pool_id: item.id,
     });
   }
 }
@@ -100,7 +102,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
         const tags = template.spec?.tags || [];
         const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
         if (isFlinkTemplate) {
-          const hasFlinkTemplate = tags.includes("flink") || tags.includes("Flink");
+          const hasFlinkTemplate = tags.includes("apache flink") || tags.includes("table api");
           return hasFlinkTemplate;
         }
         return hasProducerOrConsumer;

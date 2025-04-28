@@ -1154,7 +1154,7 @@
         },
         {
           "command": "confluent.resources.scaffold",
-          "when": "view in confluent.viewsWithResources && ((viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*-topic.*/) || viewItem =~ /.*flink-statement*/)"
+          "when": "view in confluent.viewsWithResources && ((viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*-topic.*/) || viewItem =~ /.*compute-pool*/)"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
