@@ -86,7 +86,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { ccloudConnected } from "./emitters";
+import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
 
 const logger = new Logger("extension");
 
@@ -191,6 +191,8 @@ async function _activateExtension(
     ...topicViewProvider.disposables,
     ...schemasViewProvider.disposables,
     ...supportViewProvider.disposables,
+    ...statementsViewProvider.disposables,
+    ...artifactsViewProvider.disposables,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
@@ -239,42 +241,12 @@ async function _activateExtension(
   context.subscriptions.push(
     uriHandler,
     WebsocketManager.getInstance(),
+    initializeFlinkConfigManager(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
     ...documentProviders,
   );
-  const flinkEnabled = vscode.workspace.getConfiguration().get(ENABLE_FLINK, false);
-  let flinkSqlDisposables: vscode.Disposable[] = [
-    // ...registerFlinkComputePoolCommands(), // Optional: we could register ALL Flink stuff here
-    ...statementsViewProvider.disposables,
-    ...artifactsViewProvider.disposables,
-    registerFlinkSqlDocumentListener(),
-  ];
-  const initFlinkSqlFeatures = async (isAuthenticated: boolean) => {
-    if (flinkEnabled) {
-      context.subscriptions.push(...flinkSqlDisposables);
-      logger.info("Flink SQL features initialized");
-      if (isAuthenticated) {
-        logger.info("User authenticated and Flink enabled.");
-        try {
-          await promptChooseDefaultComputePool();
-          // Coming soon: initialize the language client here
-          // // const languageClient = await initializeLanguageClient();
-        } catch (e) {
-          logger.error(`Error initializing FlinkSQL defaults: ${e}`);
-        }
-      }
-    } else {
-      logger.info("Flink SQL features disabled");
-      flinkSqlDisposables = [];
-    }
-  };
-  const authListener = ccloudConnected.event(async (isConnected) => {
-    // Coming soon: close down language client connection on log out
-    await initFlinkSqlFeatures(isConnected);
-  });
-  context.subscriptions.push(authListener);
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);

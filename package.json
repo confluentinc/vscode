@@ -598,11 +598,6 @@
             "order": 1,
             "description": "ID for the default CCloud compute pool to use for Flink SQL operations."
           },
-          "confluent.flink.catalog": {
-            "type": "string",
-            "default": "",
-            "description": "Name or ID for default CCloud Flink SQL catalog (environment) to use for Flink SQL operations"
-          },
           "confluent.flink.database": {
             "type": "string",
             "default": "",

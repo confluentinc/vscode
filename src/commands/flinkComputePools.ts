@@ -64,9 +64,10 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
   currentFlinkArtifactsPoolChanged.fire(pool);
   commands.executeCommand("confluent-flink-artifacts.focus");
 }
+
 /**
- * Show a quickpick to select a default compute pool, database, and catalog for Flink SQL operations.
- * This is used when the user opens a Flink SQL file or first logs into CCloud.
+ * Show a quickpick to select a default {@link FlinkComputePool} and database
+ * for Flink SQL operations.
  */
 export async function configureFlinkDefaults() {
   const config: Record<string, any> = await workspace.getConfiguration("confluent");
@@ -77,14 +78,7 @@ export async function configureFlinkDefaults() {
     .getConfiguration()
     .update("confluent.flink.computePoolId", computePool?.id, false);
 
-  // TODO NC db and catalog should be quickpicks too eventually
-  const catalog = await window.showInputBox({
-    prompt:
-      "Name or ID for default CCloud Flink SQL catalog (environment) to use for Flink SQL operations",
-    value: flinkConfig["catalog"],
-  });
-  await workspace.getConfiguration().update("confluent.flink.catalog", catalog, false);
-
+  // TODO NC db can be switched to filtered quickpick when available
   const database = await window.showInputBox({
     prompt: "Name or ID for default CCloud database (topic) to use for Flink SQL operations",
     value: flinkConfig["database"],
