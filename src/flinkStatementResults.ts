@@ -143,7 +143,7 @@ function flinkStatementResultsStartPollingCommand(
   const os = ObservableScope();
 
   /** Is stream currently running or being paused?  */
-  const state = os.signal<"running" | "paused">("running");
+  const state = os.signal<"running" | "paused" | "completed">("running");
   /** A signal that indicates if there are more results to fetch. */
   const moreResults = os.signal(true);
   const shouldPoll = os.derive<boolean>(() => state() === "running" && moreResults());
@@ -188,6 +188,9 @@ function flinkStatementResultsStartPollingCommand(
       return;
     }
 
+    let reportable: { message: string } | null = null;
+    let shouldPause = false;
+
     try {
       const currentResults = results();
       const pageToken = extractPageToken(latestResult()?.metadata?.next);
@@ -204,16 +207,16 @@ function flinkStatementResultsStartPollingCommand(
           rows: resultsData.data,
         });
         // Check if we have more results to fetch
-        moreResults(extractPageToken(response?.metadata?.next) !== undefined);
+        if (extractPageToken(response?.metadata?.next) === undefined) {
+          moreResults(false);
+          state("completed");
+        }
         latestError(null);
         // TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1591
         latestResult(response);
         notifyUI();
       });
     } catch (error) {
-      let reportable: { message: string } | null = null;
-      let shouldPause = false;
-
       if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
 
       if (error instanceof ResponseError) {
@@ -256,7 +259,7 @@ function flinkStatementResultsStartPollingCommand(
         reportable = { message: "An internal error occurred." };
         shouldPause = true;
       }
-
+    } finally {
       os.batch(() => {
         if (shouldPause) {
           state("paused");
@@ -326,11 +329,16 @@ function flinkStatementResultsStartPollingCommand(
       case "StreamPause": {
         state("paused");
         timer((timer) => timer.pause());
+        notifyUI();
         return null satisfies MessageResponse<"StreamPause">;
       }
       case "StreamResume": {
+        if (state() === "completed") {
+          return null satisfies MessageResponse<"StreamResume">;
+        }
         state("running");
         timer((timer) => timer.resume());
+        notifyUI();
         return null satisfies MessageResponse<"StreamResume">;
       }
       default: {
