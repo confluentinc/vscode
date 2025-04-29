@@ -1,17 +1,13 @@
 import { commands, Disposable, TextDocument, Uri, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { DocumentMetadataManager } from "../documentMetadataManager";
-import { uriCCloudEnvSet, uriCCloudOrgSet, uriCCloudRegionProviderSet } from "../emitters";
+import { uriMetadataSet } from "../emitters";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudOrganization } from "../models/organization";
-import {
-  ccloudEnvironmentQuickPick,
-  flinkCcloudEnvironmentQuickPick,
-} from "../quickpicks/environments";
-import { providerRegionQuickPick } from "../quickpicks/providerRegion";
-import { ProviderRegion } from "../types";
+import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
+import { UriMetadataKeys } from "../storage/constants";
+import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("commands.documents");
 
@@ -34,24 +30,21 @@ export async function setCCloudOrgForUriCommand(uri?: Uri) {
     return;
   }
 
-  logger.debug("setting 'ccloudOrgId' for document", { uri, orgId: org.id });
-  await DocumentMetadataManager.getInstance().set(doc, "ccloudOrgId", org.id);
-
-  uriCCloudOrgSet.fire({
-    uri,
+  logger.debug("setting metadata for document", {
+    uri: uri.toString(),
     orgId: org.id,
   });
+  await getResourceManager().setUriMetadataValue(uri, UriMetadataKeys.CCLOUD_ORG_ID, org.id);
+  uriMetadataSet.fire(uri);
 }
 
-export async function setCCloudEnvForUriCommand(uri?: Uri, onlyFlinkEnvs: boolean = false) {
+export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
   if (!(uri instanceof Uri)) {
     return;
   }
 
-  const environment: CCloudEnvironment | undefined = onlyFlinkEnvs
-    ? await flinkCcloudEnvironmentQuickPick()
-    : await ccloudEnvironmentQuickPick();
-  if (!environment) {
+  const pool: CCloudFlinkComputePool | undefined = await flinkComputePoolQuickPick();
+  if (!pool) {
     return;
   }
 
@@ -61,60 +54,29 @@ export async function setCCloudEnvForUriCommand(uri?: Uri, onlyFlinkEnvs: boolea
     return;
   }
 
-  logger.debug("setting 'ccloudEnvId' for document", { uri, envId: environment.id });
-  await DocumentMetadataManager.getInstance().set(doc, "ccloudEnvId", environment.id);
-
-  uriCCloudEnvSet.fire({
-    uri,
-    envId: environment.id,
+  logger.debug(`setting metadata for document`, {
+    uri: uri.toString(),
+    envId: pool.environmentId,
+    provider: pool.provider,
+    region: pool.region,
+    computePoolId: pool.id,
   });
-}
 
-export async function setCCloudRegionProviderForUriCommand(uri?: Uri) {
-  if (!(uri instanceof Uri)) {
-    return;
-  }
-
-  const providerRegion: ProviderRegion | undefined = await providerRegionQuickPick(
-    (env) => env.flinkComputePools.length > 0,
-  );
-  if (!providerRegion) {
-    return;
-  }
-
-  const doc: TextDocument = await workspace.openTextDocument(uri);
-  if (!doc) {
-    logger.error("Failed to open document for uri", { uri });
-    return;
-  }
-
-  logger.debug("setting 'ccloudProviderRegion' for document", {
-    uri,
-    provider: providerRegion.provider,
-    region: providerRegion.region,
+  await getResourceManager().setUriMetadata(uri, {
+    [UriMetadataKeys.CCLOUD_PROVIDER]: pool.provider,
+    [UriMetadataKeys.CCLOUD_REGION]: pool.region,
+    [UriMetadataKeys.ENVIRONMENT_ID]: pool.environmentId,
+    [UriMetadataKeys.COMPUTE_POOL_ID]: pool.id,
   });
-  await DocumentMetadataManager.getInstance().set(
-    doc,
-    "ccloudProviderRegion",
-    JSON.stringify(providerRegion),
-  );
-
-  uriCCloudRegionProviderSet.fire({
-    uri,
-    region: providerRegion,
-  });
+  uriMetadataSet.fire(uri);
 }
 
 export function registerDocumentCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.document.setCCloudOrg", setCCloudOrgForUriCommand),
     registerCommandWithLogging(
-      "confluent.document.flinksql.setCCloudEnv",
-      setCCloudEnvForUriCommand,
-    ),
-    registerCommandWithLogging(
-      "confluent.document.flinksql.setCCloudRegionProvider",
-      setCCloudRegionProviderForUriCommand,
+      "confluent.document.flinksql.setCCloudComputePool",
+      setCCloudComputePoolForUriCommand,
     ),
   ];
 }
