@@ -10,6 +10,8 @@ import {
   flinkComputePoolQuickPickWithViewProgress,
 } from "../quickpicks/flinkComputePools";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
+import { KafkaCluster } from "../models/kafkaCluster";
+import { flinkDatabaseQuickpick, logger } from "../quickpicks/kafkaClusters";
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
@@ -65,25 +67,26 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
 }
 
 /**
- * Show a quickpick to select a default {@link FlinkComputePool} and database
+ * Show a quickpick to select a default setting for {@link FlinkComputePool} and database
  * for Flink SQL operations.
  */
 export async function configureFlinkDefaults() {
-  const config: Record<string, any> = await workspace.getConfiguration("confluent");
-  const flinkConfig = config["flink"] || {};
-  // TODO in the near future, let's make this default to the current pool, if any
   const computePool = await flinkComputePoolQuickPick();
+  if (!computePool) {
+    logger.debug("No compute pool selected & none found in configuration, skipping flink config");
+    return;
+  }
   await workspace.getConfiguration().update(FLINK_CONFIG_COMPUTE_POOL, computePool?.id, false);
 
-  // TODO NC db can be switched to filtered quickpick when available
-  const database = await window.showInputBox({
-    prompt:
-      "Name or ID for default CCloud database (Kafka cluster) to use for Flink SQL operations",
-    value: flinkConfig["database"],
-  });
-  await workspace.getConfiguration().update(FLINK_CONFIG_DATABASE, database, false);
+  const databaseCluster: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
+  if (!databaseCluster) {
+    logger.debug("User canceled the default database quickpick");
+    return;
+  }
+  // Note: we can use name or ID for Language Server, but name used in Cloud UI since what you send is what shows in completions documentation
+  await workspace.getConfiguration().update(FLINK_CONFIG_DATABASE, databaseCluster.name, false);
 
-  window.showInformationMessage("Flink SQL settings updated.", "View").then((selection) => {
+  window.showInformationMessage("Flink SQL defaults updated.", "View").then((selection) => {
     if (selection === "View") {
       commands.executeCommand(
         "workbench.action.openSettings",
