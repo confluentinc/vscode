@@ -60,7 +60,7 @@ async function showNotificationWithButtons(
   message: string,
   buttons?: Record<string, (() => void) | (() => Promise<void>)>,
 ) {
-  const buttonMap = buttons || level === "error" ? DEFAULT_ERROR_NOTIFICATION_BUTTONS : {};
+  const buttonMap = buttons || (level === "error" ? DEFAULT_ERROR_NOTIFICATION_BUTTONS : {});
 
   // we're awaiting the user's selection to more easily test the callback behavior, rather than
   // chaining with .then()
