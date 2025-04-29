@@ -20,7 +20,7 @@ export const TEST_LOCAL_KAFKA_CLUSTER: LocalKafkaCluster = LocalKafkaCluster.cre
 export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.create({
   id: "lkc-abc123",
   name: "test-ccloud-kafka-cluster",
-  provider: TEST_CCLOUD_PROVIDER.toUpperCase(),
+  provider: TEST_CCLOUD_PROVIDER,
   region: TEST_CCLOUD_REGION,
   bootstrapServers: `SASL_SSL://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud:443`,
   uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud:443`,
