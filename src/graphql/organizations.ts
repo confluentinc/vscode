@@ -1,8 +1,9 @@
 import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudOrganization } from "../models/organization";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 
 const logger = new Logger("graphql.organizations");

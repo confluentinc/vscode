@@ -11,9 +11,9 @@ import {
 import { getCredentialsType } from "../../directConnections/credentials";
 import { FormConnectionType, SupportedAuthTypes } from "../../directConnections/types";
 import { connectionStable, environmentChanged } from "../../emitters";
-import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { CustomConnectionSpec, getResourceManager } from "../../storage/resourceManager";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import {

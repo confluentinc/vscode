@@ -19,7 +19,7 @@ import {
   localSchemaRegistryConnected,
   resourceSearchSet,
 } from "../emitters";
-import { ExtensionContextNotSetError, logError, showErrorNotificationWithButtons } from "../errors";
+import { ExtensionContextNotSetError, logError } from "../errors";
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -59,6 +59,7 @@ import {
   SchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";

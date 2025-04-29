@@ -14,12 +14,13 @@ import {
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
-import { logError, showErrorNotificationWithButtons } from "./errors";
+import { logError } from "./errors";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
+import { showErrorNotificationWithButtons } from "./notifications";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
 import { getResourceManager } from "./storage/resourceManager";

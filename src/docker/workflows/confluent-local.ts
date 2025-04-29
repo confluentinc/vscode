@@ -16,8 +16,8 @@ import {
 } from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
-import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { UserEvent } from "../../telemetry/events";
 import { getLocalKafkaImageTag } from "../configs";

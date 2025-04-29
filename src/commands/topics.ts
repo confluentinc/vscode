@@ -15,17 +15,16 @@ import {
 } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import {
-  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
-  isResponseError,
-  logError,
-  showErrorNotificationWithButtons,
-} from "../errors";
+import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
+import {
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  showErrorNotificationWithButtons,
+} from "../notifications";
 import { schemaKindMultiSelect, SchemaKindSelection } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { promptForSchema } from "../quickpicks/utils/schemas";

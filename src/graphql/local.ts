@@ -1,10 +1,11 @@
 import { graphql } from "gql.tada";
 import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { logError } from "../errors";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { createLocalConnection, getLocalConnection } from "../sidecar/connections/local";
 
