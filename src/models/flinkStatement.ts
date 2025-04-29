@@ -98,6 +98,10 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   get updatedAt(): Date | undefined {
     return this.metadata?.updated_at;
   }
+
+  get isBackground(): boolean {
+    return (this.sqlKind ?? "") === "INSERT_INTO";
+  }
 }
 
 /** Model for the interesting bits of the `metadata` subfield of Flink statement. */
