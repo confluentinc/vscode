@@ -36,5 +36,5 @@ export const TEST_LOCAL_ENVIRONMENT: LocalEnvironment = new LocalEnvironment({
 });
 
 // not tied to the CCloud Environment specifically, but used by CCloud Kafka clusters and Schema Registry
-export const TEST_CCLOUD_PROVIDER = "aws";
+export const TEST_CCLOUD_PROVIDER = "AWS";
 export const TEST_CCLOUD_REGION = "us-west-2";

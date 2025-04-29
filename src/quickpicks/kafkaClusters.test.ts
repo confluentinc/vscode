@@ -3,15 +3,17 @@ import * as sinon from "sinon";
 import { QuickPickItemKind, window } from "vscode";
 
 import {
+  TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResourceLoader } from "../loaders";
-import { KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import * as topicsViewProviders from "../viewProviders/topics";
-import { kafkaClusterQuickPick, logger as qpLogger } from "./kafkaClusters";
+import { flinkDatabaseQuickpick, kafkaClusterQuickPick, logger as qpLogger } from "./kafkaClusters";
 import { QuickPickItemWithValue } from "./types";
 
 describe("kafkaClusterQuickPick", () => {
@@ -165,5 +167,73 @@ describe("kafkaClusterQuickPick", () => {
 
     // First cluster should be the focused one, and its description should be the id.
     assert.strictEqual(itemsCalledWith[1].description, focusedCluster.id);
+  });
+});
+
+describe("flinkDatabaseQuickPick", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let showQuickPickStub: sinon.SinonStub;
+
+  const mockLoaders = [
+    {
+      getEnvironments: sinon.stub(),
+      getKafkaClustersForEnvironmentId: sinon.stub(),
+    },
+  ];
+
+  before(async () => {
+    // Set up the test environment
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    const loadersStub = sandbox.stub(ResourceLoader, "loaders");
+    loadersStub.returns(mockLoaders as any);
+    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    showQuickPickStub.resolves(undefined);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Filters out non-ccloud, non-same-provider-region clusters", async () => {
+    const computePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+    // make sure these line up, else test assumptions are wrong
+    assert.equal(computePool.provider, TEST_CCLOUD_KAFKA_CLUSTER.provider);
+    assert.equal(computePool.region, TEST_CCLOUD_KAFKA_CLUSTER.region);
+
+    const localClusters = [TEST_LOCAL_KAFKA_CLUSTER];
+    const ccloudClusters = [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        id: "ccloud-kafka-cluster-xyz",
+        provider: "other-provider",
+        region: "other-region",
+      }),
+    ];
+
+    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT]);
+    mockLoaders[0].getKafkaClustersForEnvironmentId.callsFake((envId: string) => {
+      if (envId === TEST_LOCAL_ENVIRONMENT.id) {
+        return localClusters;
+      } else if (envId === TEST_CCLOUD_ENVIRONMENT.id) {
+        return ccloudClusters;
+      }
+    });
+
+    await flinkDatabaseQuickpick(computePool);
+    const itemsCalledWith = showQuickPickStub.getCall(0).args[0];
+    // one separator for the single environment, one for the single cloud
+    // cluster in same provider/region.
+    assert.strictEqual(itemsCalledWith.length, 2);
+    assert.strictEqual(itemsCalledWith[0].kind, QuickPickItemKind.Separator);
+    // other two items are the clusters. Their description should be the id.
+    // and their .value should be the cluster.
+    assert.strictEqual(itemsCalledWith[1].description, ccloudClusters[0].id);
+    assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_KAFKA_CLUSTER);
   });
 });

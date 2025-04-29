@@ -5,7 +5,8 @@ import { ContextValues, getContextValue } from "../context/values";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
-import { KafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { QuickPickItemWithValue } from "./types";
@@ -164,4 +165,34 @@ export async function kafkaClusterQuickPick(
       ignoreFocusOut: true,
     });
   return chosenClusterItem ? chosenClusterItem.value : undefined;
+}
+
+/**
+ * Quickpick for selecting a Kafka cluster to use as the default database for a Flink statement.
+ * @param computePool The compute pool to use as the context for the quickpick (limits to clusters in same cloud provider/region).
+ * @param placeholder Optionally override the placeholder text for the quickpick.
+ *                    Defaults to "Select the Kafka cluster to use as the default database for the statement".
+ * @returns chosen Kafka cluster or undefined if the user cancels the quickpick.
+ */
+export async function flinkDatabaseQuickpick(
+  computePool: CCloudFlinkComputePool,
+  placeholder: string = "Select the Kafka cluster to use as the default database for the statement",
+): Promise<KafkaCluster | undefined> {
+  return await kafkaClusterQuickPick({
+    placeHolder: placeholder,
+    filter: (cluster: KafkaCluster) => {
+      if (!isCCloud(cluster)) {
+        // Only CCloud clusters are supported for Flink compute pools.
+        return false;
+      }
+
+      // Include if the cluster is in the same provider + region as the compute pool.
+      // (Flink can query cross-environment, but not cross-provider/region.)
+      const ccloudCluster = cluster as CCloudKafkaCluster;
+      return (
+        ccloudCluster.provider === computePool.provider &&
+        ccloudCluster.region === computePool.region
+      );
+    },
+  });
 }
