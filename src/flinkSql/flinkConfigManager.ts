@@ -173,13 +173,10 @@ export class FlinkConfigurationManager implements Disposable {
     const selection = await window.showInformationMessage(
       "Choose your CCloud Flink Compute Pool and other defaults to quickly run & view Flink SQL queries.",
       "Update Flink Settings",
-      "Cancel",
     );
 
     if (selection === "Update Flink Settings") {
       await commands.executeCommand("confluent.flink.configureFlinkDefaults");
-    } else if (selection === "Cancel") {
-      logger.info("Flink SQL configuration update cancelled");
     }
   }
 

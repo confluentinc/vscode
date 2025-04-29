@@ -581,7 +581,7 @@
         }
       },
       {
-        "title": "Flink SQL Settings",
+        "title": "Flink SQL",
         "properties": {
           "confluent.preview.enableFlink": {
             "type": "boolean",
