@@ -1,15 +1,11 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
-import {
-  extractResponseBody,
-  isResponseError,
-  logError,
-  showErrorNotificationWithButtons,
-} from "../errors";
+import { extractResponseBody, isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
