@@ -1,11 +1,15 @@
-import { commands, Disposable } from "vscode";
+import { commands, Disposable, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   currentFlinkArtifactsPoolChanged,
   currentFlinkStatementsResourceChanged,
 } from "../emitters";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { flinkComputePoolQuickPickWithViewProgress } from "../quickpicks/flinkComputePools";
+import {
+  flinkComputePoolQuickPick,
+  flinkComputePoolQuickPickWithViewProgress,
+} from "../quickpicks/flinkComputePools";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
@@ -60,6 +64,35 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
   commands.executeCommand("confluent-flink-artifacts.focus");
 }
 
+/**
+ * Show a quickpick to select a default {@link FlinkComputePool} and database
+ * for Flink SQL operations.
+ */
+export async function configureFlinkDefaults() {
+  const config: Record<string, any> = await workspace.getConfiguration("confluent");
+  const flinkConfig = config["flink"] || {};
+  // TODO in the near future, let's make this default to the current pool, if any
+  const computePool = await flinkComputePoolQuickPick();
+  await workspace.getConfiguration().update(FLINK_CONFIG_COMPUTE_POOL, computePool?.id, false);
+
+  // TODO NC db can be switched to filtered quickpick when available
+  const database = await window.showInputBox({
+    prompt:
+      "Name or ID for default CCloud database (Kafka cluster) to use for Flink SQL operations",
+    value: flinkConfig["database"],
+  });
+  await workspace.getConfiguration().update(FLINK_CONFIG_DATABASE, database, false);
+
+  window.showInformationMessage("Flink SQL settings updated.", "View").then((selection) => {
+    if (selection === "View") {
+      commands.executeCommand(
+        "workbench.action.openSettings",
+        "@ext:confluentinc.vscode-confluent flink",
+      );
+    }
+  });
+}
+
 export function registerFlinkComputePoolCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
@@ -74,5 +107,6 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
       "confluent.artifacts.flink-compute-pool.select",
       selectPoolForArtifactsViewCommand,
     ),
+    registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),
   ];
 }
