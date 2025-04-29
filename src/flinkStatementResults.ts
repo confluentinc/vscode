@@ -1,25 +1,26 @@
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
 import { ExtensionContext, ViewColumn, WebviewPanel } from "vscode";
-import { ResponseError } from "./clients/sidecar";
-import { registerCommandWithLogging } from "./commands";
-import { Logger } from "./logging";
-import { FlinkStatement } from "./models/flinkStatement";
-import { CCloudFlinkComputePool } from "./models/flinkComputePool";
-import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import {
   FetchError,
   GetSqlv1StatementResult200Response,
   SqlV1StatementResultResults,
 } from "./clients/flinkSql";
+import { ResponseError } from "./clients/sidecar";
+import { registerCommandWithLogging } from "./commands";
+import { logError } from "./errors";
+import { Logger } from "./logging";
+import { CCloudFlinkComputePool } from "./models/flinkComputePool";
+import { FlinkStatement } from "./models/flinkStatement";
+import { showErrorNotificationWithButtons } from "./notifications";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
+import { parseResults } from "./utils/flinkStatementResults";
+import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/flink-statement-results";
 import flinkStatementResults from "./webview/flink-statement-results.html";
-import { logError, showErrorNotificationWithButtons } from "./errors";
-import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
 

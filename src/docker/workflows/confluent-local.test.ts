@@ -13,7 +13,7 @@ import {
 } from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
-import * as errors from "../../errors";
+import * as notifications from "../../notifications";
 import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import * as dockerContainers from "../containers";
@@ -76,7 +76,9 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     checkForImageStub = sandbox.stub(workflow, "checkForImage").resolves();
     handleExistingContainersStub = sandbox.stub(workflow, "handleExistingContainers").resolves();
-    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons").resolves();
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
     // assume the container is created successfully for most tests
     const fakeCreatedContainer: ContainerCreateResponse = { Id: "1", Warnings: [] };
     createContainerStub = sandbox

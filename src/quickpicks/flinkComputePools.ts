@@ -2,12 +2,12 @@ import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
-import { showInfoNotificationWithButtons } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
+import { showInfoNotificationWithButtons } from "../notifications";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { QuickPickItemWithValue } from "./types";
 

@@ -1,10 +1,11 @@
 import { graphql } from "gql.tada";
 import { ConnectionType } from "../clients/sidecar";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { logError } from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import {
   CustomConnectionSpec,

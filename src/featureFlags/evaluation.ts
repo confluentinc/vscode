@@ -1,8 +1,8 @@
 import type { LDClientBase } from "launchdarkly-js-sdk-common";
 import { commands, env } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
-import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { getLaunchDarklyClient } from "./client";
 import { FeatureFlag, FeatureFlags, GLOBAL_DISABLED_MESSAGE } from "./constants";
 import { DisabledVersion } from "./types";

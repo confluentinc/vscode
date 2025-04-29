@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { logError } from "../errors";
 import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "../featureFlags/evaluation";
 import { IResourceBase, isResource } from "../models/resource";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { titleCase } from "../utils";
 
