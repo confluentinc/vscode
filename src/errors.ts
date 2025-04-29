@@ -45,6 +45,17 @@ export function isResponseError(error: unknown): error is AnyResponseError {
   );
 }
 
+export async function extractResponseBody(error: unknown): Promise<any> {
+  if (isResponseError(error)) {
+    const responseError = error as AnyResponseError;
+    const respJson = await responseError.response.clone().json();
+    if (respJson) {
+      return respJson;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Check if an {@link Error} has a `cause` property of type `Error`, indicating it has at least
  * one nested error.
