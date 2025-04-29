@@ -51,7 +51,7 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   ];
 }
 
-async function resourceScaffoldProjectRequest(
+export async function resourceScaffoldProjectRequest(
   item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
 ) {
   if (item instanceof KafkaCluster) {
