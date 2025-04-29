@@ -8,6 +8,7 @@ import {
 } from "../../clients/flinkSql";
 import { CCloudResourceLoader } from "../../loaders";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
 
 export class FlinkSpecProperties {
@@ -119,13 +120,13 @@ export async function submitFlinkStatement(
 
   const handle = await getSidecar();
 
-  const organizationId = await ccloudLoader.getOrganizationId();
+  const organization: CCloudOrganization = await ccloudLoader.getOrganization();
 
   const requestInner: CreateSqlv1StatementRequest = {
     api_version: CreateSqlv1StatementRequestApiVersionEnum.SqlV1,
     kind: CreateSqlv1StatementRequestKindEnum.Statement,
     name: params.statementName,
-    organization_id: organizationId,
+    organization_id: organization.id,
     environment_id: params.computePool.environmentId,
     spec: {
       statement: params.statement,
@@ -135,7 +136,7 @@ export async function submitFlinkStatement(
   };
 
   const request: CreateSqlv1StatementOperationRequest = {
-    organization_id: organizationId,
+    organization_id: organization.id,
     environment_id: params.computePool.environmentId,
     CreateSqlv1StatementRequest: requestInner,
   };
