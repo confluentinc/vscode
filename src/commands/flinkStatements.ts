@@ -25,6 +25,9 @@ import {
   localTimezoneOffset,
   submitFlinkStatement,
 } from "./utils/flinkStatements";
+import { getSidecar } from "../sidecar";
+import { FlinkStatementResultsViewerConfig } from "../flinkStatementResults";
+import { currentFlinkStatementsResourceChanged } from "../emitters";
 
 const logger = new Logger("commands.flinkStatements");
 
