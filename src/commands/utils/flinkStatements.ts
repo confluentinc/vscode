@@ -68,6 +68,7 @@ export class FlinkSpecProperties {
  * Return a suitable (and unique) name for a Flink statement to submit.
  *
  * @param statement
+ * @returns string akin to "username-vscode-2023-10-01t12-00-00"
  */
 export async function determineFlinkStatementName(): Promise<string> {
   const parts: string[] = [];
@@ -84,6 +85,8 @@ export async function determineFlinkStatementName(): Promise<string> {
 
   parts.push(dateString);
 
+  // Can only be lowercase; probably to simplify the
+  // uniqueness check on the backend.
   const proposed = parts.join("-").toLocaleLowerCase();
 
   // TODO: Show the user the proposed name and let them edit it.

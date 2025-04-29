@@ -67,7 +67,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     fileFilters,
   );
   if (!statementBodyUri) {
-    logger.info(
+    logger.debug(
       "sumbitFlinkStatementCommand",
       "Short circuiting return, no statement file chosen.",
     );
@@ -83,7 +83,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
   // 3. Choose the Flink cluster to send to
   const computePool = await flinkComputePoolQuickPick();
   if (!computePool) {
-    logger.error("sumbitFlinkStatementCommand", "computePool is undefined");
+    logger.error("submitFlinkStatementCommand", "computePool is undefined");
     return;
   }
 
@@ -92,7 +92,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
   const currentDatabaseKafkaCluster: KafkaCluster | undefined =
     await flinkDatabaseQuickpick(computePool);
   if (!currentDatabaseKafkaCluster) {
-    logger.error("sumbitFlinkStatementCommand: User canceled the default database quickpick");
+    logger.error("submitFlinkStatementCommand: User canceled the default database quickpick");
     return;
   }
   const currentDatabase = currentDatabaseKafkaCluster.name;
