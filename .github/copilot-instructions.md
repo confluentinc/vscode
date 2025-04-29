@@ -1,6 +1,6 @@
 # Testing
 
-This VS Code extension use the Mocha BDD interface and the "sinon" and "assert" packages for
+This VS Code extension uses the Mocha BDD interface and the "sinon" and "assert" packages for
 testing.
 
 Always use a `SinonSandbox` instance when setting up stubs, spies, or fakes to ensure proper
@@ -16,4 +16,4 @@ the class.
 
 Fixtures are in the `test/unit/testResources` directory and represent instances of our data models
 in `src/models` solely used for test purposes. Use these fixtures as needed, only creating new
-instances when slight variations are necessary or a when a fixture is missing entirely.
+instances when slight variations are necessary or when a fixture is missing entirely.
