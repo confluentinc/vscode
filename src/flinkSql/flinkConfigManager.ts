@@ -144,7 +144,7 @@ export class FlinkConfigurationManager implements Disposable {
           poolFound = true;
           break;
         }
-      } //TODO NC: check if it's status is ok?? Not sure...
+      }
 
       if (!poolFound) {
         logger.warn(

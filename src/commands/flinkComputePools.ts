@@ -72,7 +72,7 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
 export async function configureFlinkDefaults() {
   const config: Record<string, any> = await workspace.getConfiguration("confluent");
   const flinkConfig = config["flink"] || {};
-
+  // TODO in the near future, let's make this default to the current pool, if any
   const computePool = await flinkComputePoolQuickPick();
   await workspace
     .getConfiguration()
@@ -80,7 +80,8 @@ export async function configureFlinkDefaults() {
 
   // TODO NC db can be switched to filtered quickpick when available
   const database = await window.showInputBox({
-    prompt: "Name or ID for default CCloud database (topic) to use for Flink SQL operations",
+    prompt:
+      "Name or ID for default CCloud database (Kafka cluster) to use for Flink SQL operations",
     value: flinkConfig["database"],
   });
   await workspace.getConfiguration().update("confluent.flink.database", database, false);
