@@ -10,7 +10,8 @@ import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resou
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { QuickPickItemWithValue } from "./types";
 
-const logger = new Logger("quickpicks.kafkaClusters");
+// Exported only for testsuite purposes.
+export const logger = new Logger("quickpicks.kafkaClusters");
 
 /** Wrapper for the Kafka Cluster quickpick to accomodate data-fetching time and display a progress indicator on the Topics view. */
 export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaCluster | undefined> {
@@ -125,6 +126,8 @@ export async function kafkaClusterQuickPick(
       (env) => env.id === cluster.environmentId,
     );
     if (!environment) {
+      // Should not happen if loader.getKafkaClustersForEnvironmentId()
+      // results are self-consistent with loader.getEnvironments().
       logger.warn(`No environment found for Kafka cluster ${cluster.name}`);
       return;
     }

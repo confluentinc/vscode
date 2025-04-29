@@ -67,6 +67,10 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     fileFilters,
   );
   if (!statementBodyUri) {
+    logger.info(
+      "sumbitFlinkStatementCommand",
+      "Short circuiting return, no statement file chosen.",
+    );
     return;
   }
 
@@ -121,7 +125,6 @@ export async function submitFlinkStatementCommand(): Promise<void> {
 
   try {
     const restResponse = await submitFlinkStatement(submission);
-    // logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(restResponse, null, 2)}`);
     const newStatement = restFlinkStatementToModel(restResponse);
 
     if (newStatement.status.phase === FAILED_PHASE) {

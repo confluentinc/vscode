@@ -1,13 +1,17 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { commands, QuickPickItemKind, window } from "vscode";
+import { QuickPickItemKind, window } from "vscode";
 
-import { TEST_LOCAL_ENVIRONMENT, TEST_LOCAL_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_LOCAL_ENVIRONMENT,
+  TEST_LOCAL_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResourceLoader } from "../loaders";
 import { KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import * as topicsViewProviders from "../viewProviders/topics";
-import { kafkaClusterQuickPick } from "./kafkaClusters";
+import { kafkaClusterQuickPick, logger as qpLogger } from "./kafkaClusters";
 import { QuickPickItemWithValue } from "./types";
 
 describe("kafkaClusterQuickPick", () => {
@@ -38,18 +42,37 @@ describe("kafkaClusterQuickPick", () => {
     sandbox.restore();
   });
 
-  it("should return undefined if no Kafka clusters are available", async () => {
-    mockLoaders[0].getEnvironments.resolves([]);
+  it("bails out early if the environment has no clusters", async () => {
+    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves([]);
     const showInformationMessageStub = sandbox
       .stub(window, "showInformationMessage")
       .resolves(undefined);
-    const executeCommandStub = sandbox.stub(commands, "executeCommand");
-    const result = await kafkaClusterQuickPick();
 
+    const result = await kafkaClusterQuickPick();
     assert.strictEqual(result, undefined);
-    assert.ok(showInformationMessageStub.calledOnce);
-    assert.ok(executeCommandStub.notCalled);
-    assert.ok(showQuickPickStub.notCalled);
+    assert.strictEqual(showInformationMessageStub.callCount, 1);
+    assert.strictEqual(
+      showInformationMessageStub.getCall(0).args[0],
+      "No Kafka clusters available.",
+    );
+  });
+
+  it("should return undefined if getKafkaClustersForEnvironmentId() is out of synch with getEnvironments()", async () => {
+    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    // should have included clusters referencing TEST_LOCAL_ENVIRONMENT, so will make code hit error.
+    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+
+    // mock out the logger's warning method so we can prove going down into this unexpected codepath
+    const loggerWarnStub = sandbox.stub(qpLogger, "warn");
+
+    const result = await kafkaClusterQuickPick();
+    assert.strictEqual(result, undefined);
+    assert.strictEqual(loggerWarnStub.callCount, 1);
+    assert.strictEqual(
+      loggerWarnStub.getCall(0).args[0],
+      `No environment found for Kafka cluster ${TEST_CCLOUD_KAFKA_CLUSTER.name}`,
+    );
   });
 
   it("Offers all Kafka clusters if driven w/o a filter lambda", async () => {
