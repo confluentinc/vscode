@@ -19,6 +19,7 @@ import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
+import { CCloudOrganization } from "./models/organization";
 import { KafkaTopic } from "./models/topic";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
@@ -76,10 +77,11 @@ async function resourceScaffoldProjectRequest(
       templateType: "kafka",
     });
   } else if (item instanceof CCloudFlinkComputePool) {
-    const organizationId = await CCloudResourceLoader.getInstance().getOrganizationId();
+    const organization: CCloudOrganization =
+      await CCloudResourceLoader.getInstance().getOrganization();
     return await scaffoldProjectRequest({
       cc_environment_id: item.environmentId,
-      cc_organization_id: organizationId,
+      cc_organization_id: organization.id,
       cloud_region: item.region,
       cloud_provider: item.provider,
       cc_compute_pool_id: item.id,
