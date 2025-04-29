@@ -10,7 +10,7 @@ import {
 } from "./clients/scaffoldingService";
 import * as scaffold from "./scaffold";
 
-describe.only("scaffoldProjectRequest", () => {
+describe("scaffoldProjectRequest", () => {
   let sandbox: sinon.SinonSandbox;
   let getTemplatesStub: sinon.SinonStub;
   let quickPickStub: sinon.SinonStub;
