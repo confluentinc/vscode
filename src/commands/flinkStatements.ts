@@ -230,10 +230,12 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     await selectPoolForStatementsViewCommand(computePool);
 
     // Wait for statement to be running and show results
-    await waitAndShowResults(newStatement, computePool);
+    if (newStatement.isResultsViewable) {
+      await waitAndShowResults(newStatement, computePool);
 
-    // Refresh the statements view again
-    currentFlinkStatementsResourceChanged.fire(computePool);
+      // Refresh the statements view again
+      currentFlinkStatementsResourceChanged.fire(computePool);
+    }
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
 

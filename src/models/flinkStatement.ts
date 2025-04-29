@@ -17,6 +17,8 @@ import {
   OrganizationId,
 } from "./resource";
 
+const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
+
 /**
  * Model for a Flink statement.
  */
@@ -101,6 +103,21 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   get isBackground(): boolean {
     return (this.sqlKind ?? "") === "INSERT_INTO";
+  }
+
+  /**
+   * For statement results to be viewable, it must satisfy these conditions:
+   * 1. The statement must NOT be a background statement (an INSERT INTO statement)
+   * 2. The statement must have been created in the last 24 hours
+   *    (which is the TTL for the statement result to be deleted)
+   */
+  get isResultsViewable(): boolean {
+    if (!this.createdAt) {
+      return false;
+    }
+    const oneDayAgo = new Date().getTime() - ONE_DAY_MILLIS;
+
+    return !this.isBackground && this.createdAt.getTime() >= oneDayAgo;
   }
 }
 
