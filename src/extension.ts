@@ -83,6 +83,7 @@ import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
+import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 
 const logger = new Logger("extension");
 
@@ -246,6 +247,7 @@ async function _activateExtension(
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
+  activateFlinkStatementResultsViewer(context);
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());

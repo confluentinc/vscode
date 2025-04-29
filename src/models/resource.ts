@@ -7,6 +7,8 @@ export type ConnectionId = string & { readonly brand: unique symbol };
 /** Likewise for environment ids. Note that Direct Connection ids also double as environment ids. */
 export type EnvironmentId = string & { readonly brand: unique symbol };
 
+export type OrganizationId = string & { readonly brand: unique symbol };
+
 // Function to convert a ConnectionId to a ConnectionType, because we can always
 // go from one to the other.
 export function connectionIdToType(id: ConnectionId): ConnectionType {
@@ -91,7 +93,7 @@ export interface IEnvProviderRegion {
  **/
 export interface IFlinkQueryable extends IEnvProviderRegion {
   /** The organization ID for the resource. */
-  organizationId: string;
+  organizationId: OrganizationId;
   /** Limit to a specific compute pool? */
   computePoolId?: string;
 }

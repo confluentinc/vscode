@@ -19,7 +19,6 @@ import { localKafkaConnected } from "../../emitters";
 import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
-import { ResourceManager } from "../../storage/resourceManager";
 import { UserEvent } from "../../telemetry/events";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
@@ -153,9 +152,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     // can't wait for containers to be ready if they didn't start
     if (!success) return;
 
-    // Invalidate any prior cached data about the local Kafka cluster
-    await this.invalidateLocalKafkaCluster();
-
     this.logAndUpdateProgress(`Waiting for ${this.resourceKind} container${plural} to be ready...`);
     await this.waitForLocalResourceEventChange();
   }
@@ -221,17 +217,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       `Waiting for ${count} ${this.resourceKind} container${plural} to stop...`,
     );
     await this.waitForLocalResourceEventChange();
-  }
-
-  /**
-   * Invalidate any prior cached data about the local Kafka cluster, either within the extension or
-   * the sidecar
-   **/
-  async invalidateLocalKafkaCluster(): Promise<void> {
-    // Invalidate any cached local topics in ResourceManager / workspace storage, so that next
-    // time we need to show them we'll do a deep fetch.
-    const rm = ResourceManager.getInstance();
-    await rm.deleteLocalTopics();
   }
 
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener

@@ -1,10 +1,6 @@
 import { Disposable } from "vscode";
 
-import {
-  ListSqlv1StatementsRequest,
-  SqlV1StatementListDataInner,
-  SqlV1StatementSpec,
-} from "../clients/flinkSql";
+import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
@@ -13,15 +9,9 @@ import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
-  FlinkStatement,
-  FlinkStatementMetadata,
-  FlinkStatementSpec,
-  FlinkStatementStatus,
-  FlinkStatementTraits,
-} from "../models/flinkStatement";
+import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
+import { IFlinkQueryable, isCCloud, OrganizationId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar, SidecarHandle } from "../sidecar";
@@ -63,7 +53,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   private currentlyCoarseLoadingPromise: Promise<void> | null = null;
 
   /** The user's current ccloud organization. Determined along with coarse resources. */
-  private organizationId: string | null = null;
+  private organizationId: OrganizationId | null = null;
 
   // Singleton class. Use getInstance() to get the singleton instance.
   // (Only public for testing / signon mocking purposes.)
@@ -283,7 +273,7 @@ export class CCloudResourceLoader extends ResourceLoader {
    *
    * @returns The current organization ID.
    */
-  public async getOrganizationId(): Promise<string> {
+  public async getOrganizationId(): Promise<OrganizationId> {
     if (this.organizationId) {
       return this.organizationId;
     }
@@ -425,7 +415,7 @@ async function loadStatementsForProviderRegion(
 
     // Convert each Flink statement from the REST API representation to our codebase model.
     for (const restStatement of restResult.data) {
-      const statement = restFlinkStatementToModelFlinkStatement(restStatement);
+      const statement = restFlinkStatementToModel(restStatement);
       flinkStatements.push(statement);
     }
 
@@ -449,54 +439,4 @@ async function loadStatementsForProviderRegion(
   }
 
   return flinkStatements;
-}
-
-/** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
-function restFlinkStatementToModelFlinkStatement(
-  restFlinkStatement: SqlV1StatementListDataInner,
-): FlinkStatement {
-  // For reasons, restFlinkStatement.spec is typed as `object` in the API client,
-  // but is really a SqlV1StatementSpec.
-  const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
-
-  const status = restFlinkStatement.status;
-  const responseTraits = status.traits;
-
-  const modelTraits: FlinkStatementTraits | undefined = responseTraits
-    ? new FlinkStatementTraits({
-        sqlKind: responseTraits.sql_kind,
-        bounded: responseTraits.is_bounded,
-        appendOnly: responseTraits.is_append_only,
-        schema: responseTraits.schema,
-      })
-    : undefined;
-
-  return new FlinkStatement({
-    connectionId: CCLOUD_CONNECTION_ID,
-    connectionType: ConnectionType.Ccloud,
-    environmentId: restFlinkStatement.environment_id as EnvironmentId,
-
-    name: restFlinkStatement.name,
-
-    spec: new FlinkStatementSpec({
-      sqlStatement: spec.statement,
-      computePoolId: spec.compute_pool_id,
-      properties: spec.properties,
-      principal: spec.principal,
-      authorizedPrincipals: spec.authorized_principals,
-      stopped: spec.stopped,
-    }),
-
-    metadata: new FlinkStatementMetadata({
-      createdAt: restFlinkStatement.metadata.created_at,
-      updatedAt: restFlinkStatement.metadata.updated_at,
-    }),
-
-    status: new FlinkStatementStatus({
-      phase: restFlinkStatement.status.phase,
-      detail: restFlinkStatement.status.detail,
-      traits: modelTraits,
-      scalingStatus: restFlinkStatement.status.scaling_status,
-    }),
-  });
 }
