@@ -9,9 +9,9 @@ import {
 } from "../errors";
 import { Logger } from "../logging";
 import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
-import { kafkaClusterQuickPick } from "../quickpicks/kafkaClusters";
+import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
@@ -87,25 +87,12 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     return;
   }
 
-  // 4. Choose the current / default database / aka kafka cluster
-  // within the environment.
-  const currentDatabaseKafkaCluster: KafkaCluster | undefined = await kafkaClusterQuickPick({
-    placeHolder: "Select the Kafka cluster to use as the default database for the statement",
-    filter: (cluster: KafkaCluster) => {
-      if (cluster.environmentId !== computePool.environmentId) {
-        return false;
-      }
-      // Any survivors matching environmentId check should be CCloudKafkaClusters,
-      // since the compute pool is ccloud.
-      const ccloudCluster = cluster as CCloudKafkaCluster;
-      return (
-        ccloudCluster.provider === computePool.provider &&
-        ccloudCluster.region === computePool.region
-      );
-    },
-  });
+  // 4. Choose the current / default database for the expression to be evaluated against.
+  // (a kafka cluster in the same provider/region as the compute pool)
+  const currentDatabaseKafkaCluster: KafkaCluster | undefined =
+    await flinkDatabaseQuickpick(computePool);
   if (!currentDatabaseKafkaCluster) {
-    logger.error("sumbitFlinkStatementCommand", "currentDatabaseKafkaCluster is undefined");
+    logger.error("sumbitFlinkStatementCommand: User canceled the default database quickpick");
     return;
   }
   const currentDatabase = currentDatabaseKafkaCluster.name;
