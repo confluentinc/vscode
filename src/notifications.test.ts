@@ -3,10 +3,11 @@ import { commands, window } from "vscode";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
+  showInfoNotificationWithButtons,
+  showWarningNotificationWithButtons,
 } from "./notifications";
 import * as telemetryEvents from "./telemetry/events";
 
-const fakeMessage = "oh no, an error";
 const DEFAULT_BUTTONS = Object.keys(DEFAULT_ERROR_NOTIFICATION_BUTTONS);
 
 describe("notifications.ts showErrorNotificationWithButtons()", () => {
@@ -14,6 +15,7 @@ describe("notifications.ts showErrorNotificationWithButtons()", () => {
   let showErrorMessageStub: sinon.SinonStub;
   let executeCommandStub: sinon.SinonStub;
   let logUsageStub: sinon.SinonStub;
+  const fakeMessage = "oh no, an error";
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -186,5 +188,87 @@ describe("notifications.ts showErrorNotificationWithButtons()", () => {
 
     sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
     sinon.assert.calledOnce(asyncCallback);
+  });
+});
+
+describe("notifications.ts showInfoNotificationWithButtons()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let showInfoMessageStub: sinon.SinonStub;
+  let executeCommandStub: sinon.SinonStub;
+  let logUsageStub: sinon.SinonStub;
+  const fakeMessage = "info message";
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    showInfoMessageStub = sandbox.stub(window, "showInformationMessage").resolves(undefined);
+    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should show an info notification with no default buttons", async () => {
+    // showInfoMessageStub simulates user dismissing the notification by default
+
+    await showInfoNotificationWithButtons(fakeMessage);
+
+    sinon.assert.calledOnceWithExactly(showInfoMessageStub, fakeMessage);
+    sinon.assert.notCalled(executeCommandStub);
+    sinon.assert.notCalled(logUsageStub);
+  });
+
+  it("should show an info notification with custom buttons when provided", async () => {
+    const buttonLabel = "Custom Action";
+    const customButtons = { [buttonLabel]: sandbox.stub() };
+
+    await showInfoNotificationWithButtons(fakeMessage, customButtons);
+
+    sinon.assert.calledOnceWithExactly(showInfoMessageStub, fakeMessage, buttonLabel);
+    sinon.assert.notCalled(executeCommandStub);
+    sinon.assert.notCalled(logUsageStub);
+    sinon.assert.notCalled(customButtons[buttonLabel]);
+  });
+});
+
+describe("notifications.ts showWarningNotificationWithButtons()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let showWarningMessageStub: sinon.SinonStub;
+  let executeCommandStub: sinon.SinonStub;
+  let logUsageStub: sinon.SinonStub;
+  const fakeMessage = "watch out!";
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
+    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should show a warning notification with no default buttons", async () => {
+    // showWarningMessageStub simulates user dismissing the notification by default
+
+    await showWarningNotificationWithButtons(fakeMessage);
+
+    sinon.assert.calledOnceWithExactly(showWarningMessageStub, fakeMessage);
+    sinon.assert.notCalled(executeCommandStub);
+    sinon.assert.notCalled(logUsageStub);
+  });
+
+  it("should show a warning notification with custom buttons when provided", async () => {
+    const buttonLabel = "Custom Action";
+    const customButtons = { [buttonLabel]: sandbox.stub() };
+
+    await showWarningNotificationWithButtons(fakeMessage, customButtons);
+
+    sinon.assert.calledOnceWithExactly(showWarningMessageStub, fakeMessage, buttonLabel);
+    sinon.assert.notCalled(executeCommandStub);
+    sinon.assert.notCalled(logUsageStub);
+    sinon.assert.notCalled(customButtons[buttonLabel]);
   });
 });
