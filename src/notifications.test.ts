@@ -1,10 +1,13 @@
 import * as sinon from "sinon";
 import { commands, window } from "vscode";
-import { showErrorNotificationWithButtons } from "./notifications";
+import {
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  showErrorNotificationWithButtons,
+} from "./notifications";
 import * as telemetryEvents from "./telemetry/events";
 
 const fakeMessage = "oh no, an error";
-const DEFAULT_BUTTONS = ["Open Logs", "File Issue"];
+const DEFAULT_BUTTONS = Object.keys(DEFAULT_ERROR_NOTIFICATION_BUTTONS);
 
 describe("notifications.ts showErrorNotificationWithButtons()", () => {
   let sandbox: sinon.SinonSandbox;
