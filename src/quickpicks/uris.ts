@@ -114,11 +114,28 @@ export async function uriQuickpick(
   }
 
   return new Promise<Uri | undefined>((resolve) => {
+    let resolved = false;
+    let qpHidden = false;
+    let usingFileChooser = false;
+
+    function resolver(uri: Uri | undefined) {
+      if (!qpHidden) {
+        qpHidden = true;
+        quickPick.hide();
+      }
+
+      // Only really resolve once.
+      if (!resolved) {
+        resolved = true;
+        resolve(uri);
+      }
+    }
+
     quickPick.onDidAccept(() => {
       const selection = quickPick.selectedItems[0];
-      quickPick.hide();
 
       if (selection.label === selectFileLabel) {
+        usingFileChooser = true;
         window
           .showOpenDialog({
             openLabel: "Select a file",
@@ -128,16 +145,27 @@ export async function uriQuickpick(
             filters: fileFilters,
           })
           .then((uri) => {
-            resolve(uri ? uri[0] : undefined);
+            resolver(uri ? uri[0] : undefined);
           });
       } else if (filenameUriMap.has(selection.label)) {
-        resolve(filenameUriMap.get(selection.label));
+        resolver(filenameUriMap.get(selection.label));
       } else {
-        resolve(undefined);
+        resolver(undefined);
       }
     });
 
-    quickPick.onDidHide(() => resolve(undefined));
+    quickPick.onDidHide(() => {
+      // The call to window.showOpenDialog() as well as any of the resolver() / resolve() calls above
+      // will implicitly close the quickpick and cause onDidHide() to fire, but we don't want to resolve
+      // or falsely re-resolve our promise in those cases.
+
+      // We only want to resolve in this codepath if the quickpick was escape closed by the user.
+      if (!usingFileChooser && !resolved) {
+        resolver(undefined);
+      }
+    });
+
+    // Let the plinko games begin!
     quickPick.show();
   });
 }
