@@ -125,9 +125,9 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
     const oneDayAgo = new Date().getTime() - ONE_DAY_MILLIS;
 
     return (
-      this.canHaveResults
-      && this.createdAt.getTime() >= oneDayAgo
-      && [RUNNING_PHASE, COMPLETED_PHASE,].includes(this.phase)
+      this.canHaveResults &&
+      this.createdAt.getTime() >= oneDayAgo &&
+      [RUNNING_PHASE, COMPLETED_PHASE].includes(this.phase)
     );
   }
 }
@@ -240,7 +240,10 @@ export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
 
 /** Convert a from-REST API depiction of a Flink statement to our codebase's FlinkStatement model. */
 export function restFlinkStatementToModel(
-  restFlinkStatement: SqlV1StatementListDataInner | GetSqlv1Statement200Response | CreateSqlv1Statement201Response,
+  restFlinkStatement:
+    | SqlV1StatementListDataInner
+    | GetSqlv1Statement200Response
+    | CreateSqlv1Statement201Response,
 ): FlinkStatement {
   return new FlinkStatement({
     connectionId: CCLOUD_CONNECTION_ID,

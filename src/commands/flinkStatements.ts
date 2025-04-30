@@ -77,8 +77,9 @@ async function waitForStatementRunning(
       await statementsService.getSqlv1Statement({
         environment_id: statement.environmentId,
         organization_id: statement.organizationId,
-        statement_name: statement.name
-      }));
+        statement_name: statement.name,
+      }),
+    );
 
     if (response.isResultsViewable) {
       break;
