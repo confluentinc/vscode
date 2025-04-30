@@ -248,24 +248,55 @@ class FlinkStatementResultsViewModel extends ViewModel {
   /** Temporary state for resizing events. */
   resizeColumnDelta = this.signal<number | null>(null);
 
-  /** Handle search input events */
-  search(value: string) {
-    // This is handled by the backend through the GetResults message
-    return value;
-  }
+  /** The text search query string. */
+  search = this.resolve(() => {
+    return post("GetSearchQuery", {});
+  }, "");
+  searchRegexp = this.resolve(async () => {
+    const timestamp = this.timestamp();
+    const source = await post("GetSearchSource", { timestamp });
+    return source != null ? new RegExp(source, "gi") : null;
+  }, null);
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
+  searchDebounceTime = 500;
 
-  /** Handle keydown events in the search field */
-  handleKeydown(event: KeyboardEvent) {
+  async handleKeydown(event: KeyboardEvent) {
+    const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
-      event.preventDefault();
-      // Trigger a search update
-      this.snapshot(this.emptySnapshot);
+      // when user hits Enter, search query submitted immediately
+      const value = target.value.trim();
+      this.submitSearch(value);
+    } else {
+      // otherwise, we keep debouncing search submittion until the user stops typing
+      if (this.searchTimer != null) clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(async () => {
+        const value = target.value.trim();
+        this.submitSearch(value);
+      }, this.searchDebounceTime);
     }
   }
 
-  /** Handle input events in the search field */
-  handleInput(event: InputEvent) {
-    // This is handled by the search function
+  async handleInput(event: Event | InputEvent) {
+    if (event.type === "input" && !(event instanceof InputEvent)) {
+      if (this.searchTimer != null) {
+        clearTimeout(this.searchTimer);
+        this.searchTimer = null;
+      }
+      await post("Search", { search: null });
+    }
+  }
+
+  async submitSearch(value: string) {
+    if (this.searchTimer != null) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    if (value.length > 0) {
+      await post("Search", { search: value });
+    } else {
+      await post("Search", { search: null });
+    }
+    this.page(0);
   }
 
   /** Preview the JSON content of a result row in a read-only editor */
@@ -368,20 +399,19 @@ export function post(
 ): Promise<{ results: Map<string, any>[] }>;
 export function post(type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
 export function post(type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
-export function post(
-  type: "GetMaxSize",
-  body: { timestamp?: number },
-): Promise<keyof typeof resultLimitLabel>;
+export function post(type: "GetMaxSize", body: { timestamp?: number }): Promise<string>;
 export function post(
   type: "ResultLimitChange",
   body: { limit: number; timestamp?: number },
 ): Promise<null>;
 export function post(type: "StreamPause", body: { timestamp?: number }): Promise<null>;
 export function post(type: "StreamResume", body: { timestamp?: number }): Promise<null>;
+export function post(type: "PreviewJSON", body: { result: any; timestamp?: number }): Promise<null>;
 export function post(
-  type: "PreviewJSON",
-  body: { result: Record<string, any>; timestamp?: number },
+  type: "Search",  body: { search: string | null; timestamp?: number },
 ): Promise<null>;
+export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
+export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }

@@ -65,24 +65,15 @@
         </div>
       </section>
 
-      <!-- TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1571
-        <section>
-          <h4>Results Quick Search</h4>
-          <div class="flex-row">
-            <vscode-text-field
-              id="results-search"
-              placeholder="Search across results…"
-              type="search"
-              size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
-              data-on-keydown="this.handleKeydown(event)"
-              data-on-input="this.handleInput(event)"
-              >Search</vscode-text-field
-            >
-          </div>
-        </section>
-        -->
+      <section>
+        <h4>Results Quick Search</h4>
+        <div class="flex-row">
+          <vscode-text-field id="results-search" placeholder="Search across results…" type="search" size="50"
+            data-prop-value="this.search()" data-on-change="this.search(event.target.value)"
+            data-on-keydown="this.handleKeydown(event)"
+            data-on-input="this.handleInput(event)">Search</vscode-text-field>
+        </div>
+      </section>
     </header>
 
     <section class="content">
