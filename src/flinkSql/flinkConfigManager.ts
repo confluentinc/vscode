@@ -29,7 +29,7 @@ export class FlinkConfigurationManager implements Disposable {
   static instance: FlinkConfigurationManager | null = null;
   private disposables: Disposable[] = [];
   private hasPromptedForSettings = false;
-  private languageClientInitialized = false;
+  private languageClient: Disposable | null = null;
 
   static getInstance(): FlinkConfigurationManager {
     if (!FlinkConfigurationManager.instance) {
@@ -50,7 +50,7 @@ export class FlinkConfigurationManager implements Disposable {
       workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId === "flinksql") {
           await this.validateFlinkSettings();
-          await this.ensureLanguageClientInitialized();
+          await this.initLanguageClient();
         }
       }),
     );
@@ -60,10 +60,12 @@ export class FlinkConfigurationManager implements Disposable {
       ccloudAuthSessionInvalidated.event(() => {
         logger.debug("CCloud auth session invalidated, resetting prompt state");
         this.hasPromptedForSettings = false;
+        this.languageClient?.dispose();
+        this.languageClient = null;
       }),
       ccloudConnected.event(async () => {
         await this.validateFlinkSettings();
-        await this.ensureLanguageClientInitialized();
+        await this.initLanguageClient();
       }),
     );
 
@@ -73,6 +75,7 @@ export class FlinkConfigurationManager implements Disposable {
         if (e.affectsConfiguration("confluent.flink")) {
           logger.debug("Flink configuration changed");
           await this.checkFlinkResourcesAvailability();
+          // TODO NC reset language client if compute pool changes, or update workspace settings in client
         }
       }),
     );
@@ -85,7 +88,7 @@ export class FlinkConfigurationManager implements Disposable {
           if (isFlinkEnabled) {
             this.hasPromptedForSettings = false;
             await this.validateFlinkSettings();
-            await this.ensureLanguageClientInitialized();
+            await this.initLanguageClient();
           } else {
             logger.debug("Flink was disabled, no further actions needed");
           }
@@ -251,8 +254,8 @@ export class FlinkConfigurationManager implements Disposable {
   /**
    * Ensures the language client is initialized if prerequisites are met
    */
-  private async ensureLanguageClientInitialized(): Promise<void> {
-    if (this.languageClientInitialized) {
+  private async initLanguageClient(): Promise<void> {
+    if (this.languageClient) {
       return;
     }
 
@@ -284,10 +287,9 @@ export class FlinkConfigurationManager implements Disposable {
         return;
       });
       if (!url) return;
-      const client = await initializeLanguageClient(url);
-      if (client) {
-        this.languageClientInitialized = true;
-        this.disposables.push(client);
+      this.languageClient = await initializeLanguageClient(url);
+      if (this.languageClient) {
+        this.disposables.push(this.languageClient);
         logger.info("Flink SQL language client successfully initialized");
       }
     } catch (error) {
@@ -302,7 +304,7 @@ export class FlinkConfigurationManager implements Disposable {
    * Show notification for user to select default compute pool, database
    */
   private async promptChooseDefaultComputePool(): Promise<void> {
-if (!hasCCloudAuthSession()) {
+    if (!hasCCloudAuthSession()) {
       return; // This method should not be called if not authenticated
     }
     const selection = await window.showInformationMessage(
