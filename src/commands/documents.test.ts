@@ -8,7 +8,7 @@ import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { setCCloudComputePoolForUriCommand } from "./documents";
 
-describe.only("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
+describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
   let sandbox: sinon.SinonSandbox;
 
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
