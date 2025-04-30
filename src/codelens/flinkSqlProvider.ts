@@ -29,8 +29,8 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
   private _onDidChangeCodeLenses: EventEmitter<void> = new EventEmitter<void>();
   readonly onDidChangeCodeLenses: Event<void> = this._onDidChangeCodeLenses.event;
 
-  constructor() {
-    // refresh/update all codelenses for a given document when any of these events fire
+  private constructor() {
+    // refresh/update all codelenses for documents visible in the workspace when any of these fire
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       logger.debug("ccloudConnected event fired, updating codelenses", { connected });
       this._onDidChangeCodeLenses.fire();
@@ -41,6 +41,14 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     });
 
     this.disposables.push(ccloudConnectedSub, uriMetadataSetSub);
+  }
+
+  private static instance: FlinkSqlCodelensProvider | null = null;
+  static getInstance(): FlinkSqlCodelensProvider {
+    if (!FlinkSqlCodelensProvider.instance) {
+      FlinkSqlCodelensProvider.instance = new FlinkSqlCodelensProvider();
+    }
+    return FlinkSqlCodelensProvider.instance;
   }
 
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
