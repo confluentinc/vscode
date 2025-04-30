@@ -1,5 +1,7 @@
 import * as assert from "assert";
-import { localTimezoneOffset } from "./flinkStatements";
+import * as sinon from "sinon";
+import * as authnUtils from "../../authn/utils";
+import { determineFlinkStatementName, localTimezoneOffset } from "./flinkStatements";
 
 describe("commands/utils/flinkStatements.ts localTimezoneOffset()", function () {
   let originalTimezone: string | undefined;
@@ -33,5 +35,37 @@ describe("commands/utils/flinkStatements.ts localTimezoneOffset()", function () 
       "Offset should be 0700 or 0800",
     );
     assert.strictEqual(offset.slice(6, 8) === "00", true, "Offset should be 00");
+  });
+});
+
+describe("determineFlinkStatementName()", function () {
+  let sandbox: sinon.SinonSandbox;
+  let getCCloudAuthSessionStub: sinon.SinonStub;
+
+  const now = new Date("2024-10-21 12:00:00.0000Z");
+  const expectedDatePart = "2024-10-21t12-00-00";
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+    sandbox.useFakeTimers(now);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Should return a unique name for a Flink statement", async function () {
+    // will be lowercased, reduced to 'joe'
+    getCCloudAuthSessionStub.resolves({ account: { id: "Joe+spam@confluent.io" } });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `joe-vscode-${expectedDatePart}`);
+  });
+
+  it("Handles crazy case if ccloud isn't authenticated", async function () {
+    getCCloudAuthSessionStub.resolves(undefined);
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `unknownuser-vscode-${expectedDatePart}`);
   });
 });
