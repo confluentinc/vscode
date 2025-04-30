@@ -24,7 +24,7 @@ import { parseResults } from "./utils/flinkStatementResults";
 const logger = new Logger("flink-statement-results");
 
 export function activateFlinkStatementResultsViewer(context: ExtensionContext) {
-  const schedule = scheduler(4, 500);
+  const schedule = scheduler(4, 800);
 
   // These variables are unused in the current implementation,
   // but are kept for future use. Can be removed later if deemed unnecessary.
