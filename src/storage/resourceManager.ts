@@ -768,7 +768,7 @@ export class ResourceManager {
   }
 
   /** Get the metadata object for a specific {@link Uri}. */
-  async getUriMetadata(uri: Uri): Promise<Partial<Record<UriMetadataKeys, any>> | undefined> {
+  async getUriMetadata(uri: Uri): Promise<UriMetadata | undefined> {
     const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
     return metadataMap.get(uri.toString());
   }
@@ -792,7 +792,7 @@ export class ResourceManager {
     const key = WorkspaceStorageKeys.URI_METADATA;
     await this.runWithMutex(key, async () => {
       const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
-      const metadata = metadataMap.get(uri.toString()) ?? ({} as Record<UriMetadataKeys, any>);
+      const metadata: UriMetadata = metadataMap.get(uri.toString()) ?? {};
       metadata[metadataKey] = metadataValue;
       metadataMap.set(uri.toString(), metadata);
       await this.setAllUriMetadata(metadataMap);
