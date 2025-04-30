@@ -1,15 +1,18 @@
-import * as vscode from "vscode";
 import * as assert from "assert";
-import { parseTestResult, getConnectionSpecFromFormData, deepMerge } from "./directConnect";
+import sinon from "sinon";
+import * as vscode from "vscode";
 import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
 import { ConnectedState, Status } from "./clients/sidecar";
-import { CustomConnectionSpec } from "./storage/resourceManager";
-import sinon from "sinon";
-import { ResourceManager } from "./storage/resourceManager";
-import { handleConnectionChange } from "./directConnect";
+import {
+  deepMerge,
+  getConnectionSpecFromFormData,
+  handleConnectionChange,
+  parseTestResult,
+} from "./directConnect";
+import { CustomConnectionSpec, ResourceManager } from "./storage/resourceManager";
 
 describe("directConnect.ts", () => {
   describe("getConnectionSpecFromFormData", () => {
@@ -530,7 +533,7 @@ describe("directConnect.ts", () => {
       mockShowInformationMessage = sandbox.stub(vscode.window, "showInformationMessage");
 
       // Mock resource manager with required methods
-      stubResourceManager = sinon.createStubInstance(ResourceManager);
+      stubResourceManager = sandbox.createStubInstance(ResourceManager);
       sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
     });
 
