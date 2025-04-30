@@ -10,8 +10,8 @@ describe.only("configureFlinkDefaults command", () => {
   let sandbox: sinon.SinonSandbox;
   let flinkComputePoolQuickPickStub: sinon.SinonStub;
   let flinkDatabaseQuickpickStub: sinon.SinonStub;
-  // HELP: Not sure how to rewrite to avoid this unused var warning... we are stubbing this so internal update can call it
-  let getConfigurationStub: sinon.SinonStub;
+  // We use this to stub the getConfiguration().update() method, see below
+  let getConfigurationStub: sinon.SinonStub; // eslint-disable-line @typescript-eslint/no-unused-vars
   let updateStub: sinon.SinonStub;
   let showInformationMessageStub: sinon.SinonStub;
 
