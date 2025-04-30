@@ -18,7 +18,7 @@ import { Schema, Subject } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
-import { UriMetadataMap } from "./types";
+import { UriMetadata, UriMetadataMap } from "./types";
 
 const logger = new Logger("storage.resourceManager");
 
@@ -39,12 +39,6 @@ export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
 
 /** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
 export type CCloudSchemaBySchemaRegistry = Map<string, Schema[]>;
-
-/** Single URI's confluent-extension-centric metadata */
-export type UriMetadata = Map<UriMetadataKeys, string>;
-
-/** Map of string of uri for a file -> dict of its confluent-extension-centric metadata */
-export type AllUriMetadata = Map<string, UriMetadata>;
 
 export interface CustomConnectionSpec extends ConnectionSpec {
   // enforce `ConnectionId` type over `string`
@@ -763,19 +757,18 @@ export class ResourceManager {
   }
 
   /** Set the metadata for a specific {@link Uri}. */
-  async setUriMetadata(uri: Uri, metadata: Partial<Record<UriMetadataKeys, any>>): Promise<void> {
+  async setUriMetadata(uri: Uri, metadata: UriMetadata): Promise<void> {
     const key = WorkspaceStorageKeys.URI_METADATA;
     await this.runWithMutex(key, async () => {
       const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
-      const existingMetadata =
-        metadataMap.get(uri.toString()) ?? ({} as Record<UriMetadataKeys, any>);
+      const existingMetadata: UriMetadata = metadataMap.get(uri.toString()) ?? ({} as UriMetadata);
       metadataMap.set(uri.toString(), { ...existingMetadata, ...metadata });
       await this.setAllUriMetadata(metadataMap);
     });
   }
 
   /** Get the metadata object for a specific {@link Uri}. */
-  async getUriMetadata(uri: Uri): Promise<Record<UriMetadataKeys, any> | undefined> {
+  async getUriMetadata(uri: Uri): Promise<Partial<Record<UriMetadataKeys, any>> | undefined> {
     const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
     return metadataMap.get(uri.toString());
   }
