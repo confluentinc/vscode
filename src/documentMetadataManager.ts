@@ -19,7 +19,7 @@ export class DocumentMetadataManager {
     );
   }
 
-  private static instance: DocumentMetadataManager;
+  private static instance: DocumentMetadataManager | null = null;
   static getInstance(): DocumentMetadataManager {
     if (!DocumentMetadataManager.instance) {
       DocumentMetadataManager.instance = new DocumentMetadataManager();
