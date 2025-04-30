@@ -297,6 +297,17 @@ The build will create a lot of local files. You can clean up these generated fil
 Cleaning is often useful to ensure that all generated files, JARs and executables are removed,
 before rerunning the build and tests.
 
+### Formatting
+
+We use [Prettier](https://prettier.io/) for code formatting. To format the code, run:
+
+    gulp format
+
+You can also install the
+[Prettier extension for VS Code](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+which will format `typescript` documents **on save** based on the `.prettierrc` and
+`.vscode/settings.json` files in the project.
+
 ### Testing
 
 This project uses unit tests and integration tests to verify functionality and identify regressions.
