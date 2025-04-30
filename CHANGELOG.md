@@ -7,6 +7,8 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - Configurable default settings for `compute pool` and `database` for FlinkSQL operations
+- Codelenses for FlinkSQL documents to support signing in to CCloud, switching CCloud organizations,
+  and setting a compute pool for the document
 
 ## 1.2.0
 
