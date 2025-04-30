@@ -11,7 +11,10 @@ import {
 } from "../quickpicks/flinkComputePools";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { flinkDatabaseQuickpick, logger } from "../quickpicks/kafkaClusters";
+import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
+import { Logger } from "../logging";
+
+const logger = new Logger("commands.flinkComputePools");
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
