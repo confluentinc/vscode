@@ -57,6 +57,8 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
+import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
@@ -85,8 +87,6 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
-import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 
 const logger = new Logger("extension");
 
@@ -292,7 +292,7 @@ async function _activateExtension(
   const docManager = DocumentMetadataManager.getInstance();
   context.subscriptions.push(...docManager.disposables);
 
-  const provider = new FlinkSqlCodelensProvider();
+  const provider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider("flinksql", provider),
     ...provider.disposables,
