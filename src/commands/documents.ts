@@ -1,6 +1,7 @@
 import { commands, Disposable, TextDocument, Uri, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
+import { showErrorNotificationWithButtons } from "../errors";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -8,6 +9,7 @@ import { CCloudOrganization } from "../models/organization";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
+import { UriMetadata } from "../storage/types";
 
 const logger = new Logger("commands.documents");
 
@@ -48,7 +50,12 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
     return;
   }
 
-  const doc: TextDocument = await workspace.openTextDocument(uri);
+  let doc: TextDocument | undefined;
+  try {
+    doc = await workspace.openTextDocument(uri);
+  } catch (error) {
+    showErrorNotificationWithButtons(`Failed to open document "${uri.toString()}": ${error}`);
+  }
   if (!doc) {
     logger.error("Failed to open document for uri", { uri });
     return;
@@ -62,12 +69,13 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
     computePoolId: pool.id,
   });
 
-  await getResourceManager().setUriMetadata(uri, {
+  const metadata: UriMetadata = {
     [UriMetadataKeys.CCLOUD_PROVIDER]: pool.provider,
     [UriMetadataKeys.CCLOUD_REGION]: pool.region,
     [UriMetadataKeys.ENVIRONMENT_ID]: pool.environmentId,
     [UriMetadataKeys.COMPUTE_POOL_ID]: pool.id,
-  });
+  };
+  await getResourceManager().setUriMetadata(uri, metadata);
   uriMetadataSet.fire(uri);
 }
 
