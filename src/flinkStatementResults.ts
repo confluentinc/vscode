@@ -157,6 +157,9 @@ function flinkStatementResultsStartPollingCommand(
   /** A boolean that indicates if the results reached its capacity. */
   const isResultsFull = os.signal(false);
 
+  /** Filter by substring text query. Persists bitset instead of computing it. */
+  const searchQuery = os.signal<string>(config.searchQuery);
+
   /** Most recent response payload from Flink API. */
   const latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
   /** Most recent failure info */
@@ -289,14 +292,42 @@ function flinkStatementResultsStartPollingCommand(
           });
           return obj;
         });
-        const paginatedResults = res.slice(offset, offset + limit);
+
+        // Apply search filter if search query exists
+        let filteredResults = res;
+        if (searchQuery()) {
+          const searchLower = searchQuery().toLowerCase();
+          filteredResults = res.filter((row) =>
+            Object.values(row).some(
+              (value) => value !== null && String(value).toLowerCase().includes(searchLower),
+            ),
+          );
+        }
+
+        const paginatedResults = filteredResults.slice(offset, offset + limit);
         return {
           results: paginatedResults as any[], // Type assertion needed due to Map conversion
         } satisfies MessageResponse<"GetResults">;
       }
       case "GetResultsCount": {
         const count = results().size;
-        return { total: count, filter: null } satisfies MessageResponse<"GetResultsCount">;
+        let filteredCount = null;
+        if (searchQuery()) {
+          const searchLower = searchQuery().toLowerCase();
+          const res = Array.from(results().values()).map((row: Map<string, any>) => {
+            const obj: Record<string, any> = {};
+            row.forEach((value: any, key: string) => {
+              obj[key] = value;
+            });
+            return obj;
+          });
+          filteredCount = res.filter((row) =>
+            Object.values(row).some(
+              (value) => value !== null && String(value).toLowerCase().includes(searchLower),
+            ),
+          ).length;
+        }
+        return { total: count, filter: filteredCount } satisfies MessageResponse<"GetResultsCount">;
       }
       case "GetSchema": {
         if (!statement) {
@@ -360,6 +391,17 @@ function flinkStatementResultsStartPollingCommand(
         notifyUI();
         return null satisfies MessageResponse<"StreamResume">;
       }
+      case "Search": {
+        searchQuery(body.search ?? "");
+        notifyUI();
+        return null satisfies MessageResponse<"Search">;
+      }
+      case "GetSearchQuery": {
+        return searchQuery() ?? ("" satisfies MessageResponse<"GetSearchQuery">);
+      }
+      case "GetSearchSource": {
+        return searchQuery() ?? (null satisfies MessageResponse<"GetSearchSource">);
+      }
       default: {
         const _exhaustiveCheck: never = type;
         return _exhaustiveCheck;
@@ -384,6 +426,7 @@ function flinkStatementResultsStartPollingCommand(
  */
 export class FlinkStatementResultsViewerConfig extends Data {
   resultLimit: number = 100_000;
+  searchQuery: string = "";
 
   static fromQuery(params: URLSearchParams) {
     let value: string | null;
@@ -395,6 +438,11 @@ export class FlinkStatementResultsViewerConfig extends Data {
       if (!Number.isNaN(parsed) && [1_000_000, 100_000, 10_000, 1_000, 100].includes(parsed)) {
         config.resultLimit = parsed;
       }
+    }
+
+    value = params.get("searchQuery");
+    if (value != null) {
+      config.searchQuery = value;
     }
 
     return FlinkStatementResultsViewerConfig.create(config);
