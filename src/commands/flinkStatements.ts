@@ -16,6 +16,7 @@ import {
   determineFlinkStatementName,
   FlinkSpecProperties,
   IFlinkStatementSubmitParameters,
+  localTimezoneOffset,
   submitFlinkStatement,
 } from "./utils/flinkStatements";
 
@@ -101,8 +102,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     properties: new FlinkSpecProperties({
       currentDatabase,
       currentCatalog: computePool.environmentId,
-      // TODO get at the user's local timezone
-      // localTimezone: "GMT-04:00",
+      localTimezone: localTimezoneOffset(),
     }),
   };
 
