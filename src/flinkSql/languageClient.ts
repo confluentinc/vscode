@@ -24,7 +24,7 @@ let languageClient: LanguageClient | null = null;
  * - User is authenticated with CCloud
  * - User has selected a compute pool
  */
-export async function initializeLanguageClient(url: string): Promise<vscode.Disposable | null> {
+export async function initializeLanguageClient(url: string): Promise<LanguageClient | null> {
   if (!hasCCloudAuthSession()) {
     logger.warn("Cannot initialize language client: User not authenticated with CCloud");
     return null;
