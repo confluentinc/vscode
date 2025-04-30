@@ -63,6 +63,13 @@ describe("determineFlinkStatementName()", function () {
     assert.strictEqual(statementName, `joe-vscode-${expectedDatePart}`);
   });
 
+  it("Works with degenerate ccloud username", async function () {
+    getCCloudAuthSessionStub.resolves({ account: { id: "simple" } });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `simple-vscode-${expectedDatePart}`);
+  });
+
   it("Handles crazy case if ccloud isn't authenticated", async function () {
     getCCloudAuthSessionStub.resolves(undefined);
     const statementName = await determineFlinkStatementName();
