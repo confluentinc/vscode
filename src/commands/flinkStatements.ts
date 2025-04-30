@@ -61,6 +61,7 @@ async function waitForStatementRunning(
     region: computePool.region,
   });
 
+  let response;
   while (true) {
     const elapsedTime = Date.now() - startTime;
     if (elapsedTime > MAX_WAIT_TIME_MS) {
@@ -69,13 +70,14 @@ async function waitForStatementRunning(
       );
     }
 
-    const response = await statementsService.getSqlv1Statement({
-      environment_id: statement.environmentId,
-      organization_id: statement.organizationId,
-      statement_name: statement.name,
-    });
+    response = restFlinkStatementToModel(
+      await statementsService.getSqlv1Statement({
+        environment_id: statement.environmentId,
+        organization_id: statement.organizationId,
+        statement_name: statement.name
+      }));
 
-    if (response.status?.phase === RUNNING_PHASE) {
+    if (response.isResultsViewable) {
       break;
     }
 
@@ -86,7 +88,7 @@ async function waitForStatementRunning(
 }
 
 /**
- * Wait for a Flink statement to enter the RUNNING phase and then display the results in a new tab.
+ * Wait for a Flink statement to enter the  phase and then display the results in a new tab.
  *
  * @param statement The Flink statement to monitor and display results for
  * @param computePool The compute pool the statement is running on
@@ -136,9 +138,9 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
 /**
   * Submit a Flink statement to a Flink cluster. Flow:
   * Quickpick flow:
-	*  1) Chose flinksql, sql, or text document, preferring the current foreground editor.
+  *  1) Chose flinksql, sql, or text document, preferring the current foreground editor.
   *  2) Statement name (auto-generated from template pattern, but user can override)
-	  2) the Flink cluster to send to
+    2) the Flink cluster to send to
     3) also need to know at least the 'current database' (cluster name) to submit along with the catalog name (the env, infer-able from the chosen Flink cluster).
   5) Submit!
   6) Raise error box if any immediate submission errors.
@@ -230,7 +232,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     await selectPoolForStatementsViewCommand(computePool);
 
     // Wait for statement to be running and show results
-    if (newStatement.isResultsViewable) {
+    if (newStatement.canHaveResults) {
       await waitAndShowResults(newStatement, computePool);
 
       // Refresh the statements view again
