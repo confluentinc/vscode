@@ -65,7 +65,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
   );
   if (!statementBodyUri) {
     logger.debug(
-      "sumbitFlinkStatementCommand",
+      "submitFlinkStatementCommand",
       "Short circuiting return, no statement file chosen.",
     );
     return;

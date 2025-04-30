@@ -20,7 +20,7 @@ describe("commands/utils/flinkStatements.ts localTimezoneOffset()", function () 
     // (Can only do this once; internals of Date will cache the timezone offset?)
     process.env.TZ = "America/Los_Angeles";
 
-    // This should be GMT-0700 for EDT or GMT-0800 for EST
+    // This should be GMT-0700 for PDT or GMT-0800 for PST
     const offset = localTimezoneOffset();
     assert.strictEqual(offset.startsWith("GMT"), true, "Offset should end with GMT");
     // Fourth character should be + or -
