@@ -1,5 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { TEST_DIRECT_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
+import { TEST_AUTHTYPES_AND_CREDS } from "../../../tests/unit/testResources/authCredentials";
 import {
   TEST_AUTHENTICATED_CCLOUD_CONNECTION,
   TEST_CCLOUD_CONNECTION,
@@ -8,6 +10,7 @@ import {
   TEST_DIRECT_CONNECTION_ID,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
+import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import {
   ConnectedState,
   Connection,
@@ -16,8 +19,12 @@ import {
   instanceOfConnection,
   Status,
 } from "../../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../../constants";
 import { connectionStable } from "../../emitters";
+import * as errors from "../../errors";
 import { ConnectionId } from "../../models/resource";
+import * as notifications from "../../notifications";
+import { getResourceManager } from "../../storage/resourceManager";
 import {
   ConnectionEventAction,
   ConnectionEventBody,
@@ -25,13 +32,6 @@ import {
   MessageType,
   newMessageHeaders,
 } from "../../ws/messageTypes";
-
-import { TEST_DIRECT_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
-import { TEST_AUTHTYPES_AND_CREDS } from "../../../tests/unit/testResources/authCredentials";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
-import { CCLOUD_CONNECTION_ID } from "../../constants";
-import * as errors from "../../errors";
-import { getResourceManager } from "../../storage/resourceManager";
 import {
   ConnectionStateWatcher,
   ConnectionSummary,
@@ -349,7 +349,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
+    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
   });
 
   afterEach(() => {

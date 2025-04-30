@@ -1,12 +1,13 @@
 import { graphql } from "gql.tada";
 import { workspace, WorkspaceConfiguration } from "vscode";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { logError } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { ENABLE_FLINK } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
 

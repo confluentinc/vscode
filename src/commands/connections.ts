@@ -5,10 +5,10 @@ import { EXTENSION_VERSION } from "../constants";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
 import { ccloudAuthSessionInvalidated } from "../emitters";
-import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import {

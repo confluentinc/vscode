@@ -1,8 +1,8 @@
 import { CancellationToken, Progress, ProgressLocation, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
-import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { getLocalKafkaImageName, getLocalSchemaRegistryImageName } from "../configs";
 import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
