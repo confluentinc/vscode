@@ -18,6 +18,7 @@ import { CCloudOrganization } from "../models/organization";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
+import { UriMetadata } from "../storage/types";
 
 const logger = new Logger("codelens.flinkSqlProvider");
 
@@ -74,9 +75,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
 
     // look up document metadata from extension state
     const rm = ResourceManager.getInstance();
-    const uriMetadata: Record<UriMetadataKeys, any> | undefined = await rm.getUriMetadata(
-      document.uri,
-    );
+    const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(document.uri);
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
