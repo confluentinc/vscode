@@ -115,9 +115,15 @@ export async function uriQuickpick(
 
   return new Promise<Uri | undefined>((resolve) => {
     let resolved = false;
+    let qpHidden = false;
     let usingFileChooser = false;
 
     function resolver(uri: Uri | undefined) {
+      if (!qpHidden) {
+        qpHidden = true;
+        quickPick.hide();
+      }
+
       // Only really resolve once.
       if (!resolved) {
         resolved = true;
