@@ -1,4 +1,4 @@
-import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { commands, QuickPickItemKind, ThemeIcon, window, workspace } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
@@ -52,6 +52,9 @@ export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePoo
     }
   }
 
+  const config = workspace.getConfiguration("confluent.flink");
+  const defaultComputePoolId = config.get<string>("computePoolId");
+
   if (computePools.length === 0) {
     let login: string = "";
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
@@ -84,6 +87,13 @@ export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePoo
   const artifactsPool: CCloudFlinkComputePool | null = null;
   if (artifactsPool) {
     focusedPools.push(artifactsPool);
+  }
+  // Add default compute pool to focused pools if it exists
+  if (defaultComputePoolId) {
+    const defaultPool = computePools.find((pool) => pool.id === defaultComputePoolId);
+    if (defaultPool && !focusedPools.some((pool) => pool.id === defaultComputePoolId)) {
+      focusedPools.push(defaultPool);
+    }
   }
   for (const focusedPool of focusedPools) {
     const focusedPoolIndex: number = computePools.findIndex((pool) => focusedPool.id === pool.id);
