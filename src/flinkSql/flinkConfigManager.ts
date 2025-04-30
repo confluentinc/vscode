@@ -302,6 +302,9 @@ export class FlinkConfigurationManager implements Disposable {
    * Show notification for user to select default compute pool, database
    */
   private async promptChooseDefaultComputePool(): Promise<void> {
+if (!hasCCloudAuthSession()) {
+      return; // This method should not be called if not authenticated
+    }
     const selection = await window.showInformationMessage(
       "Choose your CCloud Flink Compute Pool and other defaults to quickly run & view Flink SQL queries.",
       "Update Flink Settings",
