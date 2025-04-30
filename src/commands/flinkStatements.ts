@@ -8,7 +8,13 @@ import {
   showErrorNotificationWithButtons,
 } from "../errors";
 import { Logger } from "../logging";
-import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
+import {
+  FAILED_PHASE,
+  FlinkStatement,
+  RUNNING_PHASE,
+  restFlinkStatementToModel,
+} from "../models/flinkStatement";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
@@ -22,8 +28,97 @@ import {
   IFlinkStatementSubmitParameters,
   submitFlinkStatement,
 } from "./utils/flinkStatements";
+import { getSidecar } from "../sidecar";
+import { FlinkStatementResultsViewerConfig } from "../flinkStatementResults";
+import { currentFlinkStatementsResourceChanged } from "../emitters";
 
 const logger = new Logger("commands.flinkStatements");
+
+/** Poll period in millis to check whether statement has reached RUNNING state */
+const DEFAULT_POLL_PERIOD_MS = 300;
+
+/** Max time in millis to wait until statement reaches RUNNING state */
+const MAX_WAIT_TIME_MS = 30_000;
+
+/**
+ * Wait for a Flink statement to enter the RUNNING phase by polling its status.
+ *
+ * @param statement The Flink statement to monitor
+ * @param computePool The compute pool the statement is running on
+ * @param progress Progress object to report status updates
+ * @param pollPeriodMs Optional polling interval in milliseconds (defaults to 300ms)
+ * @returns Promise that resolves when the statement enters RUNNING phase
+ * @throws Error if statement doesn't reach RUNNING phase within MAX_WAIT_TIME_MS seconds
+ */
+async function waitForStatementRunning(
+  statement: FlinkStatement,
+  computePool: CCloudFlinkComputePool,
+  progress: vscode.Progress<{ message?: string }>,
+  pollPeriodMs: number = DEFAULT_POLL_PERIOD_MS,
+): Promise<void> {
+  const startTime = Date.now();
+  const sidecar = await getSidecar();
+  const statementsService = sidecar.getFlinkSqlStatementsApi({
+    environmentId: computePool.environmentId,
+    provider: computePool.provider,
+    region: computePool.region,
+  });
+
+  let response;
+  while (true) {
+    const elapsedTime = Date.now() - startTime;
+    if (elapsedTime > MAX_WAIT_TIME_MS) {
+      throw new Error(
+        `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
+      );
+    }
+
+    response = restFlinkStatementToModel(
+      await statementsService.getSqlv1Statement({
+        environment_id: statement.environmentId,
+        organization_id: statement.organizationId,
+        statement_name: statement.name
+      }));
+
+    if (response.isResultsViewable) {
+      break;
+    }
+
+    progress.report({ message: response.status?.phase });
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, pollPeriodMs));
+  }
+}
+
+/**
+ * Wait for a Flink statement to enter the  phase and then display the results in a new tab.
+ *
+ * @param statement The Flink statement to monitor and display results for
+ * @param computePool The compute pool the statement is running on
+ * @returns Promise that resolves when the results are displayed
+ */
+async function waitAndShowResults(
+  statement: FlinkStatement,
+  computePool: CCloudFlinkComputePool,
+): Promise<void> {
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Submitting statement ${statement.name}`,
+      cancellable: false,
+    },
+    async (progress) => {
+      await waitForStatementRunning(statement, computePool, progress);
+      progress.report({ message: "Opening statement results in a new tab..." });
+      await vscode.commands.executeCommand(
+        "confluent.flinkStatementResults",
+        statement,
+        false,
+        FlinkStatementResultsViewerConfig.create(),
+      );
+    },
+  );
+}
 
 /** View the SQL statement portion of a FlinkStatement in a read-only document. */
 export async function viewStatementSqlCommand(statement: FlinkStatement): Promise<void> {
@@ -46,9 +141,9 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
 /**
   * Submit a Flink statement to a Flink cluster. Flow:
   * Quickpick flow:
-	*  1) Chose flinksql, sql, or text document, preferring the current foreground editor.
+  *  1) Chose flinksql, sql, or text document, preferring the current foreground editor.
   *  2) Statement name (auto-generated from template pattern, but user can override)
-	  2) the Flink cluster to send to
+    2) the Flink cluster to send to
     3) also need to know at least the 'current database' (cluster name) to submit along with the catalog name (the env, infer-able from the chosen Flink cluster).
   5) Submit!
   6) Raise error box if any immediate submission errors.
@@ -140,12 +235,13 @@ export async function submitFlinkStatementCommand(): Promise<void> {
     // which will then show the new statement.
     await selectPoolForStatementsViewCommand(computePool);
 
-    // TODO indicate to the view to highlight the new statement
-    // (similar to how we did we creating new schema subjects or versions)
-    // Something like:
-    // await FlinkStatementsViewProvider.getInstance().revealStatement(newStatement);
+    // Wait for statement to be running and show results
+    if (newStatement.canHaveResults) {
+      await waitAndShowResults(newStatement, computePool);
 
-    // TODO open up statement results view (invoke Rohit work here once both in main)
+      // Refresh the statements view again
+      currentFlinkStatementsResourceChanged.fire(computePool);
+    }
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
 
