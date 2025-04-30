@@ -7,6 +7,7 @@ import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { MessageDocumentProvider } from "./documentProviders/message";
 import {
   FetchError,
   GetSqlv1StatementResult200Response,
@@ -20,6 +21,7 @@ import { type post } from "./webview/flink-statement-results";
 import flinkStatementResults from "./webview/flink-statement-results.html";
 import { logError, showErrorNotificationWithButtons } from "./errors";
 import { parseResults } from "./utils/flinkStatementResults";
+import * as vscode from "vscode";
 
 const logger = new Logger("flink-statement-results");
 
@@ -322,6 +324,23 @@ function flinkStatementResultsStartPollingCommand(
       }
       case "GetStreamError": {
         return latestError() satisfies MessageResponse<"GetStreamError">;
+      }
+      case "PreviewJSON": {
+        const { result } = body;
+        const filename = `flink-statement-result-${new Date().getTime()}.json`;
+        const provider = new MessageDocumentProvider();
+        MessageDocumentProvider.message = JSON.stringify(result, null, 2);
+        const uri = provider.resourceToUri({ id: -1 }, filename);
+        vscode.window
+          .showTextDocument(uri, {
+            preview: true,
+            viewColumn: vscode.ViewColumn.Beside,
+            preserveFocus: false,
+          })
+          .then((editor) => {
+            vscode.languages.setTextDocumentLanguage(editor.document, "json");
+          });
+        return null;
       }
       case "GetStreamTimer": {
         return timer() satisfies MessageResponse<"GetStreamTimer">;
