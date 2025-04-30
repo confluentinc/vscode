@@ -71,15 +71,13 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
 
     // codelens for changing org
     const org: CCloudOrganization = await CCloudResourceLoader.getInstance().getOrganization();
-    const orgLens = new CodeLens(range, {
+    const selectOrgCommand: Command = {
       title: org.name,
       command: "confluent.document.setCCloudOrg",
       tooltip: "Set CCloud Organization for Flink Statement",
       arguments: [document.uri],
-    } as Command);
-    codeLenses.push(orgLens);
-
-    let computePool: CCloudFlinkComputePool | undefined;
+    };
+    const orgLens = new CodeLens(range, selectOrgCommand);
 
     // look up document metadata from extension state
     const rm = ResourceManager.getInstance();
@@ -87,34 +85,50 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
-
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
     const computePoolString: string | undefined = uriMetadata?.[UriMetadataKeys.COMPUTE_POOL_ID];
+    let computePool: CCloudFlinkComputePool | undefined;
     if (computePoolString) {
+      // TODO: replace with dedicated loader method for looking up compute pool by ID
       const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
       const env: CCloudEnvironment | undefined = envs.find((e) =>
         e.flinkComputePools.some((pool) => pool.id === computePoolString),
       );
       const computePools: CCloudFlinkComputePool[] = env?.flinkComputePools || [];
       computePool = computePools.find((p) => p.id === computePoolString);
+      if (computePool) {
+        // explicitly turn into a CCloudFlinkComputePool since `submitFlinkStatementCommand` checks
+        // for a CCloudFlinkComputePool instance
+        computePool = new CCloudFlinkComputePool({ ...computePool });
+      } else {
+        // no need to clear pool metadata since we'll show "Set Compute Pool" codelens
+        // and the user can choose a new one to update the stored metadata
+        logger.warn("compute pool not found from stored pool ID");
+      }
     }
-    const computePoolLens = new CodeLens(range, {
-      title: computePoolString ? computePoolString : "Set Compute Pool",
+    const selectComputePoolCommand: Command = {
+      title: computePool ? computePool.name : "Set Compute Pool",
       command: "confluent.document.flinksql.setCCloudComputePool",
       tooltip: "Set CCloud Compute Pool for Flink Statement",
       arguments: [document.uri],
-    } as Command);
-    codeLenses.push(computePoolLens);
+    };
+    const computePoolLens = new CodeLens(range, selectComputePoolCommand);
 
     if (computePool) {
-      const submitLens = new CodeLens(range, {
+      const submitCommand: Command = {
         title: "▶️ Submit Statement",
-        command: "confluent.flinksql.submitStatement",
+        command: "confluent.statements.create",
         tooltip: "Submit Flink Statement to CCloud",
-        arguments: [document.uri],
-      } as Command);
-      codeLenses.unshift(submitLens);
+        // TODO: update this once we can look up the database
+        arguments: [document.uri, computePool],
+      };
+      const submitLens = new CodeLens(range, submitCommand);
+      // show the "Submit Statement" | <current pool> | <current org> codelenses
+      codeLenses.push(submitLens, computePoolLens, orgLens);
+    } else {
+      // show the "Set Compute Pool" | <current org> codelenses
+      codeLenses.push(computePoolLens, orgLens);
     }
 
     return codeLenses;
