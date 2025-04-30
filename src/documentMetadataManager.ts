@@ -16,6 +16,7 @@ export class DocumentMetadataManager {
       workspace.onDidOpenTextDocument(this.handleDocumentOpen, this),
       workspace.onDidSaveTextDocument(this.handleDocumentSave, this),
       workspace.onDidCloseTextDocument(this.handleDocumentClose, this),
+      // TODO: add other listeners (rename, delete, move, etc.) as needed
     );
   }
 
