@@ -138,7 +138,7 @@ export class FlinkConfigurationManager implements Disposable {
       const environments = await resourceManager.getCCloudEnvironments();
       // Avoid warning if we haven't loaded the envs yet (happens if user already has setting on activation)
       if (!environments || environments.length === 0) {
-        logger.warn("No CCloud environments found");
+        logger.debug("No CCloud environments found");
         return;
       }
       // Check if the configured compute pool exists in any environment
