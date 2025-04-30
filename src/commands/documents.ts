@@ -1,11 +1,11 @@
 import { commands, Disposable, TextDocument, Uri, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
-import { showErrorNotificationWithButtons } from "../errors";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudOrganization } from "../models/organization";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
@@ -54,10 +54,13 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
   try {
     doc = await workspace.openTextDocument(uri);
   } catch (error) {
+    logger.error("Failed to open document to set compute pool metadata", {
+      uri: uri.toString(),
+      error,
+    });
     showErrorNotificationWithButtons(`Failed to open document "${uri.toString()}": ${error}`);
   }
   if (!doc) {
-    logger.error("Failed to open document for uri", { uri });
     return;
   }
 
