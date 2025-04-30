@@ -179,7 +179,7 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
 
     nonInvalidTokenStatusFireStub = sandbox.stub(nonInvalidTokenStatus, "fire");
 
-    stubResourceManager = sinon.createStubInstance(ResourceManager);
+    stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
   });
 
