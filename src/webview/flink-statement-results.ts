@@ -267,6 +267,12 @@ class FlinkStatementResultsViewModel extends ViewModel {
   handleInput(event: InputEvent) {
     // This is handled by the search function
   }
+
+  /** Preview the JSON content of a result row in a read-only editor */
+  preview(result: Record<string, any>) {
+    return post("PreviewJSON", { result, timestamp: this.timestamp() });
+  }
+
   /**
    * List of columns width, in pixels. The final `value` column is not present,
    * because it always takes the rest of the space available.
@@ -372,6 +378,10 @@ export function post(
 ): Promise<null>;
 export function post(type: "StreamPause", body: { timestamp?: number }): Promise<null>;
 export function post(type: "StreamResume", body: { timestamp?: number }): Promise<null>;
+export function post(
+  type: "PreviewJSON",
+  body: { result: Record<string, any>; timestamp?: number },
+): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
