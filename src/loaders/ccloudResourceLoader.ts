@@ -11,7 +11,8 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { IFlinkQueryable, isCCloud, OrganizationId } from "../models/resource";
+import { CCloudOrganization } from "../models/organization";
+import { IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar, SidecarHandle } from "../sidecar";
@@ -53,7 +54,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   private currentlyCoarseLoadingPromise: Promise<void> | null = null;
 
   /** The user's current ccloud organization. Determined along with coarse resources. */
-  private organizationId: OrganizationId | null = null;
+  private organization: CCloudOrganization | null = null;
 
   // Singleton class. Use getInstance() to get the singleton instance.
   // (Only public for testing / signon mocking purposes.)
@@ -82,7 +83,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   protected deleteCoarseResources(): void {
     getResourceManager().deleteCCloudResources();
-    this.organizationId = null;
+    this.organization = null;
   }
 
   /**
@@ -149,7 +150,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
       // Do the GraphQL fetches concurrently.
       // (this.getOrganizationId() internally caches its result, so we don't need to worry about)
-      const gqlResults = await Promise.all([getEnvironments(), this.getOrganizationId()]);
+      const gqlResults = await Promise.all([getEnvironments(), this.getOrganization()]);
 
       // Store the environments, clusters, schema registries in the resource manager
       const environments: CCloudEnvironment[] = gqlResults[0];
@@ -273,15 +274,15 @@ export class CCloudResourceLoader extends ResourceLoader {
    *
    * @returns The current organization ID.
    */
-  public async getOrganizationId(): Promise<OrganizationId> {
-    if (this.organizationId) {
-      return this.organizationId;
+  public async getOrganization(): Promise<CCloudOrganization> {
+    if (this.organization) {
+      return this.organization;
     }
 
     const organization = await getCurrentOrganization();
     if (organization) {
-      this.organizationId = organization.id;
-      return this.organizationId;
+      this.organization = organization;
+      return this.organization;
     }
     logger.error("getOrganizationId(): No current organization found.");
     throw new Error("No current organization found.");
@@ -295,12 +296,12 @@ export class CCloudResourceLoader extends ResourceLoader {
   public async determineFlinkQueryables(
     resource: CCloudEnvironment | CCloudFlinkComputePool,
   ): Promise<IFlinkQueryable[]> {
-    const orgId = await this.getOrganizationId();
+    const org = await this.getOrganization();
     if (resource instanceof CCloudFlinkComputePool) {
       // If we have a single compute pool, just reexpress it.
       return [
         {
-          organizationId: orgId,
+          organizationId: org.id,
           environmentId: resource.environmentId,
           computePoolId: resource.id,
           provider: resource.provider,
@@ -327,7 +328,7 @@ export class CCloudResourceLoader extends ResourceLoader {
         providerRegionSet.add({
           provider: pool.provider,
           region: pool.region,
-          organizationId: orgId,
+          organizationId: org.id,
           environmentId: resource.id,
         });
       });
