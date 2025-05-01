@@ -36,18 +36,20 @@ test: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
+			xvfb-run -a npx gulp clean testBuild functional; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			if pgrep -x "Dock" > /dev/null; then \
 					echo "GUI session is active."; \
 					npx gulp test; \
+					npx gulp clean testBuild functional; \
 			else \
 					echo "No active GUI session. Aborting tests."; \
 					exit 1; \
 			fi \
 	else \
 			npx gulp test; \
+			npx gulp clean testBuild functional; \
 	fi
-	npx gulp functional
 
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
