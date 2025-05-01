@@ -45,16 +45,6 @@ async function handleAuthFlow(
   const authPage = await context.newPage();
 
   try {
-    // Set up dialog handler before navigation
-    context.on("dialog", async (dialog) => {
-      console.log("wow a dialog!");
-      await dialog.accept();
-    });
-    authPage.on("dialog", async (dialog) => {
-      console.log("wow a dialog!");
-      await dialog.accept();
-    });
-
     // Navigate to the auth URL and wait for the page to be fully loaded
     await authPage.goto(authUrl, { waitUntil: "domcontentloaded", timeout: 3000 });
 
