@@ -7,7 +7,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 export type envFilter = (env: CCloudEnvironment) => boolean;
 
 export async function ccloudEnvironmentQuickPick(
-  filter: envFilter | undefined,
+  filter?: envFilter,
 ): Promise<CCloudEnvironment | undefined> {
   // Convenience function to get the name of a cloud environment if a command was triggered through
   // the command palette instead of through the view->item->context menu
