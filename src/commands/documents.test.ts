@@ -85,7 +85,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
       stubResourceManager.setUriMetadata,
       testUri,
       sinon.match({
-        [UriMetadataKeys.COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
         [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
         [UriMetadataKeys.CCLOUD_PROVIDER]: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
         [UriMetadataKeys.CCLOUD_REGION]: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,

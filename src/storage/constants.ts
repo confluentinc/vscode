@@ -36,7 +36,9 @@ export enum UriMetadataKeys {
   CCLOUD_ORG_ID = "ccloudOrgId",
   CCLOUD_PROVIDER = "ccloudProvider",
   CCLOUD_REGION = "ccloudRegion",
-  COMPUTE_POOL_ID = "computePoolId",
+  FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",
+  FLINK_CATALOG_ID = "flinkCatalogId",
+  FLINK_DATABASE_ID = "flinkDatabaseId",
   ENVIRONMENT_ID = "environmentId",
 }
 
