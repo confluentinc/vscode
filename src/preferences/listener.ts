@@ -15,7 +15,7 @@ import {
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
-import { updatePreferences } from "./updates";
+import { updatePreferences } from "./sidecarSync";
 
 const logger = new Logger("preferences.listener");
 
