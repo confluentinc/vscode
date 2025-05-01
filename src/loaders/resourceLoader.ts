@@ -128,7 +128,8 @@ export abstract class ResourceLoader implements IResourceBase {
    * If any route errors are encountered, a UI element is raised, and empty array is returned.
    * @param environmentId The environment to get the schema registry's subjects from.
    * @param forceDeepRefresh If true, will ignore any cached subjects and fetch anew.
-   * @returns An array of subjects in the schema registry. Throws an error if the subjects could not be fetched.
+   * @returns An array of subjects in the schema registry, or empty array if there was a route error. Throws
+   *          any other errors.
    * */
   public async checkedGetSubjects(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
@@ -138,7 +139,6 @@ export abstract class ResourceLoader implements IResourceBase {
       return await this.getSubjects(registryOrEnvironmentId, forceRefresh);
     } catch (error) {
       if (isResponseError(error)) {
-        // Show vscode UI element error message to the user.
         void showWarningNotificationWithButtons(
           "Route error fetching schema registry subjects, continuing on without schemas.",
         );
