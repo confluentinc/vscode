@@ -127,7 +127,7 @@ export async function login(
   await ccloudConnection.click();
 
   // Click the Sign in to Confluent Cloud button
-  const signInButton = page.getByRole("button", { name: "Sign in to Confluent Cloud" });
+  const signInButton = await page.getByRole("button", { name: "Sign in to Confluent Cloud" });
   await signInButton.click();
 
   // Wait for dialogs to return
