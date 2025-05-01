@@ -39,3 +39,19 @@ export const ALLOW_OLDER_SCHEMA_VERSIONS =
 
 export const ENABLE_FLINK = prefix + "preview.enableFlink";
 export const ENABLE_CHAT_PARTICIPANT = prefix + "experimental.enableChatParticipant";
+
+/** Default Flink compute pool ID. */
+export const FLINK_CONFIG_COMPUTE_POOL = prefix + "flink.computePoolId";
+/** Default Flink database (Kafka cluster) ID. */
+export const FLINK_CONFIG_DATABASE = prefix + "flink.database";
+
+/**
+ * Whether or not to update {@link FLINK_CONFIG_COMPUTE_POOL} when interacting with the
+ * "Set Compute Pool" codelens. Possible values are `never`, `ask`, or `always`.
+ */
+export const UPDATE_DEFAULT_POOL_ID_FROM_LENS = prefix + "flink.updateComputePoolIdFromCodelens";
+/**
+ * Whether or not to update {@link FLINK_CONFIG_DATABASE} when interacting with the
+ * "Set Catalog & Database" codelens. Possible values are `never`, `ask`, or `always`.
+ */
+export const UPDATE_DEFAULT_DATABASE_FROM_LENS = prefix + "flink.updateDatabaseFromCodelens";
