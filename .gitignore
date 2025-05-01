@@ -122,3 +122,8 @@ bin/ide-sidecar-*-runner
 # Ignore any certs or keys used for testing
 *.key
 *.pem
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
