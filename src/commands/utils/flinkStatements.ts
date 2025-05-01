@@ -1,3 +1,4 @@
+import { getCCloudAuthSession } from "../../authn/utils";
 import {
   CreateSqlv1Statement201Response,
   CreateSqlv1StatementOperationRequest,
@@ -73,16 +74,24 @@ export class FlinkSpecProperties {
 export async function determineFlinkStatementName(): Promise<string> {
   const parts: string[] = [];
 
-  const userName = process.env.USER || process.env.USERNAME;
-  if (userName) {
-    parts.push(userName);
+  // If we're creating flink statements, then we're ccloud authed. Use their
+  // ccloud account name as primary part of the statement name.
+  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
+  if (ccloudAccountName) {
+    let userNamePart = ccloudAccountName.split("@")[0];
+    // strip anything to the right of any '+' character if present, don't want their
+    // email buckets involved.
+    userNamePart = userNamePart.split("+")[0];
+
+    parts.push(userNamePart);
+  } else {
+    // Wacky. Not ccloud authed?
+    parts.push("unknownuser");
   }
 
   parts.push("vscode");
 
-  const date = new Date();
-  const dateString = date.toISOString().replace(/:/g, "-").replace(/\..*$/, "");
-
+  const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
   parts.push(dateString);
 
   // Can only be lowercase; probably to simplify the

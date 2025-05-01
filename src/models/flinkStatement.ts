@@ -1,6 +1,7 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import {
   CreateSqlv1Statement201Response,
+  GetSqlv1Statement200Response,
   SqlV1StatementListDataInner,
   SqlV1StatementMetadata,
   SqlV1StatementSpec,
@@ -16,6 +17,8 @@ import {
   ISearchable,
   OrganizationId,
 } from "./resource";
+
+const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
 
 /**
  * Model for a Flink statement.
@@ -97,6 +100,35 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   get updatedAt(): Date | undefined {
     return this.metadata?.updated_at;
+  }
+
+  get isBackground(): boolean {
+    return (this.sqlKind ?? "") === "INSERT_INTO";
+  }
+
+  /** All statements but background statements can have results */
+  get canHaveResults(): boolean {
+    return !this.isBackground;
+  }
+
+  /**
+   * For statement results to be viewable, it must satisfy these conditions:
+   * 1. The statement must NOT be a background statement (an INSERT INTO statement)
+   * 2. The statement must have been created in the last 24 hours
+   *    (which is the TTL for the statement result to be deleted)
+   * 3. The statement phase must be either RUNNING or COMPLETED.
+   */
+  get isResultsViewable(): boolean {
+    if (!this.createdAt) {
+      return false;
+    }
+    const oneDayAgo = new Date().getTime() - ONE_DAY_MILLIS;
+
+    return (
+      this.canHaveResults &&
+      this.createdAt.getTime() >= oneDayAgo &&
+      [RUNNING_PHASE, COMPLETED_PHASE].includes(this.phase)
+    );
   }
 }
 
@@ -208,7 +240,10 @@ export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
 
 /** Convert a from-REST API depiction of a Flink statement to our codebase's FlinkStatement model. */
 export function restFlinkStatementToModel(
-  restFlinkStatement: SqlV1StatementListDataInner | CreateSqlv1Statement201Response,
+  restFlinkStatement:
+    | SqlV1StatementListDataInner
+    | GetSqlv1Statement200Response
+    | CreateSqlv1Statement201Response,
 ): FlinkStatement {
   return new FlinkStatement({
     connectionId: CCLOUD_CONNECTION_ID,
