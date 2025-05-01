@@ -8,6 +8,8 @@ import {
   Position,
   Range,
   TextDocument,
+  workspace,
+  WorkspaceConfiguration,
 } from "vscode";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
@@ -15,6 +17,7 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
@@ -75,6 +78,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
+    const config: WorkspaceConfiguration = workspace.getConfiguration();
 
     // look up all environments since we'll need them to filter for compute pools and Kafka clusters
     // (as databases to match whatever the selected compute pool is, based on provider/region)
@@ -148,7 +152,10 @@ async function getComputePoolFromMetadata(
   metadata: UriMetadata | undefined,
   envs: CCloudEnvironment[],
 ): Promise<CCloudFlinkComputePool | undefined> {
-  const computePoolString: string | undefined = metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const defaultComputePoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
+  const computePoolString: string | undefined =
+    metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] ?? defaultComputePoolId;
   if (!computePoolString) {
     return;
   }
@@ -191,7 +198,11 @@ async function getCatalogDatabaseFromMetadata(
   computePool?: CCloudFlinkComputePool,
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
-  const databaseId: string | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
+  const databaseId: string | undefined =
+    metadata?.[UriMetadataKeys.FLINK_DATABASE_ID] ?? defaultDatabaseId;
   if (!databaseId) {
     return catalogDatabase;
   }
