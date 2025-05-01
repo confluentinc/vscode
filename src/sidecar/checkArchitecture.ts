@@ -1,27 +1,48 @@
 // Determine the platform + archictecture of the sidecar binary and compare it to the current platform + architecture.
 
 import fs from "fs";
-import { env, Uri, window } from "vscode";
+import { commands, env, Uri, window } from "vscode";
 import { Logger } from "../logging";
 import { titleCase } from "../utils";
 
 const logger = new Logger("sidecar.diagnoseErrors");
 
 export function checkSidecarOsAndArch(sidecarPath: string): void {
-  // If our OS + Arch != sidecar OS + Arch, then throw an error with a helpful message.
-  const ourBuild = new PlatformArch(process.platform, process.arch);
-  const sidecarBuild = getSidecarPlatformArch(sidecarPath);
-  logger.debug("platform+arch check complete", { ourBuild, sidecarBuild });
+  // Set a timeout to show notification if check takes too long
+  const timeoutId = setTimeout(() => {
+    const timeoutMsg = "Sidecar architecture check is taking longer than expected";
+    const restartButton = "Restart and Reload";
 
-  if (!ourBuild.equals(sidecarBuild)) {
-    const errorMsg = `This Confluent extension is built for a different platform (${sidecarBuild.platform}-${sidecarBuild.arch}), whereas your VS Code is on ${ourBuild.platform}-${ourBuild.arch}.`;
-    const button = "Open Marketplace";
-    window.showErrorMessage(errorMsg, button).then((action) => {
-      if (action === button) {
-        env.openExternal(Uri.parse("vscode:extension/confluentinc.vscode-confluent"));
+    window.showWarningMessage(timeoutMsg, restartButton).then((action) => {
+      if (action === restartButton) {
+        commands.executeCommand("workbench.action.reloadWindow");
       }
     });
-    throw new Error(errorMsg);
+  }, 10000);
+
+  try {
+    // If our OS + Arch != sidecar OS + Arch, then throw an error with a helpful message.
+    const ourBuild = new PlatformArch(process.platform, process.arch);
+    const sidecarBuild = getSidecarPlatformArch(sidecarPath);
+    logger.debug("platform+arch check complete", { ourBuild, sidecarBuild });
+
+    // Clear timeout as check completed successfully
+    clearTimeout(timeoutId);
+
+    if (!ourBuild.equals(sidecarBuild)) {
+      const errorMsg = `This Confluent extension is built for a different platform (${sidecarBuild.platform}-${sidecarBuild.arch}), whereas your VS Code is on ${ourBuild.platform}-${ourBuild.arch}.`;
+      const button = "Open Marketplace";
+      window.showErrorMessage(errorMsg, button).then((action) => {
+        if (action === button) {
+          env.openExternal(Uri.parse("vscode:extension/confluentinc.vscode-confluent"));
+        }
+      });
+      throw new Error(errorMsg);
+    }
+  } catch (error) {
+    // Clear timeout to avoid showing timeout message if we've already encountered an error
+    clearTimeout(timeoutId);
+    throw error;
   }
 }
 
