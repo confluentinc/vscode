@@ -34,7 +34,6 @@ describe.only("uriQuickPick", () => {
       onDidAccept: sandbox.stub(),
       onDidHide: sandbox.stub(),
       show: sandbox.stub(),
-      bullshit: sandbox.stub(),
     };
     const fakeRealQuickPick = fakeQuickPick as unknown as QuickPick<QuickPickItem>;
     const fakeQuickPickStub = sandbox.stub(window, "createQuickPick");
