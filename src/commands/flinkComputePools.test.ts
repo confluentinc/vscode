@@ -1,10 +1,10 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
 import * as commandsModule from "./flinkComputePools";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
 
 describe.only("configureFlinkDefaults command", () => {
   let sandbox: sinon.SinonSandbox;

@@ -8,6 +8,8 @@ import {
   Position,
   Range,
   TextDocument,
+  workspace,
+  WorkspaceConfiguration,
 } from "vscode";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
@@ -16,6 +18,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
@@ -86,6 +89,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
+    const config: WorkspaceConfiguration = workspace.getConfiguration();
 
     // look up all environments since we'll need them to filter for compute pools and Kafka clusters
     // (as databases to match whatever the selected compute pool is, based on provider/region)
@@ -93,8 +97,9 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
 
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
+    const defaultComputePoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
     const computePoolString: string | undefined =
-      uriMetadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
+      uriMetadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] ?? defaultComputePoolId;
     let computePool: CCloudFlinkComputePool | undefined;
     if (computePoolString) {
       // TODO: replace with dedicated loader method for looking up compute pool by ID
@@ -122,8 +127,10 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     const computePoolLens = new CodeLens(range, selectComputePoolCommand);
 
     // codelens for selecting a database (and catalog)
+    const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
     const catalogId: string | undefined = uriMetadata?.[UriMetadataKeys.FLINK_CATALOG_ID];
-    const databaseId: string | undefined = uriMetadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+    const databaseId: string | undefined =
+      uriMetadata?.[UriMetadataKeys.FLINK_DATABASE_ID] ?? defaultDatabaseId;
     let catalog: CCloudEnvironment | undefined;
     let database: CCloudKafkaCluster | undefined;
     if (catalogId && databaseId) {
