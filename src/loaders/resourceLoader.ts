@@ -2,7 +2,7 @@ import { Disposable } from "vscode";
 import { TopicData } from "../clients/kafkaRest";
 import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
-import { logError } from "../errors";
+import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -10,6 +10,7 @@ import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import {
@@ -98,7 +99,7 @@ export abstract class ResourceLoader implements IResourceBase {
   ): Promise<KafkaTopic[]> {
     // Deep fetch the topics and schema registry subject names concurrently.
     const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
-      this.getSubjects(cluster.environmentId!, forceRefresh),
+      this.checkedGetSubjects(cluster.environmentId!, forceRefresh),
       fetchTopics(cluster),
     ]);
 
@@ -121,6 +122,24 @@ export abstract class ResourceLoader implements IResourceBase {
   public abstract getSchemaRegistryForEnvironmentId(
     environmentId: string | undefined,
   ): Promise<SchemaRegistry | undefined>;
+
+  /**
+   * Get the subjects from the schema registry for the given environment or schema registry.
+   * If any route errors are encountered, a UI element is raised, and empty array is returned.
+   * @param environmentId The environment to get the schema registry's subjects from.
+   * @param forceDeepRefresh If true, will ignore any cached subjects and fetch anew.
+   * @returns An array of subjects in the schema registry. Throws an error if the subjects could not be fetched.
+   * */
+  public async checkedGetSubjects(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+    forceRefresh: boolean = false,
+  ): Promise<Subject[]> {
+    void showWarningNotificationWithButtons(
+      "Route error fetching schema registry subjects, continuing on without schemas.",
+    );
+
+    return [];
+  }
 
   /**
    * Get the subjects from the schema registry for the given environment or schema registry.
@@ -158,6 +177,11 @@ export abstract class ResourceLoader implements IResourceBase {
         // Expected error when no schema registry found for the environment.
         // Act as if there are no subjects / schemas.
         return [];
+      } else if (isResponseError(error)) {
+        // Some other route error. Not much we can do about it here. Let's not spam Sentry with
+        // it, but do log it.
+        logError(error, "getSubjects(): Route error fetching subjects");
+        throw error;
       } else {
         // Unexpected error, log it to sentry.
         logError(error, "Unexpected error within getSubjects", {

@@ -30,6 +30,7 @@ export type AnyResponseError =
   | ScaffoldingServiceResponseError
   | DockerResponseError;
 
+/** Was this an error raised when any of our OpenAPI clients tried to digest a response? */
 export function isResponseError(error: unknown): error is AnyResponseError {
   return (
     error instanceof SidecarResponseError ||

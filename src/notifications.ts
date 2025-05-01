@@ -14,8 +14,8 @@ export const DEFAULT_ERROR_NOTIFICATION_BUTTONS: Record<
 /**
  * Shows an **info** notification with `message` and custom action buttons.
  * @param message Message to display in the notification
- * @param buttons Optional map of button labels to callback functions; defaults to showing
- *   "Open Logs" and "File Issue" buttons if not provided
+ * @param buttons Optional map of button labels to callback functions; defaults to not showing any
+ *   buttons.
  */
 export async function showInfoNotificationWithButtons(
   message: string,
@@ -28,7 +28,7 @@ export async function showInfoNotificationWithButtons(
  * Shows a **warning** notification with `message` and custom action buttons.
  * @param message Message to display in the notification
  * @param buttons Optional map of button labels to callback functions; defaults to showing
- *   "Open Logs" and "File Issue" buttons if not provided
+ *   "Open Logs" and "File Issue" buttons if not provided.
  */
 export async function showWarningNotificationWithButtons(
   message: string,
@@ -40,7 +40,7 @@ export async function showWarningNotificationWithButtons(
 /** Shows an **error** notification with `message` and custom action buttons.
  * @param message Message to display in the notification
  * @param buttons Optional map of button labels to callback functions; defaults to showing
- *   "Open Logs" and "File Issue" buttons if not provided
+ *   "Open Logs" and "File Issue" buttons if not provided.
  */
 export async function showErrorNotificationWithButtons(
   message: string,
@@ -53,14 +53,14 @@ export async function showErrorNotificationWithButtons(
  * Shows a notification with `message` and custom action buttons.
  * @param message Message to display in the notification
  * @param buttons Optional map of button labels to callback functions; defaults to showing
- *   "Open Logs" and "File Issue" buttons if not provided
+ *   "Open Logs" and "File Issue" buttons if not provided AND the level is not "info".
  */
 async function showNotificationWithButtons(
   level: "info" | "warning" | "error",
   message: string,
   buttons?: Record<string, (() => void) | (() => Promise<void>)>,
 ) {
-  const buttonMap = buttons || (level === "error" ? DEFAULT_ERROR_NOTIFICATION_BUTTONS : {});
+  const buttonMap = buttons || (level !== "info" ? DEFAULT_ERROR_NOTIFICATION_BUTTONS : {});
 
   // we're awaiting the user's selection to more easily test the callback behavior, rather than
   // chaining with .then()
