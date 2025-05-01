@@ -232,6 +232,17 @@ describe("ResourceLoader::checkedGetSubjects()", () => {
         .args[0].startsWith("Route error fetching schema registry subjects"),
     );
   });
+
+  it("Non-response error is thrown", async () => {
+    const isResponseErrorStub = sandbox.stub(errors, "isResponseError").returns(false);
+    getSubjectsStub.rejects(new Error("Test error"));
+
+    await assert.rejects(loaderInstance.checkedGetSubjects(TEST_LOCAL_SCHEMA_REGISTRY), (err) => {
+      assert.strictEqual((err as Error).message, "Test error");
+      assert.ok(isResponseErrorStub.calledOnce);
+      return true;
+    });
+  });
 });
 
 describe("ResourceLoader::clearCache()", () => {
