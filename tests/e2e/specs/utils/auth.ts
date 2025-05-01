@@ -133,14 +133,13 @@ export async function loginToConfluentCloud(
   // Hover over "No Connection" to make sign-in button visible
   const ccloudConnection = await page.getByText('Confluent Cloud(No connection)');
   await ccloudConnection.click();
-  await page.waitForTimeout(1000); // Wait for hover effect
 
   // Click the Sign in to Confluent Cloud button
   const signInButton = page.getByRole('button', { name: 'Sign in to Confluent Cloud' });
   await signInButton.click();
 
   // Wait for dialogs to return
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(200);
 
   authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
 
@@ -165,6 +164,6 @@ export async function loginToConfluentCloud(
     .nth(2)
     .waitFor({
       "state": "visible",
-      timeout: 3000,
+      timeout: 200,
     });
 }
