@@ -337,6 +337,29 @@ task:
 
     gulp functional
 
+#### E2E tests
+
+End-to-end (E2E) tests verify the extension's functionality in a real VS Code environment. These
+tests use Playwright with Electron to launch VS Code and interact with it programmatically. The
+tests are located in the [`tests/e2e/specs`](../tests/e2e/specs) directory.
+
+To run the tests, use:
+
+    gulp e2e
+
+> [!INFO]
+> E2E tests differ from functional tests in several key ways:
+>
+> - E2E tests run against a full VS Code instance, testing the complete extension in a real environment
+> - They run in an actual Electron window rather than just testing web views in a browser environment
+>
+> The E2E tests require environment variables to be set in a `.env` file:
+> - `E2E_USERNAME`: Confluent Cloud username
+> - `E2E_PASSWORD`: Confluent Cloud password
+>
+> These credentials are used to verify login flows and authenticated operations
+
+
 #### Running the tests
 
 To run unit tests:
