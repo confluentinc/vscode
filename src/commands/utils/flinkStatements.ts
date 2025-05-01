@@ -76,7 +76,7 @@ export async function determineFlinkStatementName(): Promise<string> {
 
   // If we're creating flink statements, then we're ccloud authed. Use their
   // ccloud account name as primary part of the statement name.
-  const ccloudAccountName = (await getCCloudAuthSession())?.account.id;
+  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
   if (ccloudAccountName) {
     let userNamePart = ccloudAccountName.split("@")[0];
     // strip anything to the right of any '+' character if present, don't want their
