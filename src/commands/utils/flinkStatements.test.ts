@@ -57,14 +57,16 @@ describe("determineFlinkStatementName()", function () {
 
   it("Should return a unique name for a Flink statement", async function () {
     // will be lowercased, reduced to 'joe'
-    getCCloudAuthSessionStub.resolves({ account: { id: "Joe+spam@confluent.io" } });
+    getCCloudAuthSessionStub.resolves({
+      account: { label: "Joe+spam@confluent.io", id: "u-abc123" },
+    });
 
     const statementName = await determineFlinkStatementName();
     assert.strictEqual(statementName, `joe-vscode-${expectedDatePart}`);
   });
 
   it("Works with degenerate ccloud username", async function () {
-    getCCloudAuthSessionStub.resolves({ account: { id: "simple" } });
+    getCCloudAuthSessionStub.resolves({ account: { label: "simple", id: "u-abc123" } });
 
     const statementName = await determineFlinkStatementName();
     assert.strictEqual(statementName, `simple-vscode-${expectedDatePart}`);
