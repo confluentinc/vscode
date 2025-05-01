@@ -14,6 +14,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
@@ -85,13 +86,18 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
+
+    // look up all environments since we'll need them to filter for compute pools and Kafka clusters
+    // (as databases to match whatever the selected compute pool is, based on provider/region)
+    const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
+
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
-    const computePoolString: string | undefined = uriMetadata?.[UriMetadataKeys.COMPUTE_POOL_ID];
+    const computePoolString: string | undefined =
+      uriMetadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
     let computePool: CCloudFlinkComputePool | undefined;
     if (computePoolString) {
       // TODO: replace with dedicated loader method for looking up compute pool by ID
-      const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
       const env: CCloudEnvironment | undefined = envs.find((e) =>
         e.flinkComputePools.some((pool) => pool.id === computePoolString),
       );
@@ -115,20 +121,57 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     };
     const computePoolLens = new CodeLens(range, selectComputePoolCommand);
 
-    if (computePool) {
+    // codelens for selecting a database (and catalog)
+    const catalogId: string | undefined = uriMetadata?.[UriMetadataKeys.FLINK_CATALOG_ID];
+    const databaseId: string | undefined = uriMetadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+    let catalog: CCloudEnvironment | undefined;
+    let database: CCloudKafkaCluster | undefined;
+    if (catalogId && databaseId) {
+      catalog = envs.find((e) => e.id === catalogId);
+      if (catalog) {
+        database = catalog.kafkaClusters.find((k) => k.id === databaseId);
+        if (database) {
+          // finding a database by ID is not enough, we need to check that the provider/region
+          // match the compute pool (if one is selected)
+          if (
+            database.provider === computePool?.provider &&
+            database.region === computePool?.region
+          ) {
+            // explicitly turn into a CCloudKafkaCluster since `submitFlinkStatementCommand` checks
+            // for a CCloudKafkaCluster instance
+            database = CCloudKafkaCluster.create({ ...database });
+          }
+        } else {
+          // no need to clear database metadata since we'll show "Set Database" codelens
+          // and the user can choose a new one to update the stored metadata
+          logger.warn("database not found from stored database ID");
+        }
+      }
+    }
+    const selectDatabaseCommand: Command = {
+      title:
+        catalog && database
+          ? `Catalog: ${catalog.name}, Database: ${database.name}`
+          : "Set Catalog & Database",
+      command: "confluent.document.flinksql.setCCloudCatalogDatabase",
+      tooltip: "Set Catalog & Database for Flink Statement",
+      arguments: [document.uri],
+    };
+    const databaseLens = new CodeLens(range, selectDatabaseCommand);
+
+    if (computePool && database) {
       const submitCommand: Command = {
         title: "▶️ Submit Statement",
         command: "confluent.statements.create",
         tooltip: "Submit Flink Statement to CCloud",
-        // TODO: update this once we can look up the database
-        arguments: [document.uri, computePool],
+        arguments: [document.uri, computePool, database],
       };
       const submitLens = new CodeLens(range, submitCommand);
-      // show the "Submit Statement" | <current pool> | <current org> codelenses
-      codeLenses.push(submitLens, computePoolLens, orgLens);
+      // show the "Submit Statement" | <current catalog+db> | <current pool> | <current org> codelenses
+      codeLenses.push(submitLens, databaseLens, computePoolLens, orgLens);
     } else {
-      // show the "Set Compute Pool" | <current org> codelenses
-      codeLenses.push(computePoolLens, orgLens);
+      // don't show the submit codelens if we don't have a compute pool and database
+      codeLenses.push(databaseLens, computePoolLens, orgLens);
     }
 
     return codeLenses;
