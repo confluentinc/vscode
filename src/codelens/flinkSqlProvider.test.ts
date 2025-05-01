@@ -105,7 +105,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
     // simulate stored env + partially invalid compute pool metadata
     const nonExistentPoolId = "non-existent-pool-id";
     resourceManagerStub.getUriMetadata.resolves({
-      [UriMetadataKeys.COMPUTE_POOL_ID]: nonExistentPoolId,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: nonExistentPoolId,
       [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_ENVIRONMENT_ID,
     });
 
@@ -132,7 +132,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
     resourceManagerStub.getUriMetadata.resolves({
-      [UriMetadataKeys.COMPUTE_POOL_ID]: pool.id,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
       [UriMetadataKeys.ENVIRONMENT_ID]: pool.environmentId,
     });
 
