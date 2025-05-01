@@ -10,7 +10,7 @@ import {
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
 import { createConfigChangeListener } from "./listener";
-import * as updates from "./updates";
+import * as updates from "./sidecarSync";
 
 describe("preferences/listener", function () {
   let sandbox: sinon.SinonSandbox;
