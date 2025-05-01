@@ -86,6 +86,38 @@ describe("documentMetadataManager.ts", () => {
     assert.ok(stubResourceManager.deleteUriMetadata.calledWith(fakeUntitledDoc.uri));
   });
 
+  it("handleDocumentSave() should migrate metadata to newly-saved 'file' document when content matches aside from whitespace/newlines", async () => {
+    // set up the "before save" untitled document
+    const fakeUntitledDoc: TextDocument = {
+      uri: Uri.parse("untitled:test.sql"),
+      getText: () => "   SELECT * FROM test  ",
+    } as unknown as TextDocument;
+    sandbox.stub(workspace, "textDocuments").get(() => [fakeUntitledDoc]);
+    // set up the "after save" file document
+    const fakeFileDoc: TextDocument = {
+      uri: Uri.parse("file:///test.sql"),
+      getText: () => "SELECT * FROM test\n",
+    } as unknown as TextDocument;
+    sandbox.stub(workspace, "openTextDocument").resolves(fakeFileDoc);
+
+    // set some initial metadata for the untitled document to be migrated
+    const metadata = {
+      [UriMetadataKeys.COMPUTE_POOL_ID]: "test-compute-pool",
+      [UriMetadataKeys.ENVIRONMENT_ID]: "test-env",
+    };
+    const metadataMap: UriMetadataMap = new Map();
+    metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
+    stubResourceManager.getAllUriMetadata.resolves(metadataMap);
+
+    const dmm = DocumentMetadataManager.getInstance();
+    await dmm["handleDocumentSave"](fakeFileDoc);
+
+    // migration should have happened by setting the metadata for the file document and deleting the
+    // metadata for the untitled document
+    assert.ok(stubResourceManager.setUriMetadata.calledWith(fakeFileDoc.uri, metadata));
+    assert.ok(stubResourceManager.deleteUriMetadata.calledWith(fakeUntitledDoc.uri));
+  });
+
   it("handleDocumentSave() should not migrate metadata when content does not match", async () => {
     // set up the "before save" untitled document
     const fakeUntitledDoc: TextDocument = {
