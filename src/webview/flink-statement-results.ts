@@ -327,9 +327,9 @@ class FlinkStatementResultsViewModel extends ViewModel {
   streamStateTooltip = this.derive(() => {
     switch (this.streamState()) {
       case "running":
-        return "Fetching results";
+        return "Polling for new results (click to pause polling). This does not affect statement execution.";
       case "paused":
-        return "Result fetching is paused. Click to resume from last result received.";
+        return "Result polling is paused (click to resume polling). This does not affect statement execution.";
       case "completed":
         return "All results have been fetched";
     }
