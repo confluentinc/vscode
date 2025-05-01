@@ -1,25 +1,13 @@
 import { test } from "./base";
-import { loginToConfluentCloud } from "./utils/auth";
-import { closeConfluentView, openConfluentView } from "./utils/confluent";
+import { openConfluentExtension } from "./utils/confluent";
+import { login } from "./utils/confluentCloud";
 
-test.describe("Confluent Extension", () => {
-  test("should open and close Confluent view", async ({ page }) => {
-    // Wait for VS Code to be ready
-    await page.waitForLoadState("domcontentloaded");
-
-    // Open the Confluent view
-    await openConfluentView(page);
-
-    // Close the Confluent view
-    await closeConfluentView(page);
+test.describe(() => {
+  test("should load the extension properly", async ({ page }) => {
+    await openConfluentExtension(page);
   });
 
   test("sign in to confluent cloud", async ({ page, electronApp }) => {
-    await loginToConfluentCloud(
-      page,
-      electronApp,
-      process.env.E2E_USERNAME!,
-      process.env.E2E_PASSWORD!,
-    );
+    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
   });
 });

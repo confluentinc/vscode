@@ -1,6 +1,6 @@
 import { ElectronApplication, chromium } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
-import { openConfluentView } from "./confluent";
+import { openConfluentExtension } from "./confluent";
 
 /**
  * Sets up dialog stubs for the authentication flow
@@ -103,7 +103,7 @@ async function handleAuthFlow(
  * @param username The username to authenticate with
  * @param password The password to authenticate with
  */
-export async function loginToConfluentCloud(
+export async function login(
   page: any,
   electronApp: ElectronApplication,
   username: string,
@@ -129,11 +129,8 @@ export async function loginToConfluentCloud(
     };
   });
 
-  // Wait for VS Code to be ready
-  await page.waitForLoadState("domcontentloaded");
-
-  // Open Confluent view
-  await openConfluentView(page);
+  // Open the extension
+  await openConfluentExtension(page);
 
   // Hover over "No Connection" to make sign-in button visible
   const ccloudConnection = await page.getByText("Confluent Cloud(No connection)");
