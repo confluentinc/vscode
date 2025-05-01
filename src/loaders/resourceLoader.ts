@@ -134,21 +134,11 @@ export abstract class ResourceLoader implements IResourceBase {
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
     forceRefresh: boolean = false,
   ): Promise<Subject[]> {
-    try {
-      return await this.getSubjects(registryOrEnvironmentId, forceRefresh);
-    } catch (error) {
-      if (isResponseError(error)) {
-        // Show vscode UI element error message to the user.
-        void showWarningNotificationWithButtons(
-          "Route error fetching schema registry subjects, continuing on without schemas.",
-        );
+    void showWarningNotificationWithButtons(
+      "Route error fetching schema registry subjects, continuing on without schemas.",
+    );
 
-        return [];
-      } else {
-        // getSubjects() will log the error, so we don't need to do it here.
-        throw error;
-      }
-    }
+    return [];
   }
 
   /**
