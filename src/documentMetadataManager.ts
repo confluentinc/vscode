@@ -86,7 +86,7 @@ export class DocumentMetadataManager {
       const untitledContent: string | undefined = await workspace
         .openTextDocument(uri)
         .then((doc) => doc.getText());
-      if (document.getText() === untitledContent) {
+      if (document.getText().trim() === untitledContent?.trim()) {
         logger.debug(`migrating metadata from untitled document to "${document.uri.toString()}"`);
         this.resourceManager.setUriMetadata(document.uri, metadata);
         this.resourceManager.deleteUriMetadata(uri);
