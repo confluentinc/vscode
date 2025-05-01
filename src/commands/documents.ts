@@ -4,9 +4,11 @@ import { uriMetadataSet } from "../emitters";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
+import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
@@ -76,7 +78,52 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
     [UriMetadataKeys.CCLOUD_PROVIDER]: pool.provider,
     [UriMetadataKeys.CCLOUD_REGION]: pool.region,
     [UriMetadataKeys.ENVIRONMENT_ID]: pool.environmentId,
-    [UriMetadataKeys.COMPUTE_POOL_ID]: pool.id,
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+  };
+  await getResourceManager().setUriMetadata(uri, metadata);
+  uriMetadataSet.fire(uri);
+}
+
+export async function setCCloudCatalogDatabaseForUriCommand(
+  uri?: Uri,
+  pool?: CCloudFlinkComputePool,
+) {
+  if (!(uri instanceof Uri)) {
+    return;
+  }
+
+  const computePool: CCloudFlinkComputePool | undefined =
+    pool instanceof CCloudFlinkComputePool ? pool : await flinkComputePoolQuickPick();
+  if (!computePool) {
+    return;
+  }
+
+  const doc: TextDocument = await workspace.openTextDocument(uri);
+  if (!doc) {
+    logger.error("Failed to open document to update ccloudOrg", { uri });
+    return;
+  }
+
+  const database: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
+  if (!database) {
+    return;
+  }
+
+  logger.debug("setting metadata for document", {
+    uri: uri.toString(),
+    envId: computePool.environmentId,
+    provider: computePool.provider,
+    region: computePool.region,
+    catalogId: database.environmentId,
+    databaseId: database.id,
+  });
+
+  const metadata: UriMetadata = {
+    [UriMetadataKeys.CCLOUD_PROVIDER]: computePool.provider,
+    [UriMetadataKeys.CCLOUD_REGION]: computePool.region,
+    [UriMetadataKeys.ENVIRONMENT_ID]: computePool.environmentId,
+    [UriMetadataKeys.FLINK_CATALOG_ID]: database.environmentId,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
   };
   await getResourceManager().setUriMetadata(uri, metadata);
   uriMetadataSet.fire(uri);
@@ -88,6 +135,10 @@ export function registerDocumentCommands(): Disposable[] {
     registerCommandWithLogging(
       "confluent.document.flinksql.setCCloudComputePool",
       setCCloudComputePoolForUriCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.document.flinksql.setCCloudCatalogDatabase",
+      setCCloudCatalogDatabaseForUriCommand,
     ),
   ];
 }
