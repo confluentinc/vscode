@@ -7,7 +7,8 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - Can submit new SQL statements to a Flink compute pool
-- Configurable default settings for `compute pool` and `database` for FlinkSQL operations
+- Can view SQL statement results
+- Configurable default settings for `compute pool` and `database` for Flink operations
 
 ### Fixed
 
