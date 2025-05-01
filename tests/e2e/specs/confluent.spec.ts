@@ -19,7 +19,7 @@ test.describe("Confluent Extension", () => {
       page,
       electronApp,
       process.env.E2E_USERNAME!,
-      process.env.E2E_PASSWORD!
+      process.env.E2E_PASSWORD!,
     );
   });
 });

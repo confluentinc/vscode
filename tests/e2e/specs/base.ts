@@ -53,13 +53,13 @@ export const test = base.extend<TestFixtures>({
         `--extensionDevelopmentPath=${testProjectPath}`,
         `--user-data-dir=${userDataDir}`,
         `--logsPath=${logsPath}`,
-        testProjectPath
+        testProjectPath,
       ],
       env: Object.fromEntries(
         Object.entries(process.env)
           .filter(([_, value]) => value !== undefined)
-          .map(([key, value]) => [key, value as string])
-      )
+          .map(([key, value]) => [key, value as string]),
+      ),
     });
 
     console.log("Launched VS Code with PID:", electronApp.process().pid);
