@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- If the route call fails while fetching Schema Registry subject names while populating the topics
+  view, show a warning but continue on with no schema associations for the topics.
+
 ## 1.2.0
 
 ### Added
