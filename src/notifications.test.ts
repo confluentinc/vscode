@@ -250,12 +250,12 @@ describe("notifications.ts showWarningNotificationWithButtons()", () => {
     sandbox.restore();
   });
 
-  it("should show a warning notification with no default buttons", async () => {
+  it("should show a warning notification with no provided buttons, so gets default buttons.", async () => {
     // showWarningMessageStub simulates user dismissing the notification by default
 
     await showWarningNotificationWithButtons(fakeMessage);
 
-    sinon.assert.calledOnceWithExactly(showWarningMessageStub, fakeMessage);
+    sinon.assert.calledOnceWithExactly(showWarningMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
     sinon.assert.notCalled(executeCommandStub);
     sinon.assert.notCalled(logUsageStub);
   });
