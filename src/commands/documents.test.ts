@@ -1,5 +1,5 @@
 import * as sinon from "sinon";
-import { TextDocument, Uri, workspace } from "vscode";
+import { Uri } from "vscode";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { uriMetadataSet } from "../emitters";
 import * as notifications from "../notifications";
@@ -13,7 +13,6 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
 
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
   let flinkComputePoolQuickPickStub: sinon.SinonStub;
-  let openTextDocumentStub: sinon.SinonStub;
   let uriMetadataSetFireStub: sinon.SinonStub;
   let showErrorNotificationWithButtonsStub: sinon.SinonStub;
 
@@ -32,11 +31,6 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
       notifications,
       "showErrorNotificationWithButtons",
     );
-
-    // vscode stubs
-    openTextDocumentStub = sandbox.stub(workspace, "openTextDocument").resolves({
-      fileName: "test-file.sql",
-    } as unknown as TextDocument);
   });
 
   afterEach(() => {
@@ -48,8 +42,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand();
 
     sinon.assert.notCalled(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
+    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
     sinon.assert.notCalled(uriMetadataSetFireStub);
     sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
   });
@@ -62,8 +55,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.called(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(openTextDocumentStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
+    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
     sinon.assert.notCalled(uriMetadataSetFireStub);
     sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
   });
@@ -76,40 +68,16 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.calledOnce(flinkComputePoolQuickPickStub);
-    sinon.assert.calledOnceWithExactly(openTextDocumentStub, testUri);
-    sinon.assert.calledOnce(stubResourceManager.setUriMetadata);
     sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
-    sinon.assert.calledOnce(stubResourceManager.setUriMetadata);
+    sinon.assert.calledOnce(stubResourceManager.setUriMetadataValue);
     // all metadata should be derived from the chosen compute pool
     sinon.assert.calledWithExactly(
-      stubResourceManager.setUriMetadata,
+      stubResourceManager.setUriMetadataValue,
       testUri,
-      sinon.match({
-        [UriMetadataKeys.COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-        [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
-        [UriMetadataKeys.CCLOUD_PROVIDER]: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
-        [UriMetadataKeys.CCLOUD_REGION]: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
-      }),
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
     );
     sinon.assert.calledOnce(uriMetadataSetFireStub);
     sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);
-  });
-
-  it("should handle errors when the TextDocument cannot be opened", async () => {
-    // simulate user selecting a compute pool
-    flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-    const testUri = Uri.parse("file:///path/to/test.sql");
-    // usually CodeExpectedError: cannot open file ...
-    openTextDocumentStub.rejects(new Error(`cannot open file ${testUri.toString()}`));
-
-    await setCCloudComputePoolForUriCommand(testUri);
-
-    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
-    sinon.assert.notCalled(uriMetadataSetFireStub);
-    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    sinon.assert.calledWith(
-      showErrorNotificationWithButtonsStub,
-      sinon.match((msg) => typeof msg === "string" && msg.startsWith("Failed to open document")),
-    );
   });
 });
