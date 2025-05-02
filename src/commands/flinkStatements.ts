@@ -18,7 +18,6 @@ import { getSidecar } from "../sidecar";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
-import { selectPoolForStatementsViewCommand } from "./flinkComputePools";
 import {
   FlinkSpecProperties,
   IFlinkStatementSubmitParameters,
@@ -234,12 +233,13 @@ export async function submitFlinkStatementCommand(
 
     // Refresh the statements view onto the compute pool in question,
     // which will then show the new statement.
-    // (Alas, this ultimately only _queues up_ the refresh, completes before the refresh is done.)
-    await selectPoolForStatementsViewCommand(computePool);
+    // (Will wait for the refresh to complete.)
 
-    // Focus the new statement in the view. Internally takes care to
-    // queue up the refresh if needed.
+    // Focus the new statement in the view.
     const statementsView = FlinkStatementsViewProvider.getInstance();
+
+    // Cause the view to refresh, and then focus the new statement.
+    await statementsView.setParentResource(computePool);
     await statementsView.focus(newStatement.id);
 
     // Wait for statement to be running and show results
@@ -252,8 +252,8 @@ export async function submitFlinkStatementCommand(
       // to end up being a queueing operation.
       // (We could really use a "refresh and wait" API here.)
       statementsView.refresh().then(() => {
-        // Since refreshed entire view on line above, have to re-focus.
-        statementsView.focus(newStatement.id);
+        // Since refreshed entire view on line above, have to re-focus on the statement.
+        void statementsView.focus(newStatement.id);
       });
     }
   } catch (err) {

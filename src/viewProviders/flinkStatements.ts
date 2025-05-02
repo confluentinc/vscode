@@ -35,9 +35,6 @@ export class FlinkStatementsViewProvider
   // Map of resource id string -> resource currently in the tree view.
   private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
 
-  /** Statement id to be focused on after refresh() completes. */
-  private toBeFocusedId: string | null = null;
-
   /**
    * (Re)paint the view.
    * @returns A promise that resolves when the refresh is complete, if caller needs to wait for it.
@@ -48,6 +45,10 @@ export class FlinkStatementsViewProvider
 
     const completed = new Promise<void>((resolve) => {
       if (this.resource !== null) {
+        // Immediately inform the view that we (temporarily) have no data so it will clear.
+        this._onDidChangeTreeData.fire();
+
+        // And set up to deep refresh.
         const loader = ResourceLoader.getInstance(
           this.resource.connectionId,
         ) as CCloudResourceLoader;
@@ -59,60 +60,48 @@ export class FlinkStatementsViewProvider
             const statements = await loader.getFlinkStatements(this.resource!);
             statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
             this._onDidChangeTreeData.fire();
-
-            if (this.toBeFocusedId) {
-              // If we have a queued request for a statement to focus, do so now.
-              logger.debug(
-                `Focusing statement ${this.toBeFocusedId} in the view after loading statements`,
-              );
-              const existingStatement = this.resourcesInTreeView.get(this.toBeFocusedId);
-              if (existingStatement) {
-                await this.doFocus(existingStatement);
-                this.toBeFocusedId = null;
-              }
-            }
+            resolve();
           },
           false,
         );
+      } else {
+        // No resource selected, so just inform the view that we have no data.
+        // (this.resourcesInTreeView has already been cleared.)
+        this._onDidChangeTreeData.fire();
+        resolve();
       }
-
-      // Inform view that toplevel items have changed (because of edging
-      // from having old contents to new empty state). When loading is completed inside
-      // the withProgress, we will fire _onDidChangeTreeData again to update the view.
-      this._onDidChangeTreeData.fire();
-      resolve();
     });
+
     return completed;
   }
 
   /**
-   * Show and select a single statement in the view. If the statement is not
-   * already in the view, it will be added to the view.
-   */
+   * Show and select a single statement in the view.
+   * Async because asking the tree view to reveal a statement is async, and we need to await it
+   * to ensure it doesn't throw an error.
+   *
+   * @throws Error if the statement is not found in the view.
+   * @param statementId The id of the statement to focus.
+   *
+   **/
   async focus(statementId: string): Promise<void> {
+    const logger = this.logger.withCallpoint("focus()");
+
     // Find the statement in the tree view.
     const existingStatement = this.resourcesInTreeView.get(statementId);
     if (existingStatement) {
       // If the statement is already in the view, just focus it.
-      return await this.doFocus(existingStatement);
+      try {
+        logger.debug(`Focusing statement ${existingStatement.id} in the view`);
+        await this.treeView.reveal(existingStatement, { focus: true, select: true });
+        return;
+      } catch (e) {
+        this.logger.error("Error focusing statement in view", e);
+        throw e;
+      }
     } else {
-      // Queue it up to be focused when the view is next refreshed.
-      logger.debug("Queuing up statement to be focused in the view");
-      this.toBeFocusedId = statementId;
-    }
-  }
-
-  /**
-   * Set focus on the given statement instance which is already in the view and
-   * the exact object is present in this.resourcesInTreeView already.
-   * @param statement The statement contained within this.resourcesInTreeView to focus on.
-   */
-  private async doFocus(statement: FlinkStatement): Promise<void> {
-    try {
-      logger.debug(`doFocus(): Focusing statement ${statement.id} in the view`);
-      await this.treeView.reveal(statement, { focus: true, select: true });
-    } catch (e) {
-      this.logger.error("Error focusing statement in view", e);
+      logger.error("Could not find statement in the view", statementId);
+      throw new Error(`Could not find statement ${statementId} in the view`);
     }
   }
 
