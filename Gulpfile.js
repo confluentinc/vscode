@@ -647,6 +647,7 @@ export async function testBuild() {
   };
   const bundle = await rollup(testInput);
   await bundle.write(testOutput);
+
   return 0;
 }
 

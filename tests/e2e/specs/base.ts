@@ -90,7 +90,7 @@ export const test = base.extend<TestFixtures>({
     const tempDirs: string[] = [];
     await use(async () => {
       const tempDir = await fs.promises.realpath(
-        await fs.promises.mkdtemp(path.join(os.tmpdir(), "gltest-")),
+        await fs.promises.mkdtemp(path.join(os.tmpdir(), "test-")),
       );
       tempDirs.push(tempDir);
       return tempDir;

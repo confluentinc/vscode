@@ -28,14 +28,14 @@ import {
 
 const logger = new Logger("commands.flinkStatements");
 
-/** Poll period in millis to check whether statement has reached RUNNING state */
+/** Poll period in millis to check whether statement has reached results-viewable state */
 const DEFAULT_POLL_PERIOD_MS = 300;
 
-/** Max time in millis to wait until statement reaches RUNNING state */
-const MAX_WAIT_TIME_MS = 30_000;
+/** Max time in millis to wait until statement reaches results-viewable state */
+const MAX_WAIT_TIME_MS = 60_000;
 
 /**
- * Wait for a Flink statement to enter the RUNNING phase by polling its status.
+ * Wait for a Flink statement to enter results-viewable state by polling its status.
  *
  * @param statement The Flink statement to monitor
  * @param computePool The compute pool the statement is running on
