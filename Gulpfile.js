@@ -620,7 +620,7 @@ export async function testBuild() {
       }),
       copy({
         copyOnce: true,
-        targets: [{ src: ["tests/e2e/fixtures"], dest: join(DESTINATION, "tests/e2e") }],
+        targets: [{ src: ["tests/fixtures"], dest: join(DESTINATION, "tests") }],
       }),
     ],
     onLog: handleBuildLog,
