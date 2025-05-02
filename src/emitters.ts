@@ -121,3 +121,6 @@ export const topicSearchSet = new vscode.EventEmitter<string | null>();
 export const schemaSearchSet = new vscode.EventEmitter<string | null>();
 
 export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
+
+/** Metadata for a given {@link vscode.Uri} has been updated. */
+export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();

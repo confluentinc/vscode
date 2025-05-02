@@ -27,14 +27,14 @@ export enum WorkspaceStorageKeys {
   /** What (Schema) URI was chosen first to diff against? */
   DIFF_BASE_URI = "diffs.selectedResource",
 
-  /** URI annotation facility, setURIMetadata() and the like.*/
+  /** Map of URIs to their associated metadata record/objects. */
   URI_METADATA = "uriMetadata",
 }
 
 /** Keys for use within URI Metadata dicts */
 export enum UriMetadataKeys {
-  SCHEMA_REGISTRY_ID = "schemaRegistryId",
-  SCHEMA_SUBJECT = "schemaSubject",
+  CCLOUD_ORG_ID = "ccloudOrgId",
+  FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",
 }
 
 export enum SecretStorageKeys {
