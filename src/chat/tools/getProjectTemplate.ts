@@ -100,6 +100,7 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
         message =
           `${message}### Available Options:\n\`\`\`json\n${JSON.stringify(parsed.displayOptions, null, 2)}\n\`\`\`\n\n` +
           `> ${parsed.message}\n\n` +
+          `⚠️ Note: Sensitive fields like API keys or secrets have been redacted and will be collected securely through a separate form.\n\n` +
           `To create a project with this template:\n\n` +
           `1. Run: \`apply_projectTemplate\`\n` +
           `2. Enter the template name: \`${parameters.name}\`\n` +

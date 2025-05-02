@@ -31,7 +31,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     logger.debug("params:", params);
     const inputTagsPassed: boolean = Array.isArray(params.tags) && params.tags.length > 0;
 
-    const templateList = await getTemplatesList();
+    const templateList = await getTemplatesList(true);
     logger.debug("templateList:", templateList);
 
     const templates = Array.from(templateList.data) as ScaffoldV1Template[];
@@ -39,12 +39,16 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     templates.forEach((template) => {
       const spec = template.spec!;
       if (inputTagsPassed && !inputTagsMatchSpecTags(params.tags, spec.tags)) {
-        // skip any templates that don't match provided tags
+        // Skip any templates that don't match provided tags
         return;
       }
+
+      // Sanitize options to remove sensitive information
+      const sanitizedOptions = this.sanitizeOptions(spec.options);
+
       templateStrings.push(
         new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
+          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(sanitizedOptions)}".`,
         ),
       );
     });
@@ -86,6 +90,24 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       messages.push(this.toolMessage(errorMessage, "error"));
     }
     return messages;
+  }
+
+  /** Sanitize options to remove sensitive information like API keys and secrets */
+  private sanitizeOptions(options: any): any {
+    if (!options || typeof options !== "object") {
+      return options;
+    }
+
+    const sanitizedOptions = { ...options };
+    const sensitivePatterns = [/key/i, /secret/i, /password/i, /token/i]; // Add more patterns as needed
+
+    for (const key in sanitizedOptions) {
+      if (sensitivePatterns.some((pattern) => pattern.test(key))) {
+        sanitizedOptions[key] = "REDACTED"; // Replace sensitive values with a placeholder
+      }
+    }
+
+    return sanitizedOptions;
   }
 }
 
