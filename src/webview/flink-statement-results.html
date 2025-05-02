@@ -151,7 +151,7 @@
 
           <tbody>
             <template data-for="result of this.snapshot().results">
-              <tr class="grid-row">
+              <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())">
                 <template data-for="column of this.visibleColumns() by column">
                   <td class="grid-cell cell-text-overflow" tabindex="-1"
                     data-children="((this.columns())[this.column()]).children(this.result())"
@@ -194,16 +194,12 @@
           </div>
         </template>
       </div>
-      <!-- <div>
-          <vscode-button
-            appearance="icon"
-            aria-label="Open results as JSON"
-            title="Open results as JSON"
-            data-on-click="this.previewJSON()"
-          >
-            <span class="codicon codicon-json"></span>
-          </vscode-button>
-        </div> -->
+      <div>
+        <vscode-button appearance="icon" aria-label="Open results as JSON" title="Open results as JSON"
+          data-on-click="this.previewAllResults()">
+          <span class="codicon codicon-json"></span>
+        </vscode-button>
+      </div>
     </footer>
   </main>
 
