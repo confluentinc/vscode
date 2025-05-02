@@ -189,6 +189,61 @@ describe("ResourceLoader::getSubjects()", () => {
   });
 });
 
+describe("ResourceLoader::checkedGetSubjects()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let getSubjectsStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Returns subjects when no error", async () => {
+    const subjects = ["subject1", "subject2"];
+    getSubjectsStub.resolves(subjects);
+
+    const result = await loaderInstance.checkedGetSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(result, subjects);
+  });
+
+  it("Returns empty array and opens notification when error", async () => {
+    const isResponseErrorStub = sandbox.stub(errors, "isResponseError").returns(true);
+    const showWarningNotificationWithButtonsStub = sandbox.stub(
+      errors,
+      "showWarningNotificationWithButtons",
+    );
+
+    getSubjectsStub.rejects(new Error("Test error"));
+
+    const result = await loaderInstance.checkedGetSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(result, []);
+    assert.ok(isResponseErrorStub.calledOnce);
+    assert.ok(showWarningNotificationWithButtonsStub.calledOnce);
+    assert.ok(
+      showWarningNotificationWithButtonsStub
+        .getCall(0)
+        .args[0].startsWith("Route error fetching schema registry subjects"),
+    );
+  });
+
+  it("Non-response error is thrown", async () => {
+    const isResponseErrorStub = sandbox.stub(errors, "isResponseError").returns(false);
+    getSubjectsStub.rejects(new Error("Test error"));
+
+    await assert.rejects(loaderInstance.checkedGetSubjects(TEST_LOCAL_SCHEMA_REGISTRY), (err) => {
+      assert.strictEqual((err as Error).message, "Test error");
+      assert.ok(isResponseErrorStub.calledOnce);
+      return true;
+    });
+  });
+});
+
 describe("ResourceLoader::clearCache()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
@@ -291,6 +346,31 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
 
     assert.ok(getSubjectsStub.calledOnce);
     assert.ok(fetchTopicsStub.calledOnce);
+  });
+
+  it("Gracefully handles error from getSubjects()", async () => {
+    // Set up stubs to simulate error from getSubjects(), which will
+    // be eaten gracefully by getTopicsForCluster() use of
+    // checkedGetSubjects().
+    sandbox.stub(errors, "isResponseError").returns(true);
+    getSubjectsStub.rejects(new Error("Test error"));
+    const showWarningNotificationWithButtonsStub = sandbox.stub(
+      errors,
+      "showWarningNotificationWithButtons",
+    );
+
+    const topicsResponseData: TopicData[] = [
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"]),
+    ];
+    fetchTopicsStub.resolves(topicsResponseData);
+
+    const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+
+    assert.strictEqual(topics.length, 1);
+    // Returned topics def won't have schemas.
+    assert.ok(!topics[0].hasSchema);
+
+    assert.ok(showWarningNotificationWithButtonsStub.calledOnce);
   });
 });
 
