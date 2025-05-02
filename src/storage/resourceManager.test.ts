@@ -16,7 +16,6 @@ import {
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import {
   ConnectionSpec,
@@ -956,7 +955,6 @@ describe("ResourceManager Uri metadata methods", () => {
 
   const testUri: Uri = Uri.parse("file:///test-file.sql");
   const testMetadata: UriMetadata = {
-    [UriMetadataKeys.CCLOUD_ORG_ID]: TEST_CCLOUD_ORGANIZATION_ID,
     [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
   };
 
@@ -1043,7 +1041,10 @@ describe("ResourceManager Uri metadata methods", () => {
 
   it("should return undefined when getting a metadata value that doesn't exist", async () => {
     // no preloading metadata for this test
-    const value = await resourceManager.getUriMetadataValue(testUri, UriMetadataKeys.CCLOUD_ORG_ID);
+    const value = await resourceManager.getUriMetadataValue(
+      testUri,
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
+    );
 
     assert.strictEqual(value, undefined);
   });

@@ -28,7 +28,7 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
 
   logger.debug(`setting metadata for URI`, {
     uri: uri.toString(),
-    computePoolId: pool.id,
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
   });
   await getResourceManager().setUriMetadataValue(
     uri,
