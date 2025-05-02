@@ -733,7 +733,7 @@ export class ResourceManager {
   // URI METADATA
 
   /** Store the full {@link UriMetadataMap} (for possibly multiple {@link Uri}s). */
-  async setAllUriMetadata(metadataMap: UriMetadataMap): Promise<void> {
+  private async setAllUriMetadata(metadataMap: UriMetadataMap): Promise<void> {
     await this.storage.setWorkspaceState(
       WorkspaceStorageKeys.URI_METADATA,
       mapToString(metadataMap),
