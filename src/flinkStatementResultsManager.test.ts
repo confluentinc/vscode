@@ -22,7 +22,7 @@ describe("FlinkStatementResultsManager", () => {
     sandbox.restore();
   });
 
-  it("should process results from fixtures correctly", async () => {
+  const createResultsManagerWithResults = async () => {
     const os = ObservableScope();
 
     const mockService = sandbox.createStubInstance(StatementResultsSqlV1Api);
@@ -51,9 +51,13 @@ describe("FlinkStatementResultsManager", () => {
       notifyUIStub,
       DEFAULT_RESULTS_LIMIT,
     );
-
     // Wait for results to be processed
     await new Promise((resolve) => setTimeout(resolve, 20));
+    return { manager, expectedParsedResults };
+  };
+
+  it("should process results from fixtures correctly", async () => {
+    const { manager, expectedParsedResults } = await createResultsManagerWithResults();
 
     // Get all results through message handler
     const results = manager.handleMessage("GetResults", {
@@ -63,42 +67,38 @@ describe("FlinkStatementResultsManager", () => {
 
     // Verify the results match expected format
     assert.deepStrictEqual(results, { results: expectedParsedResults });
+
+    // Verify PreviewAllResults functionality
+    const previewResults = manager.handleMessage("PreviewAllResults", {});
+    assert.deepStrictEqual(previewResults.results, { results: expectedParsedResults });
   });
 
-  it("should handle PreviewJSON and call showJsonPreview", () => {
-    const os = ObservableScope();
-    const mockService = sandbox.createStubInstance(StatementResultsSqlV1Api);
-    const createStatementResponse = loadFixture(
-      "flink-statement-results-processing/create-statement-response.json",
-    );
-    const mockStatement = createStatementResponse as unknown as FlinkStatement;
-    const notifyUIStub = sandbox.stub();
+  it("should handle PreviewResult and PreviewAllResults", async () => {
+    const { manager, expectedParsedResults } = await createResultsManagerWithResults();
 
     const showJsonPreviewMock = sandbox.stub(messageUtils, "showJsonPreview").resolves();
 
-    const manager = new FlinkStatementResultsManager(
-      os,
-      mockStatement,
-      mockService,
-      schedule_immediately,
-      notifyUIStub,
-      DEFAULT_RESULTS_LIMIT,
-    );
-
-    const testResult = { foo: "bar" };
-
     // Simulate double clicking a result row in the UI
-    const response = manager.handleMessage("PreviewJSON", { result: testResult });
+    const previewedResult = expectedParsedResults[0];
+    let response = manager.handleMessage("PreviewResult", { result: previewedResult });
 
     sinon.assert.calledOnce(showJsonPreviewMock);
     const [filename, resultArg] = showJsonPreviewMock.firstCall.args;
     assert.ok(filename.startsWith("flink-statement-result-") && filename.endsWith(".json"));
-    assert.deepStrictEqual(resultArg, testResult);
+    assert.deepStrictEqual(resultArg, previewedResult);
 
     // Check the return value
     assert.ok(response.filename.startsWith("flink-statement-result-"));
     assert.ok(response.filename.endsWith(".json"));
-    assert.deepStrictEqual(response.result, testResult);
+    assert.deepStrictEqual(response.result, previewedResult);
+
+    // Now test PreviewAllResults
+    response = manager.handleMessage("PreviewAllResults", {});
+
+    // Notice the plural "results"
+    assert.ok(response.filename.startsWith("flink-statement-results-"), response.filename);
+    assert.ok(response.filename.endsWith(".json"));
+    assert.deepStrictEqual(response.result, expectedParsedResults);
 
     showJsonPreviewMock.restore();
   });

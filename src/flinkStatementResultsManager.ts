@@ -27,7 +27,8 @@ type MessageType =
   | "GetStreamTimer"
   | "StreamPause"
   | "StreamResume"
-  | "PreviewJSON";
+  | "PreviewResult"
+  | "PreviewAllResults";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -229,11 +230,7 @@ export class FlinkStatementResultsManager {
         // Convert Map to array of objects
         const res = Array.from(this._results().values()).map((row: Map<string, any>) => {
           // Convert Map to plain object
-          const obj: Record<string, any> = {};
-          row.forEach((value: any, key: string) => {
-            obj[key] = value;
-          });
-          return obj;
+          return this.mapToObject(row);
         });
         const paginatedResults = res.slice(offset, offset + limit);
         return {
@@ -257,14 +254,24 @@ export class FlinkStatementResultsManager {
       case "GetMaxSize": {
         return String(this.resultLimit);
       }
-      case "PreviewJSON": {
-        const filename = `flink-statement-result-${new Date().getTime()}.json`;
-        showJsonPreview(filename, body.result);
+      case "PreviewAllResults":
+      case "PreviewResult": {
+        const allResults = body?.result === undefined;
+
+        // plural if all results else singular
+        const filename = `flink-statement-result${allResults ? "s" : ""}-${new Date().getTime()}.json`;
+
+        let content = body?.result;
+        if (allResults) {
+          content = Array.from(this._results().values(), (mapValue) => this.mapToObject(mapValue));
+        }
+
+        showJsonPreview(filename, content);
 
         // Return value used in tests
         return {
           filename,
-          result: body.result,
+          result: content,
         };
       }
       case "ResultLimitChange": {
@@ -305,6 +312,14 @@ export class FlinkStatementResultsManager {
         return _exhaustiveCheck;
       }
     }
+  }
+
+  private mapToObject(row: Map<string, any>) {
+    const obj: Record<string, any> = {};
+    row.forEach((value: any, key: string) => {
+      obj[key] = value;
+    });
+    return obj;
   }
 
   dispose() {

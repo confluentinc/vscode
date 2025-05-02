@@ -1,9 +1,9 @@
 import { ObservableScope } from "inertial";
+import { SqlV1ResultSchema } from "../clients/flinkSql";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
-import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
+import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 import { Timer } from "./timer/timer";
-import { SqlV1ResultSchema } from "../clients/flinkSql";
 
 customElements.define("flink-timer", Timer);
 
@@ -269,8 +269,12 @@ class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /** Preview the JSON content of a result row in a read-only editor */
-  preview(result: Record<string, any>) {
-    return post("PreviewJSON", { result, timestamp: this.timestamp() });
+  previewResult(result: Record<string, any>) {
+    return post("PreviewResult", { result, timestamp: this.timestamp() });
+  }
+
+  previewAllResults() {
+    return post("PreviewAllResults", { timestamp: this.timestamp() });
   }
 
   /**
@@ -379,9 +383,10 @@ export function post(
 export function post(type: "StreamPause", body: { timestamp?: number }): Promise<null>;
 export function post(type: "StreamResume", body: { timestamp?: number }): Promise<null>;
 export function post(
-  type: "PreviewJSON",
+  type: "PreviewResult",
   body: { result: Record<string, any>; timestamp?: number },
 ): Promise<null>;
+export function post(type: "PreviewAllResults", body: { timestamp?: number }): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
