@@ -20,7 +20,8 @@ export const generateRowId = (row: any[], upsertColumns?: number[]): string => {
     result = row.filter((_, idx) => upsertColumns.includes(idx));
   }
 
-  return JSON.stringify(result.join("-")).replace(/[\\"]/g, "");
+  // Trade CPU for memory and base64 encode the concatenated row values.
+  return Buffer.from(JSON.stringify(result.join("-")).replace(/[\\"]/g, "")).toString("base64");
 };
 
 export const mapColumnsToRowData = (
