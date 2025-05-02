@@ -94,7 +94,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
       assert.strictEqual(
         codeLenses[0].command?.command,
-        "confluent.document.flinksql.setCCloudCatalogDatabase",
+        "confluent.document.flinksql.setCCloudDatabase",
       );
       assert.strictEqual(codeLenses[0].command?.title, "Set Catalog & Database");
       assert.deepStrictEqual(codeLenses[0].command?.arguments, [fakeDocument.uri]);
@@ -130,7 +130,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
       assert.strictEqual(
         codeLenses[0].command?.command,
-        "confluent.document.flinksql.setCCloudCatalogDatabase",
+        "confluent.document.flinksql.setCCloudDatabase",
       );
       assert.strictEqual(codeLenses[0].command?.title, "Set Catalog & Database");
       assert.deepStrictEqual(codeLenses[0].command?.arguments, [fakeDocument.uri]);
@@ -170,7 +170,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
     assert.strictEqual(
       codeLenses[1].command?.command,
-      "confluent.document.flinksql.setCCloudCatalogDatabase",
+      "confluent.document.flinksql.setCCloudDatabase",
     );
     assert.strictEqual(
       codeLenses[1].command?.title,

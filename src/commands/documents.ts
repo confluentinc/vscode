@@ -40,17 +40,14 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
   uriMetadataSet.fire(uri);
 }
 
-export async function setCCloudCatalogDatabaseForUriCommand(
-  uri?: Uri,
-  pool?: CCloudFlinkComputePool,
-) {
+export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFlinkComputePool) {
   if (!(uri instanceof Uri)) {
     return;
   }
   if (!hasCCloudAuthSession()) {
     // shouldn't happen since callers shouldn't be able to call this command without a valid CCloud
     // connection, but just in case
-    logger.warn("not setting compute pool for URI: no CCloud auth session");
+    logger.warn("not setting database for URI: no CCloud auth session");
     return;
   }
 
@@ -84,8 +81,8 @@ export function registerDocumentCommands(): Disposable[] {
       setCCloudComputePoolForUriCommand,
     ),
     registerCommandWithLogging(
-      "confluent.document.flinksql.setCCloudCatalogDatabase",
-      setCCloudCatalogDatabaseForUriCommand,
+      "confluent.document.flinksql.setCCloudDatabase",
+      setCCloudDatabaseForUriCommand,
     ),
   ];
 }
