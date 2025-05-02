@@ -1,0 +1,20 @@
+{
+    "api_version": "sql/v1",
+    "kind": "StatementResult",
+    "metadata": {
+        "created_at": "2025-05-02T17:54:46.85727309Z",
+        "next": "https://flink.us-east1.gcp.confluent.cloud/sql/v1/organizations/fake-org/environments/fake-env/statements/fake-statement/results?page_token=fake-page-token",
+        "self": "https://flink.us-east1.gcp.confluent.cloud/sql/v1/organizations/fake-org/environments/fake-env/statements/fake-statement/results"
+    },
+    "results": {
+        "data": [
+            {
+                "op": 0,
+                "row": [
+                    "2025-04-25 06:53:43.584845",
+                    "61.2"
+                ]
+            }
+        ]
+    }
+}
