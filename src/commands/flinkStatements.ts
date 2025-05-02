@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import {
+  FLINKSTATEMENT_URI_SCHEME,
+  FlinkStatementDocumentProvider,
+} from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkStatementResultsViewerConfig } from "../flinkStatementResults";
 import { Logger } from "../logging";
@@ -132,33 +135,38 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
 }
 
 /**
-  * Submit a Flink statement to a Flink cluster. Flow:
-  * Quickpick flow:
-  *  1) Chose flinksql, sql, or text document, preferring the current foreground editor.
-  *  2) Statement name (auto-generated from template pattern, but user can override)
-    2) the Flink cluster to send to
-    3) also need to know at least the 'current database' (cluster name) to submit along with the catalog name (the env, infer-able from the chosen Flink cluster).
-  5) Submit!
-  6) Raise error box if any immediate submission errors.
-  7) Refresh the statements view if the view is set to include the cluster
-*/
-export async function submitFlinkStatementCommand(): Promise<void> {
+ * Submit a Flink statement to a Flink cluster.
+ *
+ * The flow of the command is as follows:
+ *  1) (If no `uri` is passed): show a quickpick to **choose a Flink SQL document**,
+ *     preferring the current foreground editor
+ *  2) Create **statement name** (auto-generated from template pattern, but user can override)
+ *  3) (If no `pool` is passed): show a quickpick to **choose a Flink compute pool** to send the statement
+ *  4) Show a quickpick to **choose a database** (Kafka cluster) to submit along with the
+ *     **catalog name** (the environment, inferable from the chosen database).
+ *  5) Submit!
+ *  6) Show error notification for any submission errors.
+ *  7) Refresh the statements view if the view is focused on the chosen compute pool.
+ *  8) If the statement is viewable, wait for it to be in the RUNNING phase and show results.
+ */
+export async function submitFlinkStatementCommand(
+  uri?: vscode.Uri,
+  pool?: CCloudFlinkComputePool,
+): Promise<void> {
+  const funcLogger = logger.withCallpoint("submitFlinkStatementCommand");
+
   // 1. Choose the document with the SQL to submit
-  const uriSchemes = ["file", "untitled"];
+  const uriSchemes = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
   const languageIds = ["plaintext", "flinksql", "sql"];
   const fileFilters = {
     "FlinkSQL files": [".flinksql", ".sql"],
   };
-  const statementBodyUri: vscode.Uri | undefined = await uriQuickpick(
-    uriSchemes,
-    languageIds,
-    fileFilters,
-  );
+  const statementBodyUri: vscode.Uri | undefined =
+    uri instanceof vscode.Uri && uriSchemes.includes(uri.scheme)
+      ? uri
+      : await uriQuickpick(uriSchemes, languageIds, fileFilters);
   if (!statementBodyUri) {
-    logger.debug(
-      "submitFlinkStatementCommand",
-      "Short circuiting return, no statement file chosen.",
-    );
+    funcLogger.debug("User canceled the URI quickpick");
     return;
   }
 
@@ -169,9 +177,10 @@ export async function submitFlinkStatementCommand(): Promise<void> {
   const statementName = await determineFlinkStatementName();
 
   // 3. Choose the Flink cluster to send to
-  const computePool = await flinkComputePoolQuickPick();
+  const computePool: CCloudFlinkComputePool | undefined =
+    pool instanceof CCloudFlinkComputePool ? pool : await flinkComputePoolQuickPick();
   if (!computePool) {
-    logger.error("submitFlinkStatementCommand", "computePool is undefined");
+    funcLogger.debug("User canceled the compute pool quickpick");
     return;
   }
 
@@ -180,7 +189,7 @@ export async function submitFlinkStatementCommand(): Promise<void> {
   const currentDatabaseKafkaCluster: KafkaCluster | undefined =
     await flinkDatabaseQuickpick(computePool);
   if (!currentDatabaseKafkaCluster) {
-    logger.error("submitFlinkStatementCommand: User canceled the default database quickpick");
+    funcLogger.debug("User canceled the default database quickpick");
     return;
   }
   const currentDatabase = currentDatabaseKafkaCluster.name;
