@@ -152,7 +152,7 @@ describe("ResourceViewProvider loading functions", () => {
     sandbox.stub(ccloudConnections, "hasCCloudAuthSession").returns(true);
     sandbox.stub(org, "getCurrentOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     const envStub = sandbox
-      .stub(resourceManager.getResourceManager(), "getCCloudEnvironments")
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([TEST_CCLOUD_ENVIRONMENT]);
 
     const result: ContainerTreeItem<CCloudEnvironment> = await loadCCloudResources();
