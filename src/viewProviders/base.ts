@@ -52,7 +52,14 @@ export abstract class BaseViewProvider<
   >();
   readonly onDidChangeTreeData: Event<T | undefined | void> = this._onDidChangeTreeData.event;
 
-  refresh(): void {
+  /**
+   * Refresh the tree view with data from the current {@linkcode resource} and {@linkcode environment}.
+   *
+   * Subclasses should ensure that their implementations fire this._onDidChangeTreeData() after doing any
+   * data loading.
+   * @returns A promise that resolves when and data loading is complete, for when callers need to wait for it.
+   */
+  async refresh(): Promise<void> {
     this._onDidChangeTreeData.fire();
   }
 
@@ -129,6 +136,35 @@ export abstract class BaseViewProvider<
     return BaseViewProvider.instanceMap.get(className) as U;
   }
 
+  /**
+   * Set the parent resource for this view provider. If being set to what is already set, the
+   * resource will be refreshed.
+   *
+   * @returns A promise that resolves when the resource is set and any reloads are complete.
+   */
+  async setParentResource(resource: P | null): Promise<void> {
+    this.logger.debug(`setParentResource() called, ${resource ? "refreshing" : "resetting"}.`, {
+      resource,
+    });
+
+    if (this.resource !== resource) {
+      this.setSearch(null); // reset search when parent resource changes
+    }
+
+    if (resource) {
+      if (this.parentResourceChangedContextValue) {
+        setContextValue(this.parentResourceChangedContextValue, true);
+      }
+      this.resource = resource;
+      await this.updateTreeViewDescription();
+      await this.refresh();
+    } else {
+      // edging to empty state
+      this.resource = null;
+      await this.refresh();
+    }
+  }
+
   /** Set up event listeners for this view provider. */
   private setEventListeners(): Disposable[] {
     const disposables: Disposable[] = [];
@@ -139,21 +175,7 @@ export abstract class BaseViewProvider<
 
     const parentResourceChangedSub: Disposable | undefined =
       this.parentResourceChangedEmitter?.event(async (resource: P | null) => {
-        this.logger.debug(
-          `parent resource change event fired, ${resource ? "refreshing" : "resetting"}.`,
-          { resource },
-        );
-        this.setSearch(null); // reset search when parent resource changes
-        if (!resource) {
-          this.reset();
-        } else {
-          if (this.parentResourceChangedContextValue) {
-            setContextValue(this.parentResourceChangedContextValue, true);
-          }
-          this.resource = resource;
-          await this.updateTreeViewDescription();
-          this.refresh();
-        }
+        await this.setParentResource(resource);
       });
     if (parentResourceChangedSub) {
       disposables.push(parentResourceChangedSub);
@@ -184,7 +206,7 @@ export abstract class BaseViewProvider<
     this.setSearch(null);
     // TODO: update this to adjust associated context value for focused resource(s)
 
-    this.refresh();
+    await this.refresh();
   }
 
   /** Callback for  */
