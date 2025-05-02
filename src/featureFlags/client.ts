@@ -54,9 +54,11 @@ export async function getLaunchDarklyClient(): Promise<LDClientBase | undefined>
 /** Callback function for handling "failed" events from the LD stream. */
 function handleFailedEvent(error: unknown) {
   if (error instanceof Error) {
-    // if online, send any failed events to Sentry so we can troubleshoot
-    // if offline, just log the failed event
-    logError(error, "LD failed event", { extra: { functionName: "handleFailedEvent" } });
+    if (!error.message.includes("network error")) {
+      // send any non-'network error' events to Sentry (if online) so we can troubleshoot
+      // https://support.launchdarkly.com/hc/en-us/articles/12998125691419-Error-LaunchDarklyFlagFetchError-network-error
+      logError(error, "LD failed event", { extra: { functionName: "handleFailedEvent" } });
+    }
   } else {
     logger.error("LD failed event:", error);
   }
