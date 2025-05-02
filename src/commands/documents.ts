@@ -6,6 +6,7 @@ import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudOrganization } from "../models/organization";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -34,6 +35,12 @@ export async function setCCloudOrgForUriCommand(uri?: Uri) {
 
 export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
   if (!(uri instanceof Uri)) {
+    return;
+  }
+  if (!hasCCloudAuthSession()) {
+    // shouldn't happen since callers shouldn't be able to call this command without a valid CCloud
+    // connection, but just in case
+    logger.warn("not setting compute pool for URI: no CCloud auth session");
     return;
   }
 
