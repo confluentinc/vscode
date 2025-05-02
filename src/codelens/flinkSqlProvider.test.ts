@@ -126,7 +126,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       const provider = FlinkSqlCodelensProvider.getInstance();
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-      assert.strictEqual(codeLenses.length, 3);
+      assert.strictEqual(codeLenses.length, 2);
 
       assert.strictEqual(
         codeLenses[0].command?.command,
@@ -184,8 +184,6 @@ describe("codelens/flinkSqlProvider.ts", () => {
     );
     assert.strictEqual(codeLenses[2].command?.title, pool.name);
     assert.deepStrictEqual(codeLenses[2].command?.arguments, [fakeDocument.uri]);
-
-    assert.strictEqual(codeLenses[3].command?.command, "confluent.document.setCCloudOrg");
   });
 
   it("should create codelenses at the top of the document", async () => {
