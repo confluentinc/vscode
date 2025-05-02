@@ -20,7 +20,6 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
-import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
@@ -621,7 +620,7 @@ export async function testBuild() {
       }),
       copy({
         copyOnce: true,
-        targets: [{ src: ["tests/fixtures"], dest: path.join(DESTINATION, "tests") }],
+        targets: [{ src: ["tests/fixtures"], dest: join(DESTINATION, "tests") }],
       }),
     ],
     onLog: handleBuildLog,
