@@ -1,0 +1,55 @@
+{
+    "api_version": "sql/v1",
+    "environment_id": "fake-env",
+    "kind": "Statement",
+    "metadata": {
+        "created_at": "2025-05-02T17:54:24.822569Z",
+        "labels": {},
+        "resource_version": "4",
+        "self": "https://flink.us-east1.gcp.confluent.cloud/sql/v1/organizations/fake-org/environments/fake-env/statements/fake-statement",
+        "uid": "fake-uid",
+        "updated_at": "2025-05-02T17:54:25.119028Z"
+    },
+    "name": "fake-statement",
+    "organization_id": "fake-org",
+    "spec": {
+        "compute_pool_id": "lfcp-jy8ppq",
+        "principal": "u-77xyzj",
+        "properties": {
+            "sql.current-catalog": "Flinkfodder",
+            "sql.current-database": "Realworld Data",
+            "sql.local-time-zone": "GMT-07:00"
+        },
+        "statement": "select when_reported, tempf from `WeatherData` order by tempf desc limit 10;",
+        "stopped": false
+    },
+    "status": {
+        "detail": "",
+        "phase": "PENDING",
+        "traits": {
+            "is_append_only": false,
+            "is_bounded": false,
+            "schema": {
+                "columns": [
+                    {
+                        "name": "when_reported",
+                        "type": {
+                            "nullable": false,
+                            "precision": 6,
+                            "type": "TIMESTAMP_WITH_LOCAL_TIME_ZONE"
+                        }
+                    },
+                    {
+                        "name": "tempf",
+                        "type": {
+                            "nullable": false,
+                            "type": "DOUBLE"
+                        }
+                    }
+                ]
+            },
+            "sql_kind": "SELECT",
+            "upsert_columns": null
+        }
+    }
+}
