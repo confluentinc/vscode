@@ -88,8 +88,8 @@ export class DocumentMetadataManager {
         .then((doc) => doc.getText());
       if (document.getText().trim() === untitledContent?.trim()) {
         logger.debug(`migrating metadata from untitled document to "${document.uri.toString()}"`);
-        this.resourceManager.setUriMetadata(document.uri, metadata);
-        this.resourceManager.deleteUriMetadata(uri);
+        await this.resourceManager.setUriMetadata(document.uri, metadata);
+        await this.resourceManager.deleteUriMetadata(uri);
         break;
       }
     }
