@@ -143,7 +143,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
         catalog && database
           ? `Catalog: ${catalog.name}, Database: ${database.name}`
           : "Set Catalog & Database",
-      command: "confluent.document.flinksql.setCCloudCatalogDatabase",
+      command: "confluent.document.flinksql.setCCloudDatabase",
       tooltip: "Set Catalog & Database for Flink Statement",
       arguments: [document.uri],
     };
