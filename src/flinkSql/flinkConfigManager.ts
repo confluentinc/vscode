@@ -1,4 +1,5 @@
 import { Disposable, commands, window, workspace } from "vscode";
+import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
@@ -29,7 +30,7 @@ export class FlinkConfigurationManager implements Disposable {
   static instance: FlinkConfigurationManager | null = null;
   private disposables: Disposable[] = [];
   private hasPromptedForSettings = false;
-  private languageClient: Disposable | null = null;
+  private languageClient: LanguageClient | null = null;
 
   static getInstance(): FlinkConfigurationManager {
     if (!FlinkConfigurationManager.instance) {
@@ -73,9 +74,7 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration("confluent.flink")) {
-          logger.debug("Flink configuration changed");
-          await this.checkFlinkResourcesAvailability();
-          // TODO NC reset language client if compute pool changes, or update workspace settings in client
+          await this.handleFlinkConfigChange(e);
         }
       }),
     );
@@ -95,6 +94,25 @@ export class FlinkConfigurationManager implements Disposable {
         }
       }),
     );
+  }
+
+  private async handleFlinkConfigChange(e: any): Promise<void> {
+    logger.debug("Flink configuration changed");
+    await this.checkFlinkResourcesAvailability();
+    // Reset language client if compute pool changes, or update workspace settings in client
+    if (this.languageClient) {
+      const settings = this.getFlinkSqlSettings();
+      this.languageClient.sendNotification("workspace/didChangeConfiguration", {
+        settings: {
+          workspaceSettings: {
+            AuthToken: "{{ ccloud.data_plane_token }}",
+            // Catalog: settings.catalog, // Uncomment if catalog is part of settings
+            Database: settings.database,
+            ComputePoolId: settings.computePoolId,
+          },
+        },
+      });
+    }
   }
 
   public async checkAuthenticationState(): Promise<void> {
