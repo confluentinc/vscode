@@ -14,7 +14,6 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudOrganization } from "../models/organization";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
@@ -69,22 +68,13 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
       return [signInLens];
     }
 
-    // codelens for changing org
-    const org: CCloudOrganization = await CCloudResourceLoader.getInstance().getOrganization();
-    const selectOrgCommand: Command = {
-      title: org.name,
-      command: "confluent.document.setCCloudOrg",
-      tooltip: "Set CCloud Organization for Flink Statement",
-      arguments: [document.uri],
-    };
-    const orgLens = new CodeLens(range, selectOrgCommand);
-
     // look up document metadata from extension state
     const rm = ResourceManager.getInstance();
     const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(document.uri);
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
+
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
     const computePoolString: string | undefined =
@@ -125,11 +115,11 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
         arguments: [document.uri, computePool],
       };
       const submitLens = new CodeLens(range, submitCommand);
-      // show the "Submit Statement" | <current pool> | <current org> codelenses
-      codeLenses.push(submitLens, computePoolLens, orgLens);
+      // show the "Submit Statement" | <current pool> codelenses
+      codeLenses.push(submitLens, computePoolLens);
     } else {
-      // show the "Set Compute Pool" | <current org> codelenses
-      codeLenses.push(computePoolLens, orgLens);
+      // show the "Set Compute Pool" codelens
+      codeLenses.push(computePoolLens);
     }
 
     return codeLenses;

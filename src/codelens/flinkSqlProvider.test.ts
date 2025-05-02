@@ -85,15 +85,14 @@ describe("codelens/flinkSqlProvider.ts", () => {
     const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-    // should have two codelenses: "Set Compute Pool" and the one showing the current CCloud org
-    assert.strictEqual(codeLenses.length, 2);
+    assert.strictEqual(codeLenses.length, 1);
+
     assert.strictEqual(
       codeLenses[0].command?.command,
       "confluent.document.flinksql.setCCloudComputePool",
     );
     assert.strictEqual(codeLenses[0].command?.title, "Set Compute Pool");
     assert.deepStrictEqual(codeLenses[0].command?.arguments, [fakeDocument.uri]);
-    assert.strictEqual(codeLenses[1].command?.command, "confluent.document.setCCloudOrg");
   });
 
   it("should show 'Set Compute Pool' when pool metadata exists but compute pool is not found", async () => {
@@ -106,15 +105,14 @@ describe("codelens/flinkSqlProvider.ts", () => {
     const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-    // should have two codelenses: "Set Compute Pool" and the one showing the current CCloud org
-    assert.strictEqual(codeLenses.length, 2);
+    assert.strictEqual(codeLenses.length, 1);
+
     assert.strictEqual(
       codeLenses[0].command?.command,
       "confluent.document.flinksql.setCCloudComputePool",
     );
     assert.strictEqual(codeLenses[0].command?.title, "Set Compute Pool");
     assert.deepStrictEqual(codeLenses[0].command?.arguments, [fakeDocument.uri]);
-    assert.strictEqual(codeLenses[1].command?.command, "confluent.document.setCCloudOrg");
   });
 
   it("should provide 'Submit Statement' codelens when a compute pool is set", async () => {
@@ -132,8 +130,8 @@ describe("codelens/flinkSqlProvider.ts", () => {
     const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-    // should have three codelenses: 'Submit Statement', current compute pool, and current org
-    assert.strictEqual(codeLenses.length, 3);
+    assert.strictEqual(codeLenses.length, 2);
+
     assert.strictEqual(codeLenses[0].command?.command, "confluent.statements.create");
     assert.strictEqual(codeLenses[0].command?.title, "▶️ Submit Statement");
     assert.deepStrictEqual(codeLenses[0].command?.arguments, [fakeDocument.uri, pool]);
@@ -141,9 +139,9 @@ describe("codelens/flinkSqlProvider.ts", () => {
       codeLenses[1].command?.command,
       "confluent.document.flinksql.setCCloudComputePool",
     );
+
     assert.strictEqual(codeLenses[1].command?.title, pool.name);
     assert.deepStrictEqual(codeLenses[1].command?.arguments, [fakeDocument.uri]);
-    assert.strictEqual(codeLenses[2].command?.command, "confluent.document.setCCloudOrg");
   });
 
   it("should create codelenses at the top of the document", async () => {

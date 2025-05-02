@@ -522,12 +522,6 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.document.setCCloudOrg",
-        "icon": "$(confluent-logo)",
-        "title": "Set CCloud Organization for Flink Statement",
-        "category": "Confluent: Flink SQL"
-      },
-      {
         "command": "confluent.document.flinksql.setCCloudComputePool",
         "icon": "$(confluent-logo)",
         "title": "Set CCloud Flink Compute Pool for Flink Statement",
@@ -958,10 +952,6 @@
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.setCCloudOrg",
           "when": "false"
         },
         {
