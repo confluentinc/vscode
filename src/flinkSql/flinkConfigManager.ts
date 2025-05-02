@@ -74,7 +74,7 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration("confluent.flink")) {
-          await this.handleFlinkConfigChange(e);
+          await this.handleFlinkConfigChange();
         }
       }),
     );
@@ -96,22 +96,42 @@ export class FlinkConfigurationManager implements Disposable {
     );
   }
 
-  private async handleFlinkConfigChange(e: any): Promise<void> {
+  private async handleFlinkConfigChange(): Promise<void> {
     logger.debug("Flink configuration changed");
     await this.checkFlinkResourcesAvailability();
-    // Reset language client if compute pool changes, or update workspace settings in client
+
     if (this.languageClient) {
-      const settings = this.getFlinkSqlSettings();
-      this.languageClient.sendNotification("workspace/didChangeConfiguration", {
-        settings: {
-          workspaceSettings: {
+      const { database, computePoolId } = this.getFlinkSqlSettings();
+      if (!computePoolId) {
+        logger.debug("No compute pool ID configured, not sending configuration update");
+        return;
+      }
+      const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+      const environmentId = poolInfo?.environmentId;
+
+      // Only send settings if all required settings are present otherwise server will delete existing settings
+      if (environmentId && database && computePoolId) {
+        logger.debug("Sending complete configuration to language server", {
+          computePoolId,
+          environmentId,
+          database,
+        });
+
+        this.languageClient.sendNotification("workspace/didChangeConfiguration", {
+          settings: {
             AuthToken: "{{ ccloud.data_plane_token }}",
-            // Catalog: settings.catalog, // Uncomment if catalog is part of settings
-            Database: settings.database,
-            ComputePoolId: settings.computePoolId,
+            Catalog: environmentId,
+            Database: database,
+            ComputePoolId: computePoolId,
           },
-        },
-      });
+        });
+      } else {
+        logger.debug("Incomplete settings, not sending configuration update", {
+          hasComputePool: !!computePoolId,
+          hasEnvironment: !!environmentId,
+          hasDatabase: !!database,
+        });
+      }
     }
   }
 
@@ -277,6 +297,7 @@ export class FlinkConfigurationManager implements Disposable {
    */
   private async initLanguageClient(): Promise<void> {
     if (this.languageClient) {
+      await this.handleFlinkConfigChange();
       return;
     }
 
@@ -312,6 +333,7 @@ export class FlinkConfigurationManager implements Disposable {
       if (this.languageClient) {
         this.disposables.push(this.languageClient);
         logger.info("Flink SQL language client successfully initialized");
+        this.handleFlinkConfigChange(); //send settings right away
       }
     } catch (error) {
       logger.error("Failed to initialize Flink SQL language client:", error);
