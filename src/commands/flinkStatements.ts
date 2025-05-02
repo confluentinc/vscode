@@ -1,17 +1,11 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
-import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkStatementResultsViewerConfig } from "../flinkStatementResults";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
-  FAILED_PHASE,
-  FlinkStatement,
-  RUNNING_PHASE,
-  restFlinkStatementToModel,
-} from "../models/flinkStatement";
+import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
@@ -20,6 +14,7 @@ import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { selectPoolForStatementsViewCommand } from "./flinkComputePools";
 import {
   FlinkSpecProperties,
@@ -230,14 +225,27 @@ export async function submitFlinkStatementCommand(): Promise<void> {
 
     // Refresh the statements view onto the compute pool in question,
     // which will then show the new statement.
+    // (Alas, this ultimately only _queues up_ the refresh, completes before the refresh is done.)
     await selectPoolForStatementsViewCommand(computePool);
+
+    // Focus the new statement in the view. Internally takes care to
+    // queue up the refresh if needed.
+    const statementsView = FlinkStatementsViewProvider.getInstance();
+    await statementsView.focus(newStatement.id);
 
     // Wait for statement to be running and show results
     if (newStatement.canHaveResults) {
       await waitAndShowResults(newStatement, computePool);
 
-      // Refresh the statements view again
-      currentFlinkStatementsResourceChanged.fire(computePool);
+      // Refresh the statements view again. Even though it doesn't
+      // wait for the refresh to complete, it will at least immediately
+      // clear out the old results, allowing the next .focus() line
+      // to end up being a queueing operation.
+      // (We could really use a "refresh and wait" API here.)
+      statementsView.refresh().then(() => {
+        // Since refreshed entire view on line above, have to re-focus.
+        statementsView.focus(newStatement.id);
+      });
     }
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
