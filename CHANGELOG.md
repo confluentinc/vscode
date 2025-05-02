@@ -9,8 +9,11 @@ All notable changes to this extension will be documented in this file.
 - Can submit new SQL statements to a Flink compute pool
 - Can view SQL statement results
 - Configurable default settings for `compute pool` and `database` for Flink operations
-- Codelenses for Flink SQL documents to support submitting statements, as well as signing in to
-  CCloud and setting a compute pool for the document
+- Codelenses for Flink SQL documents to support:
+  - submitting statements
+  - signing in to CCloud
+  - setting a compute pool
+  - setting a catalog and database
 
 ### Fixed
 

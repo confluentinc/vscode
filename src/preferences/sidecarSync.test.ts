@@ -16,8 +16,8 @@ import {
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
-import * as updates from "./updates";
-import { loadPreferencesFromWorkspaceConfig } from "./updates";
+import * as updates from "./sidecarSync";
+import { loadPreferencesFromWorkspaceConfig } from "./sidecarSync";
 
 describe("preferences/updates", function () {
   let sandbox: sinon.SinonSandbox;
