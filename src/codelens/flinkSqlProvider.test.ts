@@ -76,16 +76,15 @@ describe("codelens/flinkSqlProvider.ts", () => {
 
   for (const metadataPoolId of [undefined, "old-or-invalid-pool-id"]) {
     it(`should provide 'Set Compute Pool' codelens when no pool is found matching stored metadata (${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}=${metadataPoolId})`, async () => {
-      // simulate stored env metadata
+      resourceManagerStub.getUriMetadata.resolves({
+        // undefined or something that won't match a valid pool
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: metadataPoolId,
+      });
       const envWithoutPool: CCloudEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         flinkComputePools: [],
       });
       ccloudLoaderStub.getEnvironments.resolves([envWithoutPool]);
-      resourceManagerStub.getUriMetadata.resolves({
-        // undefined or something that won't match a valid pool
-        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: metadataPoolId,
-      });
 
       const provider = FlinkSqlCodelensProvider.getInstance();
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
@@ -111,17 +110,17 @@ describe("codelens/flinkSqlProvider.ts", () => {
   for (const metadataDatabaseId of [undefined, "old-or-invalid-db-id"]) {
     it(`should provide 'Set Catalog & Database' codelens when no database is found matching stored metadata (${UriMetadataKeys.FLINK_DATABASE_ID}=${metadataDatabaseId})`, async () => {
       const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      // simulate stored env metadata
-      const envWithoutPool: CCloudEnvironment = new CCloudEnvironment({
-        ...TEST_CCLOUD_ENVIRONMENT,
-        flinkComputePools: [pool],
-      });
-      ccloudLoaderStub.getEnvironments.resolves([envWithoutPool]);
+      // simulate stored compute pool metadata
       resourceManagerStub.getUriMetadata.resolves({
         [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
         // undefined or something that won't match a valid catalog+db
         [UriMetadataKeys.FLINK_DATABASE_ID]: metadataDatabaseId,
       });
+      const envWithoutPool: CCloudEnvironment = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [pool],
+      });
+      ccloudLoaderStub.getEnvironments.resolves([envWithoutPool]);
 
       const provider = FlinkSqlCodelensProvider.getInstance();
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
@@ -147,17 +146,17 @@ describe("codelens/flinkSqlProvider.ts", () => {
   it("should provide 'Submit Statement' codelens when a compute pool and catalog+database are set", async () => {
     const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
     const database: CCloudKafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
-    // simulate stored env + compute pool metadata
+    // simulate stored compute pool + database metadata
+    resourceManagerStub.getUriMetadata.resolves({
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+    });
     const envWithPool: CCloudEnvironment = new CCloudEnvironment({
       ...TEST_CCLOUD_ENVIRONMENT,
       kafkaClusters: [database],
       flinkComputePools: [pool],
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
-    resourceManagerStub.getUriMetadata.resolves({
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
-      [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
-    });
 
     const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
