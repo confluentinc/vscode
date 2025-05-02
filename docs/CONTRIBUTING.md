@@ -343,7 +343,7 @@ End-to-end (E2E) tests verify the extension's functionality in a real VS Code en
 tests use Playwright with Electron to launch VS Code and interact with it programmatically. The
 tests are located in the [`tests/e2e/specs`](../tests/e2e/specs) directory.
 
-To run the tests, use:
+To run the tests, use (note: close any existing VS Code windows first, as the tests launch their own VS Code instance and need to properly handle browser auth callbacks):
 
     gulp e2e
 
