@@ -1,4 +1,5 @@
 import { Mutex } from "async-mutex";
+import { Uri } from "vscode";
 import { getStorageManager, StorageManager } from ".";
 import { AuthCallbackEvent } from "../authn/types";
 import {
@@ -17,6 +18,7 @@ import { Schema, Subject } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
+import { UriMetadata, UriMetadataMap } from "./types";
 
 const logger = new Logger("storage.resourceManager");
 
@@ -37,12 +39,6 @@ export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
 
 /** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
 export type CCloudSchemaBySchemaRegistry = Map<string, Schema[]>;
-
-/** Single URI's confluent-extension-centric metadata */
-export type UriMetadata = Map<UriMetadataKeys, string>;
-
-/** Map of string of uri for a file -> dict of its confluent-extension-centric metadata */
-export type AllUriMetadata = Map<string, UriMetadata>;
 
 export interface CustomConnectionSpec extends ConnectionSpec {
   // enforce `ConnectionId` type over `string`
@@ -732,6 +728,82 @@ export class ResourceManager {
     return await this.runWithMutex(key, async () => {
       await this.storage.deleteSecret(key);
     });
+  }
+
+  // URI METADATA
+
+  /** Store the full {@link UriMetadataMap} (for possibly multiple {@link Uri}s). */
+  private async setAllUriMetadata(metadataMap: UriMetadataMap): Promise<void> {
+    await this.storage.setWorkspaceState(
+      WorkspaceStorageKeys.URI_METADATA,
+      mapToString(metadataMap),
+    );
+  }
+
+  /** Get the full {@link UriMetadataMap} (for possibly multiple {@link Uri}s). */
+  async getAllUriMetadata(): Promise<UriMetadataMap> {
+    const metadataString: string | undefined = await this.storage.getWorkspaceState<string>(
+      WorkspaceStorageKeys.URI_METADATA,
+    );
+    return metadataString ? (stringToMap(metadataString) as UriMetadataMap) : new Map();
+  }
+
+  /** Delete the full {@link UriMetadataMap} (for possibly multiple {@link Uri}s). */
+  async deleteAllUriMetadata(): Promise<void> {
+    const key = WorkspaceStorageKeys.URI_METADATA;
+    await this.runWithMutex(key, async () => {
+      await this.storage.deleteWorkspaceState(key);
+    });
+  }
+
+  /** Set the metadata for a specific {@link Uri}. */
+  async setUriMetadata(uri: Uri, metadata: UriMetadata): Promise<void> {
+    const key = WorkspaceStorageKeys.URI_METADATA;
+    await this.runWithMutex(key, async () => {
+      const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
+      const existingMetadata: UriMetadata = metadataMap.get(uri.toString()) ?? ({} as UriMetadata);
+      metadataMap.set(uri.toString(), { ...existingMetadata, ...metadata });
+      await this.setAllUriMetadata(metadataMap);
+    });
+  }
+
+  /** Get the metadata object for a specific {@link Uri}. */
+  async getUriMetadata(uri: Uri): Promise<UriMetadata | undefined> {
+    const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
+    return metadataMap.get(uri.toString());
+  }
+
+  /** Delete the metadata for a specific {@link Uri}. */
+  async deleteUriMetadata(uri: Uri): Promise<void> {
+    const key = WorkspaceStorageKeys.URI_METADATA;
+    await this.runWithMutex(key, async () => {
+      const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
+      metadataMap.delete(uri.toString());
+      await this.setAllUriMetadata(metadataMap);
+    });
+  }
+
+  /** Set a metadata key/value pair for a specific {@link Uri}. */
+  async setUriMetadataValue(
+    uri: Uri,
+    metadataKey: UriMetadataKeys,
+    metadataValue: any,
+  ): Promise<void> {
+    const key = WorkspaceStorageKeys.URI_METADATA;
+    await this.runWithMutex(key, async () => {
+      const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
+      const metadata: UriMetadata = metadataMap.get(uri.toString()) ?? {};
+      metadata[metadataKey] = metadataValue;
+      metadataMap.set(uri.toString(), metadata);
+      await this.setAllUriMetadata(metadataMap);
+    });
+  }
+
+  /** Get a metadata value for a specific {@link Uri}. */
+  async getUriMetadataValue(uri: Uri, metadataKey: UriMetadataKeys): Promise<any> {
+    const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
+    const metadata: Record<string, any> | undefined = metadataMap.get(uri.toString());
+    return metadata ? metadata[metadataKey] : undefined;
   }
 }
 
