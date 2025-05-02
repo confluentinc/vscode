@@ -12,31 +12,23 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   connectionType!: ConnectionType;
   environmentId!: EnvironmentId;
 
-  /** The flink compute pool that maybe is running/ran the statement. */
-  computePoolId: string | undefined;
-
   name: string;
   metadata: FlinkStatementMetadata;
   status: FlinkStatementStatus;
+  spec: FlinkStatementSpec;
 
   // TODO: add more properties as needed
 
   constructor(
     props: Pick<
       FlinkStatement,
-      | "connectionId"
-      | "connectionType"
-      | "environmentId"
-      | "computePoolId"
-      | "name"
-      | "metadata"
-      | "status"
+      "connectionId" | "connectionType" | "environmentId" | "spec" | "name" | "metadata" | "status"
     >,
   ) {
     this.connectionId = props.connectionId;
     this.connectionType = props.connectionType;
     this.environmentId = props.environmentId;
-    this.computePoolId = props.computePoolId;
+    this.spec = props.spec;
     this.name = props.name;
     this.metadata = props.metadata;
     this.status = props.status;
@@ -44,6 +36,15 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   searchableText(): string {
     return `${this.name} ${this.phase} ${this.sqlKindDisplay}`;
+  }
+
+  /** The flink compute pool that maybe is running/ran the statement. */
+  get computePoolId(): string | undefined {
+    return this.spec.computePoolId;
+  }
+
+  get sqlStatement(): string | undefined {
+    return this.spec.sqlStatement;
   }
 
   /**
@@ -124,6 +125,34 @@ export class FlinkStatementTraits {
   }
 }
 
+export class FlinkStatementSpec {
+  computePoolId?: string;
+  principal?: string;
+  authorizedPrincipals?: string[];
+  sqlStatement?: string;
+  stopped?: boolean;
+  properties?: Record<string, string>;
+
+  constructor(
+    props: Pick<
+      FlinkStatementSpec,
+      | "computePoolId"
+      | "principal"
+      | "authorizedPrincipals"
+      | "sqlStatement"
+      | "stopped"
+      | "properties"
+    >,
+  ) {
+    this.computePoolId = props.computePoolId;
+    this.principal = props.principal;
+    this.authorizedPrincipals = props.authorizedPrincipals;
+    this.sqlStatement = props.sqlStatement;
+    this.stopped = props.stopped;
+    this.properties = props.properties;
+  }
+}
+
 export class FlinkStatementTreeItem extends TreeItem {
   resource: FlinkStatement;
 
@@ -157,6 +186,12 @@ export class FlinkStatementTreeItem extends TreeItem {
         ["Detail", resource.status.detail],
       ],
     );
+
+    this.command = {
+      command: "confluent.statements.viewstatementsql",
+      title: "View SQL",
+      arguments: [this.resource],
+    };
   }
 
   /**

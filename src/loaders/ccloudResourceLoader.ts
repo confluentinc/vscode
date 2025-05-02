@@ -16,6 +16,8 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
   FlinkStatement,
   FlinkStatementMetadata,
+  FlinkStatementSpec,
+  FlinkStatementStatus,
   FlinkStatementTraits,
 } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
@@ -473,17 +475,28 @@ function restFlinkStatementToModelFlinkStatement(
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,
     environmentId: restFlinkStatement.environment_id as EnvironmentId,
-    computePoolId: spec.compute_pool_id!,
+
     name: restFlinkStatement.name,
+
+    spec: new FlinkStatementSpec({
+      sqlStatement: spec.statement,
+      computePoolId: spec.compute_pool_id,
+      properties: spec.properties,
+      principal: spec.principal,
+      authorizedPrincipals: spec.authorized_principals,
+      stopped: spec.stopped,
+    }),
+
     metadata: new FlinkStatementMetadata({
       createdAt: restFlinkStatement.metadata.created_at,
       updatedAt: restFlinkStatement.metadata.updated_at,
     }),
-    status: {
+
+    status: new FlinkStatementStatus({
       phase: restFlinkStatement.status.phase,
       detail: restFlinkStatement.status.detail,
       traits: modelTraits,
       scalingStatus: restFlinkStatement.status.scaling_status,
-    },
+    }),
   });
 }

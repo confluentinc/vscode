@@ -41,15 +41,11 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     options: vscode.LanguageModelToolInvocationPrepareOptions<IApplyTemplateParameters>,
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
-    logger.debug("OPTIONS:", options);
-
     try {
       const inputPart = new LanguageModelTextPart(
-        `id="${options.input.name}"; inputOptions=${JSON.stringify(options.input.options)}`, // Remove unnecessary quotes around JSON.stringify
+        `id="${options.input.name}"; inputOptions=${JSON.stringify(options.input.options)}`,
       );
-      logger.debug("INPUT PART:", inputPart);
       const parsedParameters = parseListTemplatesOutput(inputPart);
-      logger.debug("Parsed parameters:", parsedParameters);
 
       options.input.options = { ...parsedParameters.options, ...options.input.options };
     } catch (error) {
@@ -83,14 +79,12 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       throw new Error("The `name` parameter is required.");
     }
 
-    // Ensure options are defined
-    params.options = { ...params.options }; // Ensure options retain merged values
+    params.options = { ...params.options };
     if (typeof params.options !== "object") {
       logger.debug("Invalid options:", params.options);
       throw new Error("The `options` parameter must be a valid object.");
     }
 
-    // Use scaffoldProjectRequest instead of direct template application
     try {
       const result = await scaffoldProjectRequest({
         templateName: params.name,
