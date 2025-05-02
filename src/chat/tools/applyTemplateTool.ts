@@ -131,7 +131,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       ]);
     }
   }
-  private previousMessages = new Set<string>();
+  // private previousMessages = new Set<string>();
   async processInvocation(
     request: ChatRequest,
     stream: ChatResponseStream,
@@ -139,7 +139,6 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     token: CancellationToken,
   ): Promise<LanguageModelChatMessage[]> {
     const parameters = toolCall.input as IApplyTemplateParameters;
-    logger.debug("PARAMS!", parameters);
 
     if (!parameters.name) {
       return [this.toolMessage("The `name` parameter is required.", `${this.name}-error`)];
@@ -149,12 +148,12 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       `🎯 **Template**: \`${parameters.name}\`\n\n` +
       `Options: ${JSON.stringify(parameters.options, null, 2)}`;
 
-    if (this.previousMessages.has(message)) {
-      logger.debug("Duplicate message detected, skipping.");
-      return [];
-    }
+    // if (this.previousMessages.has(message)) {
+    //   logger.debug("Duplicate message detected, skipping.");
+    //   return [];
+    // }
 
-    this.previousMessages.add(message);
+    // this.previousMessages.add(message);
     const modelUsed =
       (request.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
       "Unknown Model";

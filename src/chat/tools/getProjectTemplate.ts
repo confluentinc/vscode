@@ -40,7 +40,7 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
       ]);
     }
     try {
-      const templateList = await getTemplatesList();
+      const templateList = await getTemplatesList(true);
       logger.debug("templateList:", templateList);
 
       const templates = Array.from(templateList.data) as ScaffoldV1Template[];
@@ -91,10 +91,10 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
       }
       return new LanguageModelToolResult([templateInfo]);
     } catch (error) {
-      // Log telemetry for failure
       const modelUsed =
         (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
         "Unknown Model";
+
       logUsage(UserEvent.ToolInvocationFailure, {
         toolName: this.name,
         modelUsed,

@@ -4,7 +4,6 @@ import {
   ChatContext,
   ChatRequest,
   ChatRequestTurn,
-  ChatResponseMarkdownPart,
   ChatResponseStream,
   ChatResponseTurn,
   ChatResult,
@@ -183,7 +182,9 @@ export async function handleChatMessage(
     iterations++;
 
     const toolResultMessages: LanguageModelChatMessage[] = [];
+
     for await (const fragment of response.stream) {
+      logger.debug("stream fragment:", fragment);
       if (token.isCancellationRequested) {
         logger.debug("chat request canceled");
         return toolsCalled;
@@ -219,14 +220,21 @@ export async function handleChatMessage(
         // each registered tool should contribute its own way of handling the invocation and
         // interacting with the stream, and can return an array of messages to be sent for another
         // round of processing
+
         logger.debug(`Processing tool invocation for "${toolCall.name}"`);
-        const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
-          request,
-          stream,
-          toolCall,
-          token,
-        );
-        toolResultMessages.push(...newMessages);
+        try {
+          const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
+            request,
+            stream,
+            toolCall,
+            token,
+          );
+          toolResultMessages.push(...newMessages);
+        } catch (error) {
+          logger.error(`Error processing tool invocation for "${toolCall.name}":`, error);
+          stream.markdown(`Error processing tool invocation for "${toolCall.name}": ${error}`);
+          continue;
+        }
 
         toolCallsMade.add(JSON.stringify(toolCall));
         if (!toolsCalled.includes(toolCall.name)) {
@@ -275,9 +283,16 @@ function filterContextHistory(
       continue;
     }
     if (turn instanceof ChatResponseTurn) {
-      // responses from the participant:
-      if (turn.response instanceof ChatResponseMarkdownPart) {
-        messages = `${messages}\n\nASSISTANT: "${turn.response.value.value}"`;
+      logger.debug("TURN", turn);
+      for (const part of turn.response) {
+        // responses from the participant:
+
+        if (
+          turn.participant === PARTICIPANT_ID &&
+          part instanceof vscode.ChatResponseMarkdownPart
+        ) {
+          messages = `${messages}\n\nASSISTANT: "${part.value.value}"`;
+        }
       }
     }
   }
