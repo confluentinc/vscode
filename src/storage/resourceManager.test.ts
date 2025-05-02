@@ -4,11 +4,8 @@ import { Uri } from "vscode";
 import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
-  TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
-  TEST_CCLOUD_PROVIDER,
-  TEST_CCLOUD_REGION,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
@@ -959,11 +956,8 @@ describe("ResourceManager Uri metadata methods", () => {
 
   const testUri: Uri = Uri.parse("file:///test-file.sql");
   const testMetadata: UriMetadata = {
-    [UriMetadataKeys.COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
-    [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_ENVIRONMENT_ID,
     [UriMetadataKeys.CCLOUD_ORG_ID]: TEST_CCLOUD_ORGANIZATION_ID,
-    [UriMetadataKeys.CCLOUD_PROVIDER]: TEST_CCLOUD_PROVIDER,
-    [UriMetadataKeys.CCLOUD_REGION]: TEST_CCLOUD_REGION,
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
   };
 
   before(async () => {
@@ -1015,33 +1009,33 @@ describe("ResourceManager Uri metadata methods", () => {
   it("should update existing metadata when setting new metadata for the same Uri", async () => {
     // set initial metadata
     await resourceManager.setUriMetadata(testUri, {
-      [UriMetadataKeys.COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
-      [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_ENVIRONMENT_ID,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
     });
     // update with new metadata
     const newPoolId = "updated-compute-pool-id";
     await resourceManager.setUriMetadata(testUri, {
-      [UriMetadataKeys.COMPUTE_POOL_ID]: newPoolId,
-      [UriMetadataKeys.CCLOUD_PROVIDER]: TEST_CCLOUD_PROVIDER,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: newPoolId,
     });
     // make sure the merged metadata is correct
     const retrievedMetadata: UriMetadata | undefined =
       await resourceManager.getUriMetadata(testUri);
 
     assert.deepStrictEqual(retrievedMetadata, {
-      [UriMetadataKeys.COMPUTE_POOL_ID]: newPoolId, // not TEST_CCLOUD_FLINK_COMPUTE_POOL_ID
-      [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_ENVIRONMENT_ID,
-      [UriMetadataKeys.CCLOUD_PROVIDER]: TEST_CCLOUD_PROVIDER,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: newPoolId, // not TEST_CCLOUD_FLINK_COMPUTE_POOL_ID
     });
   });
 
   it("should set and get individual Uri metadata key/value pairs correctly", async () => {
     const poolId = randomUUID();
-    await resourceManager.setUriMetadataValue(testUri, UriMetadataKeys.COMPUTE_POOL_ID, poolId);
+    await resourceManager.setUriMetadataValue(
+      testUri,
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
+      poolId,
+    );
 
     const retrievedValue = await resourceManager.getUriMetadataValue(
       testUri,
-      UriMetadataKeys.COMPUTE_POOL_ID,
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
     );
 
     assert.strictEqual(retrievedValue, poolId);
@@ -1058,8 +1052,8 @@ describe("ResourceManager Uri metadata methods", () => {
     const uri1 = Uri.parse("file:///path1/file1.sql");
     const uri2 = Uri.parse("file:///path2/file2.sql");
 
-    const metadata1 = { [UriMetadataKeys.COMPUTE_POOL_ID]: "pool1" };
-    const metadata2 = { [UriMetadataKeys.COMPUTE_POOL_ID]: "pool2" };
+    const metadata1 = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool1" };
+    const metadata2 = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool2" };
 
     await resourceManager.setUriMetadata(uri1, metadata1);
     await resourceManager.setUriMetadata(uri2, metadata2);
@@ -1075,8 +1069,12 @@ describe("ResourceManager Uri metadata methods", () => {
     // set multiple Uris with metadata
     const uri1 = Uri.parse("file:///path1/file1.sql");
     const uri2 = Uri.parse("file:///path2/file2.sql");
-    await resourceManager.setUriMetadata(uri1, { [UriMetadataKeys.COMPUTE_POOL_ID]: "pool1" });
-    await resourceManager.setUriMetadata(uri2, { [UriMetadataKeys.COMPUTE_POOL_ID]: "pool2" });
+    await resourceManager.setUriMetadata(uri1, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool1",
+    });
+    await resourceManager.setUriMetadata(uri2, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool2",
+    });
     // verify they exist
     const allMetadata: UriMetadataMap = await resourceManager.getAllUriMetadata();
     assert.strictEqual(allMetadata.size, 2);

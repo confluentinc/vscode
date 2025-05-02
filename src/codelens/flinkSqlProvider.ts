@@ -87,7 +87,8 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     });
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
-    const computePoolString: string | undefined = uriMetadata?.[UriMetadataKeys.COMPUTE_POOL_ID];
+    const computePoolString: string | undefined =
+      uriMetadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
     let computePool: CCloudFlinkComputePool | undefined;
     if (computePoolString) {
       // TODO: replace with dedicated loader method for looking up compute pool by ID

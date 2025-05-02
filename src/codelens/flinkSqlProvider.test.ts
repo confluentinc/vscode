@@ -1,10 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
-import {
-  TEST_CCLOUD_ENVIRONMENT,
-  TEST_CCLOUD_ENVIRONMENT_ID,
-} from "../../tests/unit/testResources";
+import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { CCloudResourceLoader } from "../loaders";
@@ -83,9 +80,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       flinkComputePools: [],
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithoutPool]);
-    resourceManagerStub.getUriMetadata.resolves({
-      [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_ENVIRONMENT_ID,
-    });
+    resourceManagerStub.getUriMetadata.resolves({});
 
     const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
@@ -105,8 +100,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
     // simulate stored env + partially invalid compute pool metadata
     const nonExistentPoolId = "non-existent-pool-id";
     resourceManagerStub.getUriMetadata.resolves({
-      [UriMetadataKeys.COMPUTE_POOL_ID]: nonExistentPoolId,
-      [UriMetadataKeys.ENVIRONMENT_ID]: TEST_CCLOUD_ENVIRONMENT_ID,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: nonExistentPoolId,
     });
 
     const provider = FlinkSqlCodelensProvider.getInstance();
@@ -132,8 +126,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
     resourceManagerStub.getUriMetadata.resolves({
-      [UriMetadataKeys.COMPUTE_POOL_ID]: pool.id,
-      [UriMetadataKeys.ENVIRONMENT_ID]: pool.environmentId,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
     });
 
     const provider = FlinkSqlCodelensProvider.getInstance();

@@ -70,8 +70,7 @@ describe("documentMetadataManager.ts", () => {
 
     // set some initial metadata for the untitled document to be migrated
     const metadata = {
-      [UriMetadataKeys.COMPUTE_POOL_ID]: "test-compute-pool",
-      [UriMetadataKeys.ENVIRONMENT_ID]: "test-env",
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
     };
     const metadataMap: UriMetadataMap = new Map();
     metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
@@ -102,8 +101,7 @@ describe("documentMetadataManager.ts", () => {
 
     // set some initial metadata for the untitled document to be migrated
     const metadata = {
-      [UriMetadataKeys.COMPUTE_POOL_ID]: "test-compute-pool",
-      [UriMetadataKeys.ENVIRONMENT_ID]: "test-env",
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
     };
     const metadataMap: UriMetadataMap = new Map();
     metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
@@ -133,8 +131,7 @@ describe("documentMetadataManager.ts", () => {
 
     // set some initial metadata for the untitled document to (hopefully) not migrate
     const metadata = {
-      [UriMetadataKeys.COMPUTE_POOL_ID]: "test-compute-pool",
-      [UriMetadataKeys.ENVIRONMENT_ID]: "test-env",
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
     };
     const metadataMap: UriMetadataMap = new Map();
     metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);

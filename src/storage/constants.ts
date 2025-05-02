@@ -34,10 +34,7 @@ export enum WorkspaceStorageKeys {
 /** Keys for use within URI Metadata dicts */
 export enum UriMetadataKeys {
   CCLOUD_ORG_ID = "ccloudOrgId",
-  CCLOUD_PROVIDER = "ccloudProvider",
-  CCLOUD_REGION = "ccloudRegion",
-  COMPUTE_POOL_ID = "computePoolId",
-  ENVIRONMENT_ID = "environmentId",
+  FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",
 }
 
 export enum SecretStorageKeys {
