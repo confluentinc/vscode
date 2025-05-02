@@ -6,6 +6,7 @@ import {
   LanguageClient,
   LanguageClientOptions,
   Message,
+  Trace,
 } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
@@ -133,12 +134,15 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
 
         await languageClient.start();
         logger.info("FlinkSQL Language Server started");
+        languageClient.setTrace(Trace.Verbose);
         resolve(languageClient);
       } catch (e) {
         logger.error(`Error starting FlinkSQL language server: ${e}`);
         reject(e);
       }
     };
+    // TODO NC (after sidecar changes) handle conn.onclose
+    // reconnect counter and logic to check connection health/status
   });
 }
 
