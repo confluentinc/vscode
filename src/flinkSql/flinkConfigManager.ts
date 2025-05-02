@@ -66,7 +66,9 @@ export class FlinkConfigurationManager implements Disposable {
       }),
       ccloudConnected.event(async () => {
         await this.validateFlinkSettings();
-        await this.initLanguageClient();
+        if (workspace.textDocuments.some((doc) => doc.languageId === "flinksql")) {
+          this.initLanguageClient();
+        }
       }),
     );
 
@@ -87,8 +89,7 @@ export class FlinkConfigurationManager implements Disposable {
           if (isFlinkEnabled) {
             this.hasPromptedForSettings = false;
             await this.validateFlinkSettings();
-            await this.initLanguageClient();
-          } else {
+                      } else {
             logger.debug("Flink was disabled, no further actions needed");
           }
         }
