@@ -3,15 +3,9 @@ import { registerCommandWithLogging } from ".";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
-import { FlinkStatementResultsViewerConfig } from "../flinkStatementResults";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
-  FAILED_PHASE,
-  FlinkStatement,
-  RUNNING_PHASE,
-  restFlinkStatementToModel,
-} from "../models/flinkStatement";
+import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
@@ -108,12 +102,7 @@ async function waitAndShowResults(
     async (progress) => {
       await waitForStatementRunning(statement, computePool, progress);
       progress.report({ message: "Opening statement results in a new tab..." });
-      await vscode.commands.executeCommand(
-        "confluent.flinkStatementResults",
-        statement,
-        false,
-        FlinkStatementResultsViewerConfig.create(),
-      );
+      await vscode.commands.executeCommand("confluent.flinkStatementResults", statement);
     },
   );
 }
