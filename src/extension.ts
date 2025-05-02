@@ -13,11 +13,13 @@ import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudS
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { registerChatTools } from "./chat/tools/registration";
+import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
 import { registerDockerCommands } from "./commands/docker";
+import { registerDocumentCommands } from "./commands/documents";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
@@ -41,6 +43,7 @@ import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
+import { DocumentMetadataManager } from "./documentMetadataManager";
 import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
@@ -54,6 +57,8 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
+import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
@@ -82,8 +87,6 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
-import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 
 const logger = new Logger("extension");
 
@@ -228,6 +231,7 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerDocumentCommands(),
   ];
   logger.info("Commands registered");
 
@@ -284,6 +288,15 @@ async function _activateExtension(
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
   context.subscriptions.push(getCCloudStatusBarItem());
+
+  const docManager = DocumentMetadataManager.getInstance();
+  context.subscriptions.push(...docManager.disposables);
+
+  const provider = FlinkSqlCodelensProvider.getInstance();
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider("flinksql", provider),
+    ...provider.disposables,
+  );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
