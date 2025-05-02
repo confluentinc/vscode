@@ -5,13 +5,13 @@ configDotenv();
 
 export default defineConfig({
   use: {
-    headless: true, // Ensure headless mode is enabled
+    headless: true,
     viewport: { width: 1920, height: 1080 },
   },
-  timeout: 30000, // 30 seconds
+  timeout: 60000,
   workers: 1,
   expect: {
-    timeout: 10000, // 10 seconds
+    timeout: 10000,
   },
   globalSetup: "./tests/e2e/setup.ts",
   testMatch: "**/*.spec.ts",

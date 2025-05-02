@@ -618,6 +618,10 @@ export async function testBuild() {
         include: ["src/**/*.ts"],
         exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
       }),
+      copy({
+        copyOnce: true,
+        targets: [{ src: ["tests/fixtures"], dest: join(DESTINATION, "tests") }],
+      }),
     ],
     onLog: handleBuildLog,
     external: [
@@ -643,6 +647,7 @@ export async function testBuild() {
   };
   const bundle = await rollup(testInput);
   await bundle.write(testOutput);
+
   return 0;
 }
 

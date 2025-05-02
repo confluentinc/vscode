@@ -7,9 +7,9 @@ import {
 } from "../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
 import {
-  ConnectionsList,
   ConnectionSpec,
   ConnectionSpecFromJSON,
+  ConnectionsList,
   ConnectionsResourceApi,
   ResponseError,
 } from "./clients/sidecar";
