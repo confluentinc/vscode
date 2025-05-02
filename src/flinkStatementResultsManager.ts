@@ -7,6 +7,7 @@ import {
   StatementResultsSqlV1Api,
 } from "./clients/flinkSql";
 import { ResponseError } from "./clients/sidecar";
+import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
 import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
@@ -25,7 +26,9 @@ type MessageType =
   | "GetStreamError"
   | "GetStreamTimer"
   | "StreamPause"
-  | "StreamResume";
+  | "StreamResume"
+  | "PreviewResult"
+  | "PreviewAllResults";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -227,11 +230,7 @@ export class FlinkStatementResultsManager {
         // Convert Map to array of objects
         const res = Array.from(this._results().values()).map((row: Map<string, any>) => {
           // Convert Map to plain object
-          const obj: Record<string, any> = {};
-          row.forEach((value: any, key: string) => {
-            obj[key] = value;
-          });
-          return obj;
+          return this.mapToObject(row);
         });
         const paginatedResults = res.slice(offset, offset + limit);
         return {
@@ -254,6 +253,26 @@ export class FlinkStatementResultsManager {
       }
       case "GetMaxSize": {
         return String(this.resultLimit);
+      }
+      case "PreviewAllResults":
+      case "PreviewResult": {
+        const allResults = body?.result === undefined;
+
+        // plural if all results else singular
+        const filename = `flink-statement-result${allResults ? "s" : ""}-${new Date().getTime()}.json`;
+
+        let content = body?.result;
+        if (allResults) {
+          content = Array.from(this._results().values(), (mapValue) => this.mapToObject(mapValue));
+        }
+
+        showJsonPreview(filename, content);
+
+        // Return value used in tests
+        return {
+          filename,
+          result: content,
+        };
       }
       case "ResultLimitChange": {
         const newLimit = body.limit;
@@ -293,6 +312,14 @@ export class FlinkStatementResultsManager {
         return _exhaustiveCheck;
       }
     }
+  }
+
+  private mapToObject(row: Map<string, any>) {
+    const obj: Record<string, any> = {};
+    row.forEach((value: any, key: string) => {
+      obj[key] = value;
+    });
+    return obj;
   }
 
   dispose() {
