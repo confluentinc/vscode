@@ -137,7 +137,11 @@ export const parseResults = ({
       // Check all keys for a match with rowId, remove UUID to compare for duplicates as well
       // Delete most recently inserted matching rowId
       const keyToDelete = Array.from(map.keys())
-        .filter((key) => key.startsWith(rowId) && UUID_REGEX.test(key.split("-").at(-1) || ""))
+        .filter((key) => {
+          return (
+            key === rowId || (key.startsWith(rowId) && UUID_REGEX.test(key.split("-").at(-1) ?? ""))
+          );
+        })
         .pop();
       if (keyToDelete) {
         map.delete(keyToDelete);
