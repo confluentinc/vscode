@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vscode from "vscode";
 import {
   CancellationToken,
@@ -11,6 +12,7 @@ import {
 } from "vscode";
 import { Logger } from "../../logging";
 import { scaffoldProjectRequest } from "../../scaffold";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.applyTemplate");
@@ -84,7 +86,9 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       logger.debug("Invalid options:", params.options);
       throw new Error("The `options` parameter must be a valid object.");
     }
-
+    const modelUsed =
+      (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
+      "Unknown Model";
     try {
       const result = await scaffoldProjectRequest({
         templateName: params.name,
@@ -93,10 +97,22 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
 
       if (result !== null) {
         logger.debug("Template application requested successfully:", result);
+        logUsage(UserEvent.ToolInvocation, {
+          toolName: this.name,
+          modelUsed,
+          referencesCount: 1,
+          success: true,
+        });
         return new LanguageModelToolResult([
           new LanguageModelTextPart(`Template application requested successfully: ${result}`),
         ]);
       } else {
+        logUsage(UserEvent.ToolInvocation, {
+          toolName: this.name,
+          modelUsed,
+          referencesCount: 1,
+          success: true,
+        });
         logger.error("Failed to request template application:", result);
         return new LanguageModelToolResult([
           new LanguageModelTextPart(`Failed to request template application: ${result}`),
@@ -104,6 +120,12 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       }
     } catch (error) {
       logger.error("Error requesting template application:", error);
+      logUsage(UserEvent.ToolInvocationFailure, {
+        toolName: this.name,
+        modelUsed,
+        referencesCount: 0,
+        success: false,
+      });
       return new LanguageModelToolResult([
         new LanguageModelTextPart(`Error requesting template application: ${error}`),
       ]);
@@ -133,13 +155,14 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     }
 
     this.previousMessages.add(message);
-
+    const modelUsed =
+      (request.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
+      "Unknown Model";
     try {
       const result = await scaffoldProjectRequest({
         templateName: parameters.name,
         ...parameters.options,
       });
-
       return [
         this.toolMessage(
           `## Template Request Submitted\n\n` +

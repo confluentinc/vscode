@@ -11,6 +11,7 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.getProjectInfo");
@@ -22,24 +23,11 @@ export interface IGetTemplateParameter {
 export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplateParameter> {
   readonly name = "get_projectOptions";
   readonly progressMessage = "Checking available project template options...";
-  private sanitizeTemplateOptions(options: any): any {
-    if (options && typeof options === "object") {
-      const displayOptions = Object.fromEntries(
-        Object.entries(options).filter(([key]) => {
-          return !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret");
-        }),
-      );
-
-      return {
-        displayOptions,
-        message: "⚠️ Sensitive fields will be collected securely through a separate form",
-      };
-    }
-    return options;
-  }
 
   async invoke(
-    options: LanguageModelToolInvocationOptions<IGetTemplateParameter>,
+    options: LanguageModelToolInvocationOptions<
+      IGetTemplateParameter & { toolInvocationToken?: { model?: { id: string } } }
+    > & { toolInvocationToken?: { model?: { id: string } } | undefined },
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
@@ -51,29 +39,72 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
         new LanguageModelTextPart(`Please provide a template name to get its options.`),
       ]);
     }
+    try {
+      const templateList = await getTemplatesList();
+      logger.debug("templateList:", templateList);
 
-    const templateList = await getTemplatesList();
-    logger.debug("templateList:", templateList);
+      const templates = Array.from(templateList.data) as ScaffoldV1Template[];
+      const matchingTemplate = templates.find((template) => template.spec?.name === params.name);
+      if (!matchingTemplate) {
+        logger.error(`No template found with name: ${params.name}`);
 
-    const templates = Array.from(templateList.data) as ScaffoldV1Template[];
-    const matchingTemplate = templates.find((template) => template.spec?.name === params.name);
-    if (!matchingTemplate) {
-      logger.error(`No template found with name: ${params.name}`);
-      return new LanguageModelToolResult([
-        new LanguageModelTextPart(
-          `No template found with name: "${params.name}", please run list_projectTemplates tool to get available templates.`,
-        ),
-      ]);
+        const modelUsed =
+          (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
+          "Unknown Model";
+        logUsage(UserEvent.ToolInvocationFailure, {
+          toolName: this.name,
+          modelUsed,
+          referencesCount: 0,
+          success: false,
+        });
+
+        return new LanguageModelToolResult([
+          new LanguageModelTextPart(
+            `No template found with name: "${params.name}", please run list_projectTemplates tool to get available templates.`,
+          ),
+        ]);
+      }
+
+      const templateInfo = new LanguageModelTextPart(
+        JSON.stringify(matchingTemplate.spec?.options),
+      );
+
+      const modelUsed =
+        (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
+        "Unknown Model";
+      logUsage(UserEvent.ToolInvocation, {
+        toolName: this.name,
+        modelUsed,
+        referencesCount: 1,
+        success: true,
+      });
+
+      if (token.isCancellationRequested) {
+        logger.debug("Tool invocation cancelled");
+        logUsage(UserEvent.ToolInvocationCancelled, {
+          toolName: this.name,
+          modelUsed,
+          referencesCount: 1,
+          success: true,
+        });
+        return new LanguageModelToolResult([]);
+      }
+      return new LanguageModelToolResult([templateInfo]);
+    } catch (error) {
+      // Log telemetry for failure
+      const modelUsed =
+        (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
+        "Unknown Model";
+      logUsage(UserEvent.ToolInvocationFailure, {
+        toolName: this.name,
+        modelUsed,
+        referencesCount: 0,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw error;
     }
-
-    const sanitizedOptions = this.sanitizeTemplateOptions(matchingTemplate.spec?.options);
-    const templateInfo = new LanguageModelTextPart(JSON.stringify(sanitizedOptions));
-
-    if (token.isCancellationRequested) {
-      logger.debug("Tool invocation cancelled");
-      return new LanguageModelToolResult([]);
-    }
-    return new LanguageModelToolResult([templateInfo]);
   }
 
   async processInvocation(
