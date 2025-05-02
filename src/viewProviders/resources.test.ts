@@ -151,22 +151,23 @@ describe("ResourceViewProvider loading functions", () => {
   it("loadCCloudResources() should load CCloud resources under the Confluent Cloud container tree item when connected to CCloud", async () => {
     sandbox.stub(ccloudConnections, "hasCCloudAuthSession").returns(true);
     sandbox.stub(org, "getCurrentOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
-    sandbox
+    const envStub = sandbox
       .stub(resourceManager.getResourceManager(), "getCCloudEnvironments")
       .resolves([TEST_CCLOUD_ENVIRONMENT]);
 
     const result: ContainerTreeItem<CCloudEnvironment> = await loadCCloudResources();
 
+    sinon.assert.calledOnce(envStub);
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.CCLOUD);
     assert.equal(result.id, `ccloud-connected-${EXTENSION_VERSION}`);
+    assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
     assert.equal(
       result.collapsibleState,
       TreeItemCollapsibleState.Expanded,
       `Tree item should be expanded, but was ${result.collapsibleState === TreeItemCollapsibleState.Collapsed ? "collapsed" : "none"}:\n\n${JSON.stringify(result, null, 2)}`,
     );
     assert.equal(result.description, TEST_CCLOUD_ORGANIZATION.name);
-    assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
   });
 
   it("loadCCloudResources() should return a CCloud placeholder item when not connected", async () => {
