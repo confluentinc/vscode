@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import {
+  FLINKSTATEMENT_URI_SCHEME,
+  FlinkStatementDocumentProvider,
+} from "../documentProviders/flinkStatement";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkStatementResultsViewerConfig } from "../flinkStatementResults";
@@ -153,7 +156,7 @@ export async function submitFlinkStatementCommand(
   const funcLogger = logger.withCallpoint("submitFlinkStatementCommand");
 
   // 1. Choose the document with the SQL to submit
-  const uriSchemes = ["file", "untitled"];
+  const uriSchemes = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
   const languageIds = ["plaintext", "flinksql", "sql"];
   const fileFilters = {
     "FlinkSQL files": [".flinksql", ".sql"],
