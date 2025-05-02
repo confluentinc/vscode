@@ -51,8 +51,12 @@ describe("FlinkStatementResultsManager", () => {
       notifyUIStub,
       DEFAULT_RESULTS_LIMIT,
     );
-    // Wait for results to be processed
-    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Wait for results to be processed, it should eventually become 10
+    while (manager.handleMessage("GetResultsCount", {}).total !== 10) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
     return { manager, expectedParsedResults };
   };
 
@@ -67,10 +71,6 @@ describe("FlinkStatementResultsManager", () => {
 
     // Verify the results match expected format
     assert.deepStrictEqual(results, { results: expectedParsedResults });
-
-    // Verify PreviewAllResults functionality
-    const previewResults = manager.handleMessage("PreviewAllResults", {});
-    assert.deepStrictEqual(previewResults.results, { results: expectedParsedResults });
   });
 
   it("should handle PreviewResult and PreviewAllResults", async () => {
