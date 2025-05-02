@@ -7,6 +7,7 @@ import {
   StatementResultsSqlV1Api,
 } from "./clients/flinkSql";
 import { ResponseError } from "./clients/sidecar";
+import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
 import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
@@ -25,7 +26,8 @@ type MessageType =
   | "GetStreamError"
   | "GetStreamTimer"
   | "StreamPause"
-  | "StreamResume";
+  | "StreamResume"
+  | "PreviewJSON";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -254,6 +256,16 @@ export class FlinkStatementResultsManager {
       }
       case "GetMaxSize": {
         return String(this.resultLimit);
+      }
+      case "PreviewJSON": {
+        const filename = `flink-statement-result-${new Date().getTime()}.json`;
+        showJsonPreview(filename, body.result);
+
+        // Return value used in tests
+        return {
+          filename,
+          result: body.result,
+        };
       }
       case "ResultLimitChange": {
         const newLimit = body.limit;

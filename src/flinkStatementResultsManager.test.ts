@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import { ObservableScope } from "inertial";
 import sinon from "sinon";
+import * as messageUtils from "../src/documentProviders/message";
 import { loadFixture } from "../tests/fixtures/utils";
 import { StatementResultsSqlV1Api } from "./clients/flinkSql";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
@@ -9,6 +10,9 @@ import { DEFAULT_RESULTS_LIMIT } from "./utils/flinkStatementResults";
 
 describe("FlinkStatementResultsManager", () => {
   let sandbox: sinon.SinonSandbox;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const schedule_immediately = <T>(cb: () => Promise<T>, _signal?: AbortSignal) => cb();
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -21,40 +25,24 @@ describe("FlinkStatementResultsManager", () => {
   it("should process results from fixtures correctly", async () => {
     const os = ObservableScope();
 
-    // Mock Service
     const mockService = sandbox.createStubInstance(StatementResultsSqlV1Api);
-
-    // Read fixture files
     const createStatementResponse = loadFixture(
       "flink-statement-results-processing/create-statement-response.json",
     );
-
-    // Load all statement results fixtures
     const statementResponses = Array.from({ length: 5 }, (_, i) =>
       loadFixture(`flink-statement-results-processing/get-statement-results-${i + 1}.json`),
     );
-
-    // Load expected parsed results
     const expectedParsedResults = loadFixture(
       "flink-statement-results-processing/expected-parsed-results.json",
     );
-
-    // Mock Statement
     const mockStatement = createStatementResponse as unknown as FlinkStatement;
 
-    // Set up mock responses in sequence
     statementResponses.forEach((response, index) => {
       mockService.getSqlv1StatementResult.onCall(index).resolves(response);
     });
 
-    // Calls provided async callback immediately, no scheduling.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const schedule_immediately = <T>(cb: () => Promise<T>, _signal?: AbortSignal) => cb();
-
-    // Mock notifyUI
     const notifyUIStub = sandbox.stub();
 
-    // Create manager instance
     const manager = new FlinkStatementResultsManager(
       os,
       mockStatement,
@@ -75,5 +63,43 @@ describe("FlinkStatementResultsManager", () => {
 
     // Verify the results match expected format
     assert.deepStrictEqual(results, { results: expectedParsedResults });
+  });
+
+  it("should handle PreviewJSON and call showJsonPreview", () => {
+    const os = ObservableScope();
+    const mockService = sandbox.createStubInstance(StatementResultsSqlV1Api);
+    const createStatementResponse = loadFixture(
+      "flink-statement-results-processing/create-statement-response.json",
+    );
+    const mockStatement = createStatementResponse as unknown as FlinkStatement;
+    const notifyUIStub = sandbox.stub();
+
+    const showJsonPreviewMock = sandbox.stub(messageUtils, "showJsonPreview").resolves();
+
+    const manager = new FlinkStatementResultsManager(
+      os,
+      mockStatement,
+      mockService,
+      schedule_immediately,
+      notifyUIStub,
+      DEFAULT_RESULTS_LIMIT,
+    );
+
+    const testResult = { foo: "bar" };
+
+    // Simulate double clicking a result row in the UI
+    const response = manager.handleMessage("PreviewJSON", { result: testResult });
+
+    sinon.assert.calledOnce(showJsonPreviewMock);
+    const [filename, resultArg] = showJsonPreviewMock.firstCall.args;
+    assert.ok(filename.startsWith("flink-statement-result-") && filename.endsWith(".json"));
+    assert.deepStrictEqual(resultArg, testResult);
+
+    // Check the return value
+    assert.ok(response.filename.startsWith("flink-statement-result-"));
+    assert.ok(response.filename.endsWith(".json"));
+    assert.deepStrictEqual(response.result, testResult);
+
+    showJsonPreviewMock.restore();
   });
 });
