@@ -160,7 +160,11 @@ describe("ResourceViewProvider loading functions", () => {
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.CCLOUD);
     assert.equal(result.id, `ccloud-connected-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, TreeItemCollapsibleState.Expanded);
+    assert.equal(
+      result.collapsibleState,
+      TreeItemCollapsibleState.Expanded,
+      `Tree item should be expanded, but was ${result.collapsibleState === TreeItemCollapsibleState.Collapsed ? "collapsed" : "none"}:\n\n${JSON.stringify(result, null, 2)}`,
+    );
     assert.equal(result.description, TEST_CCLOUD_ORGANIZATION.name);
     assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
   });
