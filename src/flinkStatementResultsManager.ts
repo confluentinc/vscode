@@ -227,12 +227,7 @@ export class FlinkStatementResultsManager {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        // Convert Map to array of objects
-        const res = Array.from(this._results().values()).map((row: Map<string, any>) => {
-          // Convert Map to plain object
-          return this.mapToObject(row);
-        });
-        const paginatedResults = res.slice(offset, offset + limit);
+        const paginatedResults = this.getResultsArray().slice(offset, offset + limit);
         return {
           results: paginatedResults,
         };
@@ -256,15 +251,9 @@ export class FlinkStatementResultsManager {
       }
       case "PreviewAllResults":
       case "PreviewResult": {
-        const allResults = body?.result === undefined;
-
         // plural if all results else singular
-        const filename = `flink-statement-result${allResults ? "s" : ""}-${new Date().getTime()}.json`;
-
-        let content = body?.result;
-        if (allResults) {
-          content = Array.from(this._results().values(), (mapValue) => this.mapToObject(mapValue));
-        }
+        const filename = `flink-statement-result${body?.result === undefined ? "s" : ""}-${new Date().getTime()}.json`;
+        const content = body?.result ?? this.getResultsArray();
 
         showJsonPreview(filename, content);
 
@@ -314,12 +303,10 @@ export class FlinkStatementResultsManager {
     }
   }
 
-  private mapToObject(row: Map<string, any>) {
-    const obj: Record<string, any> = {};
-    row.forEach((value: any, key: string) => {
-      obj[key] = value;
-    });
-    return obj;
+  private getResultsArray() {
+    return Array.from(this._results().values()).map((row: Map<string, any>) =>
+      Object.fromEntries(row),
+    );
   }
 
   dispose() {
