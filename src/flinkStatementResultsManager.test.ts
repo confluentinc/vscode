@@ -52,7 +52,7 @@ describe("FlinkStatementResultsManager", () => {
       DEFAULT_RESULTS_LIMIT,
     );
     // Wait for results to be processed
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     return { manager, expectedParsedResults };
   };
 
