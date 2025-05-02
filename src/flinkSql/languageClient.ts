@@ -9,10 +9,10 @@ import {
 } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
-import { WebsocketTransport } from "./websocketTransport";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient");
 
@@ -68,8 +68,6 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
           middleware: {
             didOpen: (document, next) => {
               logger.info(`FlinkSQL document opened: ${document.uri}`);
-              // TODO NC send config when document opens. Must handle empty values to avoid closing connection. (See UI)
-              // Maybe in flinkConfigManager.ts?
               return next(document);
             },
             didChange: (event, next) => {
@@ -96,20 +94,20 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
               return next(document, positionToUse, context, token);
             },
             sendRequest: (type, params, token, next) => {
-                // Server does not accept line positions > 0, so we need to convert them to single-line
-                if (params && (params as any).position && (params as any).textDocument?.uri) {
-                  const uri = (params as any).textDocument.uri;
-                  const document = vscode.workspace.textDocuments.find(
-                    (doc) => doc.uri.toString() === uri,
+              // Server does not accept line positions > 0, so we need to convert them to single-line
+              if (params && (params as any).position && (params as any).textDocument?.uri) {
+                const uri = (params as any).textDocument.uri;
+                const document = vscode.workspace.textDocuments.find(
+                  (doc) => doc.uri.toString() === uri,
+                );
+                if (document) {
+                  const originalPosition = (params as any).position;
+                  (params as any).position = convertToSingleLinePosition(
+                    document,
+                    new vscode.Position(originalPosition.line, originalPosition.character),
                   );
-                  if (document) {
-                    const originalPosition = (params as any).position;
-                    (params as any).position = convertToSingleLinePosition(
-                      document,
-                      new vscode.Position(originalPosition.line, originalPosition.character),
-                    );
-                  }
                 }
+              }
 
               return next(type, params, token);
             },
@@ -143,50 +141,6 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
     };
   });
 }
-
-// TODO NC Maybe move to flinkConfigManager.ts
-// export async function registerFlinkSqlConfigListener(): Promise<vscode.Disposable> {
-//   // The CCloud UI defaults to the currently selected catalog and database from the dropdown
-//   // & waits until all settings are updated, instead of sending intermittent updates (i.e. catalog changes, then db)
-//   return vscode.workspace.onDidChangeConfiguration(async (event) => {
-//     if (event.affectsConfiguration("confluent.flink")) {
-//       logger.info("Flink SQL configuration changed");
-//       try {
-//         const settings = getFlinkSqlSettings();
-//         languageClient?.sendNotification("workspace/didChangeConfiguration", {
-//           settings: {
-//             workspaceSettings: {
-//               AuthToken: "{{ ccloud.data_plane_token }}",
-//               Catalog: settings.catalog,
-//               Database: settings.database,
-//               ComputePoolId: settings.computePoolId,
-//             },
-//           },
-//         });
-//       } catch (error) {
-//         logger.error(`Failed to send configuration update to language server: ${error}`);
-//       }
-
-//       /** We need special handling for region/provider/env/org changes, which affect the WebSocket URL
-//        * These would require a full client/socket restart
-//        * */
-//       // if (
-//       //   event.affectsConfiguration("confluent.flink.region") ||
-//       //   event.affectsConfiguration("confluent.flink.provider")
-//       // ) {
-//       //   logger.info("Region or provider changed - restarting language client");
-//       //   try {
-//       //     await startOrRestartLanguageClient(context, CCLOUD_CONNECTION_ID);
-//       //   } catch (error) {
-//       //     logger.error(`Failed to restart Flink SQL language client: ${error}`);
-//       //   }
-//       // } else {
-//       //   // For any other settings, just send log or notification, e.g.
-//       //   updateLanguageServerSettings();
-//       // }
-//     }
-//   });
-// }
 
 /** Helper to convert vscode.Position to always have {line: 0...},
  * since CCloud Flink Language Server does not support multi-line completions at this time */
