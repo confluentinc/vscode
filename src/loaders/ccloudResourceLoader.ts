@@ -149,7 +149,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       const resourceManager = getResourceManager();
 
       // Do the GraphQL fetches concurrently.
-      // (this.getOrganizationId() internally caches its result, so we don't need to worry about)
+      // (this.getOrganization() internally caches its result, so we don't need to worry about)
       const gqlResults = await Promise.all([getEnvironments(), this.getOrganization()]);
 
       // Store the environments, clusters, schema registries in the resource manager
@@ -272,7 +272,8 @@ export class CCloudResourceLoader extends ResourceLoader {
    * Get the current organization ID either from cached value or
    * directly from the sidecar GraphQL API.
    *
-   * @returns The current organization ID.
+   * @returns The {@link CCloudOrganization} for the current CCloud connection, either from cached
+   * value or deep fetch.
    */
   public async getOrganization(): Promise<CCloudOrganization> {
     if (this.organization) {
@@ -284,7 +285,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       this.organization = organization;
       return this.organization;
     }
-    logger.error("getOrganizationId(): No current organization found.");
+    logger.withCallpoint("getOrganization()").error("No current organization found.");
     throw new Error("No current organization found.");
   }
 
