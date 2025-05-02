@@ -96,7 +96,6 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
               return next(document, positionToUse, context, token);
             },
             sendRequest: (type, params, token, next) => {
-              if (type === "textDocument/completion") {
                 // Server does not accept line positions > 0, so we need to convert them to single-line
                 if (params && (params as any).position && (params as any).textDocument?.uri) {
                   const uri = (params as any).textDocument.uri;
@@ -112,8 +111,6 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
                   }
                 }
 
-                return next(type, params, token);
-              }
               return next(type, params, token);
             },
           },
