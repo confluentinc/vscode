@@ -105,6 +105,7 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
           `2. Enter the template name: \`${parameters.name}\`\n` +
           `3. Stop the tool invocation after running the command.\n`;
       }
+
       messages.push(this.toolMessage(message, "result"));
     } else {
       const errorMessage = `❌ Unexpected result content structure: ${JSON.stringify(result)}`;

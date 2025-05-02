@@ -115,6 +115,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       ]);
     }
   }
+  private previousMessages = new Set<string>();
   async processInvocation(
     request: ChatRequest,
     stream: ChatResponseStream,
@@ -127,9 +128,19 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     if (!parameters.name) {
       return [this.toolMessage("The `name` parameter is required.", `${this.name}-error`)];
     }
+    const message =
+      `Let me apply the template with your configuration:\n\n` +
+      `🎯 **Template**: \`${parameters.name}\`\n\n` +
+      `Options: ${JSON.stringify(parameters.options, null, 2)}`;
+
+    if (this.previousMessages.has(message)) {
+      logger.debug("Duplicate message detected, skipping.");
+      return [];
+    }
+
+    this.previousMessages.add(message);
 
     try {
-      // Skip prepare invocation to avoid confirmation loop
       const result = await scaffoldProjectRequest({
         templateName: parameters.name,
         ...parameters.options,
