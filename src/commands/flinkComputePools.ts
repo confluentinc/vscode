@@ -1,18 +1,18 @@
-import { commands, Disposable, window, workspace } from "vscode";
+import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   currentFlinkArtifactsPoolChanged,
   currentFlinkStatementsResourceChanged,
 } from "../emitters";
+import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { updateDefaultFlinkDatabaseId, updateDefaultFlinkPoolId } from "../preferences/updates";
 import {
   flinkComputePoolQuickPick,
   flinkComputePoolQuickPickWithViewProgress,
 } from "../quickpicks/flinkComputePools";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
-import { KafkaCluster } from "../models/kafkaCluster";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
-import { Logger } from "../logging";
 
 const logger = new Logger("commands.flinkComputePools");
 
@@ -79,7 +79,7 @@ export async function configureFlinkDefaults() {
     logger.debug("No compute pool selected & none found in configuration, skipping flink config");
     return;
   }
-  await workspace.getConfiguration().update(FLINK_CONFIG_COMPUTE_POOL, computePool?.id, false);
+  await updateDefaultFlinkPoolId(computePool);
 
   const databaseCluster: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
   if (!databaseCluster) {
@@ -87,7 +87,7 @@ export async function configureFlinkDefaults() {
     return;
   }
   // Note: we can use name or ID for Language Server, but name used in Cloud UI since what you send is what shows in completions documentation
-  await workspace.getConfiguration().update(FLINK_CONFIG_DATABASE, databaseCluster.name, false);
+  await updateDefaultFlinkDatabaseId(databaseCluster as CCloudKafkaCluster);
 
   window.showInformationMessage("Flink SQL defaults updated.", "View").then((selection) => {
     if (selection === "View") {
