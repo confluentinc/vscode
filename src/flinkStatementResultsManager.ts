@@ -28,7 +28,9 @@ type MessageType =
   | "StreamPause"
   | "StreamResume"
   | "PreviewResult"
-  | "PreviewAllResults";
+  | "PreviewAllResults"
+  | "Search"
+  | "GetSearchQuery";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -73,6 +75,8 @@ export class FlinkStatementResultsManager {
   private _isResultsFull: Signal<boolean>;
   private _pollingWatch: (() => void) | undefined;
   private _shouldPoll: Signal<boolean>;
+  /** Filter by substring text query. */
+  private _searchQuery: Signal<string | null>;
 
   constructor(
     private os: Scope,
@@ -91,6 +95,7 @@ export class FlinkStatementResultsManager {
     this._isResultsFull = os.signal(false);
     this._pollingWatch = undefined;
     this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
+    this._searchQuery = os.signal<string | null>(null);
     this.setupWatches();
   }
 
@@ -228,13 +233,46 @@ export class FlinkStatementResultsManager {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
         const paginatedResults = this.getResultsArray().slice(offset, offset + limit);
+
+        let filteredResults = paginatedResults;
+        const searchQuery = this._searchQuery();
+        if (searchQuery !== null) {
+          const searchLower = searchQuery.toLowerCase();
+          filteredResults = paginatedResults.filter((row) =>
+            Object.values(row).some(
+              (value) => value !== null && String(value).toLowerCase().includes(searchLower),
+            ),
+          );
+        }
+
         return {
-          results: paginatedResults,
+          results: filteredResults,
         };
       }
       case "GetResultsCount": {
-        const count = this._results().size;
-        return { total: count, filter: null };
+        let filteredCount = null;
+        const results = this.getResultsArray();
+        const searchQuery = this._searchQuery();
+        if (searchQuery !== null) {
+          const searchLower = searchQuery.toLowerCase();
+          filteredCount = results.filter((row) =>
+            Object.values(row).some(
+              (value) => value !== null && String(value).toLowerCase().includes(searchLower),
+            ),
+          ).length;
+        }
+        return {
+          total: results.length,
+          filter: filteredCount,
+        };
+      }
+      case "Search": {
+        this._searchQuery(body.search ?? "");
+        this.notifyUI();
+        return null;
+      }
+      case "GetSearchQuery": {
+        return this._searchQuery() ?? "";
       }
       case "GetSchema": {
         if (!this.statement) {
