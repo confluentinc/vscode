@@ -144,27 +144,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
       columns[col.name] = {
         index: index,
         title: () => col.name,
-        children: (result: Record<string, any>) => {
-          const value = result[col.name];
-          if (value === null) return "NULL";
-          switch (col.type.type) {
-            case "VARCHAR":
-              return String(value);
-            case "INTEGER":
-              return value.toLocaleString();
-            case "TIMESTAMP":
-              return new Date(value).toISOString();
-            // TODO: Add more cases here.
-            default:
-              return JSON.stringify(value);
-          }
-        },
-        // TODO: What should go here?
-        description: (result: Record<string, any>) => {
-          const value = result[col.name];
-          if (value === null) return "NULL";
-          return String(value);
-        },
+        children: (result: Record<string, any>) => result[col.name] ?? "NULL",
+        description: (result: Record<string, any>) => result[col.name] ?? "NULL",
       };
     });
 
@@ -248,6 +229,11 @@ class FlinkStatementResultsViewModel extends ViewModel {
   /** Temporary state for resizing events. */
   resizeColumnDelta = this.signal<number | null>(null);
 
+  /** Handle search input events */
+  search(value: string) {
+    return value ?? "";
+  }
+
   /** The text search query string. */
   searchTimer: ReturnType<typeof setTimeout> | null = null;
   searchDebounceTime = 500;
@@ -256,6 +242,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
     const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
       event.preventDefault();
+      // Trigger a search update
+      this.snapshot(this.emptySnapshot);
       // when user hits Enter, search query submitted immediately
       const value = target.value.trim();
       this.submitSearch(value);
