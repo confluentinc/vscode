@@ -384,7 +384,10 @@ export function post(
 ): Promise<{ results: Map<string, any>[] }>;
 export function post(type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
 export function post(type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
-export function post(type: "GetMaxSize", body: { timestamp?: number }): Promise<string>;
+export function post(
+  type: "GetMaxSize",
+  body: { timestamp?: number },
+): Promise<keyof typeof resultLimitLabel>;
 export function post(
   type: "ResultLimitChange",
   body: { limit: number; timestamp?: number },
