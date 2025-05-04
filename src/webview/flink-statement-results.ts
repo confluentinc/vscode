@@ -255,6 +255,7 @@ class FlinkStatementResultsViewModel extends ViewModel {
   async handleKeydown(event: KeyboardEvent) {
     const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
+      event.preventDefault();
       // when user hits Enter, search query submitted immediately
       const value = target.value.trim();
       this.submitSearch(value);
@@ -402,7 +403,6 @@ export function post(
 ): Promise<null>;
 export function post(type: "StreamPause", body: { timestamp?: number }): Promise<null>;
 export function post(type: "StreamResume", body: { timestamp?: number }): Promise<null>;
-export function post(type: "PreviewJSON", body: { result: any; timestamp?: number }): Promise<null>;
 export function post(
   type: "PreviewResult",
   body: { result: Record<string, any>; timestamp?: number },
