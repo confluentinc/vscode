@@ -532,6 +532,12 @@
         "icon": "$(confluent-logo)",
         "title": "Set CCloud Flink Database for Flink Statement",
         "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.document.flinksql.resetCCloudMetadata",
+        "icon": "$(x)",
+        "title": "Reset CCloud Flink Metadata",
+        "category": "Confluent: Flink SQL"
       }
     ],
     "configuration": [
@@ -966,6 +972,10 @@
         },
         {
           "command": "confluent.document.flinksql.setCCloudDatabase",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.resetCCloudMetadata",
           "when": "false"
         }
       ],

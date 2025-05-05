@@ -79,6 +79,24 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
   uriMetadataSet.fire(uri);
 }
 
+export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
+  if (!(uri instanceof Uri)) {
+    return;
+  }
+  if (!hasCCloudAuthSession()) {
+    // shouldn't happen since callers shouldn't be able to call this command without a valid CCloud
+    // connection, but just in case
+    logger.warn("not resetting metadata for URI: no CCloud auth session");
+    return;
+  }
+
+  logger.debug("resetting metadata for URI", {
+    uri: uri.toString(),
+  });
+  await getResourceManager().deleteUriMetadata(uri);
+  uriMetadataSet.fire(uri);
+}
+
 export function registerDocumentCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
@@ -88,6 +106,10 @@ export function registerDocumentCommands(): Disposable[] {
     registerCommandWithLogging(
       "confluent.document.flinksql.setCCloudDatabase",
       setCCloudDatabaseForUriCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.document.flinksql.resetCCloudMetadata",
+      resetCCloudMetadataForUriCommand,
     ),
   ];
 }
