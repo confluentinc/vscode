@@ -172,13 +172,6 @@ export async function handleChatMessage(
     toolMode: LanguageModelChatToolMode.Auto,
   };
 
-  // Check model tool compatibility only when tools are being invoked
-  if (model.vendor === "copilot" && !model.family.includes("claude")) {
-    throw new ModelNotSupportedError(
-      `${model.name} not available for calling tools in the Confluent chat participant.`,
-    );
-  }
-
   // determine whether or not to continue sending chat requests to the model as a result of any tool
   // calls
   let continueConversation = true;
