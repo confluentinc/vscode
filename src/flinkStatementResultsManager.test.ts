@@ -102,4 +102,89 @@ describe("FlinkStatementResultsManager", () => {
 
     showJsonPreviewMock.restore();
   });
+
+  it("should filter results based on search query", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    const searchValue = "80.8";
+
+    manager.handleMessage("Search", { search: searchValue });
+
+    const filtered = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: DEFAULT_RESULTS_LIMIT,
+    });
+
+    assert.equal(filtered.results.length, 4);
+    for (const row of filtered.results) {
+      const found = Object.values(row).some(
+        (value) =>
+          value !== null && String(value).toLowerCase().includes(searchValue.toLowerCase()),
+      );
+      assert.ok(found, `Row does not contain search value: ${JSON.stringify(row)}`);
+    }
+
+    const count = manager.handleMessage("GetResultsCount", {});
+    assert.strictEqual(count.filter, filtered.results.length);
+
+    // Clear search filter
+    manager.handleMessage("Search", { search: null });
+
+    const allResults = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: DEFAULT_RESULTS_LIMIT,
+    });
+
+    assert.equal(allResults.results.length, 10);
+
+    const totalCount = manager.handleMessage("GetResultsCount", {});
+    assert.strictEqual(totalCount.filter, 10);
+  });
+
+  it("should filter results based on search query only in visible columns", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    // Exists in both columns but we should only get results
+    // in the visible column `tempf`
+    const searchValue = "2";
+
+    manager.handleMessage("Search", { search: searchValue });
+    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
+
+    const filtered = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: DEFAULT_RESULTS_LIMIT,
+    });
+
+    assert.equal(filtered.results.length, 3);
+  });
+
+  it("should filter and then paginate results based on search query", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
+
+    const noFilter: { results: any[] } = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: 5,
+    });
+    const temperatures = noFilter.results.map((val) => val["tempf"]);
+
+    assert.deepEqual(temperatures, ["80.4", "80.8", "80.8", "80.8", "80.2"]);
+
+    // Apply filter
+    manager.handleMessage("Search", { search: "80.8" });
+
+    let filtered: { results: any[] } = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: 5,
+    });
+
+    // This proves filtering happens before pagination because otherwise
+    // we'd have got only three 80.8 values as seen above.
+    assert.deepEqual(
+      filtered.results.map((val) => val["tempf"]),
+      ["80.8", "80.8", "80.8", "80.8"],
+    );
+  });
 });

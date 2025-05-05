@@ -75,10 +75,16 @@ class FlinkStatementResultsViewModel extends ViewModel {
   }, this.emptySnapshot);
 
   /** Total count of results, along with count of filtered ones. */
-  resultCount = this.resolve(() => post("GetResultsCount", { timestamp: this.timestamp() }), {
-    total: 0,
-    filter: null,
-  });
+  resultCount = this.resolve(
+    () =>
+      post("GetResultsCount", {
+        timestamp: this.timestamp(),
+      }),
+    {
+      total: 0,
+      filter: null,
+    },
+  );
   /** For now, the only way to expose a loading spinner. */
   waitingForResults = this.derive(() => this.resultCount().total === 0);
   emptyFilterResult = this.derive(
@@ -144,27 +150,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
       columns[col.name] = {
         index: index,
         title: () => col.name,
-        children: (result: Record<string, any>) => {
-          const value = result[col.name];
-          if (value === null) return "NULL";
-          switch (col.type.type) {
-            case "VARCHAR":
-              return String(value);
-            case "INTEGER":
-              return value.toLocaleString();
-            case "TIMESTAMP":
-              return new Date(value).toISOString();
-            // TODO: Add more cases here.
-            default:
-              return JSON.stringify(value);
-          }
-        },
-        // TODO: What should go here?
-        description: (result: Record<string, any>) => {
-          const value = result[col.name];
-          if (value === null) return "NULL";
-          return String(value);
-        },
+        children: (result: Record<string, any>) => result[col.name] ?? "NULL",
+        description: (result: Record<string, any>) => result[col.name] ?? "NULL",
       };
     });
 
@@ -193,9 +180,13 @@ class FlinkStatementResultsViewModel extends ViewModel {
 
   /** List of currently visible column names. */
   visibleColumns = this.derive(() => {
+    return this._visibleColumns();
+  });
+
+  private _visibleColumns() {
     const flags = this.columnVisibilityFlags();
     return this.allColumns().filter((_, index) => flags[index]);
-  });
+  }
 
   /** Testing if a column is currently visible. This is for the settings panel. */
   isColumnVisible(index: number) {
@@ -205,13 +196,28 @@ class FlinkStatementResultsViewModel extends ViewModel {
   /**
    * Toggling a checkbox on the settings panel should set or unset a bit in
    * position `index`. This will trigger the UI to show or hide a column.
+   * Prevents hiding the last visible column.
    */
-  toggleColumnVisibility(index: number) {
+  async toggleColumnVisibility(index: number) {
     const flags = this.columnVisibilityFlags();
     const toggled = [...flags];
+
+    // If trying to hide a column, check if it would hide the last visible one
+    if (toggled[index] === true) {
+      const visibleCount = toggled.filter((f) => f).length;
+      if (visibleCount <= 1) {
+        // Don't allow hiding the last visible column
+        return;
+      }
+    }
+
     toggled[index] = !toggled[index];
     this.columnVisibilityFlags(toggled);
     storage.set({ ...storage.get()!, columnVisibilityFlags: toggled });
+    await post("SetVisibleColumns", {
+      visibleColumns: this._visibleColumns(),
+      timestamp: this.timestamp(),
+    });
   }
 
   /** Handles the beginning of column resizing. */
@@ -250,22 +256,53 @@ class FlinkStatementResultsViewModel extends ViewModel {
 
   /** Handle search input events */
   search(value: string) {
-    // This is handled by the backend through the GetResults message
-    return value;
+    return value ?? "";
   }
 
-  /** Handle keydown events in the search field */
-  handleKeydown(event: KeyboardEvent) {
+  /** The text search query string. */
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
+  searchDebounceTime = 500;
+
+  async handleKeydown(event: KeyboardEvent) {
+    const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
       event.preventDefault();
       // Trigger a search update
       this.snapshot(this.emptySnapshot);
+      // when user hits Enter, search query submitted immediately
+      const value = target.value.trim();
+      this.submitSearch(value);
+    } else {
+      // otherwise, we keep debouncing search submittion until the user stops typing
+      if (this.searchTimer != null) clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(async () => {
+        const value = target.value.trim();
+        this.submitSearch(value);
+      }, this.searchDebounceTime);
     }
   }
 
-  /** Handle input events in the search field */
-  handleInput(event: InputEvent) {
-    // This is handled by the search function
+  async handleInput(event: Event | InputEvent) {
+    if (event.type === "input" && !(event instanceof InputEvent)) {
+      if (this.searchTimer != null) {
+        clearTimeout(this.searchTimer);
+        this.searchTimer = null;
+      }
+      await post("Search", { search: null, timestamp: this.timestamp() });
+    }
+  }
+
+  async submitSearch(value: string) {
+    if (this.searchTimer != null) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    if (value.length > 0) {
+      await post("Search", { search: value, timestamp: this.timestamp() });
+    } else {
+      await post("Search", { search: null, timestamp: this.timestamp() });
+    }
+    this.page(0);
   }
 
   /** Preview the JSON content of a result row in a read-only editor */
@@ -387,6 +424,15 @@ export function post(
   body: { result: Record<string, any>; timestamp?: number },
 ): Promise<null>;
 export function post(type: "PreviewAllResults", body: { timestamp?: number }): Promise<null>;
+export function post(
+  type: "Search",
+  body: { search: string | null; timestamp?: number },
+): Promise<null>;
+export function post(
+  type: "SetVisibleColumns",
+  body: { visibleColumns: string[] | null; timestamp?: number },
+): Promise<null>;
+export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }

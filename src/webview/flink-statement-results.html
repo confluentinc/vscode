@@ -65,24 +65,15 @@
         </div>
       </section>
 
-      <!-- TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1571
-        <section>
-          <h4>Results Quick Search</h4>
-          <div class="flex-row">
-            <vscode-text-field
-              id="results-search"
-              placeholder="Search across results…"
-              type="search"
-              size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
-              data-on-keydown="this.handleKeydown(event)"
-              data-on-input="this.handleInput(event)"
-              >Search</vscode-text-field
-            >
-          </div>
-        </section>
-        -->
+      <section>
+        <h4>Results Quick Search</h4>
+        <div class="flex-row">
+          <vscode-text-field id="results-search" placeholder="Search across results…" type="search" size="50"
+            data-prop-value="this.search()" data-on-change="this.search(event.target.value)"
+            data-on-keydown="this.handleKeydown(event)"
+            data-on-input="this.handleInput(event)">Search</vscode-text-field>
+        </div>
+      </section>
     </header>
 
     <section class="content">
@@ -108,13 +99,7 @@
         </div>
       </template>
 
-      <template data-if="this.emptyFilterResult()">
-        <div class="grid-banner">
-          <p>Unable to find results for current search</p>
-        </div>
-      </template>
-
-      <template data-if="this.hasResults()">
+      <template data-if="this.hasResults() || this.emptyFilterResult()">
         <table class="grid" cellpadding="0" cellspacing="0" data-prop-style="this.gridTemplateColumns()">
           <thead class="sticky-table-header">
             <tr class="grid-row">
@@ -142,6 +127,7 @@
               <template data-for="column of this.allColumns() by column">
                 <label class="checkbox">
                   <input type="checkbox" data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                    data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
                     data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)" />
                   <span data-text="this.columns()[this.column()].title()"></span>
                 </label>
@@ -160,6 +146,12 @@
               </tr>
             </template>
           </tbody>
+
+          <template data-if="this.emptyFilterResult()">
+            <div class="grid-banner">
+              <p>Unable to find results for current search</p>
+            </div>
+          </template>
         </table>
       </template>
     </section>
