@@ -112,7 +112,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
 
     // codelens for resetting the metadata for the document
     const resetCommand: Command = {
-      title: "$(chrome-close)",
+      title: "Clear Settings",
       command: "confluent.document.flinksql.resetCCloudMetadata",
       tooltip: "Clear Selected CCloud Resources for Flink Statement",
       arguments: [document.uri],
