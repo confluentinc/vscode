@@ -180,7 +180,7 @@ describe("FlinkStatementResultsManager", () => {
       pageSize: 5,
     });
 
-    // This proves pagination occurred after filtering because otherwise
+    // This proves filtering happens before pagination because otherwise
     // we'd have got only three 80.8 values as seen above.
     assert.deepEqual(
       filtered.results.map((val) => val["tempf"]),
