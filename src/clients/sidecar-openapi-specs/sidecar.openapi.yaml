@@ -8,13 +8,10 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.187.0
+  version: 0.196.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
-tags:
-- name: Feature Flags
-  description: Feature flags
 paths:
   /:
     get:
@@ -49,24 +46,6 @@ paths:
           description: OK
           content:
             application/json: {}
-  /api/metadata/security/v2alpha1/authorize:
-    put:
-      requestBody:
-        description: RBAC request body
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RBACRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
   /gateway/v1/callback-vscode-docs:
     get:
       tags:
@@ -299,41 +278,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Failure"
-  /gateway/v1/feature-flags/{id}/value:
-    get:
-      tags:
-      - Feature Flags
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JsonNode"
-        "401":
-          description: Not Authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "404":
-          description: Feature flag not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "500":
-          description: Internal error parsing feature flags
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
   /gateway/v1/handshake:
     get:
       tags:
@@ -507,17 +451,6 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
 components:
   schemas:
-    Action:
-      type: object
-      properties:
-        resourceType:
-          type: string
-        resourceName:
-          type: string
-        operation:
-          type: string
-        scope:
-          $ref: "#/components/schemas/Scope"
     ApiKeyAndSecret:
       description: API key and secret authentication credentials
       required:
@@ -792,22 +725,6 @@ components:
       format: date
       type: string
       example: 2022-03-10
-    Error:
-      description: Describes a particular error encountered while performing an operation.
-      type: object
-      properties:
-        code:
-          type: string
-        status:
-          type: string
-        title:
-          type: string
-        id:
-          type: string
-        detail:
-          type: string
-        source:
-          $ref: "#/components/schemas/JsonNode"
     ExceededFields:
       type: object
       properties:
@@ -831,7 +748,7 @@ components:
         errors:
           type: array
           items:
-            $ref: "#/components/schemas/Error"
+            $ref: "#/components/schemas/SidecarError"
     HashAlgorithm:
       enum:
       - SCRAM_SHA_256
@@ -1250,15 +1167,6 @@ components:
         schema_version:
           format: int32
           type: integer
-    RBACRequest:
-      type: object
-      properties:
-        userPrincipal:
-          type: string
-        actions:
-          type: array
-          items:
-            $ref: "#/components/schemas/Action"
     RecordMetadata:
       type: object
       properties:
@@ -1318,17 +1226,6 @@ components:
           type: object
           allOf:
           - $ref: "#/components/schemas/AuthErrors"
-    Scope:
-      type: object
-      properties:
-        clusters:
-          type: object
-          additionalProperties:
-            type: string
-        path:
-          type: array
-          items:
-            type: string
     ScramCredentials:
       description: Scram authentication credentials
       required:
@@ -1359,6 +1256,22 @@ components:
       properties:
         auth_secret:
           type: string
+    SidecarError:
+      description: Describes a particular error encountered while performing an operation.
+      type: object
+      properties:
+        code:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+        id:
+          type: string
+        detail:
+          type: string
+        source:
+          $ref: "#/components/schemas/JsonNode"
     SidecarVersionResponse:
       type: object
       properties:
@@ -1501,13 +1414,13 @@ components:
     HealthCheck:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
         data:
           type: object
           nullable: true
         name:
+          type: string
+        status:
+          enum:
+          - UP
+          - DOWN
           type: string
