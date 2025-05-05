@@ -102,13 +102,6 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
         logger.warn("compute pool not found from stored pool ID");
       }
     }
-    const selectComputePoolCommand: Command = {
-      title: computePool ? computePool.name : "Set Compute Pool",
-      command: "confluent.document.flinksql.setCCloudComputePool",
-      tooltip: "Set CCloud Compute Pool for Flink Statement",
-      arguments: [document.uri],
-    };
-    const computePoolLens = new CodeLens(range, selectComputePoolCommand);
 
     // codelens for selecting a database (and from it, a catalog)
     const databaseId: string | undefined = uriMetadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
@@ -138,6 +131,15 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
         logger.warn("catalog not found from stored database ID");
       }
     }
+
+    const selectComputePoolCommand: Command = {
+      title: computePool ? computePool.name : "Set Compute Pool",
+      command: "confluent.document.flinksql.setCCloudComputePool",
+      tooltip: "Set CCloud Compute Pool for Flink Statement",
+      arguments: [document.uri, database],
+    };
+    const computePoolLens = new CodeLens(range, selectComputePoolCommand);
+
     const selectDatabaseCommand: Command = {
       title:
         catalog && database
@@ -145,7 +147,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
           : "Set Catalog & Database",
       command: "confluent.document.flinksql.setCCloudDatabase",
       tooltip: "Set Catalog & Database for Flink Statement",
-      arguments: [document.uri],
+      arguments: [document.uri, computePool],
     };
     const databaseLens = new CodeLens(range, selectDatabaseCommand);
 
