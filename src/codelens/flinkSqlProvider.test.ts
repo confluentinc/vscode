@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
+import { CodeLens, Position, Range, TextDocument, Uri, workspace } from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
@@ -8,12 +8,21 @@ import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
-import { FlinkSqlCodelensProvider } from "./flinkSqlProvider";
+import { UriMetadata } from "../storage/types";
+import {
+  CatalogDatabase,
+  FlinkSqlCodelensProvider,
+  getCatalogDatabaseFromMetadata,
+  getComputePoolFromMetadata,
+} from "./flinkSqlProvider";
 
-describe("codelens/flinkSqlProvider.ts", () => {
+const testUri = Uri.parse("file:///test/file.sql");
+
+describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
@@ -22,9 +31,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
   // NOTE: setting up fake TextDocuments is tricky since we can't create them directly, so we're
   // only populating the fields needed for the test and associated codebase logic, then using the
   // `as unknown as TextDocument` pattern to appease TypeScript
-  const fakeDocument: TextDocument = {
-    uri: Uri.parse("file:///test/file.sql"),
-  } as unknown as TextDocument;
+  const fakeDocument: TextDocument = { uri: testUri } as unknown as TextDocument;
 
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
@@ -223,5 +230,229 @@ describe("codelens/flinkSqlProvider.ts", () => {
     );
     assert.strictEqual(resetLens.command?.title, "Clear Settings");
     assert.deepStrictEqual(resetLens.command?.arguments, [fakeDocument.uri]);
+  });
+});
+
+describe("codelens/flinkSqlProvider.ts getComputePoolFromMetadata()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let getConfigStub: sinon.SinonStub;
+
+  const testFlinkEnv: CCloudEnvironment = new CCloudEnvironment({
+    ...TEST_CCLOUD_ENVIRONMENT,
+    flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    // vscode stubs
+    getConfigStub = sandbox.stub();
+    sandbox.stub(workspace, "getConfiguration").returns({
+      update: sandbox.stub(),
+      get: getConfigStub,
+      has: sandbox.stub(),
+      inspect: sandbox.stub(),
+    });
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it(`should return undefined if no "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is found and no default "${FLINK_CONFIG_COMPUTE_POOL}" value is set`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(undefined);
+    const metadata: UriMetadata = {};
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
+      metadata,
+      envs,
+    );
+
+    assert.strictEqual(pool, undefined);
+  });
+
+  it(`should return the default "${FLINK_CONFIG_COMPUTE_POOL}" value if no "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is found`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+    const metadata: UriMetadata = {};
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
+      metadata,
+      envs,
+    );
+
+    assert.ok(pool instanceof CCloudFlinkComputePool);
+    assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+  });
+
+  it(`should return the stored value if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is found`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(undefined);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
+      metadata,
+      envs,
+    );
+
+    assert.ok(pool instanceof CCloudFlinkComputePool);
+    assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+  });
+
+  it(`should favor stored "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata over default "${FLINK_CONFIG_COMPUTE_POOL}" value`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("some-other-pool-id");
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
+      metadata,
+      envs,
+    );
+
+    assert.ok(pool instanceof CCloudFlinkComputePool);
+    assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+  });
+
+  it(`should return undefined if the stored "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata doesn't match any pools`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(undefined);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "some-other-pool-id",
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
+      metadata,
+      envs,
+    );
+
+    assert.strictEqual(pool, undefined);
+  });
+});
+
+describe("codelens/flinkSqlProvider.ts getCatalogDatabaseFromMetadata()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let getConfigStub: sinon.SinonStub;
+
+  const testFlinkEnv: CCloudEnvironment = new CCloudEnvironment({
+    ...TEST_CCLOUD_ENVIRONMENT,
+    flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    // vscode stubs
+    getConfigStub = sandbox.stub();
+    sandbox.stub(workspace, "getConfiguration").returns({
+      update: sandbox.stub(),
+      get: getConfigStub,
+      has: sandbox.stub(),
+      inspect: sandbox.stub(),
+    });
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it(`should return no catalog/database if no "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata is found and no default "${FLINK_CONFIG_DATABASE}" value is set`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(undefined);
+    const metadata: UriMetadata = {};
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.strictEqual(catalogDb.catalog, undefined);
+    assert.strictEqual(catalogDb.database, undefined);
+  });
+
+  it(`should return database from default "${FLINK_CONFIG_DATABASE}" value if no "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata is found`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(TEST_CCLOUD_KAFKA_CLUSTER.id);
+    const metadata: UriMetadata = {};
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.strictEqual(catalogDb.catalog, testFlinkEnv);
+    assert.ok(catalogDb.database instanceof CCloudKafkaCluster);
+    assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
+  });
+
+  it(`should return database from "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata if found`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(undefined);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.strictEqual(catalogDb.catalog, testFlinkEnv);
+    assert.ok(catalogDb.database instanceof CCloudKafkaCluster);
+    assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
+  });
+
+  it(`should favor stored "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata over default "${FLINK_CONFIG_DATABASE}" value`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns("some-other-database-id");
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.strictEqual(catalogDb.catalog, testFlinkEnv);
+    assert.ok(catalogDb.database instanceof CCloudKafkaCluster);
+    assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
+  });
+
+  it(`should return no catalog/database if the stored "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata doesn't match any database`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(undefined);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: "non-existent-database-id",
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.strictEqual(catalogDb.catalog, undefined);
+    assert.strictEqual(catalogDb.database, undefined);
+  });
+
+  it("should return database when compute pool is provided and database provider/region matches", async () => {
+    // provider/region match TEST_CCLOUD_KAFKA_CLUSTER by default
+    const matchingComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(undefined);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(
+      metadata,
+      envs,
+      matchingComputePool,
+    );
+
+    assert.strictEqual(catalogDb.catalog, testFlinkEnv);
+    assert.ok(catalogDb.database instanceof CCloudKafkaCluster);
+    assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
+  });
+
+  it("should return catalog but no database when compute pool is provided but database provider/region doesn't match", async () => {
+    // compute pool that doesn't match TEST_CCLOUD_KAFKA_CLUSTER's provider/region
+    const nonMatchingComputePool = new CCloudFlinkComputePool({
+      ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      provider: "FAKE-PROVIDER",
+      region: "abc-fakeregion-999",
+    });
+
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(undefined);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(
+      metadata,
+      envs,
+      nonMatchingComputePool,
+    );
+
+    assert.strictEqual(catalogDb.catalog, testFlinkEnv);
+    assert.strictEqual(catalogDb.database, undefined);
   });
 });
