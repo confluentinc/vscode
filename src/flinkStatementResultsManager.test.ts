@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { ObservableScope } from "inertial";
 import sinon from "sinon";
 import * as messageUtils from "../src/documentProviders/message";
+import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
 import { StatementResultsSqlV1Api } from "./clients/flinkSql";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
@@ -53,9 +54,7 @@ describe("FlinkStatementResultsManager", () => {
     );
 
     // Wait for results to be processed, it should eventually become 10
-    while (manager.handleMessage("GetResultsCount", {}).total !== 10) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
+    await eventually(() => assert.equal(manager.handleMessage("GetResultsCount", {}).total, 10));
 
     return { manager, expectedParsedResults };
   };
@@ -110,13 +109,17 @@ describe("FlinkStatementResultsManager", () => {
 
     manager.handleMessage("Search", { search: searchValue });
 
-    const filtered = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: DEFAULT_RESULTS_LIMIT,
+    const results = await eventually(async () => {
+      const { results } = manager.handleMessage("GetResults", {
+        page: 0,
+        pageSize: DEFAULT_RESULTS_LIMIT,
+      });
+      assert.equal(results.length, 4);
+
+      return results;
     });
 
-    assert.equal(filtered.results.length, 4);
-    for (const row of filtered.results) {
+    for (const row of results) {
       const found = Object.values(row).some(
         (value) =>
           value !== null && String(value).toLowerCase().includes(searchValue.toLowerCase()),
@@ -125,7 +128,7 @@ describe("FlinkStatementResultsManager", () => {
     }
 
     const count = manager.handleMessage("GetResultsCount", {});
-    assert.strictEqual(count.filter, filtered.results.length);
+    assert.strictEqual(count.filter, results.length);
 
     // Clear search filter
     manager.handleMessage("Search", { search: null });
@@ -146,17 +149,30 @@ describe("FlinkStatementResultsManager", () => {
 
     // Exists in both columns but we should only get results
     // in the visible column `tempf`
-    const searchValue = "2";
-
-    manager.handleMessage("Search", { search: searchValue });
+    manager.handleMessage("Search", { search: "2" });
     manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
 
-    const filtered = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: DEFAULT_RESULTS_LIMIT,
-    });
+    const hasResults = async (count: number) =>
+      await eventually(async () => {
+        const { results } = manager.handleMessage("GetResults", {
+          page: 0,
+          pageSize: DEFAULT_RESULTS_LIMIT,
+        });
+        assert.equal(results.length, count);
+        return results;
+      });
 
-    assert.equal(filtered.results.length, 3);
+    assert.ok(await hasResults(3));
+
+    manager.handleMessage("Search", { search: "2025" });
+
+    assert.ok(await hasResults(0));
+
+    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["when_reported"] });
+    assert.ok(await hasResults(10));
+
+    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["when_reported", "tempf"] });
+    assert.ok(await hasResults(10));
   });
 
   it("should filter and then paginate results based on search query", async () => {
@@ -164,27 +180,31 @@ describe("FlinkStatementResultsManager", () => {
 
     manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
 
-    const noFilter: { results: any[] } = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: 5,
-    });
-    const temperatures = noFilter.results.map((val) => val["tempf"]);
+    await eventually(async () => {
+      const noFilter: { results: any[] } = manager.handleMessage("GetResults", {
+        page: 0,
+        pageSize: 5,
+      });
+      const temperatures = noFilter.results.map((val) => val["tempf"]);
 
-    assert.deepEqual(temperatures, ["80.4", "80.8", "80.8", "80.8", "80.2"]);
+      assert.deepEqual(temperatures, ["80.4", "80.8", "80.8", "80.8", "80.2"]);
+    });
 
     // Apply filter
     manager.handleMessage("Search", { search: "80.8" });
 
-    let filtered: { results: any[] } = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: 5,
-    });
+    await eventually(async () => {
+      let filtered: { results: any[] } = manager.handleMessage("GetResults", {
+        page: 0,
+        pageSize: 5,
+      });
 
-    // This proves filtering happens before pagination because otherwise
-    // we'd have got only three 80.8 values as seen above.
-    assert.deepEqual(
-      filtered.results.map((val) => val["tempf"]),
-      ["80.8", "80.8", "80.8", "80.8"],
-    );
+      // This proves filtering happens before pagination because otherwise
+      // we'd have got only three 80.8 values as seen above.
+      assert.deepEqual(
+        filtered.results.map((val) => val["tempf"]),
+        ["80.8", "80.8", "80.8", "80.8"],
+      );
+    });
   });
 });
