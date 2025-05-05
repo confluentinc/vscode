@@ -1,16 +1,7 @@
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
-import {
-  commands,
-  env,
-  ExtensionContext,
-  languages,
-  Uri,
-  ViewColumn,
-  WebviewPanel,
-  window,
-} from "vscode";
+import { commands, env, ExtensionContext, Uri, ViewColumn, WebviewPanel, window } from "vscode";
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -25,7 +16,7 @@ import {
 import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
-import { MessageDocumentProvider } from "./documentProviders/message";
+import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
 import {
   CCloudResourceLoader,
@@ -661,22 +652,10 @@ function messageViewerStartPollingCommand(
         // use a single-instance provider to display a read-only document buffer with the message
         // content
         const filename = `${topic.name}-message-${index}.json`;
-        const provider = new MessageDocumentProvider();
-        MessageDocumentProvider.message = JSON.stringify(payload, null, 2);
-        // this is really only used for the filename:
-        const uri: Uri = provider.resourceToUri(
-          { partition: payload.partition_id, offset: payload.offset },
-          filename,
-        );
-        window
-          .showTextDocument(uri, {
-            preview: true,
-            viewColumn: ViewColumn.Beside,
-            preserveFocus: false,
-          })
-          .then((editor) => {
-            languages.setTextDocumentLanguage(editor.document, "json");
-          });
+        showJsonPreview(filename, payload, {
+          partition: payload.partition_id,
+          offset: payload.offset,
+        });
         return null;
       }
       case "PreviewJSON": {
@@ -698,22 +677,10 @@ function messageViewerStartPollingCommand(
             records.push("\t" + JSON.stringify(payload));
           }
         }
-        // use a single-instance provider to display a read-only document buffer with the messages
-        // at the given timestamp, so the document isn't reused across multiple previews
+
+        const content = `[\n${records.join(",\n")}\n]`;
         const filename = `${topic.name}-messages-${new Date().getTime()}.json`;
-        const provider = new MessageDocumentProvider();
-        MessageDocumentProvider.message = `[\n${records.join(",\n")}\n]`;
-        // this is really only used for the filename:
-        const uri: Uri = provider.resourceToUri({ partition: -1, offset: -1 }, filename);
-        window
-          .showTextDocument(uri, {
-            preview: true,
-            viewColumn: ViewColumn.Beside,
-            preserveFocus: false,
-          })
-          .then((editor) => {
-            languages.setTextDocumentLanguage(editor.document, "json");
-          });
+        showJsonPreview(filename, content);
         return null satisfies MessageResponse<"PreviewJSON">;
       }
       case "SearchMessages": {
