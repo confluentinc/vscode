@@ -7,7 +7,7 @@ import {
 import { PARTICIPANT_ID } from "./constants";
 import { participantMessage, systemMessage, userMessage } from "./messageTypes";
 
-describe.only("chat/messageTypes.ts", () => {
+describe("chat/messageTypes.ts", () => {
   it("userMessage() should return a User message with a 'user' name", () => {
     const msg: LanguageModelChatMessage = userMessage("hello");
 
