@@ -227,43 +227,44 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  private filterResultsBySearch(results: any[], visibleColumns: string[] | undefined): any[] {
+    const searchQuery = this._searchQuery();
+    if (searchQuery === null) {
+      return results;
+    }
+
+    // If no columns are visible,
+    // return empty array to make it clear there are no results
+    if (!visibleColumns?.length) {
+      return [];
+    }
+
+    const searchLower = searchQuery.toLowerCase();
+    return results.filter((row) =>
+      Object.entries(row)
+        .filter(([key]) => visibleColumns.includes(key))
+        .some(([_, value]) => value !== null && String(value).toLowerCase().includes(searchLower)),
+    );
+  }
+
   handleMessage(type: MessageType, body: any): any {
     switch (type) {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
         const paginatedResults = this.getResultsArray().slice(offset, offset + limit);
-
-        let filteredResults = paginatedResults;
-        const searchQuery = this._searchQuery();
-        if (searchQuery !== null) {
-          const searchLower = searchQuery.toLowerCase();
-          filteredResults = paginatedResults.filter((row) =>
-            Object.values(row).some(
-              (value) => value !== null && String(value).toLowerCase().includes(searchLower),
-            ),
-          );
-        }
+        const filteredResults = this.filterResultsBySearch(paginatedResults, body.visibleColumns);
 
         return {
           results: filteredResults,
         };
       }
       case "GetResultsCount": {
-        let filteredCount = null;
         const results = this.getResultsArray();
-        const searchQuery = this._searchQuery();
-        if (searchQuery !== null) {
-          const searchLower = searchQuery.toLowerCase();
-          filteredCount = results.filter((row) =>
-            Object.values(row).some(
-              (value) => value !== null && String(value).toLowerCase().includes(searchLower),
-            ),
-          ).length;
-        }
+        const filteredResults = this.filterResultsBySearch(results, body.visibleColumns);
         return {
           total: results.length,
-          filter: filteredCount,
+          filter: filteredResults.length,
         };
       }
       case "Search": {

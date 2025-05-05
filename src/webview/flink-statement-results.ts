@@ -70,15 +70,23 @@ class FlinkStatementResultsViewModel extends ViewModel {
     return post("GetResults", {
       page: this.page(),
       pageSize: this.pageSize(),
+      visibleColumns: this.visibleColumns(),
       timestamp: this.timestamp(),
     });
   }, this.emptySnapshot);
 
   /** Total count of results, along with count of filtered ones. */
-  resultCount = this.resolve(() => post("GetResultsCount", { timestamp: this.timestamp() }), {
-    total: 0,
-    filter: null,
-  });
+  resultCount = this.resolve(
+    () =>
+      post("GetResultsCount", {
+        visibleColumns: this.visibleColumns(),
+        timestamp: this.timestamp(),
+      }),
+    {
+      total: 0,
+      filter: null,
+    },
+  );
   /** For now, the only way to expose a loading spinner. */
   waitingForResults = this.derive(() => this.resultCount().total === 0);
   emptyFilterResult = this.derive(
@@ -380,9 +388,12 @@ export function post(
 ): Promise<{ start: number; offset: number }>;
 export function post(
   type: "GetResults",
-  body: { page: number; pageSize: number; timestamp?: number },
+  body: { page: number; pageSize: number; timestamp?: number; visibleColumns: string[] },
 ): Promise<{ results: Map<string, any>[] }>;
-export function post(type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
+export function post(
+  type: "GetResultsCount",
+  body: { timestamp?: number; visibleColumns: string[] },
+): Promise<ResultCount>;
 export function post(type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
 export function post(
   type: "GetMaxSize",

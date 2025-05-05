@@ -140,4 +140,22 @@ describe("FlinkStatementResultsManager", () => {
     const totalCount = manager.handleMessage("GetResultsCount", {});
     assert.strictEqual(totalCount.filter, 10);
   });
+
+  it("should filter results based on search query only in visible columns", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    // Exists in both columns but we should only get results
+    // in the visible column `tempf`
+    const searchValue = ".8";
+
+    manager.handleMessage("Search", { search: searchValue });
+
+    const filtered = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: DEFAULT_RESULTS_LIMIT,
+      visibleColumns: ["tempf"],
+    });
+
+    assert.equal(filtered.results.length, 4);
+  });
 });
