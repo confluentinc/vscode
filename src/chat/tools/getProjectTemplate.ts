@@ -39,6 +39,7 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
         new LanguageModelTextPart(`Please provide a template name to get its options.`),
       ]);
     }
+
     try {
       const templateList = await getTemplatesList(true);
       logger.debug("templateList:", templateList);
@@ -91,6 +92,7 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
       }
       return new LanguageModelToolResult([templateInfo]);
     } catch (error) {
+      // currently, we do only handle one model case, but we can extend this in the future
       const modelUsed =
         (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
         "Unknown Model";

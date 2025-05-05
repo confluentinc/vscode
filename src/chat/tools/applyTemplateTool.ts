@@ -76,7 +76,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-    logger.debug("PARAMS:", params);
+    logger.debug("template application params:", params);
     if (!params.name) {
       throw new Error("The `name` parameter is required.");
     }
@@ -160,9 +160,9 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
         this.toolMessage(
           `## Template Request Submitted\n\n` +
             `🎯 **Template**: \`${parameters.name}\`\n\n` +
-            `A configuration form will appear in a new window. Please complete it to proceed with the template creation.\n\n` +
-            `> Note: Sensitive information like API keys and secrets will be collected securely through the form.`,
-          `${this.name}-result`,
+            `A configuration form will appear in a new window. Please fill in what you can to complete the template creation.\n\n` +
+            `> Note: Sensitive information like API keys and secrets will be collected securely through the form.\n\n` +
+            `Stop calling the tool and stop sending user messages after invoking the scaffoldProjectRequest function.`,
         ),
       ];
     } catch (error) {
