@@ -146,16 +146,45 @@ describe("FlinkStatementResultsManager", () => {
 
     // Exists in both columns but we should only get results
     // in the visible column `tempf`
-    const searchValue = ".8";
+    const searchValue = "2";
 
     manager.handleMessage("Search", { search: searchValue });
+    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
 
     const filtered = manager.handleMessage("GetResults", {
       page: 0,
       pageSize: DEFAULT_RESULTS_LIMIT,
-      visibleColumns: ["tempf"],
     });
 
-    assert.equal(filtered.results.length, 4);
+    assert.equal(filtered.results.length, 3);
+  });
+
+  it("should filter and then paginate results based on search query", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
+
+    const noFilter: { results: any[] } = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: 5,
+    });
+    const temperatures = noFilter.results.map((val) => val["tempf"]);
+
+    assert.deepEqual(temperatures, ["80.4", "80.8", "80.8", "80.8", "80.2"]);
+
+    // Apply filter
+    manager.handleMessage("Search", { search: "80.8" });
+
+    let filtered: { results: any[] } = manager.handleMessage("GetResults", {
+      page: 0,
+      pageSize: 5,
+    });
+
+    // This proves pagination occurred after filtering because otherwise
+    // we'd have got only three 80.8 values as seen above.
+    assert.deepEqual(
+      filtered.results.map((val) => val["tempf"]),
+      ["80.8", "80.8", "80.8", "80.8"],
+    );
   });
 });
