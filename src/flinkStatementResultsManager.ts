@@ -28,7 +28,9 @@ type MessageType =
   | "StreamPause"
   | "StreamResume"
   | "PreviewResult"
-  | "PreviewAllResults";
+  | "PreviewAllResults"
+  | "Search"
+  | "GetSearchQuery";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -73,6 +75,8 @@ export class FlinkStatementResultsManager {
   private _isResultsFull: Signal<boolean>;
   private _pollingWatch: (() => void) | undefined;
   private _shouldPoll: Signal<boolean>;
+  /** Filter by substring text query. */
+  private _searchQuery: Signal<string | null>;
 
   constructor(
     private os: Scope,
@@ -91,6 +95,7 @@ export class FlinkStatementResultsManager {
     this._isResultsFull = os.signal(false);
     this._pollingWatch = undefined;
     this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
+    this._searchQuery = os.signal<string | null>(null);
     this.setupWatches();
   }
 
@@ -222,19 +227,56 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  /**
+   * Filters results based on the current search query and visible columns.
+   * If visibleColumns is undefined, searches through all columns.
+   * If visibleColumns is defined, only searches through the specified columns.
+   *
+   * @param results - Array of result rows to filter
+   * @param visibleColumns - Optional array of column names to search through. If undefined, searches all columns.
+   * @returns Filtered array of results that match the search query in the specified columns
+   */
+  private filterResultsBySearch(results: any[], visibleColumns: string[] | undefined): any[] {
+    const searchQuery = this._searchQuery();
+    if (searchQuery === null) {
+      return results;
+    }
+
+    const searchLower = searchQuery.toLowerCase();
+    return results.filter((row) =>
+      Object.entries(row)
+        .filter(([key]) => visibleColumns === undefined || visibleColumns.includes(key))
+        .some(([_, value]) => value !== null && String(value).toLowerCase().includes(searchLower)),
+    );
+  }
+
   handleMessage(type: MessageType, body: any): any {
     switch (type) {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
         const paginatedResults = this.getResultsArray().slice(offset, offset + limit);
+        const filteredResults = this.filterResultsBySearch(paginatedResults, body.visibleColumns);
+
         return {
-          results: paginatedResults,
+          results: filteredResults,
         };
       }
       case "GetResultsCount": {
-        const count = this._results().size;
-        return { total: count, filter: null };
+        const results = this.getResultsArray();
+        const filteredResults = this.filterResultsBySearch(results, body.visibleColumns);
+        return {
+          total: results.length,
+          filter: filteredResults.length,
+        };
+      }
+      case "Search": {
+        this._searchQuery(body.search ?? "");
+        this.notifyUI();
+        return null;
+      }
+      case "GetSearchQuery": {
+        return this._searchQuery() ?? "";
       }
       case "GetSchema": {
         if (!this.statement) {
