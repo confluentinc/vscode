@@ -3,7 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
@@ -12,7 +12,7 @@ import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("commands.documents");
 
-export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
+export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CCloudKafkaCluster) {
   if (!(uri instanceof Uri)) {
     return;
   }
@@ -23,7 +23,12 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri) {
     return;
   }
 
-  const pool: CCloudFlinkComputePool | undefined = await flinkComputePoolQuickPick();
+  // if a database is provided, we need to match provider/region when showing the pool quickpick
+  const filter = database
+    ? (pool: CCloudFlinkComputePool) =>
+        pool.provider === database.provider && pool.region === database.region
+    : undefined;
+  const pool: CCloudFlinkComputePool | undefined = await flinkComputePoolQuickPick(filter);
   if (!pool) {
     return;
   }
