@@ -526,6 +526,12 @@
         "icon": "$(confluent-logo)",
         "title": "Set CCloud Flink Compute Pool for Flink Statement",
         "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.document.flinksql.setCCloudDatabase",
+        "icon": "$(confluent-logo)",
+        "title": "Set CCloud Flink Database for Flink Statement",
+        "category": "Confluent: Flink SQL"
       }
     ],
     "configuration": [
@@ -956,6 +962,10 @@
         },
         {
           "command": "confluent.document.flinksql.setCCloudComputePool",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.setCCloudDatabase",
           "when": "false"
         }
       ],

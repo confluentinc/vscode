@@ -34,6 +34,7 @@ export enum WorkspaceStorageKeys {
 /** Keys for use within UriMetadata records */
 export enum UriMetadataKeys {
   FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",
+  FLINK_DATABASE_ID = "flinkDatabaseId",
 }
 
 export enum SecretStorageKeys {
