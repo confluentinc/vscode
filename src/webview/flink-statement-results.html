@@ -116,62 +116,53 @@
 
       <template data-if="this.hasResults()">
         <div class="grid-container">
-            <!-- Settings control positioned outside the grid -->
-            <div
-              class="grid-cell grid-column-header cell-text-overflow grid-settings-control settings-control"
-              popovertarget="columnSettings"
-              data-on-click="window.columnSettings.togglePopover()"
-              data-position="bottom-end"
-              tabindex="-1"
-            >
-              <span class="codicon codicon-gear"></span>
-            </div>
+          <!-- Settings control positioned outside the grid -->
+          <div class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
+            popovertarget="columnSettings" data-on-click="window.columnSettings.togglePopover()"
+            data-position="bottom-end" tabindex="-1">
+            <span class="codicon codicon-gear"></span>
+          </div>
 
-            <table
-              class="grid"
-              cellpadding="0"
-cellspacing="0"
-data-prop-style="this.gridTemplateColumns()"
->
-          <thead class="sticky-table-header">
-            <tr class="grid-row">
-              <template data-for="column of this.visibleColumns() by column">
-                <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
-                  <span data-text="this.columns()[this.column()].title()"></span>
-                  <div class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, this.columns()[this.column()].index)"
-                    data-on-pointermove="this.handleMoveResize(event, this.columns()[this.column()].index)"
-                    data-on-pointerup="this.handleStopResize(event)"></div>
-                </th>
-              </template>
-            </tr>
-          </thead>
-
-          <section popover id="columnSettings" class="column-control">
-            <div class="flex-column" style="--gap: 0">
-              <label>Columns</label>
-              <template data-for="column of this.allColumns() by column">
-                <label class="checkbox">
-                  <input type="checkbox" data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
-                    data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)" />
-                  <span data-text="this.columns()[this.column()].title()"></span>
-                </label>
-              </template>
-            </div>
-          </section>
-
-          <tbody>
-            <template data-for="result of this.snapshot().results">
-              <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())">
+          <table class="grid" cellpadding="0" cellspacing="0" data-prop-style="this.gridTemplateColumns()">
+            <thead class="sticky-table-header">
+              <tr class="grid-row">
                 <template data-for="column of this.visibleColumns() by column">
-                  <td class="grid-cell cell-text-overflow" tabindex="-1"
-                    data-children="((this.columns())[this.column()]).children(this.result())"
-                    data-prop-title="((this.columns())[this.column()]).title()"></td>
+                  <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
+                    <span data-text="this.columns()[this.column()].title()"></span>
+                    <div class="resize-handler"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns()[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns()[this.column()].index)"
+                      data-on-pointerup="this.handleStopResize(event)"></div>
+                  </th>
                 </template>
               </tr>
-            </template>
-          </tbody>
-        </table>
+            </thead>
+
+            <section popover id="columnSettings" class="column-control">
+              <div class="flex-column" style="--gap: 0">
+                <label>Columns</label>
+                <template data-for="column of this.allColumns() by column">
+                  <label class="checkbox">
+                    <input type="checkbox" data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)" />
+                    <span data-text="this.columns()[this.column()].title()"></span>
+                  </label>
+                </template>
+              </div>
+            </section>
+
+            <tbody>
+              <template data-for="result of this.snapshot().results">
+                <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())">
+                  <template data-for="column of this.visibleColumns() by column">
+                    <td class="grid-cell cell-text-overflow" tabindex="-1"
+                      data-children="((this.columns())[this.column()]).children(this.result())"
+                      data-prop-title="((this.columns())[this.column()]).title()"></td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
       </template>
     </section>
 
@@ -369,24 +360,27 @@ data-prop-style="this.gridTemplateColumns()"
       font-size: 28px;
       color: var(--vscode-progressBar-background);
     }
-.grid-container {
-        position: relative;
-      }
-      .grid {
-        padding-left: 26px; /* padding for the settings control width */
-      }
+
+    .grid-container {
+      position: relative;
+    }
+
+    .grid {
+      padding-left: 26px;
+      /* padding for the settings control width */
+    }
 
     .grid-settings-control {
       position: absolute;
-        top: 0;
-        left: 0;
-        width: 26px;
-        height: 26px;
-        display: flex;
-        align-items: center;
+      top: 0;
+      left: 0;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
       justify-content: center;
       cursor: pointer;
-z-index: 2;
+      z-index: 2;
     }
 
     .grid-settings-control:hover {
