@@ -30,7 +30,8 @@ type MessageType =
   | "PreviewResult"
   | "PreviewAllResults"
   | "Search"
-  | "GetSearchQuery";
+  | "GetSearchQuery"
+  | "SetVisibleColumns";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -77,6 +78,8 @@ export class FlinkStatementResultsManager {
   private _shouldPoll: Signal<boolean>;
   /** Filter by substring text query. */
   private _searchQuery: Signal<string | null>;
+  private _visibleColumns: Signal<string[] | null>;
+  private _filteredResults: Signal<any[]>;
 
   constructor(
     private os: Scope,
@@ -96,6 +99,8 @@ export class FlinkStatementResultsManager {
     this._pollingWatch = undefined;
     this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
     this._searchQuery = os.signal<string | null>(null);
+    this._visibleColumns = os.signal<string[] | null>(null);
+    this._filteredResults = os.signal<any[]>([]);
     this.setupWatches();
   }
 
@@ -161,6 +166,7 @@ export class FlinkStatementResultsManager {
           map: currentResults,
           rows: resultsData.data,
         });
+        this._filteredResults(this.filterResultsBySearch());
         // Check if we have more results to fetch
         if (this.extractPageToken(response?.metadata?.next) === undefined) {
           this._moreResults(false);
@@ -236,16 +242,19 @@ export class FlinkStatementResultsManager {
    * @param visibleColumns - Optional array of column names to search through. If undefined, searches all columns.
    * @returns Filtered array of results that match the search query in the specified columns
    */
-  private filterResultsBySearch(results: any[], visibleColumns: string[] | undefined): any[] {
+  private filterResultsBySearch(): any[] {
+    const results = this.getResultsArray();
     const searchQuery = this._searchQuery();
-    if (searchQuery === null) {
+    const visibleColumns = this._visibleColumns();
+
+    if (searchQuery === null || searchQuery.length === 0) {
       return results;
     }
 
     const searchLower = searchQuery.toLowerCase();
     return results.filter((row) =>
       Object.entries(row)
-        .filter(([key]) => visibleColumns === undefined || visibleColumns.includes(key))
+        .filter(([key]) => visibleColumns === null || visibleColumns.includes(key))
         .some(([_, value]) => value !== null && String(value).toLowerCase().includes(searchLower)),
     );
   }
@@ -255,24 +264,25 @@ export class FlinkStatementResultsManager {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const paginatedResults = this.getResultsArray().slice(offset, offset + limit);
-        const filteredResults = this.filterResultsBySearch(paginatedResults, body.visibleColumns);
-
         return {
-          results: filteredResults,
+          results: this._filteredResults().slice(offset, offset + limit),
         };
       }
       case "GetResultsCount": {
-        const results = this.getResultsArray();
-        const filteredResults = this.filterResultsBySearch(results, body.visibleColumns);
         return {
-          total: results.length,
-          filter: filteredResults.length,
+          total: this._results().size,
+          filter: this._filteredResults().length,
         };
       }
       case "Search": {
         this._searchQuery(body.search ?? "");
+        this._filteredResults(this.filterResultsBySearch());
         this.notifyUI();
+        return null;
+      }
+      case "SetVisibleColumns": {
+        this._visibleColumns(body.visibleColumns ?? null);
+        this._filteredResults(this.filterResultsBySearch());
         return null;
       }
       case "GetSearchQuery": {
