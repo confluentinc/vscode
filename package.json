@@ -535,7 +535,7 @@
       },
       {
         "command": "confluent.document.flinksql.resetCCloudMetadata",
-        "icon": "$(x)",
+        "icon": "$(chrome-close)",
         "title": "Reset CCloud Flink Metadata",
         "category": "Confluent: Flink SQL"
       }
