@@ -305,7 +305,7 @@ export class FlinkStatementResultsManager {
       case "PreviewResult": {
         // plural if all results else singular
         const filename = `flink-statement-result${body?.result === undefined ? "s" : ""}-${new Date().getTime()}.json`;
-        const content = body?.result ?? this.getResultsArray();
+        const content = body?.result ?? this._filteredResults();
 
         showJsonPreview(filename, content);
 
