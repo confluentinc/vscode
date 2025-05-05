@@ -115,7 +115,24 @@
       </template>
 
       <template data-if="this.hasResults()">
-        <table class="grid" cellpadding="0" cellspacing="0" data-prop-style="this.gridTemplateColumns()">
+        <div class="grid-container">
+            <!-- Settings control positioned outside the grid -->
+            <div
+              class="grid-cell grid-column-header cell-text-overflow grid-settings-control settings-control"
+              popovertarget="columnSettings"
+              data-on-click="window.columnSettings.togglePopover()"
+              data-position="bottom-end"
+              tabindex="-1"
+            >
+              <span class="codicon codicon-gear"></span>
+            </div>
+
+            <table
+              class="grid"
+              cellpadding="0"
+cellspacing="0"
+data-prop-style="this.gridTemplateColumns()"
+>
           <thead class="sticky-table-header">
             <tr class="grid-row">
               <template data-for="column of this.visibleColumns() by column">
@@ -127,12 +144,6 @@
                     data-on-pointerup="this.handleStopResize(event)"></div>
                 </th>
               </template>
-
-              <th class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
-                popovertarget="columnSettings" data-on-click="window.columnSettings.togglePopover()"
-                data-position="bottom-end" tabindex="-1">
-                <span class="codicon codicon-gear"></span>
-              </th>
             </tr>
           </thead>
 
@@ -358,12 +369,24 @@
       font-size: 28px;
       color: var(--vscode-progressBar-background);
     }
+.grid-container {
+        position: relative;
+      }
+      .grid {
+        padding-left: 26px; /* padding for the settings control width */
+      }
 
     .grid-settings-control {
-      grid-column: -1;
-      grid-row: 1;
-      justify-self: end;
+      position: absolute;
+        top: 0;
+        left: 0;
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+      justify-content: center;
       cursor: pointer;
+z-index: 2;
     }
 
     .grid-settings-control:hover {

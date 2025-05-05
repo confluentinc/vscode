@@ -230,8 +230,7 @@ class FlinkStatementResultsViewModel extends ViewModel {
     if (start == null) return;
     const widths = this.colWidth().slice();
     const newWidth = Math.round(start + event.clientX);
-    // clamp new width in meaningful range so the user doesn't break the whole layout
-    widths[index] = Math.max(4 * 16, Math.min(newWidth, 16 * 16));
+    widths[index] = Math.max(16, newWidth); // Minimum width of 1rem
     this.colWidth(widths);
   }
 
@@ -278,26 +277,38 @@ class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /**
-   * List of columns width, in pixels. The final `value` column is not present,
-   * because it always takes the rest of the space available.
+   * List of column widths, in pixels.
    */
-  colWidth = this.signal(
-    // conveniently expressed in rems (1rem = 16px)
-    // TODO(flink-statement-results-viewer): https://github.com/confluentinc/vscode/issues/1567
-    //                                       Dynamic column widths should be handled by the reusable
-    //                                       component.
-    storage.get()?.colWidth ?? [13 * 16, 5.5 * 16, 6.5 * 16, 6 * 16],
-    // skip extra re-renders if the user didn't move pointer too much
+  colWidth = this.derive(
+    () => {
+      const columnsLength = this.allColumns().length;
+      const storedWidths = storage.get()?.colWidth;
+      if (!storedWidths) {
+        return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
+      }
+      return storedWidths;
+    },
+    // Equality function skips extra re-renders if values are similar
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
   );
 
-  /** The value can be set to `style` prop to pass values to CSS. */
+  /** Set to `style` prop to pass width values to CSS. */
   gridTemplateColumns = this.derive(() => {
-    const columns = this.colWidth().reduce((string: string, width: number, index: number) => {
-      return this.isColumnVisible(index) ? `${string} ${width}px` : string;
-    }, "");
-    return `--grid-template-columns: ${columns} 1fr`;
+    const widths = this.colWidth();
+    const columnNames = this.allColumns();
+    const flags = this.columnVisibilityFlags();
+    // Fallback in case we can't get columns
+    if (widths.length === 0 && columnNames.length === 0) {
+      return "--grid-template-columns: 1fr";
+    }
+    const visibleColumnWidths = columnNames
+      .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
+      .filter((col) => col.isVisible)
+      .map((col) => `${col.width}px`)
+      .join(" ");
+    return `--grid-template-columns: ${visibleColumnWidths}`;
   });
+
   /** Numeric limit of results that need to be fetched. */
   resultLimit = this.resolve(async () => {
     const maxSize = await post("GetMaxSize", { timestamp: this.timestamp() });
