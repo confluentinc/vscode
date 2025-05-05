@@ -98,6 +98,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
     const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList(
+      false, // Don't sanitize options
       templateRequestOptions?.templateCollection,
     );
     let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
@@ -410,14 +411,32 @@ async function pickTemplate(
   return pickedItem?.value;
 }
 
-export async function getTemplatesList(collection?: string): Promise<ScaffoldV1TemplateList> {
+export async function getTemplatesList(
+  sanitizeOptions?: boolean,
+  collection?: string,
+): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
 
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
   const requestBody: ListScaffoldV1TemplatesRequest = {
     template_collection_name: collection ?? "vscode",
   };
-  return await client.listScaffoldV1Templates(requestBody);
+  const templateListResponse = await client.listScaffoldV1Templates(requestBody);
+  if (sanitizeOptions) {
+    const templates = Array.from(templateListResponse.data) as ScaffoldV1Template[];
+    templates.forEach((template) => {
+      const spec = template.spec!;
+      if (spec.options) {
+        const sanitizedOptions = Object.fromEntries(
+          Object.entries(spec.options).filter(([key]) => {
+            return !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret");
+          }),
+        );
+        spec.options = sanitizedOptions;
+      }
+    });
+  }
+  return templateListResponse;
 }
 
 export async function handleProjectScaffoldUri(
