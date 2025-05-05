@@ -78,7 +78,6 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     logger.debug("doc metadata", document.uri.toString(), {
       uriMetadata,
     });
-    const config: WorkspaceConfiguration = workspace.getConfiguration();
 
     // look up all environments since we'll need them to filter for compute pools and Kafka clusters
     // (as databases to match whatever the selected compute pool is, based on provider/region)
@@ -148,7 +147,7 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
  * @param envs The environments to look up the compute pool.
  * @returns The compute pool.
  */
-async function getComputePoolFromMetadata(
+export async function getComputePoolFromMetadata(
   metadata: UriMetadata | undefined,
   envs: CCloudEnvironment[],
 ): Promise<CCloudFlinkComputePool | undefined> {
@@ -170,6 +169,9 @@ async function getComputePoolFromMetadata(
   if (computePool) {
     // explicitly turn into a CCloudFlinkComputePool since `submitFlinkStatementCommand` checks
     // for a CCloudFlinkComputePool instance
+    logger.debug("compute pool found from stored pool ID", {
+      computePool,
+    });
     computePool = new CCloudFlinkComputePool({ ...computePool });
   } else {
     // no need to clear pool metadata since we'll show "Set Compute Pool" codelens
@@ -180,7 +182,7 @@ async function getComputePoolFromMetadata(
   return computePool;
 }
 
-interface CatalogDatabase {
+export interface CatalogDatabase {
   catalog?: CCloudEnvironment;
   database?: CCloudKafkaCluster;
 }
@@ -192,7 +194,7 @@ interface CatalogDatabase {
  * @param computePool Optional: the compute pool to match provider/region against the database.
  * @returns The catalog and database.
  */
-async function getCatalogDatabaseFromMetadata(
+export async function getCatalogDatabaseFromMetadata(
   metadata: UriMetadata | undefined,
   envs: CCloudEnvironment[],
   computePool?: CCloudFlinkComputePool,
@@ -232,6 +234,10 @@ async function getCatalogDatabaseFromMetadata(
     if (cluster.provider === computePool.provider && cluster.region === computePool?.region) {
       // explicitly turn into a CCloudKafkaCluster since `submitFlinkStatementCommand` checks
       // for a CCloudKafkaCluster instance
+      logger.debug("database provider/region matches compute pool provider/region", {
+        database: cluster,
+        computePool,
+      });
       database = CCloudKafkaCluster.create({ ...cluster });
     } else {
       logger.warn("database provider/region does not match compute pool provider/region", {
@@ -241,6 +247,9 @@ async function getCatalogDatabaseFromMetadata(
     }
   } else {
     // no compute pool selected, so we can use the database as-is
+    logger.debug("no compute pool selected, using database without provider/region matching", {
+      database: cluster,
+    });
     database = CCloudKafkaCluster.create({ ...cluster });
   }
 
