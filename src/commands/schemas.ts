@@ -4,16 +4,16 @@ import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/sidecar";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
-import {
-  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
-  logError,
-  showErrorNotificationWithButtons,
-} from "../errors";
+import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import {
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  showErrorNotificationWithButtons,
+} from "../notifications";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";

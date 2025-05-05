@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { logError } from "../errors";
 import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "../featureFlags/evaluation";
 import { IResourceBase, isResource } from "../models/resource";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { titleCase } from "../utils";
 
@@ -26,7 +27,7 @@ export function registerCommandWithLogging(
       ...getCommandArgsContext(args),
     });
     try {
-      await command(...args);
+      return await command(...args);
     } catch (e) {
       if (e instanceof Error) {
         // gather more (possibly-ResponseError) context and send to Sentry (only enabled in

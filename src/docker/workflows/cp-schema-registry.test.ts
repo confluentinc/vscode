@@ -12,7 +12,7 @@ import {
   ContainerCreateResponse,
   ContainerInspectResponse,
 } from "../../clients/docker";
-import * as errors from "../../errors";
+import * as notifications from "../../notifications";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
@@ -96,7 +96,9 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     checkForImageStub = sandbox.stub(workflow, "checkForImage").resolves();
     handleExistingContainersStub = sandbox.stub(workflow, "handleExistingContainers").resolves();
-    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons").resolves();
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
     // assume we have Kafka containers to work off of for most tests
     fetchAndFilterKafkaContainersStub = sandbox
       .stub(workflow, "fetchAndFilterKafkaContainers")

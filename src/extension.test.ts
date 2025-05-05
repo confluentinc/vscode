@@ -8,6 +8,7 @@ import {
   setExtensionContext,
 } from "./context/extension";
 import { ExtensionContextNotSetError } from "./errors";
+import { getRefreshableViewProviders } from "./extension";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
 import { ResourceViewProvider } from "./viewProviders/resources";
@@ -96,6 +97,66 @@ describe("ExtensionContext", () => {
       `${source}: ExtensionContext not set yet`,
     );
   }
+});
+
+describe("Refreshable views tests", () => {
+  /**
+   * The view controller `kind` values for the refreshable view controllers and should have had
+   * refresh commands registered for them / returned by getRefreshableViewProviders().
+   *
+   * When a new one is added, its `kind` attribute value should be added to this list.
+   */
+  const expectedKinds = ["resources", "topics", "schemas", "statements"];
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("getRefreshableViewProviders returns the expected unique view providers / kinds", () => {
+    const seenKinds = new Set<string>();
+    const seenViewProviderConstructorNames = new Set<string>();
+
+    const refreshableViewProviders = getRefreshableViewProviders();
+
+    assert.strictEqual(
+      refreshableViewProviders.length,
+      expectedKinds.length,
+      `Expected ${expectedKinds.length} refreshable view providers, but found ${refreshableViewProviders.length}`,
+    );
+
+    for (const instance of refreshableViewProviders) {
+      assert.ok(
+        !seenKinds.has(instance.kind),
+        `Duplicate kind "${instance.kind}" found in refreshable view providers`,
+      );
+      seenKinds.add(instance.kind);
+
+      assert.ok(
+        !seenViewProviderConstructorNames.has(instance.constructor.name),
+        `Duplicate view provider constructor "${instance.constructor.name}" found`,
+      );
+      seenViewProviderConstructorNames.add(instance.constructor.name);
+    }
+  });
+
+  it("_activateExtension should have registered refresh commands for expected view providers", async () => {
+    const allRegisteredCommands = await vscode.commands.getCommands();
+
+    for (const kind of expectedKinds) {
+      const refreshCommand = allRegisteredCommands.find(
+        (cmd) => cmd === `confluent.${kind}.refresh`,
+      );
+      assert.ok(
+        refreshCommand,
+        `Command confluent.${kind}.refresh not registered; did activate() run correctly?`,
+      );
+
+      // ensure the refresh command works w/o raising error / was able to return
+      // boolean true result.
+      const result = await vscode.commands.executeCommand(refreshCommand);
+      assert.ok(result, `Command ${refreshCommand} failed to execute cleanly`);
+    }
+  });
 });
 
 describe("Extension manifest tests", () => {

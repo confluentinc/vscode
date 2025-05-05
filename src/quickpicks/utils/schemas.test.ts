@@ -7,8 +7,8 @@ import {
 } from "../../../tests/unit/testResources/schema";
 import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
-import * as errors from "../../errors";
 import { LocalResourceLoader, ResourceLoader } from "../../loaders";
+import * as notifications from "../../notifications";
 import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../preferences/constants";
 import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import * as schemaQuickPicks from "../schemas";
@@ -39,7 +39,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
+    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
     // ResourceLoader stubs
     resourceLoaderStub = sandbox.stub(ResourceLoader, "getInstance");

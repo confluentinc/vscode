@@ -1,14 +1,13 @@
-import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { commands, QuickPickItemKind, ThemeIcon, window, workspace } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
-import { showInfoNotificationWithButtons } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
-import { FlinkArtifactsViewProvider } from "../viewProviders/flinkArtifacts";
+import { showInfoNotificationWithButtons } from "../notifications";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { QuickPickItemWithValue } from "./types";
 
@@ -53,6 +52,9 @@ export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePoo
     }
   }
 
+  const config = workspace.getConfiguration("confluent.flink");
+  const defaultComputePoolId = config.get<string>("computePoolId");
+
   if (computePools.length === 0) {
     let login: string = "";
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
@@ -79,10 +81,19 @@ export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePoo
   if (statementsPool) {
     focusedPools.push(statementsPool);
   }
-  const artifactsPool: CCloudFlinkComputePool | null =
-    FlinkArtifactsViewProvider.getInstance().computePool;
+  // TODO: uncomment this if/when we start working with the artifacts view again
+  // const artifactsPool: CCloudFlinkComputePool | null =
+  //   FlinkArtifactsViewProvider.getInstance().computePool;
+  const artifactsPool: CCloudFlinkComputePool | null = null;
   if (artifactsPool) {
     focusedPools.push(artifactsPool);
+  }
+  // Add default compute pool to focused pools if it exists
+  if (defaultComputePoolId) {
+    const defaultPool = computePools.find((pool) => pool.id === defaultComputePoolId);
+    if (defaultPool && !focusedPools.some((pool) => pool.id === defaultComputePoolId)) {
+      focusedPools.push(defaultPool);
+    }
   }
   for (const focusedPool of focusedPools) {
     const focusedPoolIndex: number = computePools.findIndex((pool) => focusedPool.id === pool.id);

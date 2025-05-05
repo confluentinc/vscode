@@ -296,13 +296,6 @@ export class ResourceManager {
     return clusters.find((cluster) => cluster.id === clusterId) ?? null;
   }
 
-  /**
-   * Delete the list of available local Kafka clusters from extension state.
-   */
-  async deleteLocalKafkaClusters(): Promise<void> {
-    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS);
-  }
-
   /** Get the cluster for this topic. May return either a ccloud or local cluster */
   async getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | null> {
     if (isLocal(topic)) {
@@ -373,6 +366,13 @@ export class ResourceManager {
       }
     }
     return null;
+  }
+
+  /**
+   * Delete the list of available local Kafka clusters from extension state.
+   */
+  async deleteLocalKafkaClusters(): Promise<void> {
+    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS);
   }
 
   /**
@@ -614,14 +614,6 @@ export class ResourceManager {
   }
 
   /**
-   * Delete all local topics from workspace state, such as when we notice that the local cluster has been deleted.
-   * or we just started up a new local cluster.
-   */
-  async deleteLocalTopics(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS);
-  }
-
-  /**
    * Return the use-with-storage StateKafkaTopics key for this type of cluster.
    *
    * (not private only for testing)
@@ -629,8 +621,6 @@ export class ResourceManager {
   topicKeyForCluster(cluster: KafkaCluster): WorkspaceStorageKeys {
     if (cluster instanceof CCloudKafkaCluster) {
       return WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS;
-    } else if (cluster instanceof LocalKafkaCluster) {
-      return WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS;
     } else {
       logger.warn("Unknown cluster type", cluster);
       throw new Error("Unknown cluster type");

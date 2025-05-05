@@ -19,7 +19,7 @@ import {
   localSchemaRegistryConnected,
   resourceSearchSet,
 } from "../emitters";
-import { ExtensionContextNotSetError, logError, showErrorNotificationWithButtons } from "../errors";
+import { ExtensionContextNotSetError, logError } from "../errors";
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -59,11 +59,13 @@ import {
   SchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -88,7 +90,10 @@ type ResourceViewProviderData =
   | LocalResources
   | DirectResources;
 
-export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
+export class ResourceViewProvider
+  implements vscode.TreeDataProvider<ResourceViewProviderData>, RefreshableTreeViewProvider
+{
+  readonly kind: string = "resources";
   /** Disposables belonging to this provider to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
   disposables: vscode.Disposable[] = [];

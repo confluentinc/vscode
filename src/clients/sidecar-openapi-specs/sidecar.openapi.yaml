@@ -8,31 +8,28 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.187.0
+  version: 0.194.0
 servers:
-- url: http://127.0.0.1:26636
-  description: Auto generated value
-tags:
-- name: Feature Flags
-  description: Feature flags
+  - url: http://127.0.0.1:26636
+    description: Auto generated value
 paths:
   /:
     get:
       tags:
-      - Password Reset Callback Resource
+        - Password Reset Callback Resource
       parameters:
-      - name: email
-        in: query
-        schema:
-          type: string
-      - name: message
-        in: query
-        schema:
-          type: string
-      - name: success
-        in: query
-        schema:
-          type: boolean
+        - name: email
+          in: query
+          schema:
+            type: string
+        - name: message
+          in: query
+          schema:
+            type: string
+        - name: success
+          in: query
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -43,43 +40,25 @@ paths:
   /api/login/realm:
     get:
       tags:
-      - Login Realm Resource
+        - Login Realm Resource
       responses:
         "200":
           description: OK
           content:
             application/json: {}
-  /api/metadata/security/v2alpha1/authorize:
-    put:
-      requestBody:
-        description: RBAC request body
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RBACRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
   /gateway/v1/callback-vscode-docs:
     get:
       tags:
-      - O Auth Callback Resource
+        - O Auth Callback Resource
       parameters:
-      - name: code
-        in: query
-        schema:
-          type: string
-      - name: state
-        in: query
-        schema:
-          type: string
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -90,24 +69,24 @@ paths:
   /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/partitions/-/consume:
     post:
       tags:
-      - Kafka Consume Resource
+        - Kafka Consume Resource
       parameters:
-      - name: cluster_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: topic_name
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: x-connection-id
-        in: header
-        description: Connection ID
-        required: true
-        schema:
-          type: string
+        - name: cluster_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: topic_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: x-connection-id
+          in: header
+          description: Connection ID
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -123,29 +102,29 @@ paths:
   /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records:
     post:
       tags:
-      - Confluent Cloud Produce Records Resource
+        - Confluent Cloud Produce Records Resource
       parameters:
-      - name: cluster_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: topic_name
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: dry_run
-        in: query
-        schema:
-          default: false
-          type: boolean
-      - name: x-connection-id
-        in: header
-        description: Connection ID
-        required: true
-        schema:
-          type: string
+        - name: cluster_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: topic_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dry_run
+          in: query
+          schema:
+            default: false
+            type: boolean
+        - name: x-connection-id
+          in: header
+          description: Connection ID
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -161,7 +140,7 @@ paths:
   /gateway/v1/connections:
     get:
       tags:
-      - Connections Resource
+        - Connections Resource
       responses:
         "200":
           description: OK
@@ -171,15 +150,16 @@ paths:
                 $ref: "#/components/schemas/ConnectionsList"
     post:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: dry_run
-        in: query
-        schema:
-          description: Whether to validate the connection spec and determine the connection
-            status without creating the connection
-          default: false
-          type: boolean
+        - name: dry_run
+          in: query
+          schema:
+            description:
+              Whether to validate the connection spec and determine the connection status without
+              creating the connection
+            default: false
+            type: boolean
       requestBody:
         content:
           application/json:
@@ -195,13 +175,13 @@ paths:
   /gateway/v1/connections/{id}:
     get:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -211,13 +191,13 @@ paths:
                 $ref: "#/components/schemas/Connection"
     put:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -250,25 +230,25 @@ paths:
                 $ref: "#/components/schemas/Failure"
     delete:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "204":
           description: No Content
     patch:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -299,45 +279,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Failure"
-  /gateway/v1/feature-flags/{id}/value:
-    get:
-      tags:
-      - Feature Flags
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JsonNode"
-        "401":
-          description: Not Authorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "404":
-          description: Feature flag not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "500":
-          description: Internal error parsing feature flags
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
   /gateway/v1/handshake:
     get:
       tags:
-      - Handshake Resource
+        - Handshake Resource
       responses:
         "200":
           description: OK
@@ -348,7 +293,7 @@ paths:
   /gateway/v1/preferences:
     get:
       tags:
-      - Preferences Resource
+        - Preferences Resource
       responses:
         "200":
           description: OK
@@ -358,7 +303,7 @@ paths:
                 $ref: "#/components/schemas/Preferences"
     put:
       tags:
-      - Preferences Resource
+        - Preferences Resource
       requestBody:
         content:
           application/json:
@@ -380,7 +325,7 @@ paths:
   /gateway/v1/version:
     get:
       tags:
-      - Version Resource
+        - Version Resource
       responses:
         "200":
           description: OK
@@ -389,13 +334,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/SidecarVersionResponse"
   /gateway/v1/health:
-    summary: MicroProfile Health provides a way for your application to distribute
-      information about its healthiness state to state whether or not it is able to
-      function properly
+    summary:
+      MicroProfile Health provides a way for your application to distribute information about its
+      healthiness state to state whether or not it is able to function properly
     description: MicroProfile Health Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: "An aggregated view of the Liveness, Readiness and Startup of this\
         \ application"
       description: Check the health of the application
@@ -420,12 +365,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
   /gateway/v1/health/live:
-    summary: Liveness checks are utilized to tell whether the application should be
-      restarted
+    summary: Liveness checks are utilized to tell whether the application should be restarted
     description: MicroProfile Health - Liveness Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: The Liveness check of this application
       description: Check the liveness of the application
       operationId: microprofile_health_liveness
@@ -449,12 +393,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
   /gateway/v1/health/ready:
-    summary: Readiness checks are used to tell whether the application is able to
-      process requests
+    summary: Readiness checks are used to tell whether the application is able to process requests
     description: MicroProfile Health - Readiness Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: The Readiness check of this application
       description: Check the readiness of the application
       operationId: microprofile_health_readiness
@@ -482,7 +425,7 @@ paths:
     description: MicroProfile Health - Startup Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: The Startup check of this application
       description: Check the startup of the application
       operationId: microprofile_health_startup
@@ -507,22 +450,11 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
 components:
   schemas:
-    Action:
-      type: object
-      properties:
-        resourceType:
-          type: string
-        resourceName:
-          type: string
-        operation:
-          type: string
-        scope:
-          $ref: "#/components/schemas/Scope"
     ApiKeyAndSecret:
       description: API key and secret authentication credentials
       required:
-      - api_key
-      - api_secret
+        - api_key
+        - api_secret
       type: object
       properties:
         api_key:
@@ -536,7 +468,7 @@ components:
           minLength: 1
           type: string
           allOf:
-          - $ref: "#/components/schemas/ApiSecret"
+            - $ref: "#/components/schemas/ApiSecret"
     ApiSecret:
       description: A user-provided API secret that is always masked in responses
       maxLength: 1024
@@ -561,7 +493,7 @@ components:
     Authentication:
       description: The authentication-related status (deprecated).
       required:
-      - status
+        - status
       type: object
       properties:
         status:
@@ -575,8 +507,8 @@ components:
     BasicCredentials:
       description: Basic authentication credentials
       required:
-      - username
-      - password
+        - username
+        - password
       type: object
       properties:
         username:
@@ -590,51 +522,53 @@ components:
           minLength: 1
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
       type: object
       properties:
         organization_id:
-          description: The identifier of the CCloud organization to use. The user's
-            default organization is used when absent.
+          description:
+            The identifier of the CCloud organization to use. The user's default organization is
+            used when absent.
           maxLength: 36
           minLength: 36
           type: string
         ide_auth_callback_uri:
-          description: The URI that users will be redirected to after successfully
-            completing the authentication flow with Confluent Cloud.
+          description:
+            The URI that users will be redirected to after successfully completing the
+            authentication flow with Confluent Cloud.
           maxLength: 200
           minLength: 10
           type: string
     CCloudStatus:
       description: The status related to CCloud.
       required:
-      - state
+        - state
       type: object
       properties:
         state:
           description: The state of the connection to CCloud.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectedState"
+            - $ref: "#/components/schemas/ConnectedState"
         requires_authentication_at:
           description: "If the connection's auth context holds a valid token, this\
             \ attribute holds the time at which the user must re-authenticate because,\
             \ for instance, the refresh token reached the end of its absolute lifetime."
           type: string
           allOf:
-          - $ref: "#/components/schemas/Instant"
+            - $ref: "#/components/schemas/Instant"
         user:
           description: "Information about the authenticated principal, if known."
           type: object
           allOf:
-          - $ref: "#/components/schemas/UserInfo"
+            - $ref: "#/components/schemas/UserInfo"
         errors:
           description: Errors related to the connection to the Kafka cluster.
           type: object
           allOf:
-          - $ref: "#/components/schemas/AuthErrors"
+            - $ref: "#/components/schemas/AuthErrors"
     CollectionMetadata:
       type: object
       properties:
@@ -647,20 +581,20 @@ components:
           type: integer
     ConnectedState:
       enum:
-      - NONE
-      - ATTEMPTING
-      - SUCCESS
-      - EXPIRED
-      - FAILED
+        - NONE
+        - ATTEMPTING
+        - SUCCESS
+        - EXPIRED
+        - FAILED
       type: string
     Connection:
       required:
-      - api_version
-      - kind
-      - id
-      - metadata
-      - spec
-      - status
+        - api_version
+        - kind
+        - id
+        - metadata
+        - spec
+        - status
       type: object
       properties:
         api_version:
@@ -701,31 +635,31 @@ components:
           description: The type of connection resource.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectionType"
+            - $ref: "#/components/schemas/ConnectionType"
         ccloud_config:
           description: The details for connecting to CCloud.
           type: object
           allOf:
-          - $ref: "#/components/schemas/CCloudConfig"
+            - $ref: "#/components/schemas/CCloudConfig"
         local_config:
           description: The details for connecting to Confluent Local.
           type: object
           allOf:
-          - $ref: "#/components/schemas/LocalConfig"
+            - $ref: "#/components/schemas/LocalConfig"
         kafka_cluster:
           description: "The details for connecting to a CCloud, Confluent Platform,\
             \ or Apache Kafka cluster."
           type: object
           allOf:
-          - $ref: "#/components/schemas/KafkaClusterConfig"
+            - $ref: "#/components/schemas/KafkaClusterConfig"
         schema_registry:
           description: The details for connecting to a Schema Registry.
           type: object
           allOf:
-          - $ref: "#/components/schemas/SchemaRegistryConfig"
+            - $ref: "#/components/schemas/SchemaRegistryConfig"
     ConnectionStatus:
       required:
-      - authentication
+        - authentication
       type: object
       properties:
         ccloud:
@@ -738,17 +672,17 @@ components:
           $ref: "#/components/schemas/Authentication"
     ConnectionType:
       enum:
-      - LOCAL
-      - PLATFORM
-      - CCLOUD
-      - DIRECT
+        - LOCAL
+        - PLATFORM
+        - CCLOUD
+        - DIRECT
       type: string
     ConnectionsList:
       required:
-      - api_version
-      - kind
-      - metadata
-      - data
+        - api_version
+        - kind
+        - metadata
+        - data
       type: object
       properties:
         api_version:
@@ -781,33 +715,17 @@ components:
             - The Kafka serializer/deserializer known to sidecar failed to parse the schematized bytes
             (meaning the schema id was present in the magic bytes, but our classes could not interpret the rest of the bytes.)
       enum:
-      - AVRO
-      - JSONSCHEMA
-      - PROTOBUF
-      - JSON
-      - UTF8_STRING
-      - RAW_BYTES
+        - AVRO
+        - JSONSCHEMA
+        - PROTOBUF
+        - JSON
+        - UTF8_STRING
+        - RAW_BYTES
       type: string
     Date:
       format: date
       type: string
       example: 2022-03-10
-    Error:
-      description: Describes a particular error encountered while performing an operation.
-      type: object
-      properties:
-        code:
-          type: string
-        status:
-          type: string
-        title:
-          type: string
-        id:
-          type: string
-        detail:
-          type: string
-        source:
-          $ref: "#/components/schemas/JsonNode"
     ExceededFields:
       type: object
       properties:
@@ -816,8 +734,8 @@ components:
         value:
           type: boolean
     Failure:
-      description: Provides overall information about problems encountered while performing
-        an operation.
+      description:
+        Provides overall information about problems encountered while performing an operation.
       type: object
       properties:
         status:
@@ -831,11 +749,11 @@ components:
         errors:
           type: array
           items:
-            $ref: "#/components/schemas/Error"
+            $ref: "#/components/schemas/SidecarError"
     HashAlgorithm:
       enum:
-      - SCRAM_SHA_256
-      - SCRAM_SHA_512
+        - SCRAM_SHA_256
+        - SCRAM_SHA_512
       type: string
     Instant:
       format: date-time
@@ -892,25 +810,26 @@ components:
           type: boolean
     JsonNodeType:
       enum:
-      - ARRAY
-      - BINARY
-      - BOOLEAN
-      - MISSING
-      - "NULL"
-      - NUMBER
-      - OBJECT
-      - POJO
-      - STRING
+        - ARRAY
+        - BINARY
+        - BOOLEAN
+        - MISSING
+        - "NULL"
+        - NUMBER
+        - OBJECT
+        - POJO
+        - STRING
       type: string
     KafkaClusterConfig:
       description: Kafka cluster configuration.
       required:
-      - bootstrap_servers
+        - bootstrap_servers
       type: object
       properties:
         bootstrap_servers:
-          description: A list of host/port pairs to use for establishing the initial
-            connection to the Kafka cluster.
+          description:
+            A list of host/port pairs to use for establishing the initial connection to the Kafka
+            cluster.
           maxLength: 256
           minLength: 1
           type: string
@@ -918,11 +837,11 @@ components:
           description: "The credentials for the Kafka cluster, or null if no authentication\
             \ is required"
           oneOf:
-          - $ref: "#/components/schemas/BasicCredentials"
-          - $ref: "#/components/schemas/ApiKeyAndSecret"
-          - $ref: "#/components/schemas/OAuthCredentials"
-          - $ref: "#/components/schemas/ScramCredentials"
-          - $ref: "#/components/schemas/KerberosCredentials"
+            - $ref: "#/components/schemas/BasicCredentials"
+            - $ref: "#/components/schemas/ApiKeyAndSecret"
+            - $ref: "#/components/schemas/OAuthCredentials"
+            - $ref: "#/components/schemas/ScramCredentials"
+            - $ref: "#/components/schemas/KerberosCredentials"
           nullable: true
         ssl:
           description: "The SSL configuration for connecting to the Kafka cluster.\
@@ -931,34 +850,34 @@ components:
             \ unset."
           type: object
           allOf:
-          - $ref: "#/components/schemas/TLSConfig"
+            - $ref: "#/components/schemas/TLSConfig"
           nullable: true
     KafkaClusterStatus:
       description: The status related to the specified Kafka cluster.
       required:
-      - state
+        - state
       type: object
       properties:
         state:
           description: The state of the connection to the Kafka cluster.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectedState"
+            - $ref: "#/components/schemas/ConnectedState"
         user:
           description: "Information about the authenticated principal, if known."
           type: object
           allOf:
-          - $ref: "#/components/schemas/UserInfo"
+            - $ref: "#/components/schemas/UserInfo"
         errors:
           description: Errors related to the connection to the Kafka cluster.
           type: object
           allOf:
-          - $ref: "#/components/schemas/AuthErrors"
+            - $ref: "#/components/schemas/AuthErrors"
     KerberosCredentials:
       description: Kerberos authentication credentials
       required:
-      - principal
-      - keytab_path
+        - principal
+        - keytab_path
       type: object
       properties:
         principal:
@@ -968,8 +887,9 @@ components:
           description: The Kerberos keytab file path.
           type: string
         service_name:
-          description: Service name that matches the primary name of the Kafka brokers
-            configured in the Broker JAAS file. Defaults to 'kafka'.
+          description:
+            Service name that matches the primary name of the Kafka brokers configured in the Broker
+            JAAS file. Defaults to 'kafka'.
           default: kafka
           type: string
     KeyOrValueMetadata:
@@ -982,12 +902,13 @@ components:
           $ref: "#/components/schemas/DataFormat"
     KeyStore:
       required:
-      - path
+        - path
       type: object
       properties:
         path:
-          description: The path to the local key store file. Only specified if client
-            needs to be authenticated by the server (mutual TLS).
+          description:
+            The path to the local key store file. Only specified if client needs to be authenticated
+            by the server (mutual TLS).
           maxLength: 256
           type: string
         password:
@@ -997,24 +918,23 @@ components:
             \ format."
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
           nullable: true
         type:
           description: The file format of the local key store file.
           default: JKS
           type: string
           allOf:
-          - $ref: "#/components/schemas/StoreType"
+            - $ref: "#/components/schemas/StoreType"
           nullable: true
         key_password:
           description: The password of the private key in the local key store file.
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
           nullable: true
     LocalConfig:
-      description: Configuration when using Confluent Local and optionally a local
-        Schema Registry.
+      description: Configuration when using Confluent Local and optionally a local Schema Registry.
       type: object
       properties:
         schema-registry-uri:
@@ -1024,8 +944,8 @@ components:
     OAuthCredentials:
       description: OAuth 2.0 authentication credentials
       required:
-      - tokens_url
-      - client_id
+        - tokens_url
+        - client_id
       type: object
       properties:
         tokens_url:
@@ -1033,27 +953,28 @@ components:
           maxLength: 256
           type: string
         client_id:
-          description: The public identifier for the application as registered with
-            the OAuth 2.0 identity provider.
+          description:
+            The public identifier for the application as registered with the OAuth 2.0 identity
+            provider.
           maxLength: 128
           minLength: 1
           type: string
         client_secret:
-          description: The client secret known only to the application and the OAuth
-            2.0 identity provider.
+          description:
+            The client secret known only to the application and the OAuth 2.0 identity provider.
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
         scope:
-          description: The scope to use. The scope is optional and required only when
-            your identity provider doesn't have a default scope or your groups claim
-            is linked to a scope path to use when connecting to the external service.
+          description:
+            The scope to use. The scope is optional and required only when your identity provider
+            doesn't have a default scope or your groups claim is linked to a scope path to use when
+            connecting to the external service.
           maxLength: 256
           type: string
         connect_timeout_millis:
           format: int32
-          description: The timeout in milliseconds when connecting to your identity
-            provider.
+          description: The timeout in milliseconds when connecting to your identity provider.
           minimum: 0
           type: integer
         ccloud_logical_cluster_id:
@@ -1132,9 +1053,9 @@ components:
       type: string
     Preferences:
       required:
-      - api_version
-      - kind
-      - spec
+        - api_version
+        - kind
+        - spec
       type: object
       properties:
         api_version:
@@ -1147,7 +1068,7 @@ components:
           $ref: "#/components/schemas/PreferencesSpec"
     PreferencesMetadata:
       required:
-      - self
+        - self
       type: object
       properties:
         self:
@@ -1197,7 +1118,7 @@ components:
         data: {}
     ProduceRequestHeader:
       required:
-      - name
+        - name
       type: object
       properties:
         name:
@@ -1207,7 +1128,7 @@ components:
           type: string
     ProduceResponse:
       required:
-      - error_code
+        - error_code
       type: object
       properties:
         error_code:
@@ -1233,8 +1154,8 @@ components:
           $ref: "#/components/schemas/ProduceResponseData"
     ProduceResponseData:
       required:
-      - size
-      - type
+        - size
+        - type
       type: object
       properties:
         size:
@@ -1250,15 +1171,6 @@ components:
         schema_version:
           format: int32
           type: integer
-    RBACRequest:
-      type: object
-      properties:
-        userPrincipal:
-          type: string
-        actions:
-          type: array
-          items:
-            $ref: "#/components/schemas/Action"
     RecordMetadata:
       type: object
       properties:
@@ -1269,7 +1181,7 @@ components:
     SchemaRegistryConfig:
       description: Schema Registry configuration.
       required:
-      - uri
+        - uri
       type: object
       properties:
         id:
@@ -1285,9 +1197,9 @@ components:
           description: "The credentials for the Schema Registry, or null if no authentication\
             \ is required"
           oneOf:
-          - $ref: "#/components/schemas/BasicCredentials"
-          - $ref: "#/components/schemas/ApiKeyAndSecret"
-          - $ref: "#/components/schemas/OAuthCredentials"
+            - $ref: "#/components/schemas/BasicCredentials"
+            - $ref: "#/components/schemas/ApiKeyAndSecret"
+            - $ref: "#/components/schemas/OAuthCredentials"
           nullable: true
         ssl:
           description: "The SSL configuration for connecting to Schema Registry. If\
@@ -1295,53 +1207,42 @@ components:
             \ set `enabled` to false."
           type: object
           allOf:
-          - $ref: "#/components/schemas/TLSConfig"
+            - $ref: "#/components/schemas/TLSConfig"
           nullable: true
     SchemaRegistryStatus:
       description: The status related to the specified Schema Registry.
       required:
-      - state
+        - state
       type: object
       properties:
         state:
           description: The state of the connection to the Schema Registry.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectedState"
+            - $ref: "#/components/schemas/ConnectedState"
         user:
           description: "Information about the authenticated principal, if known."
           type: object
           allOf:
-          - $ref: "#/components/schemas/UserInfo"
+            - $ref: "#/components/schemas/UserInfo"
         errors:
           description: Errors related to the connection to the Schema Registry.
           type: object
           allOf:
-          - $ref: "#/components/schemas/AuthErrors"
-    Scope:
-      type: object
-      properties:
-        clusters:
-          type: object
-          additionalProperties:
-            type: string
-        path:
-          type: array
-          items:
-            type: string
+            - $ref: "#/components/schemas/AuthErrors"
     ScramCredentials:
       description: Scram authentication credentials
       required:
-      - hash_algorithm
-      - scram_username
-      - scram_password
+        - hash_algorithm
+        - scram_username
+        - scram_password
       type: object
       properties:
         hash_algorithm:
           description: Hash algorithm
           type: string
           allOf:
-          - $ref: "#/components/schemas/HashAlgorithm"
+            - $ref: "#/components/schemas/HashAlgorithm"
         scram_username:
           description: The username to use when connecting to the external service.
           maxLength: 64
@@ -1353,12 +1254,28 @@ components:
           minLength: 1
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
     SidecarAccessToken:
       type: object
       properties:
         auth_secret:
           type: string
+    SidecarError:
+      description: Describes a particular error encountered while performing an operation.
+      type: object
+      properties:
+        code:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+        id:
+          type: string
+        detail:
+          type: string
+        source:
+          $ref: "#/components/schemas/JsonNode"
     SidecarVersionResponse:
       type: object
       properties:
@@ -1398,27 +1315,27 @@ components:
             $ref: "#/components/schemas/PartitionConsumeData"
     Status:
       enum:
-      - NO_TOKEN
-      - VALID_TOKEN
-      - INVALID_TOKEN
-      - FAILED
+        - NO_TOKEN
+        - VALID_TOKEN
+        - INVALID_TOKEN
+        - FAILED
       type: string
     StoreType:
       enum:
-      - JKS
-      - PKCS12
-      - PEM
-      - UNKNOWN
+        - JKS
+        - PKCS12
+        - PEM
+        - UNKNOWN
       type: string
     TLSConfig:
       description: SSL configuration
       required:
-      - enabled
+        - enabled
       type: object
       properties:
         verify_hostname:
-          description: Whether to verify the server certificate hostname. Defaults
-            to true if not set.
+          description:
+            Whether to verify the server certificate hostname. Defaults to true if not set.
           default: true
           type: boolean
         enabled:
@@ -1426,33 +1343,33 @@ components:
           default: true
           type: boolean
         truststore:
-          description: The trust store configuration for authenticating the server's
-            certificate.
+          description: The trust store configuration for authenticating the server's certificate.
           type: object
           allOf:
-          - $ref: "#/components/schemas/TrustStore"
+            - $ref: "#/components/schemas/TrustStore"
           nullable: true
         keystore:
           description: "The key store configuration that will identify and authenticate\
             \ the client to the server, required for mutual TLS (mTLS)"
           type: object
           allOf:
-          - $ref: "#/components/schemas/KeyStore"
+            - $ref: "#/components/schemas/KeyStore"
           nullable: true
     TimestampType:
       enum:
-      - NO_TIMESTAMP_TYPE
-      - CREATE_TIME
-      - LOG_APPEND_TIME
+        - NO_TIMESTAMP_TYPE
+        - CREATE_TIME
+        - LOG_APPEND_TIME
       type: string
     TrustStore:
       required:
-      - path
+        - path
       type: object
       properties:
         path:
-          description: The path to the local trust store file. Required for authenticating
-            the server's certificate.
+          description:
+            The path to the local trust store file. Required for authenticating the server's
+            certificate.
           maxLength: 256
           type: string
         password:
@@ -1462,14 +1379,14 @@ components:
             \ format."
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
           nullable: true
         type:
           description: The file format of the local trust store file
           default: JKS
           type: string
           allOf:
-          - $ref: "#/components/schemas/StoreType"
+            - $ref: "#/components/schemas/StoreType"
           nullable: true
     UserInfo:
       type: object
@@ -1489,22 +1406,22 @@ components:
     HealthResponse:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
+        status:
+          enum:
+            - UP
+            - DOWN
+          type: string
     HealthCheck:
       type: object
       properties:
         status:
           enum:
-          - UP
-          - DOWN
+            - UP
+            - DOWN
           type: string
         data:
           type: object

@@ -21,6 +21,7 @@ import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -32,7 +33,10 @@ const logger = new Logger("viewProviders.schemas");
  */
 type SchemasViewProviderData = Subject | Schema;
 
-export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewProviderData> {
+export class SchemasViewProvider
+  implements vscode.TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
+{
+  readonly kind = "schemas";
   /** Disposables belonging to this provider to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
   disposables: vscode.Disposable[] = [];

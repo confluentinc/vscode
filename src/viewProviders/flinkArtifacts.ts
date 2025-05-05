@@ -9,6 +9,7 @@ export class FlinkArtifactsViewProvider
   extends BaseViewProvider<CCloudFlinkComputePool, FlinkArtifact>
   implements TreeDataProvider<FlinkArtifact>
 {
+  readonly kind = "flinkArtifacts";
   loggerName = "viewProviders.flinkArtifacts";
   viewId = "confluent-flink-artifacts";
 

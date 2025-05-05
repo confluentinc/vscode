@@ -12,6 +12,7 @@ import {
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
+import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
@@ -279,10 +280,7 @@ export async function copyBootstrapServers(item: KafkaCluster) {
   }
 
   // Strip away any protocol:// prefix from each comma separated bootstrap server
-  const stripped = bootstrapServers
-    .split(",")
-    .map((server) => server.replace(/^[^:]+:\/\//, ""))
-    .join(",");
+  const stripped = removeProtocolPrefix(bootstrapServers);
 
   await vscode.env.clipboard.writeText(stripped);
   vscode.window.showInformationMessage(`Copied "${stripped}" to clipboard.`);

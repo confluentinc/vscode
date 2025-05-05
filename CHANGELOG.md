@@ -6,7 +6,15 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- Configurable default settings for `compute pool` and `database` for FlinkSQL operations
+
+## 1.2.0
+
+### Added
+
 - Clicking / selecting a Flink statement will open its SQL statement in a read-only document.
+- Flink statement view now offers a 'reload' action to force a refresh of the statements from the
+  displayed environment or compute cluster context.
 - New actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new
   project. The project generation form will still be opened, and known form fields will be filled in
   automatically for the clicked resource.

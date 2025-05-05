@@ -1,11 +1,20 @@
-import { commands, Disposable } from "vscode";
+import { commands, Disposable, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   currentFlinkArtifactsPoolChanged,
   currentFlinkStatementsResourceChanged,
 } from "../emitters";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { flinkComputePoolQuickPickWithViewProgress } from "../quickpicks/flinkComputePools";
+import {
+  flinkComputePoolQuickPick,
+  flinkComputePoolQuickPickWithViewProgress,
+} from "../quickpicks/flinkComputePools";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
+import { KafkaCluster } from "../models/kafkaCluster";
+import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
+import { Logger } from "../logging";
+
+const logger = new Logger("commands.flinkComputePools");
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
@@ -60,6 +69,36 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
   commands.executeCommand("confluent-flink-artifacts.focus");
 }
 
+/**
+ * Show a quickpick to select a default setting for {@link FlinkComputePool} and database
+ * for Flink SQL operations.
+ */
+export async function configureFlinkDefaults() {
+  const computePool = await flinkComputePoolQuickPick();
+  if (!computePool) {
+    logger.debug("No compute pool selected & none found in configuration, skipping flink config");
+    return;
+  }
+  await workspace.getConfiguration().update(FLINK_CONFIG_COMPUTE_POOL, computePool?.id, false);
+
+  const databaseCluster: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
+  if (!databaseCluster) {
+    logger.debug("User canceled the default database quickpick");
+    return;
+  }
+  // Note: we can use name or ID for Language Server, but name used in Cloud UI since what you send is what shows in completions documentation
+  await workspace.getConfiguration().update(FLINK_CONFIG_DATABASE, databaseCluster.name, false);
+
+  window.showInformationMessage("Flink SQL defaults updated.", "View").then((selection) => {
+    if (selection === "View") {
+      commands.executeCommand(
+        "workbench.action.openSettings",
+        "@ext:confluentinc.vscode-confluent flink",
+      );
+    }
+  });
+}
+
 export function registerFlinkComputePoolCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
@@ -74,5 +113,6 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
       "confluent.artifacts.flink-compute-pool.select",
       selectPoolForArtifactsViewCommand,
     ),
+    registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),
   ];
 }

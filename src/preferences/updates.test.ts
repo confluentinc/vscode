@@ -8,6 +8,7 @@ import {
   ResponseError,
 } from "../clients/sidecar";
 import * as errors from "../errors";
+import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import {
   DEFAULT_SSL_PEM_PATHS,
@@ -48,7 +49,10 @@ describe("preferences/updates", function () {
     });
 
     // stub the notifications
-    showErrorNotificationWithButtonsStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
+    showErrorNotificationWithButtonsStub = sandbox.stub(
+      notifications,
+      "showErrorNotificationWithButtons",
+    );
   });
 
   afterEach(function () {

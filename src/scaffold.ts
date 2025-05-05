@@ -14,14 +14,18 @@ import {
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
-import { logError, showErrorNotificationWithButtons } from "./errors";
+import { logError } from "./errors";
+import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
+import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
+import { showErrorNotificationWithButtons } from "./notifications";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
 import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
+import { removeProtocolPrefix } from "./utils/bootstrapServers";
 import { fileUriExists } from "./utils/file";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -33,7 +37,9 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 interface PrefilledTemplateOptions {
+  templateCollection?: string;
   templateName?: string;
+  templateType?: string;
   [key: string]: string | undefined;
 }
 const logger = new Logger("scaffold");
@@ -46,42 +52,87 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   ];
 }
 
-async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) {
+async function resourceScaffoldProjectRequest(
+  item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
+) {
   if (item instanceof KafkaCluster) {
+    const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
     return await scaffoldProjectRequest({
-      bootstrap_server: item.bootstrapServers,
-      cc_bootstrap_server: item.bootstrapServers,
+      bootstrap_server: bootstrapServers,
+      cc_bootstrap_server: bootstrapServers,
+      templateType: "kafka",
     });
   } else if (item instanceof KafkaTopic) {
     const cluster = await getResourceManager().getClusterForTopic(item);
+    if (!cluster) {
+      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
+      return;
+    }
+    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
     return await scaffoldProjectRequest({
-      bootstrap_server: cluster?.bootstrapServers,
-      cc_bootstrap_server: cluster?.bootstrapServers,
+      bootstrap_server: bootstrapServers,
+      cc_bootstrap_server: bootstrapServers,
       cc_topic: item.name,
       topic: item.name,
+      templateType: "kafka",
+    });
+  } else if (item instanceof CCloudFlinkComputePool) {
+    const organizationId = await CCloudResourceLoader.getInstance().getOrganizationId();
+    return await scaffoldProjectRequest({
+      cc_environment_id: item.environmentId,
+      cc_organization_id: organizationId,
+      cloud_region: item.region,
+      cloud_provider: item.provider,
+      cc_compute_pool_id: item.id,
+      templateType: "flink",
     });
   }
 }
 
 export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledTemplateOptions) => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
+  const templateType = templateRequestOptions?.templateType;
   try {
-    const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList();
+    // should only be using a templateCollection if this came from a URI; by default all other uses
+    // will default to the "vscode" collection
+    const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList(
+      templateRequestOptions?.templateCollection,
+    );
     let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
     if (templateRequestOptions && !templateRequestOptions.templateName) {
       // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
       // templates that are tagged as producer or consumer but with a quickpick
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
-        const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
-        return hasProducerOrConsumer;
+
+        if (templateType === "flink") {
+          return tags.includes("apache flink") || tags.includes("table api");
+        } else if (templateType === "kafka") {
+          return tags.includes("producer") || tags.includes("consumer");
+        }
+
+        // If no specific type, show all templates with producer or consumer tags
+        return tags.includes("producer") || tags.includes("consumer");
       });
+
       pickedTemplate = await pickTemplate(templateList);
     } else if (templateRequestOptions && templateRequestOptions.templateName) {
       // Handling from a URI where there is a template name matched and quickpick is not needed
       pickedTemplate = templateList.find(
         (template) => template.spec!.name === templateRequestOptions.templateName,
       );
+      if (!pickedTemplate) {
+        const errMsg =
+          "Project template not found. Check the template name and collection and try again.";
+        logError(new Error(errMsg), "template not found", {
+          extra: {
+            templateName: templateRequestOptions.templateName,
+            templateCollection: templateRequestOptions.templateCollection,
+          },
+        });
+        showErrorNotificationWithButtons(errMsg);
+        return;
+      }
     } else {
       // If no arguments are passed, show all templates
       pickedTemplate = await pickTemplate(templateList);
@@ -110,6 +161,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   }
   logUsage(UserEvent.ProjectScaffoldingAction, {
     status: "template picked",
+    templateCollection: pickedTemplate.spec!.template_collection?.id,
     templateId: pickedTemplate.spec!.name,
     templateName: pickedTemplate.spec!.display_name,
     itemType: telemetrySource,
@@ -150,6 +202,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
         value = optionValue || "";
       }
       optionValues[option] = value;
+      properties.initial_value = typeof value === "boolean" ? value.toString() : value;
     } else {
       optionValues[option] = properties.initial_value ?? "";
     }
@@ -176,6 +229,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
       case "Submit": {
         logUsage(UserEvent.ProjectScaffoldingAction, {
           status: "form submitted",
+          templateCollection: templateSpec.template_collection?.id,
           templateId: templateSpec.name,
           templateName: templateSpec.display_name,
           itemType: telemetrySource,
@@ -231,6 +285,7 @@ export async function applyTemplate(
       // This means the user cancelled @ save dialog. Show a message and return
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "cancelled before save",
+        templateCollection: pickedTemplate.spec!.template_collection?.id,
         templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
         itemType: telemetrySource,
@@ -244,6 +299,7 @@ export async function applyTemplate(
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
+      templateCollection: pickedTemplate.spec!.template_collection?.id,
       templateId: pickedTemplate.spec!.name,
       templateName: pickedTemplate.spec!.display_name,
       itemType: telemetrySource,
@@ -262,6 +318,7 @@ export async function applyTemplate(
       const keepsExistingWindow = selection.title === "Open in New Window";
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "project folder opened",
+        templateCollection: pickedTemplate.spec!.template_collection?.id,
         templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
         keepsExistingWindow,
@@ -351,12 +408,15 @@ async function pickTemplate(
   return pickedItem?.value;
 }
 
-export async function getTemplatesList(sanitizeOptions = false): Promise<ScaffoldV1TemplateList> {
+export async function getTemplatesList(
+  sanitizeOptions = false,
+  collection?: string,
+): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
 
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
   const requestBody: ListScaffoldV1TemplatesRequest = {
-    template_collection_name: "vscode",
+    template_collection_name: collection ?? "vscode",
   };
   const templateListResponse = await client.listScaffoldV1Templates(requestBody);
   if (sanitizeOptions) {
@@ -398,7 +458,11 @@ export async function handleProjectScaffoldUri(
     async (progress) => {
       progress.report({ message: "Applying template..." });
       if (isFormNeeded) {
-        return await scaffoldProjectRequest({ templateName: template, ...options });
+        return await scaffoldProjectRequest({
+          templateCollection: collection,
+          templateName: template,
+          ...options,
+        });
       }
       return await applyTemplate(
         {
@@ -416,21 +480,27 @@ export async function handleProjectScaffoldUri(
 
   if (result) {
     if (!result.success) {
-      if (result.message !== "Project generation canceled before save.") {
+      if (result.message !== "Project generation cancelled before save.") {
         showErrorNotificationWithButtons(
           "Error generating project. Check the template options and try again.",
         );
         logUsage(UserEvent.ProjectScaffoldingAction, {
           status: "URI handling failed",
+          templateCollection: collection,
           templateId: template,
           itemType: "uri",
         });
       }
       // show the form so the user can adjust inputs as needed
-      await scaffoldProjectRequest({ templateName: template, ...options });
+      await scaffoldProjectRequest({
+        templateCollection: collection,
+        templateName: template,
+        ...options,
+      });
     } else {
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "URI handling succeeded",
+        templateCollection: collection,
         templateId: template,
         itemType: "uri",
       });

@@ -6,7 +6,7 @@ import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
-import * as errors from "../errors";
+import * as notifications from "../notifications";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 import * as quickpicks from "../quickpicks/localResources";
 import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
@@ -29,7 +29,9 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons").resolves();
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
 
     // default to Docker being available for majority of tests
     isDockerAvailableStub = sandbox.stub(dockerConfigs, "isDockerAvailable").resolves(true);

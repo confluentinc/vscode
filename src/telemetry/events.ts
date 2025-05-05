@@ -27,6 +27,7 @@ export enum UserEvent {
   ToolInvocationTimeout = "Tool Invocation Timeout",
   ToolInvocationFailure = "Tool Invocation Failure",
   ToolInvocationWarning = "Tool Invocation Warning",
+  FlinkStatementAction = "Flink Statement Action",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */

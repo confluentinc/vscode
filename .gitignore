@@ -108,7 +108,6 @@ TEST-results.xml
 *v8.log
 /lib/
 
-src/graphql/sidecarGraphQL.d.ts
 openapitools.json
 test-results
 

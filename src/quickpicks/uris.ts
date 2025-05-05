@@ -29,6 +29,30 @@ export async function uriQuickpick(
 
   const filenameUriMap: Map<string, Uri> = new Map();
 
+  const currentDocument: TextDocument | undefined = window.activeTextEditor?.document;
+  let currentDocumentItem: QuickPickItem | undefined;
+
+  if (
+    currentDocument &&
+    (!uriSchemes.length || uriSchemes.includes(currentDocument.uri.scheme)) &&
+    (!editorLanguageIds.length || editorLanguageIds.includes(currentDocument.languageId))
+  ) {
+    currentDocumentItem = {
+      label: currentDocument.fileName,
+      description: `${currentDocument.languageId} (active)`,
+      iconPath: new ThemeIcon("file-code"),
+      buttons: [{ iconPath: new ThemeIcon("check"), tooltip: "Select this file" }],
+    };
+    quickpickItems.push(
+      {
+        kind: QuickPickItemKind.Separator,
+        label: "Current document",
+      },
+      currentDocumentItem,
+    );
+    filenameUriMap.set(currentDocument.fileName, currentDocument.uri);
+  }
+
   // inspect *all* open editors, not just the visible/active ones
   const documentPromises: Promise<TextDocument>[] = [];
   window.tabGroups.all.forEach((tabGroup: TabGroup) => {
@@ -50,6 +74,10 @@ export async function uriQuickpick(
   const documents: TextDocument[] = [];
   const allDocuments: TextDocument[] = await Promise.all(documentPromises);
   allDocuments.forEach((document: TextDocument) => {
+    if (currentDocument && document.fileName === currentDocument.fileName) {
+      return;
+    }
+
     if (
       editorLanguageIds.length === 0 ||
       (editorLanguageIds.length > 0 && editorLanguageIds.includes(document.languageId))
@@ -59,13 +87,16 @@ export async function uriQuickpick(
     }
   });
 
-  let pickedItem: QuickPickItem | undefined;
+  const quickPick = window.createQuickPick();
+  quickPick.items = quickpickItems;
+
   if (documents.length > 0) {
-    quickpickItems.push({
-      kind: QuickPickItemKind.Separator,
-      label: "Open documents",
-    });
-    quickpickItems.push(
+    quickPick.items = [
+      ...quickPick.items,
+      {
+        kind: QuickPickItemKind.Separator,
+        label: "Other open documents",
+      },
       ...documents.map((document: TextDocument) => {
         return {
           label: document.fileName,
@@ -73,25 +104,68 @@ export async function uriQuickpick(
           iconPath: new ThemeIcon("file"),
         };
       }),
-    );
-    pickedItem = await window.showQuickPick(quickpickItems, {
-      placeHolder: "Select a file",
-      canPickMany: false,
-    });
-    // return URI from the selected editor
-    if (pickedItem && filenameUriMap.has(pickedItem.label)) {
-      return filenameUriMap.get(pickedItem.label);
+    ];
+  }
+
+  quickPick.placeholder = "Select a file";
+
+  if (currentDocumentItem) {
+    quickPick.activeItems = [currentDocumentItem];
+  }
+
+  return new Promise<Uri | undefined>((resolve) => {
+    let resolved = false;
+    let qpHidden = false;
+    let usingFileChooser = false;
+
+    function resolver(uri: Uri | undefined) {
+      if (!qpHidden) {
+        qpHidden = true;
+        quickPick.hide();
+      }
+
+      // Only really resolve once.
+      if (!resolved) {
+        resolved = true;
+        resolve(uri);
+      }
     }
-  }
-  // either there are no open editors, or the user selected the "Select a file" option
-  if (documents.length === 0 || pickedItem?.label === selectFileLabel) {
-    const uri: Uri[] | undefined = await window.showOpenDialog({
-      openLabel: "Select a file",
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      filters: fileFilters,
+
+    quickPick.onDidAccept(() => {
+      const selection = quickPick.selectedItems[0];
+
+      if (selection.label === selectFileLabel) {
+        usingFileChooser = true;
+        window
+          .showOpenDialog({
+            openLabel: "Select a file",
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: fileFilters,
+          })
+          .then((uri) => {
+            resolver(uri ? uri[0] : undefined);
+          });
+      } else if (filenameUriMap.has(selection.label)) {
+        resolver(filenameUriMap.get(selection.label));
+      } else {
+        resolver(undefined);
+      }
     });
-    return uri ? uri[0] : undefined;
-  }
+
+    quickPick.onDidHide(() => {
+      // The call to window.showOpenDialog() as well as any of the resolver() / resolve() calls above
+      // will implicitly close the quickpick and cause onDidHide() to fire, but we don't want to resolve
+      // or falsely re-resolve our promise in those cases.
+
+      // We only want to resolve in this codepath if the quickpick was escape closed by the user.
+      if (!usingFileChooser && !resolved) {
+        resolver(undefined);
+      }
+    });
+
+    // Let the plinko games begin!
+    quickPick.show();
+  });
 }
