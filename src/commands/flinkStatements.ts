@@ -201,7 +201,7 @@ export async function submitFlinkStatementCommand(
     computePool,
     properties: new FlinkSpecProperties({
       currentDatabase,
-      currentCatalog: computePool.environmentId,
+      currentCatalog: currentDatabaseKafkaCluster.environmentId,
       localTimezone: localTimezoneOffset(),
     }),
   };
