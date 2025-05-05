@@ -227,22 +227,25 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  /**
+   * Filters results based on the current search query and visible columns.
+   * If visibleColumns is undefined, searches through all columns.
+   * If visibleColumns is defined, only searches through the specified columns.
+   *
+   * @param results - Array of result rows to filter
+   * @param visibleColumns - Optional array of column names to search through. If undefined, searches all columns.
+   * @returns Filtered array of results that match the search query in the specified columns
+   */
   private filterResultsBySearch(results: any[], visibleColumns: string[] | undefined): any[] {
     const searchQuery = this._searchQuery();
     if (searchQuery === null) {
       return results;
     }
 
-    // If no columns are visible,
-    // return empty array to make it clear there are no results
-    if (!visibleColumns?.length) {
-      return [];
-    }
-
     const searchLower = searchQuery.toLowerCase();
     return results.filter((row) =>
       Object.entries(row)
-        .filter(([key]) => visibleColumns.includes(key))
+        .filter(([key]) => visibleColumns === undefined || visibleColumns.includes(key))
         .some(([_, value]) => value !== null && String(value).toLowerCase().includes(searchLower)),
     );
   }
