@@ -47,7 +47,12 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         }
         templateStrings.push(
           new LanguageModelTextPart(
-            `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
+            JSON.stringify({
+              id: spec.name,
+              inputOptions: spec.options,
+              displayName: spec.display_name,
+              description: spec.description,
+            }),
           ),
         );
       });
@@ -98,7 +103,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       for (const part of result.content as LanguageModelTextPart[]) {
         message = `${message}\n\n${part.value}`;
       }
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
+      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs and inputOptions when creating projects with templates.`;
       messages.push(this.toolMessage(message, "result"));
     } else {
       const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;

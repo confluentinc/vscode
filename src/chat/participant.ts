@@ -65,12 +65,13 @@ export async function chatHandler(
     messages.push(...referenceMessages);
   }
 
-  const model: LanguageModelChat = await getModel({
+  let model: LanguageModelChat = await getModel({
     vendor: request.model?.vendor,
     family: request.model?.family,
     version: request.model?.version,
     id: request.model?.id,
   });
+
   logger.debug(`using model id "${model.id}" for request`);
 
   if (request.command) {
@@ -149,7 +150,9 @@ export async function handleChatMessage(
   const toolCallsMade = new Set<string>();
 
   // limit number of iterations to prevent infinite loops
-  const maxIterations = vscode.workspace.getConfiguration("confluent").get("chat.maxIterations", 2);
+  const maxIterations = vscode.workspace
+    .getConfiguration("confluent")
+    .get("chat.maxIterations", 10);
   let iterations = 0;
 
   // hint at focusing recency instead of attempting to (re)respond to older messages
@@ -168,6 +171,14 @@ export async function handleChatMessage(
     ],
     toolMode: LanguageModelChatToolMode.Auto,
   };
+
+  // Check model tool compatibility only when tools are being invoked
+  if (model.vendor === "copilot" && !model.family.includes("claude")) {
+    throw new ModelNotSupportedError(
+      `${model.name} not available for calling tools in the Confluent chat participant.`,
+    );
+  }
+
   // determine whether or not to continue sending chat requests to the model as a result of any tool
   // calls
   let continueConversation = true;
@@ -180,11 +191,9 @@ export async function handleChatMessage(
       token,
     );
     iterations++;
-
     const toolResultMessages: LanguageModelChatMessage[] = [];
 
     for await (const fragment of response.stream) {
-      logger.debug("stream fragment:", fragment);
       if (token.isCancellationRequested) {
         logger.debug("chat request canceled");
         return toolsCalled;

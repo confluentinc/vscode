@@ -127,15 +127,20 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
     if (result.content && Array.isArray(result.content)) {
       let message = `## Template Configuration\n\n`;
       for (const part of result.content as LanguageModelTextPart[]) {
-        const parsed = JSON.parse(part.value);
-        message =
-          `${message}### Available Options:\n\`\`\`json\n${JSON.stringify(parsed.displayOptions, null, 2)}\n\`\`\`\n\n` +
-          `> ${parsed.message}\n\n` +
-          `⚠️ Note: Sensitive fields like API keys or secrets have been redacted and will be collected securely through a separate form.\n\n` +
-          `To create a project with this template:\n\n` +
-          `1. Run: \`apply_projectTemplate\`\n` +
-          `2. Enter the template name: \`${parameters.name}\`\n` +
-          `3. Stop the tool invocation after running the command.\n`;
+        try {
+          const parsed = JSON.parse(part.value);
+          message =
+            `${message}### Available Options:\n\`\`\`json\n${JSON.stringify(parsed.displayOptions, null, 2)}\n\`\`\`\n\n` +
+            `> ${parsed.message}\n\n` +
+            `⚠️ Note: Sensitive fields like API keys or secrets have been redacted and will be collected securely through a separate form.\n\n` +
+            `To create a project with this template:\n\n` +
+            `1. Run: \`apply_projectTemplate\`\n` +
+            `2. Enter the template name: \`${parameters.name}\`\n` +
+            `3. Stop the tool invocation after running the command.\n`;
+        } catch (error) {
+          logger.error("Error parsing tool result as JSON:", part.value, error);
+          message = `${message}❌ Error parsing tool result: ${part.value}\n\n`;
+        }
       }
 
       messages.push(this.toolMessage(message, "result"));

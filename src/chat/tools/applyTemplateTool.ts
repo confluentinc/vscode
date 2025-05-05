@@ -58,7 +58,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     const confirmationMessages = {
       title: "Apply Project Template",
       message: new vscode.MarkdownString(
-        `This will apply the project template with the following parameters:\n\n` +
+        `This will fill in the project template form with the following parameters:\n\n` +
           `- **Template ID**: ${options.input.name || "Not provided"}\n` +
           `- **Options**: ${JSON.stringify(options.input.options, null, 2) || "None"}\n\n` +
           `Do you want to proceed?`,
@@ -76,7 +76,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-
+    logger.debug("PARAMS:", params);
     if (!params.name) {
       throw new Error("The `name` parameter is required.");
     }
@@ -148,12 +148,6 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       `🎯 **Template**: \`${parameters.name}\`\n\n` +
       `Options: ${JSON.stringify(parameters.options, null, 2)}`;
 
-    // if (this.previousMessages.has(message)) {
-    //   logger.debug("Duplicate message detected, skipping.");
-    //   return [];
-    // }
-
-    // this.previousMessages.add(message);
     const modelUsed =
       (request.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
       "Unknown Model";
