@@ -1,9 +1,9 @@
+import * as vscode from "vscode";
 import {
   CancellationToken,
   ChatContext,
   ChatRequest,
   ChatRequestTurn,
-  ChatResponseMarkdownPart,
   ChatResponseStream,
   ChatResponseTurn,
   ChatResult,
@@ -21,12 +21,13 @@ import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
-import { participantMessage, systemMessage, userMessage } from "./messageTypes";
+import { systemMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
+import { ApplyTemplateTool } from "./tools/applyTemplateTool";
 import { BaseLanguageModelTool } from "./tools/base";
+import { GetProjectTemplateTool } from "./tools/getProjectTemplate";
 import { ListTemplatesTool } from "./tools/listTemplates";
 import { getToolMap } from "./tools/toolMap";
-
 const logger = new Logger("chat.participant");
 
 /** Main handler for the Copilot chat participant. */
@@ -64,12 +65,13 @@ export async function chatHandler(
     messages.push(...referenceMessages);
   }
 
-  const model: LanguageModelChat = await getModel({
+  let model: LanguageModelChat = await getModel({
     vendor: request.model?.vendor,
     family: request.model?.family,
     version: request.model?.version,
     id: request.model?.id,
   });
+
   logger.debug(`using model id "${model.id}" for request`);
 
   if (request.command) {
@@ -148,8 +150,10 @@ export async function handleChatMessage(
   const toolCallsMade = new Set<string>();
 
   // limit number of iterations to prevent infinite loops
+  const maxIterations = vscode.workspace
+    .getConfiguration("confluent")
+    .get("chat.maxIterations", 10);
   let iterations = 0;
-  const maxIterations = 10; // TODO: make this user-configurable?
 
   // hint at focusing recency instead of attempting to (re)respond to older messages
   messages.push(
@@ -160,9 +164,14 @@ export async function handleChatMessage(
 
   // inform the model that tools can be invoked as part of the response stream
   const requestOptions: LanguageModelChatRequestOptions = {
-    tools: [new ListTemplatesTool().toChatTool()],
+    tools: [
+      new ListTemplatesTool().toChatTool(),
+      new ApplyTemplateTool().toChatTool(),
+      new GetProjectTemplateTool().toChatTool(),
+    ],
     toolMode: LanguageModelChatToolMode.Auto,
   };
+
   // determine whether or not to continue sending chat requests to the model as a result of any tool
   // calls
   let continueConversation = true;
@@ -175,8 +184,8 @@ export async function handleChatMessage(
       token,
     );
     iterations++;
-
     const toolResultMessages: LanguageModelChatMessage[] = [];
+
     for await (const fragment of response.stream) {
       if (token.isCancellationRequested) {
         logger.debug("chat request canceled");
@@ -213,14 +222,21 @@ export async function handleChatMessage(
         // each registered tool should contribute its own way of handling the invocation and
         // interacting with the stream, and can return an array of messages to be sent for another
         // round of processing
+
         logger.debug(`Processing tool invocation for "${toolCall.name}"`);
-        const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
-          request,
-          stream,
-          toolCall,
-          token,
-        );
-        toolResultMessages.push(...newMessages);
+        try {
+          const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
+            request,
+            stream,
+            toolCall,
+            token,
+          );
+          toolResultMessages.push(...newMessages);
+        } catch (error) {
+          logger.error(`Error processing tool invocation for "${toolCall.name}":`, error);
+          stream.markdown(`Error processing tool invocation for "${toolCall.name}": ${error}`);
+          continue;
+        }
 
         toolCallsMade.add(JSON.stringify(toolCall));
         if (!toolsCalled.includes(toolCall.name)) {
@@ -259,23 +275,30 @@ function filterContextHistory(
   if (filteredHistory.length === 0) {
     return [];
   }
-  const messages: LanguageModelChatMessage[] = [];
+  let messages: string = "These are the previous messages in the conversation:\n\n";
   for (const turn of filteredHistory) {
     // don't re-use previous prompts since the model may misinterpret them as part of the current prompt
     if (turn instanceof ChatRequestTurn) {
       if (turn.participant === PARTICIPANT_ID) {
-        messages.push(userMessage(turn.prompt));
+        messages = `${messages}\n\nUSER: "${turn.prompt}"`;
       }
       continue;
     }
     if (turn instanceof ChatResponseTurn) {
-      // responses from the participant:
-      if (turn.response instanceof ChatResponseMarkdownPart) {
-        messages.push(participantMessage(turn.response.value.value));
+      logger.debug("TURN", turn);
+      for (const part of turn.response) {
+        // responses from the participant:
+
+        if (
+          turn.participant === PARTICIPANT_ID &&
+          part instanceof vscode.ChatResponseMarkdownPart
+        ) {
+          messages = `${messages}\n\nASSISTANT: "${part.value.value}"`;
+        }
       }
     }
   }
 
   logger.debug("filtered messages for historic context:", messages);
-  return messages;
+  return [userMessage(messages)];
 }
