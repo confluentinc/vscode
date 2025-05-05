@@ -8,12 +8,10 @@ import * as scaffoldModule from "../scaffold";
 describe("Chat Tools Integration Tests", () => {
   let sandbox: sinon.SinonSandbox;
   let mockCancellationToken: vscode.CancellationToken;
-  let logUsageStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // Mock cancellation token
     mockCancellationToken = {
       isCancellationRequested: false,
       onCancellationRequested: sandbox.stub(),
@@ -43,7 +41,7 @@ describe("Chat Tools Integration Tests", () => {
         ],
       });
 
-      // Replace the actual implementation with our mock using proper import
+      // Replace the actual implementation with our mock
       sandbox.stub(scaffoldModule, "getTemplatesList").get(() => getTemplatesList);
 
       const tool = new GetProjectTemplateTool();
@@ -93,7 +91,6 @@ describe("Chat Tools Integration Tests", () => {
         mockCancellationToken,
       );
 
-      // Fix: Use assert.ok instead of calling assert as a function
       assert.ok(result instanceof vscode.LanguageModelToolResult);
       assert.strictEqual(result.content.length, 1);
 
@@ -116,7 +113,6 @@ describe("Chat Tools Integration Tests", () => {
         ]),
       );
 
-      // Mock chat request and stream with all required properties
       const mockStream = {
         markdown: sandbox.stub() as any,
         progress: sandbox.stub() as any,

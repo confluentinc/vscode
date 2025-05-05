@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { Logger } from "../logging";
 import { PARTICIPANT_ID } from "./constants";
 import { chatHandler } from "./participant";
 
@@ -17,7 +16,6 @@ describe.only("Chat Participant Integration Tests", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // Mock the response stream
     mockStream = {
       markdown: sandbox.stub() as any,
       progress: sandbox.stub() as any,
@@ -28,13 +26,11 @@ describe.only("Chat Participant Integration Tests", () => {
       push: sandbox.stub() as any,
     };
 
-    // Mock cancellation token
     mockCancellationToken = {
       isCancellationRequested: false,
       onCancellationRequested: sandbox.stub() as any,
     };
 
-    // Create a properly typed chat request object
     const chatRequest = {
       prompt: "Test prompt",
       references: [],
@@ -47,12 +43,10 @@ describe.only("Chat Participant Integration Tests", () => {
     (mockChatRequest as any).model = undefined;
     (mockChatRequest as any).toolInvocationToken = undefined;
 
-    // Mock chat context with empty history
     mockChatContext = {
       history: [],
     };
 
-    // Mock language model response with required text property
     mockResponse = {
       text: (async function* () {
         yield "Test response";
@@ -62,7 +56,6 @@ describe.only("Chat Participant Integration Tests", () => {
       })(),
     };
 
-    // Mock language model with all required properties
     mockLanguageModelChat = {
       name: "Test Model",
       id: "test-model",
@@ -74,12 +67,7 @@ describe.only("Chat Participant Integration Tests", () => {
       sendRequest: sandbox.stub().resolves(mockResponse),
     };
 
-    // Mock lm.selectChatModels to return our mock model
     sandbox.stub(vscode.lm, "selectChatModels").resolves([mockLanguageModelChat]);
-
-    // Mock logger to prevent console output during tests
-    sandbox.stub(Logger.prototype, "debug");
-    sandbox.stub(Logger.prototype, "error");
   });
 
   afterEach(() => {
@@ -95,13 +83,11 @@ describe.only("Chat Participant Integration Tests", () => {
         mockCancellationToken,
       );
 
-      // Use type assertion to access stub methods
       assert.strictEqual((mockStream.markdown as any).called, true);
       assert.deepStrictEqual(result, { metadata: { toolsCalled: [] } });
     });
 
     it("should handle empty prompts gracefully", async () => {
-      // Use type assertion to modify read-only property
       (mockChatRequest as any).prompt = "";
 
       const result = await chatHandler(
@@ -120,7 +106,7 @@ describe.only("Chat Participant Integration Tests", () => {
 
     it("should handle errors in the response", async () => {
       const error = new Error("test error");
-      // Use proper type assertion for the stub
+
       (mockLanguageModelChat.sendRequest as any).rejects(error);
 
       const result = await chatHandler(
