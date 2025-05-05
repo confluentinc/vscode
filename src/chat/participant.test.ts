@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { PARTICIPANT_ID } from "./constants";
 import { chatHandler } from "./participant";
 
-describe.only("Chat Participant Integration Tests", () => {
+describe("Chat Participant Integration Tests", () => {
   let sandbox: sinon.SinonSandbox;
   let mockStream: vscode.ChatResponseStream;
   let mockChatRequest: vscode.ChatRequest;

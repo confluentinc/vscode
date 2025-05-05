@@ -96,6 +96,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
     const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList(
+      false, // Don't sanitize options
       templateRequestOptions?.templateCollection,
     );
     let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
@@ -409,7 +410,7 @@ async function pickTemplate(
 }
 
 export async function getTemplatesList(
-  sanitizeOptions = false,
+  sanitizeOptions?: boolean,
   collection?: string,
 ): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
