@@ -8,6 +8,8 @@ All notable changes to this extension will be documented in this file.
 
 - If the route call fails while fetching Schema Registry subject names while populating the topics
   view, show a warning but continue on with no schema associations for the topics.
+- Selecting resources from a quickpick should no longer throw a "No current organization found"
+  error when the user is not logged into Confluent Cloud.
 
 ## 1.2.0
 
