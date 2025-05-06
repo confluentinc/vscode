@@ -12,6 +12,7 @@ All notable changes to this extension will be documented in this file.
 - Selecting resources from a quickpick should no longer throw a "No current organization found"
   error when the user is not logged into Confluent Cloud.
 - Selecting the 'Generate Project from Resource' context item on a single direct connection topic
+  should no longer display an error
 
 ## 1.2.0
 
