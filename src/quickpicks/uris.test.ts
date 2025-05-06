@@ -46,7 +46,7 @@ describe.only("uriQuickPick", () => {
     const fakeQuickPickStub = sandbox.stub(window, "createQuickPick");
     fakeQuickPickStub.returns(fakeRealQuickPick);
 
-    // Start the quickpick and wait for next tick
+    // breaks the event loop, allowing any scheduled promise callbacks to execute before running the timers.
     const quickpickPromise = uris.uriQuickpick(["file"], ["javascript"]);
     await clock.tickAsync(0);
 
@@ -55,6 +55,7 @@ describe.only("uriQuickPick", () => {
     if (hideHandler) {
       hideHandler();
     }
+    // wait for next tick
     await clock.tickAsync(0);
     await quickpickPromise;
 
