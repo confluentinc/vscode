@@ -15,6 +15,7 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
+import { ResourceLoader } from "./loaders";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
@@ -24,7 +25,6 @@ import { KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
-import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { removeProtocolPrefix } from "./utils/bootstrapServers";
 import { fileUriExists } from "./utils/file";
@@ -64,7 +64,9 @@ async function resourceScaffoldProjectRequest(
       templateType: "kafka",
     });
   } else if (item instanceof KafkaTopic) {
-    const cluster = await getResourceManager().getClusterForTopic(item);
+    const cluster = await ResourceLoader.getInstance(
+      item.connectionId,
+    ).getKafkaClustersForEnvironmentId(item.environmentId);
     if (!cluster) {
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
