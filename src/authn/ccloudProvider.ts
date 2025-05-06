@@ -8,7 +8,7 @@ import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { getLaunchDarklyClient } from "../featureFlags/client";
 import { Logger } from "../logging";
-import { loadPreferencesFromWorkspaceConfig } from "../preferences/updates";
+import { loadPreferencesFromWorkspaceConfig } from "../preferences/sidecarSync";
 import {
   clearCurrentCCloudResources,
   createCCloudConnection,
