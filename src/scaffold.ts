@@ -15,12 +15,12 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError, showErrorNotificationWithButtons } from "./errors";
+import { ResourceLoader } from "./loaders";
 import { Logger } from "./logging";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
-import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { removeProtocolPrefix } from "./utils/bootstrapServers";
 import { fileUriExists } from "./utils/file";
@@ -56,9 +56,11 @@ async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) 
       cc_bootstrap_server: bootstrapServers,
     });
   } else if (item instanceof KafkaTopic) {
-    const cluster = await getResourceManager().getClusterForTopic(item);
+    const clusters = await ResourceLoader.getInstance(
+      item.connectionId,
+    ).getKafkaClustersForEnvironmentId(item.environmentId);
+    const cluster = clusters.find((c) => c.id === item.clusterId);
     if (!cluster) {
-      // shouldn't happen if we have the topic, but just in case
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
     }
