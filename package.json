@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-36",
+  "version": "1.3.0-39",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -526,6 +526,18 @@
         "icon": "$(confluent-logo)",
         "title": "Set CCloud Flink Compute Pool for Flink Statement",
         "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.document.flinksql.setCCloudDatabase",
+        "icon": "$(confluent-logo)",
+        "title": "Set CCloud Flink Database for Flink Statement",
+        "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.document.flinksql.resetCCloudMetadata",
+        "icon": "Clear Settings",
+        "title": "Reset CCloud Flink Metadata",
+        "category": "Confluent: Flink SQL"
       }
     ],
     "configuration": [
@@ -956,6 +968,14 @@
         },
         {
           "command": "confluent.document.flinksql.setCCloudComputePool",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.setCCloudDatabase",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.resetCCloudMetadata",
           "when": "false"
         }
       ],

@@ -100,59 +100,60 @@
       </template>
 
       <template data-if="this.hasResults() || this.emptyFilterResult()">
-        <table class="grid" cellpadding="0" cellspacing="0" data-prop-style="this.gridTemplateColumns()">
-          <thead class="sticky-table-header">
-            <tr class="grid-row">
-              <template data-for="column of this.visibleColumns() by column">
-                <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
-                  <span data-text="this.columns()[this.column()].title()"></span>
-                  <div class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, this.columns()[this.column()].index)"
-                    data-on-pointermove="this.handleMoveResize(event, this.columns()[this.column()].index)"
-                    data-on-pointerup="this.handleStopResize(event)"></div>
-                </th>
-              </template>
+        <div class="grid-container">
+          <!-- Settings control positioned outside the grid -->
+          <div class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
+            popovertarget="columnSettings" data-on-click="window.columnSettings.togglePopover()"
+            data-position="bottom-end" tabindex="-1">
+            <span class="codicon codicon-gear"></span>
+          </div>
 
-              <th class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
-                popovertarget="columnSettings" data-on-click="window.columnSettings.togglePopover()"
-                data-position="bottom-end" tabindex="-1">
-                <span class="codicon codicon-gear"></span>
-              </th>
-            </tr>
-          </thead>
-
-          <section popover id="columnSettings" class="column-control">
-            <div class="flex-column" style="--gap: 0">
-              <label>Columns</label>
-              <template data-for="column of this.allColumns() by column">
-                <label class="checkbox">
-                  <input type="checkbox" data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
-                    data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
-                    data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)" />
-                  <span data-text="this.columns()[this.column()].title()"></span>
-                </label>
-              </template>
-            </div>
-          </section>
-
-          <tbody>
-            <template data-for="result of this.snapshot().results">
-              <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())">
+          <table class="grid" cellpadding="0" cellspacing="0" data-prop-style="this.gridTemplateColumns()">
+            <thead class="sticky-table-header">
+              <tr class="grid-row">
                 <template data-for="column of this.visibleColumns() by column">
-                  <td class="grid-cell cell-text-overflow" tabindex="-1"
-                    data-children="((this.columns())[this.column()]).children(this.result())"
-                    data-prop-title="((this.columns())[this.column()]).title()"></td>
+                  <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
+                    <span data-text="this.columns()[this.column()].title()"></span>
+                    <div class="resize-handler"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns()[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns()[this.column()].index)"
+                      data-on-pointerup="this.handleStopResize(event)"></div>
+                  </th>
                 </template>
               </tr>
-            </template>
-          </tbody>
+            </thead>
 
-          <template data-if="this.emptyFilterResult()">
-            <div class="grid-banner">
-              <p>Unable to find results for current search</p>
-            </div>
-          </template>
-        </table>
+            <section popover id="columnSettings" class="column-control">
+              <div class="flex-column" style="--gap: 0">
+                <label>Columns</label>
+                <template data-for="column of this.allColumns() by column">
+                  <label class="checkbox">
+                    <input type="checkbox" data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)" />
+                    <span data-text="this.columns()[this.column()].title()"></span>
+                  </label>
+                </template>
+              </div>
+            </section>
+
+            <tbody>
+              <template data-for="result of this.snapshot().results">
+                <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())">
+                  <template data-for="column of this.visibleColumns() by column">
+                    <td class="grid-cell cell-text-overflow" tabindex="-1"
+                      data-children="((this.columns())[this.column()]).children(this.result())"
+                      data-prop-title="((this.columns())[this.column()]).title()"></td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+
+            <template data-if="this.emptyFilterResult()">
+              <div class="grid-banner">
+                <p>Unable to find results for current search</p>
+              </div>
+            </template>
+          </table>
       </template>
     </section>
 
@@ -351,11 +352,26 @@
       color: var(--vscode-progressBar-background);
     }
 
+    .grid-container {
+      position: relative;
+    }
+
+    .grid {
+      padding-left: 26px;
+      /* padding for the settings control width */
+    }
+
     .grid-settings-control {
-      grid-column: -1;
-      grid-row: 1;
-      justify-self: end;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
+      z-index: 2;
     }
 
     .grid-settings-control:hover {
