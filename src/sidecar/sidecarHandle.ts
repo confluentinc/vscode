@@ -12,7 +12,11 @@ import {
   FlinkArtifactsArtifactV1Api,
   Configuration as FlinkArtifactsConfiguration,
 } from "../clients/flinkArtifacts";
-import { Configuration as FlinkSqlConfiguration, StatementsSqlV1Api } from "../clients/flinkSql";
+import {
+  Configuration as FlinkSqlConfiguration,
+  StatementResultsSqlV1Api,
+  StatementsSqlV1Api,
+} from "../clients/flinkSql";
 import {
   ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
@@ -379,6 +383,16 @@ export class SidecarHandle {
       headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
     });
     return new StatementsSqlV1Api(config);
+  }
+
+  public getFlinkSqlStatementResultsApi(
+    providerRegion: IEnvProviderRegion,
+  ): StatementResultsSqlV1Api {
+    const config = new FlinkSqlConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
+    });
+    return new StatementResultsSqlV1Api(config);
   }
 
   /** Convert an IEnvProviderRegion to HTTPHeaders for Flink API sidecar client creation. */

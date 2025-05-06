@@ -91,3 +91,7 @@ export const SIDECAR_OUTPUT_CHANNEL: LogOutputChannel = window.createOutputChann
   "Confluent (Sidecar)",
   { log: true },
 );
+
+/** Flink Config settings names */
+export const FLINK_CONFIG_COMPUTE_POOL = "confluent.flink.computePoolId";
+export const FLINK_CONFIG_DATABASE = "confluent.flink.database";

@@ -26,6 +26,7 @@ import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { MessageDocumentProvider } from "./documentProviders/message";
+import { logError } from "./errors";
 import {
   CCloudResourceLoader,
   DirectResourceLoader,
@@ -35,6 +36,7 @@ import {
 import { Logger } from "./logging";
 import { ConnectionId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
+import { showErrorNotificationWithButtons } from "./notifications";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
@@ -45,7 +47,6 @@ import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
-import { logError, showErrorNotificationWithButtons } from "./errors";
 
 const logger = new Logger("consume");
 

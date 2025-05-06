@@ -18,8 +18,6 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   provider!: string; // cloud
   region!: string;
 
-  // TODO: add more properties as needed
-
   constructor(
     props: Pick<
       FlinkArtifact,

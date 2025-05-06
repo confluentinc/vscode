@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-11",
+  "version": "1.3.0-24",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -259,9 +259,21 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.create",
+        "icon": "$(cloud-upload)",
+        "title": "Submit Flink Statement",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
         "category": "Confluent: Flink Statements"
+      },
+      {
+        "command": "confluent.flink.configureFlinkDefaults",
+        "icon": "$(settings-gear)",
+        "title": "Configure default settings for Flink SQL actions",
+        "category": "Confluent: Flink Defaults"
       },
       {
         "command": "confluent.resources.search",
@@ -412,6 +424,12 @@
         "category": "Confluent: Topic"
       },
       {
+        "command": "confluent.flinkStatementResults",
+        "icon": "$(confluent-view-messages)",
+        "title": "View Flink Statement Results",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.topic.consume.duplicate",
         "icon": "$(explorer-view-icon)",
         "title": "Duplicate Message Viewer",
@@ -504,83 +522,102 @@
         "category": "Confluent: Resources"
       }
     ],
-    "configuration": {
-      "title": "Confluent",
-      "properties": {
-        "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
-        },
-        "confluent.debugging.showSidecarExceptions": {
-          "type": "boolean",
-          "default": false,
-          "description": "Alert on sidecar process exceptions"
-        },
-        "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
-        },
-        "confluent.ssl.pemPaths": {
-          "type": "array",
-          "items": {
-            "type": "string"
+    "configuration": [
+      {
+        "title": "Confluent",
+        "properties": {
+          "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
           },
-          "default": [],
-          "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent Cloud. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)\n\n_NOTE: This is only used for the main Confluent Cloud connection, and does not apply to custom/'direct' connections._"
-        },
-        "confluent.localDocker.socketPath": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Path to the Docker socket file.  (You can also use the [\"Set Docker Socket Path\" command](command:confluent.docker.setSocketPath).)"
-        },
-        "confluent.localDocker.kafkaImageRepo": {
-          "type": "string",
-          "enum": [
-            "confluentinc/confluent-local"
-          ],
-          "default": "confluentinc/confluent-local",
-          "description": "Docker image repo to use when starting a local Kafka container"
-        },
-        "confluent.localDocker.kafkaImageTag": {
-          "type": "string",
-          "default": "latest",
-          "description": "Docker image tag to use when starting a local Kafka container"
-        },
-        "confluent.localDocker.schemaRegistryImageTag": {
-          "type": "string",
-          "default": "latest",
-          "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
-        },
-        "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
-        },
-        "confluent.topic.produceMessages.schemas.allowOlderVersions": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
-        },
-        "confluent.preview.enableFlink": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Enable Flink-related resource loading and associated actions.",
-          "tags": [
-            "preview"
-          ]
-        },
-        "confluent.experimental.enableChatParticipant": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable the Confluent chat participant for Copilot.",
-          "tags": [
-            "experimental"
-          ]
+          "confluent.debugging.showSidecarExceptions": {
+            "type": "boolean",
+            "default": false,
+            "description": "Alert on sidecar process exceptions"
+          },
+          "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
+          },
+          "confluent.ssl.pemPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent Cloud. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)\n\n_NOTE: This is only used for the main Confluent Cloud connection, and does not apply to custom/'direct' connections._"
+          },
+          "confluent.localDocker.socketPath": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Path to the Docker socket file.  (You can also use the [\"Set Docker Socket Path\" command](command:confluent.docker.setSocketPath).)"
+          },
+          "confluent.localDocker.kafkaImageRepo": {
+            "type": "string",
+            "enum": [
+              "confluentinc/confluent-local"
+            ],
+            "default": "confluentinc/confluent-local",
+            "description": "Docker image repo to use when starting a local Kafka container"
+          },
+          "confluent.localDocker.kafkaImageTag": {
+            "type": "string",
+            "default": "latest",
+            "description": "Docker image tag to use when starting a local Kafka container"
+          },
+          "confluent.localDocker.schemaRegistryImageTag": {
+            "type": "string",
+            "default": "latest",
+            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
+          },
+          "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
+          },
+          "confluent.topic.produceMessages.schemas.allowOlderVersions": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
+          },
+          "confluent.experimental.enableChatParticipant": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable the Confluent chat participant for Copilot.",
+            "tags": [
+              "experimental"
+            ]
+          }
+        }
+      },
+      {
+        "title": "Flink SQL Defaults",
+        "properties": {
+          "confluent.preview.enableFlink": {
+            "type": "boolean",
+            "default": false,
+            "order": 0,
+            "description": "Enable Flink-related resource loading and associated actions.",
+            "tags": [
+              "preview"
+            ]
+          },
+          "confluent.flink.computePoolId": {
+            "type": "string",
+            "default": "",
+            "order": 1,
+            "description": "ID for the default CCloud compute pool to use for Flink SQL operations."
+          },
+          "confluent.flink.database": {
+            "type": "string",
+            "default": "",
+            "description": "Name or ID for default CCloud database (topic) to use for Flink SQL operations"
+          }
         }
       }
-    },
+    ],
     "grammars": [
       {
         "language": "flinksql",
@@ -824,6 +861,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.create",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -1046,19 +1087,24 @@
           "group": "2_copy@3"
         },
         {
-          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+          "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@1"
         },
         {
-          "command": "confluent.statements.flink-compute-pool.select",
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@2"
         },
         {
-          "command": "confluent.statements.refresh",
+          "command": "confluent.statements.flink-compute-pool.select",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@3"
+        },
+        {
+          "command": "confluent.statements.refresh",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "group": "navigation@4"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
@@ -1204,6 +1250,11 @@
         {
           "command": "confluent.topic.consume",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzREAD.*/",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.flinkStatementResults",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
         },
         {

@@ -5,12 +5,12 @@ import {
   PreferencesSpec,
   ResponseError,
 } from "../clients/sidecar";
+import { logError } from "../errors";
+import { Logger } from "../logging";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
-  logError,
   showErrorNotificationWithButtons,
-} from "../errors";
-import { Logger } from "../logging";
+} from "../notifications";
 import { getSidecar } from "../sidecar";
 import {
   DEFAULT_SSL_PEM_PATHS,
