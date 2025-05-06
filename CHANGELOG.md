@@ -14,6 +14,7 @@ All notable changes to this extension will be documented in this file.
   - signing in to CCloud
   - setting a compute pool
   - setting a catalog and database
+  - updating default pool/database settings
 
 ### Fixed
 
