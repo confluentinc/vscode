@@ -130,6 +130,16 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
       [RUNNING_PHASE, COMPLETED_PHASE].includes(this.phase)
     );
   }
+
+  /** @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model */
+  get catalog(): string | undefined {
+    return this.spec.properties?.["sql.current-catalog"];
+  }
+
+  /** @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model */
+  get database(): string | undefined {
+    return this.spec.properties?.["sql.current-database"];
+  }
 }
 
 /** Model for the interesting bits of the `metadata` subfield of Flink statement. */
