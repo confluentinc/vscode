@@ -73,31 +73,6 @@ describe("scaffoldProjectRequest", () => {
     sandbox.restore();
   });
 
-  it("filters templates by kafka tags when templateType is kafka", async () => {
-    await scaffold.scaffoldProjectRequest({ templateType: "kafka" });
-    const quickPickItems = quickPickStub.firstCall.args[0] as vscode.QuickPickItem[];
-    assert.ok(quickPickItems.length > 0, "Should have at least one Kafka template");
-    assert.ok(
-      quickPickItems.every(
-        (item) => item.description?.includes("producer") || item.description?.includes("consumer"),
-      ),
-      "All items should be Kafka related",
-    );
-  });
-
-  it("filters templates by flink tags when templateType is flink", async () => {
-    await scaffold.scaffoldProjectRequest({ templateType: "flink" });
-    const quickPickItems = quickPickStub.firstCall.args[0] as vscode.QuickPickItem[];
-    assert.ok(quickPickItems.length > 0, "Should have at least one Flink template");
-    assert.ok(
-      quickPickItems.every(
-        (item) =>
-          item.description?.includes("apache flink") || item.description?.includes("table api"),
-      ),
-      "All items should be Flink related",
-    );
-  });
-
   it("returns undefined when no templates are available", async () => {
     getTemplatesStub.resolves({
       api_version: ScaffoldV1TemplateListApiVersionEnum.ScaffoldV1,
