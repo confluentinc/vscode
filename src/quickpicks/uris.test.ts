@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import { QuickPick, QuickPickItem, QuickPickItemKind, TextEditor, window } from "vscode";
 import * as uris from "./uris";
 
-describe.only("uriQuickPick", () => {
+describe("uriQuickPick", () => {
   let sandbox: sinon.SinonSandbox;
   let clock: sinon.SinonFakeTimers;
 
