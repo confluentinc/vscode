@@ -28,7 +28,10 @@ type MessageType =
   | "StreamPause"
   | "StreamResume"
   | "PreviewResult"
-  | "PreviewAllResults";
+  | "PreviewAllResults"
+  | "Search"
+  | "GetSearchQuery"
+  | "SetVisibleColumns";
 
 type StreamState = "running" | "paused" | "completed";
 
@@ -73,6 +76,10 @@ export class FlinkStatementResultsManager {
   private _isResultsFull: Signal<boolean>;
   private _pollingWatch: (() => void) | undefined;
   private _shouldPoll: Signal<boolean>;
+  /** Filter by substring text query. */
+  private _searchQuery: Signal<string | null>;
+  private _visibleColumns: Signal<string[] | null>;
+  private _filteredResults: Signal<any[]>;
 
   constructor(
     private os: Scope,
@@ -91,6 +98,9 @@ export class FlinkStatementResultsManager {
     this._isResultsFull = os.signal(false);
     this._pollingWatch = undefined;
     this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
+    this._searchQuery = os.signal<string | null>(null);
+    this._visibleColumns = os.signal<string[] | null>(null);
+    this._filteredResults = os.signal<any[]>([]);
     this.setupWatches();
   }
 
@@ -156,6 +166,7 @@ export class FlinkStatementResultsManager {
           map: currentResults,
           rows: resultsData.data,
         });
+        this._filteredResults(this.filterResultsBySearch());
         // Check if we have more results to fetch
         if (this.extractPageToken(response?.metadata?.next) === undefined) {
           this._moreResults(false);
@@ -222,19 +233,60 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  /**
+   * Filters results based on the current search query and visible columns.
+   * If visibleColumns is undefined, searches through all columns.
+   * If visibleColumns is defined, only searches through the specified columns.
+   *
+   * @param results - Array of result rows to filter
+   * @param visibleColumns - Optional array of column names to search through. If undefined, searches all columns.
+   * @returns Filtered array of results that match the search query in the specified columns
+   */
+  private filterResultsBySearch(): any[] {
+    const results = this.getResultsArray();
+    const searchQuery = this._searchQuery();
+    const visibleColumns = this._visibleColumns();
+
+    if (searchQuery === null || searchQuery.length === 0) {
+      return results;
+    }
+
+    const searchLower = searchQuery.toLowerCase();
+    return results.filter((row) =>
+      Object.entries(row)
+        .filter(([key]) => visibleColumns === null || visibleColumns.includes(key))
+        .some(([_, value]) => value !== null && String(value).toLowerCase().includes(searchLower)),
+    );
+  }
+
   handleMessage(type: MessageType, body: any): any {
     switch (type) {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const paginatedResults = this.getResultsArray().slice(offset, offset + limit);
         return {
-          results: paginatedResults,
+          results: this._filteredResults().slice(offset, offset + limit),
         };
       }
       case "GetResultsCount": {
-        const count = this._results().size;
-        return { total: count, filter: null };
+        return {
+          total: this._results().size,
+          filter: this._filteredResults().length,
+        };
+      }
+      case "Search": {
+        this._searchQuery(body.search ?? "");
+        this._filteredResults(this.filterResultsBySearch());
+        this.notifyUI();
+        return null;
+      }
+      case "SetVisibleColumns": {
+        this._visibleColumns(body.visibleColumns ?? null);
+        this._filteredResults(this.filterResultsBySearch());
+        return null;
+      }
+      case "GetSearchQuery": {
+        return this._searchQuery() ?? "";
       }
       case "GetSchema": {
         if (!this.statement) {
@@ -253,7 +305,7 @@ export class FlinkStatementResultsManager {
       case "PreviewResult": {
         // plural if all results else singular
         const filename = `flink-statement-result${body?.result === undefined ? "s" : ""}-${new Date().getTime()}.json`;
-        const content = body?.result ?? this.getResultsArray();
+        const content = body?.result ?? this._filteredResults();
 
         showJsonPreview(filename, content);
 
