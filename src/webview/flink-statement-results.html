@@ -129,6 +129,7 @@
                 <template data-for="column of this.allColumns() by column">
                   <label class="checkbox">
                     <input type="checkbox" data-prop-checked="this.isColumnVisible(this.columns()[this.column()].index)"
+                      data-prop-disabled="this.isColumnVisible(this.columns()[this.column()].index) && this.columnVisibilityFlags().filter(f => f).length <= 1"
                       data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns()[this.column()].index)" />
                     <span data-text="this.columns()[this.column()].title()"></span>
                   </label>
