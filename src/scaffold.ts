@@ -71,7 +71,7 @@ async function resourceScaffoldProjectRequest(
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
     }
-    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
+    const bootstrapServers: string = removeProtocolPrefix(cluster[0]?.bootstrapServers || "");
     return await scaffoldProjectRequest({
       bootstrap_server: bootstrapServers,
       cc_bootstrap_server: bootstrapServers,
