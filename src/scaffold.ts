@@ -64,14 +64,15 @@ async function resourceScaffoldProjectRequest(
       templateType: "kafka",
     });
   } else if (item instanceof KafkaTopic) {
-    const cluster = await ResourceLoader.getInstance(
+    const clusters = await ResourceLoader.getInstance(
       item.connectionId,
     ).getKafkaClustersForEnvironmentId(item.environmentId);
+    const cluster = clusters.find((c) => c.id === item.clusterId);
     if (!cluster) {
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
     }
-    const bootstrapServers: string = removeProtocolPrefix(cluster[0]?.bootstrapServers || "");
+    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
     return await scaffoldProjectRequest({
       bootstrap_server: bootstrapServers,
       cc_bootstrap_server: bootstrapServers,
