@@ -1,7 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../constants";
+import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
 import * as commandsModule from "./flinkComputePools";
@@ -45,16 +47,24 @@ describe("configureFlinkDefaults command", () => {
   });
 
   it("should update config and show info message after pool and database are selected", async () => {
-    const pool = { id: "pool1" };
-    const cluster = { name: "db1" };
-    flinkComputePoolQuickPickStub.resolves(pool);
-    flinkDatabaseQuickpickStub.resolves(cluster);
+    flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
 
     await commandsModule.configureFlinkDefaults();
 
-    assert.ok(updateStub.calledWith(FLINK_CONFIG_COMPUTE_POOL, pool.id, false));
-    assert.ok(updateStub.calledWith(FLINK_CONFIG_DATABASE, cluster.name, false));
-    assert.ok(showInformationMessageStub.calledOnce);
+    sinon.assert.calledWithExactly(
+      updateStub,
+      FLINK_CONFIG_COMPUTE_POOL,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      true,
+    );
+    sinon.assert.calledWithExactly(
+      updateStub,
+      FLINK_CONFIG_DATABASE,
+      TEST_CCLOUD_KAFKA_CLUSTER.id,
+      true,
+    );
+    sinon.assert.calledOnce(showInformationMessageStub);
   });
 
   it("should open settings if user selects 'View' in info message", async () => {
