@@ -123,12 +123,7 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
 
   const config: WorkspaceConfiguration = workspace.getConfiguration();
   const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
-  logger.info("comparing default database ID to selected database", {
-    selected: database.id,
-    default: defaultDatabaseId,
-  });
   if (defaultDatabaseId === database.id) {
-    logger.info("not prompting to update default database ID");
     // don't ask if the default database ID is already set to the selected database ID
     return;
   }
