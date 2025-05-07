@@ -14,6 +14,8 @@ import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
+import { ResourceManager } from "../storage/resourceManager";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
@@ -122,6 +124,14 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   }
 
   const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
+
+  // make sure any relevant metadata for the Uri is set
+  const rm = ResourceManager.getInstance();
+  await rm.setUriMetadata(uri, {
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: statement.computePoolId,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: statement.database,
+  });
+
   const doc = await vscode.workspace.openTextDocument(uri);
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
   await vscode.window.showTextDocument(doc, { preview: false });
