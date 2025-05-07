@@ -153,8 +153,13 @@ export async function getComputePoolFromMetadata(
 ): Promise<CCloudFlinkComputePool | undefined> {
   const config: WorkspaceConfiguration = workspace.getConfiguration();
   const defaultComputePoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
-  const computePoolString: string | undefined =
-    metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] ?? defaultComputePoolId;
+  // clearing will set the metadata to `null`, so we'll only fall back to the default value if
+  // the metadata is `undefined` (not set at all)
+  let computePoolString: string | null | undefined =
+    metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
+  if (computePoolString === undefined) {
+    computePoolString = defaultComputePoolId;
+  }
   if (!computePoolString) {
     return;
   }
@@ -203,8 +208,12 @@ export async function getCatalogDatabaseFromMetadata(
 
   const config: WorkspaceConfiguration = workspace.getConfiguration();
   const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
-  const databaseId: string | undefined =
-    metadata?.[UriMetadataKeys.FLINK_DATABASE_ID] ?? defaultDatabaseId;
+  // clearing will set the metadata to `null`, so we'll only fall back to the default value if
+  // the metadata is `undefined` (not set at all)
+  let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+  if (databaseId === undefined) {
+    databaseId = defaultDatabaseId;
+  }
   if (!databaseId) {
     return catalogDatabase;
   }

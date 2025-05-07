@@ -270,7 +270,7 @@ describe("codelens/flinkSqlProvider.ts getComputePoolFromMetadata()", () => {
     assert.strictEqual(pool, undefined);
   });
 
-  it(`should return the default "${FLINK_CONFIG_COMPUTE_POOL}" value if no "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is found`, async () => {
+  it(`should return the default "${FLINK_CONFIG_COMPUTE_POOL}" value if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is undefined`, async () => {
     getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
     const metadata: UriMetadata = {};
     const envs: CCloudEnvironment[] = [testFlinkEnv];
@@ -281,6 +281,20 @@ describe("codelens/flinkSqlProvider.ts getComputePoolFromMetadata()", () => {
 
     assert.ok(pool instanceof CCloudFlinkComputePool);
     assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+  });
+
+  it(`should return undefined if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" is 'null' as a result of clearing metadata, even if default "${FLINK_CONFIG_COMPUTE_POOL}" is set`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: null,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
+      metadata,
+      envs,
+    );
+
+    assert.strictEqual(pool, undefined);
   });
 
   it(`should return the stored value if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is found`, async () => {
@@ -364,7 +378,7 @@ describe("codelens/flinkSqlProvider.ts getCatalogDatabaseFromMetadata()", () => 
     assert.strictEqual(catalogDb.database, undefined);
   });
 
-  it(`should return database from default "${FLINK_CONFIG_DATABASE}" value if no "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata is found`, async () => {
+  it(`should return the default "${FLINK_CONFIG_DATABASE}" value if "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata is undefined`, async () => {
     getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(TEST_CCLOUD_KAFKA_CLUSTER.id);
     const metadata: UriMetadata = {};
     const envs: CCloudEnvironment[] = [testFlinkEnv];
@@ -373,6 +387,18 @@ describe("codelens/flinkSqlProvider.ts getCatalogDatabaseFromMetadata()", () => 
     assert.strictEqual(catalogDb.catalog, testFlinkEnv);
     assert.ok(catalogDb.database instanceof CCloudKafkaCluster);
     assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
+  });
+
+  it(`should return undefined if "${UriMetadataKeys.FLINK_DATABASE_ID}" is 'null' as a result of clearing metadata, even if default "${FLINK_CONFIG_DATABASE}" is set`, async () => {
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(TEST_CCLOUD_KAFKA_CLUSTER.id);
+    const metadata: UriMetadata = {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: null,
+    };
+    const envs: CCloudEnvironment[] = [testFlinkEnv];
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.strictEqual(catalogDb.catalog, undefined);
+    assert.strictEqual(catalogDb.database, undefined);
   });
 
   it(`should return database from "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata if found`, async () => {

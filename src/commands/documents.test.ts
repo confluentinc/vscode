@@ -362,15 +362,18 @@ describe("commands/documents.ts resetCCloudMetadataForUriCommand()", () => {
     // no uri argument passed here:
     await resetCCloudMetadataForUriCommand();
 
-    sinon.assert.notCalled(stubResourceManager.deleteUriMetadata);
+    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
   it("should reset the metadata and fire event when a Uri is provided", async () => {
     await resetCCloudMetadataForUriCommand(testUri);
 
-    sinon.assert.calledOnce(stubResourceManager.deleteUriMetadata);
-    sinon.assert.calledWithExactly(stubResourceManager.deleteUriMetadata, testUri);
+    sinon.assert.calledOnce(stubResourceManager.setUriMetadata);
+    sinon.assert.calledWithExactly(stubResourceManager.setUriMetadata, testUri, {
+      [UriMetadataKeys.FLINK_DATABASE_ID]: null,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: null,
+    });
     sinon.assert.calledOnce(uriMetadataSetFireStub);
     sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);
   });

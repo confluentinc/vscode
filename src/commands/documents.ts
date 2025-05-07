@@ -147,10 +147,14 @@ export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
     return;
   }
 
-  logger.debug("resetting metadata for URI", {
+  logger.debug("nullifying metadata for URI", {
     uri: uri.toString(),
   });
-  await getResourceManager().deleteUriMetadata(uri);
+  // explicitly set to `null` instead of `undefined` so defaults from settings aren't used
+  await getResourceManager().setUriMetadata(uri, {
+    [UriMetadataKeys.FLINK_DATABASE_ID]: null,
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: null,
+  });
   uriMetadataSet.fire(uri);
 }
 
