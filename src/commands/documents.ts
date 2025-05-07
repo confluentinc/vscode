@@ -1,9 +1,15 @@
-import { Disposable, Uri } from "vscode";
+import { commands, Disposable, Uri, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { showInfoNotificationWithButtons } from "../notifications";
+import {
+  UPDATE_DEFAULT_DATABASE_FROM_LENS,
+  UPDATE_DEFAULT_POOL_ID_FROM_LENS,
+} from "../preferences/constants";
+import { updateDefaultFlinkDatabaseId, updateDefaultFlinkPoolId } from "../preferences/updates";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
@@ -11,6 +17,9 @@ import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("commands.documents");
+
+/** Possible values for user settings controlling whether or not to update the default Flink resource IDs. */
+export type NeverAskAlways = "never" | "ask" | "always";
 
 export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CCloudKafkaCluster) {
   if (!(uri instanceof Uri)) {
@@ -43,6 +52,30 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CC
     pool.id,
   );
   uriMetadataSet.fire(uri);
+
+  // check user settings to see if we should ask to update the default compute pool ID or
+  // just do it automatically. (if set to "never" or any other value, we won't ask and won't do it)
+  const shouldUpdateDefaultPoolId: NeverAskAlways = workspace
+    .getConfiguration()
+    .get(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "ask");
+  if (shouldUpdateDefaultPoolId === "ask") {
+    await showInfoNotificationWithButtons(
+      `Set default Flink compute pool to "${pool.id}" ("${pool.name}")?`,
+      {
+        Yes: async () => {
+          await updateDefaultFlinkPoolId(pool);
+        },
+        "Change Notification Settings": () => {
+          void commands.executeCommand(
+            "workbench.action.openSettings",
+            `@id:${UPDATE_DEFAULT_POOL_ID_FROM_LENS}`,
+          );
+        },
+      },
+    );
+  } else if (shouldUpdateDefaultPoolId === "always") {
+    await updateDefaultFlinkPoolId(pool);
+  }
 }
 
 export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFlinkComputePool) {
@@ -77,6 +110,30 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
     database.id,
   );
   uriMetadataSet.fire(uri);
+
+  // check user settings to see if we should ask to update the default compute pool ID or
+  // just do it automatically. (if set to "never" or any other value, we won't ask and won't do it)
+  const shouldUpdateDefaultDatabaseId: NeverAskAlways = workspace
+    .getConfiguration()
+    .get(UPDATE_DEFAULT_DATABASE_FROM_LENS, "ask");
+  if (shouldUpdateDefaultDatabaseId === "ask") {
+    await showInfoNotificationWithButtons(
+      `Set default Flink database to "${database.id}" ("${database.name}")?`,
+      {
+        Yes: async () => {
+          await updateDefaultFlinkDatabaseId(database as CCloudKafkaCluster);
+        },
+        "Change Notification Settings": () => {
+          void commands.executeCommand(
+            "workbench.action.openSettings",
+            `@id:${UPDATE_DEFAULT_DATABASE_FROM_LENS}`,
+          );
+        },
+      },
+    );
+  } else if (shouldUpdateDefaultDatabaseId === "always") {
+    await updateDefaultFlinkDatabaseId(database as CCloudKafkaCluster);
+  }
 }
 
 export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
@@ -90,10 +147,14 @@ export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
     return;
   }
 
-  logger.debug("resetting metadata for URI", {
+  logger.debug("nullifying metadata for URI", {
     uri: uri.toString(),
   });
-  await getResourceManager().deleteUriMetadata(uri);
+  // explicitly set to `null` instead of `undefined` so defaults from settings aren't used
+  await getResourceManager().setUriMetadata(uri, {
+    [UriMetadataKeys.FLINK_DATABASE_ID]: null,
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: null,
+  });
   uriMetadataSet.fire(uri);
 }
 
