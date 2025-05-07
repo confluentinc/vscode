@@ -87,7 +87,11 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
       uriMetadata,
       envs,
     );
-    const { catalog, database } = await getCatalogDatabaseFromMetadata(uriMetadata, envs);
+    const { catalog, database } = await getCatalogDatabaseFromMetadata(
+      uriMetadata,
+      envs,
+      computePool,
+    );
 
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
@@ -219,20 +223,20 @@ export async function getCatalogDatabaseFromMetadata(
   }
 
   const catalog: CCloudEnvironment | undefined = envs.find((e) =>
-    e.kafkaClusters.some((k) => k.id === databaseId),
+    e.kafkaClusters.some((k) => k.id === databaseId || k.name === databaseId),
   );
   if (!catalog) {
     // no need to clear it since we'll show "Set Catalog & Database" codelens
-    logger.warn("catalog not found from stored database ID");
+    logger.warn("catalog not found from stored database ID/name", { database: databaseId });
     return catalogDatabase;
   }
 
   const cluster: CCloudKafkaCluster | undefined = catalog.kafkaClusters.find(
-    (k) => k.id === databaseId,
+    (k) => k.id === databaseId || k.name === databaseId,
   );
   if (!cluster) {
     // shouldn't happen since we just looked it up in order to get the catalog
-    logger.warn("database not found from stored database ID");
+    logger.warn("database not found from stored database ID/name", { database: databaseId });
     return catalogDatabase;
   }
 
