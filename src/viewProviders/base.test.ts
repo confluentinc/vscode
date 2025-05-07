@@ -8,6 +8,7 @@ import {
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { SqlV1StatementStatus } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import * as contextValues from "../context/values";
 import { ContextValues } from "../context/values";
@@ -16,12 +17,13 @@ import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
-import { SqlV1StatementStatus } from "../clients/flinkSql";
 
 /** Sample view provider subclass for testing {@link BaseViewProvider}. */
 class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement> {
   loggerName = "viewProviders.test";
   viewId = "confluent-test";
+
+  parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
   readonly kind = "test";
 
   async getChildren(element?: FlinkStatement): Promise<FlinkStatement[]> {
@@ -271,6 +273,53 @@ describe("viewProviders/base.ts BaseViewProvider reset()", () => {
     await provider.reset();
 
     sinon.assert.calledOnce(refreshSpy);
+  });
+});
+
+describe("viewProviders/base.ts BaseViewProvider setParentResource()", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let provider: TestViewProvider;
+  let refreshStub: sinon.SinonStub;
+  let setSearchStub: sinon.SinonStub;
+  let setContextValueStub: sinon.SinonStub;
+  let updateTreeViewDescriptionStub: sinon.SinonStub;
+
+  before(async () => {
+    // required for all subclasses of BaseViewProvider since they deal with extension storage
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    provider = TestViewProvider.getInstance();
+    refreshStub = sandbox.stub(provider, "refresh");
+    setSearchStub = sandbox.stub(provider, "setSearch");
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+    updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
+  });
+  afterEach(() => {
+    sandbox.restore();
+    // reset singleton instances between tests
+    BaseViewProvider["instanceMap"].clear();
+  });
+
+  it("Should handle setting to null", async () => {
+    await provider.setParentResource(null);
+    assert.strictEqual(provider.resource, null, "resource should be null");
+    sinon.assert.calledOnce(refreshStub);
+  });
+
+  it("Should handle setting to a resource", async () => {
+    const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+    await provider.setParentResource(resource);
+    assert.strictEqual(provider.resource, resource, "resource should be set");
+    sinon.assert.calledOnce(refreshStub);
+    sinon.assert.calledOnce(setSearchStub);
+    sinon.assert.calledWith(setSearchStub, null);
+    sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+    sinon.assert.calledOnce(setContextValueStub);
+    sinon.assert.calledWith(setContextValueStub, provider.parentResourceChangedContextValue, true);
   });
 });
 

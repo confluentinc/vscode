@@ -58,7 +58,7 @@ export async function selectPoolForStatementsViewCommand(item?: CCloudFlinkCompu
   commands.executeCommand("confluent-flink-statements.focus");
 
   // Inform the Flink Statements view that the user has selected a new compute pool, and wait
-  // for the view to repaint itself with the new pool's statements.
+  // for the view to load the new pool's statements.
   const flinkStatementsView = FlinkStatementsViewProvider.getInstance();
   await flinkStatementsView.setParentResource(pool);
 }
