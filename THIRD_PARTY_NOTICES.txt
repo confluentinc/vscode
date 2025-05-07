@@ -9,7 +9,7 @@ The following 3rd-party software packages may be used by or distributed with git
 
 Date generated: 2025-5-7
 
-Revision ID: 2c5bbd500530dbc1155b6bb158976fbbc4a9bfb8
+Revision ID: d54b4d200174fa402a7f44bd2cd22ec245a5863c
 
 ================================================================================
 ================================================================================
@@ -20654,10 +20654,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -39814,6 +39810,8 @@ Copyright (c) 2015-2022 Mike Bostock
 Copyright (c) 2015 Toru Nagashima. All rights reserved.
 
 Copyright (c) 2014 present, Jon Schlinkert.
+
+Copyright (c) 2010-2020 by Philipp Dunkel, Ben Noordhuis, Elan Shankar, Paul Miller — see LICENSE file.
 
 Copyright (c)  Microsoft Corporation. All rights reserved.
 
