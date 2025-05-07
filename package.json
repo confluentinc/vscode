@@ -977,6 +977,10 @@
         {
           "command": "confluent.document.flinksql.resetCCloudMetadata",
           "when": "false"
+        },
+        {
+          "command": "confluent.resources.scaffold",
+          "when": "false"
         }
       ],
       "editor/title": [

@@ -15,6 +15,7 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
+import { ResourceLoader } from "./loaders";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
@@ -24,7 +25,6 @@ import { KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
-import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { removeProtocolPrefix } from "./utils/bootstrapServers";
 import { fileUriExists } from "./utils/file";
@@ -64,7 +64,10 @@ async function resourceScaffoldProjectRequest(
       templateType: "kafka",
     });
   } else if (item instanceof KafkaTopic) {
-    const cluster = await getResourceManager().getClusterForTopic(item);
+    const clusters = await ResourceLoader.getInstance(
+      item.connectionId,
+    ).getKafkaClustersForEnvironmentId(item.environmentId);
+    const cluster = clusters.find((c) => c.id === item.clusterId);
     if (!cluster) {
       showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
@@ -78,11 +81,11 @@ async function resourceScaffoldProjectRequest(
       templateType: "kafka",
     });
   } else if (item instanceof CCloudFlinkComputePool) {
-    const organization: CCloudOrganization =
+    const organization: CCloudOrganization | undefined =
       await CCloudResourceLoader.getInstance().getOrganization();
     return await scaffoldProjectRequest({
       cc_environment_id: item.environmentId,
-      cc_organization_id: organization.id,
+      cc_organization_id: organization?.id,
       cloud_region: item.region,
       cloud_provider: item.provider,
       cc_compute_pool_id: item.id,
