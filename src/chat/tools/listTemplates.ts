@@ -11,6 +11,7 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
@@ -30,30 +31,54 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     const params = options.input;
     logger.debug("params:", params);
     const inputTagsPassed: boolean = Array.isArray(params.tags) && params.tags.length > 0;
+    const modelUsed =
+      (options.toolInvocationToken as { model?: { id: string } } | undefined)?.model?.id ||
+      "Unknown Model";
+    try {
+      const templateList = await getTemplatesList(true);
+      logger.debug("templateList:", templateList);
 
-    const templateList = await getTemplatesList();
-    logger.debug("templateList:", templateList);
+      const templates = Array.from(templateList.data) as ScaffoldV1Template[];
+      const templateStrings: LanguageModelTextPart[] = [];
+      templates.forEach((template) => {
+        const spec = template.spec!;
+        if (inputTagsPassed && !inputTagsMatchSpecTags(params.tags, spec.tags)) {
+          return;
+        }
+        templateStrings.push(
+          new LanguageModelTextPart(
+            JSON.stringify({
+              id: spec.name,
+              inputOptions: spec.options,
+              displayName: spec.display_name,
+              description: spec.description,
+            }),
+          ),
+        );
+      });
 
-    const templates = Array.from(templateList.data) as ScaffoldV1Template[];
-    const templateStrings: LanguageModelTextPart[] = [];
-    templates.forEach((template) => {
-      const spec = template.spec!;
-      if (inputTagsPassed && !inputTagsMatchSpecTags(params.tags, spec.tags)) {
-        // skip any templates that don't match provided tags
-        return;
+      if (token.isCancellationRequested) {
+        logger.debug("Tool invocation cancelled");
+        return new LanguageModelToolResult([]);
       }
-      templateStrings.push(
-        new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
-        ),
-      );
-    });
 
-    if (token.isCancellationRequested) {
-      logger.debug("Tool invocation cancelled");
-      return new LanguageModelToolResult([]);
+      logUsage(UserEvent.ToolInvocation, {
+        toolName: this.name,
+        modelUsed,
+        referencesCount: templates.length,
+        success: true,
+      });
+      return new LanguageModelToolResult(templateStrings);
+    } catch (error) {
+      logUsage(UserEvent.ToolInvocationFailure, {
+        toolName: this.name,
+        modelUsed: modelUsed,
+        referencesCount: 0,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
-    return new LanguageModelToolResult(templateStrings);
   }
 
   async processInvocation(
@@ -78,7 +103,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       for (const part of result.content as LanguageModelTextPart[]) {
         message = `${message}\n\n${part.value}`;
       }
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
+      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs and inputOptions when creating projects with templates.`;
       messages.push(this.toolMessage(message, "result"));
     } else {
       const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;

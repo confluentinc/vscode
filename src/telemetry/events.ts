@@ -19,6 +19,14 @@ export enum UserEvent {
   CCloudAuthentication = "CCloud Authentication",
   ViewSearchAction = "View Search Action",
   SchemaAction = "Schema Action",
+  ToolUsage = "Tool Usage",
+  ToolInvocation = "Tool Invocation",
+  ToolInvocationError = "Tool Invocation Error",
+  ToolInvocationSuccess = "Tool Invocation Success",
+  ToolInvocationCancelled = "Tool Invocation Cancelled",
+  ToolInvocationTimeout = "Tool Invocation Timeout",
+  ToolInvocationFailure = "Tool Invocation Failure",
+  ToolInvocationWarning = "Tool Invocation Warning",
   FlinkStatementAction = "Flink Statement Action",
 }
 
