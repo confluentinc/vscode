@@ -1,4 +1,4 @@
-import { commands, Disposable, Uri, workspace } from "vscode";
+import { commands, Disposable, Uri, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
 import { Logger } from "../logging";
@@ -6,6 +6,8 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
 import {
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../preferences/constants";
@@ -53,11 +55,19 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CC
   );
   uriMetadataSet.fire(uri);
 
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const defaultPoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
+  if (defaultPoolId === pool.id) {
+    // don't ask if the default pool ID is already set to the selected pool ID
+    return;
+  }
+
   // check user settings to see if we should ask to update the default compute pool ID or
   // just do it automatically. (if set to "never" or any other value, we won't ask and won't do it)
-  const shouldUpdateDefaultPoolId: NeverAskAlways = workspace
-    .getConfiguration()
-    .get(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "ask");
+  const shouldUpdateDefaultPoolId: NeverAskAlways = config.get(
+    UPDATE_DEFAULT_POOL_ID_FROM_LENS,
+    "ask",
+  );
   if (shouldUpdateDefaultPoolId === "ask") {
     await showInfoNotificationWithButtons(
       `Set default Flink compute pool to "${pool.id}" ("${pool.name}")?`,
@@ -111,11 +121,24 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
   );
   uriMetadataSet.fire(uri);
 
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
+  logger.info("comparing default database ID to selected database", {
+    selected: database.id,
+    default: defaultDatabaseId,
+  });
+  if (defaultDatabaseId === database.id) {
+    logger.info("not prompting to update default database ID");
+    // don't ask if the default database ID is already set to the selected database ID
+    return;
+  }
+
   // check user settings to see if we should ask to update the default compute pool ID or
   // just do it automatically. (if set to "never" or any other value, we won't ask and won't do it)
-  const shouldUpdateDefaultDatabaseId: NeverAskAlways = workspace
-    .getConfiguration()
-    .get(UPDATE_DEFAULT_DATABASE_FROM_LENS, "ask");
+  const shouldUpdateDefaultDatabaseId: NeverAskAlways = config.get(
+    UPDATE_DEFAULT_DATABASE_FROM_LENS,
+    "ask",
+  );
   if (shouldUpdateDefaultDatabaseId === "ask") {
     await showInfoNotificationWithButtons(
       `Set default Flink database to "${database.id}" ("${database.name}")?`,

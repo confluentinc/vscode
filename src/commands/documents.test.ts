@@ -143,6 +143,20 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     });
   }
 
+  it(`should not show a notification to update the value of "${FLINK_CONFIG_COMPUTE_POOL}" if the user setting is 'ask' and the default pool ID matches the set pool ID`, async () => {
+    getConfigStub.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS).returns("ask");
+    // simulate user selecting a compute pool
+    flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    // ...and the default pool ID set to the just-selected pool ID
+    getConfigStub.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+    // user dismisses the notification (default behavior)
+
+    await setCCloudComputePoolForUriCommand(testUri);
+
+    sinon.assert.notCalled(showInfoMessageStub);
+    sinon.assert.notCalled(updateDefaultFlinkPoolIdStub);
+  });
+
   it(`should show a notification to update the value of "${FLINK_CONFIG_COMPUTE_POOL}" if the user setting is 'ask'`, async () => {
     getConfigStub.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS).returns("ask");
     // simulate user selecting a compute pool
@@ -309,6 +323,21 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
       }
     });
   }
+
+  it(`should not show a notification to update the value of "${FLINK_CONFIG_DATABASE}" if the user setting is 'ask' and the default database ID matches the set database ID`, async () => {
+    getConfigStub.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS).returns("ask");
+    // simulate user selecting a compute pool and database
+    flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
+    // ...and the default database ID set to the just-selected database ID
+    getConfigStub.withArgs(FLINK_CONFIG_DATABASE).returns(TEST_CCLOUD_KAFKA_CLUSTER.id);
+    // user dismisses the notification (default behavior)
+
+    await setCCloudDatabaseForUriCommand(testUri);
+
+    sinon.assert.notCalled(showInfoMessageStub);
+    sinon.assert.notCalled(updateDefaultDatabaseIdStub);
+  });
 
   it(`should show a notification to update the value of "${FLINK_CONFIG_DATABASE}" if the user setting is 'ask'`, async () => {
     getConfigStub.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS).returns("ask");
