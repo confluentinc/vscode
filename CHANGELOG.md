@@ -16,6 +16,8 @@ All notable changes to this extension will be documented in this file.
   - setting a catalog and database
   - updating default pool/database settings
 
+## 1.2.1
+
 ### Fixed
 
 - If the route call fails while fetching Schema Registry subject names while populating the topics
