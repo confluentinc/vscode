@@ -36,8 +36,11 @@ export class FlinkStatementsViewProvider
   private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
 
   /**
-   * (Re)paint the view.
-   * @returns A promise that resolves when the refresh is complete, if caller needs to wait for it.
+   * Reload all statements in the view. This is a deep refresh, meaning
+   * that it will clear the view and reload all statements from the
+   * compute cluster / environment.
+   *
+   * @returns A promise that resolves when the refresh is complete.
    */
   refresh(): Promise<void> {
     // Out with any existing subjects.
