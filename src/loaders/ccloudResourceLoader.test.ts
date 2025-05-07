@@ -209,7 +209,7 @@ describe("CCloudResourceLoader", () => {
 
       sinon.assert.calledOnce(getEnvironmentsStub);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
-      assert.strictEqual(resourceLoader["organizationId"], null);
+      assert.strictEqual(resourceLoader["organization"], null);
       sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, []);
       sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudKafkaClusters, []);
       sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSchemaRegistries, []);
@@ -223,7 +223,7 @@ describe("CCloudResourceLoader", () => {
 
       sinon.assert.calledOnce(getEnvironmentsStub);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
-      assert.strictEqual(resourceLoader["organizationId"], TEST_CCLOUD_ORGANIZATION.id);
+      assert.strictEqual(resourceLoader["organization"], TEST_CCLOUD_ORGANIZATION);
       sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, [
         TEST_CCLOUD_ENVIRONMENT,
       ]);
