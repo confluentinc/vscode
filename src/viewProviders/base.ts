@@ -215,7 +215,7 @@ export abstract class BaseViewProvider<
       // any transition of CCloud connection state should reset the tree view if we're focused on
       // a CCloud parent resource
       this.logger.debug("ccloudConnected event fired, resetting view", { connected });
-      this.reset();
+      void this.reset();
     }
   }
 

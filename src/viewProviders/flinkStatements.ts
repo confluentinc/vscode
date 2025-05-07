@@ -2,13 +2,11 @@ import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
 
-const logger = new Logger("viewProviders.flinkStatements");
 /**
  * View controller for Flink statements. Can be assigned to track either
  * a single compute cluster, or a CCloud environment.
@@ -42,40 +40,32 @@ export class FlinkStatementsViewProvider
    *
    * @returns A promise that resolves when the refresh is complete.
    */
-  refresh(): Promise<void> {
+  async refresh(): Promise<void> {
     // Out with any existing subjects.
     this.resourcesInTreeView.clear();
 
-    const completed = new Promise<void>((resolve) => {
-      if (this.resource !== null) {
-        // Immediately inform the view that we (temporarily) have no data so it will clear.
-        this._onDidChangeTreeData.fire();
+    if (this.resource !== null) {
+      // Immediately inform the view that we (temporarily) have no data so it will clear.
+      this._onDidChangeTreeData.fire();
 
-        // And set up to deep refresh.
-        const loader = ResourceLoader.getInstance(
-          this.resource.connectionId,
-        ) as CCloudResourceLoader;
+      // And set up to deep refresh.
+      const loader = ResourceLoader.getInstance(this.resource.connectionId) as CCloudResourceLoader;
 
-        void this.withProgress(
-          "Loading Flink statements...",
-          async () => {
-            // Fetch statements, remember them, and indicate to the view that we have new data.
-            const statements = await loader.getFlinkStatements(this.resource!);
-            statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
-            this._onDidChangeTreeData.fire();
-            resolve();
-          },
-          false,
-        );
-      } else {
-        // No resource selected, so just inform the view that we have no data.
-        // (this.resourcesInTreeView has already been cleared.)
-        this._onDidChangeTreeData.fire();
-        resolve();
-      }
-    });
-
-    return completed;
+      await this.withProgress(
+        "Loading Flink statements...",
+        async () => {
+          // Fetch statements, remember them, and indicate to the view that we have new data.
+          const statements = await loader.getFlinkStatements(this.resource!);
+          statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
+          this._onDidChangeTreeData.fire();
+        },
+        false,
+      );
+    } else {
+      // No resource selected, so just inform the view that we have no data.
+      // (this.resourcesInTreeView has already been cleared.)
+      this._onDidChangeTreeData.fire();
+    }
   }
 
   /**
