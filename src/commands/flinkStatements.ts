@@ -238,23 +238,23 @@ export async function submitFlinkStatementCommand(
     // Focus the new statement in the view.
     const statementsView = FlinkStatementsViewProvider.getInstance();
 
-    // Cause the view to refresh, and then focus the new statement.
+    // Cause the view to refresh on the compute pool in question,
+    // and then focus the new statement. Statement will probably be in 'Pending' state.
     await statementsView.setParentResource(computePool);
     await statementsView.focus(newStatement.id);
 
     // Wait for statement to be running and show results
     if (newStatement.canHaveResults) {
+      // Will resolve when the statement is in a viewable state and
+      // the results viewer is open.
       await waitAndShowResults(newStatement, computePool);
 
-      // Refresh the statements view again. Even though it doesn't
-      // wait for the refresh to complete, it will at least immediately
-      // clear out the old results, allowing the next .focus() line
-      // to end up being a queueing operation.
-      // (We could really use a "refresh and wait" API here.)
-      statementsView.refresh().then(() => {
-        // Since refreshed entire view on line above, have to re-focus on the statement.
-        void statementsView.focus(newStatement.id);
-      });
+      // Refresh the statements view again to show the new state of the statement.
+      // (This is a whole empty + reload of view data, so have to wait until it's done.
+      //  before we can focus our new statement.)
+      await statementsView.refresh();
+      // Focus again, but don't need to wait for it.
+      void statementsView.focus(newStatement.id);
     }
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
