@@ -389,7 +389,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       const routeResponse = await statementsClient.getSqlv1Statement({
         environment_id: statement.environmentId,
         organization_id: statement.organizationId,
-        statement_name: "nonexistent", //statement.name,
+        statement_name: statement.name,
       });
       return restFlinkStatementToModel(routeResponse, statement);
     } catch (error) {
