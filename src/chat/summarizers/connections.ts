@@ -5,17 +5,16 @@ import {
   ConnectionType,
   KafkaClusterConfig,
   KafkaClusterStatus,
+  LocalConfig,
   SchemaRegistryConfig,
   SchemaRegistryStatus,
 } from "../../clients/sidecar";
-import { titleCase } from "../../utils";
+import { ContextValues, getContextValue } from "../../context/values";
 
 /** Create a string representation of a {@link Connection} object. */
 export function summarizeConnection(connection: Connection): string {
   const type: ConnectionType = connection.spec.type!;
-  let summary = new MarkdownString().appendMarkdown(
-    `# ${titleCase(type)} Connection: "${connection.spec.name}"`,
-  );
+  let summary = new MarkdownString().appendMarkdown(`- "${connection.spec.name}"`);
 
   // add spec/status details depending on the connection type
   switch (type) {
@@ -46,19 +45,22 @@ export function summarizeCCloudConnection(
   summary: MarkdownString,
 ): MarkdownString {
   const status: CCloudStatus = connection.status.ccloud!;
+
   const expiration: Date = status.requires_authentication_at!;
   const hoursUntilExpiration: number = Math.floor(
     (expiration.getTime() - new Date().getTime()) / (1000 * 60 * 60),
   );
   summary = summary
-    .appendMarkdown(`\n\n**State:** ${status.state}`)
+    .appendMarkdown(`\n**State:** ${status.state}`)
     .appendMarkdown(
-      `\n\n**Auth Session Expires At:** ${expiration.toLocaleDateString()} ${expiration.toLocaleTimeString()} (in ${hoursUntilExpiration} hour${hoursUntilExpiration === 1 ? "" : "s"})`,
-    )
-    .appendMarkdown(`\n(Sign-in link: ${connection.metadata.sign_in_uri})`);
+      `\n**Auth Session Expires At:** ${expiration.toLocaleDateString()} ${expiration.toLocaleTimeString()} (in ${hoursUntilExpiration} hour${hoursUntilExpiration === 1 ? "" : "s"})`,
+    );
+  if (hoursUntilExpiration <= 1) {
+    summary = summary.appendMarkdown(`\n**Sign-In Link:** ${connection.metadata.sign_in_uri}`);
+  }
   if (status.errors) {
     summary = summary
-      .appendMarkdown(`\n\n**Errors:**`)
+      .appendMarkdown(`\n**Errors:**`)
       .appendCodeblock(JSON.stringify(status.errors, null, 2), "json");
   }
   return summary;
@@ -74,8 +76,21 @@ export function summarizeLocalConnection(
   connection: Connection,
   summary: MarkdownString,
 ): MarkdownString {
-  summary.appendMarkdown(`\n\n## Local Connection Status`);
-  // TODO: look up Docker container details
+  const kafkaAvailable = getContextValue(ContextValues.localKafkaClusterAvailable);
+  summary.appendMarkdown(`\n**Kafka Cluster:** ${kafkaAvailable ? "Available" : "Not Available"}`);
+
+  // TODO(shoup): update this once we migrate LOCAL connections to DIRECT
+  // local_config only exists if the SR URI is set
+  const config: LocalConfig | undefined = connection.spec.local_config;
+  const schemaRegistryAvailable: boolean =
+    !!config && (getContextValue(ContextValues.localSchemaRegistryAvailable) ?? false);
+  summary.appendMarkdown(
+    `\n**Schema Registry:** ${schemaRegistryAvailable ? "Available" : "Not Available"}`,
+  );
+  if (schemaRegistryAvailable) {
+    summary.appendMarkdown(`\n**Schema Registry URI:** ${config!.schema_registry_uri}`);
+  }
+
   return summary;
 }
 
@@ -93,11 +108,11 @@ export function summarizeDirectConnection(
   if (kafkaConfig) {
     const kafkaStatus: KafkaClusterStatus = connection.status.kafka_cluster!;
     summary = summary
-      .appendMarkdown(`\n\n**Bootstrap Servers:** ${kafkaConfig.bootstrap_servers}`)
-      .appendMarkdown(`\n\n**Status:** ${kafkaStatus.state}`);
+      .appendMarkdown(`\n**Bootstrap Servers:** ${kafkaConfig.bootstrap_servers}`)
+      .appendMarkdown(`\n**Status:** ${kafkaStatus.state}`);
     if (kafkaStatus.errors) {
       summary = summary
-        .appendMarkdown(`\n\n**Errors:**`)
+        .appendMarkdown(`\n**Errors:**`)
         .appendCodeblock(JSON.stringify(kafkaStatus.errors, null, 2), "json");
     }
   }
@@ -106,11 +121,11 @@ export function summarizeDirectConnection(
   if (schemaRegistryConfig) {
     const schemaRegistryStatus: SchemaRegistryStatus = connection.status.schema_registry!;
     summary = summary
-      .appendMarkdown(`\n\n**Schema Registry URL:** ${schemaRegistryConfig.uri}`)
-      .appendMarkdown(`\n\n**Status:** ${schemaRegistryStatus.state}`);
+      .appendMarkdown(`\n**Schema Registry URL:** ${schemaRegistryConfig.uri}`)
+      .appendMarkdown(`\n**Status:** ${schemaRegistryStatus.state}`);
     if (schemaRegistryStatus.errors) {
       summary = summary
-        .appendMarkdown(`\n\n**Errors:**`)
+        .appendMarkdown(`\n**Errors:**`)
         .appendCodeblock(JSON.stringify(schemaRegistryStatus.errors, null, 2), "json");
     }
   }
