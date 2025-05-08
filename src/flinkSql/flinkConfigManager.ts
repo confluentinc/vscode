@@ -10,7 +10,11 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { ENABLE_FLINK } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
-import { initializeLanguageClient } from "./languageClient";
+import {
+  initializeLanguageClient,
+  isLanguageClientConnected,
+  languageClientRestartNeeded,
+} from "./languageClient";
 
 const logger = new Logger("flinkConfigManager");
 
@@ -27,10 +31,11 @@ export interface FlinkSqlSettings {
  * - WIP: Manage Flink SQL Language Client(s) lifecycle & settings
  */
 export class FlinkConfigurationManager implements Disposable {
-  static instance: FlinkConfigurationManager | null = null;
+  private static instance: FlinkConfigurationManager | null = null;
   private disposables: Disposable[] = [];
   private hasPromptedForSettings = false;
   private languageClient: LanguageClient | null = null;
+  private lastWebSocketUrl: string | null = null;
 
   static getInstance(): FlinkConfigurationManager {
     if (!FlinkConfigurationManager.instance) {
@@ -63,6 +68,7 @@ export class FlinkConfigurationManager implements Disposable {
         this.hasPromptedForSettings = false;
         this.languageClient?.dispose();
         this.languageClient = null;
+        this.lastWebSocketUrl = null;
       }),
       ccloudConnected.event(async () => {
         await this.validateFlinkSettings();
@@ -89,9 +95,22 @@ export class FlinkConfigurationManager implements Disposable {
           if (isFlinkEnabled) {
             this.hasPromptedForSettings = false;
             await this.validateFlinkSettings();
-                      } else {
+          } else {
             logger.debug("Flink was disabled, no further actions needed");
           }
+        }
+      }),
+    );
+
+    // Listen for WebSocket disconnection events and try to reconnect
+    this.disposables.push(
+      languageClientRestartNeeded.event(async () => {
+        logger.info("Received language client restart event");
+        if (this.lastWebSocketUrl) {
+          logger.info(`Attempting to reconnect language client to ${this.lastWebSocketUrl}`);
+          await this.initLanguageClient();
+        } else {
+          logger.warn("Cannot reconnect language client - no previous WebSocket URL stored");
         }
       }),
     );
@@ -101,6 +120,7 @@ export class FlinkConfigurationManager implements Disposable {
     logger.debug("Flink configuration changed");
     await this.checkFlinkResourcesAvailability();
 
+    // We have a lang client, send the updated settings
     if (this.languageClient) {
       const { database, computePoolId } = this.getFlinkSqlSettings();
       if (!computePoolId) {
@@ -110,7 +130,7 @@ export class FlinkConfigurationManager implements Disposable {
       const poolInfo = await this.lookupComputePoolInfo(computePoolId);
       const environmentId = poolInfo?.environmentId;
 
-      // Only send settings if all required settings are present otherwise server will delete existing settings
+      // Don't send with undefined settings, server will delete existing settings if sent with empty/undefined values
       if (environmentId && database && computePoolId) {
         logger.debug("Sending complete configuration to language server", {
           computePoolId,
@@ -290,16 +310,33 @@ export class FlinkConfigurationManager implements Disposable {
       throw new Error(`Could not find environment containing compute pool ${computePoolId}`);
     }
     const { organizationId, environmentId, region, provider } = poolInfo;
-    return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
+    const url = `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
+    this.lastWebSocketUrl = url;
+    return url;
   }
 
   /**
    * Ensures the language client is initialized if prerequisites are met
    */
   private async initLanguageClient(): Promise<void> {
+    // If we already have a client and it's healthy, just update settings
     if (this.languageClient) {
-      await this.handleFlinkConfigChange();
-      return;
+      try {
+        if (isLanguageClientConnected()) {
+          logger.debug("Language client connection confirmed active");
+          await this.handleFlinkConfigChange();
+          return;
+        }
+        throw new Error("Language client is not in running state");
+      } catch (error) {
+        logger.warn("Language client appears to be disconnected, will reinitialize", error);
+        try {
+          await this.languageClient.stop();
+        } catch (e) {
+          logger.error("Error stopping disconnected language client", e);
+        }
+        this.languageClient = null;
+      }
     }
 
     const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
@@ -314,7 +351,6 @@ export class FlinkConfigurationManager implements Disposable {
     }
 
     const { computePoolId } = this.getFlinkSqlSettings();
-
     if (!computePoolId) {
       logger.debug("No compute pool ID configured, not initializing language client");
       return;
@@ -322,19 +358,28 @@ export class FlinkConfigurationManager implements Disposable {
 
     try {
       logger.info("Initializing Flink SQL language client");
-      const url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
-        logger.error("Failed to build WebSocket URL:", error);
-        window.showErrorMessage(
-          `Failed to initialize Flink SQL language client: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        return;
-      });
+      let url: string | undefined;
+      if (this.lastWebSocketUrl && this.lastWebSocketUrl.includes(computePoolId)) {
+        logger.debug("Using cached WebSocket URL for reconnection");
+        url = this.lastWebSocketUrl;
+      } else {
+        url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
+          logger.error("Failed to build WebSocket URL:", error);
+          window.showErrorMessage(
+            `Failed to initialize Flink SQL language client: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return undefined;
+        });
+      }
+
       if (!url) return;
+
+      // Initialize the client with the URL
       this.languageClient = await initializeLanguageClient(url);
       if (this.languageClient) {
         this.disposables.push(this.languageClient);
         logger.info("Flink SQL language client successfully initialized");
-        this.handleFlinkConfigChange(); //send settings right away
+        this.handleFlinkConfigChange(); // Send settings right away
       }
     } catch (error) {
       logger.error("Failed to initialize Flink SQL language client:", error);
