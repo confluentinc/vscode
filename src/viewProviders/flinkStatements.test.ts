@@ -179,7 +179,7 @@ describe("FlinkStatementsViewProvider", () => {
       assert.strictEqual(computePool, null);
     });
 
-    it("returns returns null if resource set to an environment", () => {
+    it("returns null if resource set to an environment", () => {
       viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
       const computePool = viewProvider.computePool;
       assert.strictEqual(computePool, null);
