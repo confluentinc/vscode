@@ -143,6 +143,31 @@
             "templateOptions"
           ]
         }
+      },
+      {
+        "name": "get_connections",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "connections"
+        ],
+        "displayName": "Get Connections",
+        "modelDescription": "Get a list of connections available in the current workspace. Use this when the user asks about their connections or you want to show them a list of connections.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "connectionType": {
+              "type": "string",
+              "enum": [
+                "CCLOUD",
+                "DIRECT",
+                "LOCAL"
+              ],
+              "description": "Optional connection type to filter the list of connections."
+            }
+          }
+        }
       }
     ],
     "commands": [
