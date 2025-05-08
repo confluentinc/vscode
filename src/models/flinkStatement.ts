@@ -66,11 +66,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   }
 
   /** The flink compute pool that maybe is running/ran the statement. */
-  get computePoolId(): string {
-    if (this.spec.compute_pool_id === undefined) {
-      throw new Error("Statement does not have compute pool set");
-    }
-
+  get computePoolId(): string | undefined {
     return this.spec.compute_pool_id;
   }
 
