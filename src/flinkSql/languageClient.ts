@@ -18,6 +18,13 @@ import { WebsocketTransport } from "./websocketTransport";
 const logger = new Logger("flinkSql.languageClient");
 
 let languageClient: LanguageClient | null = null;
+let reconnectCounter = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+
+/**
+ * Event emitter for when the language client needs to be restarted
+ */
+export const languageClientRestartNeeded = new vscode.EventEmitter<void>();
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed
@@ -30,6 +37,9 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
     logger.warn("Cannot initialize language client: User not authenticated with CCloud");
     return null;
   }
+
+  // Reset reconnect counter on new initialization
+  reconnectCounter = 0;
 
   if (languageClient) {
     logger.info("Language client already initialized");
@@ -72,7 +82,7 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
               return next(document);
             },
             didChange: (event, next) => {
-              // Clear diagnostics when document changes, so user sees only relevant (new) issues
+              // Clear diagnostics when document changes, so user sees only latest issues
               const diagnostics = languageClient?.diagnostics;
               if (diagnostics) {
                 diagnostics.delete(event.document.uri);
@@ -80,8 +90,8 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
               return next(event);
             },
             provideCompletionItem: (document, position, context, token, next) => {
-              // Server adds backticks to all Entity completions, so we check
-              // if the character before the word range start is a backtick & if so, adjust the position
+              // Server adds backticks to all Entity completions, but this isn't expected by LSP
+              // so if the character before the word range is a backtick, adjust the position
               const range = document.getWordRangeAtPosition(position);
               const line = document.lineAt(position.line).text;
               let positionToUse = position;
@@ -119,8 +129,10 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
               return { action: ErrorAction.Continue, message: `${message ?? error.message}` };
             },
             closed: () => {
-              vscode.window.showWarningMessage("Language server connection closed");
-              return { action: CloseAction.Restart };
+              logger.warn("Language server connection closed by the client's error handler");
+              // This will trigger our own reconnection logic
+              languageClientRestartNeeded.fire();
+              return { action: CloseAction.DoNotRestart };
             },
           },
         };
@@ -141,9 +153,76 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
         reject(e);
       }
     };
-    // TODO NC (after sidecar changes) handle conn.onclose
-    // reconnect counter and logic to check connection health/status
+    conn.onclose = async (event) => {
+      const reason = event.reason || "Unknown reason";
+      const code = event.code;
+      logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
+      await handleWebSocketDisconnect(url);
+    };
   });
+}
+
+/**
+ * Try to reconnect to the language server
+ * @param url The WebSocket URL to reconnect to
+ */
+async function handleWebSocketDisconnect(url: string): Promise<void> {
+  // Skip reconnection attempts if we're not authenticated
+  if (!hasCCloudAuthSession()) {
+    logger.warn("Not attempting reconnection: User not authenticated with CCloud");
+    return;
+  }
+
+  // If we've reached max attempts, show a notification to the user
+  if (reconnectCounter >= MAX_RECONNECT_ATTEMPTS) {
+    logger.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
+    vscode.window
+      .showErrorMessage(
+        "Connection to Flink SQL server lost. Please try reopening your Flink SQL files.",
+        "Retry Now",
+      )
+      .then((selection) => {
+        if (selection === "Retry Now") {
+          // Reset counter and try again immediately
+          reconnectCounter = 0;
+          restartLanguageClient(url);
+        }
+      });
+    return;
+  }
+
+  reconnectCounter++;
+  restartLanguageClient(url);
+}
+
+/**
+ * Restarts the language client
+ * @param url The WebSocket URL to connect to
+ */
+async function restartLanguageClient(url: string): Promise<void> {
+  // Dispose of the existing client if it exists
+  if (languageClient) {
+    logger.info("Disposing existing language client");
+    try {
+      await languageClient.stop();
+    } catch (e) {
+      logger.error(`Error stopping language client: ${e}`);
+    }
+    languageClient = null;
+  }
+
+  // Try to initialize a new client
+  try {
+    logger.info("Attempting to initialize new language client");
+    await initializeLanguageClient(url);
+    // Reset counter on successful reconnection
+    reconnectCounter = 0;
+    logger.info("Successfully reconnected to language server");
+  } catch (e) {
+    logger.error(`Failed to reconnect: ${e}`);
+    // The next reconnection attempt will happen through handleWebSocketDisconnect
+    handleWebSocketDisconnect(url);
+  }
 }
 
 /** Helper to convert vscode.Position to always have {line: 0...},
@@ -161,4 +240,12 @@ function convertToSingleLinePosition(
   }
   singleLinePosition += position.character;
   return new vscode.Position(0, singleLinePosition);
+}
+
+/**
+ * Checks if the language client is currently connected and healthy
+ * @returns True if the client is connected, false otherwise
+ */
+export function isLanguageClientConnected(): boolean {
+  return languageClient !== null && languageClient.needsStart() === false;
 }
