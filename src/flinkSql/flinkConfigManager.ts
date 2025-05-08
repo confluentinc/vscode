@@ -167,7 +167,7 @@ export class FlinkConfigurationManager implements Disposable {
       logger.debug("Flink is not enabled in settings, skipping configuration prompt");
       return false;
     }
-    const { computePoolId, database } = this.getFlinkSqlSettings();
+    const { computePoolId } = this.getFlinkSqlSettings();
     // If default settings are missing, prompt the user
     if (!computePoolId) {
       logger.debug("Flink settings not fully configured");
@@ -176,7 +176,7 @@ export class FlinkConfigurationManager implements Disposable {
       return false;
     }
 
-    logger.debug("Flink settings are configured", { computePoolId, database });
+    logger.debug("Flink compute pool is:", computePoolId);
     const computeValid = await this.checkFlinkResourcesAvailability(computePoolId);
     if (!computeValid) {
       // logger.debug("Flink compute pool is not valid, prompting user");
