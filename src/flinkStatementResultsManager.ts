@@ -74,7 +74,7 @@ export class FlinkStatementResultsManager {
   private _latestError: Signal<{ message: string } | null>;
   private _timer: Signal<Timer>;
   private _isResultsFull: Signal<boolean>;
-  private _pollingWatch: (() => void) | undefined;
+  private _pollingInterval: NodeJS.Timeout | undefined;
   private _shouldPoll: Signal<boolean>;
   /** Filter by substring text query. */
   private _searchQuery: Signal<string | null>;
@@ -88,6 +88,7 @@ export class FlinkStatementResultsManager {
     private schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
     private notifyUI: () => void,
     private resultLimit: number,
+    private resultsPollingIntervalMs: number = 800,
   ) {
     this._results = os.signal(new Map<string, any>());
     this._state = os.signal<StreamState>("running");
@@ -96,19 +97,18 @@ export class FlinkStatementResultsManager {
     this._latestError = os.signal<{ message: string } | null>(null);
     this._timer = os.signal(Timer.create());
     this._isResultsFull = os.signal(false);
-    this._pollingWatch = undefined;
     this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
     this._searchQuery = os.signal<string | null>(null);
     this._visibleColumns = os.signal<string[] | null>(null);
     this._filteredResults = os.signal<any[]>([]);
-    this.setupWatches();
+    this.setupPolling();
   }
 
-  private setupWatches() {
-    // Watch for polling
-    this._pollingWatch = this.os.watch(async (signal) => {
-      await this.fetchResults(signal);
-    });
+  private setupPolling() {
+    this._pollingInterval = setInterval(
+      this.fetchResults.bind(this),
+      this.resultsPollingIntervalMs,
+    );
 
     // Watch for results full state
     this.os.watch(() => {
@@ -131,7 +131,7 @@ export class FlinkStatementResultsManager {
     }
   }
 
-  async fetchResults(signal: AbortSignal): Promise<void> {
+  async fetchResults(): Promise<void> {
     if (!this._shouldPoll()) {
       return;
     }
@@ -142,18 +142,13 @@ export class FlinkStatementResultsManager {
     try {
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-      const response = await this.schedule(
-        () =>
-          this.service.getSqlv1StatementResult(
-            {
-              environment_id: this.statement.environmentId,
-              organization_id: this.statement.organizationId,
-              name: this.statement.name,
-              page_token: pageToken,
-            },
-            { signal },
-          ),
-        signal,
+      const response = await this.schedule(() =>
+        this.service.getSqlv1StatementResult({
+          environment_id: this.statement.environmentId,
+          organization_id: this.statement.organizationId,
+          name: this.statement.name,
+          page_token: pageToken,
+        }),
       );
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
@@ -362,7 +357,8 @@ export class FlinkStatementResultsManager {
   }
 
   dispose() {
-    this._pollingWatch?.();
-    this.os.dispose();
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval);
+    }
   }
 }

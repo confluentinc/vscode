@@ -51,10 +51,22 @@ describe("FlinkStatementResultsManager", () => {
       schedule_immediately,
       notifyUIStub,
       DEFAULT_RESULTS_LIMIT,
+      // Polling interval of 0 for testing
+      0,
     );
 
     // Wait for results to be processed, it should eventually become 10
-    await eventually(() => assert.equal(manager.handleMessage("GetResultsCount", {}).total, 10));
+    await eventually(() => {
+      assert.equal(manager.handleMessage("GetResultsCount", {}).total, 10);
+
+      const results = manager.handleMessage("GetResults", {
+        page: 0,
+        pageSize: DEFAULT_RESULTS_LIMIT,
+      });
+
+      // Verify the results match expected format
+      assert.deepStrictEqual(results, { results: expectedParsedResults });
+    });
 
     return { manager, expectedParsedResults };
   };
