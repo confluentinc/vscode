@@ -99,7 +99,7 @@
           "connections"
         ],
         "displayName": "Get Connections",
-        "modelDescription": "Get a list of connections available in the current workspace. Use this when the user asks about their connections or you want to show them a list of connections.",
+        "modelDescription": "Get a list of connections available in the current workspace. Use this when the user asks about their connections or you want to show them a list of connections. Any sign-in/sign-out actions are specific to the CCLOUD connection. The LOCAL connection handles Kafka and Schema registry through the local Docker engine API. Any other configurations for Kafka or Schema Registry are done through the DIRECT connections.",
         "canBeReferencedInPrompt": false,
         "icon": "$(list-selection)",
         "inputSchema": {
