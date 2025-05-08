@@ -120,7 +120,10 @@ export async function submitFlinkStatement(
 
   const handle = await getSidecar();
 
-  const organization: CCloudOrganization = await ccloudLoader.getOrganization();
+  const organization: CCloudOrganization | undefined = await ccloudLoader.getOrganization();
+  if (!organization) {
+    throw new Error("User must be signed in to Confluent Cloud to submit Flink statements.");
+  }
 
   const requestInner: CreateSqlv1StatementRequest = {
     api_version: CreateSqlv1StatementRequestApiVersionEnum.SqlV1,

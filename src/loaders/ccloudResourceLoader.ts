@@ -291,7 +291,7 @@ export class CCloudResourceLoader extends ResourceLoader {
    * @returns The {@link CCloudOrganization} for the current CCloud connection, either from cached
    * value or deep fetch.
    */
-  public async getOrganization(): Promise<CCloudOrganization> {
+  public async getOrganization(): Promise<CCloudOrganization | undefined> {
     if (this.organization) {
       return this.organization;
     }
@@ -302,7 +302,6 @@ export class CCloudResourceLoader extends ResourceLoader {
       return this.organization;
     }
     logger.withCallpoint("getOrganization()").error("No current organization found.");
-    throw new Error("No current organization found.");
   }
 
   /**
@@ -313,7 +312,11 @@ export class CCloudResourceLoader extends ResourceLoader {
   public async determineFlinkQueryables(
     resource: CCloudEnvironment | CCloudFlinkComputePool,
   ): Promise<IFlinkQueryable[]> {
-    const org = await this.getOrganization();
+    const org: CCloudOrganization | undefined = await this.getOrganization();
+    if (!org) {
+      return [];
+    }
+
     if (resource instanceof CCloudFlinkComputePool) {
       // If we have a single compute pool, just reexpress it.
       return [

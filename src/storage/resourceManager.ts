@@ -756,7 +756,12 @@ export class ResourceManager {
     });
   }
 
-  /** Set the metadata for a specific {@link Uri}. */
+  /**
+   * Set the metadata for a specific {@link Uri}.
+   *
+   * This will merge with any existing metadata, overwriting any preexisting keys with (new) values
+   * provided in `metadata`.
+   */
   async setUriMetadata(uri: Uri, metadata: UriMetadata): Promise<void> {
     const key = WorkspaceStorageKeys.URI_METADATA;
     await this.runWithMutex(key, async () => {

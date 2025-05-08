@@ -8,6 +8,8 @@ import {
   Position,
   Range,
   TextDocument,
+  workspace,
+  WorkspaceConfiguration,
 } from "vscode";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
@@ -15,6 +17,7 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
@@ -84,7 +87,11 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
       uriMetadata,
       envs,
     );
-    const { catalog, database } = await getCatalogDatabaseFromMetadata(uriMetadata, envs);
+    const { catalog, database } = await getCatalogDatabaseFromMetadata(
+      uriMetadata,
+      envs,
+      computePool,
+    );
 
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
@@ -144,11 +151,19 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
  * @param envs The environments to look up the compute pool.
  * @returns The compute pool.
  */
-async function getComputePoolFromMetadata(
+export async function getComputePoolFromMetadata(
   metadata: UriMetadata | undefined,
   envs: CCloudEnvironment[],
 ): Promise<CCloudFlinkComputePool | undefined> {
-  const computePoolString: string | undefined = metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const defaultComputePoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
+  // clearing will set the metadata to `null`, so we'll only fall back to the default value if
+  // the metadata is `undefined` (not set at all)
+  let computePoolString: string | null | undefined =
+    metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
+  if (computePoolString === undefined) {
+    computePoolString = defaultComputePoolId;
+  }
   if (!computePoolString) {
     return;
   }
@@ -163,6 +178,9 @@ async function getComputePoolFromMetadata(
   if (computePool) {
     // explicitly turn into a CCloudFlinkComputePool since `submitFlinkStatementCommand` checks
     // for a CCloudFlinkComputePool instance
+    logger.debug("compute pool found from stored pool ID", {
+      computePool,
+    });
     computePool = new CCloudFlinkComputePool({ ...computePool });
   } else {
     // no need to clear pool metadata since we'll show "Set Compute Pool" codelens
@@ -173,7 +191,7 @@ async function getComputePoolFromMetadata(
   return computePool;
 }
 
-interface CatalogDatabase {
+export interface CatalogDatabase {
   catalog?: CCloudEnvironment;
   database?: CCloudKafkaCluster;
 }
@@ -185,32 +203,40 @@ interface CatalogDatabase {
  * @param computePool Optional: the compute pool to match provider/region against the database.
  * @returns The catalog and database.
  */
-async function getCatalogDatabaseFromMetadata(
+export async function getCatalogDatabaseFromMetadata(
   metadata: UriMetadata | undefined,
   envs: CCloudEnvironment[],
   computePool?: CCloudFlinkComputePool,
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
-  const databaseId: string | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
+  // clearing will set the metadata to `null`, so we'll only fall back to the default value if
+  // the metadata is `undefined` (not set at all)
+  let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+  if (databaseId === undefined) {
+    databaseId = defaultDatabaseId;
+  }
   if (!databaseId) {
     return catalogDatabase;
   }
 
   const catalog: CCloudEnvironment | undefined = envs.find((e) =>
-    e.kafkaClusters.some((k) => k.id === databaseId),
+    e.kafkaClusters.some((k) => k.id === databaseId || k.name === databaseId),
   );
   if (!catalog) {
     // no need to clear it since we'll show "Set Catalog & Database" codelens
-    logger.warn("catalog not found from stored database ID");
+    logger.warn("catalog not found from stored database ID/name", { database: databaseId });
     return catalogDatabase;
   }
 
   const cluster: CCloudKafkaCluster | undefined = catalog.kafkaClusters.find(
-    (k) => k.id === databaseId,
+    (k) => k.id === databaseId || k.name === databaseId,
   );
   if (!cluster) {
     // shouldn't happen since we just looked it up in order to get the catalog
-    logger.warn("database not found from stored database ID");
+    logger.warn("database not found from stored database ID/name", { database: databaseId });
     return catalogDatabase;
   }
 
@@ -221,6 +247,10 @@ async function getCatalogDatabaseFromMetadata(
     if (cluster.provider === computePool.provider && cluster.region === computePool?.region) {
       // explicitly turn into a CCloudKafkaCluster since `submitFlinkStatementCommand` checks
       // for a CCloudKafkaCluster instance
+      logger.debug("database provider/region matches compute pool provider/region", {
+        database: cluster,
+        computePool,
+      });
       database = CCloudKafkaCluster.create({ ...cluster });
     } else {
       logger.warn("database provider/region does not match compute pool provider/region", {
@@ -230,6 +260,9 @@ async function getCatalogDatabaseFromMetadata(
     }
   } else {
     // no compute pool selected, so we can use the database as-is
+    logger.debug("no compute pool selected, using database without provider/region matching", {
+      database: cluster,
+    });
     database = CCloudKafkaCluster.create({ ...cluster });
   }
 

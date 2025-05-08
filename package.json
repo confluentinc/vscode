@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-40",
+  "version": "1.3.0-46",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -632,6 +632,36 @@
             "type": "string",
             "default": "",
             "description": "Name or ID for default CCloud database (topic) to use for Flink SQL operations"
+          },
+          "confluent.flink.updateComputePoolIdFromCodelens": {
+            "markdownDescription": "Controls whether or not to update `#confluent.flink.computePoolId#` after selecting a compute pool from the 'Set Compute Pool' codelens.",
+            "type": "string",
+            "default": "ask",
+            "enum": [
+              "never",
+              "ask",
+              "always"
+            ],
+            "markdownEnumDescriptions": [
+              "Don't ask, and **never** update `#confluent.flink.computePoolId#`.",
+              "Show a notification asking whether or not to update `#confluent.flink.computePoolId#`.",
+              "**Always** update `#confluent.flink.computePoolId#` without asking."
+            ]
+          },
+          "confluent.flink.updateDatabaseFromCodelens": {
+            "markdownDescription": "Controls whether or not to update `#confluent.flink.database#` after selecting a database from the 'Set Catalog & Database' codelens.",
+            "type": "string",
+            "default": "ask",
+            "enum": [
+              "never",
+              "ask",
+              "always"
+            ],
+            "markdownEnumDescriptions": [
+              "Don't ask, and **never** update `#confluent.flink.database#`.",
+              "Show a notification asking whether or not to update `#confluent.flink.database#`.",
+              "**Always** update `#confluent.flink.database#` without asking."
+            ]
           }
         }
       }
@@ -976,6 +1006,10 @@
         },
         {
           "command": "confluent.document.flinksql.resetCCloudMetadata",
+          "when": "false"
+        },
+        {
+          "command": "confluent.resources.scaffold",
           "when": "false"
         }
       ],

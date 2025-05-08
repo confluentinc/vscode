@@ -1,6 +1,7 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
+import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import {
@@ -12,7 +13,10 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import * as graphqlEnvs from "../graphql/environments";
+import * as graphqlOrgs from "../graphql/organizations";
 import * as sidecar from "../sidecar";
+import { ResourceManager } from "../storage/resourceManager";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
 
 describe("CCloudResourceLoader", () => {
@@ -173,4 +177,64 @@ describe("CCloudResourceLoader", () => {
       };
     }
   }); // getFlinkStatements
+
+  describe("doLoadCoarseResources", () => {
+    let resourceLoader: CCloudResourceLoader;
+
+    let sandbox: sinon.SinonSandbox;
+    let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+    let getEnvironmentsStub: sinon.SinonStub;
+    let getCurrentOrganizationStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+
+      resourceLoader = CCloudResourceLoader.getInstance();
+      stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
+      sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
+
+      getEnvironmentsStub = sandbox.stub(graphqlEnvs, "getEnvironments");
+      getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should not throw any errors when no CCloud org is available", async () => {
+      getEnvironmentsStub.resolves([]);
+      getCurrentOrganizationStub.resolves(undefined);
+
+      await resourceLoader["doLoadCoarseResources"]();
+
+      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      assert.strictEqual(resourceLoader["organization"], null);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, []);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudKafkaClusters, []);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSchemaRegistries, []);
+    });
+
+    it("should set CCloud resources when available", async () => {
+      getEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+      getCurrentOrganizationStub.resolves(TEST_CCLOUD_ORGANIZATION);
+
+      await resourceLoader["doLoadCoarseResources"]();
+
+      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      assert.strictEqual(resourceLoader["organization"], TEST_CCLOUD_ORGANIZATION);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, [
+        TEST_CCLOUD_ENVIRONMENT,
+      ]);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setCCloudKafkaClusters,
+        TEST_CCLOUD_ENVIRONMENT.kafkaClusters, // empty array by default
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setCCloudSchemaRegistries,
+        TEST_CCLOUD_ENVIRONMENT.schemaRegistry ? [TEST_CCLOUD_ENVIRONMENT.schemaRegistry] : [],
+      );
+    });
+  });
 }); // CCloudResourceLoader
