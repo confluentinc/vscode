@@ -33,11 +33,6 @@ export const languageClientRestartNeeded = new vscode.EventEmitter<void>();
  * - User has selected a compute pool
  */
 export async function initializeLanguageClient(url: string): Promise<LanguageClient | null> {
-  if (!hasCCloudAuthSession()) {
-    logger.warn("Cannot initialize language client: User not authenticated with CCloud");
-    return null;
-  }
-
   // Reset reconnect counter on new initialization
   reconnectCounter = 0;
 
