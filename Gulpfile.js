@@ -861,13 +861,13 @@ export async function format() {
   return pipeline(
     src([
       "src/**/*.ts",
+      "!src/clients/**/*.ts", // don't reformat apigen generated code
       "src/**/*.css",
       "src/**/*.html",
       "src/**/*.json",
       "src/**/*.graphql",
       "*.md",
       "*.js",
-      "src/clients/sidecar-openapi-specs/*.yaml",
     ]),
     transform,
     dest((file) => file.base),
