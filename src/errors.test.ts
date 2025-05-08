@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { createResponseError } from "../tests/unit/testUtils";
 import { ResponseError } from "./clients/sidecar";
-import { getNestedErrorChain, hasErrorCause, logError } from "./errors";
+import { getNestedErrorChain, hasErrorCause, isResponseErrorWithStatus, logError } from "./errors";
 import { Logger } from "./logging";
 
 describe("errors.ts logError()", () => {
@@ -17,17 +18,6 @@ describe("errors.ts logError()", () => {
   afterEach(() => {
     sandbox.restore();
   });
-
-  const createResponseError = (status: number, statusText: string, body: string): ResponseError => {
-    const response = {
-      status,
-      statusText,
-      clone: () => ({
-        text: () => Promise.resolve(body),
-      }),
-    } as Response;
-    return new ResponseError(response);
-  };
 
   it("should log regular Error instances", async () => {
     const errorMessage = "uh oh";
@@ -153,5 +143,22 @@ describe("errors.ts getNestedErrorChain()", () => {
     assert.deepStrictEqual(errorChain[0]["errorType0"], error.name);
     assert.deepStrictEqual(errorChain[0]["errorMessage0"], error.message);
     assert.deepStrictEqual(errorChain[0]["errorStack0"], error.stack);
+  });
+});
+
+describe("errors.ts isResponseErrorWithStatus()", () => {
+  it("should return false for not-a-response-error", () => {
+    const error = new Error("test");
+    assert.strictEqual(isResponseErrorWithStatus(error, 404), false);
+  });
+
+  it("should return false for a response error with a different status", () => {
+    const error = createResponseError(500, "Internal Server Error", "test");
+    assert.strictEqual(isResponseErrorWithStatus(error, 404), false);
+  });
+
+  it("should return true for a response error with the same status", () => {
+    const error = createResponseError(404, "Not Found", "test");
+    assert.strictEqual(isResponseErrorWithStatus(error, 404), true);
   });
 });

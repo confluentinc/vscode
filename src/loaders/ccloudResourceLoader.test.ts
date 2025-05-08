@@ -1,10 +1,14 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
+import { loadFixture } from "../../tests/fixtures/utils";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
+import { createResponseError } from "../../tests/unit/testUtils";
 import {
+  GetSqlv1Statement200Response,
   SqlV1StatementList,
   SqlV1StatementListApiVersionEnum,
   SqlV1StatementListDataInner,
@@ -15,6 +19,7 @@ import {
 } from "../clients/flinkSql";
 import * as graphqlEnvs from "../graphql/environments";
 import * as graphqlOrgs from "../graphql/organizations";
+import { restFlinkStatementToModel } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
@@ -178,6 +183,65 @@ describe("CCloudResourceLoader", () => {
     }
   }); // getFlinkStatements
 
+  describe("refreshFlinkStatement()", () => {
+    let sandbox: sinon.SinonSandbox;
+    let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let loader: CCloudResourceLoader;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      loader = CCloudResourceLoader.getInstance();
+
+      // stub the sidecar getFlinkSqlStatementsApi API
+      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        sandbox.createStubInstance(sidecar.SidecarHandle);
+      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+      flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+      mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should return the statement if found", async () => {
+      const mockResponse = loadFixture(
+        "flink-statement-results-processing/create-statement-response.json",
+      ) as GetSqlv1Statement200Response;
+
+      flinkSqlStatementsApi.getSqlv1Statement.resolves(mockResponse);
+
+      const expectedStatement = restFlinkStatementToModel(mockResponse, {
+        provider: "aws",
+        region: "us-west-2",
+      });
+
+      const updatedStatement = await loader.refreshFlinkStatement(expectedStatement);
+      assert.deepStrictEqual(updatedStatement, expectedStatement);
+    });
+
+    it("should return null if statement is not found", async () => {
+      // Simulate a 404 error from the API
+      flinkSqlStatementsApi.getSqlv1Statement.rejects(
+        createResponseError(404, "Not Found", "test"),
+      );
+
+      const shouldBeNull = await loader.refreshFlinkStatement(createFlinkStatement());
+      assert.strictEqual(shouldBeNull, null);
+    });
+
+    it("Should raise if non-404 error occurs", async () => {
+      // Simulate a 500 error from the API
+      const error = createResponseError(500, "Internal Server Error", "test");
+      flinkSqlStatementsApi.getSqlv1Statement.rejects(error);
+      const statement = createFlinkStatement();
+      await assert.rejects(async () => {
+        await loader.refreshFlinkStatement(statement);
+      });
+    });
+  }); // refreshFlinkStatement
+
   describe("doLoadCoarseResources", () => {
     let resourceLoader: CCloudResourceLoader;
 
@@ -237,4 +301,4 @@ describe("CCloudResourceLoader", () => {
       );
     });
   });
-}); // CCloudResourceLoader
+});
