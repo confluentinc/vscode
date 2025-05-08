@@ -20,6 +20,7 @@ export interface CreateFlinkStatementArgs {
   computePoolId?: string;
 
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): FlinkStatement {
@@ -32,7 +33,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     metadata: {
       self: null,
       created_at: overrides.createdAt || new Date(),
-      updated_at: new Date(),
+      updated_at: overrides.updatedAt || new Date(),
     },
     status: {
       phase: overrides.phase || "RUNNING",
