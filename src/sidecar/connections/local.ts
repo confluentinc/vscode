@@ -8,6 +8,8 @@ import { ContainerListRequest, ContainerSummary, Port } from "../../clients/dock
 import { Connection, ConnectionSpec } from "../../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
 import {
+  getLocalKafkaImageName,
+  getLocalKafkaImageTag,
   getLocalSchemaRegistryImageName,
   getLocalSchemaRegistryImageTag,
   isDockerAvailable,
@@ -64,6 +66,59 @@ export async function deleteLocalConnection(): Promise<void> {
   await tryToDeleteConnection(LOCAL_CONNECTION_ID);
 }
 
+/**
+ * Helper function to list containers based on image repo and tag.
+ * @param imageRepo The image repo to filter by.
+ * @param imageTag The image tag to filter by.
+ * @param onlyExtensionManaged Whether or not to filter containers with the
+ *   {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ */
+export async function getLocalResourceContainers(
+  imageRepo: string,
+  imageTag: string,
+  onlyExtensionManaged: boolean = false,
+): Promise<ContainerSummary[]> {
+  const repoTag = `${imageRepo}:${imageTag}`;
+  const filters: Record<string, any> = {
+    ancestor: [repoTag],
+    status: ["running"],
+  };
+  if (onlyExtensionManaged) {
+    filters.label = [MANAGED_CONTAINER_LABEL];
+  }
+  const containerListRequest: ContainerListRequest = {
+    all: true,
+    filters: JSON.stringify(filters),
+  };
+  return await getContainersForImage(containerListRequest);
+}
+
+/**
+ * Get running Kafka containers based on the image name and tag in user/workspace settings.
+ * @param onlyExtensionManaged Whether or not to filter containers with the
+ * {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ */
+export async function getLocalKafkaContainers(
+  onlyExtensionManaged: boolean = false,
+): Promise<ContainerSummary[]> {
+  const imageRepo: string = getLocalKafkaImageName();
+  const imageTag: string = getLocalKafkaImageTag();
+  return await getLocalResourceContainers(imageRepo, imageTag, onlyExtensionManaged);
+}
+
+/**
+ * Get running Schema Registry containers based on the image name and tag in user/workspace settings.
+ * @param onlyExtensionManaged Whether or not to filter containers with the
+ *  {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ */
+export async function getLocalSchemaRegistryContainers(
+  onlyExtensionManaged: boolean = false,
+): Promise<ContainerSummary[]> {
+  const imageRepo: string = getLocalSchemaRegistryImageName();
+  const imageTag: string = getLocalSchemaRegistryImageTag();
+  return await getLocalResourceContainers(imageRepo, imageTag, onlyExtensionManaged);
+}
+
 /** Discover any running Schema Registry containers and return the URI to include the REST proxy port. */
 async function discoverSchemaRegistry(): Promise<string | undefined> {
   const dockerAvailable = await isDockerAvailable();
@@ -71,18 +126,7 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
     return;
   }
 
-  const imageRepo = getLocalSchemaRegistryImageName();
-  const imageTag = getLocalSchemaRegistryImageTag();
-  const repoTag = `${imageRepo}:${imageTag}`;
-  const containerListRequest: ContainerListRequest = {
-    all: true,
-    filters: JSON.stringify({
-      ancestor: [repoTag],
-      label: [MANAGED_CONTAINER_LABEL],
-      status: ["running"],
-    }),
-  };
-  const containers: ContainerSummary[] = await getContainersForImage(containerListRequest);
+  const containers: ContainerSummary[] = await getLocalSchemaRegistryContainers(true);
   if (containers.length === 0) {
     return;
   }
