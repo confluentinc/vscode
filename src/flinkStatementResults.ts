@@ -86,6 +86,7 @@ async function handleFlinkStatementResults(
   });
 
   panel.onDidDispose(() => {
+    resultsManager.dispose();
     handler.dispose();
     os.dispose();
   });
