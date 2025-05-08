@@ -52,24 +52,24 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
     return null;
   }
   return new Promise((resolve, reject) => {
-    const conn = new WebSocket(url, {
+    const ws = new WebSocket(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
-    conn.onerror = (error) => {
+    ws.onerror = (error) => {
       logger.error(`WebSocket connection error: ${error}`);
       reject(new Error("Failed to connect to Flink SQL language server"));
     };
-    conn.onopen = async () => {
-      logger.info("FlinkSQL WebSocket connection opened");
+    ws.onopen = async () => {
+      logger.debug("WebSocket connection opened");
       try {
-        const transport = new WebsocketTransport(conn);
+        const transport = new WebsocketTransport(ws);
         const serverOptions = () => {
           return Promise.resolve(transport);
         };
         const clientOptions: LanguageClientOptions = {
           documentSelector: [
             { scheme: "file", language: "flinksql" },
-            { scheme: "untitled", language: "flinksql" }, // TODO NC: We may want to use a different file extension
+            { scheme: "untitled", language: "flinksql" },
           ],
           middleware: {
             didOpen: (document, next) => {
@@ -148,7 +148,7 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
         reject(e);
       }
     };
-    conn.onclose = async (event) => {
+    ws.onclose = async (event) => {
       const reason = event.reason || "Unknown reason";
       const code = event.code;
       logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
@@ -172,10 +172,7 @@ async function handleWebSocketDisconnect(url: string): Promise<void> {
   if (reconnectCounter >= MAX_RECONNECT_ATTEMPTS) {
     logger.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
     vscode.window
-      .showErrorMessage(
-        "Connection to Flink SQL server lost. Please try reopening your Flink SQL files.",
-        "Retry Now",
-      )
+      .showErrorMessage("Connection to Flink SQL language server lost.", "Retry Now")
       .then((selection) => {
         if (selection === "Retry Now") {
           // Reset counter and try again immediately
