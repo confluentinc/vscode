@@ -2,7 +2,7 @@ import { Disposable, commands, window, workspace } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
-import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
+import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -33,7 +33,7 @@ export interface FlinkSqlSettings {
 export class FlinkConfigurationManager implements Disposable {
   private static instance: FlinkConfigurationManager | null = null;
   private disposables: Disposable[] = [];
-  private hasPromptedForSettings = false;
+  // private hasPromptedForSettings = false;
   private languageClient: LanguageClient | null = null;
   private lastWebSocketUrl: string | null = null;
 
@@ -46,8 +46,6 @@ export class FlinkConfigurationManager implements Disposable {
 
   private constructor() {
     this.registerListeners();
-    // Check immediately in case we're already authenticated
-    this.checkAuthenticationState();
   }
 
   private registerListeners(): void {
@@ -55,25 +53,20 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId === "flinksql") {
-          await this.validateFlinkSettings();
-          await this.initLanguageClient();
+          await this.maybeStartLanguageClient();
         }
       }),
     );
 
     // Listen for CCloud authentication
     this.disposables.push(
-      ccloudAuthSessionInvalidated.event(() => {
-        logger.debug("CCloud auth session invalidated, resetting prompt state");
-        this.hasPromptedForSettings = false;
-        this.languageClient?.dispose();
-        this.languageClient = null;
-        this.lastWebSocketUrl = null;
-      }),
-      ccloudConnected.event(async () => {
-        await this.validateFlinkSettings();
-        if (workspace.textDocuments.some((doc) => doc.languageId === "flinksql")) {
-          this.initLanguageClient();
+      ccloudConnected.event(async (connected) => {
+        if (connected) {
+          // if (workspace.textDocuments.some((doc) => doc.languageId === "flinksql")) { // TODO NC check it works !
+          await this.maybeStartLanguageClient();
+        } else {
+          logger.debug("CCloud auth session invalidated, resetting client");
+          this.maybeStopLanguageClient();
         }
       }),
     );
@@ -82,7 +75,7 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration("confluent.flink")) {
-          await this.handleFlinkConfigChange();
+          await this.notifyConfigChanged();
         }
       }),
     );
@@ -93,10 +86,10 @@ export class FlinkConfigurationManager implements Disposable {
         if (e.affectsConfiguration(ENABLE_FLINK)) {
           const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
           if (isFlinkEnabled) {
-            this.hasPromptedForSettings = false;
-            await this.validateFlinkSettings();
+            await this.maybeStartLanguageClient();
           } else {
             logger.debug("Flink was disabled, no further actions needed");
+            this.maybeStopLanguageClient();
           }
         }
       }),
@@ -108,7 +101,7 @@ export class FlinkConfigurationManager implements Disposable {
         logger.info("Received language client restart event");
         if (this.lastWebSocketUrl) {
           logger.info(`Attempting to reconnect language client to ${this.lastWebSocketUrl}`);
-          await this.initLanguageClient();
+          await this.maybeStartLanguageClient();
         } else {
           logger.warn("Cannot reconnect language client - no previous WebSocket URL stored");
         }
@@ -116,9 +109,9 @@ export class FlinkConfigurationManager implements Disposable {
     );
   }
 
-  private async handleFlinkConfigChange(): Promise<void> {
+  private async notifyConfigChanged(): Promise<void> {
     logger.debug("Flink configuration changed");
-    await this.checkFlinkResourcesAvailability();
+    // await this.checkFlinkResourcesAvailability();
 
     // We have a lang client, send the updated settings
     if (this.languageClient) {
@@ -130,7 +123,7 @@ export class FlinkConfigurationManager implements Disposable {
       const poolInfo = await this.lookupComputePoolInfo(computePoolId);
       const environmentId = poolInfo?.environmentId;
 
-      // Don't send with undefined settings, server will delete existing settings if sent with empty/undefined values
+      // Don't send with undefined settings, server will override existing settings with empty/undefined values
       if (environmentId && database && computePoolId) {
         logger.debug("Sending complete configuration to language server", {
           computePoolId,
@@ -156,14 +149,6 @@ export class FlinkConfigurationManager implements Disposable {
     }
   }
 
-  public async checkAuthenticationState(): Promise<void> {
-    if (hasCCloudAuthSession()) {
-      logger.debug("User is authenticated with CCloud, checking Flink settings");
-      await this.validateFlinkSettings();
-    } else {
-      logger.debug("User is not authenticated with CCloud");
-    }
-  }
   public getFlinkSqlSettings(): FlinkSqlSettings {
     const config = workspace.getConfiguration("confluent.flink");
     return {
@@ -171,51 +156,43 @@ export class FlinkConfigurationManager implements Disposable {
       computePoolId: config.get<string>("computePoolId", ""),
     };
   }
-  /** Verify if the user has the required settings
-   * - If not, prompt the user to select at least default compute pool
-   * - If flink disabled or already prompted, skip the prompt
-   * - If the user has a compute pool set, see if it is OK
-   */
-  public async validateFlinkSettings(): Promise<void> {
-    if (this.hasPromptedForSettings) {
-      logger.debug("Already prompted for Flink settings this session, skipping");
-      return;
-    }
+
+  public async validateFlinkSettings(): Promise<boolean> {
+    // if (this.hasPromptedForSettings) {
+    //   logger.debug("Already prompted for Flink settings this session, skipping");
+    //   // return;
+    // }
     const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
     if (!isFlinkEnabled) {
       logger.debug("Flink is not enabled in settings, skipping configuration prompt");
-      return;
+      return false;
     }
     const { computePoolId, database } = this.getFlinkSqlSettings();
     // If default settings are missing, prompt the user
-    if (!computePoolId || !database) {
-      // TODO NC: should we skip as long as compute pool set? Branch off for DB?
-      logger.debug("Flink settings not fully configured, prompting user");
-      await this.promptChooseDefaultComputePool();
-      this.hasPromptedForSettings = true;
-    } else {
-      logger.debug("Flink settings are configured", { computePoolId, database });
-      await this.checkFlinkResourcesAvailability();
-    }
-  }
-
-  private async checkFlinkResourcesAvailability(): Promise<void> {
-    if (!hasCCloudAuthSession()) {
-      return; // This method should not be called if not authenticated
-    }
-    const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
-      return;
+      logger.debug("Flink settings not fully configured");
+      // await this.promptChooseDefaultComputePool(); // TODO NC where does this go now?
+      // this.hasPromptedForSettings = true;
+      return false;
     }
 
+    logger.debug("Flink settings are configured", { computePoolId, database });
+    const computeValid = await this.checkFlinkResourcesAvailability(computePoolId);
+    if (!computeValid) {
+      // logger.debug("Flink compute pool is not valid, prompting user");
+      // await this.promptChooseDefaultComputePool();
+      return false;
+    }
+    logger.debug("Flink compute pool is valid");
+    return true;
+  }
+  private async checkFlinkResourcesAvailability(computePoolId: string): Promise<boolean> {
     try {
       // Load available compute pools to verify the configured pool exists
-      // const resourceManager = getResourceManager();
-      const environments = await getEnvironments(); //resourceManager.getCCloudEnvironments();
-      // Avoid warning if we haven't loaded the envs yet (happens if user already has setting on activation)
+      const environments = await getEnvironments();
       if (!environments || environments.length === 0) {
         logger.debug("No CCloud environments found");
-        return;
+        return false;
       }
       // Check if the configured compute pool exists in any environment
       let poolFound = false;
@@ -226,23 +203,17 @@ export class FlinkConfigurationManager implements Disposable {
         }
       }
 
-      if (!poolFound) {
+      if (poolFound) {
+        return true;
+      } else {
         logger.warn(
           `Configured Flink compute pool ${computePoolId} not found in available resources`,
         );
-        window
-          .showWarningMessage(
-            `The configured Flink compute pool (${computePoolId}) is not available. Please check your configuration.`,
-            "Update Flink Settings",
-          )
-          .then((selection) => {
-            if (selection === "Update Flink Settings") {
-              commands.executeCommand("confluent.flink.configureFlinkDefaults");
-            }
-          });
+        return false;
       }
     } catch (error) {
       logger.error("Error checking Flink resources availability", error);
+      return false;
     }
   }
 
@@ -257,10 +228,6 @@ export class FlinkConfigurationManager implements Disposable {
     region: string;
     provider: string;
   } | null> {
-    if (!computePoolId) {
-      return null;
-    }
-
     try {
       // Get the current org
       const currentOrg = await getCurrentOrganization();
@@ -317,42 +284,33 @@ export class FlinkConfigurationManager implements Disposable {
 
   /**
    * Ensures the language client is initialized if prerequisites are met
+   * Prerequisites:
+   * - User is authenticated with CCloud
+   * - User has selected a compute pool to use for websocket connection (language server route is region/provider specific)
+   * - User has opened a Flink SQL file
+   * - User has not disabled Flink in settings
    */
-  private async initLanguageClient(): Promise<void> {
-    // If we already have a client and it's healthy, just update settings
-    if (this.languageClient) {
-      try {
-        if (isLanguageClientConnected()) {
-          logger.debug("Language client connection confirmed active");
-          await this.handleFlinkConfigChange();
-          return;
-        }
-        throw new Error("Language client is not in running state");
-      } catch (error) {
-        logger.warn("Language client appears to be disconnected, will reinitialize", error);
-        try {
-          await this.languageClient.stop();
-        } catch (e) {
-          logger.error("Error stopping disconnected language client", e);
-        }
-        this.languageClient = null;
-      }
+  private async maybeStartLanguageClient(): Promise<void> {
+    // If we already have a client and it's healthy we're cool
+    if (this.languageClient && isLanguageClientConnected()) {
+      logger.debug("Language client connection confirmed active");
+      return;
     }
-
+    // Otherwise, we need to check if the prerequisites are met
     const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
     if (!isFlinkEnabled) {
       logger.debug("Flink is not enabled, not initializing language client");
       return;
     }
-
     if (!hasCCloudAuthSession()) {
-      logger.debug("No CCloud auth session, not initializing language client");
+      logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;
     }
-
     const { computePoolId } = this.getFlinkSqlSettings();
-    if (!computePoolId) {
-      logger.debug("No compute pool ID configured, not initializing language client");
+    const isPoolOk = await this.validateFlinkSettings();
+    // TODO NC: refactor to validate & return setting in one?
+    if (!computePoolId || !isPoolOk) {
+      logger.debug("No valid compute pool; not initializing language client");
       return;
     }
 
@@ -365,27 +323,36 @@ export class FlinkConfigurationManager implements Disposable {
       } else {
         url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
           logger.error("Failed to build WebSocket URL:", error);
-          window.showErrorMessage(
-            `Failed to initialize Flink SQL language client: ${error instanceof Error ? error.message : String(error)}`,
-          );
           return undefined;
         });
       }
-
       if (!url) return;
-
       // Initialize the client with the URL
       this.languageClient = await initializeLanguageClient(url);
       if (this.languageClient) {
         this.disposables.push(this.languageClient);
         logger.info("Flink SQL language client successfully initialized");
-        this.handleFlinkConfigChange(); // Send settings right away
+        // this.notifyConfigChanged(); // Send settings right away... or no?
       }
     } catch (error) {
       logger.error("Failed to initialize Flink SQL language client:", error);
-      window.showErrorMessage(
-        `Failed to initialize Flink SQL language client: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    }
+  }
+
+  private async maybeStopLanguageClient(): Promise<void> {
+    try {
+      if (this.languageClient) {
+        logger.debug("Stopping language client");
+        await this.languageClient.stop();
+        this.languageClient = null;
+      }
+      if (this.lastWebSocketUrl) {
+        logger.debug("Clearing cached WebSocket URL");
+        this.lastWebSocketUrl = null;
+      }
+    } catch (error) {
+      logger.error("Error stopping language client:", error);
+      return;
     }
   }
 
