@@ -40,7 +40,7 @@ describe("FlinkStatementsViewProvider", () => {
       resourcesClearStub = sandbox.stub(viewProvider["resourcesInTreeView"], "clear");
     });
 
-    it("refresh() when no resource is selected", async () => {
+    it("clears when no resource is selected", async () => {
       // Should clear the resource map and fire the change event.
       await viewProvider.refresh();
 
@@ -48,7 +48,7 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledOnce(resourcesClearStub);
     });
 
-    it("refresh() when a resource is selected fetches new statements", async () => {
+    it("fetches new statements when a resource is selected", async () => {
       const resourceLoader = sinon.createStubInstance(CCloudResourceLoader);
       sandbox.stub(ResourceLoader, "getInstance").returns(resourceLoader);
       const windowWithProgressStub = sandbox
@@ -74,14 +74,14 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("getChildren()", () => {
-    it("getChildren returns empty array when resourcesInTreeView is empty", async () => {
+    it("returns empty array when resourcesInTreeView is empty", async () => {
       resourcesInTreeView.clear();
       const children = await viewProvider.getChildren();
 
       assert.deepStrictEqual(children, []);
     });
 
-    describe("getChildren with resourcesInTreeView populated", () => {
+    describe("behavior with resourcesInTreeView populated", () => {
       const oldestStatement = createFlinkStatement({
         name: "papa", // bear ommitted to test filtering.
         createdAt: new Date("2023-01-01"),
@@ -103,12 +103,12 @@ describe("FlinkStatementsViewProvider", () => {
         }
       });
 
-      it("getChildren returns sorted array of FlinkStatement unfiltered", async () => {
+      it("returns sorted array of FlinkStatement unfiltered", async () => {
         const children = await viewProvider.getChildren();
         assert.deepStrictEqual(children, [youngestStatement, middleStatement, oldestStatement]);
       });
 
-      it("getChildren returns sorted array of FlinkStatement filtered by name", async () => {
+      it("returns sorted array of FlinkStatement filtered by name", async () => {
         viewProvider.itemSearchString = "bear";
         const children = await viewProvider.getChildren();
         // papa's last name isnt bear.
@@ -118,7 +118,7 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("focus()", () => {
-    it("focus() calls treeView.reveal() with the correct statement", async () => {
+    it("calls treeView.reveal() with the correct statement", async () => {
       const statement = createFlinkStatement();
       resourcesInTreeView.set(statement.id, statement);
       const revealStub = sandbox.stub(viewProvider["treeView"], "reveal");
@@ -127,7 +127,7 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledWith(revealStub, statement, { focus: true, select: true });
     });
 
-    it("focus() throws if reveal() fails", async () => {
+    it("throws if reveal() fails", async () => {
       const statement = createFlinkStatement();
       resourcesInTreeView.set(statement.id, statement);
       const revealStub = sandbox.stub(viewProvider["treeView"], "reveal").throws();
@@ -144,7 +144,7 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledWith(revealStub, statement, { focus: true, select: true });
     });
 
-    it("focus() throws error if statement not found", async () => {
+    it("throws error if statement not found", async () => {
       const statementId = "non-existent-statement-id";
       assert.rejects(
         async () => {
@@ -159,14 +159,14 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("getParent()", () => {
-    it("getParent returns null", () => {
+    it("always returns null", () => {
       const parent = viewProvider.getParent();
       assert.strictEqual(parent, null);
     });
   });
 
   describe("getTreeItem()", () => {
-    it("getTreeItem returns FlinkStatementTreeItem", () => {
+    it("returns FlinkStatementTreeItem", () => {
       const statement = createFlinkStatement();
       const treeItem = viewProvider.getTreeItem(statement);
       assert.strictEqual(treeItem.label, statement.name);
@@ -174,18 +174,18 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("get computePool()", () => {
-    it("get computePool returns null if no resource set", () => {
+    it("returns null if no resource set", () => {
       const computePool = viewProvider.computePool;
       assert.strictEqual(computePool, null);
     });
 
-    it("get computePool returns returns null if resource set to an environment", () => {
+    it("returns returns null if resource set to an environment", () => {
       viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
       const computePool = viewProvider.computePool;
       assert.strictEqual(computePool, null);
     });
 
-    it("get computePool returns CCloudFlinkComputePool if resource set to a compute pool", () => {
+    it("returns CCloudFlinkComputePool if resource set to a compute pool", () => {
       const computePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       viewProvider["resource"] = computePool;
       const result = viewProvider.computePool;
