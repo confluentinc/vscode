@@ -62,10 +62,9 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       ccloudConnected.event(async (connected) => {
         if (connected) {
-          // if (workspace.textDocuments.some((doc) => doc.languageId === "flinksql")) { // TODO NC check it works !
           await this.maybeStartLanguageClient();
         } else {
-          logger.debug("CCloud auth session invalidated, resetting client");
+          logger.debug("CCloud auth session invalidated, stopping Flink language client");
           this.maybeStopLanguageClient();
         }
       }),
@@ -88,7 +87,7 @@ export class FlinkConfigurationManager implements Disposable {
           if (isFlinkEnabled) {
             await this.maybeStartLanguageClient();
           } else {
-            logger.debug("Flink was disabled, no further actions needed");
+            logger.debug("Flink is disabled in settings, stopping language client");
             this.maybeStopLanguageClient();
           }
         }
@@ -109,46 +108,7 @@ export class FlinkConfigurationManager implements Disposable {
     );
   }
 
-  private async notifyConfigChanged(): Promise<void> {
-    logger.debug("Flink configuration changed");
-    // await this.checkFlinkResourcesAvailability();
-
-    // We have a lang client, send the updated settings
-    if (this.languageClient) {
-      const { database, computePoolId } = this.getFlinkSqlSettings();
-      if (!computePoolId) {
-        logger.debug("No compute pool ID configured, not sending configuration update");
-        return;
-      }
-      const poolInfo = await this.lookupComputePoolInfo(computePoolId);
-      const environmentId = poolInfo?.environmentId;
-
-      // Don't send with undefined settings, server will override existing settings with empty/undefined values
-      if (environmentId && database && computePoolId) {
-        logger.debug("Sending complete configuration to language server", {
-          computePoolId,
-          environmentId,
-          database,
-        });
-
-        this.languageClient.sendNotification("workspace/didChangeConfiguration", {
-          settings: {
-            AuthToken: "{{ ccloud.data_plane_token }}",
-            Catalog: environmentId,
-            Database: database,
-            ComputePoolId: computePoolId,
-          },
-        });
-      } else {
-        logger.debug("Incomplete settings, not sending configuration update", {
-          hasComputePool: !!computePoolId,
-          hasEnvironment: !!environmentId,
-          hasDatabase: !!database,
-        });
-      }
-    }
-  }
-
+  /** Get the global/workspace settings for Flink, if any */
   public getFlinkSqlSettings(): FlinkSqlSettings {
     const config = workspace.getConfiguration("confluent.flink");
     return {
@@ -157,6 +117,7 @@ export class FlinkConfigurationManager implements Disposable {
     };
   }
 
+  /** Verify that Flink is enabled + the compute pool id setting exists and is in an environment we know about */
   public async validateFlinkSettings(): Promise<boolean> {
     // if (this.hasPromptedForSettings) {
     //   logger.debug("Already prompted for Flink settings this session, skipping");
@@ -168,7 +129,6 @@ export class FlinkConfigurationManager implements Disposable {
       return false;
     }
     const { computePoolId } = this.getFlinkSqlSettings();
-    // If default settings are missing, prompt the user
     if (!computePoolId) {
       logger.debug("Flink settings not fully configured");
       // await this.promptChooseDefaultComputePool(); // TODO NC where does this go now?
@@ -186,6 +146,8 @@ export class FlinkConfigurationManager implements Disposable {
     logger.debug("Flink compute pool is valid");
     return true;
   }
+
+  /** Does the compute pool id exist in an available ccloud environment? */
   private async checkFlinkResourcesAvailability(computePoolId: string): Promise<boolean> {
     try {
       // Load available compute pools to verify the configured pool exists
@@ -218,9 +180,9 @@ export class FlinkConfigurationManager implements Disposable {
   }
 
   /**
-   * Finds compute pool information across all environments
-   * @param computePoolId The ID of the compute pool to find
-   * @returns Object containing pool info and environment, or null if not found
+   * Compiles compute pool details across all known environments
+   * @param computePoolId The ID of the compute pool to look up
+   * @returns Object {organizationId, environmentId, region, provider} or null if not found
    */
   private async lookupComputePoolInfo(computePoolId: string): Promise<{
     organizationId: string;
@@ -353,6 +315,49 @@ export class FlinkConfigurationManager implements Disposable {
     } catch (error) {
       logger.error("Error stopping language client:", error);
       return;
+    }
+  }
+
+  /** Verifies and sends workspace settings to the language server via
+   * `workspace/didChangeConfiguration` notification
+   */
+  private async notifyConfigChanged(): Promise<void> {
+    logger.debug("Flink configuration changed");
+    // await this.checkFlinkResourcesAvailability();
+
+    // We have a lang client, send the updated settings
+    if (this.languageClient) {
+      const { database, computePoolId } = this.getFlinkSqlSettings();
+      if (!computePoolId) {
+        logger.debug("No compute pool ID configured, not sending configuration update");
+        return;
+      }
+      const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+      const environmentId = poolInfo?.environmentId;
+
+      // Don't send with undefined settings, server will override existing settings with empty/undefined values
+      if (environmentId && database && computePoolId) {
+        logger.debug("Sending complete configuration to language server", {
+          computePoolId,
+          environmentId,
+          database,
+        });
+
+        this.languageClient.sendNotification("workspace/didChangeConfiguration", {
+          settings: {
+            AuthToken: "{{ ccloud.data_plane_token }}",
+            Catalog: environmentId,
+            Database: database,
+            ComputePoolId: computePoolId,
+          },
+        });
+      } else {
+        logger.debug("Incomplete settings, not sending configuration update", {
+          hasComputePool: !!computePoolId,
+          hasEnvironment: !!environmentId,
+          hasDatabase: !!database,
+        });
+      }
     }
   }
 
