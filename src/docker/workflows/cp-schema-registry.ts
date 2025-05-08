@@ -11,14 +11,14 @@ import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
-import { updateLocalConnection } from "../../sidecar/connections/local";
+import { getLocalResourceContainers, updateLocalConnection } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
 import {
   getLocalKafkaImageName,
   getLocalKafkaImageTag,
   getLocalSchemaRegistryImageTag,
 } from "../configs";
-import { LocalResourceKind, MANAGED_CONTAINER_LABEL } from "../constants";
+import { LocalResourceKind } from "../constants";
 import {
   createContainer,
   getContainer,
@@ -72,15 +72,11 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     await this.checkForImage(this.imageRepo, this.imageTag);
     if (token.isCancellationRequested) return;
 
-    const containerListRequest: ContainerListRequest = {
-      all: true,
-      filters: JSON.stringify({
-        ancestor: [this.imageRepoTag],
-        label: [MANAGED_CONTAINER_LABEL],
-      }),
-    };
-    const existingContainers: ContainerSummary[] =
-      await getContainersForImage(containerListRequest);
+    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+      this.imageRepo,
+      this.imageTag,
+      true, // only extension-managed containers
+    );
     if (existingContainers.length > 0) {
       // this will handle logging and notifications
       await this.handleExistingContainers(existingContainers);
@@ -165,16 +161,11 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     this.progress = progress;
     this.imageTag = getLocalSchemaRegistryImageTag();
 
-    const repoTag = `${ConfluentPlatformSchemaRegistryWorkflow.imageRepo}:${this.imageTag}`;
-    const containerListRequest: ContainerListRequest = {
-      all: true,
-      filters: JSON.stringify({
-        ancestor: [repoTag],
-        label: [MANAGED_CONTAINER_LABEL],
-      }),
-    };
-    const existingContainers: ContainerSummary[] =
-      await getContainersForImage(containerListRequest);
+    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+      this.imageRepo,
+      this.imageTag,
+      true, // only extension-managed containers
+    );
     const count = existingContainers.length;
     const plural = count > 1 ? "s" : "";
     if (count === 0) {
