@@ -12,7 +12,7 @@ Confluent, and read the docs at the [Confluent documentation](https://docs.confl
 
 ## Features
 
-Confluent for VS Code provides a number of features for working with your Apache Kafka® compatible 
+Confluent for VS Code provides a number of features for working with your Apache Kafka® compatible
 clusters and Confluent Schema Registry compatible servers.
 
 The extension enables you to:
@@ -27,8 +27,10 @@ The extension enables you to:
 
 ## Documentation
 
-- For detailed documentation on using the features in the extension, head to [docs/USAGE.md](./docs/USAGE.md).
-- For instructions on how to install the extension, including how to install from a VSIX file, head to [docs/INSTALL.md](./docs/INSTALL.md).
+- For detailed documentation on using the features in the extension, head to
+  [docs/USAGE.md](./docs/USAGE.md).
+- For instructions on how to install the extension, including how to install from a VSIX file, head
+to [docs/INSTALL.md](./docs/INSTALL.md).
 <!-- - For troubleshooting, head to [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) -->
 
 ## Logs
@@ -51,8 +53,8 @@ settings, the extension doesn't send any events or data.
 
 The extension uses [Segment](https://segment.com/) to log extension usage. See `telemetry.ts` for
 implementation and how it is used in the codebase. The extension sends events when you perform major
-actions in the extension, such as using any of the registered commands. This helps Confluent see what
-commands are popular and helps to answer other questions about how the extension is used, so
+actions in the extension, such as using any of the registered commands. This helps Confluent see
+what commands are popular and helps to answer other questions about how the extension is used, so
 Confluent can make it even more useful.
 
 ### Sentry for error tracing
