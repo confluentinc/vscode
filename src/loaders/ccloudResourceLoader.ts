@@ -4,7 +4,6 @@ import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
-import { extractResponseBody, isResponseError } from "../errors";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -16,10 +15,10 @@ import { CCloudOrganization } from "../models/organization";
 import { IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { SidecarHandle, getSidecar } from "../sidecar";
+import { getSidecar, SidecarHandle } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
-import { ExecutionResult, executeInWorkerPool, extract } from "../utils/workerPool";
+import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.ccloudResourceLoader");
@@ -209,21 +208,6 @@ export class CCloudResourceLoader extends ResourceLoader {
     return Array.from(registryByEnvId.values());
   }
 
-  public async getComputePools(
-    forceDeepRefresh: boolean = false,
-  ): Promise<CCloudFlinkComputePool[]> {
-    const environments = await this.getEnvironments(forceDeepRefresh);
-    const computePools: CCloudFlinkComputePool[] = [];
-    for (const env of environments) {
-      if (env.flinkComputePools) {
-        const pools = env.flinkComputePools as CCloudFlinkComputePool[];
-        // convert the pools data to CCloudFlinkComputePool instances
-        computePools.push(...pools.map((pool) => new CCloudFlinkComputePool(pool)));
-      }
-    }
-    return computePools;
-  }
-
   /**
    * Get the CCLoud kafka clusters in the given environment ID.
    */
@@ -393,62 +377,6 @@ export class CCloudResourceLoader extends ResourceLoader {
   private reset(): void {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
-  }
-
-  public async refreshFlinkStatement(
-    existing: FlinkStatement,
-    forceDeepRefresh: boolean = false,
-  ): Promise<FlinkStatement | null> {
-    const handle = await getSidecar();
-
-    // Get all compute pools and find the matching one
-    const computePools = await this.getComputePools(forceDeepRefresh);
-    const statementsPool = computePools.find((pool) => pool.id === existing.computePoolId);
-    if (!statementsPool) {
-      throw new Error(
-        `Could not find compute pool ${existing.computePoolId} for statement ${existing.id}`,
-      );
-    }
-
-    const statementsClient = handle.getFlinkSqlStatementsApi({
-      environmentId: existing.environmentId,
-      provider: statementsPool.provider,
-      region: statementsPool.region,
-    });
-
-    try {
-      return restFlinkStatementToModel(
-        await statementsClient.getSqlv1Statement({
-          environment_id: existing.environmentId,
-          organization_id: existing.organizationId,
-          statement_name: existing.name,
-        }),
-      );
-    } catch (err) {
-      if (isResponseError(err)) {
-        switch (err.response.status) {
-          case 404: {
-            // Statement not found, return null
-            logger.debug(`Statement ${existing.name} not found`);
-            return null;
-          }
-          case 500: {
-            const responseErrors: { errors: [{ detail: string }] } = await extractResponseBody(err);
-            logger.error(JSON.stringify(responseErrors, null, 2));
-
-            const errorMessages = responseErrors.errors
-              .map((e: { detail: string }) => e.detail)
-              .join("\n");
-
-            if (errorMessages.includes("cr_failed_get_stmt_name")) {
-              logger.debug(`Statement ${existing.name} not found`);
-              return null;
-            }
-          }
-        }
-      }
-      throw err;
-    }
   }
 }
 

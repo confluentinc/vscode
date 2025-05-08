@@ -44,7 +44,15 @@ export async function flinkComputePoolQuickPick(
   filterPredicate?: (pool: CCloudFlinkComputePool) => boolean,
 ): Promise<CCloudFlinkComputePool | undefined> {
   const loader = CCloudResourceLoader.getInstance();
-  const computePools: CCloudFlinkComputePool[] = await loader.getComputePools();
+  const environments: Environment[] = await loader.getEnvironments();
+  const computePools: CCloudFlinkComputePool[] = [];
+  for (const env of environments) {
+    if (env.flinkComputePools) {
+      const pools = env.flinkComputePools as CCloudFlinkComputePool[];
+      // convert the pools data to CCloudFlinkComputePool instances
+      computePools.push(...pools.map((pool) => new CCloudFlinkComputePool(pool)));
+    }
+  }
 
   const config = workspace.getConfiguration("confluent.flink");
   const defaultComputePoolId = config.get<string>("computePoolId");
@@ -99,7 +107,6 @@ export async function flinkComputePoolQuickPick(
   const focusedPoolIds: string[] = focusedPools.map((pool) => pool.id);
 
   let lastSeparator: string = "";
-  const environments: Environment[] = await loader.getEnvironments();
   for (const pool of computePools) {
     if (filterPredicate && !filterPredicate(pool)) {
       continue;

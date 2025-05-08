@@ -9,7 +9,6 @@ import {
 import { ResponseError } from "./clients/sidecar";
 import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
-import { CCloudResourceLoader } from "./loaders";
 import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
@@ -81,7 +80,6 @@ export class FlinkStatementResultsManager {
   private _searchQuery: Signal<string | null>;
   private _visibleColumns: Signal<string[] | null>;
   private _filteredResults: Signal<any[]>;
-  private _fetchCount: number = 0;
 
   constructor(
     private os: Scope,
@@ -138,26 +136,6 @@ export class FlinkStatementResultsManager {
     let shouldPause = false;
 
     try {
-      this._fetchCount++;
-      if (this._fetchCount % 4 === 0) {
-        this._fetchCount = 0;
-        const loader = CCloudResourceLoader.getInstance();
-        const refreshedStatement = await loader.refreshFlinkStatement(this.statement);
-        if (refreshedStatement) {
-          this.statement = refreshedStatement;
-        } else {
-          // Statement must have been deleted.
-          this.os.batch(() => {
-            this._state("completed");
-            this._latestError({
-              message: "The statement may have been deleted. Results can no longer be fetched.",
-            });
-            this.notifyUI();
-          });
-          return;
-        }
-      }
-
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
       const response = await this.schedule(() =>
