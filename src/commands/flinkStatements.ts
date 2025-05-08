@@ -40,7 +40,6 @@ const MAX_WAIT_TIME_MS = 60_000;
  * Wait for a Flink statement to enter results-viewable state by polling its status.
  *
  * @param statement The Flink statement to monitor
- * @param computePool The compute pool the statement is running on
  * @param progress Progress object to report status updates
  * @param pollPeriodMs Optional polling interval in milliseconds (defaults to 300ms)
  * @returns Promise that resolves when the statement enters RUNNING phase
@@ -60,6 +59,8 @@ async function waitForStatementRunning(
     const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
 
     if (!refreshedStatement || refreshedStatement.isResultsViewable) {
+      // if the statement is in a viewable state, resolve
+      // (or if the statement is no longer found. Should be improved in the future)
       return;
     }
 
