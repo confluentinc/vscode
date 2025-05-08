@@ -33,7 +33,7 @@ export interface FlinkSqlSettings {
 export class FlinkConfigurationManager implements Disposable {
   private static instance: FlinkConfigurationManager | null = null;
   private disposables: Disposable[] = [];
-  // private hasPromptedForSettings = false;
+  private hasPromptedForSettings = false;
   private languageClient: LanguageClient | null = null;
   private lastWebSocketUrl: string | null = null;
 
@@ -131,16 +131,15 @@ export class FlinkConfigurationManager implements Disposable {
     const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
       logger.debug("Flink settings not fully configured");
-      // await this.promptChooseDefaultComputePool(); // TODO NC where does this go now?
-      // this.hasPromptedForSettings = true;
+      await this.promptChooseDefaultComputePool();
       return false;
     }
 
     logger.debug("Flink compute pool is:", computePoolId);
     const computeValid = await this.checkFlinkResourcesAvailability(computePoolId);
     if (!computeValid) {
-      // logger.debug("Flink compute pool is not valid, prompting user");
-      // await this.promptChooseDefaultComputePool();
+      logger.debug("Flink compute pool is not valid, prompting user");
+      await this.promptChooseDefaultComputePool();
       return false;
     }
     logger.debug("Flink compute pool is valid");
@@ -270,9 +269,10 @@ export class FlinkConfigurationManager implements Disposable {
     }
     const { computePoolId } = this.getFlinkSqlSettings();
     const isPoolOk = await this.validateFlinkSettings();
-    // TODO NC: refactor to validate & return setting in one?
+    // TODO NC: maybe refactor to validate & return setting in one?
     if (!computePoolId || !isPoolOk) {
       logger.debug("No valid compute pool; not initializing language client");
+      await this.promptChooseDefaultComputePool();
       return;
     }
 
@@ -323,8 +323,6 @@ export class FlinkConfigurationManager implements Disposable {
    */
   private async notifyConfigChanged(): Promise<void> {
     logger.debug("Flink configuration changed");
-    // await this.checkFlinkResourcesAvailability();
-
     // We have a lang client, send the updated settings
     if (this.languageClient) {
       const { database, computePoolId } = this.getFlinkSqlSettings();
@@ -365,6 +363,10 @@ export class FlinkConfigurationManager implements Disposable {
    * Show notification for user to select default compute pool, database
    */
   private async promptChooseDefaultComputePool(): Promise<void> {
+    if (this.hasPromptedForSettings) {
+      logger.debug("Already prompted for Flink settings this session, skipping");
+      return;
+    }
     if (!hasCCloudAuthSession()) {
       return; // This method should not be called if not authenticated
     }
@@ -376,6 +378,7 @@ export class FlinkConfigurationManager implements Disposable {
     if (selection === "Update Flink Settings") {
       await commands.executeCommand("confluent.flink.configureFlinkDefaults");
     }
+    this.hasPromptedForSettings = true;
   }
 
   public dispose(): void {
