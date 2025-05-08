@@ -6,20 +6,16 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
-  MarkdownString,
 } from "vscode";
 import {
-  CCloudStatus,
   Connection,
   ConnectionsList,
   ConnectionsResourceApi,
   ConnectionType,
-  KafkaClusterConfig,
-  SchemaRegistryConfig,
 } from "../../clients/sidecar";
 import { Logger } from "../../logging";
 import { getSidecar } from "../../sidecar";
-import { titleCase } from "../../utils";
+import { summarizeConnection } from "../summarizers/connections";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.getConnections");
@@ -50,10 +46,12 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       if (params.connectionType && connection.spec.type !== params.connectionType) {
         return;
       }
-      const connectionSummary: string = makeConnectionSummary(connection);
+      const connectionSummary: string = summarizeConnection(connection);
       connectionStrings.push(new LanguageModelTextPart(connectionSummary));
     });
-    logger.debug(`connectionStrings:\n\n${connectionStrings.join("\n")}`);
+
+    // TODO(shoup): remove later
+    logger.debug(`connectionStrings:\n\n${connectionStrings.map((part) => part.value).join("\n")}`);
 
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
@@ -94,57 +92,4 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
-}
-
-/** Create a string representation of a {@link Connection} object for usage by Copilot models. */
-export function makeConnectionSummary(connection: Connection): string {
-  const type: ConnectionType = connection.spec.type!;
-  let summary = new MarkdownString().appendMarkdown(
-    `# ${titleCase(type)} Connection: "${connection.spec.name}"`,
-  );
-
-  // add spec/status details depending on the connection type
-  switch (type) {
-    case ConnectionType.Ccloud: {
-      const status: CCloudStatus = connection.status.ccloud!;
-      summary = summary
-        .appendMarkdown(`\n\n**State:** ${status.state}`)
-        .appendMarkdown(
-          `\n\n**Auth Session Expires At:** ${status.requires_authentication_at?.toString()}`,
-        )
-        .appendMarkdown(`(Sign-in link: ${connection.metadata.sign_in_uri})`);
-      if (status.errors) {
-        summary = summary
-          .appendMarkdown(`\n\n**Errors:**`)
-          .appendCodeblock(JSON.stringify(status.errors, null, 2), "json");
-      }
-      break;
-    }
-    case ConnectionType.Local: {
-      // const config: LocalConfig = connection.spec.local_config!;
-      summary = summary.appendMarkdown(`\n\n## Local Connection Status`);
-      // TODO: look up Docker container details
-
-      break;
-    }
-    case ConnectionType.Direct: {
-      const kafkaConfig: KafkaClusterConfig | undefined = connection.spec.kafka_cluster;
-      if (kafkaConfig) {
-        summary = summary.appendMarkdown(
-          `\n\n**Bootstrap Servers:** ${kafkaConfig.bootstrap_servers}`,
-        );
-      }
-
-      const schemaRegistryConfig: SchemaRegistryConfig | undefined =
-        connection.spec.schema_registry;
-      if (schemaRegistryConfig) {
-        summary = summary.appendMarkdown(
-          `\n\n**Schema Registry URL:** ${schemaRegistryConfig.uri}`,
-        );
-      }
-
-      break;
-    }
-  }
-  return summary.value;
 }
