@@ -6,6 +6,7 @@ import {
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
@@ -14,7 +15,6 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
-import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UserEvent, logUsage } from "../telemetry/events";
@@ -48,43 +48,29 @@ const MAX_WAIT_TIME_MS = 60_000;
  */
 async function waitForStatementRunning(
   statement: FlinkStatement,
-  computePool: CCloudFlinkComputePool,
   progress: vscode.Progress<{ message?: string }>,
   pollPeriodMs: number = DEFAULT_POLL_PERIOD_MS,
 ): Promise<void> {
   const startTime = Date.now();
-  const sidecar = await getSidecar();
-  const statementsService = sidecar.getFlinkSqlStatementsApi({
-    environmentId: computePool.environmentId,
-    provider: computePool.provider,
-    region: computePool.region,
-  });
 
-  let response;
-  while (true) {
-    const elapsedTime = Date.now() - startTime;
-    if (elapsedTime > MAX_WAIT_TIME_MS) {
-      throw new Error(
-        `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
-      );
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  while (Date.now() - startTime < MAX_WAIT_TIME_MS) {
+    // Check if the statement is in a viewable state
+    const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
+
+    if (!refreshedStatement || refreshedStatement.isResultsViewable) {
+      return;
     }
 
-    response = restFlinkStatementToModel(
-      await statementsService.getSqlv1Statement({
-        environment_id: statement.environmentId,
-        organization_id: statement.organizationId,
-        statement_name: statement.name,
-      }),
-    );
-
-    if (response.isResultsViewable) {
-      break;
-    }
-
-    progress.report({ message: response.status?.phase });
+    progress.report({ message: refreshedStatement.status?.phase });
     // Wait before polling again
     await new Promise((resolve) => setTimeout(resolve, pollPeriodMs));
   }
+
+  throw new Error(
+    `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
+  );
 }
 
 /**
@@ -94,10 +80,7 @@ async function waitForStatementRunning(
  * @param computePool The compute pool the statement is running on
  * @returns Promise that resolves when the results are displayed
  */
-async function waitAndShowResults(
-  statement: FlinkStatement,
-  computePool: CCloudFlinkComputePool,
-): Promise<void> {
+async function waitAndShowResults(statement: FlinkStatement): Promise<void> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -105,7 +88,7 @@ async function waitAndShowResults(
       cancellable: false,
     },
     async (progress) => {
-      await waitForStatementRunning(statement, computePool, progress);
+      await waitForStatementRunning(statement, progress);
       progress.report({ message: "Opening statement results in a new tab..." });
       await vscode.commands.executeCommand("confluent.flinkStatementResults", statement);
     },
@@ -218,7 +201,7 @@ export async function submitFlinkStatementCommand(
 
   try {
     const restResponse = await submitFlinkStatement(submission);
-    const newStatement = restFlinkStatementToModel(restResponse);
+    const newStatement = restFlinkStatementToModel(restResponse, computePool);
 
     if (newStatement.status.phase === FAILED_PHASE) {
       // Immediate failure of the statement. User gave us something
@@ -258,7 +241,7 @@ export async function submitFlinkStatementCommand(
     if (newStatement.canHaveResults) {
       // Will resolve when the statement is in a viewable state and
       // the results viewer is open.
-      await waitAndShowResults(newStatement, computePool);
+      await waitAndShowResults(newStatement);
 
       // Refresh the statements view again to show the new state of the statement.
       // (This is a whole empty + reload of view data, so have to wait until it's done.

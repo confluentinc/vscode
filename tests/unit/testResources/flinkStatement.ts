@@ -29,7 +29,11 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     connectionType: ConnectionType.Ccloud,
     environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT_ID,
     organizationId: overrides.organizationId || TEST_CCLOUD_ORGANIZATION.id,
+    provider: "aws",
+    region: "us-west-2",
+
     name: overrides.name || "statement0",
+
     metadata: {
       self: null,
       created_at: overrides.createdAt || new Date(),

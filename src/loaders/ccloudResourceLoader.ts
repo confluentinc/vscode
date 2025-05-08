@@ -4,6 +4,7 @@ import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
+import { isResponseErrorWithStatus } from "../errors";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -373,6 +374,37 @@ export class CCloudResourceLoader extends ResourceLoader {
     return flinkStatements;
   }
 
+  /**
+   * Reload the given Flink statement from the sidecar API.
+   * @param statement The Flink statement to refresh.
+   * @returns Updated Flink statement or null if it was not found.
+   * @throws Error if there was an error while refreshing the Flink statement.
+   */
+  public async refreshFlinkStatement(statement: FlinkStatement): Promise<FlinkStatement | null> {
+    const handle = await getSidecar();
+
+    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
+
+    try {
+      const routeResponse = await statementsClient.getSqlv1Statement({
+        environment_id: statement.environmentId,
+        organization_id: statement.organizationId,
+        statement_name: statement.name,
+      });
+      return restFlinkStatementToModel(routeResponse, statement);
+    } catch (error) {
+      if (isResponseErrorWithStatus(error, 404)) {
+        logger.info(`Flink statement ${statement.name} no longer exists`);
+        return null;
+      } else {
+        logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
+          error,
+        });
+        throw error;
+      }
+    }
+  }
+
   /** Go back to initial state, not having cached anything. */
   private reset(): void {
     this.coarseLoadingComplete = false;
@@ -420,7 +452,7 @@ async function loadStatementsForProviderRegion(
 
     // Convert each Flink statement from the REST API representation to our codebase model.
     for (const restStatement of restResult.data) {
-      const statement = restFlinkStatementToModel(restStatement);
+      const statement = restFlinkStatementToModel(restStatement, queryable);
       flinkStatements.push(statement);
     }
 

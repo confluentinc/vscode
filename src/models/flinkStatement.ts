@@ -13,6 +13,8 @@ import { CustomMarkdownString, IdItem } from "./main";
 import {
   ConnectionId,
   EnvironmentId,
+  IEnvProviderRegion,
+  IProviderRegion,
   IResourceBase,
   ISearchable,
   OrganizationId,
@@ -23,12 +25,14 @@ const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
 /**
  * Model for a Flink statement.
  */
-export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
+export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvProviderRegion {
   // Immutable foreign reference properties
   readonly connectionId!: ConnectionId;
   readonly connectionType!: ConnectionType;
   readonly environmentId!: EnvironmentId;
   readonly organizationId!: OrganizationId;
+  readonly provider: string;
+  readonly region: string;
 
   // Immutable name
   readonly name: string;
@@ -45,8 +49,10 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
       | "connectionType"
       | "environmentId"
       | "organizationId"
-      | "spec"
+      | "provider"
+      | "region"
       | "name"
+      | "spec"
       | "metadata"
       | "status"
     >,
@@ -55,8 +61,12 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
     this.connectionType = props.connectionType;
     this.environmentId = props.environmentId;
     this.organizationId = props.organizationId;
-    this.spec = props.spec;
+    this.provider = props.provider;
+    this.region = props.region;
+
     this.name = props.name;
+
+    this.spec = props.spec;
     this.metadata = props.metadata;
     this.status = props.status;
   }
@@ -273,19 +283,30 @@ export const PENDING_PHASE = "PENDING";
 
 export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
 
-/** Convert a from-REST API depiction of a Flink statement to our codebase's FlinkStatement model. */
+/**
+ * Convert a from-REST API depiction of a Flink statement to
+ * our codebase's FlinkStatement model.
+ *
+ * @param restFlinkStatement The Flink statement from the REST API
+ * @param providerRegion Object contributing the provider and region the statement should be related to.
+ * */
 export function restFlinkStatementToModel(
   restFlinkStatement:
     | SqlV1StatementListDataInner
     | GetSqlv1Statement200Response
     | CreateSqlv1Statement201Response,
+  providerRegion: IProviderRegion,
 ): FlinkStatement {
   return new FlinkStatement({
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,
     environmentId: restFlinkStatement.environment_id as EnvironmentId,
     organizationId: restFlinkStatement.organization_id as OrganizationId,
+    provider: providerRegion.provider,
+    region: providerRegion.region,
+
     name: restFlinkStatement.name!,
+
     spec: restFlinkStatement.spec,
     metadata: restFlinkStatement.metadata,
     status: restFlinkStatement.status,
