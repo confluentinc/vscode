@@ -24,12 +24,16 @@ const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
  * Model for a Flink statement.
  */
 export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
-  connectionId!: ConnectionId;
-  connectionType!: ConnectionType;
-  environmentId!: EnvironmentId;
-  organizationId!: OrganizationId;
+  // Immutable foreign reference properties
+  readonly connectionId!: ConnectionId;
+  readonly connectionType!: ConnectionType;
+  readonly environmentId!: EnvironmentId;
+  readonly organizationId!: OrganizationId;
 
-  name: string;
+  // Immutable name
+  readonly name: string;
+
+  // Mutable properties
   metadata: SqlV1StatementMetadata | undefined;
   status: SqlV1StatementStatus;
   spec: SqlV1StatementSpec;
@@ -109,6 +113,27 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   /** All statements but background statements can have results */
   get canHaveResults(): boolean {
     return !this.isBackground;
+  }
+
+  /**
+   * Update this FlinkStatement with metadata, status, spec from another FlinkStatement.
+   *
+   * (Needed because statements within the view controller must be retained by reference,
+   *  but statements mutate over time.)
+   *
+   * @param other The other FlinkStatement to update this one with.
+   * @throws Error if the other statement has a different name or environmentId
+   */
+  update(other: FlinkStatement): void {
+    if (this.name !== other.name || this.environmentId !== other.environmentId) {
+      throw new Error(
+        `Cannot update FlinkStatement "${this.name}" with instance with different name ${other.id} or environmentId ${other.environmentId}`,
+      );
+    }
+
+    this.metadata = other.metadata;
+    this.status = other.status;
+    this.spec = other.spec;
   }
 
   /**
