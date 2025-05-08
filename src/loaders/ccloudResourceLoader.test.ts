@@ -3,7 +3,9 @@ import * as sinon from "sinon";
 
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
+import { createResponseError } from "../../tests/unit/testUtils";
 import {
   SqlV1StatementList,
   SqlV1StatementListApiVersionEnum,
@@ -20,6 +22,39 @@ import { ResourceManager } from "../storage/resourceManager";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
 
 describe("CCloudResourceLoader", () => {
+  describe("refreshFlinkStatement()", () => {
+    let sandbox: sinon.SinonSandbox;
+    let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let loader: CCloudResourceLoader;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      loader = CCloudResourceLoader.getInstance();
+
+      // stub the sidecar getFlinkSqlStatementsApi API
+      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        sandbox.createStubInstance(sidecar.SidecarHandle);
+      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+      flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+      mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should return null if statement is not found", async () => {
+      // Simulate a 404 error from the API
+      flinkSqlStatementsApi.getSqlv1Statement.rejects(
+        createResponseError(404, "Not Found", "test"),
+      );
+
+      const shouldBeNull = await loader.refreshFlinkStatement(createFlinkStatement());
+      assert.strictEqual(shouldBeNull, null);
+    });
+  });
+
   describe("getFlinkStatements", () => {
     let resourceLoader: CCloudResourceLoader;
 
@@ -237,4 +272,4 @@ describe("CCloudResourceLoader", () => {
       );
     });
   });
-}); // CCloudResourceLoader
+});
