@@ -44,6 +44,14 @@ export function isResponseError(error: unknown): error is AnyResponseError {
   );
 }
 
+/** Was this a response error with the given http response code? */
+export function isResponseErrorWithStatus(
+  error: unknown,
+  statusCode: number,
+): error is AnyResponseError {
+  return isResponseError(error) && error.response.status === statusCode;
+}
+
 export async function extractResponseBody(error: unknown): Promise<any> {
   if (isResponseError(error)) {
     const responseError = error as AnyResponseError;

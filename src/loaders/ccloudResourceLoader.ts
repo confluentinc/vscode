@@ -4,7 +4,7 @@ import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
-import { isResponseError } from "../errors";
+import { isResponseErrorWithStatus } from "../errors";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -389,15 +389,12 @@ export class CCloudResourceLoader extends ResourceLoader {
       const routeResponse = await statementsClient.getSqlv1Statement({
         environment_id: statement.environmentId,
         organization_id: statement.organizationId,
-        statement_name: statement.name,
+        statement_name: "nonexistent", //statement.name,
       });
       return restFlinkStatementToModel(routeResponse, statement);
     } catch (error) {
-      if (isResponseError(error)) {
-        // XXX TODO figure out how to sniff out exactly 404.
-        logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
-          error,
-        });
+      if (isResponseErrorWithStatus(error, 404)) {
+        logger.info(`Flink statement ${statement.name} no longer exists`);
         return null;
       } else {
         logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
