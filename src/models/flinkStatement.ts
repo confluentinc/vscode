@@ -25,13 +25,13 @@ const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
  */
 export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   // Immutable foreign reference properties
-  connectionId!: ConnectionId;
-  connectionType!: ConnectionType;
-  environmentId!: EnvironmentId;
-  organizationId!: OrganizationId;
+  readonly connectionId!: ConnectionId;
+  readonly connectionType!: ConnectionType;
+  readonly environmentId!: EnvironmentId;
+  readonly organizationId!: OrganizationId;
 
   // Immutable name
-  name: string;
+  readonly name: string;
 
   // Mutable properties
   metadata: SqlV1StatementMetadata | undefined;
