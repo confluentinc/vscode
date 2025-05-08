@@ -4,7 +4,6 @@ import {
   FLINKSTATEMENT_URI_SCHEME,
   FlinkStatementDocumentProvider,
 } from "../documentProviders/flinkStatement";
-import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -19,7 +18,7 @@ import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
-import { selectPoolForStatementsViewCommand } from "./flinkComputePools";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import {
   FlinkSpecProperties,
   IFlinkStatementSubmitParameters,
@@ -244,14 +243,28 @@ export async function submitFlinkStatementCommand(
 
     // Refresh the statements view onto the compute pool in question,
     // which will then show the new statement.
-    await selectPoolForStatementsViewCommand(computePool);
+    // (Will wait for the refresh to complete.)
+
+    // Focus the new statement in the view.
+    const statementsView = FlinkStatementsViewProvider.getInstance();
+
+    // Cause the view to refresh on the compute pool in question,
+    // and then focus the new statement. Statement will probably be in 'Pending' state.
+    await statementsView.setParentResource(computePool);
+    await statementsView.focus(newStatement.id);
 
     // Wait for statement to be running and show results
     if (newStatement.canHaveResults) {
+      // Will resolve when the statement is in a viewable state and
+      // the results viewer is open.
       await waitAndShowResults(newStatement, computePool);
 
-      // Refresh the statements view again
-      currentFlinkStatementsResourceChanged.fire(computePool);
+      // Refresh the statements view again to show the new state of the statement.
+      // (This is a whole empty + reload of view data, so have to wait until it's done.
+      //  before we can focus our new statement.)
+      await statementsView.refresh();
+      // Focus again, but don't need to wait for it.
+      void statementsView.focus(newStatement.id);
     }
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
