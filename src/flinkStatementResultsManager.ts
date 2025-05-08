@@ -88,6 +88,7 @@ export class FlinkStatementResultsManager {
     private schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
     private notifyUI: () => void,
     private resultLimit: number,
+    private resultsPollingIntervalMs: number = 800,
   ) {
     this._results = os.signal(new Map<string, any>());
     this._state = os.signal<StreamState>("running");
@@ -104,7 +105,10 @@ export class FlinkStatementResultsManager {
   }
 
   private setupPolling() {
-    this._pollingInterval = setInterval(this.fetchResults.bind(this), 800);
+    this._pollingInterval = setInterval(
+      this.fetchResults.bind(this),
+      this.resultsPollingIntervalMs,
+    );
 
     // Watch for results full state
     this.os.watch(() => {
