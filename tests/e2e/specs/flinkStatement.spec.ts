@@ -1,4 +1,5 @@
 import { Page } from "@playwright/test";
+import { DEFAULT_FLINK_SQL_FILE_EXTENSION } from "../../../src/flinkSql/constants";
 import { test } from "./base";
 import { login } from "./utils/confluentCloud";
 
@@ -29,7 +30,8 @@ test.describe("Flink statements and statement results", () => {
     // First, login to Confluent Cloud
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
 
-    // Open a new file, save it and call it `test.flinksql`
+    // Open a new file, save it and call it `select.flink.sql`
+    const fileName = `select${DEFAULT_FLINK_SQL_FILE_EXTENSION}`;
 
     // Enable Flink
     await enableFlink(page);
@@ -41,7 +43,7 @@ test.describe("Flink statements and statement results", () => {
     await (await page.getByText("AWS.us-east-1")).click();
 
     await page.keyboard.press("ControlOrMeta+P");
-    await page.keyboard.type("select.flinksql");
+    await page.keyboard.type(fileName);
     await page.keyboard.press("Enter");
 
     // Move the mouse and hover over Flink Statements
@@ -51,7 +53,7 @@ test.describe("Flink statements and statement results", () => {
     await (await page.getByLabel("Submit Flink Statement")).click();
 
     // Choose the select.flinksql file
-    await page.keyboard.type("select.flinksql");
+    await page.keyboard.type(fileName);
     await page.keyboard.press("Enter");
 
     // Select the first compute pool

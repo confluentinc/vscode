@@ -5,6 +5,7 @@ import {
   FlinkStatementDocumentProvider,
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
+import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
@@ -161,9 +162,9 @@ export async function submitFlinkStatementCommand(
 
   // 1. Choose the document with the SQL to submit
   const uriSchemes = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
-  const languageIds = ["plaintext", "flinksql", "sql"];
+  const languageIds = ["plaintext", FLINK_SQL_LANGUAGE_ID, "sql"];
   const fileFilters = {
-    "FlinkSQL files": [".flinksql", ".sql"],
+    "FlinkSQL files": [...FLINK_SQL_FILE_EXTENSIONS, ".sql"],
   };
   const validUriProvided: boolean = uri instanceof vscode.Uri && uriSchemes.includes(uri.scheme);
   const statementBodyUri: vscode.Uri | undefined = validUriProvided

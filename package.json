@@ -677,7 +677,7 @@
       {
         "id": "flinksql",
         "extensions": [
-          ".flinksql"
+          ".flink.sql"
         ],
         "aliases": [
           "Flink SQL",
