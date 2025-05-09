@@ -862,6 +862,7 @@ export async function format() {
     src([
       "src/**/*.ts",
       "!src/clients/**/*.ts", // don't reformat apigen generated code
+      "!src/graphql/sidecarGraphQL.d.ts", // don't reformat gql.tada generated code
       "src/**/*.css",
       "src/**/*.html",
       "src/**/*.json",
