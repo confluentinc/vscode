@@ -77,7 +77,7 @@ export function summarizeLocalConnection(
   summary: MarkdownString,
 ): MarkdownString {
   const kafkaAvailable = getContextValue(ContextValues.localKafkaClusterAvailable);
-  summary.appendMarkdown(`\n**Kafka Cluster:** ${kafkaAvailable ? "Available" : "Not Available"}`);
+  summary.appendMarkdown(`\n**Kafka Cluster:** ${kafkaAvailable ? "Running" : "Not Running"}`);
 
   // TODO(shoup): update this once we migrate LOCAL connections to DIRECT
   // local_config only exists if the SR URI is set
