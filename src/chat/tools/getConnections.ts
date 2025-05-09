@@ -92,9 +92,6 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
     }
 
-    // TODO(shoup): remove later
-    logger.debug(`connectionStrings:\n\n${connectionStrings.map((part) => part.value).join("\n")}`);
-
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
       return new LanguageModelToolResult([]);
