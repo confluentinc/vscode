@@ -77,7 +77,7 @@ export function summarizeLocalConnection(
   summary: MarkdownString,
 ): MarkdownString {
   const kafkaAvailable = getContextValue(ContextValues.localKafkaClusterAvailable);
-  summary.appendMarkdown(`\n**Kafka Cluster:** ${kafkaAvailable ? "Running" : "Not Running"}`);
+  summary.appendMarkdown(`\n**Kafka:** ${kafkaAvailable ? "Running" : "Not Running"}`);
 
   // TODO(shoup): update this once we migrate LOCAL connections to DIRECT
   // local_config only exists if the SR URI is set
@@ -85,7 +85,7 @@ export function summarizeLocalConnection(
   const schemaRegistryAvailable: boolean =
     !!config && (getContextValue(ContextValues.localSchemaRegistryAvailable) ?? false);
   summary.appendMarkdown(
-    `\n**Schema Registry:** ${schemaRegistryAvailable ? "Available" : "Not Available"}`,
+    `\n**Schema Registry:** ${schemaRegistryAvailable ? "Running" : "Not Running"}`,
   );
   if (schemaRegistryAvailable) {
     summary.appendMarkdown(`\n**Schema Registry URI:** ${config!.schema_registry_uri}`);
