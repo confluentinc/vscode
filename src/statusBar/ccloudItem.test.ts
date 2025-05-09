@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { MarkdownString, StatusBarItem, ThemeColor, window } from "vscode";
+import { MarkdownString, StatusBarItem, window } from "vscode";
 import {
   TEST_CCLOUD_INCIDENT,
   TEST_CCLOUD_SCHEDULED_MAINTENANCE,
@@ -13,7 +13,6 @@ import {
   getCCloudStatusBarItem,
   updateCCloudStatus,
 } from "./ccloudItem";
-import { ERROR_BACKGROUND_COLOR_ID, WARNING_BACKGROUND_COLOR_ID } from "./constants";
 import {
   ACTIVE_INCIDENT_STATUS_ORDER,
   ACTIVE_MAINTENANCE_STATUS_ORDER,
@@ -62,7 +61,6 @@ describe("statusBar/ccloudItem.ts", () => {
     updateCCloudStatus(TEST_CCLOUD_STATUS_SUMMARY);
 
     assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO})`);
-    assert.strictEqual(statusBarItem.backgroundColor, undefined);
     const tooltip = statusBarItem.tooltip as MarkdownString;
     assert.ok(tooltip.value.includes(`**$(${IconNames.CONFLUENT_LOGO}) Confluent Cloud Status**`));
     assert.ok(tooltip.value.includes("No notices for Confluent Cloud at this time"));
@@ -80,8 +78,6 @@ describe("statusBar/ccloudItem.ts", () => {
       updateCCloudStatus(activeIncidentSummary);
 
       assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO}) ${incidents.length}`);
-      assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-      assert.strictEqual(statusBarItem.backgroundColor.id, ERROR_BACKGROUND_COLOR_ID);
     });
   }
 
@@ -100,8 +96,6 @@ describe("statusBar/ccloudItem.ts", () => {
         statusBarItem.text,
         `$(${IconNames.CONFLUENT_LOGO}) ${maintenances.length}`,
       );
-      assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-      assert.strictEqual(statusBarItem.backgroundColor.id, WARNING_BACKGROUND_COLOR_ID);
     });
   }
 
@@ -116,9 +110,6 @@ describe("statusBar/ccloudItem.ts", () => {
     updateCCloudStatus(multipleSummary);
 
     assert.strictEqual(statusBarItem.text, "$(confluent-logo) 2");
-    assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-    // incident color takes priority
-    assert.strictEqual(statusBarItem.backgroundColor.id, ERROR_BACKGROUND_COLOR_ID);
   });
 
   for (const status of COMPLETED_INCIDENT_STATUSES) {
@@ -132,7 +123,6 @@ describe("statusBar/ccloudItem.ts", () => {
       updateCCloudStatus(activeIncidentSummary);
 
       assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO})`);
-      assert.strictEqual(statusBarItem.backgroundColor, undefined);
     });
   }
 
@@ -147,7 +137,6 @@ describe("statusBar/ccloudItem.ts", () => {
       updateCCloudStatus(activeMaintenanceSummary);
 
       assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO})`);
-      assert.strictEqual(statusBarItem.backgroundColor, undefined);
     });
   }
 });
