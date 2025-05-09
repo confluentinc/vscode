@@ -7,10 +7,11 @@ import {
   ScaffoldV1TemplateListDataInnerApiVersionEnum,
   ScaffoldV1TemplateListDataInnerKindEnum,
   ScaffoldV1TemplateListKindEnum,
-} from "./clients/scaffoldingService";
-import * as scaffold from "./scaffold";
+} from "../clients/scaffoldingService";
+import * as projectGeneration from "./projectGeneration";
+import { scaffoldProjectRequest } from "./projectGeneration";
 
-describe("scaffoldProjectRequest", () => {
+describe.only("projectGeneration", () => {
   let sandbox: sinon.SinonSandbox;
   let getTemplatesStub: sinon.SinonStub;
   let quickPickStub: sinon.SinonStub;
@@ -28,6 +29,12 @@ describe("scaffoldProjectRequest", () => {
           display_name: "Kafka Client In JavaScript",
           description: "A simple JavaScript project",
           tags: ["producer", "consumer", "javascript"],
+          options: {
+            api_key: "default-key",
+            secret_key: "default-secret",
+            bootstrap_server: "localhost:9092",
+            topic_name: "test-topic",
+          },
         },
       },
       {
@@ -39,6 +46,12 @@ describe("scaffoldProjectRequest", () => {
           display_name: "Flink SQL Application",
           description: "A Flink SQL application",
           tags: ["apache flink", "table api"],
+          options: {
+            api_key: "default-key",
+            secret_key: "default-secret",
+            bootstrap_server: "localhost:9092",
+            topic_name: "test-topic",
+          },
         },
       },
       {
@@ -50,6 +63,12 @@ describe("scaffoldProjectRequest", () => {
           display_name: "Other Template",
           description: "Another template",
           tags: ["other"],
+          options: {
+            api_key: "default-key",
+            secret_key: "default-secret",
+            bootstrap_server: "localhost:9092",
+            topic_name: "test-topic",
+          },
         },
       },
     ];
@@ -65,7 +84,7 @@ describe("scaffoldProjectRequest", () => {
       data: new Set(templateData),
     };
 
-    getTemplatesStub = sandbox.stub(scaffold, "getTemplatesList").resolves(mockTemplates);
+    getTemplatesStub = sandbox.stub(projectGeneration, "getTemplatesList").resolves(mockTemplates);
     quickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
   });
 
@@ -74,7 +93,7 @@ describe("scaffoldProjectRequest", () => {
   });
 
   it("filters templates by kafka tags when templateType is kafka", async () => {
-    await scaffold.scaffoldProjectRequest({ templateType: "kafka" });
+    await scaffoldProjectRequest({ templateType: "kafka" });
     const quickPickItems = quickPickStub.firstCall.args[0] as vscode.QuickPickItem[];
     assert.ok(quickPickItems.length > 0, "Should have at least one Kafka template");
     assert.ok(
@@ -86,7 +105,7 @@ describe("scaffoldProjectRequest", () => {
   });
 
   it("filters templates by flink tags when templateType is flink", async () => {
-    await scaffold.scaffoldProjectRequest({ templateType: "flink" });
+    await scaffoldProjectRequest({ templateType: "flink" });
     const quickPickItems = quickPickStub.firstCall.args[0] as vscode.QuickPickItem[];
     assert.ok(quickPickItems.length > 0, "Should have at least one Flink template");
     assert.ok(
@@ -106,17 +125,41 @@ describe("scaffoldProjectRequest", () => {
       data: new Set([]),
     });
 
-    const result = await scaffold.scaffoldProjectRequest({ templateType: "kafka" });
+    const result = await scaffoldProjectRequest({ templateType: "kafka" });
     assert.strictEqual(result, undefined);
   });
 
   it("finds specific template when templateName is provided", async () => {
-    await scaffold.scaffoldProjectRequest({
+    await scaffoldProjectRequest({
       templateName: "kafka-js",
       templateType: "kafka",
     });
 
     const quickPickItems = quickPickStub.firstCall?.args[0] as vscode.QuickPickItem[];
     assert.ok(!quickPickItems, "QuickPick should not be shown when template is specified");
+  });
+
+  it("preserves all options when sanitizeOptions is false", async () => {
+    const result = await projectGeneration.getTemplatesList(undefined, false);
+    const template = Array.from(result.data)[0] as ScaffoldV1TemplateListDataInner;
+
+    sinon.assert.calledWith(getTemplatesStub, undefined, false);
+    assert.deepStrictEqual((template.spec as { options: Record<string, string> }).options, {
+      api_key: "default-key",
+      secret_key: "default-secret",
+      bootstrap_server: "localhost:9092",
+      topic_name: "test-topic",
+    });
+  });
+
+  it("filters sensitive options when sanitizeOptions is true", async () => {
+    const result = await projectGeneration.getTemplatesList(undefined, true);
+    const template = Array.from(result.data)[0] as ScaffoldV1TemplateListDataInner;
+
+    sinon.assert.calledWith(getTemplatesStub, undefined, true);
+    assert.deepStrictEqual((template.spec as { options: Record<string, string> }).options, {
+      bootstrap_server: "localhost:9092",
+      topic_name: "test-topic",
+    });
   });
 });

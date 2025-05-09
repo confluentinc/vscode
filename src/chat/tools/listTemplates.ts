@@ -9,8 +9,8 @@ import {
   LanguageModelToolResult,
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
+import { getTemplatesList } from "../../commands/projectGeneration";
 import { Logger } from "../../logging";
-import { getTemplatesList } from "../../scaffold";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
