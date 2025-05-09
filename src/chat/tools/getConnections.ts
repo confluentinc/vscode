@@ -96,9 +96,6 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
     }
 
-    // TODO(shoup): remove later
-    logger.debug(`connectionStrings:\n\n${connectionStrings.map((part) => part.value).join("\n")}`);
-
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
       return new LanguageModelToolResult([]);
@@ -176,10 +173,11 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
     }
 
-    // TODO(shoup): remove later
+    // TODO(shoup): remove after debugging
     logger.debug(
-      `messages:\n\n${messages.map((msg) => `${msg.role.toString()} ${msg.name}: ${msg.content.map((part) => (part as LanguageModelTextPart).value)}`).join("\n")}`,
+      `messages:\n\n${messages.map((msg) => `${msg.name}: ${msg.content.map((part) => (part as LanguageModelTextPart).value)}`).join("\n")}`,
     );
+
     return messages;
   }
 }
