@@ -32,20 +32,6 @@
               </vscode-dropdown>
             </div>
 
-            <div class="dropdown-container">
-              <!-- Empty label for aligned layout with the rest of controls -->
-              <label for="stream-toggle"><span>&nbsp;</span></label>
-              <vscode-button
-                appearance="primary"
-                id="stream-toggle"
-                data-on-click="this.handleStreamToggle(this.streamState())"
-                data-text="this.streamStateLabel()"
-                data-attr-title="this.streamStateTooltip()"
-                data-attr-disabled="this.streamState() === 'completed'"
-              >
-              </vscode-button>
-            </div>
-
             <template data-if="this.streamError() != null">
               <div class="dropdown-container">
                 <!-- Empty label for aligned layout with the rest of controls -->
@@ -64,18 +50,6 @@
                     <p data-text="this.streamError().message"></p>
                   </div>
                 </div>
-              </div>
-            </template>
-
-            <template data-if="this.timer() != null">
-              <div class="dropdown-container">
-                <label>Time elapsed</label>
-                <flink-timer
-                  class="timer"
-                  data-attr-class="'timer ' + this.streamState()"
-                  data-prop-time="this.timer()"
-                  data-prop-state="this.streamState()"
-                ></flink-timer>
               </div>
             </template>
           </div>
@@ -106,15 +80,6 @@
           <div class="grid-banner">
             <vscode-progress-ring></vscode-progress-ring>
             <label>Waiting for results…</label>
-          </div>
-        </template>
-
-        <template
-          data-if="this.waitingForResults() && this.streamState() === 'paused' && this.streamError() == null"
-        >
-          <div class="grid-banner">
-            <span class="codicon codicon-debug-pause banner-pending"></span>
-            <label>Paused</label>
           </div>
         </template>
 

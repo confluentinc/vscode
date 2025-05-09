@@ -32,7 +32,7 @@ const resultLimitLabel = Object.fromEntries(
   labels.map((label, index) => [numbers[index], label]),
 ) as Record<string, ResultLimitType>;
 
-type StreamState = "running" | "paused" | "errored" | "completed";
+type StreamState = "running" | "completed";
 
 /**
  * Top level view model for Flink Statement Results Viewer. It composes shared state and logic
@@ -362,47 +362,13 @@ class FlinkStatementResultsViewModel extends ViewModel {
     this.snapshot(this.emptySnapshot);
   }
 
-  timer = this.resolve(() => {
-    return post("GetStreamTimer", { timestamp: this.timestamp() });
-  }, null);
-  /** State of stream provided by the host: either running or paused. */
+  /** State of stream provided by the host: either running or completed. */
   streamState = this.resolve(() => {
     return post("GetStreamState", { timestamp: this.timestamp() });
   }, "running");
   streamError = this.resolve(() => {
     return post("GetStreamError", { timestamp: this.timestamp() });
   }, null);
-  streamStateLabel = this.derive(() => {
-    switch (this.streamState()) {
-      case "running":
-        return "Pause";
-      case "paused":
-        return "Resume";
-      case "completed":
-        return "Completed";
-    }
-  });
-  streamStateTooltip = this.derive(() => {
-    switch (this.streamState()) {
-      case "running":
-        return "Polling for new results (click to pause polling). This does not affect statement execution.";
-      case "paused":
-        return "Result polling is paused (click to resume polling). This does not affect statement execution.";
-      case "completed":
-        return "All results have been fetched";
-    }
-  });
-
-  handleStreamToggle(state: StreamState) {
-    switch (state) {
-      case "running":
-        return post("StreamPause", { timestamp: this.timestamp() });
-      case "paused":
-        return post("StreamResume", { timestamp: this.timestamp() });
-      case "completed":
-        return null; // No action for completed state
-    }
-  }
 }
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
@@ -410,10 +376,6 @@ export function post(
   type: "GetStreamError",
   body: { timestamp?: number },
 ): Promise<{ message: string } | null>;
-export function post(
-  type: "GetStreamTimer",
-  body: { timestamp?: number },
-): Promise<{ start: number; offset: number }>;
 export function post(
   type: "GetResults",
   body: { page: number; pageSize: number; timestamp?: number },
@@ -428,8 +390,6 @@ export function post(
   type: "ResultLimitChange",
   body: { limit: number; timestamp?: number },
 ): Promise<null>;
-export function post(type: "StreamPause", body: { timestamp?: number }): Promise<null>;
-export function post(type: "StreamResume", body: { timestamp?: number }): Promise<null>;
 export function post(
   type: "PreviewResult",
   body: { result: Record<string, any>; timestamp?: number },
