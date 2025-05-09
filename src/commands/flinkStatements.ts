@@ -58,13 +58,17 @@ async function waitForStatementRunning(
     // Check if the statement is in a viewable state
     const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
 
-    if (!refreshedStatement || refreshedStatement.isResultsViewable) {
-      // if the statement is in a viewable state, resolve
-      // (or if the statement is no longer found. Should be improved in the future)
+    if (!refreshedStatement) {
+      // if the statement is no longer found, break to raise error
+      logger.error("waitForStatementRunning", "statement not found");
+      break;
+    } else if (refreshedStatement.isResultsViewable) {
+      // Resolve if now in a viewable state
       return;
     }
 
     progress.report({ message: refreshedStatement.status?.phase });
+
     // Wait before polling again
     await new Promise((resolve) => setTimeout(resolve, pollPeriodMs));
   }
