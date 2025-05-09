@@ -177,7 +177,7 @@
           "containers"
         ],
         "displayName": "Get Docker Containers",
-        "modelDescription": "Get information about Docker containers running on the local machine. This can be filtered to specifically show Kafka or Schema Registry containers using the resourceKind parameter.",
+        "modelDescription": "Get information about Docker containers for Kafka or Schema Registry running on the local machine. Use this when the user asks about their local connection/resources or any direct connections using 'localhost'.",
         "canBeReferencedInPrompt": false,
         "icon": "$(docker)",
         "inputSchema": {
