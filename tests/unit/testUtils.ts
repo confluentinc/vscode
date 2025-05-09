@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../../src/authz/types";
 import { TopicData, TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
+import { ResponseError } from "../../src/clients/sidecar";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
 import { Subject } from "../../src/models/schema";
@@ -98,4 +99,25 @@ export function createTestSubject(schemaRegistry: SchemaRegistry, name: string):
     schemaRegistry.environmentId,
     schemaRegistry.id,
   );
+}
+/**
+ * Create a mock ResponseError for testing.
+ * @param status - HTTP status code
+ * @param statusText - HTTP status text
+ * @param body - Response body
+ * @returns A ResponseError instance
+ */
+export function createResponseError(
+  status: number,
+  statusText: string,
+  body: string,
+): ResponseError {
+  const response = {
+    status,
+    statusText,
+    clone: () => ({
+      text: () => Promise.resolve(body),
+    }),
+  } as Response;
+  return new ResponseError(response);
 }
