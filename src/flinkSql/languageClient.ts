@@ -126,8 +126,8 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
             closed: () => {
               logger.warn("Language server connection closed by the client's error handler");
               // This will trigger our own reconnection logic
-              languageClientRestartNeeded.fire();
-              return { action: CloseAction.DoNotRestart };
+              handleWebSocketDisconnect(url);
+              return { action: CloseAction.Restart, handled: true };
             },
           },
         };
@@ -152,7 +152,6 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
       const reason = event.reason || "Unknown reason";
       const code = event.code;
       logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
-      await handleWebSocketDisconnect(url);
     };
   });
 }

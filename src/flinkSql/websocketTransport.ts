@@ -1,14 +1,14 @@
+import { Disposable, Event, EventEmitter } from "vscode";
 import {
-  MessageTransports,
-  MessageReader,
-  MessageWriter,
-  Message,
-  PartialMessageInfo,
   DataCallback,
+  Message,
+  MessageReader,
+  MessageTransports,
+  MessageWriter,
+  PartialMessageInfo,
 } from "vscode-languageclient/node";
-import { EventEmitter, Event, Disposable } from "vscode";
-import { Logger } from "../logging";
 import { WebSocket } from "ws";
+import { Logger } from "../logging";
 
 const logger = new Logger("websocketTransport");
 
@@ -85,6 +85,12 @@ class WebsocketMessageWriter implements MessageWriter {
   }
 
   public async write(message: Message): Promise<void> {
+    // Check if socket was closed to prevent "sendAfterClose" errors
+    if (this.socket.readyState !== WebSocket.OPEN) {
+      logger.warn("Attempted to write to closed WebSocket, ignoring message");
+      return Promise.resolve();
+    }
+
     try {
       const messageStr = JSON.stringify(message);
       logger.debug(`Sending message to language server: ${messageStr}`);
@@ -127,9 +133,11 @@ class WebsocketMessageWriter implements MessageWriter {
 export class WebsocketTransport implements MessageTransports {
   public reader: MessageReader;
   public writer: MessageWriter;
+  private socket: WebSocket;
 
   constructor(socket: WebSocket) {
     logger.debug("Creating websocket transport");
+    this.socket = socket;
     this.reader = new WebsocketMessageReader(socket);
     this.writer = new WebsocketMessageWriter(socket);
   }
