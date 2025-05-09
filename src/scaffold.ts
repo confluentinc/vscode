@@ -98,10 +98,9 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   try {
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
-    const templateListResponse: ScaffoldV1Template[] = await getTemplatesList(
+    let templateList: ScaffoldV1Template[] = await getTemplatesList(
       templateRequestOptions?.templateCollection,
     );
-    let templateList = Array.from(templateListResponse) as ScaffoldV1Template[];
     if (templateRequestOptions && !templateRequestOptions.templateName) {
       // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
       // templates that are tagged as producer or consumer but with a quickpick
