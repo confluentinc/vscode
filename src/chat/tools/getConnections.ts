@@ -2,6 +2,7 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
+  Command,
   LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
@@ -32,6 +33,9 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
   readonly name = "get_connections";
   readonly progressMessage = "Checking available connections...";
 
+  foundConnectionTypes: ConnectionType[] = [];
+  missingConnectionTypes: ConnectionType[] = [];
+
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetConnectionsParameters>,
     token: CancellationToken,
@@ -39,33 +43,43 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     const params = options.input;
     logger.debug("params:", params);
 
+    // reset for each invocation
+    this.foundConnectionTypes = [];
+    this.missingConnectionTypes = [];
+
     // use the Connections API to get the list of connections
     const sidecar = await getSidecar();
     const client: ConnectionsResourceApi = sidecar.getConnectionsResourceApi();
     const connectionsList: ConnectionsList = await client.gatewayV1ConnectionsGet();
 
-    // ...then handle all of the text-formatting to tell the model only the information that's needed
-    const connectionStrings: LanguageModelTextPart[] = [];
-    if (connectionsList.data.length) {
-      // group by type to keep summaries concise
-      const connectionsMap: Map<ConnectionType, Connection[]> = new Map();
-      connectionsList.data.forEach((connection: Connection) => {
-        const type: ConnectionType = connection.spec.type!;
-        if (!connectionsMap.has(type)) {
-          connectionsMap.set(type, []);
-        }
-        connectionsMap.get(type)?.push(connection);
-      });
+    // keep track of how many connections of each type there are in case we need to add hints to the
+    // model to help the user connect to other resources
+    const connectionCounts: Map<ConnectionType, number> = new Map([
+      [ConnectionType.Ccloud, 0],
+      [ConnectionType.Local, 0],
+      [ConnectionType.Direct, 0],
+    ]);
 
-      // give each connection type its own header
-      for (const [type, connections] of connectionsMap.entries()) {
-        if (params.connectionType && type !== params.connectionType) {
-          // if the model is filtering by connection type, skip any other types
-          continue;
-        }
+    // go through each connection type to determine whether to summarize the connection(s) or to
+    // provide hints to the user
+    const connectionStrings: LanguageModelTextPart[] = [];
+    for (const connectionType of connectionCounts.keys()) {
+      const connections: Connection[] = connectionsList.data.filter(
+        (connection: Connection) => connection.spec.type === connectionType,
+      );
+      // keep general awareness of how many connections there are per type, even when filtering
+      connectionCounts.set(connectionType, connections.length);
+      if (params.connectionType && connectionType !== params.connectionType) {
+        // if the model is filtering by connection type, skip any other types
+        continue;
+      }
+
+      if (connections.length) {
+        this.foundConnectionTypes.push(connectionType);
+        // give each connection type its own markdown header
         const plural = connections.length === 1 ? "" : "s";
         let connectionGroupSummary = new MarkdownString(
-          `## ${titleCase(type)} Connection${plural} (${connections.length})`,
+          `## ${titleCase(connectionType)} Connection${plural} (${connections.length})`,
         );
         // then summarize each connection
         connections.forEach((connection: Connection) => {
@@ -75,22 +89,10 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
           );
         });
         connectionStrings.push(new LanguageModelTextPart(connectionGroupSummary.value));
+      } else {
+        // no connections of this type, so provide a hint to the model about how the user can connect
+        this.missingConnectionTypes.push(connectionType);
       }
-    } else {
-      // show placeholders for signing in to CCloud, starting local resources, or connecting directly
-      const ccloudButton = `[${CCLOUD_SIGN_IN_BUTTON_LABEL}](command:confluent.connections.ccloud.signIn)`;
-      const localResourcesButton = `[Start Local Resources](command:confluent.docker.startLocalResources)`;
-      const directConnectionButton = `[Connect Directly](command:confluent.connections.direct)`;
-
-      const noConnectionsMarkdown = new MarkdownString(`No connections found.`)
-        .appendMarkdown(`\n\n- Connect to Confluent Cloud by signing in:\n\n${ccloudButton}`)
-        .appendMarkdown(
-          `\n\n- Start local resources (Kafka, Schema Registry, etc.) by running:\n\n${localResourcesButton}`,
-        )
-        .appendMarkdown(
-          `\n\n- Connect directly to a Kafka cluster or Schema registry with:\n\n${directConnectionButton}`,
-        );
-      connectionStrings.push(new LanguageModelTextPart(noConnectionsMarkdown.value));
     }
 
     // TODO(shoup): remove later
@@ -121,14 +123,45 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
 
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      let message = new MarkdownString(
-        `Below are the details of available connections for you to reference and summarize to the user:\n\n# Connections`,
-      );
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = message.appendMarkdown(`\n\n${part.value}`);
+      if (this.foundConnectionTypes.length) {
+        let message = new MarkdownString(
+          `Below are the details of available connections for you to reference and summarize to the user:\n\n# Connections`,
+        );
+        for (const part of result.content as LanguageModelTextPart[]) {
+          message = message.appendMarkdown(`\n\n${part.value}`);
+        }
+        messages.push(this.toolMessage(message.value, "result"));
       }
-      messages.push(this.toolMessage(message.value, "result"));
+
+      if (this.missingConnectionTypes.length) {
+        let message = new MarkdownString(
+          `The following connection types are not available: ${JSON.stringify(this.missingConnectionTypes)}.`,
+        );
+        if (this.missingConnectionTypes.includes(ConnectionType.Ccloud)) {
+          const ccloudCommand: Command = {
+            command: "confluent.connections.ccloud.signIn",
+            title: CCLOUD_SIGN_IN_BUTTON_LABEL,
+          };
+          stream.button(ccloudCommand);
+        }
+        if (this.missingConnectionTypes.includes(ConnectionType.Local)) {
+          const localCommand: Command = {
+            command: "confluent.docker.startLocalResources",
+            title: "Start Local Resources",
+          };
+          stream.button(localCommand);
+        }
+        if (this.missingConnectionTypes.includes(ConnectionType.Direct)) {
+          const directCommand: Command = {
+            command: "confluent.connections.direct",
+            title: "Add New Connection",
+          };
+          stream.button(directCommand);
+        }
+        messages.push(this.toolMessage(message.value, "result"));
+      }
     }
+
     // TODO(shoup): remove later
     logger.debug(
       `messages:\n\n${messages.map((msg) => `${msg.role.toString()} ${msg.name}: ${msg.content.map((part) => (part as LanguageModelTextPart).value)}`).join("\n")}`,
