@@ -15,15 +15,78 @@ import {
   STATUS_GREEN,
   STATUS_RED,
   STATUS_YELLOW,
+  TERMINAL_PHASES,
 } from "./flinkStatement";
 import { CustomMarkdownString, KeyValuePairArray } from "./main";
 import { EnvironmentId } from "./resource";
 
 describe("FlinkStatement", () => {
-  it("uses name as id", () => {
-    const statement = createFlinkStatement({ name: "statement0" });
+  it("uses env+name as id", () => {
+    const statement = createFlinkStatement({
+      name: "statement0",
+      environmentId: "env0" as EnvironmentId,
+    });
 
-    assert.strictEqual(statement.id, statement.name, "Expect name and id to be the same");
+    assert.strictEqual(statement.id, "statement0@env0", "Expected id to be made of name@env");
+  });
+
+  it("isTerminal returns true for terminal phases", () => {
+    for (const phase of TERMINAL_PHASES) {
+      const statement = createFlinkStatement({ phase });
+      assert.strictEqual(statement.isTerminal, true, `Expected ${phase} to be terminal`);
+    }
+
+    // not necessarily all the nonterminal phases, but enough to prove the point.
+    const nonTerminalPhases = ["RUNNING", "DEGRADED", "PENDING", "FAILING"];
+    for (const phase of nonTerminalPhases) {
+      const statement = createFlinkStatement({ phase });
+      assert.strictEqual(statement.isTerminal, false, `Expected ${phase} to not be terminal`);
+    }
+  });
+
+  describe("isFresherThan()", () => {
+    const staleStatement = createFlinkStatement({ updatedAt: new Date("2023-01-01T00:00:00Z") });
+    const freshStatement = createFlinkStatement({ updatedAt: new Date("2023-01-02T00:00:00Z") });
+
+    it("returns true if the statement is fresher", () => {
+      assert.strictEqual(
+        freshStatement.isFresherThan(staleStatement),
+        true,
+        "Expected fresh statement to be fresher than stale statement",
+      );
+    });
+
+    it("returns false if the statement is not fresher", () => {
+      assert.strictEqual(
+        staleStatement.isFresherThan(freshStatement),
+        false,
+        "Expected stale statement to not be fresher than fresh statement",
+      );
+    });
+
+    it("returns faluse if statement is the same", () => {
+      assert.strictEqual(
+        freshStatement.isFresherThan(freshStatement),
+        false,
+        "Expected statement to not be fresher than itself",
+      );
+    });
+
+    it("Throws if the statement ids are not the same", () => {
+      const differentIdStatement = createFlinkStatement({
+        name: "someOtherStatement",
+        environmentId: "env1" as EnvironmentId,
+      });
+
+      assert.throws(
+        () => {
+          freshStatement.isFresherThan(differentIdStatement);
+        },
+        {
+          message: `Cannot compare FlinkStatement "${freshStatement.id}" with instance with different id "${differentIdStatement.id}"`,
+        },
+      );
+    });
   });
 
   describe("update()", () => {

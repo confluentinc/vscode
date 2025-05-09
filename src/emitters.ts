@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { CCloudEnvironment } from "./models/environment";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
+import { FlinkStatement } from "./models/flinkStatement";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
@@ -33,6 +34,9 @@ export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
+
+/** Fired when a FlinkStatementManager-monitored non-terminal statement has been observed to have changed. */
+export const flinkStatementUpdated = new vscode.EventEmitter<FlinkStatement>();
 
 export type EventChangeType = "added" | "deleted";
 

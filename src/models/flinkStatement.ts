@@ -22,6 +22,7 @@ import {
 
 const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
 
+export type FlinkStatementId = string & { readonly brand: unique symbol };
 /**
  * Model for a Flink statement.
  */
@@ -85,15 +86,20 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   }
 
   /**
-   * Return the name of the statement as its id.
-   * This is guaranteed to be unique within the environment, per API docs.
+   * Return globally unique id for this statement.
+   * This is a combination of the statement name and the environmentId.
+   * This is needed because the name is not guaranteed unique across environments.
    */
-  get id(): string {
-    return this.name;
+  get id(): FlinkStatementId {
+    return `${this.name}@${this.environmentId}` as FlinkStatementId;
   }
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.id}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  get isTerminal(): boolean {
+    return TERMINAL_PHASES.includes(this.phase);
   }
 
   get phase(): string {
@@ -114,6 +120,23 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
 
   get updatedAt(): Date | undefined {
     return this.metadata?.updated_at;
+  }
+
+  /**
+   * Is this statement's `updatedAt` newer than other's?
+   * @throws Error if statements have different name or environmentIds.
+   */
+  isFresherThan(other: FlinkStatement): boolean {
+    if (this.id !== other.id) {
+      throw new Error(
+        `Cannot compare FlinkStatement "${this.id}" with instance with different id "${other.id}"`,
+      );
+    }
+
+    if (!this.updatedAt || !other.updatedAt) {
+      return false;
+    }
+    return this.updatedAt.getTime() > other.updatedAt.getTime();
   }
 
   get isBackground(): boolean {
