@@ -5,11 +5,7 @@ import { unzip } from "unzipit";
 import { ViewColumn } from "vscode";
 import {
   ApplyScaffoldV1TemplateOperationRequest,
-  ListScaffoldV1TemplatesRequest,
   ScaffoldV1Template,
-  ScaffoldV1TemplateList,
-  ScaffoldV1TemplateListDataInner,
-  ScaffoldV1TemplateOption,
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
@@ -102,10 +98,10 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   try {
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
-    const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList(
+    const templateListResponse: ScaffoldV1Template[] = await getTemplatesList(
       templateRequestOptions?.templateCollection,
     );
-    let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
+    let templateList = Array.from(templateListResponse) as ScaffoldV1Template[];
     if (templateRequestOptions && !templateRequestOptions.templateName) {
       // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
       // templates that are tagged as producer or consumer but with a quickpick
@@ -415,49 +411,41 @@ async function pickTemplate(
   return pickedItem?.value;
 }
 
-export function sanitizeTemplateOptions(
-  template: ScaffoldV1TemplateListDataInner,
-): ScaffoldV1TemplateListDataInner {
-  const sanitizedTemplate: ScaffoldV1TemplateListDataInner = {
-    api_version: template.api_version,
-    kind: template.kind,
-    metadata: template.metadata,
+export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(obj)
+      .filter(
+        ([key]) => !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret"),
+      )
+      .map(([key, value]) => [key, value]),
+  );
+}
+
+export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV1Template {
+  const spec = template.spec as ScaffoldV1TemplateSpec;
+  const sanitizedOptions = spec?.options ? filterSensitiveKeys(spec.options) : {};
+
+  return {
+    ...template,
     spec: {
-      ...(template.spec as ScaffoldV1TemplateSpec),
-      options: (template.spec as ScaffoldV1TemplateSpec)?.options
-        ? Object.fromEntries(
-            Object.entries((template.spec as ScaffoldV1TemplateSpec).options || {})
-              .filter(
-                ([key]) =>
-                  !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret"),
-              )
-              .map(([key, option]) => [key, { ...option }]),
-          )
-        : ({} as Record<string, ScaffoldV1TemplateOption>),
+      ...spec,
+      options: sanitizedOptions,
     } as ScaffoldV1TemplateSpec,
   };
-  return sanitizedTemplate;
 }
 
 export async function getTemplatesList(
   collection?: string,
   sanitizeOptions: boolean = false,
-): Promise<ScaffoldV1TemplateList> {
-  const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
-  const requestBody: ListScaffoldV1TemplatesRequest = {
+): Promise<ScaffoldV1Template[]> {
+  const client = (await getSidecar()).getTemplatesApi();
+  const response = await client.listScaffoldV1Templates({
     template_collection_name: collection ?? "vscode",
-  };
-  const templateListResponse = await client.listScaffoldV1Templates(requestBody);
+  });
 
-  if (sanitizeOptions) {
-    const templates = Array.from(templateListResponse.data) as ScaffoldV1TemplateListDataInner[];
-    const sanitizedTemplates = templates.map(sanitizeTemplateOptions);
-    templateListResponse.data = new Set(sanitizedTemplates);
-  }
-
-  return templateListResponse;
+  const templates = Array.from(response.data) as ScaffoldV1Template[];
+  return sanitizeOptions ? templates.map(sanitizeTemplateOptions) : templates;
 }
-
 export async function handleProjectScaffoldUri(
   collection: string | null,
   template: string | null,
