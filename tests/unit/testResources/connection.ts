@@ -1,15 +1,9 @@
 import { randomUUID } from "crypto";
 import {
-  Authentication,
-  CCloudConfig,
-  CCloudStatus,
   ConnectedState,
   Connection,
   ConnectionFromJSON,
-  ConnectionMetadata,
-  ConnectionSpec,
   ConnectionSpecFromJSON,
-  ConnectionStatus,
   ConnectionType,
   Status,
   UserInfo,
@@ -44,20 +38,20 @@ export const TEST_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   metadata: {
     self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${CCLOUD_CONNECTION_ID}`,
     sign_in_uri: `http://login.confluent.io/login?...`,
-  } satisfies ConnectionMetadata,
+  },
   spec: {
     ...CCLOUD_CONNECTION_SPEC,
     ccloud_config: {
       organization_id: TEST_CCLOUD_ORGANIZATION.id,
       ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
-    } satisfies CCloudConfig,
-  } satisfies ConnectionSpec,
+    },
+  },
   status: {
     // start with unauthenticated connection, then add TEST_CCLOUD_USER and TEST_AUTH_EXPIRATION later
     authentication: {
       status: Status.NoToken,
-    } satisfies Authentication,
-  } satisfies ConnectionStatus,
+    },
+  },
 } satisfies Connection);
 
 /** A CCloud {@link Connection} with `VALID_TOKEN` auth status and user info. */
@@ -70,14 +64,14 @@ export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = ConnectionFromJS
       requires_authentication_at: TEST_AUTH_EXPIRATION,
       status: Status.ValidToken,
       user: TEST_CCLOUD_USER,
-    } satisfies Authentication,
+    },
     ccloud: {
       ...TEST_CCLOUD_CONNECTION.status.ccloud,
       requires_authentication_at: TEST_AUTH_EXPIRATION,
       state: ConnectedState.Success,
       user: TEST_CCLOUD_USER,
-    } satisfies CCloudStatus,
-  } satisfies ConnectionStatus,
+    },
+  },
 } satisfies Connection);
 
 export const TEST_LOCAL_CONNECTION: Connection = ConnectionFromJSON({
@@ -86,13 +80,13 @@ export const TEST_LOCAL_CONNECTION: Connection = ConnectionFromJSON({
   id: LOCAL_CONNECTION_ID,
   metadata: {
     self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${LOCAL_CONNECTION_ID}`,
-  } satisfies ConnectionMetadata,
+  },
   spec: LOCAL_CONNECTION_SPEC,
   status: {
     authentication: {
       status: Status.NoToken,
-    } satisfies Authentication,
-  } satisfies ConnectionStatus,
+    },
+  },
 } satisfies Connection);
 
 export const TEST_DIRECT_CONNECTION_ID = randomUUID() as ConnectionId;
@@ -102,17 +96,17 @@ export const TEST_DIRECT_CONNECTION: Connection = ConnectionFromJSON({
   id: TEST_DIRECT_CONNECTION_ID,
   metadata: {
     self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${TEST_DIRECT_CONNECTION_ID}`,
-  } satisfies ConnectionMetadata,
+  },
   spec: {
     id: TEST_DIRECT_CONNECTION_ID,
     name: "New Connection",
     type: ConnectionType.Direct,
-  } satisfies ConnectionSpec,
+  },
   status: {
     authentication: {
       status: Status.NoToken,
-    } satisfies Authentication,
-  } satisfies ConnectionStatus,
+    },
+  },
 } satisfies Connection);
 
 /** Fake spec augmented with `formConnectionType` for test purposes. */
