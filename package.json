@@ -93,6 +93,34 @@
         }
       },
       {
+        "name": "get_dockerContainers",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "docker",
+          "containers"
+        ],
+        "displayName": "Get Docker Containers",
+        "modelDescription": "Get information about Docker containers running on the local machine. This can be filtered to specifically show Kafka or Schema Registry containers using the resourceKind parameter.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(docker)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "resourceKind": {
+              "type": "string",
+              "enum": [
+                "Kafka",
+                "Schema Registry"
+              ],
+              "description": "Which kind of resource's container(s) to list (Kafka, Schema Registry, etc)."
+            }
+          },
+          "required": [
+            "resourceKind"
+          ]
+        }
+      },
+      {
         "name": "get_connections",
         "when": "confluent.chatParticipantEnabled",
         "tags": [

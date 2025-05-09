@@ -10,7 +10,6 @@ import {
   ContainerCreateRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,
-  ContainerListRequest,
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
@@ -19,10 +18,10 @@ import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
+import { getLocalResourceContainers } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
 import { getLocalKafkaImageTag } from "../configs";
-import { MANAGED_CONTAINER_LABEL } from "../constants";
-import { createContainer, getContainersForImage } from "../containers";
+import { createContainer } from "../containers";
 import { createNetwork } from "../networks";
 import { findFreePort } from "../ports";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
@@ -67,15 +66,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await this.checkForImage(this.imageRepo, this.imageTag);
     if (token.isCancellationRequested) return;
 
-    const containerListRequest: ContainerListRequest = {
-      all: true,
-      filters: JSON.stringify({
-        ancestor: [this.imageRepoTag],
-        label: [MANAGED_CONTAINER_LABEL],
-      }),
-    };
-    const existingContainers: ContainerSummary[] =
-      await getContainersForImage(containerListRequest);
+    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+      this.imageRepo,
+      this.imageTag,
+      true,
+    );
     if (existingContainers.length > 0) {
       // this will handle logging and notifications
       await this.handleExistingContainers(existingContainers);
@@ -165,16 +160,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.imageTag = getLocalKafkaImageTag();
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
-    const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
-    const containerListRequest: ContainerListRequest = {
-      filters: JSON.stringify({
-        ancestor: [repoTag],
-        // label: [MANAGED_CONTAINER_LABEL], // TODO: determine if we want to use this label to filter
-        status: ["running"],
-      }),
-    };
-    const existingContainers: ContainerSummary[] =
-      await getContainersForImage(containerListRequest);
+    const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
+      this.imageRepo,
+      this.imageTag,
+      false,
+    );
     const count = existingContainers.length;
     const plural = count > 1 ? "s" : "";
     if (existingContainers.length === 0) {
