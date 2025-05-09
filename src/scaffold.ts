@@ -8,6 +8,8 @@ import {
   ListScaffoldV1TemplatesRequest,
   ScaffoldV1Template,
   ScaffoldV1TemplateList,
+  ScaffoldV1TemplateListDataInner,
+  ScaffoldV1TemplateOption,
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
@@ -413,14 +415,47 @@ async function pickTemplate(
   return pickedItem?.value;
 }
 
-export async function getTemplatesList(collection?: string): Promise<ScaffoldV1TemplateList> {
-  // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
+export function sanitizeTemplateOptions(
+  template: ScaffoldV1TemplateListDataInner,
+): ScaffoldV1TemplateListDataInner {
+  const sanitizedTemplate: ScaffoldV1TemplateListDataInner = {
+    api_version: template.api_version,
+    kind: template.kind,
+    metadata: template.metadata,
+    spec: {
+      ...(template.spec as ScaffoldV1TemplateSpec),
+      options: (template.spec as ScaffoldV1TemplateSpec)?.options
+        ? Object.fromEntries(
+            Object.entries((template.spec as ScaffoldV1TemplateSpec).options || {})
+              .filter(
+                ([key]) =>
+                  !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret"),
+              )
+              .map(([key, option]) => [key, { ...option }]),
+          )
+        : ({} as Record<string, ScaffoldV1TemplateOption>),
+    } as ScaffoldV1TemplateSpec,
+  };
+  return sanitizedTemplate;
+}
 
+export async function getTemplatesList(
+  collection?: string,
+  sanitizeOptions: boolean = false,
+): Promise<ScaffoldV1TemplateList> {
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
   const requestBody: ListScaffoldV1TemplatesRequest = {
     template_collection_name: collection ?? "vscode",
   };
-  return await client.listScaffoldV1Templates(requestBody);
+  const templateListResponse = await client.listScaffoldV1Templates(requestBody);
+
+  if (sanitizeOptions) {
+    const templates = Array.from(templateListResponse.data) as ScaffoldV1TemplateListDataInner[];
+    const sanitizedTemplates = templates.map(sanitizeTemplateOptions);
+    templateListResponse.data = new Set(sanitizedTemplates);
+  }
+
+  return templateListResponse;
 }
 
 export async function handleProjectScaffoldUri(
