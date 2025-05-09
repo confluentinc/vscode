@@ -81,15 +81,15 @@ export function getConnectionLabel(type: ConnectionType): string {
   }
 }
 
-/** Specifies a cloud provider and region pair */
+/** Subset of some resources which exist in a cloud provider + cloud region */
 export interface IProviderRegion {
   /** The cloud provider for this resource. */
   provider: string;
-  /** The region inside said for this resource. */
+  /** The region within the provider for this resource. */
   region: string;
 }
 
-/** Specifies a (Ccloud) environment/provider/region tuple. */
+/** Specifies a (Ccloud) environment/cloud provider/cloud region triplet. */
 export interface IEnvProviderRegion extends IProviderRegion {
   /** The CCloud environment ID for this resource. */
   environmentId: EnvironmentId;
