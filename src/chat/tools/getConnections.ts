@@ -20,6 +20,7 @@ import {
 import { Logger } from "../../logging";
 import { getSidecar } from "../../sidecar";
 import { titleCase } from "../../utils";
+import { systemMessage } from "../messageTypes";
 import { summarizeConnection } from "../summarizers/connections";
 import { BaseLanguageModelTool } from "./base";
 
@@ -134,10 +135,19 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
 
       if (this.missingConnectionTypes.length) {
-        let message = new MarkdownString(
-          `The following connection types are not available: ${JSON.stringify(this.missingConnectionTypes)}.`,
+        // summarize missing connection types
+        const missingTypes = this.missingConnectionTypes
+          .map((ctype) => titleCase(ctype))
+          .join(", ");
+        let connectionMessage = new MarkdownString(
+          `The following connection types are not available: ${missingTypes}.`,
         );
+        messages.push(this.toolMessage(connectionMessage.value, "result"));
+
+        // then add system-message hints about showing buttons for connecting
+        let buttonInstructions = "After explaining the connection status to the user, suggest:";
         if (this.missingConnectionTypes.includes(ConnectionType.Ccloud)) {
+          buttonInstructions += `\n- They need to sign in to Confluent Cloud using the '${CCLOUD_SIGN_IN_BUTTON_LABEL}' button added above`;
           const ccloudCommand: Command = {
             command: "confluent.connections.ccloud.signIn",
             title: CCLOUD_SIGN_IN_BUTTON_LABEL,
@@ -145,6 +155,8 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
           stream.button(ccloudCommand);
         }
         if (this.missingConnectionTypes.includes(ConnectionType.Local)) {
+          buttonInstructions +=
+            "\n- They can start local resources using the 'Start Local Resources' button added above";
           const localCommand: Command = {
             command: "confluent.docker.startLocalResources",
             title: "Start Local Resources",
@@ -152,13 +164,15 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
           stream.button(localCommand);
         }
         if (this.missingConnectionTypes.includes(ConnectionType.Direct)) {
+          buttonInstructions +=
+            "\n- They can connect directly using the 'Add New Connection' button added above";
           const directCommand: Command = {
             command: "confluent.connections.direct",
             title: "Add New Connection",
           };
           stream.button(directCommand);
         }
-        messages.push(this.toolMessage(message.value, "result"));
+        messages.push(systemMessage(buttonInstructions));
       }
     }
 
