@@ -51,16 +51,16 @@ export function summarizeCCloudConnection(
     (expiration.getTime() - new Date().getTime()) / (1000 * 60 * 60),
   );
   summary = summary
-    .appendMarkdown(`\n**State:** ${status.state}`)
+    .appendMarkdown(`\nState: ${status.state}`)
     .appendMarkdown(
-      `\n**Auth Session Expires At:** ${expiration.toLocaleDateString()} ${expiration.toLocaleTimeString()} (in ${hoursUntilExpiration} hour${hoursUntilExpiration === 1 ? "" : "s"})`,
+      `\nAuth Session Expires At: ${expiration.toLocaleDateString()} ${expiration.toLocaleTimeString()} (in ${hoursUntilExpiration} hour${hoursUntilExpiration === 1 ? "" : "s"})`,
     );
   if (hoursUntilExpiration <= 1) {
-    summary = summary.appendMarkdown(`\n**Sign-In Link:** ${connection.metadata.sign_in_uri}`);
+    summary = summary.appendMarkdown(`\nSign-In Link: ${connection.metadata.sign_in_uri}`);
   }
   if (status.errors) {
     summary = summary
-      .appendMarkdown(`\n**Errors:**`)
+      .appendMarkdown(`\nErrors:`)
       .appendCodeblock(JSON.stringify(status.errors, null, 2), "json");
   }
   return summary;
@@ -77,18 +77,18 @@ export function summarizeLocalConnection(
   summary: MarkdownString,
 ): MarkdownString {
   const kafkaAvailable = getContextValue(ContextValues.localKafkaClusterAvailable);
-  summary.appendMarkdown(`\n**Kafka:** ${kafkaAvailable ? "Running" : "Not Running"}`);
+  summary.appendMarkdown(`\nKafka: ${kafkaAvailable ? "Running" : "Not Running"}`);
 
   // TODO(shoup): update this once we migrate LOCAL connections to DIRECT
   // local_config only exists if the SR URI is set
   const config: LocalConfig | undefined = connection.spec.local_config;
   const schemaRegistryAvailable: boolean =
-    !!config && (getContextValue(ContextValues.localSchemaRegistryAvailable) ?? false);
+    getContextValue(ContextValues.localSchemaRegistryAvailable) ?? false;
   summary.appendMarkdown(
-    `\n**Schema Registry:** ${schemaRegistryAvailable ? "Running" : "Not Running"}`,
+    `\nSchema Registry: ${schemaRegistryAvailable ? "Running" : "Not Running"}`,
   );
-  if (schemaRegistryAvailable) {
-    summary.appendMarkdown(`\n**Schema Registry URI:** ${config!.schema_registry_uri}`);
+  if (config && schemaRegistryAvailable) {
+    summary.appendMarkdown(`\nSchema Registry URI: ${config.schema_registry_uri}`);
   }
 
   return summary;
@@ -108,11 +108,11 @@ export function summarizeDirectConnection(
   if (kafkaConfig) {
     const kafkaStatus: KafkaClusterStatus = connection.status.kafka_cluster!;
     summary = summary
-      .appendMarkdown(`\n**Bootstrap Servers:** ${kafkaConfig.bootstrap_servers}`)
-      .appendMarkdown(`\n**Status:** ${kafkaStatus.state}`);
+      .appendMarkdown(`\nBootstrap Servers: ${kafkaConfig.bootstrap_servers}`)
+      .appendMarkdown(`\nStatus: ${kafkaStatus.state}`);
     if (kafkaStatus.errors) {
       summary = summary
-        .appendMarkdown(`\n**Errors:**`)
+        .appendMarkdown(`\nErrors:`)
         .appendCodeblock(JSON.stringify(kafkaStatus.errors, null, 2), "json");
     }
   }
@@ -121,11 +121,11 @@ export function summarizeDirectConnection(
   if (schemaRegistryConfig) {
     const schemaRegistryStatus: SchemaRegistryStatus = connection.status.schema_registry!;
     summary = summary
-      .appendMarkdown(`\n**Schema Registry URL:** ${schemaRegistryConfig.uri}`)
-      .appendMarkdown(`\n**Status:** ${schemaRegistryStatus.state}`);
+      .appendMarkdown(`\nSchema Registry URI: ${schemaRegistryConfig.uri}`)
+      .appendMarkdown(`\nStatus: ${schemaRegistryStatus.state}`);
     if (schemaRegistryStatus.errors) {
       summary = summary
-        .appendMarkdown(`\n**Errors:**`)
+        .appendMarkdown(`\nErrors:`)
         .appendCodeblock(JSON.stringify(schemaRegistryStatus.errors, null, 2), "json");
     }
   }
