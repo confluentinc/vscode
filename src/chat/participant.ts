@@ -12,6 +12,7 @@ import {
   LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
+  LanguageModelChatTool,
   LanguageModelChatToolMode,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
@@ -24,8 +25,6 @@ import { ModelNotSupportedError } from "./errors";
 import { participantMessage, systemMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
 import { BaseLanguageModelTool } from "./tools/base";
-import { GetConnectionsTool } from "./tools/getConnections";
-import { ListTemplatesTool } from "./tools/listTemplates";
 import { getToolMap } from "./tools/toolMap";
 
 const logger = new Logger("chat.participant");
@@ -160,8 +159,12 @@ export async function handleChatMessage(
   );
 
   // inform the model that tools can be invoked as part of the response stream
+  const registeredTools: BaseLanguageModelTool<any>[] = Array.from(getToolMap().values());
+  const chatTools: LanguageModelChatTool[] = registeredTools.map(
+    (tool: BaseLanguageModelTool<any>) => tool.toChatTool(),
+  );
   const requestOptions: LanguageModelChatRequestOptions = {
-    tools: [new ListTemplatesTool().toChatTool(), new GetConnectionsTool().toChatTool()],
+    tools: chatTools,
     toolMode: LanguageModelChatToolMode.Auto,
   };
   // determine whether or not to continue sending chat requests to the model as a result of any tool

@@ -5,17 +5,14 @@ import { ListTemplatesTool } from "./listTemplates";
 import { setToolMap } from "./toolMap";
 
 export function registerChatTools(): Disposable[] {
+  const tools: BaseLanguageModelTool<any>[] = [new ListTemplatesTool(), new GetConnectionsTool()];
+
   const disposables: Disposable[] = [];
-
-  const tools = new Map<string, BaseLanguageModelTool<any>>([
-    ["list_projectTemplates", new ListTemplatesTool()],
-    ["get_connections", new GetConnectionsTool()],
-  ]);
-
-  for (const [toolId, tool] of tools.entries()) {
-    disposables.push(lm.registerTool(toolId, tool));
-    setToolMap(toolId, tool);
+  for (const tool of tools) {
+    const toolDisposable: Disposable = lm.registerTool(tool.name, tool);
+    disposables.push(toolDisposable);
+    // also update the registry map for easier lookup later
+    setToolMap(tool.name, tool);
   }
-
   return disposables;
 }
