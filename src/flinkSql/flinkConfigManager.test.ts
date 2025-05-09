@@ -11,7 +11,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { FlinkConfigurationManager } from "./flinkConfigManager";
 
-describe.only("FlinkConfigurationManager", () => {
+describe("FlinkConfigurationManager", () => {
   let sandbox: sinon.SinonSandbox;
   let configStub: sinon.SinonStub;
   let contextValueStub: sinon.SinonStub;
