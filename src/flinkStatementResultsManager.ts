@@ -1,4 +1,3 @@
-import { Data } from "dataclass";
 import { Scope, Signal } from "inertial";
 import {
   FetchError,
@@ -24,35 +23,13 @@ type MessageType =
   | "ResultLimitChange"
   | "GetStreamState"
   | "GetStreamError"
-  | "GetStreamTimer"
-  | "StreamPause"
-  | "StreamResume"
   | "PreviewResult"
   | "PreviewAllResults"
   | "Search"
   | "GetSearchQuery"
   | "SetVisibleColumns";
 
-type StreamState = "running" | "paused" | "completed";
-
-/**
- * Basic timer structure with pause/resume functionality.
- * Uses `Date.now()` for time tracking.
- */
-class Timer extends Data {
-  start = Date.now();
-  offset = 0;
-  pause(this: Timer) {
-    const now = Date.now();
-    return this.copy({ start: now, offset: now - this.start + this.offset });
-  }
-  resume(this: Timer) {
-    return this.copy({ start: Date.now() });
-  }
-  reset(this: Timer) {
-    return this.copy({ start: Date.now(), offset: 0 });
-  }
-}
+type StreamState = "running" | "completed";
 
 /**
  * Manages the state and data fetching for Flink statement results.
@@ -72,7 +49,6 @@ export class FlinkStatementResultsManager {
   private _moreResults: Signal<boolean>;
   private _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
   private _latestError: Signal<{ message: string } | null>;
-  private _timer: Signal<Timer>;
   private _isResultsFull: Signal<boolean>;
   private _pollingInterval: NodeJS.Timeout | undefined;
   private _shouldPoll: Signal<boolean>;
@@ -95,7 +71,6 @@ export class FlinkStatementResultsManager {
     this._moreResults = os.signal(true);
     this._latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
     this._latestError = os.signal<{ message: string } | null>(null);
-    this._timer = os.signal(Timer.create());
     this._isResultsFull = os.signal(false);
     this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
     this._searchQuery = os.signal<string | null>(null);
@@ -137,7 +112,7 @@ export class FlinkStatementResultsManager {
     }
 
     let reportable: { message: string } | null = null;
-    let shouldPause = false;
+    let shouldComplete = false;
 
     try {
       const currentResults = this._results();
@@ -178,7 +153,7 @@ export class FlinkStatementResultsManager {
         const payload = await error.response.json();
         if (!payload?.aborted) {
           const status = error.response.status;
-          shouldPause = status >= 400;
+          shouldComplete = status >= 400;
           switch (status) {
             case 401: {
               reportable = { message: "Authentication required." };
@@ -212,13 +187,12 @@ export class FlinkStatementResultsManager {
       } else if (error instanceof Error) {
         logger.error(error.message);
         reportable = { message: "An internal error occurred." };
-        shouldPause = true;
+        shouldComplete = true;
       }
     } finally {
       this.os.batch(() => {
-        if (shouldPause) {
-          this._state("paused");
-          this._timer(this._timer().pause());
+        if (shouldComplete) {
+          this._state("completed");
         }
         if (reportable != null) {
           this._latestError(reportable);
@@ -316,7 +290,6 @@ export class FlinkStatementResultsManager {
         this._results(new Map<string, any>());
         this._isResultsFull(false);
         this._state("running");
-        this._timer(this._timer().resume());
         return null;
       }
       case "GetStreamState": {
@@ -324,24 +297,6 @@ export class FlinkStatementResultsManager {
       }
       case "GetStreamError": {
         return this._latestError();
-      }
-      case "GetStreamTimer": {
-        return this._timer();
-      }
-      case "StreamPause": {
-        this._state("paused");
-        this._timer(this._timer().pause());
-        this.notifyUI();
-        return null;
-      }
-      case "StreamResume": {
-        if (this._state() === "completed") {
-          return null;
-        }
-        this._state("running");
-        this._timer(this._timer().resume());
-        this.notifyUI();
-        return null;
       }
       default: {
         const _exhaustiveCheck: never = type;
