@@ -22,6 +22,29 @@ import {
 
 const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
 
+// Statement phases
+export const RUNNING_PHASE = "RUNNING";
+export const DEGRADED_PHASE = "DEGRADED";
+export const COMPLETED_PHASE = "COMPLETED";
+export const STOPPING_PHASE = "STOPPING";
+export const STOPPED_PHASE = "STOPPED";
+export const FAILED_PHASE = "FAILED";
+export const FAILING_PHASE = "FAILING";
+export const DELETING_PHASE = "DELETING";
+export const PENDING_PHASE = "PENDING";
+
+export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
+
+// List of phases considered as failed or non-stoppable
+export const FAILED_PHASES = [
+  FAILED_PHASE,
+  FAILING_PHASE,
+  STOPPED_PHASE,
+  DELETING_PHASE,
+  STOPPING_PHASE,
+];
+export const NON_STOPPABLE_PHASES = [COMPLETED_PHASE, ...FAILED_PHASES];
+
 /**
  * Model for a Flink statement.
  */
@@ -175,6 +198,16 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   get database(): string | undefined {
     return this.spec.properties?.["sql.current-database"];
   }
+
+  /** Returns true if the statement is in a failed or failing phase. */
+  get failed(): boolean {
+    return FAILED_PHASES.includes(this.phase);
+  }
+
+  /** Returns true if the statement can be stopped (not in a completed, failed, stopped, stopping, deleting, or other terminal/transitory state). */
+  get stoppable(): boolean {
+    return !NON_STOPPABLE_PHASES.includes(this.phase);
+  }
 }
 
 /** Model for the interesting bits of the `metadata` subfield of Flink statement. */
@@ -267,22 +300,6 @@ export const STATUS_BLUE = new ThemeColor("notificationsInfoIcon.foreground");
 export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
 
-// Statement phases
-// TODO make convience boolean properies in FlinkStatement class
-// so that we can do things like `statement.isRunning()` or `statement.isFailed()`
-
-export const RUNNING_PHASE = "RUNNING";
-export const DEGRADED_PHASE = "DEGRADED";
-export const COMPLETED_PHASE = "COMPLETED";
-export const STOPPING_PHASE = "STOPPING";
-export const STOPPED_PHASE = "STOPPED";
-export const FAILED_PHASE = "FAILED";
-export const FAILING_PHASE = "FAILING";
-export const DELETING_PHASE = "DELETING";
-export const PENDING_PHASE = "PENDING";
-
-export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
-
 /**
  * Convert a from-REST API depiction of a Flink statement to
  * our codebase's FlinkStatement model.
@@ -311,4 +328,15 @@ export function restFlinkStatementToModel(
     metadata: restFlinkStatement.metadata,
     status: restFlinkStatement.status,
   });
+}
+
+export function modelFlinkStatementToRest(modelFlinkStatement: FlinkStatement) {
+  return {
+    metadata: modelFlinkStatement.metadata ?? {},
+    name: modelFlinkStatement.name,
+    organization_id: modelFlinkStatement.organizationId,
+    environment_id: modelFlinkStatement.environmentId,
+    spec: modelFlinkStatement.spec,
+    status: modelFlinkStatement.status,
+  };
 }

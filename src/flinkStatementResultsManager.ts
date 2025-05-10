@@ -8,9 +8,11 @@ import {
 import { ResponseError } from "./clients/sidecar";
 import { showJsonPreview } from "./documentProviders/message";
 import { logError } from "./errors";
+import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
-import { FlinkStatement } from "./models/flinkStatement";
+import { FlinkStatement, modelFlinkStatementToRest } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
+import { getSidecar } from "./sidecar";
 import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
@@ -20,14 +22,15 @@ type MessageType =
   | "GetResultsCount"
   | "GetSchema"
   | "GetMaxSize"
-  | "ResultLimitChange"
   | "GetStreamState"
   | "GetStreamError"
   | "PreviewResult"
   | "PreviewAllResults"
   | "Search"
   | "GetSearchQuery"
-  | "SetVisibleColumns";
+  | "SetVisibleColumns"
+  | "GetStatementMeta"
+  | "StopStatement";
 
 type StreamState = "running" | "completed";
 
@@ -56,6 +59,9 @@ export class FlinkStatementResultsManager {
   private _searchQuery: Signal<string | null>;
   private _visibleColumns: Signal<string[] | null>;
   private _filteredResults: Signal<any[]>;
+  private _fetchCount = 0;
+  private readonly REFRESH_INTERVAL = 5; // Refresh statement every 5 result fetches
+  private readonly resourceLoader = CCloudResourceLoader.getInstance();
 
   constructor(
     private os: Scope,
@@ -106,46 +112,62 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  private async refreshStatementIfNeeded(): Promise<void> {
+    this._fetchCount++;
+    if (this._fetchCount % this.REFRESH_INTERVAL === 0) {
+      const refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
+      if (refreshedStatement) {
+        this.statement = refreshedStatement;
+      }
+    }
+  }
+
   async fetchResults(): Promise<void> {
     if (!this._shouldPoll()) {
       return;
     }
 
-    let reportable: { message: string } | null = null;
+    let reportable: { message: string } | null =
+      this.statement?.status?.detail === ""
+        ? null
+        : { message: this.statement?.status?.detail ?? "" };
     let shouldComplete = false;
 
     try {
-      const currentResults = this._results();
-      const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-      const response = await this.schedule(() =>
-        this.service.getSqlv1StatementResult({
-          environment_id: this.statement.environmentId,
-          organization_id: this.statement.organizationId,
-          name: this.statement.name,
-          page_token: pageToken,
-        }),
-      );
-      const resultsData: SqlV1StatementResultResults = response.results ?? {};
+      await this.refreshStatementIfNeeded();
+      if (this.statement.isResultsViewable) {
+        const currentResults = this._results();
+        const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
+        const response = await this.schedule(() =>
+          this.service.getSqlv1StatementResult({
+            environment_id: this.statement.environmentId,
+            organization_id: this.statement.organizationId,
+            name: this.statement.name,
+            page_token: pageToken,
+          }),
+        );
+        const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
-      this.os.batch(() => {
-        parseResults({
-          columns: this.statement.status?.traits?.schema?.columns ?? [],
-          isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
-          upsertColumns: this.statement.status?.traits?.upsert_columns,
-          limit: this.resultLimit,
-          map: currentResults,
-          rows: resultsData.data,
+        this.os.batch(() => {
+          parseResults({
+            columns: this.statement.status?.traits?.schema?.columns ?? [],
+            isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
+            upsertColumns: this.statement.status?.traits?.upsert_columns,
+            limit: this.resultLimit,
+            map: currentResults,
+            rows: resultsData.data,
+          });
+          this._filteredResults(this.filterResultsBySearch());
+          // Check if we have more results to fetch
+          if (this.extractPageToken(response?.metadata?.next) === undefined) {
+            this._moreResults(false);
+            this._state("completed");
+          }
+          this._latestError(null);
+          this._latestResult(response);
+          this.notifyUI();
         });
-        this._filteredResults(this.filterResultsBySearch());
-        // Check if we have more results to fetch
-        if (this.extractPageToken(response?.metadata?.next) === undefined) {
-          this._moreResults(false);
-          this._state("completed");
-        }
-        this._latestError(null);
-        this._latestResult(response);
-        this.notifyUI();
-      });
+      }
     } catch (error) {
       if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
 
@@ -228,6 +250,32 @@ export class FlinkStatementResultsManager {
     );
   }
 
+  private async stopStatement(): Promise<void> {
+    try {
+      const sidecar = await getSidecar();
+      const api = sidecar.getFlinkSqlStatementsApi(this.statement);
+      const latestStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
+      if (!latestStatement) {
+        logger.error("Failed to refresh Flink statement before stopping.");
+        return;
+      }
+      await api.updateSqlv1Statement({
+        organization_id: latestStatement.organizationId,
+        environment_id: latestStatement.environmentId,
+        statement_name: latestStatement.name,
+        UpdateSqlv1StatementRequest: {
+          ...modelFlinkStatementToRest(latestStatement),
+          spec: {
+            ...latestStatement.spec,
+            stopped: true,
+          },
+        },
+      });
+    } catch (err) {
+      logError(err, "Failed to stop Flink statement");
+    }
+  }
+
   handleMessage(type: MessageType, body: any): any {
     switch (type) {
       case "GetResults": {
@@ -284,19 +332,26 @@ export class FlinkStatementResultsManager {
           result: content,
         };
       }
-      case "ResultLimitChange": {
-        const newLimit = body.limit;
-        this.resultLimit = newLimit;
-        this._results(new Map<string, any>());
-        this._isResultsFull(false);
-        this._state("running");
-        return null;
-      }
       case "GetStreamState": {
         return this._state();
       }
       case "GetStreamError": {
         return this._latestError();
+      }
+      case "GetStatementMeta": {
+        return {
+          name: this.statement.name,
+          status: this.statement.status?.phase,
+          startTime: this.statement.metadata?.created_at ?? null,
+          detail: this.statement.status?.detail ?? null,
+          failed: this.statement.failed,
+          stoppable: this.statement.stoppable,
+        };
+      }
+      case "StopStatement": {
+        // Call the PUT API to stop the statement
+        this.stopStatement();
+        return null;
       }
       default: {
         const _exhaustiveCheck: never = type;

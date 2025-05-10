@@ -12,26 +12,10 @@
 
   <body>
     <main class="wrapper">
-      <header class="results-viewer-settings">
-        <section class="flink-settings">
-          <h4>Statement Results Settings</h4>
-
+      <header class="statement-details-header">
+        <section class="statement-details-section">
+          <h4>Statement details</h4>
           <div class="flex-row">
-            <div class="dropdown-container">
-              <label for="results-limit">Max results</label>
-              <vscode-dropdown
-                id="results-limit"
-                data-prop-value="this.resultLimit()"
-                data-on-change="this.handleResultLimitChange(event.target.value)"
-              >
-                <vscode-option value="100">100</vscode-option>
-                <vscode-option value="1k">1,000</vscode-option>
-                <vscode-option value="10k">10,000</vscode-option>
-                <vscode-option value="100k">100,000</vscode-option>
-                <vscode-option value="1m">1,000,000</vscode-option>
-              </vscode-dropdown>
-            </div>
-
             <template data-if="this.streamError() != null">
               <div class="dropdown-container">
                 <!-- Empty label for aligned layout with the rest of controls -->
@@ -53,10 +37,30 @@
               </div>
             </template>
           </div>
+
+          <div class="statement-info">
+            <div class="flex-row">
+              <div class="info-item">
+                <label>Start Time:</label>
+                <span data-text="this.statementMeta().startTime"></span>
+              </div>
+              <div class="info-item">
+                <label>Status:</label>
+                <span data-text="this.statementMeta().status"></span>
+              </div>
+              <vscode-button
+                appearance="primary"
+                data-on-click="this.stopStatement()"
+                data-attr-disabled="!this.statementMeta().stoppable"
+              >
+                <span class="codicon codicon-stop"></span>
+                <label>&nbsp;Stop</label>
+              </vscode-button>
+            </div>
+          </div>
         </section>
 
         <section>
-          <h4>Results Quick Search</h4>
           <div class="flex-row">
             <vscode-text-field
               id="results-search"
@@ -88,6 +92,15 @@
             <span class="codicon codicon-error banner-error"></span>
             <label>Failed to load results.</label>
             <label data-text="this.streamError().message"></label>
+          </div>
+        </template>
+
+        <template
+          data-if="!this.waitingForResults() && !this.hasResults() && !this.emptyFilterResult()"
+        >
+          <div class="grid-banner">
+            <span class="codicon codicon-info"></span>
+            <label>No results available</label>
           </div>
         </template>
 
@@ -254,12 +267,12 @@
         margin: 0;
       }
 
-      .results-viewer-settings {
+      .statement-details-header {
         display: flex;
         flex-direction: column;
       }
 
-      .results-viewer-settings > * {
+      .statement-details-header > * {
         padding: 12px;
       }
 
@@ -281,7 +294,7 @@
         color: var(--vscode-list-activeSelectionForeground, #ffffff);
       }
 
-      .flink-settings {
+      .statement-details-section {
         background: var(--vscode-sideBarTitle-background);
         border-bottom: 1px solid var(--vscode-sideBar-border);
       }
@@ -465,19 +478,20 @@
         font-size: 14px;
       }
 
-      .timer {
-        font-size: 1rem;
-        font-weight: 600;
-        padding: 2px 0;
-        line-height: 1;
-        flex: 1;
-        align-items: center;
-        display: flex;
-        color: var(--vscode-editor-foreground);
+      .statement-info {
+        margin-top: 0.5rem;
       }
 
-      .timer.paused {
-        opacity: 0.5;
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-right: 1rem;
+      }
+
+      .info-item label {
+        font-weight: 500;
+        color: var(--vscode-descriptionForeground);
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
