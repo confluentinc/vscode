@@ -3,7 +3,6 @@ import {
   ChatContext,
   ChatRequest,
   ChatRequestTurn,
-  ChatResponseMarkdownPart,
   ChatResponseStream,
   ChatResponseTurn,
   ChatResult,
@@ -22,8 +21,9 @@ import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
-import { participantMessage, systemMessage, userMessage } from "./messageTypes";
+import { systemMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
+import { summarizeChatHistory } from "./summarizers/conversationHistory";
 import { BaseLanguageModelTool } from "./tools/base";
 import { getToolMap } from "./tools/toolMap";
 
@@ -266,7 +266,7 @@ export async function handleChatMessage(
 function filterContextHistory(
   history: readonly (ChatRequestTurn | ChatResponseTurn)[],
 ): LanguageModelChatMessage[] {
-  logger.debug("context history:", history);
+  logger.debug("context history:\n", JSON.stringify(history, null, 2));
 
   // only use messages where the participant was tagged, or messages where the participant responded
   const filteredHistory: (ChatRequestTurn | ChatResponseTurn)[] = history.filter(
@@ -275,23 +275,7 @@ function filterContextHistory(
   if (filteredHistory.length === 0) {
     return [];
   }
-  const messages: LanguageModelChatMessage[] = [];
-  for (const turn of filteredHistory) {
-    // don't re-use previous prompts since the model may misinterpret them as part of the current prompt
-    if (turn instanceof ChatRequestTurn) {
-      if (turn.participant === PARTICIPANT_ID) {
-        messages.push(userMessage(turn.prompt));
-      }
-      continue;
-    }
-    if (turn instanceof ChatResponseTurn) {
-      // responses from the participant:
-      if (turn.response instanceof ChatResponseMarkdownPart) {
-        messages.push(participantMessage(turn.response.value.value));
-      }
-    }
-  }
 
-  logger.debug("filtered messages for historic context:", messages);
-  return messages;
+  const summary: string = summarizeChatHistory(filteredHistory);
+  return [userMessage(summary)];
 }
