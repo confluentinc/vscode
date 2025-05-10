@@ -3,9 +3,6 @@ import { SqlV1ResultSchema } from "../clients/flinkSql";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
-import { Timer } from "./timer/timer";
-
-customElements.define("flink-timer", Timer);
 
 const storage = createWebviewStorage<{
   colWidth: number[];

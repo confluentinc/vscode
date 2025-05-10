@@ -74,15 +74,15 @@ test.describe("Flink statements and statement results", () => {
     // TODO: Inspecting iframe properly needs some work, exercise for reader to
     //       look into it and fix.
     // Get the iframe and evaluate within its context
-    // const frame = await page.waitForSelector("iframe");
-    // if (!frame) {
-    //   throw new Error("Results iframe not found");
-    // }
+    const frame = await page.waitForSelector("iframe");
+    if (!frame) {
+      throw new Error("Results iframe not found");
+    }
 
-    // const frameContent = await frame.contentFrame();
-    // if (!frameContent) {
-    //   throw new Error("Could not get iframe content");
-    // }
+    const frameContent = await frame.contentFrame();
+    if (!frameContent) {
+      throw new Error("Could not get iframe content");
+    }
 
     // // Wait for and check the results within the iframe context
     // const iframePage = await frameContent.page();
