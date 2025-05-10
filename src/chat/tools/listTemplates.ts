@@ -7,11 +7,11 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
-  MarkdownString,
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
+import { summarizeProjectTemplate } from "../summarizers/projectTemplate";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
@@ -41,10 +41,8 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         // skip any templates that don't match provided tags
         return;
       }
-      const templateSummary = new MarkdownString(`- "${spec.name}"`)
-        .appendMarkdown(`\n\t- Display Name: "${spec.display_name}"`)
-        .appendMarkdown(`\n\t- Description: "${spec.description}"`);
-      templateStrings.push(new LanguageModelTextPart(templateSummary.value));
+      const templateSummary = summarizeProjectTemplate(template);
+      templateStrings.push(new LanguageModelTextPart(templateSummary));
     });
 
     if (token.isCancellationRequested) {
@@ -78,7 +76,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         message = `${message}\n\n${part.value}`;
       }
 
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when referencing a template for other tools. After the user selects a template, use the "get_templateOptions" tool to get the options for that template.`;
+      message = `${message}\n\nIf the user is interested in a specific project template, use the "get_templateOptions" tool to determine what inputs they need to provide.`;
       messages.push(this.toolMessage(message, "result"));
     }
     return messages;
