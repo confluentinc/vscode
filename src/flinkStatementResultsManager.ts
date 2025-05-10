@@ -7,7 +7,7 @@ import {
 } from "./clients/flinkSql";
 import { ResponseError } from "./clients/sidecar";
 import { showJsonPreview } from "./documentProviders/message";
-import { logError } from "./errors";
+import { isResponseErrorWithStatus, logError } from "./errors";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { FlinkStatement, modelFlinkStatementToRest } from "./models/flinkStatement";
@@ -250,28 +250,44 @@ export class FlinkStatementResultsManager {
   }
 
   private async stopStatement(): Promise<void> {
-    try {
-      const sidecar = await getSidecar();
-      const api = sidecar.getFlinkSqlStatementsApi(this.statement);
-      const latestStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
-      if (!latestStatement) {
-        logger.error("Failed to refresh Flink statement before stopping.");
-        return;
-      }
-      await api.updateSqlv1Statement({
-        organization_id: latestStatement.organizationId,
-        environment_id: latestStatement.environmentId,
-        statement_name: latestStatement.name,
-        UpdateSqlv1StatementRequest: {
-          ...modelFlinkStatementToRest(latestStatement),
-          spec: {
-            ...latestStatement.spec,
-            stopped: true,
+    const MAX_RETRIES = 5;
+    const INITIAL_BACKOFF_MS = 100;
+    const MAX_BACKOFF_MS = 10_000;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const sidecar = await getSidecar();
+        const api = sidecar.getFlinkSqlStatementsApi(this.statement);
+        await this.refreshStatement();
+        await api.updateSqlv1Statement({
+          organization_id: this.statement.organizationId,
+          environment_id: this.statement.environmentId,
+          statement_name: this.statement.name,
+          UpdateSqlv1StatementRequest: {
+            ...modelFlinkStatementToRest(this.statement),
+            spec: {
+              ...this.statement.spec,
+              stopped: true,
+            },
           },
-        },
-      });
-    } catch (err) {
-      logError(err, "Failed to stop Flink statement");
+        });
+        return;
+      } catch (err) {
+        if (isResponseErrorWithStatus(err, 409)) {
+          if (attempt < MAX_RETRIES - 1) {
+            // Calculate backoff time with exponential increase, capped at MAX_BACKOFF_MS
+            const backoffMs = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
+            logger.info(
+              `Retrying stop statement after 409 conflict. Attempt ${attempt + 1}/${MAX_RETRIES}. Waiting ${backoffMs}ms`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, backoffMs));
+            continue;
+          }
+        }
+        // If it's not a 409 or we're out of retries, log and throw
+        logError(err, "Failed to stop Flink statement");
+        throw err;
+      }
     }
   }
 

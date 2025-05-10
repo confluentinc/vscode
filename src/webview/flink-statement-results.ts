@@ -363,6 +363,10 @@ class FlinkStatementResultsViewModel extends ViewModel {
   async stopStatement() {
     this.stopButtonClicked(true);
     await post("StopStatement", { timestamp: this.timestamp() });
+
+    // Reset the button state after a short delay
+    // in case the stop failed for some reason
+    setTimeout(() => this.stopButtonClicked(false), 2000);
   }
 }
 
