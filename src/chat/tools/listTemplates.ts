@@ -11,6 +11,7 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
+import { summarizeProjectTemplate } from "../summarizers/projectTemplate";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
@@ -40,11 +41,8 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         // skip any templates that don't match provided tags
         return;
       }
-      templateStrings.push(
-        new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
-        ),
-      );
+      const templateSummary = summarizeProjectTemplate(template);
+      templateStrings.push(new LanguageModelTextPart(templateSummary));
     });
 
     if (token.isCancellationRequested) {
@@ -72,16 +70,16 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
 
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      let message = `Available project templates:\n`;
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = `${message}\n\n${part.value}`;
+      if (result.content.length) {
+        let message = `Available project templates:\n`;
+        for (const part of result.content as LanguageModelTextPart[]) {
+          message = `${message}\n\n${part.value}`;
+        }
+        message = `${message}\n\nIf the user is interested in a specific project template, use the "get_templateOptions" tool to determine what inputs they need to provide.`;
+        messages.push(this.toolMessage(message, "result"));
+      } else {
+        messages.push(this.toolMessage("No project templates found.", "result"));
       }
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
-      messages.push(this.toolMessage(message, "result"));
-    } else {
-      const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;
-      logger.error(errorMessage);
-      messages.push(this.toolMessage(errorMessage, "error"));
     }
     return messages;
   }
