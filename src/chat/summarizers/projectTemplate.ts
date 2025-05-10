@@ -7,6 +7,12 @@ export function summarizeProjectTemplate(template: ScaffoldV1Template): string {
     .appendMarkdown(`"${spec.display_name}":`)
     .appendMarkdown(`\n\t- ID: "${spec.name}"`)
     .appendMarkdown(`\n\t- Description: "${spec.description}"`);
+  return summary.value;
+}
+
+export function summarizeTemplateOptions(template: ScaffoldV1Template): string {
+  let summary = new MarkdownString().appendMarkdown(`- "${template.spec!.name}"`);
+  summary.appendCodeblock(JSON.stringify(template.spec!.options, null, 2));
 
   return summary.value;
 }
