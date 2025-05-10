@@ -23,7 +23,7 @@ import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
 import { systemMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
-import { summarizeChatHistory } from "./summarizers/conversationHistory";
+import { summarizeChatHistory } from "./summarizers/chatHistory";
 import { BaseLanguageModelTool } from "./tools/base";
 import { getToolMap } from "./tools/toolMap";
 
