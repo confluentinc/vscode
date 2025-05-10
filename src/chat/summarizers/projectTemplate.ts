@@ -11,8 +11,8 @@ export function summarizeProjectTemplate(template: ScaffoldV1Template): string {
 }
 
 export function summarizeTemplateOptions(template: ScaffoldV1Template): string {
-  let summary = new MarkdownString().appendMarkdown(`- "${template.spec!.name}"`);
-  summary.appendCodeblock(JSON.stringify(template.spec!.options, null, 2));
-
+  let summary = new MarkdownString().appendCodeblock(
+    JSON.stringify(template.spec!.options, null, 2),
+  );
   return summary.value;
 }
