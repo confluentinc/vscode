@@ -74,7 +74,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         for (const part of result.content as LanguageModelTextPart[]) {
           message = `${message}\n\n${part.value}`;
         }
-        message = `${message}\n\nIf the user is interested in a specific project template, use the "get_templateOptions" tool to determine what inputs they need to provide.`;
+        message = `${message}\n\nIf the user is interested in a specific project template, provde the template's 'ID' with the "get_templateOptions" tool to determine what inputs they need to provide.`;
         messages.push(this.toolMessage(message, "result"));
       } else {
         messages.push(this.toolMessage("No project templates found.", "result"));
