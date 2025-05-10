@@ -117,7 +117,8 @@ async function getModel(selector: LanguageModelChatSelector): Promise<LanguageMo
   let models: LanguageModelChat[] = [];
   for (const fieldToRemove of ["id", "version", "family", "vendor"]) {
     models = await lm.selectChatModels(selector);
-    logger.debug(`${models.length} available chat model(s)`, { models, modelSelector: selector });
+    // NOTE: uncomment this when debugging locally; too noisy otherwise
+    // logger.debug(`${models.length} available chat model(s)`, { models, modelSelector: selector });
     if (models.length) {
       break;
     }
@@ -217,7 +218,9 @@ export async function handleChatMessage(
         // each registered tool should contribute its own way of handling the invocation and
         // interacting with the stream, and can return an array of messages to be sent for another
         // round of processing
-        logger.debug(`Processing tool invocation for "${toolCall.name}"`);
+        logger.debug(`Processing tool invocation for "${toolCall.name}"`, {
+          params: toolCall.input,
+        });
         const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
           request,
           stream,
