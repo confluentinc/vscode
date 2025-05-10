@@ -7,34 +7,34 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
-  MarkdownString,
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
-import { getTemplatesList } from "../../scaffold";
-import { summarizeTemplateOptions } from "../summarizers/projectTemplate";
+import { getTemplatesList, scaffoldProjectRequest } from "../../scaffold";
+import { PostResponse } from "../../webview/scaffold-form";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.getTemplateOptions");
 
-export interface IGetTemplateOptions {
+export interface ICreateProjectParameters {
   templateId: string;
+  templateOptions: { [key: string]: string | boolean };
 }
 
-export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOptions> {
-  readonly name = "get_templateOptions";
-  readonly progressMessage = "Looking up project template options...";
+export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParameters> {
+  readonly name = "create_project";
+  readonly progressMessage = "Setting up project...";
 
   async invoke(
-    options: LanguageModelToolInvocationOptions<IGetTemplateOptions>,
+    options: LanguageModelToolInvocationOptions<ICreateProjectParameters>,
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
 
-    if (!params.templateId) {
+    if (!params.templateId || !params.templateOptions) {
       logger.error("No template ID provided");
       return new LanguageModelToolResult([
-        new LanguageModelTextPart(`Provide a template ID to get its options.`),
+        new LanguageModelTextPart(`Provide a template ID to create a project with it.`),
       ]);
     }
 
@@ -47,18 +47,32 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       logger.error(`No template found with ID: ${params.templateId}`);
       return new LanguageModelToolResult([
         new LanguageModelTextPart(
-          `No template found with ID "${params.templateId}". Run the "list_projectTemplates" tool to get available templates' IDs.`,
+          `No template found with ID "${params.templateId}". Run the "list_projectTemplates" tool to get available templates.`,
         ),
       ]);
     }
 
-    const templateInfo = new LanguageModelTextPart(summarizeTemplateOptions(matchingTemplate));
+    // just try to open the form for now
+    const resp: PostResponse = await scaffoldProjectRequest({
+      templateName: params.templateId,
+      ...params.templateOptions,
+    });
+    if (!resp.success) {
+      logger.error(`Error creating project: ${resp.message}`);
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(`Error creating project: ${resp.message}`),
+      ]);
+    }
 
     if (token.isCancellationRequested) {
-      logger.debug("Tool invocation cancelled");
+      logger.info("Tool invocation cancelled");
       return new LanguageModelToolResult([]);
     }
-    return new LanguageModelToolResult([templateInfo]);
+    return new LanguageModelToolResult([
+      new LanguageModelTextPart(
+        `Project created successfully. The user can refer to the form to make any necessary adjustments.`,
+      ),
+    ]);
   }
 
   async processInvocation(
@@ -67,7 +81,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
   ): Promise<LanguageModelChatMessage[]> {
-    const parameters = toolCall.input as IGetTemplateOptions;
+    const parameters = toolCall.input as ICreateProjectParameters;
 
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -79,16 +93,11 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
 
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      let message = new MarkdownString(`Inputs for the template are listed below:`);
+      // no header/footer messages needed here
       for (const part of result.content as LanguageModelTextPart[]) {
-        message = message.appendMarkdown(`\n\n${part.value}`);
+        messages.push(this.toolMessage(part.value, "result"));
       }
-      message.appendMarkdown(
-        `\n\nOnce the necessary values are provided, use template ID "${parameters.templateId}" with the "create_project" tool to create a project.`,
-      );
-      messages.push(this.toolMessage(message.value, "result"));
     }
-
     return messages;
   }
 }
