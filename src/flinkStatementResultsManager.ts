@@ -5,9 +5,8 @@ import {
   SqlV1StatementResultResults,
   StatementResultsSqlV1Api,
 } from "./clients/flinkSql";
-import { ResponseError } from "./clients/sidecar";
 import { showJsonPreview } from "./documentProviders/message";
-import { isResponseErrorWithStatus, logError } from "./errors";
+import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { FlinkStatement, modelFlinkStatementToRest } from "./models/flinkStatement";
@@ -170,7 +169,7 @@ export class FlinkStatementResultsManager {
     } catch (error) {
       if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
 
-      if (error instanceof ResponseError) {
+      if (isResponseError(error)) {
         const payload = await error.response.json();
         if (!payload?.aborted) {
           const status = error.response.status;
