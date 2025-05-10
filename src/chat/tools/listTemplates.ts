@@ -29,7 +29,6 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-    logger.debug("params:", params);
     const inputTagsPassed: boolean = Array.isArray(params.tags) && params.tags.length > 0;
 
     // TODO: add support for other collections
