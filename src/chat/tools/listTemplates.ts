@@ -69,14 +69,16 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
 
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      let message = `Available project templates:\n`;
-
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = `${message}\n\n${part.value}`;
+      if (result.content.length) {
+        let message = `Available project templates:\n`;
+        for (const part of result.content as LanguageModelTextPart[]) {
+          message = `${message}\n\n${part.value}`;
+        }
+        message = `${message}\n\nIf the user is interested in a specific project template, use the "get_templateOptions" tool to determine what inputs they need to provide.`;
+        messages.push(this.toolMessage(message, "result"));
+      } else {
+        messages.push(this.toolMessage("No project templates found.", "result"));
       }
-
-      message = `${message}\n\nIf the user is interested in a specific project template, use the "get_templateOptions" tool to determine what inputs they need to provide.`;
-      messages.push(this.toolMessage(message, "result"));
     }
     return messages;
   }
