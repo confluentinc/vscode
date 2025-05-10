@@ -12,13 +12,13 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
-import { summarizeProjectTemplate } from "../summarizers/projectTemplate";
+import { summarizeTemplateOptions } from "../summarizers/projectTemplate";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.getTemplateOptions");
 
 export interface IGetTemplateOptions {
-  templateName: string;
+  templateId: string;
 }
 
 export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOptions> {
@@ -32,28 +32,28 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
     const params = options.input;
     logger.debug("params:", params);
 
-    if (!params.templateName) {
-      logger.error("No template name provided");
+    if (!params.templateId) {
+      logger.error("No template ID provided");
       return new LanguageModelToolResult([
-        new LanguageModelTextPart(`Provide a template name to get its options.`),
+        new LanguageModelTextPart(`Provide a template ID to get its options.`),
       ]);
     }
 
     // TODO: add support for other collections
     const templates: ScaffoldV1Template[] = await getTemplatesList("vscode", true);
     const matchingTemplate: ScaffoldV1Template | undefined = templates.find(
-      (template) => template.spec?.name === params.templateName,
+      (template) => template.spec?.name === params.templateId,
     );
     if (!matchingTemplate) {
-      logger.error(`No template found with name: ${params.templateName}`);
+      logger.error(`No template found with ID: ${params.templateId}`);
       return new LanguageModelToolResult([
         new LanguageModelTextPart(
-          `No template found with name "${params.templateName}". Run the "list_projectTemplates" tool to get available templates.`,
+          `No template found with ID "${params.templateId}". Run the "list_projectTemplates" tool to get available templates.`,
         ),
       ]);
     }
 
-    const templateInfo = new LanguageModelTextPart(summarizeProjectTemplate(matchingTemplate));
+    const templateInfo = new LanguageModelTextPart(summarizeTemplateOptions(matchingTemplate));
 
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
@@ -81,7 +81,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
       let message = new MarkdownString(
-        `Inputs for the ${parameters.templateName} template are listed below:`,
+        `Inputs for the ${parameters.templateId} template are listed below:`,
       );
       for (const part of result.content as LanguageModelTextPart[]) {
         message = message.appendMarkdown(`\n\n${part.value}`);
