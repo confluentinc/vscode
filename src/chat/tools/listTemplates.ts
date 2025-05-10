@@ -7,6 +7,7 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
+  MarkdownString,
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
@@ -39,11 +40,10 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         // skip any templates that don't match provided tags
         return;
       }
-      templateStrings.push(
-        new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
-        ),
-      );
+      const templateSummary = new MarkdownString(`- "${spec.name}"`)
+        .appendMarkdown(`\n\t- Display Name: "${spec.display_name}"`)
+        .appendMarkdown(`\n\t- Description: "${spec.description}"`);
+      templateStrings.push(new LanguageModelTextPart(templateSummary.value));
     });
 
     if (token.isCancellationRequested) {
@@ -72,15 +72,13 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
       let message = `Available project templates:\n`;
+
       for (const part of result.content as LanguageModelTextPart[]) {
         message = `${message}\n\n${part.value}`;
       }
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
+
+      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when referencing a template for other tools. After the user selects a template, use the "get_templateOptions" tool to get the options for that template.`;
       messages.push(this.toolMessage(message, "result"));
-    } else {
-      const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;
-      logger.error(errorMessage);
-      messages.push(this.toolMessage(errorMessage, "error"));
     }
     return messages;
   }
