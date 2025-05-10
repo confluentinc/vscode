@@ -38,7 +38,6 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-    logger.debug("params:", params);
 
     // reset for each invocation
     this.foundConnectionTypes = [];
