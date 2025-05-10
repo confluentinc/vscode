@@ -224,6 +224,18 @@ export async function handleChatMessage(
           toolCall,
           token,
         );
+
+        // TODO(shoup): remove after debugging
+        const toolDebugMessages: string[] = [];
+        newMessages.forEach((msg: LanguageModelChatMessage) => {
+          for (const part of msg.content) {
+            if (part instanceof LanguageModelTextPart) {
+              toolDebugMessages.push(`${msg.name}: ${part.value}`);
+            }
+          }
+        });
+        logger.debug(`messages:\n\n${toolDebugMessages.join("\n")}`);
+
         toolResultMessages.push(...newMessages);
 
         toolCallsMade.add(JSON.stringify(toolCall));

@@ -173,11 +173,6 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
     }
 
-    // TODO(shoup): remove after debugging
-    logger.debug(
-      `messages:\n\n${messages.map((msg) => `${msg.name}: ${msg.content.map((part) => (part as LanguageModelTextPart).value)}`).join("\n")}`,
-    );
-
     return messages;
   }
 }
