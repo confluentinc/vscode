@@ -325,6 +325,7 @@ async function setupContextValues() {
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
     "ccloud-schema-registry",
+    "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
   ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
@@ -342,6 +343,7 @@ async function setupContextValues() {
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
+    "ccloud-flink-compute-pool",
     "ccloud-flink-artifact",
     "local-kafka-cluster",
     "local-schema-registry",
@@ -354,6 +356,7 @@ async function setupContextValues() {
     "ccloud-environment",
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
     "ccloud-flink-artifact",
     "local-kafka-cluster",
