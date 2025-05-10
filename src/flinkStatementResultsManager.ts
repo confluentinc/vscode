@@ -54,14 +54,13 @@ export class FlinkStatementResultsManager {
   private _latestError: Signal<{ message: string } | null>;
   private _isResultsFull: Signal<boolean>;
   private _pollingInterval: NodeJS.Timeout | undefined;
-  private _shouldPoll: Signal<boolean>;
   /** Filter by substring text query. */
   private _searchQuery: Signal<string | null>;
   private _visibleColumns: Signal<string[] | null>;
   private _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
-  private readonly REFRESH_INTERVAL = 5; // Refresh statement every 5 result fetches
   private readonly resourceLoader = CCloudResourceLoader.getInstance();
+  private _statementRefreshInterval: NodeJS.Timeout | undefined;
 
   constructor(
     private os: Scope,
@@ -71,6 +70,7 @@ export class FlinkStatementResultsManager {
     private notifyUI: () => void,
     private resultLimit: number,
     private resultsPollingIntervalMs: number = 800,
+    private statementRefreshIntervalMs: number = 2000,
   ) {
     this._results = os.signal(new Map<string, any>());
     this._state = os.signal<StreamState>("running");
@@ -78,7 +78,6 @@ export class FlinkStatementResultsManager {
     this._latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
     this._latestError = os.signal<{ message: string } | null>(null);
     this._isResultsFull = os.signal(false);
-    this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
     this._searchQuery = os.signal<string | null>(null);
     this._visibleColumns = os.signal<string[] | null>(null);
     this._filteredResults = os.signal<any[]>([]);
@@ -89,6 +88,11 @@ export class FlinkStatementResultsManager {
     this._pollingInterval = setInterval(
       this.fetchResults.bind(this),
       this.resultsPollingIntervalMs,
+    );
+
+    this._statementRefreshInterval = setInterval(
+      this.refreshStatement.bind(this),
+      this.statementRefreshIntervalMs,
     );
 
     // Watch for results full state
@@ -112,62 +116,57 @@ export class FlinkStatementResultsManager {
     }
   }
 
-  private async refreshStatementIfNeeded(): Promise<void> {
-    this._fetchCount++;
-    if (this._fetchCount % this.REFRESH_INTERVAL === 0) {
-      const refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
-      if (refreshedStatement) {
-        this.statement = refreshedStatement;
-      }
+  private async refreshStatement() {
+    const refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
+    if (refreshedStatement) {
+      this.statement = refreshedStatement;
+      this.notifyUI();
     }
   }
 
   async fetchResults(): Promise<void> {
-    if (!this._shouldPoll()) {
+    if (this._state() !== "running" || !this._moreResults() || !this.statement.isResultsViewable) {
+      // Self-destruct
+      clearInterval(this._pollingInterval);
       return;
     }
 
-    let reportable: { message: string } | null =
-      this.statement?.status?.detail === ""
-        ? null
-        : { message: this.statement?.status?.detail ?? "" };
+    let reportable: { message: string } | null = null;
     let shouldComplete = false;
+    this._fetchCount++;
 
     try {
-      await this.refreshStatementIfNeeded();
-      if (this.statement.isResultsViewable) {
-        const currentResults = this._results();
-        const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-        const response = await this.schedule(() =>
-          this.service.getSqlv1StatementResult({
-            environment_id: this.statement.environmentId,
-            organization_id: this.statement.organizationId,
-            name: this.statement.name,
-            page_token: pageToken,
-          }),
-        );
-        const resultsData: SqlV1StatementResultResults = response.results ?? {};
+      const currentResults = this._results();
+      const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
+      const response = await this.schedule(() =>
+        this.service.getSqlv1StatementResult({
+          environment_id: this.statement.environmentId,
+          organization_id: this.statement.organizationId,
+          name: this.statement.name,
+          page_token: pageToken,
+        }),
+      );
+      const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
-        this.os.batch(() => {
-          parseResults({
-            columns: this.statement.status?.traits?.schema?.columns ?? [],
-            isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
-            upsertColumns: this.statement.status?.traits?.upsert_columns,
-            limit: this.resultLimit,
-            map: currentResults,
-            rows: resultsData.data,
-          });
-          this._filteredResults(this.filterResultsBySearch());
-          // Check if we have more results to fetch
-          if (this.extractPageToken(response?.metadata?.next) === undefined) {
-            this._moreResults(false);
-            this._state("completed");
-          }
-          this._latestError(null);
-          this._latestResult(response);
-          this.notifyUI();
+      this.os.batch(() => {
+        parseResults({
+          columns: this.statement.status?.traits?.schema?.columns ?? [],
+          isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
+          upsertColumns: this.statement.status?.traits?.upsert_columns,
+          limit: this.resultLimit,
+          map: currentResults,
+          rows: resultsData.data,
         });
-      }
+        this._filteredResults(this.filterResultsBySearch());
+        // Check if we have more results to fetch
+        if (this.extractPageToken(response?.metadata?.next) === undefined) {
+          this._moreResults(false);
+          this._state("completed");
+        }
+        this._latestError(null);
+        this._latestResult(response);
+        this.notifyUI();
+      });
     } catch (error) {
       if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
 
@@ -346,6 +345,7 @@ export class FlinkStatementResultsManager {
           detail: this.statement.status?.detail ?? null,
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
+          isResultsViewable: this.statement.isResultsViewable,
         };
       }
       case "StopStatement": {
@@ -369,6 +369,9 @@ export class FlinkStatementResultsManager {
   dispose() {
     if (this._pollingInterval) {
       clearInterval(this._pollingInterval);
+    }
+    if (this._statementRefreshInterval) {
+      clearInterval(this._statementRefreshInterval);
     }
   }
 }

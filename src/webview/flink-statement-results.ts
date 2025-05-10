@@ -74,8 +74,22 @@ class FlinkStatementResultsViewModel extends ViewModel {
       filter: null,
     },
   );
+
+  /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
+  statementMeta = this.resolve(() => post("GetStatementMeta", { timestamp: this.timestamp() }), {
+    name: "",
+    status: "",
+    startTime: null,
+    detail: null,
+    failed: false,
+    isResultsViewable: true,
+  });
+
   /** For now, the only way to expose a loading spinner. */
-  waitingForResults = this.derive(() => this.resultCount().total === 0);
+  waitingForResults = this.derive(() => {
+    return this.resultCount().total === 0 && this.statementMeta().isResultsViewable;
+  });
+
   emptyFilterResult = this.derive(
     () => this.resultCount().total > 0 && this.resultCount().filter === 0,
   );
@@ -335,6 +349,9 @@ class FlinkStatementResultsViewModel extends ViewModel {
     return `--grid-template-columns: ${visibleColumnWidths}`;
   });
 
+  /** Whether the stop button has been clicked */
+  stopButtonClicked = this.signal(false);
+
   /** State of stream provided by the host: either running or completed. */
   streamState = this.resolve(() => {
     return post("GetStreamState", { timestamp: this.timestamp() });
@@ -343,16 +360,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
     return post("GetStreamError", { timestamp: this.timestamp() });
   }, null);
 
-  /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
-  statementMeta = this.resolve(() => post("GetStatementMeta", { timestamp: this.timestamp() }), {
-    name: "",
-    status: "",
-    startTime: null,
-    detail: null,
-    failed: false,
-  });
-
   async stopStatement() {
+    this.stopButtonClicked(true);
     await post("StopStatement", { timestamp: this.timestamp() });
   }
 }
@@ -391,6 +400,7 @@ export function post(
   startTime: string | null;
   detail: string | null;
   failed: boolean;
+  isResultsViewable: boolean;
 }>;
 export function post(type: "StopStatement", body: { timestamp?: number }): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {

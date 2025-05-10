@@ -15,6 +15,26 @@
       <header class="statement-details-header">
         <section class="statement-details-section">
           <h4>Statement details</h4>
+          <div class="statement-info">
+            <div class="flex-row">
+              <div class="info-item">
+                <label>Start Time:</label>
+                <span data-text="this.statementMeta().startTime"></span>
+              </div>
+              <div class="info-item">
+                <label>Status:</label>
+                <span data-text="this.statementMeta().status"></span>
+              </div>
+              <vscode-button
+                appearance="primary"
+                data-on-click="this.stopStatement()"
+                data-attr-disabled="!this.statementMeta().stoppable || this.stopButtonClicked()"
+              >
+                <span class="codicon codicon-stop"></span>
+                <label>&nbsp;Stop</label>
+              </vscode-button>
+            </div>
+          </div>
           <div class="flex-row">
             <template data-if="this.streamError() != null">
               <div class="dropdown-container">
@@ -37,27 +57,30 @@
               </div>
             </template>
           </div>
-
-          <div class="statement-info">
-            <div class="flex-row">
-              <div class="info-item">
-                <label>Start Time:</label>
-                <span data-text="this.statementMeta().startTime"></span>
+          <template data-if="this.statementMeta().failed && this.statementMeta().detail">
+            <div class="reportable-box red">
+              <div class="error-heading">
+                <span class="codicon codicon-error"></span>
+                Something went wrong.
               </div>
-              <div class="info-item">
-                <label>Status:</label>
-                <span data-text="this.statementMeta().status"></span>
-              </div>
-              <vscode-button
-                appearance="primary"
-                data-on-click="this.stopStatement()"
-                data-attr-disabled="!this.statementMeta().stoppable"
-              >
-                <span class="codicon codicon-stop"></span>
-                <label>&nbsp;Stop</label>
-              </vscode-button>
+              <div
+                class="reportable-message"
+                data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
+              ></div>
             </div>
-          </div>
+          </template>
+          <template data-if="!this.statementMeta().failed && this.statementMeta().detail">
+            <div class="reportable-box blue">
+              <div class="error-heading">
+                <span class="codicon codicon-info"></span>
+                Info
+              </div>
+              <div
+                class="reportable-message"
+                data-html="this.statementMeta().detail && this.statementMeta().detail.replace(/\n/g, '<br>')"
+              ></div>
+            </div>
+          </template>
         </section>
 
         <section>
@@ -492,6 +515,38 @@
       .info-item label {
         font-weight: 500;
         color: var(--vscode-descriptionForeground);
+      }
+
+      .reportable-box {
+        padding: 12px;
+        border-radius: 6px;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .reportable-box.red {
+        background: #ffeaea;
+        border: 1px solid #e53935;
+        color: #b71c1c;
+      }
+
+      .reportable-box.blue {
+        background: #e3f2fd;
+        border: 1px solid #1976d2;
+        color: #0d47a1;
+      }
+
+      .reportable-message {
+        margin-top: 4px;
+        font-size: 95%;
+      }
+
+      .error-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        font-weight: bold;
+        margin-bottom: 4px;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
