@@ -93,6 +93,29 @@
         }
       },
       {
+        "name": "get_templateOptions",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Get Project Template Options",
+        "modelDescription": "Get the input options for filling out a project template. Use this after 'list_projectTemplates' when the user selects a template to create a new project. This will return the input options for the selected template.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the template to apply."
+            }
+          },
+          "required": [
+            "templateId"
+          ]
+        }
+      },
+      {
         "name": "get_connections",
         "when": "confluent.chatParticipantEnabled",
         "tags": [
