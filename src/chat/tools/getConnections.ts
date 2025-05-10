@@ -131,7 +131,7 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
         messages.push(this.toolMessage(message.value, "result"));
       }
 
-      if (this.missingConnectionTypes.length) {
+      if (parameters.connectionType && this.missingConnectionTypes.length) {
         // summarize missing connection types
         const missingTypes = this.missingConnectionTypes
           .map((ctype) => titleCase(ctype))
