@@ -92,7 +92,9 @@ async function resourceScaffoldProjectRequest(
   }
 }
 
-export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledTemplateOptions) => {
+export const scaffoldProjectRequest = async (
+  templateRequestOptions?: PrefilledTemplateOptions,
+): Promise<PostResponse> => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
   const templateType = templateRequestOptions?.templateType;
   try {
@@ -119,7 +121,8 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
 
       pickedTemplate = await pickTemplate(templateList);
     } else if (templateRequestOptions && templateRequestOptions.templateName) {
-      // Handling from a URI where there is a template name matched and quickpick is not needed
+      // Handling from a URI (or Copilot tool invocation) where there is a template name matched and
+      // showing a quickpick is not needed
       pickedTemplate = templateList.find(
         (template) => template.spec!.name === templateRequestOptions.templateName,
       );
@@ -133,7 +136,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
           },
         });
         showErrorNotificationWithButtons(errMsg);
-        return;
+        return { success: false, message: errMsg };
       }
     } else {
       // If no arguments are passed, show all templates
@@ -142,12 +145,12 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
-    return;
+    return { success: false, message: "Failed to retrieve template list" };
   }
 
   if (!pickedTemplate) {
     // user canceled the quickpick
-    return;
+    return { success: false, message: "Project generation cancelled." };
   }
 
   let telemetrySource: string | undefined;
@@ -181,7 +184,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
 
   if (wasExisting) {
     optionsForm.reveal();
-    return;
+    return { success: true, message: "Form already open" };
   }
 
   /** Stores a map of options with key: value pairs that is then updated on form input
@@ -248,6 +251,8 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   };
   const disposable = handleWebviewMessage(optionsForm.webview, processMessage);
   optionsForm.onDidDispose(() => disposable.dispose());
+
+  return { success: true, message: "Form opened" };
 };
 
 export async function applyTemplate(
