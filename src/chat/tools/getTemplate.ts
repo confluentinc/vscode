@@ -48,7 +48,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       logger.error(`No template found with ID: ${params.templateId}`);
       return new LanguageModelToolResult([
         new LanguageModelTextPart(
-          `No template found with ID "${params.templateId}". Run the "list_projectTemplates" tool to get available templates.`,
+          `No template found with ID "${params.templateId}". Run the "list_projectTemplates" tool to get available templates' IDs.`,
         ),
       ]);
     }
