@@ -21,7 +21,6 @@ import {
 } from "./resource";
 
 const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
-const FIVE_MINUTES_MILLIS = 5 * 60 * 1000;
 
 // Statement phases
 export enum Phase {
@@ -187,14 +186,9 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
       return false;
     }
 
-    // If the statement is a SELECT, results can only be viewed for
-    // 5 minutes. Why? Because that's what Confluent Cloud UI does.
-    const timeWindow = this.isSelect ? FIVE_MINUTES_MILLIS : ONE_DAY_MILLIS;
-    const cutoffTime = new Date().getTime() - timeWindow;
-
     return (
       this.canHaveResults &&
-      this.createdAt.getTime() >= cutoffTime &&
+      this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS &&
       [Phase.PENDING, Phase.RUNNING, Phase.COMPLETED].includes(this.phase as Phase)
     );
   }
