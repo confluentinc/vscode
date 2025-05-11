@@ -6,6 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- Intellisense features for FlinkSQL language documents, provided by a connection to Confluent
+  Cloud's Flink Language Server
 - Can submit new SQL statements to a Flink compute pool
 - Can view SQL statement results
 - Configurable default settings for `compute pool` and `database` for Flink operations
