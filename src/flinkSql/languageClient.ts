@@ -19,12 +19,7 @@ const logger = new Logger("flinkSql.languageClient");
 
 let languageClient: LanguageClient | null = null;
 let reconnectCounter = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
-
-/**
- * Event emitter for when the language client needs to be restarted
- */
-export const languageClientRestartNeeded = new vscode.EventEmitter<void>();
+const MAX_RECONNECT_ATTEMPTS = 2;
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed
@@ -125,9 +120,11 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
             },
             closed: () => {
               logger.warn("Language server connection closed by the client's error handler");
-              // This will trigger our own reconnection logic
               handleWebSocketDisconnect(url);
-              return { action: CloseAction.Restart, handled: true };
+              return {
+                action: CloseAction.Restart,
+                handled: true,
+              };
             },
           },
         };
@@ -170,15 +167,6 @@ async function handleWebSocketDisconnect(url: string): Promise<void> {
   // If we've reached max attempts, show a notification to the user
   if (reconnectCounter >= MAX_RECONNECT_ATTEMPTS) {
     logger.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
-    vscode.window
-      .showErrorMessage("Connection to Flink SQL language server lost.", "Retry Now")
-      .then((selection) => {
-        if (selection === "Retry Now") {
-          // Reset counter and try again immediately
-          reconnectCounter = 0;
-          restartLanguageClient(url);
-        }
-      });
     return;
   }
 
@@ -192,14 +180,18 @@ async function handleWebSocketDisconnect(url: string): Promise<void> {
  */
 async function restartLanguageClient(url: string): Promise<void> {
   // Dispose of the existing client if it exists
+  //  && languageClient.state === 2 // Maybe & is running state to prevent error
   if (languageClient) {
     logger.info("Disposing existing language client");
     try {
-      await languageClient.stop();
+      await languageClient.dispose();
+      // Make sure the client is nullified even if there's an error
+      languageClient = null;
     } catch (e) {
       logger.error(`Error stopping language client: ${e}`);
+      // Still set to null to avoid keeping references to a potentially broken client
+      languageClient = null;
     }
-    languageClient = null;
   }
 
   // Try to initialize a new client
@@ -208,7 +200,6 @@ async function restartLanguageClient(url: string): Promise<void> {
     await initializeLanguageClient(url);
     // Reset counter on successful reconnection
     reconnectCounter = 0;
-    logger.info("Successfully reconnected to language server");
   } catch (e) {
     logger.error(`Failed to reconnect: ${e}`);
     // The next reconnection attempt will happen through handleWebSocketDisconnect

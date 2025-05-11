@@ -144,7 +144,30 @@ export class WebsocketTransport implements MessageTransports {
 
   public dispose(): void {
     logger.debug("Disposing websocket transport");
+    // Make sure we close the writer first to send any pending messages
+    try {
+      (this.writer as WebsocketMessageWriter).end().catch((err) => {
+        logger.error(`Error ending writer: ${err}`);
+      });
+    } catch (err) {
+      logger.error(`Error calling writer.end(): ${err}`);
+    }
+
+    // Then dispose both reader and writer
     this.reader.dispose();
     this.writer.dispose();
+
+    // Finally, close the socket directly if it's still open
+    if (
+      this.socket.readyState === WebSocket.OPEN ||
+      this.socket.readyState === WebSocket.CONNECTING
+    ) {
+      logger.debug("Closing WebSocket connection in transport dispose");
+      try {
+        this.socket.close(1000, "Transport disposed");
+      } catch (err) {
+        logger.error(`Error closing WebSocket: ${err}`);
+      }
+    }
   }
 }
