@@ -135,7 +135,7 @@
             },
             "templateOptions": {
               "type": "object",
-              "description": "The input options for the selected project template. This should match the result returned by 'get_templateOptions'."
+              "description": "The input options for the selected project template. Use the result of the 'get_templateOptions' and any user-provided values to fill out this object."
             }
           },
           "required": [
