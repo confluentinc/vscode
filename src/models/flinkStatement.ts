@@ -62,7 +62,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   readonly name: string;
 
   // Mutable properties
-  metadata: SqlV1StatementMetadata | undefined;
+  metadata: SqlV1StatementMetadata;
   status: SqlV1StatementStatus;
   spec: SqlV1StatementSpec;
 
@@ -337,7 +337,7 @@ export function restFlinkStatementToModel(
     name: restFlinkStatement.name!,
 
     spec: restFlinkStatement.spec,
-    metadata: restFlinkStatement.metadata,
+    metadata: restFlinkStatement.metadata!,
     status: restFlinkStatement.status,
   });
 }

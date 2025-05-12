@@ -4,6 +4,7 @@ import {
   GetSqlv1StatementResult200Response,
   SqlV1StatementResultResults,
   StatementResultsSqlV1Api,
+  StatementsSqlV1Api,
 } from "./clients/flinkSql";
 import { showJsonPreview } from "./documentProviders/message";
 import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
@@ -11,7 +12,7 @@ import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { FlinkStatement, modelFlinkStatementToRest } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
-import { getSidecar } from "./sidecar";
+import { SidecarHandle } from "./sidecar";
 import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
@@ -58,18 +59,21 @@ export class FlinkStatementResultsManager {
   private _visibleColumns: Signal<string[] | null>;
   private _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
-  private readonly resourceLoader = CCloudResourceLoader.getInstance();
   private _statementRefreshInterval: NodeJS.Timeout | undefined;
+
+  private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
+  private _flinkStatementsSqlApi: StatementsSqlV1Api;
 
   constructor(
     private os: Scope,
     private statement: FlinkStatement,
-    private service: StatementResultsSqlV1Api,
+    private sidecar: SidecarHandle,
     private schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
     private notifyUI: () => void,
     private resultLimit: number,
     private resultsPollingIntervalMs: number = 800,
     private statementRefreshIntervalMs: number = 2000,
+    private readonly resourceLoader: CCloudResourceLoader = CCloudResourceLoader.getInstance(),
   ) {
     this._results = os.signal(new Map<string, any>());
     this._state = os.signal<StreamState>("running");
@@ -80,6 +84,10 @@ export class FlinkStatementResultsManager {
     this._searchQuery = os.signal<string | null>(null);
     this._visibleColumns = os.signal<string[] | null>(null);
     this._filteredResults = os.signal<any[]>([]);
+
+    this._flinkStatementResultsSqlApi = sidecar.getFlinkSqlStatementResultsApi(statement);
+    this._flinkStatementsSqlApi = sidecar.getFlinkSqlStatementsApi(statement);
+
     this.setupPolling();
   }
 
@@ -138,7 +146,7 @@ export class FlinkStatementResultsManager {
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
       const response = await this.schedule(() =>
-        this.service.getSqlv1StatementResult({
+        this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
           environment_id: this.statement.environmentId,
           organization_id: this.statement.organizationId,
           name: this.statement.name,
@@ -255,10 +263,8 @@ export class FlinkStatementResultsManager {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const sidecar = await getSidecar();
-        const api = sidecar.getFlinkSqlStatementsApi(this.statement);
         await this.refreshStatement();
-        await api.updateSqlv1Statement({
+        await this._flinkStatementsSqlApi.updateSqlv1Statement({
           organization_id: this.statement.organizationId,
           environment_id: this.statement.environmentId,
           statement_name: this.statement.name,
@@ -272,9 +278,9 @@ export class FlinkStatementResultsManager {
         });
         return;
       } catch (err) {
+        // 409 means we didn't send the PUT request with the latest statement spec, so we retry
         if (isResponseErrorWithStatus(err, 409)) {
           if (attempt < MAX_RETRIES - 1) {
-            // Calculate backoff time with exponential increase, capped at MAX_BACKOFF_MS
             const backoffMs = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
             logger.info(
               `Retrying stop statement after 409 conflict. Attempt ${attempt + 1}/${MAX_RETRIES}. Waiting ${backoffMs}ms`,

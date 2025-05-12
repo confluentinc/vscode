@@ -4,19 +4,37 @@ import sinon from "sinon";
 import * as messageUtils from "../src/documentProviders/message";
 import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
-import { StatementResultsSqlV1Api } from "./clients/flinkSql";
+import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "./clients/flinkSql";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
+import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { FlinkStatement } from "./models/flinkStatement";
+import * as sidecar from "./sidecar";
 import { DEFAULT_RESULTS_LIMIT } from "./utils/flinkStatementResults";
 
 describe("FlinkStatementResultsManager", () => {
   let sandbox: sinon.SinonSandbox;
+  let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+  let flinkSqlStatementResultsApi: sinon.SinonStubbedInstance<StatementResultsSqlV1Api>;
+  let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const schedule_immediately = <T>(cb: () => Promise<T>, _signal?: AbortSignal) => cb();
 
+  let resourceLoader: CCloudResourceLoader;
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    // stub the sidecar getFlinkSqlStatementsApi API
+    mockSidecar = sandbox.createStubInstance(sidecar.SidecarHandle);
+    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecar);
+
+    flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+    mockSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+
+    flinkSqlStatementResultsApi = sandbox.createStubInstance(StatementResultsSqlV1Api);
+    mockSidecar.getFlinkSqlStatementResultsApi.returns(flinkSqlStatementResultsApi);
+
+    resourceLoader = CCloudResourceLoader.getInstance();
   });
 
   afterEach(() => {
@@ -26,9 +44,8 @@ describe("FlinkStatementResultsManager", () => {
   const createResultsManagerWithResults = async () => {
     const os = ObservableScope();
 
-    const mockService = sandbox.createStubInstance(StatementResultsSqlV1Api);
-    const createStatementResponse = loadFixture(
-      "flink-statement-results-processing/create-statement-response.json",
+    const fakeFlinkStatement = loadFixture(
+      "flink-statement-results-processing/fake-flink-statement.json",
     );
     const statementResponses = Array.from({ length: 5 }, (_, i) =>
       loadFixture(`flink-statement-results-processing/get-statement-results-${i + 1}.json`),
@@ -36,23 +53,37 @@ describe("FlinkStatementResultsManager", () => {
     const expectedParsedResults = loadFixture(
       "flink-statement-results-processing/expected-parsed-results.json",
     );
-    const mockStatement = createStatementResponse as unknown as FlinkStatement;
+
+    // Create a proper mock statement with all required fields
+    const mockStatement = new FlinkStatement(fakeFlinkStatement);
+
+    mockStatement.metadata = {
+      ...mockStatement.metadata,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
 
     statementResponses.forEach((response, index) => {
-      mockService.getSqlv1StatementResult.onCall(index).resolves(response);
+      flinkSqlStatementResultsApi.getSqlv1StatementResult.onCall(index).resolves(response);
     });
 
     const notifyUIStub = sandbox.stub();
 
+    // Update the refreshFlinkStatement stub to return the mock statement
+    sandbox.stub(resourceLoader, "refreshFlinkStatement").returns(Promise.resolve(mockStatement));
+
     const manager = new FlinkStatementResultsManager(
       os,
       mockStatement,
-      mockService,
+      mockSidecar,
       schedule_immediately,
       notifyUIStub,
       DEFAULT_RESULTS_LIMIT,
       // Polling interval of 0 for testing
       0,
+      // Refresh interval
+      100,
+      resourceLoader,
     );
 
     // Wait for results to be processed, it should eventually become 10
@@ -66,7 +97,7 @@ describe("FlinkStatementResultsManager", () => {
 
       // Verify the results match expected format
       assert.deepStrictEqual(results, { results: expectedParsedResults });
-    });
+    }, 10_000);
 
     return { manager, expectedParsedResults };
   };

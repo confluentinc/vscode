@@ -2,11 +2,9 @@ import { ObservableScope } from "inertial";
 import { ExtensionContext, ViewColumn, WebviewPanel } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
-import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatement } from "./models/flinkStatement";
 import { scheduler } from "./scheduler";
 import { getSidecar } from "./sidecar";
-import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import flinkStatementResults from "./webview/flink-statement-results.html";
@@ -49,10 +47,6 @@ async function handleFlinkStatementResults(
     return;
   }
 
-  const sidecar = await getSidecar();
-  const computePool = getComputePool();
-  const service = createFlinkService(sidecar, computePool);
-
   const os = ObservableScope();
 
   /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
@@ -69,10 +63,11 @@ async function handleFlinkStatementResults(
     });
   };
 
+  const sidecar = await getSidecar();
   const resultsManager = new FlinkStatementResultsManager(
     os,
     statement,
-    service,
+    sidecar,
     schedule,
     notifyUI,
     DEFAULT_RESULT_LIMIT,
@@ -110,27 +105,4 @@ function findOrCreatePanel(
     ViewColumn.One,
     { enableScripts: true },
   );
-}
-
-/**
- * Retrieves the compute pool from the Flink statements view provider.
- * Throws an error if no compute pool is found.
- */
-function getComputePool(): CCloudFlinkComputePool {
-  const computePool = FlinkStatementsViewProvider.getInstance().computePool;
-  if (!computePool) {
-    throw new Error("Compute pool not found");
-  }
-  return computePool;
-}
-
-/**
- * Creates a Flink SQL statement results API service using the provided sidecar and compute pool.
- */
-function createFlinkService(sidecar: any, computePool: CCloudFlinkComputePool) {
-  return sidecar.getFlinkSqlStatementResultsApi({
-    environmentId: computePool.environmentId,
-    provider: computePool.provider,
-    region: computePool.region,
-  });
 }
