@@ -3,7 +3,6 @@ import { ExtensionContext, ViewColumn, WebviewPanel } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
 import { FlinkStatement } from "./models/flinkStatement";
-import { scheduler } from "./scheduler";
 import { getSidecar } from "./sidecar";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -16,12 +15,11 @@ const DEFAULT_RESULT_LIMIT = 100_000;
  * Sets up the scheduler and panel cache for managing results display.
  */
 export function activateFlinkStatementResultsViewer(context: ExtensionContext) {
-  const schedule = scheduler(4, 800);
   const cache = new WebviewPanelCache();
 
   context.subscriptions.push(
     registerCommandWithLogging("confluent.flinkStatementResults", (statement?: FlinkStatement) =>
-      handleFlinkStatementResults(statement, schedule, cache),
+      handleFlinkStatementResults(statement, cache),
     ),
   );
 }
@@ -36,7 +34,6 @@ export function activateFlinkStatementResultsViewer(context: ExtensionContext) {
  */
 async function handleFlinkStatementResults(
   statement: FlinkStatement | undefined,
-  schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
   cache: WebviewPanelCache,
 ) {
   if (!statement) return;
@@ -68,7 +65,6 @@ async function handleFlinkStatementResults(
     os,
     statement,
     sidecar,
-    schedule,
     notifyUI,
     DEFAULT_RESULT_LIMIT,
   );

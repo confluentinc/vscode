@@ -68,7 +68,6 @@ export class FlinkStatementResultsManager {
     private os: Scope,
     private statement: FlinkStatement,
     private sidecar: SidecarHandle,
-    private schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
     private notifyUI: () => void,
     private resultLimit: number,
     private resultsPollingIntervalMs: number = 800,
@@ -135,6 +134,7 @@ export class FlinkStatementResultsManager {
     if (this._state() !== "running" || !this._moreResults() || !this.statement.isResultsViewable) {
       // Self-destruct
       clearInterval(this._pollingInterval);
+      this._pollingInterval = undefined;
       return;
     }
 
@@ -145,14 +145,12 @@ export class FlinkStatementResultsManager {
     try {
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-      const response = await this.schedule(() =>
-        this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
-          environment_id: this.statement.environmentId,
-          organization_id: this.statement.organizationId,
-          name: this.statement.name,
-          page_token: pageToken,
-        }),
-      );
+      const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
+        environment_id: this.statement.environmentId,
+        organization_id: this.statement.organizationId,
+        name: this.statement.name,
+        page_token: pageToken,
+      });
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       this.os.batch(() => {
@@ -286,12 +284,13 @@ export class FlinkStatementResultsManager {
               `Retrying stop statement after 409 conflict. Attempt ${attempt + 1}/${MAX_RETRIES}. Waiting ${backoffMs}ms`,
             );
             await new Promise((resolve) => setTimeout(resolve, backoffMs));
-            continue;
           }
+        } else {
+          // If it's not a 409 or we're out of retries, log and throw
+          logError(err, "Failed to stop Flink statement");
+          this._latestError({ message: "Failed to stop Flink statement" });
+          break;
         }
-        // If it's not a 409 or we're out of retries, log and throw
-        logError(err, "Failed to stop Flink statement");
-        throw err;
       }
     }
   }
@@ -370,9 +369,7 @@ export class FlinkStatementResultsManager {
         };
       }
       case "StopStatement": {
-        // Call the PUT API to stop the statement
-        this.stopStatement();
-        return null;
+        return this.stopStatement();
       }
       default: {
         const _exhaustiveCheck: never = type;
@@ -390,9 +387,11 @@ export class FlinkStatementResultsManager {
   dispose() {
     if (this._pollingInterval) {
       clearInterval(this._pollingInterval);
+      this._pollingInterval = undefined;
     }
     if (this._statementRefreshInterval) {
       clearInterval(this._statementRefreshInterval);
+      this._statementRefreshInterval = undefined;
     }
   }
 }

@@ -4,10 +4,11 @@ import sinon from "sinon";
 import * as messageUtils from "../src/documentProviders/message";
 import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
+import { createResponseError } from "../tests/unit/testUtils";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "./clients/flinkSql";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
-import { FlinkStatement } from "./models/flinkStatement";
+import { FlinkStatement, Phase } from "./models/flinkStatement";
 import * as sidecar from "./sidecar";
 import { DEFAULT_RESULTS_LIMIT } from "./utils/flinkStatementResults";
 
@@ -16,10 +17,8 @@ describe("FlinkStatementResultsManager", () => {
   let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
   let flinkSqlStatementResultsApi: sinon.SinonStubbedInstance<StatementResultsSqlV1Api>;
   let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const schedule_immediately = <T>(cb: () => Promise<T>, _signal?: AbortSignal) => cb();
-
+  let mockStatement: FlinkStatement;
+  let refreshFlinkStatementStub: sinon.SinonStub;
   let resourceLoader: CCloudResourceLoader;
 
   beforeEach(() => {
@@ -35,6 +34,7 @@ describe("FlinkStatementResultsManager", () => {
     mockSidecar.getFlinkSqlStatementResultsApi.returns(flinkSqlStatementResultsApi);
 
     resourceLoader = CCloudResourceLoader.getInstance();
+    refreshFlinkStatementStub = sandbox.stub(resourceLoader, "refreshFlinkStatement");
   });
 
   afterEach(() => {
@@ -47,7 +47,7 @@ describe("FlinkStatementResultsManager", () => {
     const fakeFlinkStatement = loadFixture(
       "flink-statement-results-processing/fake-flink-statement.json",
     );
-    const statementResponses = Array.from({ length: 5 }, (_, i) =>
+    const stmtResults = Array.from({ length: 5 }, (_, i) =>
       loadFixture(`flink-statement-results-processing/get-statement-results-${i + 1}.json`),
     );
     const expectedParsedResults = loadFixture(
@@ -55,7 +55,7 @@ describe("FlinkStatementResultsManager", () => {
     );
 
     // Create a proper mock statement with all required fields
-    const mockStatement = new FlinkStatement(fakeFlinkStatement);
+    mockStatement = new FlinkStatement(fakeFlinkStatement);
 
     mockStatement.metadata = {
       ...mockStatement.metadata,
@@ -63,20 +63,26 @@ describe("FlinkStatementResultsManager", () => {
       updated_at: new Date(),
     };
 
-    statementResponses.forEach((response, index) => {
-      flinkSqlStatementResultsApi.getSqlv1StatementResult.onCall(index).resolves(response);
-    });
-
     const notifyUIStub = sandbox.stub();
 
     // Update the refreshFlinkStatement stub to return the mock statement
-    sandbox.stub(resourceLoader, "refreshFlinkStatement").returns(Promise.resolve(mockStatement));
+    refreshFlinkStatementStub.returns(Promise.resolve(mockStatement));
+
+    let callCount = 0;
+    flinkSqlStatementResultsApi.getSqlv1StatementResult.callsFake(() => {
+      // Returns 1...stmtResults.length and then returns the last
+      // statement result forever.
+      const response =
+        callCount < stmtResults.length
+          ? stmtResults[callCount++]
+          : stmtResults[stmtResults.length - 1];
+      return Promise.resolve(response);
+    });
 
     const manager = new FlinkStatementResultsManager(
       os,
       mockStatement,
       mockSidecar,
-      schedule_immediately,
       notifyUIStub,
       DEFAULT_RESULTS_LIMIT,
       // Polling interval of 0 for testing
@@ -249,5 +255,84 @@ describe("FlinkStatementResultsManager", () => {
         ["80.8", "80.8", "80.8", "80.8"],
       );
     });
+  });
+
+  it("should handle GetStatementMeta message", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    const meta = manager.handleMessage("GetStatementMeta", {});
+    assert.deepStrictEqual(meta, {
+      name: mockStatement.name,
+      status: mockStatement.status?.phase,
+      startTime: mockStatement.metadata?.created_at,
+      detail: mockStatement.status?.detail ?? null,
+      failed: mockStatement.failed,
+      stoppable: mockStatement.stoppable,
+      isResultsViewable: mockStatement.isResultsViewable,
+    });
+  });
+
+  it("should handle StopStatement message with retries", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    // Mock the updateSqlv1Statement to fail with 409 twice then succeed
+    flinkSqlStatementsApi.updateSqlv1Statement
+      .onFirstCall()
+      .rejects(createResponseError(409, "Conflict", "test"));
+    flinkSqlStatementsApi.updateSqlv1Statement
+      .onSecondCall()
+      .rejects(createResponseError(409, "Conflict", "test"));
+    flinkSqlStatementsApi.updateSqlv1Statement.onThirdCall().resolves();
+
+    await manager.handleMessage("StopStatement", {});
+
+    await eventually(() => {
+      assert.equal(flinkSqlStatementsApi.updateSqlv1Statement.callCount, 3);
+    });
+  });
+
+  it("should handle StopStatement message with max retries exceeded", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    // Mock the updateSqlv1Statement to always fail with 409
+    const responseError = createResponseError(409, "Conflict", "test");
+    flinkSqlStatementsApi.updateSqlv1Statement.rejects(responseError);
+
+    // Call stop statement and expect it to throw after max retries
+    await manager.handleMessage("StopStatement", {});
+    assert.equal(flinkSqlStatementsApi.updateSqlv1Statement.callCount, 5);
+  });
+
+  it("should stop polling when statement is not results viewable", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    assert.ok(manager["_pollingInterval"] as NodeJS.Timeout);
+
+    const nonViewableStatement = new FlinkStatement({
+      ...mockStatement,
+      status: {
+        ...mockStatement.status,
+        phase: Phase.FAILED,
+        detail: "Statement failed",
+      },
+    });
+    refreshFlinkStatementStub.returns(Promise.resolve(nonViewableStatement));
+
+    // Verify polling was stopped
+    await eventually(() => {
+      assert.equal(manager["_pollingInterval"], undefined);
+    });
+  });
+
+  it("should handle non-409 errors in StopStatement immediately", async () => {
+    const { manager } = await createResultsManagerWithResults();
+
+    flinkSqlStatementsApi.updateSqlv1Statement.rejects(
+      createResponseError(500, "Server Error", "test"),
+    );
+
+    await manager.handleMessage("StopStatement", {});
+
+    assert.equal(flinkSqlStatementsApi.updateSqlv1Statement.callCount, 1);
   });
 });
