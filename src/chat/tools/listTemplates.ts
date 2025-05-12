@@ -2,7 +2,6 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
@@ -11,7 +10,8 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
-import { BaseLanguageModelTool } from "./base";
+import { summarizeProjectTemplate } from "../summarizers/projectTemplate";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
 
@@ -40,11 +40,8 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         // skip any templates that don't match provided tags
         return;
       }
-      templateStrings.push(
-        new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
-        ),
-      );
+      const templateSummary = summarizeProjectTemplate(template);
+      templateStrings.push(new LanguageModelTextPart(templateSummary));
     });
 
     if (token.isCancellationRequested) {
@@ -59,9 +56,10 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<LanguageModelChatMessage[]> {
+  ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IListTemplatesParameters;
 
+    // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -69,21 +67,19 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       },
       token,
     );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      let message = `Available project templates:\n`;
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = `${message}\n\n${part.value}`;
-      }
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
-      messages.push(this.toolMessage(message, "result"));
-    } else {
-      const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;
-      logger.error(errorMessage);
-      messages.push(this.toolMessage(errorMessage, "error"));
+    if (!result.content.length) {
+      // cancellation / no results
+      return new TextOnlyToolResultPart(toolCall.callId, []);
     }
-    return messages;
+
+    // format the results before sending them back to the model
+    const resultParts: LanguageModelTextPart[] = [];
+
+    // no header needed
+    resultParts.push(...(result.content as LanguageModelTextPart[]));
+    // TODO: hint at upcoming `get_templateOptions` tool call
+
+    return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }
 
