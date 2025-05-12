@@ -21,17 +21,6 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 type ResultCount = { total: number; filter: number | null };
-type ResultLimitType = "1m" | "100k" | "10k" | "1k" | "100";
-
-const labels = ["1m", "100k", "10k", "1k", "100"];
-const numbers = [1_000_000, 100_000, 10_000, 1_000, 100];
-const resultLimitNumber = Object.fromEntries(
-  labels.map((label, index) => [label, numbers[index]]),
-) as Record<ResultLimitType, number>;
-const resultLimitLabel = Object.fromEntries(
-  labels.map((label, index) => [numbers[index], label]),
-) as Record<string, ResultLimitType>;
-
 type StreamState = "running" | "completed";
 
 /**
@@ -85,8 +74,22 @@ class FlinkStatementResultsViewModel extends ViewModel {
       filter: null,
     },
   );
+
+  /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
+  statementMeta = this.resolve(() => post("GetStatementMeta", { timestamp: this.timestamp() }), {
+    name: "",
+    status: "",
+    startTime: null,
+    detail: null,
+    failed: false,
+    isResultsViewable: true,
+  });
+
   /** For now, the only way to expose a loading spinner. */
-  waitingForResults = this.derive(() => this.resultCount().total === 0);
+  waitingForResults = this.derive(() => {
+    return this.resultCount().total === 0 && this.statementMeta().isResultsViewable;
+  });
+
   emptyFilterResult = this.derive(
     () => this.resultCount().total > 0 && this.resultCount().filter === 0,
   );
@@ -346,21 +349,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
     return `--grid-template-columns: ${visibleColumnWidths}`;
   });
 
-  /** Numeric limit of results that need to be fetched. */
-  resultLimit = this.resolve(async () => {
-    const maxSize = await post("GetMaxSize", { timestamp: this.timestamp() });
-    return resultLimitLabel[maxSize];
-  }, "100k");
-
-  async handleResultLimitChange(value: ResultLimitType) {
-    await post("ResultLimitChange", {
-      limit: resultLimitNumber[value],
-      timestamp: this.timestamp(),
-    });
-    this.resultLimit(value);
-    this.page(0);
-    this.snapshot(this.emptySnapshot);
-  }
+  /** Whether the stop button has been clicked */
+  stopButtonClicked = this.signal(false);
 
   /** State of stream provided by the host: either running or completed. */
   streamState = this.resolve(() => {
@@ -369,6 +359,15 @@ class FlinkStatementResultsViewModel extends ViewModel {
   streamError = this.resolve(() => {
     return post("GetStreamError", { timestamp: this.timestamp() });
   }, null);
+
+  async stopStatement() {
+    this.stopButtonClicked(true);
+    await post("StopStatement", { timestamp: this.timestamp() });
+
+    // Reset the button state after a short delay
+    // in case the stop failed for some reason
+    setTimeout(() => this.stopButtonClicked(false), 2000);
+  }
 }
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
@@ -383,14 +382,6 @@ export function post(
 export function post(type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
 export function post(type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
 export function post(
-  type: "GetMaxSize",
-  body: { timestamp?: number },
-): Promise<keyof typeof resultLimitLabel>;
-export function post(
-  type: "ResultLimitChange",
-  body: { limit: number; timestamp?: number },
-): Promise<null>;
-export function post(
   type: "PreviewResult",
   body: { result: Record<string, any>; timestamp?: number },
 ): Promise<null>;
@@ -404,6 +395,18 @@ export function post(
   body: { visibleColumns: string[] | null; timestamp?: number },
 ): Promise<null>;
 export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
+export function post(
+  type: "GetStatementMeta",
+  body: { timestamp?: number },
+): Promise<{
+  name: string;
+  status: string;
+  startTime: string | null;
+  detail: string | null;
+  failed: boolean;
+  isResultsViewable: boolean;
+}>;
+export function post(type: "StopStatement", body: { timestamp?: number }): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
