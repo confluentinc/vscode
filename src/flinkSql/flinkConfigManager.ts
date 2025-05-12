@@ -1,4 +1,4 @@
-import { Disposable, commands, window, workspace } from "vscode";
+import { Disposable, WorkspaceConfiguration, commands, window, workspace } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
@@ -7,7 +7,11 @@ import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { ENABLE_FLINK } from "../preferences/constants";
+import {
+  ENABLE_FLINK,
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+} from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { initializeLanguageClient, isLanguageClientConnected } from "./languageClient";
@@ -93,10 +97,13 @@ export class FlinkConfigurationManager implements Disposable {
 
   /** Get the global/workspace settings for Flink, if any */
   public getFlinkSqlSettings(): FlinkSqlSettings {
-    const config = workspace.getConfiguration("confluent.flink");
+    const config: WorkspaceConfiguration = workspace.getConfiguration();
+    const defaultPoolId: string = config.get(FLINK_CONFIG_COMPUTE_POOL, "");
+    const defaultDatabase: string = config.get(FLINK_CONFIG_DATABASE, "");
+    logger.info("pool/db =>", defaultPoolId, defaultDatabase);
     return {
-      database: config.get<string>("database", ""),
-      computePoolId: config.get<string>("computePoolId", ""),
+      database: defaultDatabase,
+      computePoolId: defaultPoolId,
     };
   }
 
