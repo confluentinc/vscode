@@ -14,12 +14,16 @@ import { DEFAULT_RESULTS_LIMIT } from "./utils/flinkStatementResults";
 
 describe("FlinkStatementResultsManager", () => {
   let sandbox: sinon.SinonSandbox;
+  let manager: FlinkStatementResultsManager;
   let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
   let flinkSqlStatementResultsApi: sinon.SinonStubbedInstance<StatementResultsSqlV1Api>;
   let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
   let mockStatement: FlinkStatement;
   let refreshFlinkStatementStub: sinon.SinonStub;
   let resourceLoader: CCloudResourceLoader;
+  const expectedParsedResults = loadFixture(
+    "flink-statement-results-processing/expected-parsed-results.json",
+  );
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -39,6 +43,10 @@ describe("FlinkStatementResultsManager", () => {
 
   afterEach(() => {
     sandbox.restore();
+
+    if (manager) {
+      manager.dispose();
+    }
   });
 
   const createResultsManagerWithResults = async () => {
@@ -49,9 +57,6 @@ describe("FlinkStatementResultsManager", () => {
     );
     const stmtResults = Array.from({ length: 5 }, (_, i) =>
       loadFixture(`flink-statement-results-processing/get-statement-results-${i + 1}.json`),
-    );
-    const expectedParsedResults = loadFixture(
-      "flink-statement-results-processing/expected-parsed-results.json",
     );
 
     // Create a proper mock statement with all required fields
@@ -79,7 +84,7 @@ describe("FlinkStatementResultsManager", () => {
       return Promise.resolve(response);
     });
 
-    const manager = new FlinkStatementResultsManager(
+    manager = new FlinkStatementResultsManager(
       os,
       mockStatement,
       mockSidecar,
@@ -104,12 +109,10 @@ describe("FlinkStatementResultsManager", () => {
       // Verify the results match expected format
       assert.deepStrictEqual(results, { results: expectedParsedResults });
     }, 10_000);
-
-    return { manager, expectedParsedResults };
   };
 
   it("should process results from fixtures correctly", async () => {
-    const { manager, expectedParsedResults } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     // Get all results through message handler
     const results = manager.handleMessage("GetResults", {
@@ -122,7 +125,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should handle PreviewResult and PreviewAllResults", async () => {
-    const { manager, expectedParsedResults } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     const showJsonPreviewMock = sandbox.stub(messageUtils, "showJsonPreview").resolves();
 
@@ -152,7 +155,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should filter results based on search query", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     const searchValue = "80.8";
 
@@ -194,7 +197,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should filter results based on search query only in visible columns", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     // Exists in both columns but we should only get results
     // in the visible column `tempf`
@@ -225,7 +228,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should filter and then paginate results based on search query", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
 
@@ -258,7 +261,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should handle GetStatementMeta message", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     const meta = manager.handleMessage("GetStatementMeta", {});
     assert.deepStrictEqual(meta, {
@@ -273,7 +276,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should handle StopStatement message with retries", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     // Mock the updateSqlv1Statement to fail with 409 twice then succeed
     flinkSqlStatementsApi.updateSqlv1Statement
@@ -292,7 +295,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should handle StopStatement message with max retries exceeded", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     // Mock the updateSqlv1Statement to always fail with 409
     const responseError = createResponseError(409, "Conflict", "test");
@@ -304,7 +307,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should stop polling when statement is not results viewable", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     assert.ok(manager["_pollingInterval"] as NodeJS.Timeout);
 
@@ -325,7 +328,7 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should handle non-409 errors in StopStatement immediately", async () => {
-    const { manager } = await createResultsManagerWithResults();
+    await createResultsManagerWithResults();
 
     flinkSqlStatementsApi.updateSqlv1Statement.rejects(
       createResponseError(500, "Server Error", "test"),

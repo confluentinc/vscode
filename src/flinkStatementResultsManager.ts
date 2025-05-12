@@ -10,7 +10,7 @@ import { showJsonPreview } from "./documentProviders/message";
 import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
-import { FlinkStatement, modelFlinkStatementToRest } from "./models/flinkStatement";
+import { FlinkStatement } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { SidecarHandle } from "./sidecar";
 import { parseResults } from "./utils/flinkStatementResults";
@@ -262,18 +262,7 @@ export class FlinkStatementResultsManager {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         await this.refreshStatement();
-        await this._flinkStatementsSqlApi.updateSqlv1Statement({
-          organization_id: this.statement.organizationId,
-          environment_id: this.statement.environmentId,
-          statement_name: this.statement.name,
-          UpdateSqlv1StatementRequest: {
-            ...modelFlinkStatementToRest(this.statement),
-            spec: {
-              ...this.statement.spec,
-              stopped: true,
-            },
-          },
-        });
+        await this._stopStatement();
         return;
       } catch (err) {
         // 409 means we didn't send the PUT request with the latest statement spec, so we retry
@@ -289,10 +278,29 @@ export class FlinkStatementResultsManager {
           // If it's not a 409 or we're out of retries, log and throw
           logError(err, "Failed to stop Flink statement");
           this._latestError({ message: "Failed to stop Flink statement" });
-          break;
+          return;
         }
       }
     }
+  }
+
+  private async _stopStatement() {
+    await this._flinkStatementsSqlApi.updateSqlv1Statement({
+      organization_id: this.statement.organizationId,
+      environment_id: this.statement.environmentId,
+      statement_name: this.statement.name,
+      UpdateSqlv1StatementRequest: {
+        metadata: this.statement.metadata,
+        name: this.statement.name,
+        organization_id: this.statement.organizationId,
+        environment_id: this.statement.environmentId,
+        status: this.statement.status,
+        spec: {
+          ...this.statement.spec,
+          stopped: true,
+        },
+      },
+    });
   }
 
   handleMessage(type: MessageType, body: any): any {

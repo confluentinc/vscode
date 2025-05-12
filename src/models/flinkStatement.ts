@@ -338,13 +338,3 @@ export function restFlinkStatementToModel(
   });
 }
 
-export function modelFlinkStatementToRest(modelFlinkStatement: FlinkStatement) {
-  return {
-    metadata: modelFlinkStatement.metadata ?? {},
-    name: modelFlinkStatement.name,
-    organization_id: modelFlinkStatement.organizationId,
-    environment_id: modelFlinkStatement.environmentId,
-    spec: modelFlinkStatement.spec,
-    status: modelFlinkStatement.status,
-  };
-}
