@@ -2,7 +2,6 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
@@ -12,7 +11,7 @@ import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
 import { summarizeProjectTemplate } from "../summarizers/projectTemplate";
-import { BaseLanguageModelTool } from "./base";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
 
@@ -56,9 +55,10 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<LanguageModelChatMessage[]> {
+  ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IListTemplatesParameters;
 
+    // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -66,21 +66,22 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       },
       token,
     );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      if (result.content.length) {
-        let message = `Available project templates:\n`;
-        for (const part of result.content as LanguageModelTextPart[]) {
-          message = `${message}\n\n${part.value}`;
-        }
-        message = `${message}\n\nIf the user is interested in a specific project template, provde the template's 'ID' with the "get_templateOptions" tool to determine what inputs they need to provide.`;
-        messages.push(this.toolMessage(message, "result"));
-      } else {
-        messages.push(this.toolMessage("No project templates found.", "result"));
-      }
+    if (!result.content.length) {
+      // cancellation / no results
+      return new TextOnlyToolResultPart(toolCall.callId, []);
     }
-    return messages;
+
+    // format the results before sending them back to the model
+    const resultParts: LanguageModelTextPart[] = [];
+
+    // no header needed
+    resultParts.push(...(result.content as LanguageModelTextPart[]));
+    const resultsFooter = new LanguageModelTextPart(
+      `Summarize all of the above project templates for the user. If the user is interested in a specific project template, provide the template's 'ID' with the "get_templateOptions" tool to determine what inputs they need to provide.`,
+    );
+    resultParts.push(resultsFooter);
+
+    return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }
 

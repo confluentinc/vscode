@@ -3,7 +3,6 @@ import {
   ChatRequest,
   ChatResponseStream,
   Command,
-  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
@@ -20,9 +19,8 @@ import {
 import { Logger } from "../../logging";
 import { getSidecar } from "../../sidecar";
 import { titleCase } from "../../utils";
-import { systemMessage } from "../messageTypes";
 import { summarizeConnection } from "../summarizers/connections";
-import { BaseLanguageModelTool } from "./base";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.getConnections");
 
@@ -107,9 +105,10 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<LanguageModelChatMessage[]> {
+  ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetConnectionsParameters;
 
+    // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -117,61 +116,59 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       },
       token,
     );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      if (this.foundConnectionTypes.length) {
-        let message = new MarkdownString(
-          `Below are the details of available connections for you to reference and summarize to the user:\n\n# Connections`,
-        );
-        for (const part of result.content as LanguageModelTextPart[]) {
-          message = message.appendMarkdown(`\n\n${part.value}`);
-        }
-        messages.push(this.toolMessage(message.value, "result"));
-      }
-
-      if (parameters.connectionType && this.missingConnectionTypes.length) {
-        // summarize missing connection types
-        const missingTypes = this.missingConnectionTypes
-          .map((ctype) => titleCase(ctype))
-          .join(", ");
-        let connectionMessage = new MarkdownString(
-          `The following connection types are not available: ${missingTypes}.`,
-        );
-        messages.push(this.toolMessage(connectionMessage.value, "result"));
-
-        // then add system-message hints about showing buttons for connecting
-        let buttonInstructions = "After explaining the connection status to the user, suggest:";
-        if (this.missingConnectionTypes.includes(ConnectionType.Ccloud)) {
-          buttonInstructions += `\n- They need to sign in to Confluent Cloud using the '${CCLOUD_SIGN_IN_BUTTON_LABEL}' button added above`;
-          const ccloudCommand: Command = {
-            command: "confluent.connections.ccloud.signIn",
-            title: CCLOUD_SIGN_IN_BUTTON_LABEL,
-          };
-          stream.button(ccloudCommand);
-        }
-        if (this.missingConnectionTypes.includes(ConnectionType.Local)) {
-          buttonInstructions +=
-            "\n- They can start local resources using the 'Start Local Resources' button added above";
-          const localCommand: Command = {
-            command: "confluent.docker.startLocalResources",
-            title: "Start Local Resources",
-          };
-          stream.button(localCommand);
-        }
-        if (this.missingConnectionTypes.includes(ConnectionType.Direct)) {
-          buttonInstructions +=
-            "\n- They can connect directly using the 'Add New Connection' button added above";
-          const directCommand: Command = {
-            command: "confluent.connections.direct",
-            title: "Add New Connection",
-          };
-          stream.button(directCommand);
-        }
-        messages.push(systemMessage(buttonInstructions));
-      }
+    const resultParts: LanguageModelTextPart[] = [];
+    if (!result.content.length) {
+      // cancellation / no results
+      return new TextOnlyToolResultPart(toolCall.callId, resultParts);
     }
 
-    return messages;
+    // format the results before sending them back to the model
+    if (this.foundConnectionTypes.length) {
+      const resultsHeader = new LanguageModelTextPart(
+        `Below are the details of available connections for you to reference and summarize to the user:\n\n# Connections`,
+      );
+      resultParts.push(resultsHeader);
+      resultParts.push(...(result.content as LanguageModelTextPart[]));
+    }
+
+    // only add hints if the model is filtering by connection type (user is asking about a specific
+    // connection type) and that connection type is not available
+    if (parameters.connectionType && this.missingConnectionTypes.length) {
+      let buttonInstructions = "After explaining the connection status to the user, suggest:";
+      if (this.missingConnectionTypes.includes(ConnectionType.Ccloud)) {
+        buttonInstructions += `\n- They need to sign in to Confluent Cloud using the '${CCLOUD_SIGN_IN_BUTTON_LABEL}' button added above`;
+        const ccloudCommand: Command = {
+          command: "confluent.connections.ccloud.signIn",
+          title: CCLOUD_SIGN_IN_BUTTON_LABEL,
+        };
+        stream.button(ccloudCommand);
+      }
+      if (this.missingConnectionTypes.includes(ConnectionType.Local)) {
+        buttonInstructions +=
+          "\n- They can start local resources using the 'Start Local Resources' button added above";
+        const localCommand: Command = {
+          command: "confluent.docker.startLocalResources",
+          title: "Start Local Resources",
+        };
+        stream.button(localCommand);
+      }
+      if (this.missingConnectionTypes.includes(ConnectionType.Direct)) {
+        buttonInstructions +=
+          "\n- They can connect directly using the 'Add New Connection' button added above";
+        const directCommand: Command = {
+          command: "confluent.connections.direct",
+          title: "Add New Connection",
+        };
+        stream.button(directCommand);
+      }
+
+      const missingTypes = this.missingConnectionTypes.map((ctype) => titleCase(ctype)).join(", ");
+      const hintsHeader = new LanguageModelTextPart(
+        `The following connection types are not available: ${missingTypes}. ${buttonInstructions}`,
+      );
+      resultParts.push(hintsHeader);
+    }
+
+    return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }

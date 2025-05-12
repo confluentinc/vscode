@@ -1,7 +1,9 @@
-// NOTE: property descriptions below taken from package.json help text, not currently available at
-// https://code.visualstudio.com/api/references/contribution-points
-
-/** An object in the package.json `languageModelTools`. */
+/**
+ * An object in the package.json `languageModelTools`.
+ *
+ * NOTE: property descriptions taken from package.json help text, not currently available at
+ * https://code.visualstudio.com/api/references/contribution-points
+ */
 export interface LanguageModelToolContribution {
   /**
    * A unique name for this tool. This name must be a globally unique identifier, and is also used
