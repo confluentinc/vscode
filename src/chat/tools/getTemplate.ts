@@ -2,18 +2,16 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
-  MarkdownString,
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
 import { summarizeTemplateOptions } from "../summarizers/projectTemplate";
-import { BaseLanguageModelTool } from "./base";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.getTemplateOptions");
 
@@ -67,9 +65,10 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<LanguageModelChatMessage[]> {
+  ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetTemplateOptions;
 
+    // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -77,19 +76,21 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       },
       token,
     );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      let message = new MarkdownString(
-        `Inputs for the ${parameters.templateId} template are listed below:`,
-      );
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = message.appendMarkdown(`\n\n${part.value}`);
-      }
-      // TODO: add hint for the model to create a project based on user inputs
-      messages.push(this.toolMessage(message.value, "result"));
+    if (!result.content.length) {
+      // cancellation / no results
+      return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
-    return messages;
+    // format the results before sending them back to the model
+    const resultParts: LanguageModelTextPart[] = [];
+
+    const resultsHeader = new LanguageModelTextPart(
+      `Inputs for the ${parameters.templateId} template are listed below:`,
+    );
+    resultParts.push(resultsHeader);
+    resultParts.push(...(result.content as LanguageModelTextPart[]));
+    // TODO: add hint for the model to create a project based on user inputs
+
+    return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }
