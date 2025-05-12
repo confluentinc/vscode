@@ -626,12 +626,12 @@
             "type": "string",
             "default": "",
             "order": 1,
-            "description": "ID for the default CCloud compute pool to use for Flink SQL operations."
+            "description": "ID for the CCloud compute pool to use as default for Flink SQL operations."
           },
           "confluent.flink.database": {
             "type": "string",
             "default": "",
-            "description": "Name or ID for default CCloud database (topic) to use for Flink SQL operations"
+            "description": "Name or ID for CCloud Kafka® cluster to use as the default Flink SQL database."
           },
           "confluent.flink.updateComputePoolIdFromCodelens": {
             "markdownDescription": "Controls whether or not to update `#confluent.flink.computePoolId#` after selecting a compute pool from the 'Set Compute Pool' codelens.",
@@ -1719,6 +1719,8 @@
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
     "vscode-json-languageservice": "^5.4.2",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
     "ws": "^8.18.0"
   }
 }
