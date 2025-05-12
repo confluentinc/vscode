@@ -30,31 +30,43 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
 
-    if (!params.templateId || !params.templateOptions) {
+    const templateId = params.templateId;
+    if (!templateId) {
       logger.error("No template ID provided");
       return new LanguageModelToolResult([
         new LanguageModelTextPart(`Provide a template ID to create a project with it.`),
       ]);
     }
 
+    // NOTE: Copilot has some issues with vague-object models like `templateOptions`, so we have to
+    // check if other properties are set that don't match templateId/templateOptions
+    let templateOptions: { [key: string]: string | boolean } = params.templateOptions || {};
+    if (!Object.keys(templateOptions).length || Object.keys(params).length > 2) {
+      const extraOptions = Object.fromEntries(
+        Object.entries(params).filter(([key]) => key !== "templateId" && key !== "templateOptions"),
+      );
+      // merge with any existing templateOptions
+      templateOptions = { ...extraOptions, ...templateOptions };
+    }
+
     // TODO: add support for other collections
     const templates: ScaffoldV1Template[] = await getTemplatesList("vscode", true);
     const matchingTemplate: ScaffoldV1Template | undefined = templates.find(
-      (template) => template.spec?.name === params.templateId,
+      (template) => template.spec?.name === templateId,
     );
     if (!matchingTemplate) {
-      logger.error(`No template found with ID: ${params.templateId}`);
+      logger.error(`No template found with ID: ${templateId}`);
       return new LanguageModelToolResult([
         new LanguageModelTextPart(
-          `No template found with ID "${params.templateId}". Run the "list_projectTemplates" tool to get available templates.`,
+          `No template found with ID "${templateId}". Run the "list_projectTemplates" tool to get available templates.`,
         ),
       ]);
     }
 
     // just try to open the form for now
     const resp: PostResponse = await scaffoldProjectRequest({
-      templateName: params.templateId,
-      ...params.templateOptions,
+      templateName: templateId,
+      ...templateOptions,
     });
     if (!resp.success) {
       logger.error(`Error creating project: ${resp.message}`);
