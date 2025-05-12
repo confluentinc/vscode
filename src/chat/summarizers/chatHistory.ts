@@ -27,12 +27,6 @@ export function summarizeChatHistory(
 
     // responses from the assistant:
     if (turn instanceof ChatResponseTurn) {
-      // unlike requests, responses can have multiple parts, so we need to iterate through them
-      for (const part of turn.response) {
-        if (part instanceof ChatResponseMarkdownPart) {
-          summary.appendMarkdown(`\n\nASSISTANT: "${part.value.value}"`);
-        }
-      }
       // also check if there was any tool call data in the result.metadata.toolsCalled object
       const toolCallResults: ToolCallMetadata[] = turn.result.metadata?.toolsCalled;
       if (toolCallResults && toolCallResults.length) {
@@ -47,6 +41,12 @@ export function summarizeChatHistory(
           summary.appendMarkdown(
             `\n\nUSER tool call result${plural}: "${toolCall.request.name}": "${textResults.map((part) => part.value).join("\n")}"`,
           );
+        }
+      }
+      // unlike requests, responses can have multiple parts, so we need to iterate through them
+      for (const part of turn.response) {
+        if (part instanceof ChatResponseMarkdownPart) {
+          summary.appendMarkdown(`\n\nASSISTANT: "${part.value.value}"`);
         }
       }
     }
