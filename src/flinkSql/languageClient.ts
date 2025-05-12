@@ -19,7 +19,7 @@ const logger = new Logger("flinkSql.languageClient");
 
 let languageClient: LanguageClient | null = null;
 let reconnectCounter = 0;
-const MAX_RECONNECT_ATTEMPTS = 2;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed
@@ -164,7 +164,7 @@ async function handleWebSocketDisconnect(url: string): Promise<void> {
     return;
   }
 
-  // If we've reached max attempts, show a notification to the user
+  // If we've reached max attempts, stop trying to reconnect
   if (reconnectCounter >= MAX_RECONNECT_ATTEMPTS) {
     logger.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
     return;
