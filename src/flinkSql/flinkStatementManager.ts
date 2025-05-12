@@ -32,7 +32,7 @@ export type FlinkStatementManagerConfiguration = {
  * an event onto `flinkStatementDeleted` whenever a nonterminal statement is deleted.
  * */
 export class FlinkStatementManager {
-  private static instance: FlinkStatementManager;
+  private static instance: FlinkStatementManager | undefined = undefined;
 
   static getInstance(): FlinkStatementManager {
     if (!FlinkStatementManager.instance) {
@@ -41,7 +41,7 @@ export class FlinkStatementManager {
     return FlinkStatementManager.instance;
   }
 
-  private static getConfiguration(): FlinkStatementManagerConfiguration {
+  static getConfiguration(): FlinkStatementManagerConfiguration {
     const configs: WorkspaceConfiguration = workspace.getConfiguration();
     let concurrency =
       configs.get<number>(STATEMENT_POLLING_CONCURRENCY) ?? DEFAULT_STATEMENT_POLLING_CONCURRENCY;
@@ -50,7 +50,7 @@ export class FlinkStatementManager {
     let maxStatementsToPoll =
       configs.get<number>(STATEMENT_POLLING_LIMIT) ?? DEFAULT_STATEMENT_POLLING_LIMIT;
 
-    if (concurrency < 0) {
+    if (concurrency < 1) {
       logger.error(
         `Invalid concurrency: ${concurrency}. Resetting to ${DEFAULT_STATEMENT_POLLING_CONCURRENCY}.`,
       );
@@ -64,7 +64,7 @@ export class FlinkStatementManager {
       pollingFrequency = DEFAULT_STATEMENT_POLLING_FREQUENCY;
     }
 
-    if (maxStatementsToPoll < 0) {
+    if (maxStatementsToPoll < 1) {
       logger.error(
         `Invalid max statement to poll: ${maxStatementsToPoll}. Resetting to ${DEFAULT_STATEMENT_POLLING_LIMIT}.`,
       );
@@ -84,13 +84,13 @@ export class FlinkStatementManager {
   disposables: Disposable[] = [];
 
   /** Should we poll at all based on configuration? */
-  get isEnabled(): boolean {
+  isEnabled(): boolean {
     return this.configuration.pollingFrequency > 0;
   }
 
   /** Should we poll eventually / have a poller defined? */
-  get shouldPoll(): boolean {
-    return this.isEnabled && !this.monitoredStatements.isEmpty();
+  shouldPoll(): boolean {
+    return this.isEnabled() && !this.monitoredStatements.isEmpty();
   }
 
   private constructor() {
@@ -115,7 +115,7 @@ export class FlinkStatementManager {
       this.poller.stop();
     }
 
-    if (this.isEnabled) {
+    if (this.isEnabled()) {
       logger.debug(
         `Polling is enabled, creating new poller with frequency ${this.configuration.pollingFrequency}`,
       );
@@ -131,7 +131,7 @@ export class FlinkStatementManager {
       );
 
       // Start the new poller if we have statements to poll.
-      if (this.shouldPoll) {
+      if (this.shouldPoll()) {
         logger.debug("Starting new poller since we should be polling");
         poller.start();
       }

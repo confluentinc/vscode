@@ -1,9 +1,25 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
+import { ConfigurationChangeEvent } from "vscode";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { flinkStatementUpdated } from "../emitters";
 import { FlinkStatement, FlinkStatementId, STOPPED_PHASE } from "../models/flinkStatement";
-import { MonitoredStatement, MonitoredStatements } from "./flinkStatementManager";
+import {
+  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+  DEFAULT_STATEMENT_POLLING_FREQUENCY,
+  DEFAULT_STATEMENT_POLLING_LIMIT,
+  STATEMENT_POLLING_CONCURRENCY,
+  STATEMENT_POLLING_FREQUENCY,
+  STATEMENT_POLLING_LIMIT,
+} from "../preferences/constants";
+import { IntervalPoller } from "../utils/timing";
+import {
+  FlinkStatementManager,
+  FlinkStatementManagerConfiguration,
+  MonitoredStatement,
+  MonitoredStatements,
+} from "./flinkStatementManager";
 
 describe("flinkStatementManager.ts", () => {
   describe("MonitoredStatement", () => {
@@ -62,6 +78,176 @@ describe("flinkStatementManager.ts", () => {
       });
     });
   });
+
+  describe("FlinkStatementManager", () => {
+    let sandbox: sinon.SinonSandbox;
+
+    let instance: FlinkStatementManager;
+    let testConfigState: FlinkStatementManagerConfiguration;
+    let configStub: sinon.SinonStub;
+    let onDidChangeConfigurationStub: sinon.SinonStub;
+    let resetPoller: () => IntervalPoller | void;
+
+    function resetConfiguration(): FlinkStatementManagerConfiguration {
+      return {
+        pollingFrequency: DEFAULT_STATEMENT_POLLING_FREQUENCY,
+        maxStatementsToPoll: DEFAULT_STATEMENT_POLLING_LIMIT,
+        concurrency: DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+      };
+    }
+
+    async function setPollingFrequencySetting(value: number): Promise<void> {
+      // Set up the current workspace settings to have a polling frequency of 0
+      testConfigState.pollingFrequency = value;
+      // Now simulate the event that would be fired when the configuration changes
+      const mockEvent = {
+        affectsConfiguration: (config: string) => config === STATEMENT_POLLING_FREQUENCY,
+      } as ConfigurationChangeEvent;
+
+      onDidChangeConfigurationStub.yields(mockEvent);
+
+      // Call the event handler wired up in construct / createConfigChangeListener().
+      await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+    }
+
+    beforeEach(() => {
+      // by default will make a RUNNING state statement, nonterminal.
+      sandbox = sinon.createSandbox();
+      onDidChangeConfigurationStub = sandbox.stub(vscode.workspace, "onDidChangeConfiguration");
+
+      testConfigState = resetConfiguration();
+
+      // Fake implementation of workspace.getConfiguration
+      const configMock = {
+        get: sandbox.fake((configName: string) => {
+          switch (configName) {
+            case STATEMENT_POLLING_FREQUENCY:
+              return testConfigState.pollingFrequency;
+            case STATEMENT_POLLING_LIMIT:
+              return testConfigState.maxStatementsToPoll;
+            case STATEMENT_POLLING_CONCURRENCY:
+              return testConfigState.concurrency;
+            default:
+              throw new Error(`Unknown config name: ${configName}`);
+          }
+        }),
+      };
+      configStub = sandbox.stub(vscode.workspace, "getConfiguration");
+      configStub.returns(configMock);
+
+      instance = FlinkStatementManager.getInstance();
+      resetPoller = instance["resetPoller"].bind(instance);
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+      FlinkStatementManager["instance"] = undefined;
+    });
+
+    describe("getConfiguration()", () => {
+      it("should return the configuration object", () => {
+        const config = FlinkStatementManager.getConfiguration();
+        assert.deepStrictEqual(config, testConfigState);
+      });
+
+      it("Should fix concurrency to be at least 1", () => {
+        testConfigState.concurrency = 0;
+        const config = FlinkStatementManager.getConfiguration();
+        assert.strictEqual(config.concurrency, DEFAULT_STATEMENT_POLLING_CONCURRENCY);
+      });
+
+      it("Should fix polling frequency to be at least 0", () => {
+        testConfigState.pollingFrequency = -1;
+        const config = FlinkStatementManager.getConfiguration();
+        assert.strictEqual(config.pollingFrequency, DEFAULT_STATEMENT_POLLING_FREQUENCY);
+      });
+
+      it("Should fix max statements to poll to be at least 1", () => {
+        testConfigState.maxStatementsToPoll = 0;
+        const config = FlinkStatementManager.getConfiguration();
+        assert.strictEqual(config.maxStatementsToPoll, DEFAULT_STATEMENT_POLLING_LIMIT);
+      });
+    }); // describe getConfiguration
+
+    describe("isEnabled()", () => {
+      it("should return true if polling frequency > 0", () => {
+        assert.ok(instance.isEnabled());
+      });
+
+      it("should return false if configuration changes to polling frequency == 0", async () => {
+        await setPollingFrequencySetting(0);
+
+        // Check that the isEnabled property is now false
+        assert.strictEqual(instance.isEnabled(), false);
+      });
+    }); // isEnable
+
+    describe("shouldPoll()", () => {
+      it("should return false if enabled and no statements to monitor", () => {
+        assert.strictEqual(false, instance.shouldPoll());
+      });
+
+      it("should return true if enabled and has statements to monitor", () => {
+        const statement = createFlinkStatement();
+        instance.register("testClientId", statement);
+        assert.strictEqual(true, instance.shouldPoll());
+      });
+
+      it("should return false if not enabled but has statements to monitor", async () => {
+        const statement = createFlinkStatement();
+        instance.register("testClientId", statement);
+
+        await setPollingFrequencySetting(0);
+
+        assert.strictEqual(false, instance.shouldPoll());
+      });
+    }); // shouldPoll()
+
+    describe("resetPoller()", () => {
+      it("Should return a new stopped poller if enabled", () => {
+        const poller = resetPoller();
+        assert.ok(poller);
+        assert.strictEqual(poller.isRunning(), false);
+      });
+
+      it("Should return undefined if not enabled", async () => {
+        await setPollingFrequencySetting(0);
+        const poller = resetPoller();
+        assert.strictEqual(poller, undefined);
+      });
+
+      it("Should return a new poller if already running", () => {
+        const poller = resetPoller();
+        assert.ok(poller);
+        assert.strictEqual(poller.isRunning(), false);
+
+        // Call again to check if it returns a new poller
+        const newPoller = resetPoller();
+        assert.notStrictEqual(poller, newPoller);
+      });
+
+      it("Should start the created poller if shouldPoll() is true", () => {
+        const statement = createFlinkStatement();
+        instance.register("testClientId", statement);
+
+        const poller = resetPoller();
+        assert.ok(poller);
+        assert.strictEqual(poller.isRunning(), true);
+        poller.stop();
+      });
+
+      it("Will stop the old poller if it is running", () => {
+        const poller = resetPoller();
+        assert.ok(poller);
+        sandbox.stub(poller, "isRunning").returns(true);
+        instance["poller"] = poller;
+
+        const stopStub = sandbox.stub(poller, "stop");
+        resetPoller();
+        sinon.assert.calledOnce(stopStub);
+      });
+    }); // resetPoller()
+  }); // describe FlinkStatementManager
 
   describe("MonitoredStatements", () => {
     let sandbox: sinon.SinonSandbox;

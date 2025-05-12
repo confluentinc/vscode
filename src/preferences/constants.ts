@@ -65,7 +65,7 @@ export const DEFAULT_STATEMENT_POLLING_FREQUENCY = 10; // seconds.
  * Maximum number of nonterminal Flink statements to poll for updates.
  */
 export const STATEMENT_POLLING_LIMIT = prefix + "flink.statementPollingLimit";
-export const DEFAULT_STATEMENT_POLLING_LIMIT = 100; // non-terminal statements
+export const DEFAULT_STATEMENT_POLLING_LIMIT = 25; // non-terminal statements
 
 export const STATEMENT_POLLING_CONCURRENCY: string = prefix + "flink.statementPollingConcurrency";
 export const DEFAULT_STATEMENT_POLLING_CONCURRENCY = 5; // concurrent polling requests
