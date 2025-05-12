@@ -28,7 +28,6 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-    logger.debug("params:", params);
 
     if (!params.templateId) {
       logger.error("No template ID provided");
