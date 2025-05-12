@@ -8,6 +8,7 @@ import * as environmentsModule from "../graphql/environments";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FLINK_CONFIG_COMPUTE_POOL } from "../preferences/constants";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { FlinkConfigurationManager } from "./flinkConfigManager";
 
@@ -77,7 +78,7 @@ describe("FlinkConfigurationManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs("computePoolId").returns("invalid-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("invalid-pool-id");
       configStub.returns(configMock);
 
       (flinkManager as any).checkFlinkResourcesAvailability.resolves(false);
@@ -97,7 +98,7 @@ describe("FlinkConfigurationManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs("computePoolId").returns("valid-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("valid-pool-id");
       configStub.returns(configMock);
       (flinkManager as any).checkFlinkResourcesAvailability.resolves(true);
 
@@ -116,7 +117,7 @@ describe("FlinkConfigurationManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs("computePoolId").returns("test-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("test-pool-id");
       configStub.returns(configMock);
       (flinkManager as any).checkFlinkResourcesAvailability.resolves(true);
 
