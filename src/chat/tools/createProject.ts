@@ -64,10 +64,13 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
     }
 
     // just try to open the form for now
-    const resp: PostResponse = await scaffoldProjectRequest({
-      templateName: templateId,
-      ...templateOptions,
-    });
+    const resp: PostResponse = await scaffoldProjectRequest(
+      {
+        templateName: templateId,
+        ...templateOptions,
+      },
+      `copilot:${this.name}`,
+    );
     if (!resp.success) {
       logger.error(`Error creating project: ${resp.message}`);
       return new LanguageModelToolResult([
