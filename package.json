@@ -114,6 +114,35 @@
             "templateId"
           ]
         }
+      },
+      {
+        "name": "create_project",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Create Project",
+        "modelDescription": "Create a new project using the selected template and input options. Use this after 'get_templateOptions' when the provided values for the selected template have been provided.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "createProject",
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the project template to use."
+            },
+            "templateOptions": {
+              "type": "object",
+              "description": "The input options for the selected project template. Use the result of the 'get_templateOptions' and any user-provided values to fill out this object."
+            }
+          },
+          "required": [
+            "templateId",
+            "templateOptions"
+          ]
+        }
       }
     ],
     "commands": [
