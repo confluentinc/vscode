@@ -2,7 +2,6 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
@@ -12,7 +11,7 @@ import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList, scaffoldProjectRequest } from "../../scaffold";
 import { PostResponse } from "../../webview/scaffold-form";
-import { BaseLanguageModelTool } from "./base";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.getTemplateOptions");
 
@@ -80,9 +79,10 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<LanguageModelChatMessage[]> {
+  ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as ICreateProjectParameters;
 
+    // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -90,14 +90,15 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       },
       token,
     );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      // no header/footer messages needed here
-      for (const part of result.content as LanguageModelTextPart[]) {
-        messages.push(this.toolMessage(part.value, "result"));
-      }
+    if (!result.content.length) {
+      // cancellation / no results
+      return new TextOnlyToolResultPart(toolCall.callId, []);
     }
-    return messages;
+
+    // format the results before sending them back to the model
+    const resultParts: LanguageModelTextPart[] = [];
+    // no header/footer messages needed here
+    resultParts.push(...(result.content as LanguageModelTextPart[]));
+    return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }
