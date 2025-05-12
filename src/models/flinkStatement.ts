@@ -144,10 +144,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return (this.sqlKind ?? "") === "INSERT_INTO";
   }
 
-  get isSelect(): boolean {
-    return (this.sqlKind ?? "") === "SELECT";
-  }
-
   /** All statements but background statements can have results */
   get canHaveResults(): boolean {
     return !this.isBackground;
