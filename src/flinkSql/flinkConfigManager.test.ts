@@ -8,7 +8,7 @@ import * as environmentsModule from "../graphql/environments";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FLINK_CONFIG_COMPUTE_POOL } from "../preferences/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { FlinkConfigurationManager } from "./flinkConfigManager";
 
@@ -64,8 +64,8 @@ describe("FlinkConfigurationManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs("computePoolId").returns("");
-      configMock.get.withArgs("database").returns("");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("");
+      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("");
       configStub.returns(configMock);
 
       const result = await flinkManager.validateFlinkSettings();
