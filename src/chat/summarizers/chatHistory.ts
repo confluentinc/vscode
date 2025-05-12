@@ -2,9 +2,11 @@ import {
   ChatRequestTurn,
   ChatResponseMarkdownPart,
   ChatResponseTurn,
+  LanguageModelTextPart,
   MarkdownString,
 } from "vscode";
 import { PARTICIPANT_ID } from "../constants";
+import { ToolCallMetadata } from "../tools/types";
 
 export function summarizeChatHistory(
   history: readonly (ChatRequestTurn | ChatResponseTurn)[],
@@ -29,6 +31,22 @@ export function summarizeChatHistory(
       for (const part of turn.response) {
         if (part instanceof ChatResponseMarkdownPart) {
           summary.appendMarkdown(`\n\nASSISTANT: "${part.value.value}"`);
+        }
+      }
+      // also check if there was any tool call data in the result.metadata.toolsCalled object
+      const toolCallResults: ToolCallMetadata[] = turn.result.metadata?.toolsCalled;
+      if (toolCallResults && toolCallResults.length) {
+        for (const toolCall of toolCallResults) {
+          // LanguageModelToolCallPart:
+          summary.appendMarkdown(
+            `\n\nASSISTANT tool call: "${toolCall.request.name}" inputs: "${JSON.stringify(toolCall.request.input)}"`,
+          );
+          // TextOnlyToolResultPart(LanguageModelToolResultPart):
+          const textResults: LanguageModelTextPart[] = toolCall.response.content;
+          const plural = textResults.length > 1 ? "s" : "";
+          summary.appendMarkdown(
+            `\n\nUSER tool call result${plural}: "${toolCall.request.name}": "${textResults.map((part) => part.value).join("\n")}"`,
+          );
         }
       }
     }

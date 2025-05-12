@@ -3,7 +3,6 @@ import {
   ChatContext,
   ChatRequest,
   ChatRequestTurn,
-  ChatResponseMarkdownPart,
   ChatResponseStream,
   ChatResponseTurn,
   ChatResult,
@@ -15,17 +14,20 @@ import {
   LanguageModelChatToolMode,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolResultPart,
   lm,
 } from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
-import { participantMessage, systemMessage, userMessage } from "./messageTypes";
+import { participantMessage, systemMessage, toolMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
-import { BaseLanguageModelTool } from "./tools/base";
+import { summarizeChatHistory } from "./summarizers/chatHistory";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./tools/base";
 import { ListTemplatesTool } from "./tools/listTemplates";
 import { getToolMap } from "./tools/toolMap";
+import { ToolCallMetadata } from "./tools/types";
 
 const logger = new Logger("chat.participant");
 
@@ -70,7 +72,6 @@ export async function chatHandler(
     version: request.model?.version,
     id: request.model?.id,
   });
-  logger.debug(`using model id "${model.id}" for request`);
 
   if (request.command) {
     // TODO: implement command handling
@@ -79,7 +80,13 @@ export async function chatHandler(
 
   // non-command request
   try {
-    const toolsCalled: string[] = await handleChatMessage(request, model, messages, stream, token);
+    const toolsCalled: ToolCallMetadata[] = await handleChatMessage(
+      request,
+      model,
+      messages,
+      stream,
+      token,
+    );
     return { metadata: { toolsCalled } };
   } catch (error) {
     if (error instanceof Error) {
@@ -117,7 +124,8 @@ async function getModel(selector: LanguageModelChatSelector): Promise<LanguageMo
   let models: LanguageModelChat[] = [];
   for (const fieldToRemove of ["id", "version", "family", "vendor"]) {
     models = await lm.selectChatModels(selector);
-    logger.debug(`${models.length} available chat model(s)`, { models, modelSelector: selector });
+    // NOTE: uncomment for local debugging; this can be noisy otherwise
+    // logger.debug(`${models.length} available chat model(s)`, { models, modelSelector: selector });
     if (models.length) {
       break;
     }
@@ -141,8 +149,10 @@ export async function handleChatMessage(
   messages: LanguageModelChatMessage[],
   stream: ChatResponseStream,
   token: CancellationToken,
-): Promise<string[]> {
-  const toolsCalled: string[] = [];
+): Promise<ToolCallMetadata[]> {
+  // capture results to return as ChatResult.metadata to prevent the model from having to repeat
+  // the tool calls after subsequent requests
+  const toolCallMetadata: ToolCallMetadata[] = [];
   // keep track of which calls the model has made to prevent repeats by stringifying any
   // `LanguageModelToolCallPart` results
   const toolCallsMade = new Set<string>();
@@ -150,13 +160,6 @@ export async function handleChatMessage(
   // limit number of iterations to prevent infinite loops
   let iterations = 0;
   const maxIterations = 10; // TODO: make this user-configurable?
-
-  // hint at focusing recency instead of attempting to (re)respond to older messages
-  messages.push(
-    systemMessage(
-      "Focus on answering the user's most recent query directly unless explicitly asked to address previous messages.",
-    ),
-  );
 
   // inform the model that tools can be invoked as part of the response stream
   const requestOptions: LanguageModelChatRequestOptions = {
@@ -169,6 +172,9 @@ export async function handleChatMessage(
   while (continueConversation && iterations < maxIterations) {
     continueConversation = false;
 
+    // NOTE: uncomment for local debugging
+    // debugLogChatMessages(messages);
+
     const response: LanguageModelChatResponse = await model.sendRequest(
       messages,
       requestOptions,
@@ -176,11 +182,10 @@ export async function handleChatMessage(
     );
     iterations++;
 
-    const toolResultMessages: LanguageModelChatMessage[] = [];
     for await (const fragment of response.stream) {
       if (token.isCancellationRequested) {
         logger.debug("chat request canceled");
-        return toolsCalled;
+        return toolCallMetadata;
       }
 
       if (fragment instanceof LanguageModelTextPart) {
@@ -194,8 +199,9 @@ export async function handleChatMessage(
           const errorMsg = `Tool "${toolCall.name}" not found.`;
           logger.error(errorMsg);
           stream.markdown(errorMsg);
-          return toolsCalled;
+          return toolCallMetadata;
         }
+        // TODO: move this into the tools themselves?
         stream.progress(tool.progressMessage);
 
         if (toolCallsMade.has(JSON.stringify(toolCall))) {
@@ -211,46 +217,59 @@ export async function handleChatMessage(
         }
 
         // each registered tool should contribute its own way of handling the invocation and
-        // interacting with the stream, and can return an array of messages to be sent for another
-        // round of processing
-        logger.debug(`Processing tool invocation for "${toolCall.name}"`);
-        const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
-          request,
-          stream,
-          toolCall,
-          token,
-        );
-        toolResultMessages.push(...newMessages);
+        // interacting with the stream
+        continueConversation = true;
+        logger.debug(`Processing tool invocation for "${toolCall.name}"`, {
+          params: toolCall.input,
+        });
+        let toolResultPart: TextOnlyToolResultPart;
+        let status: "success" | "error" = "success";
 
-        toolCallsMade.add(JSON.stringify(toolCall));
-        if (!toolsCalled.includes(toolCall.name)) {
-          // keep track of the tools that have been called so far as part of this chat request flow
-          toolsCalled.push(toolCall.name);
+        try {
+          toolResultPart = await tool.processInvocation(request, stream, toolCall, token);
+
+          // TODO(shoup): remove after debugging
+          const toolDebugMessages: string[] = [];
+          for (const part of toolResultPart.content) {
+            toolDebugMessages.push(part.value);
+          }
+          logger.debug(`tool call result:\n\n${toolDebugMessages.join("\n")}`);
+        } catch (error) {
+          const errorMsg = `Error processing tool "${toolCall.name}": ${error}`;
+          logger.error(errorMsg);
+          toolResultPart = new TextOnlyToolResultPart(toolCall.callId, [
+            new LanguageModelTextPart(errorMsg),
+          ]);
+          status = "error";
         }
-      }
-    }
+        toolCallsMade.add(JSON.stringify(toolCall));
 
-    if (toolResultMessages.length) {
-      // add results to the messages and let the model process them and decide what to do next
-      messages.push(...toolResultMessages);
-      // send synthetic "user" message to the model to indicate that the conversation should continue
-      // (.sendRequest requires the last message to be a `User` message; see
-      // https://github.com/microsoft/vscode-extension-samples/blob/26acb262b8b2b41e9e466115f13a7f72ef63d59d/chat-sample/src/toolsPrompt.tsx#L83)
-      messages.push(
-        systemMessage("Please continue the conversation using the information from the tool call."),
-      );
-      continueConversation = true;
+        // add the Assistant message for the LanguageModelToolCallPart,
+        // then a User message for the LanguageModelToolResultPart
+        // (XXX: removing either one of these will result in error 400 responses from Copilot)
+        messages.push(
+          participantMessage([toolCall]),
+          toolMessage(toolCall.name, [toolResultPart], status),
+        );
+
+        // add the tool result to the metadata for future chat requests
+        toolCallMetadata.push({
+          request: toolCall,
+          response: toolResultPart,
+        });
+      }
     }
   }
 
-  return toolsCalled;
+  return toolCallMetadata;
 }
 
 /** Filter the chat history to only relevant messages for the current chat. */
 function filterContextHistory(
   history: readonly (ChatRequestTurn | ChatResponseTurn)[],
 ): LanguageModelChatMessage[] {
-  logger.debug("context history:", history);
+  // remove the last message from the history since it is the current request
+  logger.debug("context history:\n", JSON.stringify(history, null, 2));
 
   // only use messages where the participant was tagged, or messages where the participant responded
   const filteredHistory: (ChatRequestTurn | ChatResponseTurn)[] = history.filter(
@@ -259,23 +278,71 @@ function filterContextHistory(
   if (filteredHistory.length === 0) {
     return [];
   }
-  const messages: LanguageModelChatMessage[] = [];
-  for (const turn of filteredHistory) {
-    // don't re-use previous prompts since the model may misinterpret them as part of the current prompt
-    if (turn instanceof ChatRequestTurn) {
-      if (turn.participant === PARTICIPANT_ID) {
-        messages.push(userMessage(turn.prompt));
-      }
-      continue;
-    }
-    if (turn instanceof ChatResponseTurn) {
-      // responses from the participant:
-      if (turn.response instanceof ChatResponseMarkdownPart) {
-        messages.push(participantMessage(turn.response.value.value));
-      }
-    }
-  }
 
-  logger.debug("filtered messages for historic context:", messages);
-  return messages;
+  const summary: string = summarizeChatHistory(filteredHistory);
+  logger.debug("filtered context history:\n", summary);
+  return [userMessage(summary)];
+}
+
+/** Log chat messages from conversation history for local development and debugging. */
+export function debugLogChatMessages(messages: LanguageModelChatMessage[]): string {
+  const output: string[] = ["=== CHAT MESSAGES ==="];
+
+  messages.forEach((message, index) => {
+    const role = message.role === 1 ? "USER" : "ASSISTANT";
+    output.push(
+      `\n[Message ${index + 1}] ${role}${message.name ? ` (name="${message.name}")` : ""}`,
+    );
+
+    if (message.content.length === 0) {
+      output.push("(no content)");
+      return;
+    }
+
+    message.content.forEach((part, partIndex) => {
+      output.push(`  [Part ${partIndex + 1}]`);
+
+      if (part instanceof LanguageModelTextPart) {
+        output.push(`  Type: LanguageModelTextPart`);
+
+        output.push(`  "${part.value}"`);
+      } else if (part instanceof LanguageModelToolCallPart) {
+        // tool call request
+        output.push(`  LanguageModelToolCallPart (tool="${part.name}", callId=${part.callId})`);
+
+        try {
+          const inputStr =
+            typeof part.input === "object" ? JSON.stringify(part.input, null, 2) : part.input;
+          output.push(`  Input: ${inputStr}`);
+        } catch (e) {
+          output.push(`  Input: [Error parsing input: ${e}]`);
+        }
+      } else if (part instanceof LanguageModelToolResultPart) {
+        // tool call result/response
+        output.push(`  LanguageModelToolResultPart (callId=${part.callId})`);
+
+        if (part.content.length === 0) {
+          output.push(`  Result: Empty`);
+        } else {
+          output.push(`  Results:`);
+          part.content.forEach((resultItem, resultIndex) => {
+            if (resultItem instanceof LanguageModelTextPart) {
+              output.push(`    [${resultIndex + 1}] Text: ${resultItem.value}`);
+            } else {
+              output.push(
+                `    [${resultIndex + 1}] Unknown result type: ${JSON.stringify(resultItem, null, 2)}`,
+              );
+            }
+          });
+        }
+      } else {
+        output.push(`  Type: Unknown (${part})`);
+        output.push(`  Properties: ${JSON.stringify(part, null, 2)}`);
+      }
+    });
+  });
+
+  const formattedOutput = output.join("\n");
+  logger.debug(formattedOutput);
+  return formattedOutput;
 }
