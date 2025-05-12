@@ -1,4 +1,8 @@
-import { LanguageModelChatMessage } from "vscode";
+import {
+  LanguageModelChatMessage,
+  LanguageModelToolCallPart,
+  LanguageModelToolResultPart,
+} from "vscode";
 import { PARTICIPANT_ID } from "./constants";
 
 /**
@@ -15,7 +19,7 @@ export function userMessage(message: string) {
  * Returns an {@link LanguageModelChatMessage.Assistant Assistant message} with a participant tag as
  * the {@linkcode PARTICIPANT_ID} to clearly separate it from other `Assistant` message implementations.
  */
-export function participantMessage(message: string) {
+export function participantMessage(message: string | LanguageModelToolCallPart[]) {
   return LanguageModelChatMessage.Assistant(message, PARTICIPANT_ID);
 }
 
@@ -28,6 +32,20 @@ export function systemMessage(message: string) {
   return LanguageModelChatMessage.User(`SYSTEM: ${message}`, "system");
 }
 
-// NOTE: "tool" messages should be handled via the `.toolMessage()` method from the
-// `BaseLanguageModelTool` class, but we may want to migrate it here for easier access and
-// consistency in the future
+/**
+ * Returns a {@link LanguageModelChatMessage.User User message} with a "tool" tag to clearly
+ * distinguish it from other `User` message implementations.
+ *
+ * This should be used to wrap the {@link LanguageModelToolResultPart}s of a tool invocation.
+ */
+export function toolMessage(
+  toolName: string,
+  results: LanguageModelToolResultPart[],
+  status?: string,
+): LanguageModelChatMessage {
+  let roleName = `tool:${toolName}`;
+  if (status !== undefined) {
+    roleName = `${roleName}:${status}`;
+  }
+  return LanguageModelChatMessage.User(results, roleName);
+}
