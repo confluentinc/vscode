@@ -631,7 +631,7 @@
           "confluent.flink.database": {
             "type": "string",
             "default": "",
-            "description": "Name or ID for CCloud Kafka® cluster to use as the default Flink SQL database"
+            "description": "Name or ID for CCloud Kafka® cluster to use as the default Flink SQL database."
           },
           "confluent.flink.updateComputePoolIdFromCodelens": {
             "markdownDescription": "Controls whether or not to update `#confluent.flink.computePoolId#` after selecting a compute pool from the 'Set Compute Pool' codelens.",
