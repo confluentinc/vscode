@@ -19,7 +19,7 @@ const logger = new Logger("flinkSql.languageClient");
 
 let languageClient: LanguageClient | null = null;
 let reconnectCounter = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
+const MAX_RECONNECT_ATTEMPTS = 2;
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed
@@ -63,8 +63,9 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
         };
         const clientOptions: LanguageClientOptions = {
           documentSelector: [
-            { scheme: "file", language: "flinksql" },
+            { language: "flinksql" },
             { scheme: "untitled", language: "flinksql" },
+            { pattern: "**/*.flink.sql" },
           ],
           middleware: {
             didOpen: (document, next) => {
