@@ -81,7 +81,7 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
     }
     return new LanguageModelToolResult([
       new LanguageModelTextPart(
-        `Project created successfully. The user can refer to the form to make any necessary adjustments.`,
+        `The project template form was successfully opened, and is now ready for the user to verify and/or make any necessary adjustments before the project can be created.`,
       ),
     ]);
   }
