@@ -160,7 +160,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   update(other: FlinkStatement): void {
     if (this.name !== other.name || this.environmentId !== other.environmentId) {
       throw new Error(
-        `Cannot update FlinkStatement "${this.name}" with instance with different name ${other.id} or environmentId ${other.environmentId}`,
+        `Cannot update FlinkStatement "${this.name}" with instance with different name ${other.name} or environmentId ${other.environmentId}`,
       );
     }
 
@@ -216,10 +216,9 @@ export class FlinkStatementTreeItem extends TreeItem {
   resource: FlinkStatement;
 
   constructor(resource: FlinkStatement) {
-    super(resource.id, TreeItemCollapsibleState.None);
+    super(resource.name, TreeItemCollapsibleState.None);
 
     // internal properties
-    this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 

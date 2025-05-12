@@ -55,3 +55,17 @@ export const UPDATE_DEFAULT_POOL_ID_FROM_LENS = prefix + "flink.updateComputePoo
  * "Set Catalog & Database" codelens. Possible values are `never`, `ask`, or `always`.
  */
 export const UPDATE_DEFAULT_DATABASE_FROM_LENS = prefix + "flink.updateDatabaseFromCodelens";
+
+/**
+ * Frequency in seconds for polling non-terminal Flink statements. 0 means no polling.
+ */
+export const STATEMENT_POLLING_FREQUENCY = prefix + "flink.statementPollingFrequency";
+export const DEFAULT_STATEMENT_POLLING_FREQUENCY = 10; // seconds.
+/**
+ * Maximum number of nonterminal Flink statements to poll for updates.
+ */
+export const STATEMENT_POLLING_LIMIT = prefix + "flink.statementPollingLimit";
+export const DEFAULT_STATEMENT_POLLING_LIMIT = 100; // non-terminal statements
+
+export const STATEMENT_POLLING_CONCURRENCY: string = prefix + "flink.statementPollingConcurrency";
+export const DEFAULT_STATEMENT_POLLING_CONCURRENCY = 5; // concurrent polling requests

@@ -169,7 +169,7 @@ describe("FlinkStatementsViewProvider", () => {
     it("returns FlinkStatementTreeItem", () => {
       const statement = createFlinkStatement();
       const treeItem = viewProvider.getTreeItem(statement);
-      assert.strictEqual(treeItem.label, statement.name);
+      assert.strictEqual(treeItem.label, statement.id);
     });
   });
 

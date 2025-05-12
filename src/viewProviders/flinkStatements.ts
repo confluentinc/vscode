@@ -1,12 +1,16 @@
-import { TreeDataProvider, TreeItem } from "vscode";
+import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentFlinkStatementsResourceChanged } from "../emitters";
+import {
+  currentFlinkStatementsResourceChanged,
+  flinkStatementDeleted,
+  flinkStatementUpdated,
+} from "../emitters";
+import { FlinkStatementManager } from "../flinkSql/flinkStatementManager";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
+import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
-
 /**
  * View controller for Flink statements. Can be assigned to track either
  * a single compute cluster, or a CCloud environment.
@@ -33,6 +37,42 @@ export class FlinkStatementsViewProvider
   // Map of resource id string -> resource currently in the tree view.
   private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
 
+  managerClientId = "FlinkStatementsViewProvider";
+  private statementManager = FlinkStatementManager.getInstance();
+
+  protected setCustomEventListeners(): Disposable[] {
+    const statementChangedSub: Disposable = flinkStatementUpdated.event(
+      (statement: FlinkStatement) => {
+        // Update the statement in the view.
+        const existingStatement = this.resourcesInTreeView.get(statement.id);
+        if (existingStatement) {
+          // Update our reference to the statement.
+          existingStatement.update(statement);
+
+          // inform the view that we have new data.
+          this._onDidChangeTreeData.fire(existingStatement);
+        }
+      },
+    );
+
+    const statementDeletedSub: Disposable = flinkStatementDeleted.event(
+      (statementId: FlinkStatementId) => {
+        // Remove the statement from the view. It is known to no longer exist.
+        const existingStatement = this.resourcesInTreeView.get(statementId);
+        if (existingStatement) {
+          // Remove it from our reference.
+          this.resourcesInTreeView.delete(statementId);
+
+          // inform the view that toplevel has changed. Sigh, no API to indicate that
+          // a specific item has been removed?
+          this._onDidChangeTreeData.fire();
+        }
+      },
+    );
+
+    return [statementChangedSub, statementDeletedSub];
+  }
+
   /**
    * Reload all statements in the view. This is a deep refresh, meaning
    * that it will clear the view and reload all statements from the
@@ -43,6 +83,7 @@ export class FlinkStatementsViewProvider
   async refresh(): Promise<void> {
     // Out with any existing subjects.
     this.resourcesInTreeView.clear();
+    this.statementManager.clearClient(this.managerClientId);
 
     if (this.resource !== null) {
       // Immediately inform the view that we (temporarily) have no data so it will clear.
@@ -56,7 +97,20 @@ export class FlinkStatementsViewProvider
         async () => {
           // Fetch statements, remember them, and indicate to the view that we have new data.
           const statements = await loader.getFlinkStatements(this.resource!);
-          statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
+          const nonTerminalStatements: FlinkStatement[] = [];
+          statements.forEach((r: FlinkStatement) => {
+            this.resourcesInTreeView.set(r.id, r);
+            if (!r.isTerminal) {
+              nonTerminalStatements.push(r);
+            }
+          });
+
+          if (nonTerminalStatements.length > 0) {
+            // Set up to monitor the statements for changes.
+            this.statementManager.register(this.managerClientId, nonTerminalStatements);
+          }
+
+          // inform the view that we have new toplevel data.
           this._onDidChangeTreeData.fire();
         },
         false,
