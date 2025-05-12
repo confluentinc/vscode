@@ -4,13 +4,15 @@ import {
   GetSqlv1StatementResult200Response,
   SqlV1StatementResultResults,
   StatementResultsSqlV1Api,
+  StatementsSqlV1Api,
 } from "./clients/flinkSql";
-import { ResponseError } from "./clients/sidecar";
 import { showJsonPreview } from "./documentProviders/message";
-import { logError } from "./errors";
+import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
+import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
-import { FlinkStatement } from "./models/flinkStatement";
+import { FlinkStatement, modelFlinkStatementToRest } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
+import { SidecarHandle } from "./sidecar";
 import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
@@ -20,14 +22,15 @@ type MessageType =
   | "GetResultsCount"
   | "GetSchema"
   | "GetMaxSize"
-  | "ResultLimitChange"
   | "GetStreamState"
   | "GetStreamError"
   | "PreviewResult"
   | "PreviewAllResults"
   | "Search"
   | "GetSearchQuery"
-  | "SetVisibleColumns";
+  | "SetVisibleColumns"
+  | "GetStatementMeta"
+  | "StopStatement";
 
 type StreamState = "running" | "completed";
 
@@ -51,20 +54,25 @@ export class FlinkStatementResultsManager {
   private _latestError: Signal<{ message: string } | null>;
   private _isResultsFull: Signal<boolean>;
   private _pollingInterval: NodeJS.Timeout | undefined;
-  private _shouldPoll: Signal<boolean>;
   /** Filter by substring text query. */
   private _searchQuery: Signal<string | null>;
   private _visibleColumns: Signal<string[] | null>;
   private _filteredResults: Signal<any[]>;
+  private _fetchCount = 0;
+  private _statementRefreshInterval: NodeJS.Timeout | undefined;
+
+  private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
+  private _flinkStatementsSqlApi: StatementsSqlV1Api;
 
   constructor(
     private os: Scope,
     private statement: FlinkStatement,
-    private service: StatementResultsSqlV1Api,
-    private schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
+    private sidecar: SidecarHandle,
     private notifyUI: () => void,
     private resultLimit: number,
     private resultsPollingIntervalMs: number = 800,
+    private statementRefreshIntervalMs: number = 2000,
+    private readonly resourceLoader: CCloudResourceLoader = CCloudResourceLoader.getInstance(),
   ) {
     this._results = os.signal(new Map<string, any>());
     this._state = os.signal<StreamState>("running");
@@ -72,10 +80,13 @@ export class FlinkStatementResultsManager {
     this._latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
     this._latestError = os.signal<{ message: string } | null>(null);
     this._isResultsFull = os.signal(false);
-    this._shouldPoll = os.derive<boolean>(() => this._state() === "running" && this._moreResults());
     this._searchQuery = os.signal<string | null>(null);
     this._visibleColumns = os.signal<string[] | null>(null);
     this._filteredResults = os.signal<any[]>([]);
+
+    this._flinkStatementResultsSqlApi = sidecar.getFlinkSqlStatementResultsApi(statement);
+    this._flinkStatementsSqlApi = sidecar.getFlinkSqlStatementsApi(statement);
+
     this.setupPolling();
   }
 
@@ -83,6 +94,11 @@ export class FlinkStatementResultsManager {
     this._pollingInterval = setInterval(
       this.fetchResults.bind(this),
       this.resultsPollingIntervalMs,
+    );
+
+    this._statementRefreshInterval = setInterval(
+      this.refreshStatement.bind(this),
+      this.statementRefreshIntervalMs,
     );
 
     // Watch for results full state
@@ -106,25 +122,35 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  private async refreshStatement() {
+    const refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
+    if (refreshedStatement) {
+      this.statement = refreshedStatement;
+      this.notifyUI();
+    }
+  }
+
   async fetchResults(): Promise<void> {
-    if (!this._shouldPoll()) {
+    if (this._state() !== "running" || !this._moreResults() || !this.statement.isResultsViewable) {
+      // Self-destruct
+      clearInterval(this._pollingInterval);
+      this._pollingInterval = undefined;
       return;
     }
 
     let reportable: { message: string } | null = null;
     let shouldComplete = false;
+    this._fetchCount++;
 
     try {
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-      const response = await this.schedule(() =>
-        this.service.getSqlv1StatementResult({
-          environment_id: this.statement.environmentId,
-          organization_id: this.statement.organizationId,
-          name: this.statement.name,
-          page_token: pageToken,
-        }),
-      );
+      const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
+        environment_id: this.statement.environmentId,
+        organization_id: this.statement.organizationId,
+        name: this.statement.name,
+        page_token: pageToken,
+      });
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       this.os.batch(() => {
@@ -149,7 +175,7 @@ export class FlinkStatementResultsManager {
     } catch (error) {
       if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
 
-      if (error instanceof ResponseError) {
+      if (isResponseError(error)) {
         const payload = await error.response.json();
         if (!payload?.aborted) {
           const status = error.response.status;
@@ -228,6 +254,47 @@ export class FlinkStatementResultsManager {
     );
   }
 
+  private async stopStatement(): Promise<void> {
+    const MAX_RETRIES = 5;
+    const INITIAL_BACKOFF_MS = 100;
+    const MAX_BACKOFF_MS = 10_000;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        await this.refreshStatement();
+        await this._flinkStatementsSqlApi.updateSqlv1Statement({
+          organization_id: this.statement.organizationId,
+          environment_id: this.statement.environmentId,
+          statement_name: this.statement.name,
+          UpdateSqlv1StatementRequest: {
+            ...modelFlinkStatementToRest(this.statement),
+            spec: {
+              ...this.statement.spec,
+              stopped: true,
+            },
+          },
+        });
+        return;
+      } catch (err) {
+        // 409 means we didn't send the PUT request with the latest statement spec, so we retry
+        if (isResponseErrorWithStatus(err, 409)) {
+          if (attempt < MAX_RETRIES - 1) {
+            const backoffMs = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
+            logger.info(
+              `Retrying stop statement after 409 conflict. Attempt ${attempt + 1}/${MAX_RETRIES}. Waiting ${backoffMs}ms`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, backoffMs));
+          }
+        } else {
+          // If it's not a 409 or we're out of retries, log and throw
+          logError(err, "Failed to stop Flink statement");
+          this._latestError({ message: "Failed to stop Flink statement" });
+          break;
+        }
+      }
+    }
+  }
+
   handleMessage(type: MessageType, body: any): any {
     switch (type) {
       case "GetResults": {
@@ -284,19 +351,25 @@ export class FlinkStatementResultsManager {
           result: content,
         };
       }
-      case "ResultLimitChange": {
-        const newLimit = body.limit;
-        this.resultLimit = newLimit;
-        this._results(new Map<string, any>());
-        this._isResultsFull(false);
-        this._state("running");
-        return null;
-      }
       case "GetStreamState": {
         return this._state();
       }
       case "GetStreamError": {
         return this._latestError();
+      }
+      case "GetStatementMeta": {
+        return {
+          name: this.statement.name,
+          status: this.statement.status?.phase,
+          startTime: this.statement.metadata?.created_at ?? null,
+          detail: this.statement.status?.detail ?? null,
+          failed: this.statement.failed,
+          stoppable: this.statement.stoppable,
+          isResultsViewable: this.statement.isResultsViewable,
+        };
+      }
+      case "StopStatement": {
+        return this.stopStatement();
       }
       default: {
         const _exhaustiveCheck: never = type;
@@ -314,6 +387,11 @@ export class FlinkStatementResultsManager {
   dispose() {
     if (this._pollingInterval) {
       clearInterval(this._pollingInterval);
+      this._pollingInterval = undefined;
+    }
+    if (this._statementRefreshInterval) {
+      clearInterval(this._statementRefreshInterval);
+      this._statementRefreshInterval = undefined;
     }
   }
 }
