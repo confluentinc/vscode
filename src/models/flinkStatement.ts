@@ -337,4 +337,3 @@ export function restFlinkStatementToModel(
     status: restFlinkStatement.status,
   });
 }
-
