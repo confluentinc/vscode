@@ -77,7 +77,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     // no header needed
     resultParts.push(...(result.content as LanguageModelTextPart[]));
     const resultsFooter = new LanguageModelTextPart(
-      `If the user is interested in a specific project template, provde the template's 'ID' with the "get_templateOptions" tool to determine what inputs they need to provide.`,
+      `Summarize all of the above project templates for the user. If the user is interested in a specific project template, provide the template's 'ID' with the "get_templateOptions" tool to determine what inputs they need to provide.`,
     );
     resultParts.push(resultsFooter);
 

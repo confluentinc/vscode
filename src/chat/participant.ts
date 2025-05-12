@@ -22,7 +22,7 @@ import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
-import { systemMessage, userMessage } from "./messageTypes";
+import { participantMessage, systemMessage, toolMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
 import { summarizeChatHistory } from "./summarizers/chatHistory";
 import { BaseLanguageModelTool } from "./tools/base";
@@ -217,7 +217,7 @@ export async function handleChatMessage(
           params: toolCall.input,
         });
         let toolResultPart: LanguageModelToolResultPart;
-        let status: "success" | "error" | undefined;
+        let status: "success" | "error" = "success";
         try {
           toolResultPart = await tool.processInvocation(request, stream, toolCall, token);
 
@@ -232,17 +232,16 @@ export async function handleChatMessage(
         } catch (error) {
           const errorMsg = `Error processing tool "${toolCall.name}": ${error}`;
           logger.error(errorMsg);
-          toolResultPart = new LanguageModelToolResultPart(toolCall.callId, [errorMsg]);
+          toolResultPart = new LanguageModelToolResultPart(toolCall.callId, [
+            new LanguageModelTextPart(errorMsg),
+          ]);
           status = "error";
         }
         // add the Assistant message for the LanguageModelToolCallPart,
         // then a User message for the LanguageModelToolResultPart
         messages.push(
-          // participantMessage([toolCall]),
-          LanguageModelChatMessage.User([toolResultPart]),
-          systemMessage(
-            "Tool execution complete. Please provide a complete response without calling the same tool again.",
-          ),
+          participantMessage([toolCall]),
+          toolMessage(toolCall.name, [toolResultPart], status),
         );
 
         toolCallsMade.add(JSON.stringify(toolCall));
@@ -335,9 +334,7 @@ export function logChatMessages(messages: LanguageModelChatMessage[]): string {
     });
   });
 
-  // Log the output using the specified logger and level
   const formattedOutput = output.join("\n");
   logger.debug(formattedOutput);
-
   return formattedOutput;
 }

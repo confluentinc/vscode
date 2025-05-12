@@ -36,7 +36,7 @@ export function systemMessage(message: string) {
  * Returns a {@link LanguageModelChatMessage.User User message} with a "tool" tag to clearly
  * distinguish it from other `User` message implementations.
  *
- * This should be used to wrap the result(s) of a tool invocation.
+ * This should be used to wrap the {@link LanguageModelToolResultPart}s of a tool invocation.
  */
 export function toolMessage(
   toolName: string,
