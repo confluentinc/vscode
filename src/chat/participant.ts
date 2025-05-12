@@ -166,6 +166,11 @@ export async function handleChatMessage(
   const chatTools: LanguageModelChatTool[] = registeredTools.map(
     (tool: BaseLanguageModelTool<any>) => tool.toChatTool(),
   );
+  // keep this around for debugging new tools to make sure they are registered correctly
+  logger.debug(
+    "registered tools:",
+    chatTools.map((tool) => tool.name),
+  );
   const requestOptions: LanguageModelChatRequestOptions = {
     tools: chatTools,
     toolMode: LanguageModelChatToolMode.Auto,
