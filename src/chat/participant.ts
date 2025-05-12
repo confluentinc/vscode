@@ -11,6 +11,7 @@ import {
   LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
+  LanguageModelChatTool,
   LanguageModelChatToolMode,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
@@ -25,7 +26,6 @@ import { participantMessage, systemMessage, toolMessage, userMessage } from "./m
 import { parseReferences } from "./references";
 import { summarizeChatHistory } from "./summarizers/chatHistory";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./tools/base";
-import { ListTemplatesTool } from "./tools/listTemplates";
 import { getToolMap } from "./tools/toolMap";
 import { ToolCallMetadata } from "./tools/types";
 
@@ -162,8 +162,12 @@ export async function handleChatMessage(
   const maxIterations = 10; // TODO: make this user-configurable?
 
   // inform the model that tools can be invoked as part of the response stream
+  const registeredTools: BaseLanguageModelTool<any>[] = Array.from(getToolMap().values());
+  const chatTools: LanguageModelChatTool[] = registeredTools.map(
+    (tool: BaseLanguageModelTool<any>) => tool.toChatTool(),
+  );
   const requestOptions: LanguageModelChatRequestOptions = {
-    tools: [new ListTemplatesTool().toChatTool()],
+    tools: chatTools,
     toolMode: LanguageModelChatToolMode.Auto,
   };
   // determine whether or not to continue sending chat requests to the model as a result of any tool
