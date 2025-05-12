@@ -56,11 +56,14 @@ async function resourceScaffoldProjectRequest(
 ) {
   if (item instanceof KafkaCluster) {
     const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
-    return await scaffoldProjectRequest({
-      bootstrap_server: bootstrapServers,
-      cc_bootstrap_server: bootstrapServers,
-      templateType: "kafka",
-    });
+    return await scaffoldProjectRequest(
+      {
+        bootstrap_server: bootstrapServers,
+        cc_bootstrap_server: bootstrapServers,
+        templateType: "kafka",
+      },
+      "cluster",
+    );
   } else if (item instanceof KafkaTopic) {
     const clusters = await ResourceLoader.getInstance(
       item.connectionId,
@@ -71,28 +74,37 @@ async function resourceScaffoldProjectRequest(
       return;
     }
     const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
-    return await scaffoldProjectRequest({
-      bootstrap_server: bootstrapServers,
-      cc_bootstrap_server: bootstrapServers,
-      cc_topic: item.name,
-      topic: item.name,
-      templateType: "kafka",
-    });
+    return await scaffoldProjectRequest(
+      {
+        bootstrap_server: bootstrapServers,
+        cc_bootstrap_server: bootstrapServers,
+        cc_topic: item.name,
+        topic: item.name,
+        templateType: "kafka",
+      },
+      "topic",
+    );
   } else if (item instanceof CCloudFlinkComputePool) {
     const organization: CCloudOrganization | undefined =
       await CCloudResourceLoader.getInstance().getOrganization();
-    return await scaffoldProjectRequest({
-      cc_environment_id: item.environmentId,
-      cc_organization_id: organization?.id,
-      cloud_region: item.region,
-      cloud_provider: item.provider,
-      cc_compute_pool_id: item.id,
-      templateType: "flink",
-    });
+    return await scaffoldProjectRequest(
+      {
+        cc_environment_id: item.environmentId,
+        cc_organization_id: organization?.id,
+        cloud_region: item.region,
+        cloud_provider: item.provider,
+        cc_compute_pool_id: item.id,
+        templateType: "flink",
+      },
+      "compute pool",
+    );
   }
 }
 
-export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledTemplateOptions) => {
+export const scaffoldProjectRequest = async (
+  templateRequestOptions?: PrefilledTemplateOptions,
+  telemetrySource?: string,
+): Promise<PostResponse> => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
   const templateType = templateRequestOptions?.templateType;
   try {
@@ -119,7 +131,8 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
 
       pickedTemplate = await pickTemplate(templateList);
     } else if (templateRequestOptions && templateRequestOptions.templateName) {
-      // Handling from a URI where there is a template name matched and quickpick is not needed
+      // Handling from a URI (or Copilot tool invocation) where there is a template name matched and
+      // showing a quickpick is not needed
       pickedTemplate = templateList.find(
         (template) => template.spec!.name === templateRequestOptions.templateName,
       );
@@ -133,7 +146,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
           },
         });
         showErrorNotificationWithButtons(errMsg);
-        return;
+        return { success: false, message: errMsg };
       }
     } else {
       // If no arguments are passed, show all templates
@@ -142,25 +155,14 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
-    return;
+    return { success: false, message: "Failed to retrieve template list" };
   }
 
   if (!pickedTemplate) {
     // user canceled the quickpick
-    return;
+    return { success: false, message: "Project generation cancelled." };
   }
 
-  let telemetrySource: string | undefined;
-  if (templateRequestOptions?.templateName) {
-    // only URIs will specify the templateName
-    telemetrySource = "uri";
-  } else if (templateRequestOptions?.topic) {
-    // no templateName, but we have a topic name so this must've come from a topic tree item
-    telemetrySource = "topic";
-  } else if (templateRequestOptions?.bootstrap_server) {
-    // no templateName, but we have a bootstrap_server (but no topic name) so this must've come from a Kafka cluster tree item
-    telemetrySource = "cluster";
-  }
   logUsage(UserEvent.ProjectScaffoldingAction, {
     status: "template picked",
     templateCollection: pickedTemplate.spec!.template_collection?.id,
@@ -181,7 +183,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
 
   if (wasExisting) {
     optionsForm.reveal();
-    return;
+    return { success: true, message: "Form already open" };
   }
 
   /** Stores a map of options with key: value pairs that is then updated on form input
@@ -248,6 +250,8 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   };
   const disposable = handleWebviewMessage(optionsForm.webview, processMessage);
   optionsForm.onDidDispose(() => disposable.dispose());
+
+  return { success: true, message: "Form opened" };
 };
 
 export async function applyTemplate(
@@ -467,11 +471,14 @@ export async function handleProjectScaffoldUri(
     async (progress) => {
       progress.report({ message: "Applying template..." });
       if (isFormNeeded) {
-        return await scaffoldProjectRequest({
-          templateCollection: collection,
-          templateName: template,
-          ...options,
-        });
+        return await scaffoldProjectRequest(
+          {
+            templateCollection: collection,
+            templateName: template,
+            ...options,
+          },
+          "uri",
+        );
       }
       return await applyTemplate(
         {
@@ -501,11 +508,14 @@ export async function handleProjectScaffoldUri(
         });
       }
       // show the form so the user can adjust inputs as needed
-      await scaffoldProjectRequest({
-        templateCollection: collection,
-        templateName: template,
-        ...options,
-      });
+      await scaffoldProjectRequest(
+        {
+          templateCollection: collection,
+          templateName: template,
+          ...options,
+        },
+        "uri",
+      );
     } else {
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "URI handling succeeded",
