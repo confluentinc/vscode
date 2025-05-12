@@ -9,7 +9,7 @@ import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/co
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
@@ -208,7 +208,7 @@ export async function submitFlinkStatementCommand(
     const restResponse = await submitFlinkStatement(submission);
     const newStatement = restFlinkStatementToModel(restResponse, computePool);
 
-    if (newStatement.status.phase === FAILED_PHASE) {
+    if (newStatement.status.phase === Phase.FAILED) {
       // Immediate failure of the statement. User gave us something
       // bad, like perhaps a bad table / column name, etc..
 
