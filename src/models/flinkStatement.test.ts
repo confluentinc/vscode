@@ -145,13 +145,13 @@ describe("FlinkStatement", () => {
         expected: true,
       },
       {
-        name: "should not be viewable when statement is INSERT_INTO",
+        name: "should be viewable when statement is INSERT_INTO",
         statement: {
           phase: Phase.RUNNING,
           sqlKind: "INSERT_INTO",
           createdAt: today,
         },
-        expected: false,
+        expected: true,
       },
       {
         name: "should not be viewable when statement is FAILED",

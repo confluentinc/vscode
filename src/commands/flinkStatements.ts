@@ -242,19 +242,16 @@ export async function submitFlinkStatementCommand(
     await statementsView.setParentResource(computePool);
     await statementsView.focus(newStatement.id);
 
-    // Wait for statement to be running and show results
-    if (newStatement.canHaveResults) {
-      // Will resolve when the statement is in a viewable state and
-      // the results viewer is open.
-      await waitAndShowResults(newStatement);
+    // Will resolve when the statement is in a viewable state and
+    // the results viewer is open.
+    await waitAndShowResults(newStatement);
 
-      // Refresh the statements view again to show the new state of the statement.
-      // (This is a whole empty + reload of view data, so have to wait until it's done.
-      //  before we can focus our new statement.)
-      await statementsView.refresh();
-      // Focus again, but don't need to wait for it.
-      void statementsView.focus(newStatement.id);
-    }
+    // Refresh the statements view again to show the new state of the statement.
+    // (This is a whole empty + reload of view data, so have to wait until it's done.
+    //  before we can focus our new statement.)
+    await statementsView.refresh();
+    // Focus again, but don't need to wait for it.
+    void statementsView.focus(newStatement.id);
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
 

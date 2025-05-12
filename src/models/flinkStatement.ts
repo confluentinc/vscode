@@ -144,11 +144,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return (this.sqlKind ?? "") === "INSERT_INTO";
   }
 
-  /** All statements but background statements can have results */
-  get canHaveResults(): boolean {
-    return !this.isBackground;
-  }
-
   /**
    * Update this FlinkStatement with metadata, status, spec from another FlinkStatement.
    *
@@ -183,7 +178,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     }
 
     return (
-      this.canHaveResults &&
       this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS &&
       [Phase.PENDING, Phase.RUNNING, Phase.COMPLETED].includes(this.phase as Phase)
     );
