@@ -6,7 +6,27 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- Configurable default settings for `compute pool` and `database` for FlinkSQL operations
+- Can submit new SQL statements to a Flink compute pool
+- Can view SQL statement results
+- Configurable default settings for `compute pool` and `database` for Flink operations
+- Codelenses for Flink SQL documents to support:
+  - submitting statements
+  - signing in to CCloud
+  - setting a compute pool
+  - setting a catalog and database
+  - updating default pool/database settings
+
+## 1.2.1
+
+### Fixed
+
+- If the route call fails while fetching Schema Registry subject names while populating the topics
+  view, show a warning but continue on with no schema associations for the topics.
+- Sidecar version update to include a fix for listing subjects.
+- Selecting resources from a quickpick should no longer throw a "No current organization found"
+  error when the user is not logged into Confluent Cloud.
+- Selecting the 'Generate Project from Resource' context item on a single direct connection topic
+  should no longer display an error
 
 ## 1.2.0
 

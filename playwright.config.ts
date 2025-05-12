@@ -4,7 +4,17 @@ import { configDotenv } from "dotenv";
 configDotenv();
 
 export default defineConfig({
-  testMatch: "*.spec.ts",
+  use: {
+    headless: true,
+    viewport: { width: 1920, height: 1080 },
+  },
+  timeout: 60000,
+  workers: 1,
+  expect: {
+    timeout: 10000,
+  },
+  globalSetup: "./tests/e2e/setup.ts",
+  testMatch: "**/*.spec.ts",
   reporter: [
     ["list"],
     ["rollwright/coverage-reporter", { name: "text" }],

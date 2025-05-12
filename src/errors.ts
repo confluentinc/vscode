@@ -30,6 +30,7 @@ export type AnyResponseError =
   | ScaffoldingServiceResponseError
   | DockerResponseError;
 
+/** Was this an error raised when any of our OpenAPI clients tried to digest a response? */
 export function isResponseError(error: unknown): error is AnyResponseError {
   return (
     error instanceof SidecarResponseError ||
@@ -41,6 +42,14 @@ export function isResponseError(error: unknown): error is AnyResponseError {
     error instanceof ScaffoldingServiceResponseError ||
     error instanceof DockerResponseError
   );
+}
+
+/** Was this a response error with the given http response code? */
+export function isResponseErrorWithStatus(
+  error: unknown,
+  statusCode: number,
+): error is AnyResponseError {
+  return isResponseError(error) && error.response.status === statusCode;
 }
 
 export async function extractResponseBody(error: unknown): Promise<any> {

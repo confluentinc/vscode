@@ -34,6 +34,7 @@ const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
+export const e2e = series(clean, build, testBuild, e2eRun);
 export const liveTest = series(clean, build, testBuild);
 liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
@@ -593,7 +594,7 @@ testBuild.description =
   "Build test files for running tests via `gulp testRun` or through the VS Code test runner. Use --coverage to enable coverage reporting.";
 export async function testBuild() {
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
-  const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts"]);
+  const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts", "tests/**/*.ts"]);
   const entryMap = Object.fromEntries(
     testFiles.map((filename) => [filename.slice(0, -extname(filename).length), filename]),
   );
@@ -616,6 +617,10 @@ export async function testBuild() {
         enabled: reportCoverage,
         include: ["src/**/*.ts"],
         exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
+      }),
+      copy({
+        copyOnce: true,
+        targets: [{ src: ["tests/fixtures"], dest: join(DESTINATION, "tests") }],
       }),
     ],
     onLog: handleBuildLog,
@@ -642,6 +647,7 @@ export async function testBuild() {
   };
   const bundle = await rollup(testInput);
   await bundle.write(testOutput);
+
   return 0;
 }
 
@@ -719,7 +725,19 @@ function coverage(options) {
 }
 
 export function functional(done) {
-  const result = spawnSync("npx", ["playwright", "test"], { stdio: "inherit", shell: IS_WINDOWS });
+  const result = spawnSync("npx", ["playwright", "test", "src"], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
+  if (result.error) throw result.error;
+  return done(result.status);
+}
+
+export function e2eRun(done) {
+  const result = spawnSync("npx", ["playwright", "test", "tests/e2e"], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
   if (result.error) throw result.error;
   return done(result.status);
 }
@@ -843,13 +861,14 @@ export async function format() {
   return pipeline(
     src([
       "src/**/*.ts",
+      "!src/clients/**/*.ts", // don't reformat apigen generated code
+      "!src/graphql/sidecarGraphQL.d.ts", // don't reformat gql.tada generated code
       "src/**/*.css",
       "src/**/*.html",
       "src/**/*.json",
       "src/**/*.graphql",
       "*.md",
       "*.js",
-      "src/clients/sidecar-openapi-specs/*.yaml",
     ]),
     transform,
     dest((file) => file.base),

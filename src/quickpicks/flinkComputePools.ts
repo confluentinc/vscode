@@ -40,7 +40,9 @@ export async function flinkComputePoolQuickPickWithViewProgress(
  * ---------------------------------- Confluent Cloud: env2
  * ccloud-pool3 (lfcp-id3)
  */
-export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePool | undefined> {
+export async function flinkComputePoolQuickPick(
+  filterPredicate?: (pool: CCloudFlinkComputePool) => boolean,
+): Promise<CCloudFlinkComputePool | undefined> {
   const loader = CCloudResourceLoader.getInstance();
   const environments: Environment[] = await loader.getEnvironments();
   const computePools: CCloudFlinkComputePool[] = [];
@@ -106,6 +108,9 @@ export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePoo
 
   let lastSeparator: string = "";
   for (const pool of computePools) {
+    if (filterPredicate && !filterPredicate(pool)) {
+      continue;
+    }
     const environment: Environment | undefined = environments.find(
       (env) => env.id === pool.environmentId,
     );

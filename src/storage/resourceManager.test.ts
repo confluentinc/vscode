@@ -1,4 +1,6 @@
 import * as assert from "assert";
+import { randomUUID } from "crypto";
+import { Uri } from "vscode";
 import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -13,6 +15,7 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import {
   ConnectionSpec,
@@ -25,7 +28,7 @@ import { ConnectionId, EnvironmentId } from "../models/resource";
 import { Subject } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { WorkspaceStorageKeys } from "./constants";
+import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
@@ -38,6 +41,7 @@ import {
   ResourceManager,
   stringToMap,
 } from "./resourceManager";
+import { UriMetadata, UriMetadataMap } from "./types";
 
 describe("ResourceManager (CCloud) environment methods", function () {
   let storageManager: StorageManager;
@@ -566,8 +570,6 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 describe("ResourceManager Kafka topic methods", function () {
   let storageManager: StorageManager;
   let ccloudTopics: KafkaTopic[];
-  let otherCcloudCluster: CCloudKafkaCluster;
-  let otherCcloudClusterTopics: KafkaTopic[];
 
   before(async () => {
     // extension needs to be activated before storage manager can be used
@@ -575,19 +577,6 @@ describe("ResourceManager Kafka topic methods", function () {
     ccloudTopics = [
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
-    ];
-
-    otherCcloudCluster = CCloudKafkaCluster.create({
-      ...TEST_CCLOUD_KAFKA_CLUSTER,
-      id: "other-cluster-id",
-    });
-
-    otherCcloudClusterTopics = [
-      KafkaTopic.create({
-        ...TEST_CCLOUD_KAFKA_TOPIC,
-        name: "test-ccloud-topic-3",
-        clusterId: otherCcloudCluster.id,
-      }),
     ];
   });
 
@@ -957,6 +946,144 @@ describe("ResourceManager general utility methods", function () {
     assert.deepStrictEqual(missingClusters, new Map());
     const missingSchemaRegistries = await resourceManager.getCCloudSchemaRegistries();
     assert.deepStrictEqual(missingSchemaRegistries, new Map());
+  });
+});
+
+describe("ResourceManager Uri metadata methods", () => {
+  let resourceManager: ResourceManager;
+  let storageManager: StorageManager;
+
+  const testUri: Uri = Uri.parse("file:///test-file.sql");
+  const testMetadata: UriMetadata = {
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+  };
+
+  before(async () => {
+    // extension needs to be activated before storage manager can be used
+    await getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
+    storageManager = await getTestStorageManager();
+    resourceManager = getResourceManager();
+
+    // fresh slate for each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    // clean up after each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  it("should set and get Uri metadata correctly", async () => {
+    await resourceManager.setUriMetadata(testUri, testMetadata);
+    const retrievedMetadata: UriMetadata | undefined =
+      await resourceManager.getUriMetadata(testUri);
+
+    assert.deepStrictEqual(retrievedMetadata, testMetadata);
+  });
+
+  it("should return undefined when getting metadata for Uri that has no metadata", async () => {
+    const nonExistentUri = Uri.parse("file:///non-existent-file.sql");
+    const retrievedMetadata: UriMetadata | undefined =
+      await resourceManager.getUriMetadata(nonExistentUri);
+
+    assert.strictEqual(retrievedMetadata, undefined);
+  });
+
+  it("should delete Uri metadata correctly", async () => {
+    // set initial metadata
+    await resourceManager.setUriMetadata(testUri, testMetadata);
+    let retrievedMetadata: UriMetadata | undefined = await resourceManager.getUriMetadata(testUri);
+    assert.deepStrictEqual(retrievedMetadata, testMetadata);
+
+    // delete and verify it's gone
+    await resourceManager.deleteUriMetadata(testUri);
+    retrievedMetadata = await resourceManager.getUriMetadata(testUri);
+    assert.strictEqual(retrievedMetadata, undefined);
+  });
+
+  it("should update existing metadata when setting new metadata for the same Uri", async () => {
+    // set initial metadata
+    await resourceManager.setUriMetadata(testUri, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+    });
+    // update with new metadata
+    const newPoolId = "updated-compute-pool-id";
+    await resourceManager.setUriMetadata(testUri, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: newPoolId,
+    });
+    // make sure the merged metadata is correct
+    const retrievedMetadata: UriMetadata | undefined =
+      await resourceManager.getUriMetadata(testUri);
+
+    assert.deepStrictEqual(retrievedMetadata, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: newPoolId, // not TEST_CCLOUD_FLINK_COMPUTE_POOL_ID
+    });
+  });
+
+  it("should set and get individual Uri metadata key/value pairs correctly", async () => {
+    const poolId = randomUUID();
+    await resourceManager.setUriMetadataValue(
+      testUri,
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
+      poolId,
+    );
+
+    const retrievedValue = await resourceManager.getUriMetadataValue(
+      testUri,
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
+    );
+
+    assert.strictEqual(retrievedValue, poolId);
+  });
+
+  it("should return undefined when getting a metadata value that doesn't exist", async () => {
+    // no preloading metadata for this test
+    const value = await resourceManager.getUriMetadataValue(
+      testUri,
+      UriMetadataKeys.FLINK_COMPUTE_POOL_ID,
+    );
+
+    assert.strictEqual(value, undefined);
+  });
+
+  it("should handle multiple Uris with different metadata sequentially", async () => {
+    const uri1 = Uri.parse("file:///path1/file1.sql");
+    const uri2 = Uri.parse("file:///path2/file2.sql");
+
+    const metadata1 = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool1" };
+    const metadata2 = { [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool2" };
+
+    await resourceManager.setUriMetadata(uri1, metadata1);
+    await resourceManager.setUriMetadata(uri2, metadata2);
+
+    const retrieved1: UriMetadata | undefined = await resourceManager.getUriMetadata(uri1);
+    const retrieved2: UriMetadata | undefined = await resourceManager.getUriMetadata(uri2);
+
+    assert.deepStrictEqual(retrieved1, metadata1);
+    assert.deepStrictEqual(retrieved2, metadata2);
+  });
+
+  it("should clear all Uri metadata when deleteAllUriMetadata is called", async () => {
+    // set multiple Uris with metadata
+    const uri1 = Uri.parse("file:///path1/file1.sql");
+    const uri2 = Uri.parse("file:///path2/file2.sql");
+    await resourceManager.setUriMetadata(uri1, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool1",
+    });
+    await resourceManager.setUriMetadata(uri2, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "pool2",
+    });
+    // verify they exist
+    const allMetadata: UriMetadataMap = await resourceManager.getAllUriMetadata();
+    assert.strictEqual(allMetadata.size, 2);
+
+    await resourceManager.deleteAllUriMetadata();
+
+    const emptyMetadata: UriMetadataMap = await resourceManager.getAllUriMetadata();
+    assert.strictEqual(emptyMetadata.size, 0);
   });
 });
 

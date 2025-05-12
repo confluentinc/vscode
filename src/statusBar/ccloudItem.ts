@@ -1,7 +1,6 @@
-import { StatusBarAlignment, StatusBarItem, ThemeColor, window } from "vscode";
+import { StatusBarAlignment, StatusBarItem, window } from "vscode";
 import { CCloudStatusSummary, Incident, ScheduledMaintenance } from "../ccloudStatus/types";
 import { IconNames } from "../constants";
-import { ERROR_BACKGROUND_COLOR_ID, WARNING_BACKGROUND_COLOR_ID } from "./constants";
 import {
   ACTIVE_INCIDENT_STATUS_ORDER,
   ACTIVE_MAINTENANCE_STATUS_ORDER,
@@ -52,14 +51,6 @@ export function updateCCloudStatus(status: CCloudStatusSummary) {
   // only show the number of active incidents and maintenances if there are any
   item.text =
     `$(${IconNames.CONFLUENT_LOGO}) ${activeIncidents.length + activeMaintenances.length || ""}`.trim();
-
-  // active incidents will use the error color; active maintenances will use the warning color
-  // if both are present, the error color will take precedence
-  item.backgroundColor = activeIncidents.length
-    ? new ThemeColor(ERROR_BACKGROUND_COLOR_ID)
-    : activeMaintenances.length
-      ? new ThemeColor(WARNING_BACKGROUND_COLOR_ID)
-      : undefined;
 
   item.tooltip = createStatusSummaryMarkdown(status);
 }

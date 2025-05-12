@@ -1,8 +1,14 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
+import { loadFixture } from "../../tests/fixtures/utils";
+import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
+import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
+import { createResponseError } from "../../tests/unit/testUtils";
 import {
+  GetSqlv1Statement200Response,
   SqlV1StatementList,
   SqlV1StatementListApiVersionEnum,
   SqlV1StatementListDataInner,
@@ -11,9 +17,12 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import * as graphqlEnvs from "../graphql/environments";
+import * as graphqlOrgs from "../graphql/organizations";
+import { restFlinkStatementToModel } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
+import { ResourceManager } from "../storage/resourceManager";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
-import { OrganizationId } from "../models/resource";
 
 describe("CCloudResourceLoader", () => {
   describe("getFlinkStatements", () => {
@@ -22,7 +31,6 @@ describe("CCloudResourceLoader", () => {
     let sandbox: sinon.SinonSandbox;
     let flinkStatementsApiStub: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
 
-    const testOrgId = "01234";
     beforeEach(() => {
       sandbox = sinon.createSandbox();
       resourceLoader = CCloudResourceLoader.getInstance();
@@ -34,7 +42,7 @@ describe("CCloudResourceLoader", () => {
       mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkStatementsApiStub);
       sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
 
-      sandbox.stub(resourceLoader, "getOrganizationId").resolves(testOrgId as OrganizationId);
+      sandbox.stub(resourceLoader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     });
 
     afterEach(() => {
@@ -53,7 +61,7 @@ describe("CCloudResourceLoader", () => {
 
       // Test the args passed to the API.
       const args = flinkStatementsApiStub.listSqlv1Statements.getCall(0).args[0];
-      assert.strictEqual(args.organization_id, testOrgId);
+      assert.strictEqual(args.organization_id, TEST_CCLOUD_ORGANIZATION.id);
       assert.strictEqual(args.environment_id, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
       assert.strictEqual(args.page_size, 100);
       assert.strictEqual(args.page_token, "");
@@ -174,4 +182,123 @@ describe("CCloudResourceLoader", () => {
       };
     }
   }); // getFlinkStatements
-}); // CCloudResourceLoader
+
+  describe("refreshFlinkStatement()", () => {
+    let sandbox: sinon.SinonSandbox;
+    let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let loader: CCloudResourceLoader;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      loader = CCloudResourceLoader.getInstance();
+
+      // stub the sidecar getFlinkSqlStatementsApi API
+      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        sandbox.createStubInstance(sidecar.SidecarHandle);
+      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+      flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+      mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should return the statement if found", async () => {
+      const mockResponse = loadFixture(
+        "flink-statement-results-processing/create-statement-response.json",
+      ) as GetSqlv1Statement200Response;
+
+      flinkSqlStatementsApi.getSqlv1Statement.resolves(mockResponse);
+
+      const expectedStatement = restFlinkStatementToModel(mockResponse, {
+        provider: "aws",
+        region: "us-west-2",
+      });
+
+      const updatedStatement = await loader.refreshFlinkStatement(expectedStatement);
+      assert.deepStrictEqual(updatedStatement, expectedStatement);
+    });
+
+    it("should return null if statement is not found", async () => {
+      // Simulate a 404 error from the API
+      flinkSqlStatementsApi.getSqlv1Statement.rejects(
+        createResponseError(404, "Not Found", "test"),
+      );
+
+      const shouldBeNull = await loader.refreshFlinkStatement(createFlinkStatement());
+      assert.strictEqual(shouldBeNull, null);
+    });
+
+    it("Should raise if non-404 error occurs", async () => {
+      // Simulate a 500 error from the API
+      const error = createResponseError(500, "Internal Server Error", "test");
+      flinkSqlStatementsApi.getSqlv1Statement.rejects(error);
+      const statement = createFlinkStatement();
+      await assert.rejects(async () => {
+        await loader.refreshFlinkStatement(statement);
+      });
+    });
+  }); // refreshFlinkStatement
+
+  describe("doLoadCoarseResources", () => {
+    let resourceLoader: CCloudResourceLoader;
+
+    let sandbox: sinon.SinonSandbox;
+    let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+    let getEnvironmentsStub: sinon.SinonStub;
+    let getCurrentOrganizationStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+
+      resourceLoader = CCloudResourceLoader.getInstance();
+      stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
+      sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
+
+      getEnvironmentsStub = sandbox.stub(graphqlEnvs, "getEnvironments");
+      getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should not throw any errors when no CCloud org is available", async () => {
+      getEnvironmentsStub.resolves([]);
+      getCurrentOrganizationStub.resolves(undefined);
+
+      await resourceLoader["doLoadCoarseResources"]();
+
+      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      assert.strictEqual(resourceLoader["organization"], null);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, []);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudKafkaClusters, []);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSchemaRegistries, []);
+    });
+
+    it("should set CCloud resources when available", async () => {
+      getEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+      getCurrentOrganizationStub.resolves(TEST_CCLOUD_ORGANIZATION);
+
+      await resourceLoader["doLoadCoarseResources"]();
+
+      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      assert.strictEqual(resourceLoader["organization"], TEST_CCLOUD_ORGANIZATION);
+      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, [
+        TEST_CCLOUD_ENVIRONMENT,
+      ]);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setCCloudKafkaClusters,
+        TEST_CCLOUD_ENVIRONMENT.kafkaClusters, // empty array by default
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setCCloudSchemaRegistries,
+        TEST_CCLOUD_ENVIRONMENT.schemaRegistry ? [TEST_CCLOUD_ENVIRONMENT.schemaRegistry] : [],
+      );
+    });
+  });
+});

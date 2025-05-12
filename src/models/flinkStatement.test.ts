@@ -5,6 +5,7 @@ import {
   createFlinkStatement,
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
+import { SqlV1StatementStatus } from "../clients/flinkSql";
 import { IconNames } from "../constants";
 import {
   FlinkStatement,
@@ -17,13 +18,86 @@ import {
 } from "./flinkStatement";
 import { CustomMarkdownString, KeyValuePairArray } from "./main";
 import { EnvironmentId } from "./resource";
-import { SqlV1StatementStatus } from "../clients/flinkSql";
 
 describe("FlinkStatement", () => {
   it("uses name as id", () => {
     const statement = createFlinkStatement({ name: "statement0" });
 
     assert.strictEqual(statement.id, statement.name, "Expect name and id to be the same");
+  });
+
+  describe("update()", () => {
+    it("properly updates metadata, status, and spec when given revised instance same name/env", () => {
+      const statement = createFlinkStatement({
+        name: "statement0",
+        environmentId: "env0" as EnvironmentId,
+        computePoolId: "pool0",
+
+        phase: "RUNNING",
+        detail: "Statement is running",
+        sqlKind: "SELECT",
+        updatedAt: new Date("2023-01-01T00:00:00Z"),
+      });
+
+      const updateWith = createFlinkStatement({
+        name: "statement0",
+        environmentId: "env0" as EnvironmentId,
+
+        // in spec, as if the user updated the statement and changed the compute pool.
+        computePoolId: "pool12",
+
+        // these three in status.
+        phase: "COMPLETED",
+        detail: "Statement is completed",
+        sqlKind: "SELECT",
+
+        // a day later, stored in metadata.
+        updatedAt: new Date("2023-01-02T00:00:00Z"),
+      });
+      statement.update(updateWith);
+      assert.strictEqual(statement.name, updateWith.name);
+      assert.strictEqual(statement.environmentId, updateWith.environmentId);
+      assert.strictEqual(statement.computePoolId, updateWith.computePoolId);
+      assert.strictEqual(statement.phase, updateWith.phase);
+      assert.strictEqual(statement.status.detail, updateWith.status.detail);
+      assert.strictEqual(statement.sqlKind, updateWith.sqlKind);
+      assert.strictEqual(statement.sqlStatement, updateWith.sqlStatement);
+      assert.strictEqual(statement.updatedAt?.toString(), updateWith.updatedAt?.toString());
+      assert.strictEqual(statement.createdAt?.toString(), updateWith.createdAt?.toString());
+    });
+
+    it("throws if name is not the same", () => {
+      const statement = createFlinkStatement({ name: "statement0" });
+      const updateWith = createFlinkStatement({ name: "statement1" });
+
+      assert.throws(
+        () => {
+          statement.update(updateWith);
+        },
+        {
+          message:
+            'Cannot update FlinkStatement "statement0" with instance with different name statement1 or environmentId env-abc123',
+        },
+      );
+    });
+
+    it("throws if environmentId is not the same", () => {
+      const statement = createFlinkStatement({ name: "statement0" });
+      const updateWith = createFlinkStatement({
+        name: "statement0",
+        environmentId: "env1" as EnvironmentId,
+      });
+
+      assert.throws(
+        () => {
+          statement.update(updateWith);
+        },
+        {
+          message:
+            'Cannot update FlinkStatement "statement0" with instance with different name statement0 or environmentId env1',
+        },
+      );
+    });
   });
 });
 

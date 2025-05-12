@@ -1,8 +1,6 @@
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
-import {
-  FlinkStatement,
-} from "../../../src/models/flinkStatement";
+import { FlinkStatement } from "../../../src/models/flinkStatement";
 import { EnvironmentId, OrganizationId } from "../../../src/models/resource";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "./environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "./flinkComputePool";
@@ -20,6 +18,9 @@ export interface CreateFlinkStatementArgs {
   environmentId?: EnvironmentId;
   organizationId?: OrganizationId;
   computePoolId?: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): FlinkStatement {
@@ -28,11 +29,15 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     connectionType: ConnectionType.Ccloud,
     environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT_ID,
     organizationId: overrides.organizationId || TEST_CCLOUD_ORGANIZATION.id,
+    provider: "aws",
+    region: "us-west-2",
+
     name: overrides.name || "statement0",
+
     metadata: {
       self: null,
-      created_at: new Date(),
-      updated_at: new Date(),
+      created_at: overrides.createdAt || new Date(),
+      updated_at: overrides.updatedAt || new Date(),
     },
     status: {
       phase: overrides.phase || "RUNNING",
@@ -43,7 +48,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
         is_append_only: true,
         schema: {},
       },
-      scaling_status: {}
+      scaling_status: {},
     },
     spec: {
       compute_pool_id: overrides.computePoolId || TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,

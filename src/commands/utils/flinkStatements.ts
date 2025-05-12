@@ -1,3 +1,4 @@
+import { getCCloudAuthSession } from "../../authn/utils";
 import {
   CreateSqlv1Statement201Response,
   CreateSqlv1StatementOperationRequest,
@@ -7,6 +8,7 @@ import {
 } from "../../clients/flinkSql";
 import { CCloudResourceLoader } from "../../loaders";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
 
 export class FlinkSpecProperties {
@@ -73,16 +75,24 @@ export class FlinkSpecProperties {
 export async function determineFlinkStatementName(): Promise<string> {
   const parts: string[] = [];
 
-  const userName = process.env.USER || process.env.USERNAME;
-  if (userName) {
-    parts.push(userName);
+  // If we're creating flink statements, then we're ccloud authed. Use their
+  // ccloud account name as primary part of the statement name.
+  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
+  if (ccloudAccountName) {
+    let userNamePart = ccloudAccountName.split("@")[0];
+    // strip anything to the right of any '+' character if present, don't want their
+    // email buckets involved.
+    userNamePart = userNamePart.split("+")[0];
+
+    parts.push(userNamePart);
+  } else {
+    // Wacky. Not ccloud authed?
+    parts.push("unknownuser");
   }
 
   parts.push("vscode");
 
-  const date = new Date();
-  const dateString = date.toISOString().replace(/:/g, "-").replace(/\..*$/, "");
-
+  const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
   parts.push(dateString);
 
   // Can only be lowercase; probably to simplify the
@@ -110,13 +120,16 @@ export async function submitFlinkStatement(
 
   const handle = await getSidecar();
 
-  const organizationId = await ccloudLoader.getOrganizationId();
+  const organization: CCloudOrganization | undefined = await ccloudLoader.getOrganization();
+  if (!organization) {
+    throw new Error("User must be signed in to Confluent Cloud to submit Flink statements.");
+  }
 
   const requestInner: CreateSqlv1StatementRequest = {
     api_version: CreateSqlv1StatementRequestApiVersionEnum.SqlV1,
     kind: CreateSqlv1StatementRequestKindEnum.Statement,
     name: params.statementName,
-    organization_id: organizationId,
+    organization_id: organization.id,
     environment_id: params.computePool.environmentId,
     spec: {
       statement: params.statement,
@@ -126,7 +139,7 @@ export async function submitFlinkStatement(
   };
 
   const request: CreateSqlv1StatementOperationRequest = {
-    organization_id: organizationId,
+    organization_id: organization.id,
     environment_id: params.computePool.environmentId,
     CreateSqlv1StatementRequest: requestInner,
   };
