@@ -268,7 +268,6 @@ export async function handleChatMessage(
 function filterContextHistory(
   history: readonly (ChatRequestTurn | ChatResponseTurn)[],
 ): LanguageModelChatMessage[] {
-  // remove the last message from the history since it is the current request
   logger.debug("context history:\n", JSON.stringify(history, null, 2));
 
   // only use messages where the participant was tagged, or messages where the participant responded
