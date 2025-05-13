@@ -15,10 +15,16 @@ import { ToolCallMetadata } from "./tools/types";
 import { CustomChatResult } from "./types";
 
 const fakeModelInfo = {
-  name: "gpt-4",
-  version: "1.0",
-  vendor: "OpenAI",
-  family: "gpt",
+  id: "gpt-4o",
+  vendor: "copilot",
+  family: "gpt-4o",
+  version: "gpt-4o-2024-11-20",
+  name: "GPT-4o",
+  capabilities: {
+    supportsImageToText: true,
+    supportsToolCalling: true,
+  },
+  maxInputTokens: 63833,
 };
 const fakeErrorDetails: ChatErrorDetails = { message: "Uh oh" };
 
@@ -40,6 +46,52 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  it("should always include modelInfo", () => {
+    // not sending any error details or tool call inputs/contents
+    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
+    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+
+    const result: CustomChatResult = {
+      errorDetails: fakeErrorDetails,
+      metadata: {
+        modelInfo: fakeModelInfo,
+      },
+    };
+    const sanitizedResult = sanitizeFeedbackResult(result);
+
+    assert.deepStrictEqual(sanitizedResult, {
+      modelInfo: fakeModelInfo,
+      // no toolCallNames
+      // no errorDetails
+      // no toolsCalled
+    });
+  });
+
+  it("should include modelInfo even if 'capabilities' is undefined", () => {
+    // not sending any error details or tool call inputs/contents
+    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
+    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+
+    const modelInfoWithoutCapabilities = {
+      ...fakeModelInfo,
+      capabilities: undefined,
+    };
+
+    const result: CustomChatResult = {
+      errorDetails: fakeErrorDetails,
+      metadata: {
+        modelInfo: modelInfoWithoutCapabilities,
+      },
+    };
+    const sanitizedResult = sanitizeFeedbackResult(result);
+    assert.deepStrictEqual(sanitizedResult, {
+      modelInfo: modelInfoWithoutCapabilities,
+      // no toolCallNames
+      // no errorDetails
+      // no toolsCalled
+    });
   });
 
   it("should return an empty result when no configuration options are enabled", () => {

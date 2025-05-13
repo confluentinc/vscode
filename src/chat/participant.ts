@@ -58,6 +58,9 @@ export async function chatHandler(
     family: model.family,
     version: model.version,
     maxInputTokens: model.maxInputTokens,
+    // not part of the interface, but looks something like this:
+    // { supportsImageToText: true, supportsToolCalling: true }
+    capabilities: (model as any).capabilities,
   };
 
   const userPrompt = request.prompt.trim();
