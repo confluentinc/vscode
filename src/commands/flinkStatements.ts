@@ -9,7 +9,7 @@ import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/co
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FAILED_PHASE, FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
@@ -62,7 +62,7 @@ async function waitForStatementRunning(
       // if the statement is no longer found, break to raise error
       logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
       break;
-    } else if (refreshedStatement.isResultsViewable) {
+    } else if (refreshedStatement.areResultsViewable) {
       // Resolve if now in a viewable state
       return;
     }
@@ -208,7 +208,7 @@ export async function submitFlinkStatementCommand(
     const restResponse = await submitFlinkStatement(submission);
     const newStatement = restFlinkStatementToModel(restResponse, computePool);
 
-    if (newStatement.status.phase === FAILED_PHASE) {
+    if (newStatement.status.phase === Phase.FAILED) {
       // Immediate failure of the statement. User gave us something
       // bad, like perhaps a bad table / column name, etc..
 
@@ -242,19 +242,16 @@ export async function submitFlinkStatementCommand(
     await statementsView.setParentResource(computePool);
     await statementsView.focus(newStatement.id);
 
-    // Wait for statement to be running and show results
-    if (newStatement.canHaveResults) {
-      // Will resolve when the statement is in a viewable state and
-      // the results viewer is open.
-      await waitAndShowResults(newStatement);
+    // Will resolve when the statement is in a viewable state and
+    // the results viewer is open.
+    await waitAndShowResults(newStatement);
 
-      // Refresh the statements view again to show the new state of the statement.
-      // (This is a whole empty + reload of view data, so have to wait until it's done.
-      //  before we can focus our new statement.)
-      await statementsView.refresh();
-      // Focus again, but don't need to wait for it.
-      void statementsView.focus(newStatement.id);
-    }
+    // Refresh the statements view again to show the new state of the statement.
+    // (This is a whole empty + reload of view data, so have to wait until it's done.
+    //  before we can focus our new statement.)
+    await statementsView.refresh();
+    // Focus again, but don't need to wait for it.
+    void statementsView.focus(newStatement.id);
   } catch (err) {
     logError(err, "Submit Flink statement unexpected error");
 

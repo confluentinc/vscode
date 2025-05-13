@@ -23,6 +23,41 @@ import {
 const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
 
 export type FlinkStatementId = string & { readonly brand: unique symbol };
+
+/** Statement phases */
+export enum Phase {
+  RUNNING = "RUNNING",
+  DEGRADED = "DEGRADED",
+  COMPLETED = "COMPLETED",
+  STOPPING = "STOPPING",
+  STOPPED = "STOPPED",
+  FAILED = "FAILED",
+  FAILING = "FAILING",
+  DELETING = "DELETING",
+  PENDING = "PENDING",
+}
+
+/**  List of phases considered as failed or failing. */
+export const FAILED_PHASES = [Phase.FAILED, Phase.FAILING];
+
+/**  List of terminal phases. Statements in terminal phase won't ever change on their own. */
+export const TERMINAL_PHASES = [Phase.COMPLETED, Phase.STOPPED, Phase.FAILED];
+
+const VIEWABLE_PHASES = [
+  Phase.PENDING,
+  Phase.RUNNING,
+  Phase.COMPLETED,
+  // Phase.DEGRADED,??
+];
+
+/** Phases which cannot be stopped. */
+export const UNSTOPPABLE_PHASES = [
+  Phase.DELETING,
+  Phase.STOPPING,
+  Phase.FAILING,
+  ...TERMINAL_PHASES,
+];
+
 /**
  * Model for a Flink statement.
  */
@@ -39,7 +74,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   readonly name: string;
 
   // Mutable properties
-  metadata: SqlV1StatementMetadata | undefined;
+  metadata: SqlV1StatementMetadata;
   status: SqlV1StatementStatus;
   spec: SqlV1StatementSpec;
 
@@ -102,8 +137,8 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return TERMINAL_PHASES.includes(this.phase);
   }
 
-  get phase(): string {
-    return this.status.phase;
+  get phase(): Phase {
+    return this.status.phase as Phase;
   }
 
   get sqlKindDisplay(): string | undefined {
@@ -143,11 +178,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return (this.sqlKind ?? "") === "INSERT_INTO";
   }
 
-  /** All statements but background statements can have results */
-  get canHaveResults(): boolean {
-    return !this.isBackground;
-  }
-
   /**
    * Update this FlinkStatement with metadata, status, spec from another FlinkStatement.
    *
@@ -171,21 +201,18 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
 
   /**
    * For statement results to be viewable, it must satisfy these conditions:
-   * 1. The statement must NOT be a background statement (an INSERT INTO statement)
-   * 2. The statement must have been created in the last 24 hours
+   * 1. The statement must have been created in the last 24 hours
    *    (which is the TTL for the statement result to be deleted)
-   * 3. The statement phase must be either RUNNING or COMPLETED.
+   * 2. The statement phase indicates viewable {@see VIEWABLE_PHASES}
    */
-  get isResultsViewable(): boolean {
+  get areResultsViewable(): boolean {
     if (!this.createdAt) {
       return false;
     }
-    const oneDayAgo = new Date().getTime() - ONE_DAY_MILLIS;
 
     return (
-      this.canHaveResults &&
-      this.createdAt.getTime() >= oneDayAgo &&
-      [RUNNING_PHASE, COMPLETED_PHASE].includes(this.phase)
+      this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS &&
+      VIEWABLE_PHASES.includes(this.phase)
     );
   }
 
@@ -197,6 +224,24 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   /** @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model */
   get database(): string | undefined {
     return this.spec.properties?.["sql.current-database"];
+  }
+
+  /** Returns true if the statement is in a failed or failing phase. */
+  get failed(): boolean {
+    return FAILED_PHASES.includes(this.phase);
+  }
+
+  /** Returns true if the statement can be stopped (not in a terminal phase). */
+  get stoppable(): boolean {
+    return !TERMINAL_PHASES.includes(this.phase);
+  }
+
+  get detail(): string | undefined {
+    return this.status?.detail;
+  }
+
+  get startTime(): Date | undefined {
+    return this.metadata?.created_at;
   }
 }
 
@@ -257,21 +302,21 @@ export class FlinkStatementTreeItem extends TreeItem {
    */
   getThemeIcon(): ThemeIcon {
     switch (this.resource.phase.toUpperCase()) {
-      case FAILED_PHASE:
-      case FAILING_PHASE:
+      case Phase.FAILED:
+      case Phase.FAILING:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, STATUS_RED);
-      case DEGRADED_PHASE:
+      case Phase.DEGRADED:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, STATUS_YELLOW);
-      case RUNNING_PHASE:
+      case Phase.RUNNING:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, STATUS_GREEN);
-      case COMPLETED_PHASE:
+      case Phase.COMPLETED:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, STATUS_GRAY);
-      case DELETING_PHASE:
-      case STOPPING_PHASE:
+      case Phase.DELETING:
+      case Phase.STOPPING:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, STATUS_GRAY);
-      case STOPPED_PHASE:
+      case Phase.STOPPED:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, STATUS_BLUE);
-      case PENDING_PHASE:
+      case Phase.PENDING:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
       default:
         return new ThemeIcon(IconNames.FLINK_STATEMENT);
@@ -288,22 +333,6 @@ export const STATUS_BLUE = new ThemeColor("notificationsInfoIcon.foreground");
 // there aren't as many green or gray options to choose from without using `chart` colors
 export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
-
-// Statement phases
-// TODO make convience boolean properies in FlinkStatement class
-// so that we can do things like `statement.isRunning()` or `statement.isFailed()`
-
-export const RUNNING_PHASE = "RUNNING";
-export const DEGRADED_PHASE = "DEGRADED";
-export const COMPLETED_PHASE = "COMPLETED";
-export const STOPPING_PHASE = "STOPPING";
-export const STOPPED_PHASE = "STOPPED";
-export const FAILED_PHASE = "FAILED";
-export const FAILING_PHASE = "FAILING";
-export const DELETING_PHASE = "DELETING";
-export const PENDING_PHASE = "PENDING";
-
-export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
 
 /**
  * Convert a from-REST API depiction of a Flink statement to
@@ -330,7 +359,7 @@ export function restFlinkStatementToModel(
     name: restFlinkStatement.name!,
 
     spec: restFlinkStatement.spec,
-    metadata: restFlinkStatement.metadata,
+    metadata: restFlinkStatement.metadata!,
     status: restFlinkStatement.status,
   });
 }

@@ -10,6 +10,7 @@ import { IconNames } from "../constants";
 import {
   FlinkStatement,
   FlinkStatementTreeItem,
+  Phase,
   STATUS_BLUE,
   STATUS_GRAY,
   STATUS_GREEN,
@@ -37,7 +38,7 @@ describe("FlinkStatement", () => {
     }
 
     // not necessarily all the nonterminal phases, but enough to prove the point.
-    const nonTerminalPhases = ["RUNNING", "DEGRADED", "PENDING", "FAILING"];
+    const nonTerminalPhases = [Phase.RUNNING, Phase.DEGRADED, Phase.PENDING, Phase.FAILING];
     for (const phase of nonTerminalPhases) {
       const statement = createFlinkStatement({ phase });
       assert.strictEqual(statement.isTerminal, false, `Expected ${phase} to not be terminal`);
@@ -96,7 +97,7 @@ describe("FlinkStatement", () => {
         environmentId: "env0" as EnvironmentId,
         computePoolId: "pool0",
 
-        phase: "RUNNING",
+        phase: Phase.RUNNING,
         detail: "Statement is running",
         sqlKind: "SELECT",
         updatedAt: new Date("2023-01-01T00:00:00Z"),
@@ -110,7 +111,7 @@ describe("FlinkStatement", () => {
         computePoolId: "pool12",
 
         // these three in status.
-        phase: "COMPLETED",
+        phase: Phase.COMPLETED,
         detail: "Statement is completed",
         sqlKind: "SELECT",
 
@@ -162,6 +163,126 @@ describe("FlinkStatement", () => {
       );
     });
   });
+
+  describe("isResultsViewable", () => {
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - ONE_DAY_MS * 1.5);
+    const today = new Date(now.getTime() - ONE_DAY_MS * 0.5);
+
+    const testCases = [
+      {
+        name: "should be viewable when statement is RUNNING and less than a day old",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should not be viewable when statement is RUNNING but more than a day old",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "SELECT",
+          createdAt: yesterday,
+        },
+        expected: false,
+      },
+      {
+        name: "should be viewable when statement is PENDING and less than a day old",
+        statement: {
+          phase: Phase.PENDING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should be viewable when statement is COMPLETED and less than a day old",
+        statement: {
+          phase: Phase.COMPLETED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should be viewable when statement is INSERT_INTO",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "INSERT_INTO",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should not be viewable when statement is FAILED",
+        statement: {
+          phase: Phase.FAILED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is STOPPED",
+        statement: {
+          phase: Phase.STOPPED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is STOPPING",
+        statement: {
+          phase: Phase.STOPPING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is DELETING",
+        statement: {
+          phase: Phase.DELETING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is FAILING",
+        statement: {
+          phase: Phase.FAILING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is DEGRADED",
+        statement: {
+          phase: Phase.DEGRADED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+    ];
+
+    testCases.forEach(({ name, statement, expected }) => {
+      it(name, () => {
+        const flinkStatement = createFlinkStatement({
+          phase: statement.phase,
+          sqlKind: statement.sqlKind,
+          createdAt: statement.createdAt,
+        });
+        assert.strictEqual(flinkStatement.areResultsViewable, expected);
+      });
+    });
+  });
 });
 
 describe("FlinkStatementTreeItem", () => {
@@ -176,7 +297,7 @@ describe("FlinkStatementTreeItem", () => {
   it("tooltip hits the major properties", () => {
     const statement = createFlinkStatement({
       name: "statement0",
-      phase: "RUNNING",
+      phase: Phase.RUNNING,
       detail: "Statement is running",
       sqlKind: "SELECT",
       environmentId: "env0" as EnvironmentId,
@@ -207,7 +328,7 @@ describe("FlinkStatementTreeItem", () => {
 
   describe("icon tests", () => {
     it("should use the correct icons and colors based on the `phase`", () => {
-      for (const phase of ["FAILED", "FAILING"]) {
+      for (const phase of [Phase.FAILED, Phase.FAILING]) {
         const failStatement = new FlinkStatement({
           ...TEST_CCLOUD_FLINK_STATEMENT,
           status: makeStatus(phase),
@@ -220,7 +341,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const degradedStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("DEGRADED"),
+        status: makeStatus(Phase.DEGRADED),
       });
       const degradedTreeItem = new FlinkStatementTreeItem(degradedStatement);
       const degradedIcon = degradedTreeItem.iconPath as ThemeIcon;
@@ -229,7 +350,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const runningStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("RUNNING"),
+        status: makeStatus(Phase.RUNNING),
       });
       const runningTreeItem = new FlinkStatementTreeItem(runningStatement);
       const runningIcon = runningTreeItem.iconPath as ThemeIcon;
@@ -238,14 +359,14 @@ describe("FlinkStatementTreeItem", () => {
 
       const completedStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("COMPLETED"),
+        status: makeStatus(Phase.COMPLETED),
       });
       const completedTreeItem = new FlinkStatementTreeItem(completedStatement);
       const completedIcon = completedTreeItem.iconPath as ThemeIcon;
       assert.strictEqual(completedIcon.id, IconNames.FLINK_STATEMENT_STATUS_COMPLETED);
       assert.strictEqual(completedIcon.color, STATUS_GRAY);
 
-      for (const phase of ["DELETING", "STOPPING"]) {
+      for (const phase of [Phase.DELETING, Phase.STOPPING]) {
         const stopStatement = new FlinkStatement({
           ...TEST_CCLOUD_FLINK_STATEMENT,
           status: makeStatus(phase),
@@ -258,7 +379,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const stoppedStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("STOPPED"),
+        status: makeStatus(Phase.STOPPED),
       });
       const stoppedTreeItem = new FlinkStatementTreeItem(stoppedStatement);
       const stoppedIcon = stoppedTreeItem.iconPath as ThemeIcon;
@@ -267,7 +388,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const pendingStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("PENDING"),
+        status: makeStatus(Phase.PENDING),
       });
       const pendingTreeItem = new FlinkStatementTreeItem(pendingStatement);
       const pendingIcon = pendingTreeItem.iconPath as ThemeIcon;
@@ -278,7 +399,7 @@ describe("FlinkStatementTreeItem", () => {
     it("should fall back to a basic icon for untracked phase values", () => {
       const unknownStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("UNKNOWN"),
+        status: makeStatus("UNKNOWN" as Phase),
       });
       const unknownTreeItem = new FlinkStatementTreeItem(unknownStatement);
       const unknownIcon = unknownTreeItem.iconPath as ThemeIcon;
@@ -288,6 +409,6 @@ describe("FlinkStatementTreeItem", () => {
   });
 });
 
-function makeStatus(phase: string): SqlV1StatementStatus {
+function makeStatus(phase: Phase): SqlV1StatementStatus {
   return createFlinkStatement({ phase: phase }).status;
 }

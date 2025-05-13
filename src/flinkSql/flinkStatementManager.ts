@@ -91,13 +91,37 @@ export class FlinkStatementManager {
     };
   }
 
+  /**
+   * The poller used to call our pollStatements(). Will be undefined if
+   * polling is disabled (see isEnabled()). If assigned, the poller may
+   * be started or stopped based on having any nonterminal statements
+   * to actually monitor. The poller may be re-created based on settings changes.
+   */
   private poller: IntervalPoller | undefined;
+
+  /**
+   * Holds the nonterminal statements to monitor. Responsible for firing events
+   * when a statement is updated or deleted.
+   */
   private monitoredStatements: MonitoredStatements = new MonitoredStatements();
+
+  /**
+   * Are we currently within a call to pollStatements()? Prevents the poller
+   * from starting a new poll while we are already polling.
+   */
   private isPolling: boolean = false;
+
+  /**
+   * Our configuration, as extracted and updated from the workspace settings.
+   */
   private configuration: FlinkStatementManagerConfiguration;
+
+  /**
+   * List of disposables to clean up when we are done.
+   */
   private disposables: Disposable[];
 
-  /** Is flink enabled and should we poll at all? */
+  /** Is Flink enabled and should we possibly poll at all? */
   isEnabled(): boolean {
     return this.configuration.flinkEnabled && this.configuration.pollingFrequency > 0;
   }
@@ -148,6 +172,7 @@ export class FlinkStatementManager {
       logger.debug(
         `Polling is enabled, creating new poller with frequency ${this.configuration.pollingFrequency}`,
       );
+
       // Create a new poller with the current frequency.
       const poller = new IntervalPoller(
         "FlinkStatementManager",
@@ -157,7 +182,7 @@ export class FlinkStatementManager {
         this.configuration.pollingFrequency * 1000,
       );
 
-      // Start the new poller if we have statements to poll.
+      // Start the new poller if we already have statements to monitor.
       if (this.shouldPoll()) {
         logger.debug("Starting new poller since we should be polling");
         poller.start();
@@ -171,11 +196,24 @@ export class FlinkStatementManager {
     }
   }
 
+  /**
+   * Event listener to migrate configuration changes that we need to be aware
+   * of over to `this.configuration`. Also recreates the poller upon changes
+   * to the polling frequency or if Flink is enabled/disabled.
+   */
   private createConfigChangeListener(): Disposable {
     // NOTE: this fires from any VS Code configuration, not just configs from our extension
     return workspace.onDidChangeConfiguration(async (event: ConfigurationChangeEvent) => {
       // get the latest workspace configs after the event fired
       const workspaceConfigs: WorkspaceConfiguration = workspace.getConfiguration();
+
+      if (event.affectsConfiguration(ENABLE_FLINK)) {
+        const newEnabled = workspaceConfigs.get<boolean>(ENABLE_FLINK)!;
+        this.configuration.flinkEnabled = newEnabled;
+        logger.debug(`Flink enabled changed to ${newEnabled}`);
+        this.poller = this.resetPoller();
+        return;
+      }
 
       if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS)) {
         const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS)!;
@@ -198,17 +236,15 @@ export class FlinkStatementManager {
         logger.debug(`Polling concurrency changed to ${newConcurrency}`);
         return;
       }
-
-      if (event.affectsConfiguration(ENABLE_FLINK)) {
-        const newEnabled = workspaceConfigs.get<boolean>(ENABLE_FLINK)!;
-        this.configuration.flinkEnabled = newEnabled;
-        logger.debug(`Flink enabled changed to ${newEnabled}`);
-        this.poller = this.resetPoller();
-        return;
-      }
     });
   }
 
+  /**
+   * Event listener to listen for ccloud auth changes.
+   * If we edge to a ccloud-connected state, we will reset the poller.
+   * If we edge to a ccloud-disconnected state, we will stop the poller
+   * and clear the monitored statements.
+   */
   private createCcloudAuthListener(): Disposable {
     return ccloudConnected.event((connected: boolean) => {
       if (connected) {
@@ -224,13 +260,12 @@ export class FlinkStatementManager {
     });
   }
 
-  /** Monitor one or more statements on behalf of this codebase client. */
+  /**
+   * Monitor one or more statements on behalf of the provided codebase client.
+   *
+   * If the poller exists but is not already running, it will be started.
+   * */
   register(clientId: string, statements: FlinkStatement | FlinkStatement[]): void {
-    if (Array.isArray(statements)) {
-      logger.debug(`Registering ${statements.length} statements for client ${clientId}`);
-    } else {
-      logger.debug(`Registering statement ${statements.id} for client ${clientId}`);
-    }
     this.monitoredStatements.register(clientId, statements);
     if (this.poller && !this.poller.isRunning()) {
       // Start the poller if we are not already polling.
@@ -239,6 +274,13 @@ export class FlinkStatementManager {
     }
   }
 
+  /**
+   * Remove all bindings for this client (say, when view reset). If
+   * no other clients interested in having a statement monitored, then
+   * the statement will be forgotten.
+   *
+   * If no statements are left to be monitored, will stop the poller.
+   */
   clearClient(clientId: string): void {
     logger.debug(`Clearing client ${clientId}`);
     this.monitoredStatements.deregisterClient(clientId);
@@ -250,13 +292,11 @@ export class FlinkStatementManager {
   }
 
   /**
-   * Poll / update the nonterminal statements.
-   *
-   * @returns the number of statements polled.
+   * Poll / update the nonterminal statements. Called by our poller.
    */
   async pollStatements(): Promise<void> {
-    // Avoid overlapping poll runs in case where it takes longer than the polling frequency.
-    // to complete.
+    // Avoid overlapping poll runs in case where it takes longer than
+    // the polling frequency to complete.
     if (!this.isPolling) {
       this.isPolling = true;
 
@@ -271,8 +311,9 @@ export class FlinkStatementManager {
         const statementsToPoll = this.getStatementsToPoll();
         logger.debug(`Polling ${statementsToPoll.length} statements for updates ...`);
 
-        // Run the polling in parallel using a worker pool.
-        // extract call will throw if any of the tasks fail
+        // Perform the polling concurrently using a worker pool over each statement
+        // in `statementsToPoll`.
+        // The extract call will throw if any of the tasks fail
         // (but they should internally handle their own errors).
         extract(
           await executeInWorkerPool(
@@ -311,7 +352,7 @@ export class FlinkStatementManager {
           // If we have no more statements to poll, stop the poller.
           this.poller.stop();
         }
-
+        // release our mutual exclusion lock.
         this.isPolling = false;
       }
     } else {

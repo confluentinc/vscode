@@ -6,7 +6,7 @@ import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatem
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
-import { FlinkStatement, FlinkStatementId, STOPPED_PHASE } from "../models/flinkStatement";
+import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
   DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
@@ -488,7 +488,7 @@ describe("flinkStatementManager.ts", () => {
           return createFlinkStatement({
             name: statement.name,
             updatedAt: new Date("2025-01-01"),
-            phase: STOPPED_PHASE,
+            phase: Phase.STOPPED,
           });
         });
         await instance.pollStatements();
@@ -661,7 +661,7 @@ describe("flinkStatementManager.ts", () => {
 
       it("cannot add a terminal statement", () => {
         const terminalStatement = createFlinkStatement({
-          phase: STOPPED_PHASE,
+          phase: Phase.STOPPED,
         });
 
         assert.throws(() => {
@@ -783,7 +783,7 @@ describe("flinkStatementManager.ts", () => {
 
       it("should remove the statement if it is terminal", () => {
         const terminalStatement = createFlinkStatement({
-          phase: STOPPED_PHASE,
+          phase: Phase.STOPPED,
         });
 
         instance.register(clientId, statement);
