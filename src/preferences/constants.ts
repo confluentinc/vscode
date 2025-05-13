@@ -69,7 +69,7 @@ export const DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS = 10; // seconds.
  * N with the most recent `createdAt` timestamps will be polled.
  */
 export const STATEMENT_POLLING_LIMIT = prefix + "flink.statementPollingLimit";
-export const DEFAULT_STATEMENT_POLLING_LIMIT = 25; // non-terminal statements
+export const DEFAULT_STATEMENT_POLLING_LIMIT = 20; // non-terminal statements
 
 /**
  * Setting to control the concurrency level when polling requests for Flink statements.

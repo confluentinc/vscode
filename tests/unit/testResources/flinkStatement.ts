@@ -40,7 +40,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       updated_at: overrides.updatedAt || new Date(),
     },
     status: {
-      phase: (overrides.phase as string) || "RUNNING",
+      phase: (overrides.phase as string) || Phase.RUNNING,
       detail: overrides.detail || "Running",
       traits: {
         sql_kind: overrides.sqlKind || "SELECT",
