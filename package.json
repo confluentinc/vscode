@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-56",
+  "version": "1.3.0-57",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -651,14 +651,6 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
-          },
-          "confluent.experimental.enableChatParticipant": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable the Confluent chat participant for Copilot.",
-            "tags": [
-              "experimental"
-            ]
           }
         }
       },
@@ -735,6 +727,30 @@
             "description": "Maximum number of concurrent polling requests for non-terminal Flink statements.",
             "minimum": 1,
             "maximum": 10
+          }
+        }
+      },
+      {
+        "title": "Copilot Chat Participant",
+        "properties": {
+          "confluent.experimental.enableChatParticipant": {
+            "order": 0,
+            "type": "boolean",
+            "default": false,
+            "description": "Enable the Confluent chat participant for Copilot.",
+            "tags": [
+              "experimental"
+            ]
+          },
+          "confluent.chat.telemetry.sendErrorData": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Include **error data** from Copilot chat participant results gathered from 👍/👎 feedback or from error responses. When disabled (default), no error details will be sent."
+          },
+          "confluent.chat.telemetry.sendToolCallData": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Include **tool call inputs and result contents** from Copilot chat participant results gathered from 👍/👎 feedback, as well as **tool call inputs** during tool call flows for general telemetry purposes.\n- When disabled (default), your privacy is protected as no model-provided tool inputs or result contents will be shared.\n- When enabled, potentially sensitive information will be sent including the full inputs provided to tools and their complete outputs (which may contain names, IDs, and detailed properties of your Confluent/Kafka resources).\n\nNOTE: If telemetry is enabled via `#telemetry.telemetryLevel#` and `#telemetry.feedback.enabled#`, we will always send the **names** of tools used, but not their inputs or outputs."
           }
         }
       }
