@@ -1,5 +1,5 @@
 import { ConfigurationChangeEvent, Disposable, WorkspaceConfiguration, workspace } from "vscode";
-import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
+import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
@@ -7,6 +7,7 @@ import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
   DEFAULT_STATEMENT_POLLING_FREQUENCY,
   DEFAULT_STATEMENT_POLLING_LIMIT,
+  ENABLE_FLINK,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY,
   STATEMENT_POLLING_LIMIT,
@@ -21,6 +22,7 @@ export type FlinkStatementManagerConfiguration = {
   pollingFrequency: number;
   maxStatementsToPoll: number;
   concurrency: number;
+  flinkEnabled: boolean;
 };
 
 /**
@@ -75,6 +77,7 @@ export class FlinkStatementManager {
       concurrency,
       pollingFrequency,
       maxStatementsToPoll,
+      flinkEnabled: configs.get<boolean>(ENABLE_FLINK) ?? false,
     };
   }
 
@@ -82,11 +85,11 @@ export class FlinkStatementManager {
   private monitoredStatements: MonitoredStatements = new MonitoredStatements();
   private isPolling: boolean = false;
   private configuration: FlinkStatementManagerConfiguration;
-  disposables: Disposable[] = [];
+  private disposables: Disposable[];
 
-  /** Should we poll at all based on configuration? */
+  /** Is flink enabled and should we poll at all? */
   isEnabled(): boolean {
-    return this.configuration.pollingFrequency > 0;
+    return this.configuration.flinkEnabled && this.configuration.pollingFrequency > 0;
   }
 
   /** Should we poll eventually / have a poller defined? */
@@ -98,8 +101,23 @@ export class FlinkStatementManager {
     this.configuration = FlinkStatementManager.getConfiguration();
     // May be undefined if polling is disabled.
     this.poller = this.resetPoller();
-    // Listen for changes to our configuration.
-    this.disposables.push(this.createConfigChangeListener());
+
+    this.disposables = [
+      // Listen for changes to our configuration. Reconfigures and/or starts/stops me.
+      this.createConfigChangeListener(),
+      // Listen for changes to ccloud auth. Starts or stops me.
+      this.createCcloudAuthListener(),
+    ];
+  }
+
+  /** Cleanup at extension shutdown. */
+  dispose(): void {
+    if (this.poller) {
+      this.poller.dispose();
+    }
+    this.monitoredStatements.clear();
+    this.disposables.forEach((disposable) => disposable.dispose());
+    this.disposables = [];
   }
 
   /**
@@ -109,7 +127,7 @@ export class FlinkStatementManager {
    * If settings are configured to disable polling, return undefined.
    * @returns The new poller, or undefined if polling is disabled.
    */
-  private resetPoller(): IntervalPoller | undefined {
+  resetPoller(): IntervalPoller | undefined {
     if (this.poller && this.poller.isRunning()) {
       // Stop existing poller if it is running.
       logger.debug("Stopping existing poller");
@@ -145,51 +163,56 @@ export class FlinkStatementManager {
 
   private createConfigChangeListener(): Disposable {
     // NOTE: this fires from any VS Code configuration, not just configs from our extension
-    const disposable: Disposable = workspace.onDidChangeConfiguration(
-      async (event: ConfigurationChangeEvent) => {
-        // get the latest workspace configs after the event fired
-        const workspaceConfigs: WorkspaceConfiguration = workspace.getConfiguration();
+    return workspace.onDidChangeConfiguration(async (event: ConfigurationChangeEvent) => {
+      // get the latest workspace configs after the event fired
+      const workspaceConfigs: WorkspaceConfiguration = workspace.getConfiguration();
 
-        if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY)) {
-          const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY);
-          if (newFrequency === undefined) {
-            logger.error(`Invalid polling frequency: ${newFrequency}`);
-            return;
-          }
-          this.configuration.pollingFrequency = newFrequency;
-          logger.debug(`Polling frequency changed to ${newFrequency}`);
-          this.poller = this.resetPoller();
-          return;
-        }
+      if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY)) {
+        const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY)!;
+        this.configuration.pollingFrequency = newFrequency;
+        logger.debug(`Polling frequency changed to ${newFrequency}`);
+        this.poller = this.resetPoller();
+        return;
+      }
 
-        if (event.affectsConfiguration(STATEMENT_POLLING_LIMIT)) {
-          const newLimit = workspaceConfigs.get<number>(STATEMENT_POLLING_LIMIT);
-          if (newLimit === undefined) {
-            logger.error(`Invalid max statement to poll: ${newLimit}`);
-            return;
-          }
-          this.configuration.maxStatementsToPoll = newLimit;
-          logger.debug(`Max statement to poll changed to ${newLimit}`);
-          return;
-        }
+      if (event.affectsConfiguration(STATEMENT_POLLING_LIMIT)) {
+        const newLimit = workspaceConfigs.get<number>(STATEMENT_POLLING_LIMIT)!;
+        this.configuration.maxStatementsToPoll = newLimit;
+        logger.debug(`Max statement to poll changed to ${newLimit}`);
+        return;
+      }
 
-        if (event.affectsConfiguration(STATEMENT_POLLING_CONCURRENCY)) {
-          const newConcurrency = workspaceConfigs.get<number>(STATEMENT_POLLING_CONCURRENCY);
-          if (newConcurrency === undefined) {
-            logger.error(`Invalid concurrency: ${newConcurrency}`);
-            return;
-          }
-          this.configuration.concurrency = newConcurrency;
-          logger.debug(`Polling concurrency changed to ${newConcurrency}`);
-          return;
-        }
-      },
-    );
+      if (event.affectsConfiguration(STATEMENT_POLLING_CONCURRENCY)) {
+        const newConcurrency = workspaceConfigs.get<number>(STATEMENT_POLLING_CONCURRENCY)!;
+        this.configuration.concurrency = newConcurrency;
+        logger.debug(`Polling concurrency changed to ${newConcurrency}`);
+        return;
+      }
 
-    return disposable;
+      if (event.affectsConfiguration(ENABLE_FLINK)) {
+        const newEnabled = workspaceConfigs.get<boolean>(ENABLE_FLINK)!;
+        this.configuration.flinkEnabled = newEnabled;
+        logger.debug(`Flink enabled changed to ${newEnabled}`);
+        this.poller = this.resetPoller();
+        return;
+      }
+    });
   }
 
-  // XXX todo ccloud auth listener to turn on/off polling when ccloud auth happens.
+  private createCcloudAuthListener(): Disposable {
+    return ccloudConnected.event((connected: boolean) => {
+      if (connected) {
+        logger.debug("CCloud connected, resetting poller");
+        this.poller = this.resetPoller();
+      } else {
+        logger.debug("CCloud disconnected, stopping poller");
+        if (this.poller) {
+          this.poller.stop();
+        }
+        this.monitoredStatements.clear();
+      }
+    });
+  }
 
   /** Monitor one or more statements on behalf of this codebase client. */
   register(clientId: string, statements: FlinkStatement | FlinkStatement[]): void {
@@ -261,8 +284,8 @@ export class FlinkStatementManager {
                   this.monitoredStatements.remove(statement.id);
                 }
               } catch (error) {
-                // Many things can go wrong here, including network errors, etc.
-                // XXX todo determine what to do here.
+                // Many things can go wrong here, including transient network errors, etc.
+                // Determine what better to do here?
                 logger.error(`Error polling statement ${statement.id}: ${error}`);
               }
             },

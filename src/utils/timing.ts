@@ -94,6 +94,10 @@ export class IntervalPoller {
     return false;
   }
 
+  dispose() {
+    this.stop();
+  }
+
   /** Is this poller is currently running? */
   public isRunning() {
     return this.registeredInterval !== undefined;

@@ -4,13 +4,14 @@ import * as vscode from "vscode";
 import { ConfigurationChangeEvent } from "vscode";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { flinkStatementUpdated } from "../emitters";
+import { ccloudConnected, flinkStatementUpdated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, FlinkStatementId, STOPPED_PHASE } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
   DEFAULT_STATEMENT_POLLING_FREQUENCY,
   DEFAULT_STATEMENT_POLLING_LIMIT,
+  ENABLE_FLINK,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY,
   STATEMENT_POLLING_LIMIT,
@@ -47,6 +48,7 @@ describe("flinkStatementManager.ts", () => {
         pollingFrequency: DEFAULT_STATEMENT_POLLING_FREQUENCY,
         maxStatementsToPoll: DEFAULT_STATEMENT_POLLING_LIMIT,
         concurrency: DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+        flinkEnabled: true,
       };
     }
 
@@ -71,6 +73,12 @@ describe("flinkStatementManager.ts", () => {
       await driveConfigChangeListener(STATEMENT_POLLING_CONCURRENCY);
     }
 
+    async function setWorkspaceFlinkEnabled(value: boolean): Promise<void> {
+      testConfigState.flinkEnabled = value;
+      // Now simulate the event that would be fired when the configuration changes
+      await driveConfigChangeListener(ENABLE_FLINK);
+    }
+
     async function driveConfigChangeListener(configName: string): Promise<void> {
       // Simulate the event that would be fired when the given configuration changes
       const mockEvent = {
@@ -87,7 +95,7 @@ describe("flinkStatementManager.ts", () => {
     beforeEach(() => {
       sandbox = sinon.createSandbox();
       onDidChangeConfigurationStub = sandbox.stub(vscode.workspace, "onDidChangeConfiguration");
-
+      onDidChangeConfigurationStub.returns({ dispose: () => {} });
       testConfigState = resetConfiguration();
 
       // Fake implementation of workspace.getConfiguration
@@ -100,6 +108,8 @@ describe("flinkStatementManager.ts", () => {
               return testConfigState.maxStatementsToPoll;
             case STATEMENT_POLLING_CONCURRENCY:
               return testConfigState.concurrency;
+            case ENABLE_FLINK:
+              return testConfigState.flinkEnabled;
             default:
               throw new Error(`Unknown config name: ${configName}`);
           }
@@ -158,6 +168,13 @@ describe("flinkStatementManager.ts", () => {
         // Check that the isEnabled property is now false
         assert.strictEqual(instance.isEnabled(), false);
       });
+
+      it("should return false if configuration changes to flink disabled", async () => {
+        testConfigState.flinkEnabled = false;
+        await driveConfigChangeListener(ENABLE_FLINK);
+        // Check that the isEnabled property is now false
+        assert.strictEqual(instance.isEnabled(), false);
+      });
     }); // isEnable
 
     describe("shouldPoll()", () => {
@@ -180,6 +197,39 @@ describe("flinkStatementManager.ts", () => {
         assert.strictEqual(false, instance.shouldPoll());
       });
     }); // shouldPoll()
+
+    describe("changing flink enabled setting", () => {
+      it("should stop the poller and disable if reset to false", async () => {
+        instance.register("client", createFlinkStatement());
+        const oldPoller = instance["poller"]!;
+        assert.strictEqual(oldPoller.isRunning(), true);
+        assert.strictEqual(instance.isEnabled(), true);
+
+        await setWorkspaceFlinkEnabled(false);
+
+        assert.strictEqual(instance.isEnabled(), false);
+        assert.strictEqual(oldPoller.isRunning(), false);
+        assert.strictEqual(instance["poller"], undefined);
+        // will not clear statements in case they turn back on again.
+        assert.strictEqual(monitoredStatements.isEmpty(), false);
+      });
+
+      it("should start the poller and enable if reset to true", async () => {
+        await setWorkspaceFlinkEnabled(false);
+
+        assert.strictEqual(instance.isEnabled(), false);
+        assert.strictEqual(instance["poller"], undefined);
+
+        await setWorkspaceFlinkEnabled(true);
+
+        assert.strictEqual(instance.isEnabled(), true);
+        // will have made a poller, but not started it yet since no statements.
+        assert.ok(instance["poller"]);
+        // Will have a poller, but not started it yet since no statements.
+        // @ts-expect-error poller will be assigned.
+        assert.strictEqual(instance["poller"].isRunning(), false);
+      });
+    });
 
     describe("resetPoller()", () => {
       it("Should return a new stopped poller if enabled", () => {
@@ -464,6 +514,58 @@ describe("flinkStatementManager.ts", () => {
         assert.strictEqual(instance["isPolling"], false);
       });
     }); // pollStatements()
+
+    describe("createCcloudAuthListener()", () => {
+      it("Should reset poller on ccloudConnected=true", async () => {
+        const resetPollerStub = sandbox.stub(instance, "resetPoller");
+        ccloudConnected.fire(true);
+
+        sinon.assert.calledOnce(resetPollerStub);
+      });
+
+      it("Should stop poller and clear statements on ccloudConnected=false", async () => {
+        const clearClientStub = sandbox.stub(monitoredStatements, "clear");
+        const stopPollerStub = sandbox.stub(instance["poller"]!, "stop");
+
+        ccloudConnected.fire(false);
+
+        sinon.assert.calledOnce(stopPollerStub);
+        sinon.assert.calledOnce(clearClientStub);
+      });
+
+      it("Skips poller stop if no poller exists on ccloudConnected=false", async () => {
+        // Set the poller to undefined
+        instance["poller"] = undefined;
+
+        const clearClientStub = sandbox.stub(monitoredStatements, "clear");
+
+        ccloudConnected.fire(false);
+
+        sinon.assert.calledOnce(clearClientStub);
+      });
+    }); // createCcloudAuthListener()
+
+    describe("dispose()", () => {
+      it("Should stop the poller and clear statements", () => {
+        const stopPollerStub = sandbox.stub(instance["poller"]!, "stop");
+        const monitoredStatementClearStub = sandbox.stub(monitoredStatements, "clear");
+
+        instance.dispose();
+
+        sinon.assert.calledOnce(stopPollerStub);
+        sinon.assert.calledOnce(monitoredStatementClearStub);
+      });
+      it("Should not throw if poller is undefined", () => {
+        // Set the poller to undefined
+        instance["poller"] = undefined;
+
+        const monitoredStatementClearStub = sandbox.stub(monitoredStatements, "clear");
+
+        instance.dispose();
+
+        sinon.assert.calledOnce(monitoredStatementClearStub);
+      });
+    }); // dispose()
   }); // describe FlinkStatementManager
 
   describe("MonitoredStatements", () => {
