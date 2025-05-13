@@ -43,6 +43,14 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       const templateSummary = summarizeProjectTemplate(template);
       templateStrings.push(new LanguageModelTextPart(templateSummary));
     });
+    if (inputTagsPassed && !templateStrings.length) {
+      // invalid tags, no results
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(
+          `No templates matched the provided tags: ${JSON.stringify(params.tags)}`,
+        ),
+      ]);
+    }
 
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
