@@ -51,7 +51,14 @@ export async function chatHandler(
     version: request.model?.version,
     id: request.model?.id,
   });
-  const modelInfo = JSON.parse(JSON.stringify(model));
+  const modelInfo = {
+    name: model.name,
+    id: model.id,
+    vendor: model.vendor,
+    family: model.family,
+    version: model.version,
+    maxInputTokens: model.maxInputTokens,
+  };
 
   const userPrompt = request.prompt.trim();
   // check for empty request
