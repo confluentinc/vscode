@@ -5,7 +5,6 @@ import {
   ChatRequestTurn,
   ChatResponseStream,
   ChatResponseTurn,
-  ChatResult,
   LanguageModelChat,
   LanguageModelChatMessage,
   LanguageModelChatRequestOptions,
@@ -28,6 +27,7 @@ import { summarizeChatHistory } from "./summarizers/chatHistory";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./tools/base";
 import { getToolMap } from "./tools/toolMap";
 import { ToolCallMetadata } from "./tools/types";
+import { CustomChatResult } from "./types";
 
 const logger = new Logger("chat.participant");
 
@@ -37,7 +37,7 @@ export async function chatHandler(
   context: ChatContext,
   stream: ChatResponseStream,
   token: CancellationToken,
-): Promise<ChatResult> {
+): Promise<CustomChatResult> {
   logger.debug("received chat request", { request, context });
 
   const messages: LanguageModelChatMessage[] = [];
@@ -45,11 +45,19 @@ export async function chatHandler(
   // add the initial prompt to the messages
   messages.push(systemMessage(INITIAL_PROMPT));
 
+  const model: LanguageModelChat = await getModel({
+    vendor: request.model?.vendor,
+    family: request.model?.family,
+    version: request.model?.version,
+    id: request.model?.id,
+  });
+  const modelInfo = JSON.parse(JSON.stringify(model));
+
   const userPrompt = request.prompt.trim();
   // check for empty request
   if (userPrompt === "" && request.references.length === 0 && request.command === undefined) {
     stream.markdown("Hmm... I don't know how to respond to that.");
-    return {};
+    return { metadata: { modelInfo } };
   }
 
   // add historical messages to the context, along with the user prompt if provided
@@ -66,16 +74,9 @@ export async function chatHandler(
     messages.push(...referenceMessages);
   }
 
-  const model: LanguageModelChat = await getModel({
-    vendor: request.model?.vendor,
-    family: request.model?.family,
-    version: request.model?.version,
-    id: request.model?.id,
-  });
-
   if (request.command) {
-    // TODO: implement command handling
-    return { metadata: { command: request.command } };
+    // TODO: implement command handling and update CustomChatResult interface
+    return { metadata: { modelInfo } };
   }
 
   // non-command request
@@ -87,7 +88,7 @@ export async function chatHandler(
       stream,
       token,
     );
-    return { metadata: { toolsCalled } };
+    return { metadata: { toolsCalled, modelInfo } };
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("model_not_supported")) {
@@ -99,19 +100,19 @@ export async function chatHandler(
         // keep track of how often this is happening so we can
         logError(new ModelNotSupportedError(`${model.id} is not supported`), "chatHandler", {
           extra: {
-            model: JSON.stringify({ id: model.id, vendor: model.vendor, family: model.family }),
+            model: JSON.stringify(modelInfo),
           },
         });
         return {
           errorDetails: { message: errMsg },
-          metadata: { error: true, name: ModelNotSupportedError.name },
+          metadata: { modelInfo },
         };
       }
       // some other kind of error when sending the request or streaming the response
       logError(error, "chatHandler", { extra: { model: model?.name ?? "unknown" } });
       return {
         errorDetails: { message: error.message },
-        metadata: { error: true, stack: error.stack, name: error.name },
+        metadata: { modelInfo },
       };
     }
     throw error;
