@@ -46,10 +46,7 @@ export class FlinkStatementsViewProvider
         // Update the statement in the view.
         const existingStatement = this.resourcesInTreeView.get(statement.id);
         if (existingStatement) {
-          // Update our reference to the statement.
           existingStatement.update(statement);
-
-          // inform the view that we have new data.
           this._onDidChangeTreeData.fire(existingStatement);
         }
       },
@@ -60,9 +57,7 @@ export class FlinkStatementsViewProvider
         // Remove the statement from the view. It is known to no longer exist.
         const existingStatement = this.resourcesInTreeView.get(statementId);
         if (existingStatement) {
-          // Remove it from our reference.
           this.resourcesInTreeView.delete(statementId);
-
           // inform the view that toplevel has changed. Sigh, no API to indicate that
           // a specific item has been removed?
           this._onDidChangeTreeData.fire();
