@@ -116,7 +116,7 @@ describe("FlinkStatementsViewProvider", () => {
         assert.deepStrictEqual(children, [youngestStatement, middleStatement]);
       });
 
-      describe("setCustomEventListeners() listners behavior", () => {
+      describe("setCustomEventListeners() listener behavior", () => {
         let onDidChangeTreeDataFireStub: sinon.SinonStub;
 
         beforeEach(() => {
