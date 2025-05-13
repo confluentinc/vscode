@@ -3,7 +3,9 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ConfigurationChangeEvent } from "vscode";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { flinkStatementUpdated } from "../emitters";
+import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, FlinkStatementId, STOPPED_PHASE } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
@@ -22,61 +24,11 @@ import {
 } from "./flinkStatementManager";
 
 describe("flinkStatementManager.ts", () => {
-  describe("MonitoredStatement", () => {
-    const initialClientId = "testClientId";
-    const initialStatementDate = new Date("2024-01-01");
-    let statement: FlinkStatement;
-
-    let monitoredStatement: MonitoredStatement;
-    let clientIds: Set<string>;
-
-    beforeEach(() => {
-      statement = createFlinkStatement({ updatedAt: initialStatementDate });
-      monitoredStatement = new MonitoredStatement(initialClientId, statement);
-      clientIds = monitoredStatement["clientIds"];
-    });
-
-    describe("addClientId", () => {
-      it("should add a clientId to the statement", () => {
-        monitoredStatement.addClientId("newClient");
-        assert.strictEqual(clientIds.size, 2);
-        assert.ok(clientIds.has(initialClientId));
-        assert.ok(clientIds.has("newClient"));
-      });
-    });
-
-    describe("removeClientId", () => {
-      it("should remove and indicate remaining count", () => {
-        monitoredStatement.addClientId("newClient");
-        assert.strictEqual(clientIds.size, 2);
-
-        const remainingCount = monitoredStatement.removeClientId(initialClientId);
-        assert.strictEqual(remainingCount, 1);
-        assert.ok(clientIds.has("newClient"));
-
-        // Remove the last clientId
-        assert.strictEqual(monitoredStatement.removeClientId("newClient"), 0);
-        assert.strictEqual(clientIds.size, 0);
-      });
-    });
-
-    describe("maybeUpdateStatement", () => {
-      it("Should update the statement if is fresher", () => {
-        const fresherStatement = createFlinkStatement({ updatedAt: new Date("2024-01-02") });
-        const updated = monitoredStatement.maybeUpdateStatement(fresherStatement);
-        assert.strictEqual(updated, true);
-        // Updated reference.
-        assert.ok(monitoredStatement.statement === fresherStatement);
-      });
-
-      it("Should not update the statement if not fresher", () => {
-        const sameFreshnessStatement = createFlinkStatement({ updatedAt: initialStatementDate });
-        const updated = monitoredStatement.maybeUpdateStatement(sameFreshnessStatement);
-        assert.strictEqual(updated, false);
-        // Kept existing reference.
-        assert.ok(monitoredStatement.statement === statement);
-      });
-    });
+  before(async () => {
+    // otherwise logging calls when debugging will fail
+    // due to not having determined writeable tmpdir
+    // yet. Sigh.
+    await getTestExtensionContext();
   });
 
   describe("FlinkStatementManager", () => {
@@ -87,6 +39,7 @@ describe("flinkStatementManager.ts", () => {
     let configStub: sinon.SinonStub;
     let onDidChangeConfigurationStub: sinon.SinonStub;
     let resetPoller: () => IntervalPoller | void;
+    let monitoredStatements: MonitoredStatements;
 
     function resetConfiguration(): FlinkStatementManagerConfiguration {
       return {
@@ -96,22 +49,34 @@ describe("flinkStatementManager.ts", () => {
       };
     }
 
-    async function setPollingFrequencySetting(value: number): Promise<void> {
-      // Set up the current workspace settings to have a polling frequency of 0
+    async function setWorkspacePollingFrequencySetting(value: number): Promise<void> {
+      // Set up the current workspace settings polling frequency
       testConfigState.pollingFrequency = value;
       // Now simulate the event that would be fired when the configuration changes
+      await driveConfigChangeListener(STATEMENT_POLLING_FREQUENCY);
+    }
+
+    async function setWorkspacePollingLimitSetting(value: number): Promise<void> {
+      // Set up the current workspace settings polling frequency max statements to poll
+      testConfigState.maxStatementsToPoll = value;
+      // Now simulate the event that would be fired when the configuration changes
+      await driveConfigChangeListener(STATEMENT_POLLING_LIMIT);
+    }
+
+    async function driveConfigChangeListener(configName: string): Promise<void> {
+      // Simulate the event that would be fired when the given configuration changes
       const mockEvent = {
-        affectsConfiguration: (config: string) => config === STATEMENT_POLLING_FREQUENCY,
+        affectsConfiguration: (config: string) => config === configName,
       } as ConfigurationChangeEvent;
 
       onDidChangeConfigurationStub.yields(mockEvent);
 
       // Call the event handler wired up in construct / createConfigChangeListener().
+      // Will end up observing the settings in `testConfigState`.
       await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
     }
 
     beforeEach(() => {
-      // by default will make a RUNNING state statement, nonterminal.
       sandbox = sinon.createSandbox();
       onDidChangeConfigurationStub = sandbox.stub(vscode.workspace, "onDidChangeConfiguration");
 
@@ -135,8 +100,13 @@ describe("flinkStatementManager.ts", () => {
       configStub = sandbox.stub(vscode.workspace, "getConfiguration");
       configStub.returns(configMock);
 
+      // Be sure to get ahold of a new instance of the FlinkStatementManager
+      FlinkStatementManager["instance"] = undefined;
       instance = FlinkStatementManager.getInstance();
+
       resetPoller = instance["resetPoller"].bind(instance);
+
+      monitoredStatements = instance["monitoredStatements"];
     });
 
     afterEach(() => {
@@ -167,7 +137,7 @@ describe("flinkStatementManager.ts", () => {
         const config = FlinkStatementManager.getConfiguration();
         assert.strictEqual(config.maxStatementsToPoll, DEFAULT_STATEMENT_POLLING_LIMIT);
       });
-    }); // describe getConfiguration
+    }); // getConfiguration
 
     describe("isEnabled()", () => {
       it("should return true if polling frequency > 0", () => {
@@ -175,7 +145,7 @@ describe("flinkStatementManager.ts", () => {
       });
 
       it("should return false if configuration changes to polling frequency == 0", async () => {
-        await setPollingFrequencySetting(0);
+        await setWorkspacePollingFrequencySetting(0);
 
         // Check that the isEnabled property is now false
         assert.strictEqual(instance.isEnabled(), false);
@@ -189,15 +159,15 @@ describe("flinkStatementManager.ts", () => {
 
       it("should return true if enabled and has statements to monitor", () => {
         const statement = createFlinkStatement();
-        instance.register("testClientId", statement);
+        instance.register("client", statement);
         assert.strictEqual(true, instance.shouldPoll());
       });
 
       it("should return false if not enabled but has statements to monitor", async () => {
         const statement = createFlinkStatement();
-        instance.register("testClientId", statement);
+        instance.register("client", statement);
 
-        await setPollingFrequencySetting(0);
+        await setWorkspacePollingFrequencySetting(0);
 
         assert.strictEqual(false, instance.shouldPoll());
       });
@@ -211,7 +181,7 @@ describe("flinkStatementManager.ts", () => {
       });
 
       it("Should return undefined if not enabled", async () => {
-        await setPollingFrequencySetting(0);
+        await setWorkspacePollingFrequencySetting(0);
         const poller = resetPoller();
         assert.strictEqual(poller, undefined);
       });
@@ -247,6 +217,205 @@ describe("flinkStatementManager.ts", () => {
         sinon.assert.calledOnce(stopStub);
       });
     }); // resetPoller()
+
+    describe("register()", () => {
+      it("should register a new statement and then start up", () => {
+        // stopped at first
+        assert.strictEqual(instance["poller"]!.isRunning(), false);
+        const statement = createFlinkStatement();
+        instance.register("testClientId", statement);
+        // now it should be running
+        assert.strictEqual(instance["poller"]!.isRunning(), true);
+        assert.strictEqual(monitoredStatements.getAll().length, 1);
+      });
+
+      it("handles many statements at once", () => {
+        const statement1 = createFlinkStatement();
+        const statement2 = createFlinkStatement({
+          name: "other",
+        });
+        instance.register("testClientId", [statement1, statement2]);
+        assert.strictEqual(instance["poller"]!.isRunning(), true);
+        assert.strictEqual(monitoredStatements.getAll().length, 2);
+      });
+    }); // register()
+
+    describe("clearClient()", () => {
+      it("should clear all statements for a clientId", () => {
+        const statement1 = createFlinkStatement();
+        const statement2 = createFlinkStatement({
+          name: "other",
+        });
+        instance.register("testClientId", [statement1, statement2]);
+        assert.strictEqual(instance["poller"]!.isRunning(), true);
+        assert.strictEqual(monitoredStatements.getAll().length, 2);
+
+        instance.clearClient("testClientId");
+        assert.strictEqual(monitoredStatements.getAll().length, 0);
+        // poller should be stopped since no statements are left
+        assert.strictEqual(instance["poller"]!.isRunning(), false);
+      });
+      it("should not clear other clients' statements", () => {
+        const statement1 = createFlinkStatement();
+        const statement2 = createFlinkStatement({
+          name: "other",
+        });
+        instance.register("testClientId", [statement1, statement2]);
+        instance.register("otherClientId", statement1);
+        assert.strictEqual(monitoredStatements.getAll().length, 2);
+
+        instance.clearClient("testClientId");
+        assert.strictEqual(monitoredStatements.getAll().length, 1);
+        // poller should be running since still some statements left.
+        assert.strictEqual(instance["poller"]!.isRunning(), true);
+      });
+      it("handles clearing all when no poller exists", async () => {
+        // Register statement, will start the poller.
+        instance.register("testClientId", createFlinkStatement());
+
+        // Now reconfigure to not have a poller. Will stop and set .poller to undefined.
+        await setWorkspacePollingFrequencySetting(0);
+
+        // Now clear the client. Should not throw.
+        instance.clearClient("testClientId");
+        assert.strictEqual(monitoredStatements.getAll().length, 0);
+      });
+    }); // clearClient()
+
+    describe("getStatementsToPoll()", () => {
+      const statement1 = createFlinkStatement({
+        name: "statement1",
+        updatedAt: new Date("2024-01-01"),
+      });
+      const statement2 = createFlinkStatement({
+        name: "statement2",
+        updatedAt: new Date("2024-01-02"),
+      });
+      const statement3 = createFlinkStatement({
+        name: "statement3",
+        updatedAt: new Date("2024-01-03"),
+      });
+
+      beforeEach(async () => {
+        // Register the three statements
+        instance.register("testClientId", [statement1, statement2, statement3]);
+        // Ensure we're configured to be able to poll > 3 at a time. Prior tests
+        // may have reset this.
+        await setWorkspacePollingLimitSetting(10);
+      });
+
+      it("Should return statements most recently updated first", () => {
+        const statementsToPoll = instance.getStatementsToPoll();
+        assert.strictEqual(statementsToPoll.length, 3);
+        // won't be in any particular order since did not have
+        // to sort + limit.
+      });
+
+      it("honors the max statements to poll setting + return most recent first", async () => {
+        // Set the max statements to poll to 2
+        await setWorkspacePollingLimitSetting(2);
+
+        // Should return the two most recent statements
+        const statementsToPoll = instance.getStatementsToPoll();
+        assert.strictEqual(statementsToPoll.length, 2);
+        assert.strictEqual(statementsToPoll[0], statement3);
+        assert.strictEqual(statementsToPoll[1], statement2);
+      });
+    }); // getStatementsToPoll()
+
+    describe("pollStatements()", () => {
+      const statement1 = createFlinkStatement({
+        name: "statement1",
+        updatedAt: new Date("2024-01-01"),
+      });
+
+      const statement2 = createFlinkStatement({
+        name: "statement2",
+        updatedAt: new Date("2024-01-02"),
+      });
+
+      function registerStatements(): void {
+        const statements = [statement1, statement2];
+        instance.register("testClientId", statements);
+      }
+
+      let resourceLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+      let refreshFlinkStatementStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        resourceLoaderStub = sandbox.createStubInstance(CCloudResourceLoader);
+        sandbox.stub(CCloudResourceLoader, "getInstance").returns(resourceLoaderStub);
+        refreshFlinkStatementStub = resourceLoaderStub.refreshFlinkStatement;
+      });
+
+      it("should avoid reentrancy", async () => {
+        registerStatements();
+        // As if there's another run going.
+        instance["isPolling"] = true;
+
+        await instance.pollStatements();
+
+        sinon.assert.notCalled(refreshFlinkStatementStub);
+      });
+
+      it("Should short-circuit if no statements to poll", async () => {
+        // No statements registered
+        assert.strictEqual(monitoredStatements.isEmpty(), true);
+        await instance.pollStatements();
+
+        sinon.assert.notCalled(refreshFlinkStatementStub);
+
+        // And that isPolling is set to false when done..
+        assert.strictEqual(instance["isPolling"], false);
+      });
+
+      it("Should call refreshFlinkStatement() for each statement", async () => {
+        registerStatements();
+
+        // Will be the updated date for statement1
+        const newDate = new Date("2025-01-01");
+        assert.ok(newDate.getTime() > statement1.updatedAt!.getTime());
+
+        refreshFlinkStatementStub.callsFake(async (statement): Promise<FlinkStatement | null> => {
+          // if is statement1, return new representation with newer updatedAt.
+          if (statement.id === statement1.id) {
+            return createFlinkStatement({
+              name: statement.name,
+              updatedAt: newDate,
+            });
+          } else {
+            // as if statement2 has been deleted.
+            return null;
+          }
+        });
+
+        await instance.pollStatements();
+
+        sinon.assert.calledTwice(refreshFlinkStatementStub);
+
+        // Only statement1 should remain, and should be
+        // with the new updatedAt date.
+        assert.strictEqual(monitoredStatements.getAll().length, 1);
+        const monitoredStatement = monitoredStatements.getAll()[0];
+        assert.strictEqual(monitoredStatement.id, statement1.id);
+        assert.strictEqual(monitoredStatement.updatedAt!.getTime(), newDate.getTime());
+        assert.strictEqual(instance["isPolling"], false);
+      });
+
+      it("Handles unexpected errors", async () => {
+        registerStatements();
+        // Simulate an unexpected error in the refreshFlinkStatement call
+        refreshFlinkStatementStub.callsFake(() => {
+          throw new Error("Simulated error");
+        });
+        await instance.pollStatements();
+        // should have called the refreshFlinkStatement method 2x
+        sinon.assert.calledTwice(refreshFlinkStatementStub);
+        // should not have removed any statements
+        assert.strictEqual(monitoredStatements.getAll().length, 2);
+        assert.strictEqual(instance["isPolling"], false);
+      });
+    }); // pollStatements()
   }); // describe FlinkStatementManager
 
   describe("MonitoredStatements", () => {

@@ -122,10 +122,8 @@ export class FlinkStatementManager {
       // Create a new poller with the current frequency.
       const poller = new IntervalPoller(
         "FlinkStatementManager",
-        async () => {
-          if (!this.isPolling) {
-            await this.pollStatements();
-          }
+        () => {
+          void this.pollStatements();
         },
         this.configuration.pollingFrequency * 1000,
       );
@@ -223,49 +221,58 @@ export class FlinkStatementManager {
    * @returns the number of statements polled.
    */
   async pollStatements(): Promise<void> {
-    this.isPolling = true;
+    // Avoid overlapping poll runs in case where it takes longer than the polling frequency.
+    // to complete.
+    if (!this.isPolling) {
+      this.isPolling = true;
 
-    try {
-      if (this.monitoredStatements.isEmpty()) {
-        logger.debug("Not polling, no statements to poll");
-      }
-
-      const loader = CCloudResourceLoader.getInstance();
-
-      const statementsToPoll = this.getStatementsToPoll();
-      logger.debug(`Polling ${statementsToPoll.length} statements for updates ...`);
-
-      // TODO refactor into interior function for worker pool concurrency.
-      for (const statement of statementsToPoll) {
-        try {
-          // Get the latest version of the statement.
-          const latestStatement = await loader.refreshFlinkStatement(statement);
-          if (latestStatement) {
-            logger.debug(
-              `Polled statement ${statement.id} - latest phase: ${latestStatement.phase} at ${latestStatement.updatedAt}`,
-            );
-            // may, may not update reference + fire event based on freshness.
-            this.monitoredStatements.update(latestStatement);
-          } else {
-            // statement is now gone. Remove it from being monitored.
-            logger.debug(
-              `Statement ${statement.id} is no longer available, removing from monitored list.`,
-            );
-            this.monitoredStatements.remove(statement.id);
-          }
-        } catch (error) {
-          // Many things can go wrong here, including network errors, etc.
-          // XXX todo determine what to do here.
-          logger.error(`Error polling statement ${statement.id}: ${error}`);
+      try {
+        if (this.monitoredStatements.isEmpty()) {
+          logger.debug("No statements to poll");
+          return;
         }
-      }
-    } finally {
-      if (this.monitoredStatements.isEmpty() && this.poller) {
-        // If we have no more statements to poll, stop the poller.
-        this.poller.stop();
-      }
 
-      this.isPolling = false;
+        const loader = CCloudResourceLoader.getInstance();
+
+        const statementsToPoll = this.getStatementsToPoll();
+        logger.debug(`Polling ${statementsToPoll.length} statements for updates ...`);
+
+        // TODO refactor into interior function for worker pool concurrency.
+        for (const statement of statementsToPoll) {
+          try {
+            // Get the latest version of the statement.
+            const latestStatement = await loader.refreshFlinkStatement(statement);
+            if (latestStatement) {
+              logger.debug(
+                `Polled statement ${statement.id} - latest phase: ${latestStatement.phase} at ${latestStatement.updatedAt}`,
+              );
+              // may, may not update reference + fire event based on freshness.
+              this.monitoredStatements.update(latestStatement);
+            } else {
+              // statement is now gone. Remove it from being monitored.
+              logger.debug(
+                `Statement ${statement.id} is no longer available, removing from monitored list.`,
+              );
+              this.monitoredStatements.remove(statement.id);
+            }
+          } catch (error) {
+            // Many things can go wrong here, including network errors, etc.
+            // XXX todo determine what to do here.
+            logger.error(`Error polling statement ${statement.id}: ${error}`);
+          }
+        }
+      } finally {
+        if (this.monitoredStatements.isEmpty() && this.poller) {
+          // If we have no more statements to poll, stop the poller.
+          this.poller.stop();
+        }
+
+        this.isPolling = false;
+      }
+    } else {
+      logger.warn(
+        `Already polling, skipping this poll run. Consider either increasing the pause between Flink statement polling runs or reducing the maximum number of statements to poll.`,
+      );
     }
   }
 
@@ -278,10 +285,7 @@ export class FlinkStatementManager {
     // Get the list of statements to poll.
     const statementsToPoll = this.monitoredStatements.getAll();
     // Limit the number of statements to poll to the configured maximum.
-    if (
-      this.configuration.maxStatementsToPoll > 0 &&
-      statementsToPoll.length > this.configuration.maxStatementsToPoll
-    ) {
+    if (statementsToPoll.length > this.configuration.maxStatementsToPoll) {
       logger.debug(
         `Limiting number of statements to poll from ${statementsToPoll.length} to ${this.configuration.maxStatementsToPoll}`,
       );
@@ -292,7 +296,7 @@ export class FlinkStatementManager {
       });
       statementsToPoll.splice(this.configuration.maxStatementsToPoll);
     }
-    logger.debug(`Polling ${statementsToPoll.length} updated statements`);
+    logger.debug(`getStatementsToPoll(): returning ${statementsToPoll.length} statements`);
 
     return statementsToPoll;
   }
