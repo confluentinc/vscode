@@ -20,7 +20,7 @@ import {
 } from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import { CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
+import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
@@ -94,6 +94,10 @@ export async function chatHandler(
     return { metadata: { modelInfo } };
   }
 
+  const shouldSendErrorData: boolean = workspace
+    .getConfiguration()
+    .get(CHAT_SEND_ERROR_DATA, false);
+
   // non-command request
   try {
     const toolsCalled: ToolCallMetadata[] = await handleChatMessage(
@@ -118,6 +122,8 @@ export async function chatHandler(
         status: "message handling failed",
         promptTokensUsed,
         modelInfo,
+        // only include error data for telemetry if the user has opted in
+        error: shouldSendErrorData ? error : undefined,
       });
       if (error.message.includes("model_not_supported")) {
         // NOTE: some models returned from `selectChatModels()` may return an error 400 response
