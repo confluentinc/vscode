@@ -373,7 +373,7 @@ export class FlinkStatementResultsManager {
           detail: this.statement.status?.detail ?? null,
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
-          isResultsViewable: this.statement.areResultsViewable,
+          areResultsViewable: this.statement.areResultsViewable,
         };
       }
       case "StopStatement": {

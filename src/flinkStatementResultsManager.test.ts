@@ -271,7 +271,7 @@ describe("FlinkStatementResultsManager", () => {
       detail: mockStatement.status?.detail ?? null,
       failed: mockStatement.failed,
       stoppable: mockStatement.stoppable,
-      isResultsViewable: mockStatement.areResultsViewable,
+      areResultsViewable: mockStatement.areResultsViewable,
     });
   });
 

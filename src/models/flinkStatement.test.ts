@@ -164,7 +164,7 @@ describe("FlinkStatement", () => {
     });
   });
 
-  describe("isResultsViewable", () => {
+  describe("areResultsViewable", () => {
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     const now = new Date();
     const yesterday = new Date(now.getTime() - ONE_DAY_MS * 1.5);
