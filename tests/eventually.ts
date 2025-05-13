@@ -6,8 +6,8 @@
  */
 export async function eventually<T>(
   callback: () => T | Promise<T>,
-  message?: string,
   timeout_ms: number = 5000,
+  message?: string,
   delay_ms: number = 15,
 ): Promise<T> {
   const startTime = Date.now();

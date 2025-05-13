@@ -10,6 +10,7 @@ import { IconNames } from "../constants";
 import {
   FlinkStatement,
   FlinkStatementTreeItem,
+  Phase,
   STATUS_BLUE,
   STATUS_GRAY,
   STATUS_GREEN,
@@ -97,6 +98,126 @@ describe("FlinkStatement", () => {
             'Cannot update FlinkStatement "statement0" with instance with different name statement0 or environmentId env1',
         },
       );
+    });
+  });
+
+  describe("isResultsViewable", () => {
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - ONE_DAY_MS * 1.5);
+    const today = new Date(now.getTime() - ONE_DAY_MS * 0.5);
+
+    const testCases = [
+      {
+        name: "should be viewable when statement is RUNNING and less than a day old",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should not be viewable when statement is RUNNING but more than a day old",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "SELECT",
+          createdAt: yesterday,
+        },
+        expected: false,
+      },
+      {
+        name: "should be viewable when statement is PENDING and less than a day old",
+        statement: {
+          phase: Phase.PENDING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should be viewable when statement is COMPLETED and less than a day old",
+        statement: {
+          phase: Phase.COMPLETED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should be viewable when statement is INSERT_INTO",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "INSERT_INTO",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should not be viewable when statement is FAILED",
+        statement: {
+          phase: Phase.FAILED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is STOPPED",
+        statement: {
+          phase: Phase.STOPPED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is STOPPING",
+        statement: {
+          phase: Phase.STOPPING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is DELETING",
+        statement: {
+          phase: Phase.DELETING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is FAILING",
+        statement: {
+          phase: Phase.FAILING,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be viewable when statement is DEGRADED",
+        statement: {
+          phase: Phase.DEGRADED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: false,
+      },
+    ];
+
+    testCases.forEach(({ name, statement, expected }) => {
+      it(name, () => {
+        const flinkStatement = createFlinkStatement({
+          phase: statement.phase,
+          sqlKind: statement.sqlKind,
+          createdAt: statement.createdAt,
+        });
+        assert.strictEqual(flinkStatement.isResultsViewable, expected);
+      });
     });
   });
 });
