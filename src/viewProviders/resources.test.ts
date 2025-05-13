@@ -258,7 +258,8 @@ describe("ResourceViewProvider loading functions", () => {
     // no direct connections exist
     sandbox.stub(direct, "getDirectResources").resolves([]);
 
-    const result: DirectEnvironment[] = await loadDirectResources();
+    const result: (DirectEnvironment | ContainerTreeItem<DirectEnvironment>)[] =
+      await loadDirectResources();
 
     assert.deepStrictEqual(result, []);
   });
@@ -272,7 +273,8 @@ describe("ResourceViewProvider loading functions", () => {
     });
     sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
 
-    const result: DirectEnvironment[] = await loadDirectResources();
+    const result: (DirectEnvironment | ContainerTreeItem<DirectEnvironment>)[] =
+      await loadDirectResources();
 
     assert.deepStrictEqual(result, [testDirectEnv]);
   });
