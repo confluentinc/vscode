@@ -2,7 +2,6 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
-  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
@@ -11,7 +10,8 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
-import { BaseLanguageModelTool } from "./base";
+import { summarizeProjectTemplate } from "../summarizers/projectTemplate";
+import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
 
@@ -40,12 +40,17 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         // skip any templates that don't match provided tags
         return;
       }
-      templateStrings.push(
-        new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
-        ),
-      );
+      const templateSummary = summarizeProjectTemplate(template);
+      templateStrings.push(new LanguageModelTextPart(templateSummary));
     });
+    if (inputTagsPassed && !templateStrings.length) {
+      // invalid tags, no results
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(
+          `No templates matched the provided tags: ${JSON.stringify(params.tags)}`,
+        ),
+      ]);
+    }
 
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
@@ -59,9 +64,10 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<LanguageModelChatMessage[]> {
+  ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IListTemplatesParameters;
 
+    // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -69,21 +75,25 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       },
       token,
     );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      let message = `Available project templates:\n`;
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = `${message}\n\n${part.value}`;
-      }
-      message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
-      messages.push(this.toolMessage(message, "result"));
-    } else {
-      const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;
-      logger.error(errorMessage);
-      messages.push(this.toolMessage(errorMessage, "error"));
+    if (!result.content.length) {
+      // cancellation / no results
+      return new TextOnlyToolResultPart(toolCall.callId, []);
     }
-    return messages;
+
+    // format the results before sending them back to the model
+    const resultParts: LanguageModelTextPart[] = [];
+    // no header needed
+    resultParts.push(...(result.content as LanguageModelTextPart[]));
+    // add a footer to the results
+    const resultsFooter = new LanguageModelTextPart(
+      `Summarize all of the above project templates for the user. If the user is interested in a specific project template:
+      1. Use the "get_templateOptions" tool with the template's 'ID' to determine what inputs they need to provide
+      2. Ask the user to provide values for any/all **required** fields
+      3. AFTER collecting user inputs, call the "create_project" tool with BOTH the 'templateId' AND all user-provided values in the 'templateOptions' object
+      IMPORTANT: Never call "create_project" without including ALL user input values in 'templateOptions'.`,
+    );
+    resultParts.push(resultsFooter);
+    return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }
 

@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-53",
+  "version": "1.3.0-56",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -90,6 +90,58 @@
               "description": "Optional tags to filter the list of templates."
             }
           }
+        }
+      },
+      {
+        "name": "get_templateOptions",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Get Project Template Options",
+        "modelDescription": "Get the input options for filling out a project template. Use this after 'list_projectTemplates' when the user selects a template to create a new project. This will return the input options for the selected template.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the template to apply."
+            }
+          },
+          "required": [
+            "templateId"
+          ]
+        }
+      },
+      {
+        "name": "create_project",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Create Project",
+        "modelDescription": "Create a new project using the selected template and input options. If the user provides values for these options, ALWAYS pass them to this tool as input for the templateOptions.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "createProject",
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the project template to use."
+            },
+            "templateOptions": {
+              "type": "object",
+              "description": "The input options for the selected project template. The keys for this object must match the input options defined in the template."
+            }
+          },
+          "required": [
+            "templateId",
+            "templateOptions"
+          ]
         }
       }
     ],
