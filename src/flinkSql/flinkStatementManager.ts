@@ -12,6 +12,7 @@ import {
   STATEMENT_POLLING_LIMIT,
 } from "../preferences/constants";
 import { IntervalPoller } from "../utils/timing";
+import { executeInWorkerPool, extract } from "../utils/workerPool";
 
 const logger = new Logger("FlinkStatementManager");
 
@@ -237,30 +238,41 @@ export class FlinkStatementManager {
         const statementsToPoll = this.getStatementsToPoll();
         logger.debug(`Polling ${statementsToPoll.length} statements for updates ...`);
 
-        // TODO refactor into interior function for worker pool concurrency.
-        for (const statement of statementsToPoll) {
-          try {
-            // Get the latest version of the statement.
-            const latestStatement = await loader.refreshFlinkStatement(statement);
-            if (latestStatement) {
-              logger.debug(
-                `Polled statement ${statement.id} - latest phase: ${latestStatement.phase} at ${latestStatement.updatedAt}`,
-              );
-              // may, may not update reference + fire event based on freshness.
-              this.monitoredStatements.update(latestStatement);
-            } else {
-              // statement is now gone. Remove it from being monitored.
-              logger.debug(
-                `Statement ${statement.id} is no longer available, removing from monitored list.`,
-              );
-              this.monitoredStatements.remove(statement.id);
-            }
-          } catch (error) {
-            // Many things can go wrong here, including network errors, etc.
-            // XXX todo determine what to do here.
-            logger.error(`Error polling statement ${statement.id}: ${error}`);
-          }
-        }
+        // Run the polling in parallel using a worker pool.
+        // extract call will throw if any of the tasks fail
+        // (but they should internally handle their own errors).
+        extract(
+          await executeInWorkerPool(
+            async (statement: FlinkStatement): Promise<void> => {
+              try {
+                // Get the latest version of the statement.
+                const latestStatement = await loader.refreshFlinkStatement(statement);
+                if (latestStatement) {
+                  logger.debug(
+                    `Polled statement ${statement.id} - latest phase: ${latestStatement.phase} at ${latestStatement.updatedAt}`,
+                  );
+                  // may, may not update reference + fire event based on freshness.
+                  this.monitoredStatements.update(latestStatement);
+                } else {
+                  // statement is now gone. Remove it from being monitored.
+                  logger.debug(
+                    `Statement ${statement.id} is no longer available, removing from monitored list.`,
+                  );
+                  this.monitoredStatements.remove(statement.id);
+                }
+              } catch (error) {
+                // Many things can go wrong here, including network errors, etc.
+                // XXX todo determine what to do here.
+                logger.error(`Error polling statement ${statement.id}: ${error}`);
+              }
+            },
+            statementsToPoll,
+            {
+              maxWorkers: this.configuration.concurrency,
+              taskName: "FlinkStatementManager.pollStatements",
+            },
+          ),
+        );
       } finally {
         if (this.monitoredStatements.isEmpty() && this.poller) {
           // If we have no more statements to poll, stop the poller.

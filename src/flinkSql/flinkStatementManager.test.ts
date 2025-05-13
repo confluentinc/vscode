@@ -16,6 +16,7 @@ import {
   STATEMENT_POLLING_LIMIT,
 } from "../preferences/constants";
 import { IntervalPoller } from "../utils/timing";
+import * as workerPool from "../utils/workerPool";
 import {
   FlinkStatementManager,
   FlinkStatementManagerConfiguration,
@@ -61,6 +62,13 @@ describe("flinkStatementManager.ts", () => {
       testConfigState.maxStatementsToPoll = value;
       // Now simulate the event that would be fired when the configuration changes
       await driveConfigChangeListener(STATEMENT_POLLING_LIMIT);
+    }
+
+    async function setWorkspacePollingConcurrencySetting(value: number): Promise<void> {
+      // Set up the current workspace settings polling concurrenct
+      testConfigState.concurrency = value;
+      // Now simulate the event that would be fired when the configuration changes
+      await driveConfigChangeListener(STATEMENT_POLLING_CONCURRENCY);
     }
 
     async function driveConfigChangeListener(configName: string): Promise<void> {
@@ -399,6 +407,46 @@ describe("flinkStatementManager.ts", () => {
         const monitoredStatement = monitoredStatements.getAll()[0];
         assert.strictEqual(monitoredStatement.id, statement1.id);
         assert.strictEqual(monitoredStatement.updatedAt!.getTime(), newDate.getTime());
+        assert.strictEqual(instance["isPolling"], false);
+      });
+
+      it("workerpool concurrency should be respected", async () => {
+        // inject spy over executeInWorkerPool
+        const executeInWorkerPoolSpy = sandbox.spy(workerPool, "executeInWorkerPool");
+
+        registerStatements();
+
+        // Set the concurrency to 8
+        await setWorkspacePollingConcurrencySetting(8);
+
+        // Poll.
+        await instance.pollStatements();
+
+        sinon.assert.calledOnce(executeInWorkerPoolSpy);
+
+        // Check that the called concurrency was set to 8
+        assert.strictEqual(executeInWorkerPoolSpy.firstCall.args[2]!.maxWorkers, 8);
+      });
+
+      it("Should stop poller if no statements left", async () => {
+        registerStatements();
+        // Will have started the poller.
+        assert.strictEqual(instance["poller"]!.isRunning(), true);
+
+        refreshFlinkStatementStub.callsFake(async (statement): Promise<FlinkStatement | null> => {
+          // as if statement is now in stopped phase.
+          return createFlinkStatement({
+            name: statement.name,
+            updatedAt: new Date("2025-01-01"),
+            phase: STOPPED_PHASE,
+          });
+        });
+        await instance.pollStatements();
+        sinon.assert.calledTwice(refreshFlinkStatementStub);
+        // should have removed all statements
+        assert.strictEqual(monitoredStatements.getAll().length, 0);
+        // poller should be stopped since no statements are left
+        assert.strictEqual(instance["poller"]!.isRunning(), false);
         assert.strictEqual(instance["isPolling"], false);
       });
 
