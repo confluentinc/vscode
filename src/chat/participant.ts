@@ -16,9 +16,12 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolResultPart,
   lm,
+  workspace,
 } from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
+import { CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
 import { participantMessage, systemMessage, toolMessage, userMessage } from "./messageTypes";
@@ -51,19 +54,15 @@ export async function chatHandler(
     version: request.model?.version,
     id: request.model?.id,
   });
-  const modelInfo = {
-    name: model.name,
-    id: model.id,
-    vendor: model.vendor,
-    family: model.family,
-    version: model.version,
-    maxInputTokens: model.maxInputTokens,
-    // not part of the interface, but looks something like this:
-    // { supportsImageToText: true, supportsToolCalling: true }
-    capabilities: (model as any).capabilities,
-  };
+  const modelInfo = getModelInfo(model);
 
   const userPrompt = request.prompt.trim();
+  const promptTokensUsed: number = await model.countTokens(userPrompt);
+  logUsage(UserEvent.CopilotInteraction, {
+    status: "user prompt received",
+    promptTokensUsed,
+    modelInfo,
+  });
   // check for empty request
   if (userPrompt === "" && request.references.length === 0 && request.command === undefined) {
     stream.markdown("Hmm... I don't know how to respond to that.");
@@ -85,6 +84,12 @@ export async function chatHandler(
   }
 
   if (request.command) {
+    logUsage(UserEvent.CopilotInteraction, {
+      status: "slash command used",
+      command: request.command,
+      promptTokensUsed,
+      modelInfo,
+    });
     // TODO: implement command handling and update CustomChatResult interface
     return { metadata: { modelInfo } };
   }
@@ -98,9 +103,22 @@ export async function chatHandler(
       stream,
       token,
     );
+    logUsage(UserEvent.CopilotInteraction, {
+      status: "message handling succeeded",
+      promptTokensUsed,
+      modelInfo,
+      toolsCalled: toolsCalled.map((metadata: ToolCallMetadata) => {
+        return metadata.request.name;
+      }),
+    });
     return { metadata: { toolsCalled, modelInfo } };
   } catch (error) {
     if (error instanceof Error) {
+      logUsage(UserEvent.CopilotInteraction, {
+        status: "message handling failed",
+        promptTokensUsed,
+        modelInfo,
+      });
       if (error.message.includes("model_not_supported")) {
         // NOTE: some models returned from `selectChatModels()` may return an error 400 response
         // while streaming the response. This is out of our control, and attempting to find a fallback
@@ -119,7 +137,7 @@ export async function chatHandler(
         };
       }
       // some other kind of error when sending the request or streaming the response
-      logError(error, "chatHandler", { extra: { model: model?.name ?? "unknown" } });
+      logError(error, "chatHandler", { extra: { model: JSON.stringify(modelInfo) } });
       return {
         errorDetails: { message: error.message },
         metadata: { modelInfo },
@@ -153,6 +171,21 @@ async function getModel(selector: LanguageModelChatSelector): Promise<LanguageMo
   return selectedModel;
 }
 
+function getModelInfo(model: LanguageModelChat): Record<string, any> {
+  const modelInfo: Record<string, any> = {
+    name: model.name,
+    id: model.id,
+    vendor: model.vendor,
+    family: model.family,
+    version: model.version,
+    maxInputTokens: model.maxInputTokens,
+    // not part of the interface, but looks something like this:
+    // { supportsImageToText: true, supportsToolCalling: true }
+    capabilities: (model as any).capabilities,
+  };
+  return modelInfo;
+}
+
 /** Send message(s) and stream the response in markdown format. */
 export async function handleChatMessage(
   request: ChatRequest,
@@ -167,6 +200,10 @@ export async function handleChatMessage(
   // keep track of which calls the model has made to prevent repeats by stringifying any
   // `LanguageModelToolCallPart` results
   const toolCallsMade = new Set<string>();
+
+  // top-level telemetry data that won't change as a result of tool call iterations for this request
+  const modelInfo = getModelInfo(model);
+  const promptTokensUsed: number = await model.countTokens(request.prompt);
 
   // limit number of iterations to prevent infinite loops
   let iterations = 0;
@@ -202,9 +239,27 @@ export async function handleChatMessage(
     );
     iterations++;
 
+    // dynamic telemetry data that may change as a result of tool call iterations
+    const toolsCalled: string[] = toolCallMetadata.map((metadata: ToolCallMetadata) => {
+      return metadata.request.name;
+    });
+    const previousMessageCount: number = messages.length;
+    // also check user/workspace settings to see if we can send tool call data with telemetry
+    const shouldSendToolCallData: boolean = workspace
+      .getConfiguration()
+      .get(CHAT_SEND_TOOL_CALL_DATA, false);
+
     for await (const fragment of response.stream) {
       if (token.isCancellationRequested) {
         logger.debug("chat request canceled");
+        logUsage(UserEvent.CopilotInteraction, {
+          status: "message handling canceled by user",
+          promptTokensUsed,
+          modelInfo,
+          previousMessageCount,
+          toolsCalled,
+          toolCallIteration: iterations,
+        });
         return toolCallMetadata;
       }
 
@@ -215,6 +270,16 @@ export async function handleChatMessage(
         // tool call: look up the tool from the map, process its invocation result(s), and continue on
         const toolCall: LanguageModelToolCallPart = fragment as LanguageModelToolCallPart;
         const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(toolCall.name);
+        logUsage(UserEvent.CopilotInteraction, {
+          status: "tool call received from model",
+          promptTokensUsed,
+          modelInfo,
+          previousMessageCount,
+          toolsCalled,
+          toolCallIteration: iterations,
+          toolName: toolCall.name,
+          toolCallInput: shouldSendToolCallData ? JSON.stringify(toolCall.input) : undefined,
+        });
         if (!tool) {
           const errorMsg = `Tool "${toolCall.name}" not found.`;
           logger.error(errorMsg);
@@ -263,6 +328,17 @@ export async function handleChatMessage(
           status = "error";
         }
         toolCallsMade.add(JSON.stringify(toolCall));
+
+        logUsage(UserEvent.CopilotInteraction, {
+          status: `tool invocation ${status}`,
+          promptTokensUsed,
+          modelInfo,
+          previousMessageCount,
+          toolsCalled,
+          toolCallIteration: iterations,
+          toolName: toolCall.name,
+          toolCallInput: shouldSendToolCallData ? JSON.stringify(toolCall.input) : undefined,
+        });
 
         // add the Assistant message for the LanguageModelToolCallPart,
         // then a User message for the LanguageModelToolResultPart
