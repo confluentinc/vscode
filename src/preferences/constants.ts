@@ -55,3 +55,9 @@ export const UPDATE_DEFAULT_POOL_ID_FROM_LENS = prefix + "flink.updateComputePoo
  * "Set Catalog & Database" codelens. Possible values are `never`, `ask`, or `always`.
  */
 export const UPDATE_DEFAULT_DATABASE_FROM_LENS = prefix + "flink.updateDatabaseFromCodelens";
+
+/** Whether or not to include `errorDetails` from the `ChatResult` while handling `ChatResultFeedback`. */
+export const CHAT_SEND_ERROR_DATA = prefix + "chat.feedback.sendErrorData";
+
+/** Whether or not to include tool call inputs and tool result contents while handling `ChatResultFeedback`. */
+export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.feedback.sendToolCallData";
