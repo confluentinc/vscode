@@ -2,12 +2,14 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
+  Command,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
   MarkdownString,
 } from "vscode";
+import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../../authn/constants";
 import {
   Connection,
   ConnectionsList,
@@ -122,11 +124,56 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
 
-    const resultsHeader = new LanguageModelTextPart(
-      `Below are the details of available connections for you to reference and summarize to the user:\n`,
-    );
-    resultParts.push(resultsHeader);
-    resultParts.push(...(result.content as LanguageModelTextPart[]));
+    if (this.foundConnectionTypes.length) {
+      const resultsHeader = new LanguageModelTextPart(
+        `Below are the details of available connections for you to reference and summarize to the user:\n`,
+      );
+      resultParts.push(resultsHeader);
+      resultParts.push(...(result.content as LanguageModelTextPart[]));
+      // TODO: add footer hint for providing the connection type/ID for looking up resource details
+    }
+
+    if (parameters.connectionType && this.missingConnectionTypes.length) {
+      // TODO: add stream.markdown here for some text above the button?
+
+      // summarize missing connection types
+      const missingTypes = this.missingConnectionTypes.map((ctype) => titleCase(ctype)).join(", ");
+      const resultsHeader = new LanguageModelTextPart(
+        `The following connection types are not available: ${missingTypes}.`,
+      );
+      resultParts.push(resultsHeader);
+
+      // then add system-message hints about showing buttons for connecting
+      let buttonInstructions = "After explaining the connection status to the user, suggest:";
+      if (this.missingConnectionTypes.includes(ConnectionType.Ccloud)) {
+        buttonInstructions += `\n- They need to sign in to Confluent Cloud using the '${CCLOUD_SIGN_IN_BUTTON_LABEL}' button added above`;
+        const ccloudCommand: Command = {
+          command: "confluent.connections.ccloud.signIn",
+          title: CCLOUD_SIGN_IN_BUTTON_LABEL,
+        };
+        stream.button(ccloudCommand);
+      }
+      if (this.missingConnectionTypes.includes(ConnectionType.Local)) {
+        buttonInstructions +=
+          "\n- They can start local resources using the 'Start Local Resources' button added above";
+        const localCommand: Command = {
+          command: "confluent.docker.startLocalResources",
+          title: "Start Local Resources",
+        };
+        stream.button(localCommand);
+      }
+      if (this.missingConnectionTypes.includes(ConnectionType.Direct)) {
+        buttonInstructions +=
+          "\n- They can connect directly using the 'Add New Connection' button added above";
+        const directCommand: Command = {
+          command: "confluent.connections.direct",
+          title: "Add New Connection",
+        };
+        stream.button(directCommand);
+      }
+      const resultsFooter = new LanguageModelTextPart(buttonInstructions);
+      resultParts.push(resultsFooter);
+    }
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
