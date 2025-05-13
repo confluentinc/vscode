@@ -55,3 +55,15 @@ export const UPDATE_DEFAULT_POOL_ID_FROM_LENS = prefix + "flink.updateComputePoo
  * "Set Catalog & Database" codelens. Possible values are `never`, `ask`, or `always`.
  */
 export const UPDATE_DEFAULT_DATABASE_FROM_LENS = prefix + "flink.updateDatabaseFromCodelens";
+
+/**
+ * Whether or not to include `errorDetails` from the `ChatResult` while handling `ChatResultFeedback`.
+ * Also affects whether we send `error` data for "message handling failed" telemetry events.
+ */
+export const CHAT_SEND_ERROR_DATA = prefix + "chat.telemetry.sendErrorData";
+
+/**
+ * Whether or not to include tool call inputs and tool result contents while handling `ChatResultFeedback`.
+ * Also affects whether we include tool call inputs in general tool-handling telemetry events.
+ */
+export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.telemetry.sendToolCallData";
