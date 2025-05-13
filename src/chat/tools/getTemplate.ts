@@ -88,8 +88,15 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
     );
     resultParts.push(resultsHeader);
     resultParts.push(...(result.content as LanguageModelTextPart[]));
-    // TODO: add hint for the model to create a project based on user inputs
-
+    const resultsFooter = new LanguageModelTextPart(
+      `If the user wants to continue with this template:
+      1. Ask the user to provide values for ALL required inputs listed above
+      2. After collecting all user inputs, call the "create_project" tool with:
+        - the 'templateId': "${parameters.templateId}"
+        - 'templateOptions': an object containing ALL user-provided values
+      IMPORTANT: Always include the complete templateOptions object with ALL user input values when calling create_project.`,
+    );
+    resultParts.push(resultsFooter);
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
 }

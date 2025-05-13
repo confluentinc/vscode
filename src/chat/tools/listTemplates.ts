@@ -43,6 +43,14 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       const templateSummary = summarizeProjectTemplate(template);
       templateStrings.push(new LanguageModelTextPart(templateSummary));
     });
+    if (inputTagsPassed && !templateStrings.length) {
+      // invalid tags, no results
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(
+          `No templates matched the provided tags: ${JSON.stringify(params.tags)}`,
+        ),
+      ]);
+    }
 
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
@@ -78,7 +86,11 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     resultParts.push(...(result.content as LanguageModelTextPart[]));
     // add a footer to the results
     const resultsFooter = new LanguageModelTextPart(
-      `Summarize all of the above project templates for the user. If the user is interested in a specific project template, provide the template's 'ID' with the "get_templateOptions" tool to determine what inputs they need to provide.`,
+      `Summarize all of the above project templates for the user. If the user is interested in a specific project template:
+      1. Use the "get_templateOptions" tool with the template's 'ID' to determine what inputs they need to provide
+      2. Ask the user to provide values for any/all **required** fields
+      3. AFTER collecting user inputs, call the "create_project" tool with BOTH the 'templateId' AND all user-provided values in the 'templateOptions' object
+      IMPORTANT: Never call "create_project" without including ALL user input values in 'templateOptions'.`,
     );
     resultParts.push(resultsFooter);
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
