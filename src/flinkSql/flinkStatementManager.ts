@@ -5,11 +5,11 @@ import { Logger } from "../logging";
 import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY,
+  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
   DEFAULT_STATEMENT_POLLING_LIMIT,
   ENABLE_FLINK,
   STATEMENT_POLLING_CONCURRENCY,
-  STATEMENT_POLLING_FREQUENCY,
+  STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../preferences/constants";
 import { IntervalPoller } from "../utils/timing";
@@ -20,8 +20,17 @@ const logger = new Logger("FlinkStatementManager");
 export type FlinkStatementManagerConfiguration = {
   /** The frequency at which to poll for updated statements (in seconds. 0 = no polling at all). */
   pollingFrequency: number;
+
+  /**
+   * Poll at most this many statements. If more are available to poll, then err
+   * on the side of polling the most recent ones first.
+   */
   maxStatementsToPoll: number;
+
+  /** The concurrency level to use when polling for updated statements. */
   concurrency: number;
+
+  /** Flink experimental setting enabled or not. */
   flinkEnabled: boolean;
 };
 
@@ -49,7 +58,8 @@ export class FlinkStatementManager {
     let concurrency =
       configs.get<number>(STATEMENT_POLLING_CONCURRENCY) ?? DEFAULT_STATEMENT_POLLING_CONCURRENCY;
     let pollingFrequency =
-      configs.get<number>(STATEMENT_POLLING_FREQUENCY) ?? DEFAULT_STATEMENT_POLLING_FREQUENCY;
+      configs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS) ??
+      DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS;
     let maxStatementsToPoll =
       configs.get<number>(STATEMENT_POLLING_LIMIT) ?? DEFAULT_STATEMENT_POLLING_LIMIT;
 
@@ -62,9 +72,9 @@ export class FlinkStatementManager {
 
     if (pollingFrequency < 0) {
       logger.error(
-        `Invalid polling frequency: ${pollingFrequency}. Resetting to ${DEFAULT_STATEMENT_POLLING_FREQUENCY}.`,
+        `Invalid polling frequency: ${pollingFrequency}. Resetting to ${DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS}.`,
       );
-      pollingFrequency = DEFAULT_STATEMENT_POLLING_FREQUENCY;
+      pollingFrequency = DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS;
     }
 
     if (maxStatementsToPoll < 1) {
@@ -167,8 +177,8 @@ export class FlinkStatementManager {
       // get the latest workspace configs after the event fired
       const workspaceConfigs: WorkspaceConfiguration = workspace.getConfiguration();
 
-      if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY)) {
-        const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY)!;
+      if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS)) {
+        const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS)!;
         this.configuration.pollingFrequency = newFrequency;
         logger.debug(`Polling frequency changed to ${newFrequency}`);
         this.poller = this.resetPoller();
@@ -465,14 +475,15 @@ export class MonitoredStatements {
     }
   }
 
-  /** Remove this statement, independent of client ids.
+  /**
+   * Remove this statement, independent of client ids.
    * Used when a statement has disappeared from ccloud-side.
    */
   remove(statementId: FlinkStatementId): void {
+    logger.debug(`Removed statement ${statementId} from monitored list.`);
     this.monitored.delete(statementId);
     // Emit event to inform listeners.
     flinkStatementDeleted.fire(statementId);
-    logger.debug(`Removed statement ${statementId} from monitored list.`);
   }
 
   /**

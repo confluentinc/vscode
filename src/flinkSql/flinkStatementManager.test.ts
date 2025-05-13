@@ -4,16 +4,16 @@ import * as vscode from "vscode";
 import { ConfigurationChangeEvent } from "vscode";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ccloudConnected, flinkStatementUpdated } from "../emitters";
+import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, FlinkStatementId, STOPPED_PHASE } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY,
+  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
   DEFAULT_STATEMENT_POLLING_LIMIT,
   ENABLE_FLINK,
   STATEMENT_POLLING_CONCURRENCY,
-  STATEMENT_POLLING_FREQUENCY,
+  STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../preferences/constants";
 import { IntervalPoller } from "../utils/timing";
@@ -45,7 +45,7 @@ describe("flinkStatementManager.ts", () => {
 
     function resetConfiguration(): FlinkStatementManagerConfiguration {
       return {
-        pollingFrequency: DEFAULT_STATEMENT_POLLING_FREQUENCY,
+        pollingFrequency: DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
         maxStatementsToPoll: DEFAULT_STATEMENT_POLLING_LIMIT,
         concurrency: DEFAULT_STATEMENT_POLLING_CONCURRENCY,
         flinkEnabled: true,
@@ -56,7 +56,7 @@ describe("flinkStatementManager.ts", () => {
       // Set up the current workspace settings polling frequency
       testConfigState.pollingFrequency = value;
       // Now simulate the event that would be fired when the configuration changes
-      await driveConfigChangeListener(STATEMENT_POLLING_FREQUENCY);
+      await driveConfigChangeListener(STATEMENT_POLLING_FREQUENCY_SECONDS);
     }
 
     async function setWorkspacePollingLimitSetting(value: number): Promise<void> {
@@ -102,7 +102,7 @@ describe("flinkStatementManager.ts", () => {
       const configMock = {
         get: sandbox.fake((configName: string) => {
           switch (configName) {
-            case STATEMENT_POLLING_FREQUENCY:
+            case STATEMENT_POLLING_FREQUENCY_SECONDS:
               return testConfigState.pollingFrequency;
             case STATEMENT_POLLING_LIMIT:
               return testConfigState.maxStatementsToPoll;
@@ -147,7 +147,7 @@ describe("flinkStatementManager.ts", () => {
       it("Should fix polling frequency to be at least 0", () => {
         testConfigState.pollingFrequency = -1;
         const config = FlinkStatementManager.getConfiguration();
-        assert.strictEqual(config.pollingFrequency, DEFAULT_STATEMENT_POLLING_FREQUENCY);
+        assert.strictEqual(config.pollingFrequency, DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS);
       });
 
       it("Should fix max statements to poll to be at least 1", () => {
@@ -571,6 +571,7 @@ describe("flinkStatementManager.ts", () => {
   describe("MonitoredStatements", () => {
     let sandbox: sinon.SinonSandbox;
     let flinkStatementUpdatedFired: sinon.SinonStub;
+    let flinkStatementDeletedFired: sinon.SinonStub;
 
     const initialStatementDate = new Date("2024-01-01");
     const clientId = "testClientId";
@@ -582,6 +583,7 @@ describe("flinkStatementManager.ts", () => {
       // by default will make a RUNNING state statement, nonterminal.
       sandbox = sinon.createSandbox();
       flinkStatementUpdatedFired = sandbox.stub(flinkStatementUpdated, "fire");
+      flinkStatementDeletedFired = sandbox.stub(flinkStatementDeleted, "fire");
 
       statement = createFlinkStatement({ updatedAt: initialStatementDate });
       instance = new MonitoredStatements();
@@ -812,6 +814,22 @@ describe("flinkStatementManager.ts", () => {
         instance.clear();
         instance.isEmpty();
         assert.strictEqual(monitoredMap.size, 0);
+        sinon.assert.notCalled(flinkStatementUpdatedFired);
+        sinon.assert.notCalled(flinkStatementDeletedFired);
+      });
+    });
+
+    describe("remove()", () => {
+      it("should remove a statement from the monitored statements", () => {
+        instance.register(clientId, [statement, createFlinkStatement({ name: "other" })]);
+        assert.strictEqual(monitoredMap.size, 2);
+
+        instance.remove(statement.id);
+        assert.strictEqual(monitoredMap.size, 1);
+        assert.strictEqual(monitoredMap.get(statement.id), undefined);
+        sinon.assert.notCalled(flinkStatementUpdatedFired);
+        sinon.assert.calledOnce(flinkStatementDeletedFired);
+        sinon.assert.calledWith(flinkStatementDeletedFired, statement.id);
       });
     });
   });
