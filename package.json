@@ -122,7 +122,7 @@
           "projects"
         ],
         "displayName": "Create Project",
-        "modelDescription": "Create a new project using the selected template and input options. Use this after 'get_templateOptions' when the provided values for the selected template have been provided.",
+        "modelDescription": "Create a new project using the selected template and input options. If the user provides values for these options, ALWAYS pass them to this tool as input for the templateOptions.",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "createProject",
         "icon": "$(checklist)",
@@ -135,7 +135,7 @@
             },
             "templateOptions": {
               "type": "object",
-              "description": "The input options for the selected project template. Use the result of the 'get_templateOptions' and any user-provided values to fill out this object."
+              "description": "The input options for the selected project template. The keys for this object must match the input options defined in the template."
             }
           },
           "required": [
