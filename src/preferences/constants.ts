@@ -57,6 +57,27 @@ export const UPDATE_DEFAULT_POOL_ID_FROM_LENS = prefix + "flink.updateComputePoo
 export const UPDATE_DEFAULT_DATABASE_FROM_LENS = prefix + "flink.updateDatabaseFromCodelens";
 
 /**
+ * Frequency in seconds for polling non-terminal Flink statements. 0 means no polling.
+ */
+export const STATEMENT_POLLING_FREQUENCY_SECONDS =
+  prefix + "flink.statementPollingFrequencySeconds";
+export const DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS = 10; // seconds.
+
+/**
+ * Maximum number of nonterminal Flink statements to poll for updates.
+ * If the number of nonterminal statements exceeds this limit, only the
+ * N with the most recent `createdAt` timestamps will be polled.
+ */
+export const STATEMENT_POLLING_LIMIT = prefix + "flink.statementPollingLimit";
+export const DEFAULT_STATEMENT_POLLING_LIMIT = 25; // non-terminal statements
+
+/**
+ * Setting to control the concurrency level when polling requests for Flink statements.
+ */
+export const STATEMENT_POLLING_CONCURRENCY: string = prefix + "flink.statementPollingConcurrency";
+export const DEFAULT_STATEMENT_POLLING_CONCURRENCY = 5; // concurrent polling requests
+
+/**
  * Whether or not to include `errorDetails` from the `ChatResult` while handling `ChatResultFeedback`.
  * Also affects whether we send `error` data for "message handling failed" telemetry events.
  */

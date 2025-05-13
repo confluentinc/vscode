@@ -16,15 +16,78 @@ import {
   STATUS_GREEN,
   STATUS_RED,
   STATUS_YELLOW,
+  TERMINAL_PHASES,
 } from "./flinkStatement";
 import { CustomMarkdownString, KeyValuePairArray } from "./main";
 import { EnvironmentId } from "./resource";
 
 describe("FlinkStatement", () => {
-  it("uses name as id", () => {
-    const statement = createFlinkStatement({ name: "statement0" });
+  it("uses env+name as id", () => {
+    const statement = createFlinkStatement({
+      name: "statement0",
+      environmentId: "env0" as EnvironmentId,
+    });
 
-    assert.strictEqual(statement.id, statement.name, "Expect name and id to be the same");
+    assert.strictEqual(statement.id, "statement0@env0", "Expected id to be made of name@env");
+  });
+
+  it("isTerminal returns true for terminal phases", () => {
+    for (const phase of TERMINAL_PHASES) {
+      const statement = createFlinkStatement({ phase });
+      assert.strictEqual(statement.isTerminal, true, `Expected ${phase} to be terminal`);
+    }
+
+    // not necessarily all the nonterminal phases, but enough to prove the point.
+    const nonTerminalPhases = [Phase.RUNNING, Phase.DEGRADED, Phase.PENDING, Phase.FAILING];
+    for (const phase of nonTerminalPhases) {
+      const statement = createFlinkStatement({ phase });
+      assert.strictEqual(statement.isTerminal, false, `Expected ${phase} to not be terminal`);
+    }
+  });
+
+  describe("isFresherThan()", () => {
+    const staleStatement = createFlinkStatement({ updatedAt: new Date("2023-01-01T00:00:00Z") });
+    const freshStatement = createFlinkStatement({ updatedAt: new Date("2023-01-02T00:00:00Z") });
+
+    it("returns true if the statement is fresher", () => {
+      assert.strictEqual(
+        freshStatement.isFresherThan(staleStatement),
+        true,
+        "Expected fresh statement to be fresher than stale statement",
+      );
+    });
+
+    it("returns false if the statement is not fresher", () => {
+      assert.strictEqual(
+        staleStatement.isFresherThan(freshStatement),
+        false,
+        "Expected stale statement to not be fresher than fresh statement",
+      );
+    });
+
+    it("returns faluse if statement is the same", () => {
+      assert.strictEqual(
+        freshStatement.isFresherThan(freshStatement),
+        false,
+        "Expected statement to not be fresher than itself",
+      );
+    });
+
+    it("Throws if the statement ids are not the same", () => {
+      const differentIdStatement = createFlinkStatement({
+        name: "someOtherStatement",
+        environmentId: "env1" as EnvironmentId,
+      });
+
+      assert.throws(
+        () => {
+          freshStatement.isFresherThan(differentIdStatement);
+        },
+        {
+          message: `Cannot compare FlinkStatement "${freshStatement.id}" with instance with different id "${differentIdStatement.id}"`,
+        },
+      );
+    });
   });
 
   describe("update()", () => {
@@ -34,7 +97,7 @@ describe("FlinkStatement", () => {
         environmentId: "env0" as EnvironmentId,
         computePoolId: "pool0",
 
-        phase: "RUNNING",
+        phase: Phase.RUNNING,
         detail: "Statement is running",
         sqlKind: "SELECT",
         updatedAt: new Date("2023-01-01T00:00:00Z"),
@@ -48,7 +111,7 @@ describe("FlinkStatement", () => {
         computePoolId: "pool12",
 
         // these three in status.
-        phase: "COMPLETED",
+        phase: Phase.COMPLETED,
         detail: "Statement is completed",
         sqlKind: "SELECT",
 
@@ -216,7 +279,7 @@ describe("FlinkStatement", () => {
           sqlKind: statement.sqlKind,
           createdAt: statement.createdAt,
         });
-        assert.strictEqual(flinkStatement.isResultsViewable, expected);
+        assert.strictEqual(flinkStatement.areResultsViewable, expected);
       });
     });
   });
@@ -234,7 +297,7 @@ describe("FlinkStatementTreeItem", () => {
   it("tooltip hits the major properties", () => {
     const statement = createFlinkStatement({
       name: "statement0",
-      phase: "RUNNING",
+      phase: Phase.RUNNING,
       detail: "Statement is running",
       sqlKind: "SELECT",
       environmentId: "env0" as EnvironmentId,
@@ -265,7 +328,7 @@ describe("FlinkStatementTreeItem", () => {
 
   describe("icon tests", () => {
     it("should use the correct icons and colors based on the `phase`", () => {
-      for (const phase of ["FAILED", "FAILING"]) {
+      for (const phase of [Phase.FAILED, Phase.FAILING]) {
         const failStatement = new FlinkStatement({
           ...TEST_CCLOUD_FLINK_STATEMENT,
           status: makeStatus(phase),
@@ -278,7 +341,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const degradedStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("DEGRADED"),
+        status: makeStatus(Phase.DEGRADED),
       });
       const degradedTreeItem = new FlinkStatementTreeItem(degradedStatement);
       const degradedIcon = degradedTreeItem.iconPath as ThemeIcon;
@@ -287,7 +350,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const runningStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("RUNNING"),
+        status: makeStatus(Phase.RUNNING),
       });
       const runningTreeItem = new FlinkStatementTreeItem(runningStatement);
       const runningIcon = runningTreeItem.iconPath as ThemeIcon;
@@ -296,14 +359,14 @@ describe("FlinkStatementTreeItem", () => {
 
       const completedStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("COMPLETED"),
+        status: makeStatus(Phase.COMPLETED),
       });
       const completedTreeItem = new FlinkStatementTreeItem(completedStatement);
       const completedIcon = completedTreeItem.iconPath as ThemeIcon;
       assert.strictEqual(completedIcon.id, IconNames.FLINK_STATEMENT_STATUS_COMPLETED);
       assert.strictEqual(completedIcon.color, STATUS_GRAY);
 
-      for (const phase of ["DELETING", "STOPPING"]) {
+      for (const phase of [Phase.DELETING, Phase.STOPPING]) {
         const stopStatement = new FlinkStatement({
           ...TEST_CCLOUD_FLINK_STATEMENT,
           status: makeStatus(phase),
@@ -316,7 +379,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const stoppedStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("STOPPED"),
+        status: makeStatus(Phase.STOPPED),
       });
       const stoppedTreeItem = new FlinkStatementTreeItem(stoppedStatement);
       const stoppedIcon = stoppedTreeItem.iconPath as ThemeIcon;
@@ -325,7 +388,7 @@ describe("FlinkStatementTreeItem", () => {
 
       const pendingStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("PENDING"),
+        status: makeStatus(Phase.PENDING),
       });
       const pendingTreeItem = new FlinkStatementTreeItem(pendingStatement);
       const pendingIcon = pendingTreeItem.iconPath as ThemeIcon;
@@ -336,7 +399,7 @@ describe("FlinkStatementTreeItem", () => {
     it("should fall back to a basic icon for untracked phase values", () => {
       const unknownStatement = new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        status: makeStatus("UNKNOWN"),
+        status: makeStatus("UNKNOWN" as Phase),
       });
       const unknownTreeItem = new FlinkStatementTreeItem(unknownStatement);
       const unknownIcon = unknownTreeItem.iconPath as ThemeIcon;
@@ -346,6 +409,6 @@ describe("FlinkStatementTreeItem", () => {
   });
 });
 
-function makeStatus(phase: string): SqlV1StatementStatus {
+function makeStatus(phase: Phase): SqlV1StatementStatus {
   return createFlinkStatement({ phase: phase }).status;
 }

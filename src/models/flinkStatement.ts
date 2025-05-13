@@ -22,7 +22,9 @@ import {
 
 const ONE_DAY_MILLIS = 24 * 60 * 60 * 1000;
 
-// Statement phases
+export type FlinkStatementId = string & { readonly brand: unique symbol };
+
+/** Statement phases */
 export enum Phase {
   RUNNING = "RUNNING",
   DEGRADED = "DEGRADED",
@@ -35,15 +37,25 @@ export enum Phase {
   PENDING = "PENDING",
 }
 
-// List of phases considered as failed or non-stoppable
+/**  List of phases considered as failed or failing. */
 export const FAILED_PHASES = [Phase.FAILED, Phase.FAILING];
 
-export const TERMINAL_PHASES = [
+/**  List of terminal phases. Statements in terminal phase won't ever change on their own. */
+export const TERMINAL_PHASES = [Phase.COMPLETED, Phase.STOPPED, Phase.FAILED];
+
+const VIEWABLE_PHASES = [
+  Phase.PENDING,
+  Phase.RUNNING,
   Phase.COMPLETED,
-  Phase.STOPPED,
+  // Phase.DEGRADED,??
+];
+
+/** Phases which cannot be stopped. */
+export const UNSTOPPABLE_PHASES = [
   Phase.DELETING,
   Phase.STOPPING,
-  ...FAILED_PHASES,
+  Phase.FAILING,
+  ...TERMINAL_PHASES,
 ];
 
 /**
@@ -109,19 +121,24 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   }
 
   /**
-   * Return the name of the statement as its id.
-   * This is guaranteed to be unique within the environment, per API docs.
+   * Return globally unique id for this statement.
+   * This is a combination of the statement name and the environmentId.
+   * This is needed because the name is not guaranteed unique across environments.
    */
-  get id(): string {
-    return this.name;
+  get id(): FlinkStatementId {
+    return `${this.name}@${this.environmentId}` as FlinkStatementId;
   }
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.id}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
-  get phase(): string {
-    return this.status.phase;
+  get isTerminal(): boolean {
+    return TERMINAL_PHASES.includes(this.phase);
+  }
+
+  get phase(): Phase {
+    return this.status.phase as Phase;
   }
 
   get sqlKindDisplay(): string | undefined {
@@ -140,6 +157,23 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return this.metadata?.updated_at;
   }
 
+  /**
+   * Is this statement's `updatedAt` newer than other's?
+   * @throws Error if statements have different name or environmentIds.
+   */
+  isFresherThan(other: FlinkStatement): boolean {
+    if (this.id !== other.id) {
+      throw new Error(
+        `Cannot compare FlinkStatement "${this.id}" with instance with different id "${other.id}"`,
+      );
+    }
+
+    if (!this.updatedAt || !other.updatedAt) {
+      return false;
+    }
+    return this.updatedAt.getTime() > other.updatedAt.getTime();
+  }
+
   get isBackground(): boolean {
     return (this.sqlKind ?? "") === "INSERT_INTO";
   }
@@ -156,7 +190,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   update(other: FlinkStatement): void {
     if (this.name !== other.name || this.environmentId !== other.environmentId) {
       throw new Error(
-        `Cannot update FlinkStatement "${this.name}" with instance with different name ${other.id} or environmentId ${other.environmentId}`,
+        `Cannot update FlinkStatement "${this.name}" with instance with different name ${other.name} or environmentId ${other.environmentId}`,
       );
     }
 
@@ -167,19 +201,18 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
 
   /**
    * For statement results to be viewable, it must satisfy these conditions:
-   * 1. The statement must NOT be a background statement (an INSERT INTO statement)
-   * 2. The statement must have been created in the last 24 hours
+   * 1. The statement must have been created in the last 24 hours
    *    (which is the TTL for the statement result to be deleted)
-   * 3. The statement phase must be either RUNNING or COMPLETED.
+   * 2. The statement phase indicates viewable {@see VIEWABLE_PHASES}
    */
-  get isResultsViewable(): boolean {
+  get areResultsViewable(): boolean {
     if (!this.createdAt) {
       return false;
     }
 
     return (
       this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS &&
-      [Phase.PENDING, Phase.RUNNING, Phase.COMPLETED].includes(this.phase as Phase)
+      VIEWABLE_PHASES.includes(this.phase)
     );
   }
 
@@ -195,12 +228,12 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
 
   /** Returns true if the statement is in a failed or failing phase. */
   get failed(): boolean {
-    return FAILED_PHASES.includes(this.phase as Phase);
+    return FAILED_PHASES.includes(this.phase);
   }
 
   /** Returns true if the statement can be stopped (not in a terminal phase). */
   get stoppable(): boolean {
-    return !TERMINAL_PHASES.includes(this.phase as Phase);
+    return !TERMINAL_PHASES.includes(this.phase);
   }
 
   get detail(): string | undefined {
@@ -228,10 +261,9 @@ export class FlinkStatementTreeItem extends TreeItem {
   resource: FlinkStatement;
 
   constructor(resource: FlinkStatement) {
-    super(resource.id, TreeItemCollapsibleState.None);
+    super(resource.name, TreeItemCollapsibleState.None);
 
     // internal properties
-    this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 

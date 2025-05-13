@@ -1,7 +1,6 @@
 import { Logger } from "../logging";
 
 const SLOW_POLLING_FREQUENCY = 10 * 1000; // 10s
-const FAST_POLLING_FREQUENCY = 2 * 1000; // 2s
 
 const logger = new Logger("utils.timing");
 
@@ -28,7 +27,7 @@ export class IntervalPoller {
   private name: string;
 
   readonly slowFrequency: number;
-  readonly fastFrequency: number;
+  readonly fastFrequency: number | undefined;
   currentFrequency: number;
 
   runImmediately: boolean = false;
@@ -41,19 +40,21 @@ export class IntervalPoller {
     name: string,
     callback: () => void,
     slowFrequency: number = SLOW_POLLING_FREQUENCY,
-    fastFrequency: number = FAST_POLLING_FREQUENCY,
+    fastFrequency: number | undefined = undefined,
     runImmediately: boolean = false,
   ) {
     if (slowFrequency < 1) {
       throw new Error("Slow frequency must be at least 1ms");
     }
 
-    if (fastFrequency < 1) {
-      throw new Error("Fast frequency must be at least 1ms");
-    }
+    if (fastFrequency !== undefined) {
+      if (fastFrequency < 1) {
+        throw new Error("Fast frequency must be at least 1ms");
+      }
 
-    if (slowFrequency <= fastFrequency) {
-      throw new Error("Slow frequency must be greater than high frequency");
+      if (slowFrequency <= fastFrequency) {
+        throw new Error("Slow frequency must be greater than high frequency");
+      }
     }
 
     this.name = name;
@@ -93,6 +94,10 @@ export class IntervalPoller {
     return false;
   }
 
+  dispose() {
+    this.stop();
+  }
+
   /** Is this poller is currently running? */
   public isRunning() {
     return this.registeredInterval !== undefined;
@@ -102,6 +107,10 @@ export class IntervalPoller {
    * Will not take any action if the poller is already running at the fast frequency.
    */
   public useFastFrequency() {
+    if (!this.fastFrequency) {
+      throw new Error("Fast frequency is not set");
+    }
+
     logger.trace(`${this.name}: using fast frequency polling interval`, {
       fastFrequency: `${this.fastFrequency}ms`,
       slowFrequency: `${this.slowFrequency}ms`,
