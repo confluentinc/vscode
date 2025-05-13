@@ -11,8 +11,9 @@ import { CustomChatResult } from "./types";
 
 export function handleFeedback(feedback: ChatResultFeedback): void {
   logUsage(UserEvent.CopilotInteraction, {
-    // only includes error info and tool call metadata, not the prompt or response text
-    result: sanitizeFeedbackResult(feedback.result as CustomChatResult),
+    status: "feedback provided",
+    // only includes error info and tool call metadata, not the prompt or final response text
+    chatResult: sanitizeFeedbackResult(feedback.result as CustomChatResult),
     isHelpful: feedback.kind === ChatResultFeedbackKind.Helpful,
   });
 }
