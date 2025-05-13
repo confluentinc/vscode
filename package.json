@@ -692,15 +692,15 @@
               "experimental"
             ]
           },
-          "confluent.chat.feedback.sendErrorData": {
+          "confluent.chat.telemetry.sendErrorData": {
             "type": "boolean",
             "default": false,
-            "markdownDescription": "Include **error data** from Copilot chat participant results gathered from 👍/👎 feedback. When disabled (default), no error details will be sent with your feedback."
+            "markdownDescription": "Include **error data** from Copilot chat participant results gathered from 👍/👎 feedback or from error responses. When disabled (default), no error details will be sent."
           },
-          "confluent.chat.feedback.sendToolCallData": {
+          "confluent.chat.telemetry.sendToolCallData": {
             "type": "boolean",
             "default": false,
-            "markdownDescription": "Include **tool call inputs and result contents** from Copilot chat participant results gathered from 👍/👎 feedback.\n- When disabled (default), your privacy is protected as no model-provided tool inputs or result contents will be shared.\n- When enabled, potentially sensitive information will be sent including the full inputs provided to tools and their complete outputs (which may contain names, IDs, and detailed properties of your Confluent/Kafka resources).\n\nNOTE: If telemetry is enabled via `#telemetry.telemetryLevel#` and `#telemetry.feedback.enabled#`, we will always send the **names** of tools used, but not their inputs or outputs."
+            "markdownDescription": "Include **tool call inputs and result contents** from Copilot chat participant results gathered from 👍/👎 feedback, as well as **tool call inputs** during tool call flows for general telemetry purposes.\n- When disabled (default), your privacy is protected as no model-provided tool inputs or result contents will be shared.\n- When enabled, potentially sensitive information will be sent including the full inputs provided to tools and their complete outputs (which may contain names, IDs, and detailed properties of your Confluent/Kafka resources).\n\nNOTE: If telemetry is enabled via `#telemetry.telemetryLevel#` and `#telemetry.feedback.enabled#`, we will always send the **names** of tools used, but not their inputs or outputs."
           }
         }
       }

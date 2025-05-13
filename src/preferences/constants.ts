@@ -60,10 +60,10 @@ export const UPDATE_DEFAULT_DATABASE_FROM_LENS = prefix + "flink.updateDatabaseF
  * Whether or not to include `errorDetails` from the `ChatResult` while handling `ChatResultFeedback`.
  * Also affects whether we send `error` data for "message handling failed" telemetry events.
  */
-export const CHAT_SEND_ERROR_DATA = prefix + "chat.feedback.sendErrorData";
+export const CHAT_SEND_ERROR_DATA = prefix + "chat.telemetry.sendErrorData";
 
 /**
  * Whether or not to include tool call inputs and tool result contents while handling `ChatResultFeedback`.
  * Also affects whether we include tool call inputs in general tool-handling telemetry events.
  */
-export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.feedback.sendToolCallData";
+export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.telemetry.sendToolCallData";
