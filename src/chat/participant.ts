@@ -7,6 +7,7 @@ import {
   ChatResponseTurn,
   LanguageModelChat,
   LanguageModelChatMessage,
+  LanguageModelChatMessageRole,
   LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
@@ -238,6 +239,18 @@ export async function handleChatMessage(
     // NOTE: uncomment for local debugging
     // debugLogChatMessages(messages);
 
+    const latestMessage: LanguageModelChatMessage = messages[messages.length - 1];
+    const isNotUserMessage: boolean = latestMessage.role !== LanguageModelChatMessageRole.User;
+    const isNotTextPart: boolean =
+      latestMessage.content.length === 0 ||
+      latestMessage.content[0] instanceof LanguageModelToolResultPart;
+    if (isNotUserMessage || isNotTextPart) {
+      // the latest message needs to be a `User` message, and on older versions of the Copilot Chat
+      // extension (<0.27.0), it also can't be a tool result, so we have to add a new User message
+      // to the end of the messages array
+      messages.push(userMessage(request.prompt));
+    }
+
     const response: LanguageModelChatResponse = await model.sendRequest(
       messages,
       requestOptions,
@@ -295,17 +308,20 @@ export async function handleChatMessage(
         // TODO: move this into the tools themselves?
         stream.progress(tool.progressMessage);
 
-        if (toolCallsMade.has(JSON.stringify(toolCall))) {
+        // don't stringify the entire tool call object since the `callId` will change each time
+        const toolCallString = `${toolCall.name}:${JSON.stringify(toolCall.input)}`;
+        if (toolCallsMade.has(toolCallString)) {
           // don't process the same tool call twice
           logger.debug(`Tool "${toolCall.name}" already called with input "${toolCall.input}"`);
           messages.push(
             systemMessage(
-              `Tool "${toolCall.name}" already called with input "${JSON.stringify(toolCall.input)}". Do not repeatedly call tools with the same inputs. Use previous result(s) if possible.`,
+              `Tool "${toolCall.name}" already called with input "${JSON.stringify(toolCall.input)}". Do not repeatedly call tools with the same inputs. Refer to previous tool results in the conversation history.`,
             ),
           );
           continueConversation = true;
           continue;
         }
+        toolCallsMade.add(toolCallString);
 
         // each registered tool should contribute its own way of handling the invocation and
         // interacting with the stream
@@ -333,7 +349,6 @@ export async function handleChatMessage(
           ]);
           status = "error";
         }
-        toolCallsMade.add(JSON.stringify(toolCall));
 
         logUsage(UserEvent.CopilotInteraction, {
           status: `tool invocation ${status}`,
