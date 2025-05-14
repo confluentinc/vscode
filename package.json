@@ -1917,7 +1917,6 @@
     "tail": "^2.2.6",
     "undici": "^6.21.2",
     "unzipit": "^1.4.3",
-    "uuid": "^11.1.0",
     "vscode-json-languageservice": "^5.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
