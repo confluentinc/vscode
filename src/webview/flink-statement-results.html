@@ -91,7 +91,6 @@
               size="50"
               data-on-keydown="this.handleKeydown(event)"
               data-on-input="this.handleInput(event)"
-              data-prop-disabled="this.viewMode() === 'changelog'"
               >Search</vscode-text-field
             >
           </div>
@@ -268,7 +267,7 @@
             <vscode-button
               appearance="icon"
               aria-label="Click to view results as changelog"
-              data-on-click="this.toggleViewMode()"
+              data-on-click="this.setViewMode('changelog')"
               title="Click to view results as changelog"
             >
               <span class="codicon codicon-insert"></span>
@@ -279,7 +278,7 @@
             <vscode-button
               appearance="icon"
               aria-label="Click to view results as table (collapsed changelog)"
-              data-on-click="this.toggleViewMode()"
+              data-on-click="this.setViewMode('table')"
               title="Click to view results as table (collapsed changelog)"
             >
               <span class="codicon codicon-table"></span>

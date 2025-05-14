@@ -34,7 +34,7 @@ export type MessageType =
   | "SetVisibleColumns"
   | "GetStatementMeta"
   | "StopStatement"
-  | "ToggleViewMode"
+  | "SetViewMode"
   | "GetViewMode";
 
 // Define the post function type based on the overloads
@@ -78,6 +78,8 @@ export type PostFunction = {
     areResultsViewable: boolean;
   }>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
+  (type: "SetViewMode", body: { viewMode: ViewMode; timestamp?: number }): Promise<null>;
+  (type: "GetViewMode", body: { timestamp?: number }): Promise<ViewMode>;
 };
 
 /**
@@ -359,47 +361,31 @@ export class FlinkStatementResultsManager {
     });
   }
 
-  handleMessage(type: MessageType, body: any): any {
+  handleMessage<T extends MessageType>(type: T, body: any): any {
     switch (type) {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        // Use raw results if in changelog mode, otherwise use processed results
-        const results =
-          this._viewMode() === "changelog" ? this._rawResults() : this._filteredResults();
         return {
-          results: results.slice(offset, offset + limit),
+          results: this._filteredResults().slice(offset, offset + limit),
         };
       }
       case "GetResultsCount": {
-        if (this._viewMode() === "changelog") {
-          return {
-            total: this._rawResults().length,
-            filter: null,
-          };
-        } else {
-          return {
-            total: this._results().size,
-            filter: this._filteredResults().length,
-          };
-        }
+        return {
+          total: this._viewMode() === "table" ? this._results().size : this._rawResults().length,
+          filter: this._filteredResults().length,
+        };
       }
       case "Search": {
         // Only apply search in table mode
-        if (this._viewMode() !== "changelog") {
-          this._searchQuery(body.search ?? "");
-          this._filteredResults(this.filterResultsBySearch());
-        }
+        this._searchQuery(body.search ?? "");
+        this._filteredResults(this.filterResultsBySearch());
         this.notifyUI();
         return null;
       }
       case "SetVisibleColumns": {
         this._visibleColumns(body.visibleColumns ?? null);
-
-        // Only update filtered results in case of table mode
-        if (this._viewMode() === "table") {
-          this._filteredResults(this.filterResultsBySearch());
-        }
+        this._filteredResults(this.filterResultsBySearch());
         return null;
       }
       case "GetSchema": {
@@ -416,9 +402,7 @@ export class FlinkStatementResultsManager {
       case "PreviewResult": {
         // plural if all results else singular
         const filename = `flink-statement-result${body?.result === undefined ? "s" : ""}-${new Date().getTime()}.json`;
-        const content =
-          body?.result ??
-          (this._viewMode() === "changelog" ? this._rawResults() : this._filteredResults());
+        const content = body?.result ?? this._filteredResults();
 
         showJsonPreview(filename, content);
 
@@ -448,8 +432,9 @@ export class FlinkStatementResultsManager {
       case "StopStatement": {
         return this.stopStatement();
       }
-      case "ToggleViewMode": {
-        this._viewMode(this._viewMode() === "table" ? "changelog" : "table");
+      case "SetViewMode": {
+        this._viewMode(body.viewMode! as ViewMode);
+        this._filteredResults(this.filterResultsBySearch());
         this.notifyUI();
         return null;
       }
@@ -464,9 +449,9 @@ export class FlinkStatementResultsManager {
   }
 
   private getResultsArray() {
-    return Array.from(this._results().values()).map((row: Map<string, any>) =>
-      Object.fromEntries(row),
-    );
+    return this._viewMode() === "table"
+      ? Array.from(this._results().values()).map((row: Map<string, any>) => Object.fromEntries(row))
+      : Array.from(this._rawResults());
   }
 
   dispose() {

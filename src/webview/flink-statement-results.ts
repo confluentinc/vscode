@@ -1,6 +1,12 @@
 import { Scope, Signal } from "inertial";
 import { SqlV1ResultSchema } from "../clients/flinkSql";
 import { PostFunction, ResultCount, StreamState } from "../flinkStatementResultsManager";
+import {
+  ColumnDefinitions,
+  ViewMode,
+  createColumnDefinitions,
+  getColumnOrder,
+} from "../utils/flinkStatementResultColumns";
 import { ViewModel } from "./bindings/view-model";
 import { WebviewStorage, createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
@@ -9,15 +15,6 @@ export type ResultsViewerStorageState = {
   columnVisibilityFlags: boolean[];
   page: number;
 };
-
-type ColumnDefinition = {
-  index: number;
-  title: () => string;
-  children: (result: Record<string, any>) => any;
-  description: (result: Record<string, any>) => any;
-};
-
-type ColumnDefinitions = Record<string, ColumnDefinition>;
 
 /**
  * Top level view model for Flink Statement Results Viewer. It composes shared state and logic
@@ -30,12 +27,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly page: Signal<number>;
   readonly pageSize: Signal<number>;
   readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
-  readonly stopButtonClicked: Signal<boolean>;
+  readonly stopButtonClicked: Signal<boolean> = this.signal<boolean>(false);
   readonly tablePage: Signal<number>;
   readonly changelogPage: Signal<number>;
   readonly viewMode: Signal<ViewMode>;
   readonly schema: Signal<SqlV1ResultSchema>;
-  readonly emptySnapshot: { results: any[] };
   readonly snapshot: Signal<{ results: any[] }>;
   readonly resultCount: Signal<ResultCount>;
   readonly statementMeta: Signal<{
@@ -94,7 +90,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   ) {
     super(os);
 
-    this.page = this.signal(storage.get()?.page ?? 0);
+    // Initialize signals that depend on storage
+    this.page = this.signal(this.storage.get()?.page ?? 0);
+    this.tablePage = this.signal(0);
+    this.changelogPage = this.signal(0);
     this.pageSize = this.signal(100);
     this.tablePage = this.signal(0);
     this.changelogPage = this.signal(0);
@@ -105,25 +104,20 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       storage.set({ ...storage.get()!, page: this.page() });
     });
 
-    /** Schema information for the current statement */
     this.schema = this.resolve(() => this.post("GetSchema", { timestamp: this.timestamp() }), {
       columns: [],
     } as SqlV1ResultSchema);
 
-    /** Initial state of results collection. Stored separately so we can use to reset state. */
-    this.emptySnapshot = { results: [] as any[] };
-
-    /**
-     * Get a snapshot of results from the host environment, whenever page is changed or
-     * the stream is updated. The snapshot includes result records.
-     */
-    this.snapshot = this.resolve(() => {
-      return this.post("GetResults", {
-        page: this.page(),
-        pageSize: this.pageSize(),
-        timestamp: this.timestamp(),
-      });
-    }, this.emptySnapshot);
+    this.snapshot = this.resolve(
+      () => {
+        return this.post("GetResults", {
+          page: this.page(),
+          pageSize: this.pageSize(),
+          timestamp: this.timestamp(),
+        });
+      },
+      { results: [] },
+    );
 
     this.resultCount = this.resolve(
       () =>
@@ -162,31 +156,9 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return filter != null ? filter > 0 : total > 0;
     });
 
-    /**
-     * Short list of pages generated based on current results count and current
-     * page. Always shows first and last page, current page with two siblings.
-     */
-    this.pageButtons = this.derive(() => {
-      const { total, filter } = this.resultCount();
-      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
-      const current = this.page();
-      if (max <= 0) return [];
-      const offset = 2;
-      const lo = Math.max(0, current - offset);
-      const hi = Math.min(current + offset, max);
-      const chunk: (number | "ldot" | "rdot")[] = Array.from(
-        { length: hi - lo + 1 },
-        (_, i) => i + lo,
-      );
-      if (lo > 0) {
-        if (lo > 1) chunk.unshift(0, "ldot");
-        else chunk.unshift(0);
-      }
-      if (hi < max) {
-        if (hi < max - 1) chunk.push("rdot", max);
-        else chunk.push(max);
-      }
-      return chunk;
+    // Set up watchers
+    this.pagePersistWatcher = this.watch(() => {
+      this.storage.set({ ...this.storage.get()!, page: this.page() });
     });
 
     /** A description of current results range, based on the page and total number of results. */
@@ -210,25 +182,15 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     /** List of all columns in the grid, with their content definition. */
     this.columns = this.derive(() => {
       const schema: SqlV1ResultSchema = this.schema();
-      const columns: Record<string, any> = {};
-
-      schema?.columns?.forEach((col, index) => {
-        columns[col.name] = {
-          index: index,
-          title: () => col.name,
-          children: (result: Record<string, any>) => result[col.name] ?? "NULL",
-          description: (result: Record<string, any>) => result[col.name] ?? "NULL",
-        };
-      });
-
-      return columns;
+      return createColumnDefinitions(schema, this.viewMode());
     });
 
     /** Static list of all columns in order shown in the UI. */
     this.allColumns = this.derive(() => {
       const schema = this.schema();
-      return schema.columns?.map((col) => col.name) ?? [];
+      return getColumnOrder(schema, this.viewMode());
     });
+
     /**
      * A number which binary representation defines which columns are visible.
      * This number assumes the order defined by `allColumns` array.
@@ -281,8 +243,32 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return `--grid-template-columns: ${visibleColumnWidths}`;
     });
 
-    /** Whether the stop button has been clicked */
-    this.stopButtonClicked = this.signal(false);
+    /**
+     * Short list of pages generated based on current results count and current
+     * page. Always shows first and last page, current page with two siblings.
+     */
+    this.pageButtons = this.derive(() => {
+      const { total, filter } = this.resultCount();
+      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
+      const current = this.page();
+      if (max <= 0) return [];
+      const offset = 2;
+      const lo = Math.max(0, current - offset);
+      const hi = Math.min(current + offset, max);
+      const chunk: (number | "ldot" | "rdot")[] = Array.from(
+        { length: hi - lo + 1 },
+        (_, i) => i + lo,
+      );
+      if (lo > 0) {
+        if (lo > 1) chunk.unshift(0, "ldot");
+        else chunk.unshift(0);
+      }
+      if (hi < max) {
+        if (hi < max - 1) chunk.push("rdot", max);
+        else chunk.push(max);
+      }
+      return chunk;
+    });
 
     /** State of stream provided by the host: either running or completed. */
     this.streamState = this.resolve(() => {
@@ -365,15 +351,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  searchTimer: ReturnType<typeof setTimeout> | null = null;
+  searchTimer: NodeJS.Timeout | null = null;
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
-    // Disable search in changelog mode
-    if (this.viewMode() === "changelog") {
-      return;
-    }
-
     const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
       event.preventDefault();
@@ -393,11 +374,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   async handleInput(event: Event | InputEvent) {
-    // Disable search in changelog mode
-    if (this.viewMode() === "changelog") {
-      return;
-    }
-
     if (event.type === "input" && !(event instanceof InputEvent)) {
       if (this.searchTimer != null) {
         clearTimeout(this.searchTimer);
@@ -408,11 +384,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   async submitSearch(value: string) {
-    // Disable search in changelog mode
-    if (this.viewMode() === "changelog") {
-      return;
-    }
-
     if (this.searchTimer != null) {
       clearTimeout(this.searchTimer);
       this.searchTimer = null;
