@@ -45,13 +45,13 @@ describe("FlinkStatement", () => {
     }
   });
 
-  describe("isFresherThan()", () => {
+  describe("isUpdatedMoreRecentlyThan()", () => {
     const staleStatement = createFlinkStatement({ updatedAt: new Date("2023-01-01T00:00:00Z") });
     const freshStatement = createFlinkStatement({ updatedAt: new Date("2023-01-02T00:00:00Z") });
 
     it("returns true if the statement is fresher", () => {
       assert.strictEqual(
-        freshStatement.isFresherThan(staleStatement),
+        freshStatement.isUpdatedMoreRecentlyThan(staleStatement),
         true,
         "Expected fresh statement to be fresher than stale statement",
       );
@@ -59,7 +59,7 @@ describe("FlinkStatement", () => {
 
     it("returns false if the statement is not fresher", () => {
       assert.strictEqual(
-        staleStatement.isFresherThan(freshStatement),
+        staleStatement.isUpdatedMoreRecentlyThan(freshStatement),
         false,
         "Expected stale statement to not be fresher than fresh statement",
       );
@@ -67,7 +67,7 @@ describe("FlinkStatement", () => {
 
     it("returns faluse if statement is the same", () => {
       assert.strictEqual(
-        freshStatement.isFresherThan(freshStatement),
+        freshStatement.isUpdatedMoreRecentlyThan(freshStatement),
         false,
         "Expected statement to not be fresher than itself",
       );
@@ -81,7 +81,7 @@ describe("FlinkStatement", () => {
 
       assert.throws(
         () => {
-          freshStatement.isFresherThan(differentIdStatement);
+          freshStatement.isUpdatedMoreRecentlyThan(differentIdStatement);
         },
         {
           message: `Cannot compare FlinkStatement "${freshStatement.id}" with instance with different id "${differentIdStatement.id}"`,

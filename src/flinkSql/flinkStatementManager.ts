@@ -579,7 +579,7 @@ export class MonitoredStatement {
    * @returns True if the statement was updated, false otherwise.
    */
   maybeUpdateStatement(statement: FlinkStatement): boolean {
-    if (statement.isFresherThan(this.statement)) {
+    if (statement.isUpdatedMoreRecentlyThan(this.statement)) {
       this.statement = statement;
       return true;
     }

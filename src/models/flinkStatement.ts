@@ -161,7 +161,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    * Is this statement's `updatedAt` later than other's?
    * @throws Error if statements have different name or environmentIds.
    */
-  isFresherThan(other: FlinkStatement): boolean {
+  isUpdatedMoreRecentlyThan(other: FlinkStatement): boolean {
     if (this.id !== other.id) {
       throw new Error(
         `Cannot compare FlinkStatement "${this.id}" with instance with different id "${other.id}"`,
