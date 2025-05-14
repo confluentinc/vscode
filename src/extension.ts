@@ -59,6 +59,7 @@ import {
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
 import { initializeFlinkConfigManager } from "./flinkSql/flinkConfigManager";
+import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
@@ -243,6 +244,7 @@ async function _activateExtension(
   context.subscriptions.push(
     uriHandler,
     WebsocketManager.getInstance(),
+    FlinkStatementManager.getInstance(),
     initializeFlinkConfigManager(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
