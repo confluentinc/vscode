@@ -369,6 +369,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
       event.preventDefault();
@@ -388,6 +393,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   async handleInput(event: Event | InputEvent) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return;
+    }
+
     if (event.type === "input" && !(event instanceof InputEvent)) {
       if (this.searchTimer != null) {
         clearTimeout(this.searchTimer);
@@ -398,6 +408,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   async submitSearch(value: string) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return;
+    }
+
     if (this.searchTimer != null) {
       clearTimeout(this.searchTimer);
       this.searchTimer = null;
