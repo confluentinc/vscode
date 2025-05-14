@@ -94,8 +94,10 @@ export async function createTestResultsManagerContext(
     mockSidecar,
     notifyUIStub,
     DEFAULT_RESULTS_LIMIT,
-    0, // Polling interval of 0 for testing
-    100, // Refresh interval
+    // Polling interval of 1ms
+    1,
+     // Refresh interval
+    100,
     resourceLoader,
   );
 
