@@ -1,137 +1,88 @@
 import * as assert from "assert";
-import { ObservableScope } from "inertial";
+import { ObservableScope, Scope, Signal } from "inertial";
 import sinon from "sinon";
 import * as messageUtils from "../src/documentProviders/message";
+import {
+  FlinkStatementResultsManagerTestContext,
+  createTestResultsManagerContext,
+} from "../tests/createResultsManager";
 import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
 import { createResponseError } from "../tests/unit/testUtils";
-import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "./clients/flinkSql";
-import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
-import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
+import { MessageType, PostFunction } from "./flinkStatementResultsManager";
 import { FlinkStatement, Phase } from "./models/flinkStatement";
-import * as sidecar from "./sidecar";
-import { DEFAULT_RESULTS_LIMIT } from "./utils/flinkStatementResults";
+import { WebviewStorage } from "./webview/comms/comms";
+import {
+  FlinkStatementResultsViewModel,
+  ResultsViewerStorageState,
+} from "./webview/flink-statement-results";
 
-describe("FlinkStatementResultsManager", () => {
+class FakeWebviewStorage<T> implements WebviewStorage<T> {
+  private storage: T | undefined;
+
+  get(): T | undefined {
+    return this.storage;
+  }
+
+  set(state: T): void {
+    this.storage = state;
+  }
+}
+
+function createFakeWebviewStorage<T>(): WebviewStorage<T> {
+  return new FakeWebviewStorage<T>();
+}
+
+describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () => {
   let sandbox: sinon.SinonSandbox;
-  let manager: FlinkStatementResultsManager;
-  let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
-  let flinkSqlStatementResultsApi: sinon.SinonStubbedInstance<StatementResultsSqlV1Api>;
-  let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
-  let mockStatement: FlinkStatement;
-  let refreshFlinkStatementStub: sinon.SinonStub;
-  let resourceLoader: CCloudResourceLoader;
+  let ctx: FlinkStatementResultsManagerTestContext;
   const expectedParsedResults = loadFixture(
     "flink-statement-results-processing/expected-parsed-results.json",
   );
+  let os: Scope;
+  let storage: WebviewStorage<ResultsViewerStorageState>;
+  let post: PostFunction;
+  let timestamp: Signal<number>;
+  let vm: FlinkStatementResultsViewModel;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sandbox = sinon.createSandbox();
-    // stub the sidecar getFlinkSqlStatementsApi API
-    mockSidecar = sandbox.createStubInstance(sidecar.SidecarHandle);
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecar);
+    os = ObservableScope();
+    ctx = await createTestResultsManagerContext(sandbox, os);
 
-    flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
-    mockSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+    timestamp = os.produce(Date.now(), (ts) => {
+      // Forces a re-render of the view model
+      ts(Date.now());
+    });
+    storage = createFakeWebviewStorage<ResultsViewerStorageState>();
 
-    flinkSqlStatementResultsApi = sandbox.createStubInstance(StatementResultsSqlV1Api);
-    mockSidecar.getFlinkSqlStatementResultsApi.returns(flinkSqlStatementResultsApi);
+    // Create a post function that directly delegates to the results manager instance
+    // and bypasses the webview comms altogether.
+    post = (type: MessageType, body: any) => ctx.manager.handleMessage(type, body);
 
-    resourceLoader = CCloudResourceLoader.getInstance();
-    refreshFlinkStatementStub = sandbox.stub(resourceLoader, "refreshFlinkStatement");
+    vm = new FlinkStatementResultsViewModel(os, timestamp, storage, post);
   });
 
   afterEach(() => {
     sandbox.restore();
-
-    if (manager) {
-      manager.dispose();
-    }
+    ctx.manager.dispose();
+    os.dispose();
   });
 
-  const createResultsManagerWithResults = async () => {
-    const os = ObservableScope();
-
-    const fakeFlinkStatement = loadFixture(
-      "flink-statement-results-processing/fake-flink-statement.json",
-    );
-    const stmtResults = Array.from({ length: 5 }, (_, i) =>
-      loadFixture(`flink-statement-results-processing/get-statement-results-${i + 1}.json`),
-    );
-
-    // Create a proper mock statement with all required fields
-    mockStatement = new FlinkStatement(fakeFlinkStatement);
-
-    mockStatement.metadata = {
-      ...mockStatement.metadata,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-
-    const notifyUIStub = sandbox.stub();
-
-    // Update the refreshFlinkStatement stub to return the mock statement
-    refreshFlinkStatementStub.returns(Promise.resolve(mockStatement));
-
-    let callCount = 0;
-    flinkSqlStatementResultsApi.getSqlv1StatementResult.callsFake(() => {
-      // Returns 1...stmtResults.length and then returns the last
-      // statement result forever.
-      const response =
-        callCount < stmtResults.length
-          ? stmtResults[callCount++]
-          : stmtResults[stmtResults.length - 1];
-      return Promise.resolve(response);
-    });
-
-    manager = new FlinkStatementResultsManager(
-      os,
-      mockStatement,
-      mockSidecar,
-      notifyUIStub,
-      DEFAULT_RESULTS_LIMIT,
-      // Polling interval of 0 for testing
-      0,
-      // Refresh interval
-      100,
-      resourceLoader,
-    );
-
-    // Wait for results to be processed, it should eventually become 10
-    await eventually(() => {
-      assert.equal(manager.handleMessage("GetResultsCount", {}).total, 10);
-
-      const results = manager.handleMessage("GetResults", {
-        page: 0,
-        pageSize: DEFAULT_RESULTS_LIMIT,
-      });
-
-      // Verify the results match expected format
-      assert.deepStrictEqual(results, { results: expectedParsedResults });
-    }, 10_000);
-  };
-
   it("should process results from fixtures correctly", async () => {
-    await createResultsManagerWithResults();
-
     // Get all results through message handler
-    const results = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: DEFAULT_RESULTS_LIMIT,
-    });
+    const results = vm.snapshot();
 
     // Verify the results match expected format
     assert.deepStrictEqual(results, { results: expectedParsedResults });
   });
 
   it("should handle PreviewResult and PreviewAllResults", async () => {
-    await createResultsManagerWithResults();
-
     const showJsonPreviewMock = sandbox.stub(messageUtils, "showJsonPreview").resolves();
 
     // Simulate double clicking a result row in the UI
     const previewedResult = expectedParsedResults[0];
-    let response = manager.handleMessage("PreviewResult", { result: previewedResult });
+    let response = await vm.previewResult(previewedResult);
 
     sinon.assert.calledOnce(showJsonPreviewMock);
     const [filename, resultArg] = showJsonPreviewMock.firstCall.args;
@@ -143,8 +94,7 @@ describe("FlinkStatementResultsManager", () => {
     assert.ok(response.filename.endsWith(".json"));
     assert.deepStrictEqual(response.result, previewedResult);
 
-    // Now test PreviewAllResults
-    response = manager.handleMessage("PreviewAllResults", {});
+    response = await vm.previewAllResults();
 
     // Notice the plural "results"
     assert.ok(response.filename.startsWith("flink-statement-results-"), response.filename);
@@ -155,21 +105,18 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should filter results based on search query", async () => {
-    await createResultsManagerWithResults();
-
     const searchValue = "80.8";
 
-    manager.handleMessage("Search", { search: searchValue });
+    await vm.submitSearch(searchValue);
 
-    const results = await eventually(async () => {
-      const { results } = manager.handleMessage("GetResults", {
-        page: 0,
-        pageSize: DEFAULT_RESULTS_LIMIT,
+    await eventually(() => {
+      assert.deepEqual(vm.resultCount(), {
+        filter: 4,
+        total: 10,
       });
-      assert.equal(results.length, 4);
-
-      return results;
     });
+
+    const { results } = vm.snapshot();
 
     for (const row of results) {
       const found = Object.values(row).some(
@@ -179,77 +126,71 @@ describe("FlinkStatementResultsManager", () => {
       assert.ok(found, `Row does not contain search value: ${JSON.stringify(row)}`);
     }
 
-    const count = manager.handleMessage("GetResultsCount", {});
+    const count = await vm.resultCount();
     assert.strictEqual(count.filter, results.length);
 
     // Clear search filter
-    manager.handleMessage("Search", { search: null });
+    await vm.submitSearch("");
 
-    const allResults = manager.handleMessage("GetResults", {
-      page: 0,
-      pageSize: DEFAULT_RESULTS_LIMIT,
-    });
+    const allResults = await vm.snapshot();
 
     assert.equal(allResults.results.length, 10);
 
-    const totalCount = manager.handleMessage("GetResultsCount", {});
+    const totalCount = await vm.resultCount();
     assert.strictEqual(totalCount.filter, 10);
   });
 
   it("should filter results based on search query only in visible columns", async () => {
-    await createResultsManagerWithResults();
-
+    await eventually(() => assert.deepEqual(vm.visibleColumns(), ["when_reported", "tempf"]));
     // Exists in both columns but we should only get results
     // in the visible column `tempf`
-    manager.handleMessage("Search", { search: "2" });
-    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
+    await vm.submitSearch("2");
+
+    await vm.toggleColumnVisibility(0);
+    await eventually(() => assert.deepEqual(vm.visibleColumns(), ["tempf"]));
 
     const hasResults = async (count: number) =>
-      await eventually(async () => {
-        const { results } = manager.handleMessage("GetResults", {
-          page: 0,
-          pageSize: DEFAULT_RESULTS_LIMIT,
-        });
-        assert.equal(results.length, count);
-        return results;
+      await eventually(() => {
+        assert.equal(vm.resultCount().filter, count);
       });
 
-    assert.ok(await hasResults(3));
+    await hasResults(3);
 
-    manager.handleMessage("Search", { search: "2025" });
+    await vm.submitSearch("2025");
 
-    assert.ok(await hasResults(0));
+    await hasResults(0);
 
-    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["when_reported"] });
-    assert.ok(await hasResults(10));
+    await vm.toggleColumnVisibility(0);
+    await vm.toggleColumnVisibility(1);
+    await eventually(() => assert.deepEqual(vm.visibleColumns(), ["when_reported"]));
 
-    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["when_reported", "tempf"] });
-    assert.ok(await hasResults(10));
+    await hasResults(10);
+
+    vm.toggleColumnVisibility(1);
+    await eventually(() => assert.deepEqual(vm.visibleColumns(), ["when_reported", "tempf"]));
+
+    await hasResults(10);
   });
 
   it("should filter and then paginate results based on search query", async () => {
-    await createResultsManagerWithResults();
+    await vm.toggleColumnVisibility(0);
+    await eventually(() => assert.deepEqual(vm.visibleColumns(), ["tempf"]));
 
-    manager.handleMessage("SetVisibleColumns", { visibleColumns: ["tempf"] });
+    // Set page size to 5, note that changing this is currently not support via UI
+    vm.pageSize(5);
 
     await eventually(async () => {
-      const noFilter: { results: any[] } = manager.handleMessage("GetResults", {
-        page: 0,
-        pageSize: 5,
-      });
+      const noFilter = vm.snapshot();
       const temperatures = noFilter.results.map((val) => val["tempf"]);
 
       assert.deepEqual(temperatures, ["80.4", "80.8", "80.8", "80.8", "80.2"]);
     });
 
     // Apply filter
-    manager.handleMessage("Search", { search: "80.8" });
+    await vm.submitSearch("80.8");
 
-    await eventually(async () => {
-      let filtered: { results: any[] } = manager.handleMessage("GetResults", {
-        page: 0,
-        pageSize: 5,
-      });
+    await eventually(() => {
+      let filtered = vm.snapshot();
 
       // This proves filtering happens before pagination because otherwise
       // we'd have got only three 80.8 values as seen above.
@@ -261,81 +202,219 @@ describe("FlinkStatementResultsManager", () => {
   });
 
   it("should handle GetStatementMeta message", async () => {
-    await createResultsManagerWithResults();
-
-    const meta = manager.handleMessage("GetStatementMeta", {});
+    const meta = vm.statementMeta();
     assert.deepStrictEqual(meta, {
-      name: mockStatement.name,
-      status: mockStatement.status?.phase,
-      startTime: mockStatement.metadata?.created_at,
-      detail: mockStatement.status?.detail ?? null,
-      failed: mockStatement.failed,
-      stoppable: mockStatement.stoppable,
-      areResultsViewable: mockStatement.areResultsViewable,
+      name: ctx.statement.name,
+      status: ctx.statement.status?.phase,
+      startTime: ctx.statement.metadata?.created_at,
+      detail: ctx.statement.status?.detail ?? null,
+      failed: ctx.statement.failed,
+      stoppable: ctx.statement.stoppable,
+      areResultsViewable: ctx.statement.areResultsViewable,
     });
   });
 
   it("should handle StopStatement message with retries", async () => {
-    await createResultsManagerWithResults();
-
     // Mock the updateSqlv1Statement to fail with 409 twice then succeed
-    flinkSqlStatementsApi.updateSqlv1Statement
+    ctx.flinkSqlStatementsApi.updateSqlv1Statement
       .onFirstCall()
       .rejects(createResponseError(409, "Conflict", "test"));
-    flinkSqlStatementsApi.updateSqlv1Statement
+    ctx.flinkSqlStatementsApi.updateSqlv1Statement
       .onSecondCall()
       .rejects(createResponseError(409, "Conflict", "test"));
-    flinkSqlStatementsApi.updateSqlv1Statement.onThirdCall().resolves();
+    ctx.flinkSqlStatementsApi.updateSqlv1Statement.onThirdCall().resolves();
 
-    await manager.handleMessage("StopStatement", {});
+    await vm.stopStatement();
 
     await eventually(() => {
-      assert.equal(flinkSqlStatementsApi.updateSqlv1Statement.callCount, 3);
+      assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 3);
     });
   });
 
   it("should handle StopStatement message with max retries exceeded", async () => {
-    await createResultsManagerWithResults();
-
     // Mock the updateSqlv1Statement to always fail with 409
     const responseError = createResponseError(409, "Conflict", "test");
-    flinkSqlStatementsApi.updateSqlv1Statement.rejects(responseError);
+    ctx.flinkSqlStatementsApi.updateSqlv1Statement.rejects(responseError);
 
     // Call stop statement and expect it to throw after max retries
-    await manager.handleMessage("StopStatement", {});
-    assert.equal(flinkSqlStatementsApi.updateSqlv1Statement.callCount, 5);
+    await vm.stopStatement();
+    assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 5);
   });
 
   it("should stop polling when statement is not results viewable", async () => {
-    await createResultsManagerWithResults();
-
-    assert.ok(manager["_pollingInterval"] as NodeJS.Timeout);
+    assert.ok(ctx.manager["_pollingInterval"] as NodeJS.Timeout);
 
     const nonViewableStatement = new FlinkStatement({
-      ...mockStatement,
+      ...ctx.statement,
       status: {
-        ...mockStatement.status,
+        ...ctx.statement.status,
         phase: Phase.FAILED,
         detail: "Statement failed",
       },
     });
-    refreshFlinkStatementStub.returns(Promise.resolve(nonViewableStatement));
+    ctx.refreshFlinkStatementStub.returns(Promise.resolve(nonViewableStatement));
 
     // Verify polling was stopped
     await eventually(() => {
-      assert.equal(manager["_pollingInterval"], undefined);
+      assert.equal(ctx.manager["_pollingInterval"], undefined);
     });
   });
 
   it("should handle non-409 errors in StopStatement immediately", async () => {
-    await createResultsManagerWithResults();
-
-    flinkSqlStatementsApi.updateSqlv1Statement.rejects(
+    ctx.flinkSqlStatementsApi.updateSqlv1Statement.rejects(
       createResponseError(500, "Server Error", "test"),
     );
 
-    await manager.handleMessage("StopStatement", {});
+    await vm.stopStatement();
 
-    assert.equal(flinkSqlStatementsApi.updateSqlv1Statement.callCount, 1);
+    assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 1);
+  });
+
+  describe("FlinkStatementResultsViewModel only", () => {
+    describe("schema and columns", () => {
+      it("should create correct column definitions for table view", () => {
+        const columns = vm.columns();
+        assert.deepStrictEqual(Object.keys(columns), ["when_reported", "tempf"]);
+        assert.strictEqual(columns["when_reported"].title(), "when_reported");
+        assert.strictEqual(columns["tempf"].title(), "tempf");
+      });
+
+      it("should get schema correctly", () => {
+        const schema = vm.schema();
+
+        assert.deepStrictEqual(schema, {
+          columns: [
+            {
+              name: "when_reported",
+              type: {
+                nullable: false,
+                precision: 6,
+                type: "TIMESTAMP_WITH_LOCAL_TIME_ZONE",
+              },
+            },
+            {
+              name: "tempf",
+              type: {
+                nullable: false,
+                type: "DOUBLE",
+              },
+            },
+          ],
+        });
+      });
+
+      it("should handle empty schema", () => {
+        vm.schema({ columns: [] });
+        const columns = vm.columns();
+        assert.deepStrictEqual(Object.keys(columns), []);
+      });
+    });
+
+    describe("pagination", () => {
+      it("should handle empty results", () => {
+        vm.pageSize(10);
+        vm.resultCount({ total: 0, filter: null });
+
+        const buttons = vm.pageButtons();
+        assert.deepStrictEqual(buttons, []);
+      });
+
+      it("should generate correct page stat label", async () => {
+        vm.pageSize(10);
+        vm.page(1);
+        vm.resultCount({ total: 25, filter: null });
+
+        const label = vm.pageStatLabel();
+        await eventually(() => assert.strictEqual(label, "Showing 11..20 of 25 results."));
+      });
+
+      it("should handle filtered results in page stat label", async () => {
+        vm.pageSize(10);
+        vm.page(0);
+        vm.resultCount({ total: 25, filter: 15 });
+
+        const label = vm.pageStatLabel();
+        await eventually(() =>
+          assert.strictEqual(label, "Showing 1..10 of 15 results (total: 25)."),
+        );
+      });
+
+      it("should generate correct page buttons for large result sets", () => {
+        vm.resultCount({ total: 1000, filter: null });
+        vm.pageSize(10);
+        vm.page(5);
+
+        const buttons = vm.pageButtons();
+        assert.deepStrictEqual(buttons, [0, "ldot", 3, 4, 5, 6, 7, "rdot", 99]);
+      });
+
+      it("should persist page state in storage", () => {
+        vm.page(2);
+        const stored = storage.get()?.page;
+        assert.strictEqual(stored, 2);
+      });
+
+      it("should handle page size changes", async () => {
+        vm.pageSize(1);
+
+        const buttons = vm.pageButtons();
+        // Since there are 10 results, page buttons should be: 1, 2, 3...10
+        await eventually(() => assert.deepStrictEqual(buttons, [0, 1, 2, "rdot", 9]));
+      });
+    });
+
+    describe("column visibility", () => {
+      it("should initialize with all columns visible", () => {
+        const visibleColumns = vm.visibleColumns();
+        assert.deepStrictEqual(visibleColumns, ["when_reported", "tempf"]);
+      });
+
+      it("should check column visibility correctly", () => {
+        assert.strictEqual(vm.isColumnVisible(0), true);
+        assert.strictEqual(vm.isColumnVisible(1), true);
+      });
+
+      it("should prevent hiding the last visible column", async () => {
+        await vm.toggleColumnVisibility(0);
+        await vm.toggleColumnVisibility(1);
+
+        // Try to hide the last column
+        await vm.toggleColumnVisibility(0);
+        assert.strictEqual(vm.isColumnVisible(0), true);
+      });
+
+      it("should persist column visibility state", async () => {
+        await vm.toggleColumnVisibility(0);
+        const stored = storage.get()?.columnVisibilityFlags;
+        assert.deepStrictEqual(stored, [false, true]);
+      });
+    });
+
+    describe("search and input handling", () => {
+      it("should handle Enter key for immediate search", async () => {
+        const event = {
+          key: "Enter",
+          target: { value: "test" },
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent;
+        await vm.handleKeydown(event);
+
+        // Verify search was submitted immediately
+        assert.strictEqual(vm.searchTimer, null);
+      });
+
+      it("should debounce search input", async () => {
+        const event = {
+          target: { value: "test" },
+          preventDefault: () => {},
+        } as unknown as KeyboardEvent;
+        await vm.handleKeydown(event);
+
+        assert.ok(vm.searchTimer);
+        // Wait for debounce
+        await new Promise((resolve) => setTimeout(resolve, vm.searchDebounceTime));
+        assert.strictEqual(vm.searchTimer, null);
+      });
+    });
   });
 });

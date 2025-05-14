@@ -47,6 +47,11 @@ export function sendWebviewMessage(type: any, body: any) {
   });
 }
 
+export type WebviewStorage<T> = {
+  get: () => T | undefined;
+  set: (state: T) => void;
+};
+
 /**
  * Provides get/set methods to store arbitrary serializable data in webview's
  * persistent storage. The storage is sync and useful for things that need to
@@ -56,7 +61,7 @@ export function sendWebviewMessage(type: any, body: any) {
  * @link https://code.visualstudio.com/api/extension-guides/webview#getstate-and-setstate
  * @remark this function should be used in the webview environment.
  */
-export function createWebviewStorage<T>() {
+export function createWebviewStorage<T>(): WebviewStorage<T> {
   const vscode = api();
   return {
     get: (): T | undefined => vscode.getState(),
