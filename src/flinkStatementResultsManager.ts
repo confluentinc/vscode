@@ -97,6 +97,7 @@ export class FlinkStatementResultsManager {
   private _latestError: Signal<{ message: string } | null>;
   private _isResultsFull: Signal<boolean>;
   private _pollingInterval: NodeJS.Timeout | undefined;
+  private _getResultsAbortController: AbortController;
   /** Filter by substring text query. */
   private _searchQuery: Signal<string | null>;
   private _visibleColumns: Signal<string[] | null>;
@@ -126,6 +127,7 @@ export class FlinkStatementResultsManager {
     this._searchQuery = os.signal<string | null>(null);
     this._visibleColumns = os.signal<string[] | null>(null);
     this._filteredResults = os.signal<any[]>([]);
+    this._getResultsAbortController = new AbortController();
 
     this._flinkStatementResultsSqlApi = sidecar.getFlinkSqlStatementResultsApi(statement);
     this._flinkStatementsSqlApi = sidecar.getFlinkSqlStatementsApi(statement);
@@ -174,7 +176,12 @@ export class FlinkStatementResultsManager {
   }
 
   async fetchResults(): Promise<void> {
-    if (this._state() !== "running" || !this._moreResults() || !this.statement.areResultsViewable) {
+    if (
+      this._state() !== "running" ||
+      !this._moreResults() ||
+      !this.statement.areResultsViewable ||
+      this._getResultsAbortController.signal.aborted
+    ) {
       // Self-destruct
       clearInterval(this._pollingInterval);
       this._pollingInterval = undefined;
@@ -188,12 +195,17 @@ export class FlinkStatementResultsManager {
     try {
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-      const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
-        environment_id: this.statement.environmentId,
-        organization_id: this.statement.organizationId,
-        name: this.statement.name,
-        page_token: pageToken,
-      });
+      const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
+        {
+          environment_id: this.statement.environmentId,
+          organization_id: this.statement.organizationId,
+          name: this.statement.name,
+          page_token: pageToken,
+        },
+        {
+          signal: this._getResultsAbortController.signal,
+        },
+      );
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       this.os.batch(() => {
@@ -216,7 +228,10 @@ export class FlinkStatementResultsManager {
         this.notifyUI();
       });
     } catch (error) {
-      if (error instanceof FetchError && error?.cause?.name === "AbortError") return;
+      if (error instanceof FetchError && error?.cause?.name === "AbortError") {
+        logger.info("Statement results fetch was aborted");
+        return;
+      }
 
       if (isResponseError(error)) {
         const payload = await error.response.json();
@@ -301,6 +316,9 @@ export class FlinkStatementResultsManager {
     const MAX_RETRIES = 5;
     const INITIAL_BACKOFF_MS = 100;
     const MAX_BACKOFF_MS = 10_000;
+
+    // Abort any in-flight GET results requests
+    this._getResultsAbortController.abort();
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -438,5 +456,7 @@ export class FlinkStatementResultsManager {
       clearInterval(this._statementRefreshInterval);
       this._statementRefreshInterval = undefined;
     }
+    // Abort any in-flight requests
+    this._getResultsAbortController.abort();
   }
 }
