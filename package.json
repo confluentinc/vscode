@@ -168,6 +168,34 @@
             }
           }
         }
+      },
+      {
+        "name": "get_dockerContainers",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "docker",
+          "containers"
+        ],
+        "displayName": "Get Docker Containers",
+        "modelDescription": "Get information about Docker containers for Kafka or Schema Registry running on the local machine. Use this when the user asks about their local connection/resources or any direct connections using 'localhost'.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(docker)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "resourceKind": {
+              "type": "string",
+              "enum": [
+                "Kafka",
+                "Schema Registry"
+              ],
+              "description": "Which kind of resource's container(s) to list (Kafka, Schema Registry, etc)."
+            }
+          },
+          "required": [
+            "resourceKind"
+          ]
+        }
       }
     ],
     "commands": [
