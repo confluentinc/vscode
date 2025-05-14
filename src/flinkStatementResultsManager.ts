@@ -2,6 +2,7 @@ import { Scope, Signal } from "inertial";
 import {
   FetchError,
   GetSqlv1StatementResult200Response,
+  SqlV1ResultSchema,
   SqlV1StatementResultResults,
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
@@ -17,22 +18,64 @@ import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
 
-type MessageType =
+export type ResultCount = { total: number; filter: number | null };
+export type StreamState = "running" | "completed";
+
+export type MessageType =
   | "GetResults"
   | "GetResultsCount"
   | "GetSchema"
-  | "GetMaxSize"
   | "GetStreamState"
   | "GetStreamError"
   | "PreviewResult"
   | "PreviewAllResults"
   | "Search"
-  | "GetSearchQuery"
   | "SetVisibleColumns"
   | "GetStatementMeta"
   | "StopStatement";
 
-type StreamState = "running" | "completed";
+// Define the post function type based on the overloads
+export type PostFunction = {
+  (type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
+  (type: "GetStreamError", body: { timestamp?: number }): Promise<{ message: string } | null>;
+  (
+    type: "GetResults",
+    body: { page: number; pageSize: number; timestamp?: number },
+  ): Promise<{ results: any[] }>;
+  (type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
+  (type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
+  (
+    type: "PreviewResult",
+    body: { result: Record<string, any>; timestamp?: number },
+  ): Promise<{
+    filename: string;
+    result: any;
+  }>;
+  (
+    type: "PreviewAllResults",
+    body: { timestamp?: number },
+  ): Promise<{
+    filename: string;
+    result: any;
+  }>;
+  (type: "Search", body: { search: string | null; timestamp?: number }): Promise<null>;
+  (
+    type: "SetVisibleColumns",
+    body: { visibleColumns: string[] | null; timestamp?: number },
+  ): Promise<null>;
+  (
+    type: "GetStatementMeta",
+    body: { timestamp?: number },
+  ): Promise<{
+    name: string;
+    status: string;
+    startTime: string | null;
+    detail: string | null;
+    failed: boolean;
+    isResultsViewable: boolean;
+  }>;
+  (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
+};
 
 /**
  * Manages the state and data fetching for Flink statement results.
@@ -329,9 +372,6 @@ export class FlinkStatementResultsManager {
         this._filteredResults(this.filterResultsBySearch());
         return null;
       }
-      case "GetSearchQuery": {
-        return this._searchQuery() ?? "";
-      }
       case "GetSchema": {
         if (!this.statement) {
           return { columns: [] };
@@ -341,9 +381,6 @@ export class FlinkStatementResultsManager {
             columns: [],
           }
         );
-      }
-      case "GetMaxSize": {
-        return String(this.resultLimit);
       }
       case "PreviewAllResults":
       case "PreviewResult": {
