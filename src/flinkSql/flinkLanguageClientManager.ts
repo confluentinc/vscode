@@ -14,9 +14,9 @@ import {
 } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
-import { initializeLanguageClient, isLanguageClientConnected } from "./languageClient";
+import { initializeLanguageClient } from "./languageClient";
 
-const logger = new Logger("flinkConfigManager");
+const logger = new Logger("flinkLanguageClientManager");
 
 export interface FlinkSqlSettings {
   database: string;
@@ -24,24 +24,26 @@ export interface FlinkSqlSettings {
 }
 
 /**
- * Singleton class that handles Flink configuration settings.
+ * Singleton class that handles Flink configuration settings and language client management.
  * - Listens for CCloud authentication events, flinksql language file open, settings changes
  * - Prompts user to update Flink settings configuration (default compute pool, database)
  * - Fetches and manages Flink compute pool resources
- * - WIP: Manage Flink SQL Language Client(s) lifecycle & settings
+ * - Manages Flink SQL Language Client lifecycle & settings
  */
-export class FlinkConfigurationManager implements Disposable {
-  private static instance: FlinkConfigurationManager | null = null;
+export class FlinkLanguageClientManager implements Disposable {
+  private static instance: FlinkLanguageClientManager | null = null;
   private disposables: Disposable[] = [];
   private hasPromptedForSettings = false;
   private languageClient: LanguageClient | null = null;
   private lastWebSocketUrl: string | null = null;
+  private reconnectCounter = 0;
+  private readonly MAX_RECONNECT_ATTEMPTS = 2;
 
-  static getInstance(): FlinkConfigurationManager {
-    if (!FlinkConfigurationManager.instance) {
-      FlinkConfigurationManager.instance = new FlinkConfigurationManager();
+  static getInstance(): FlinkLanguageClientManager {
+    if (!FlinkLanguageClientManager.instance) {
+      FlinkLanguageClientManager.instance = new FlinkLanguageClientManager();
     }
-    return FlinkConfigurationManager.instance;
+    return FlinkLanguageClientManager.instance;
   }
 
   private constructor() {
@@ -53,6 +55,7 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId === "flinksql") {
+          logger.debug("Flink SQL file opened, checking for language client");
           await this.maybeStartLanguageClient();
         }
       }),
@@ -64,7 +67,7 @@ export class FlinkConfigurationManager implements Disposable {
         if (connected) {
           await this.maybeStartLanguageClient();
         } else {
-          logger.debug("CCloud auth session invalidated, stopping Flink language client");
+          logger.debug("CCloud auth session invalid, stopping Flink language client");
           this.cleanupLanguageClient();
         }
       }),
@@ -74,7 +77,11 @@ export class FlinkConfigurationManager implements Disposable {
     this.disposables.push(
       workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration("confluent.flink")) {
-          await this.notifyConfigChanged();
+          if (this.languageClient) {
+            await this.notifyConfigChanged();
+          } else {
+            await this.maybeStartLanguageClient();
+          }
         }
       }),
     );
@@ -100,7 +107,7 @@ export class FlinkConfigurationManager implements Disposable {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
     const defaultPoolId: string = config.get(FLINK_CONFIG_COMPUTE_POOL, "");
     const defaultDatabase: string = config.get(FLINK_CONFIG_DATABASE, "");
-    logger.info("pool/db =>", defaultPoolId, defaultDatabase);
+    logger.debug("pool/db =>", defaultPoolId, defaultDatabase);
     return {
       database: defaultDatabase,
       computePoolId: defaultPoolId,
@@ -116,7 +123,7 @@ export class FlinkConfigurationManager implements Disposable {
     }
     const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
-      logger.debug("Flink settings not fully configured");
+      logger.debug("Flink compute pool not set");
       await this.promptChooseDefaultComputePool();
       return false;
     }
@@ -239,7 +246,7 @@ export class FlinkConfigurationManager implements Disposable {
    */
   private async maybeStartLanguageClient(): Promise<void> {
     if (this.languageClient) {
-      if (isLanguageClientConnected()) {
+      if (this.isLanguageClientConnected()) {
         // If we already have a client and it's healthy we're cool
         logger.debug("Language client connection confirmed active");
         return;
@@ -267,7 +274,7 @@ export class FlinkConfigurationManager implements Disposable {
     }
 
     try {
-      logger.info("Initializing Flink SQL language client");
+      logger.debug("Initializing Flink SQL language client");
       let url: string | undefined;
       if (this.lastWebSocketUrl && this.lastWebSocketUrl.includes(computePoolId)) {
         logger.debug("Using cached WebSocket URL for reconnection");
@@ -279,14 +286,62 @@ export class FlinkConfigurationManager implements Disposable {
         });
       }
       if (!url) return;
-      this.languageClient = await initializeLanguageClient(url);
+
+      // Reset reconnect counter on new initialization
+      this.reconnectCounter = 0;
+
+      this.languageClient = await initializeLanguageClient(url, () =>
+        this.handleWebSocketDisconnect(),
+      );
       if (this.languageClient) {
         this.disposables.push(this.languageClient);
-        logger.info("Flink SQL language client successfully initialized");
+        logger.debug("Flink SQL language client successfully initialized");
         this.notifyConfigChanged(); // Send settings right away
       }
     } catch (error) {
       logger.error("Failed to initialize Flink SQL language client:", error);
+    }
+  }
+
+  /**
+   * Handle WebSocket disconnection events and attempt reconnection
+   */
+  private handleWebSocketDisconnect(): void {
+    // Skip reconnection attempts if we're not authenticated
+    if (!hasCCloudAuthSession()) {
+      logger.warn("Not attempting reconnection: User not authenticated with CCloud");
+      return;
+    }
+
+    // If we've reached max attempts, stop trying to reconnect
+    if (this.reconnectCounter >= this.MAX_RECONNECT_ATTEMPTS) {
+      logger.error(`Failed to reconnect after ${this.MAX_RECONNECT_ATTEMPTS} attempts`);
+      return;
+    }
+
+    this.reconnectCounter++;
+    this.restartLanguageClient();
+  }
+
+  /**
+   * Restart the language client
+   */
+  private async restartLanguageClient(): Promise<void> {
+    // Dispose of the existing client if it exists
+    await this.cleanupLanguageClient();
+
+    // Try to initialize a new client
+    try {
+      logger.debug("Attempting to initialize new language client");
+      await this.maybeStartLanguageClient();
+      // Reset counter on successful reconnection
+      this.reconnectCounter = 0;
+    } catch (e) {
+      logger.error(`Failed to reconnect: ${e}`);
+      // Try again if we haven't reached max attempts
+      if (this.reconnectCounter < this.MAX_RECONNECT_ATTEMPTS) {
+        this.handleWebSocketDisconnect();
+      }
     }
   }
 
@@ -314,7 +369,7 @@ export class FlinkConfigurationManager implements Disposable {
   private async notifyConfigChanged(): Promise<void> {
     logger.debug("Flink configuration changed");
     // We have a lang client, send the updated settings
-    if (this.languageClient && isLanguageClientConnected()) {
+    if (this.languageClient && this.isLanguageClientConnected()) {
       const { database, computePoolId } = this.getFlinkSqlSettings();
       if (!computePoolId) {
         logger.debug("No compute pool ID configured, not sending configuration update");
@@ -348,15 +403,22 @@ export class FlinkConfigurationManager implements Disposable {
       }
     }
   }
+  /**
+   * Checks if the language client is currently connected and healthy
+   * @returns True if the client is connected, false otherwise
+   */
+  private isLanguageClientConnected(): boolean {
+    return this.languageClient !== null && this.languageClient.needsStart() === false;
+  }
 
   /**
    * Show notification for user to select default compute pool, database
    */
   private async promptChooseDefaultComputePool(): Promise<void> {
-    if (this.hasPromptedForSettings) {
-      logger.debug("Already prompted for Flink settings this session, skipping");
-      return;
-    }
+    // if (this.hasPromptedForSettings) {
+    //   logger.debug("Already prompted for Flink settings this session, skipping");
+    //   return;
+    // }
     if (!hasCCloudAuthSession()) {
       return; // This method should not be called if not authenticated
     }
@@ -372,7 +434,7 @@ export class FlinkConfigurationManager implements Disposable {
   }
 
   public async dispose(): Promise<void> {
-    logger.debug("Disposing FlinkConfigurationManager");
+    logger.debug("Disposing FlinkLanguageClientManager");
     await this.cleanupLanguageClient();
 
     // Dispose all other disposables
@@ -381,6 +443,6 @@ export class FlinkConfigurationManager implements Disposable {
   }
 }
 
-export function initializeFlinkConfigManager(): Disposable {
-  return FlinkConfigurationManager.getInstance();
+export function initializeFlinkLanguageClientManager(): Disposable {
+  return FlinkLanguageClientManager.getInstance();
 }
