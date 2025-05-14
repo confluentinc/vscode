@@ -1,7 +1,22 @@
-// NOTE: property descriptions below taken from package.json help text, not currently available at
-// https://code.visualstudio.com/api/references/contribution-points
+import { LanguageModelToolCallPart } from "vscode";
+import { TextOnlyToolResultPart } from "./base";
 
-/** An object in the package.json `languageModelTools`. */
+/**
+ * Object representing the request/response of a single tool call, stored in the `ChatResult`
+ * metadata after a single `ChatRequest` is sent so that the tool call can be referenced in future
+ * requests without the model needing to repeat the tool call(s).
+ */
+export type ToolCallMetadata = {
+  request: LanguageModelToolCallPart;
+  response: TextOnlyToolResultPart;
+};
+
+/**
+ * An object in the package.json `languageModelTools`.
+ *
+ * NOTE: property descriptions below taken from package.json help text, not currently available at
+ * https://code.visualstudio.com/api/references/contribution-points
+ */
 export interface LanguageModelToolContribution {
   /**
    * A unique name for this tool. This name must be a globally unique identifier, and is also used

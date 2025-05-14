@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-52",
+  "version": "1.3.0-59",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -88,6 +88,83 @@
               },
               "default": [],
               "description": "Optional tags to filter the list of templates."
+            }
+          }
+        }
+      },
+      {
+        "name": "get_templateOptions",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Get Project Template Options",
+        "modelDescription": "Get the input options for filling out a project template. Use this after 'list_projectTemplates' when the user selects a template to create a new project. This will return the input options for the selected template.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the template to apply."
+            }
+          },
+          "required": [
+            "templateId"
+          ]
+        }
+      },
+      {
+        "name": "create_project",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Create Project",
+        "modelDescription": "Create a new project using the selected template and input options. If the user provides values for these options, ALWAYS pass them to this tool as input for the templateOptions.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "createProject",
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the project template to use."
+            },
+            "templateOptions": {
+              "type": "object",
+              "description": "The input options for the selected project template. The keys for this object must match the input options defined in the template."
+            }
+          },
+          "required": [
+            "templateId",
+            "templateOptions"
+          ]
+        }
+      },
+      {
+        "name": "get_connections",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "connections"
+        ],
+        "displayName": "Get Connections",
+        "modelDescription": "Get a list of connections available in the current workspace. ALWAYS call this tool when the user asks about their connections or when connection information is needed - NEVER rely on previous results as connection states change frequently. Any sign-in/sign-out actions are specific to the CCLOUD connection. The LOCAL connection handles Kafka and Schema registry through the local Docker engine API. Any other configurations for Kafka or Schema Registry are done through the DIRECT connections.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "connectionType": {
+              "type": "string",
+              "enum": [
+                "CCLOUD",
+                "DIRECT",
+                "LOCAL"
+              ],
+              "description": "Optional connection type to filter the list of connections."
             }
           }
         }
@@ -599,14 +676,6 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
-          },
-          "confluent.experimental.enableChatParticipant": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable the Confluent chat participant for Copilot.",
-            "tags": [
-              "experimental"
-            ]
           }
         }
       },
@@ -662,6 +731,30 @@
               "Show a notification asking whether or not to update `#confluent.flink.database#`.",
               "**Always** update `#confluent.flink.database#` without asking."
             ]
+          }
+        }
+      },
+      {
+        "title": "Copilot Chat Participant",
+        "properties": {
+          "confluent.experimental.enableChatParticipant": {
+            "order": 0,
+            "type": "boolean",
+            "default": false,
+            "description": "Enable the Confluent chat participant for Copilot.",
+            "tags": [
+              "experimental"
+            ]
+          },
+          "confluent.chat.telemetry.sendErrorData": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Include **error data** from Copilot chat participant results gathered from 👍/👎 feedback or from error responses. When disabled (default), no error details will be sent."
+          },
+          "confluent.chat.telemetry.sendToolCallData": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Include **tool call inputs and result contents** from Copilot chat participant results gathered from 👍/👎 feedback, as well as **tool call inputs** during tool call flows for general telemetry purposes.\n- When disabled (default), your privacy is protected as no model-provided tool inputs or result contents will be shared.\n- When enabled, potentially sensitive information will be sent including the full inputs provided to tools and their complete outputs (which may contain names, IDs, and detailed properties of your Confluent/Kafka resources).\n\nNOTE: If telemetry is enabled via `#telemetry.telemetryLevel#` and `#telemetry.feedback.enabled#`, we will always send the **names** of tools used, but not their inputs or outputs."
           }
         }
       }

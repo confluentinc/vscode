@@ -2,11 +2,8 @@ import { ObservableScope } from "inertial";
 import { ExtensionContext, ViewColumn, WebviewPanel } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { FlinkStatementResultsManager } from "./flinkStatementResultsManager";
-import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatement } from "./models/flinkStatement";
-import { scheduler } from "./scheduler";
 import { getSidecar } from "./sidecar";
-import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import flinkStatementResults from "./webview/flink-statement-results.html";
@@ -18,12 +15,11 @@ const DEFAULT_RESULT_LIMIT = 100_000;
  * Sets up the scheduler and panel cache for managing results display.
  */
 export function activateFlinkStatementResultsViewer(context: ExtensionContext) {
-  const schedule = scheduler(4, 800);
   const cache = new WebviewPanelCache();
 
   context.subscriptions.push(
     registerCommandWithLogging("confluent.flinkStatementResults", (statement?: FlinkStatement) =>
-      handleFlinkStatementResults(statement, schedule, cache),
+      handleFlinkStatementResults(statement, cache),
     ),
   );
 }
@@ -38,7 +34,6 @@ export function activateFlinkStatementResultsViewer(context: ExtensionContext) {
  */
 async function handleFlinkStatementResults(
   statement: FlinkStatement | undefined,
-  schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
   cache: WebviewPanelCache,
 ) {
   if (!statement) return;
@@ -48,10 +43,6 @@ async function handleFlinkStatementResults(
     panel.reveal();
     return;
   }
-
-  const sidecar = await getSidecar();
-  const computePool = getComputePool();
-  const service = createFlinkService(sidecar, computePool);
 
   const os = ObservableScope();
 
@@ -69,11 +60,11 @@ async function handleFlinkStatementResults(
     });
   };
 
+  const sidecar = await getSidecar();
   const resultsManager = new FlinkStatementResultsManager(
     os,
     statement,
-    service,
-    schedule,
+    sidecar,
     notifyUI,
     DEFAULT_RESULT_LIMIT,
   );
@@ -110,27 +101,4 @@ function findOrCreatePanel(
     ViewColumn.One,
     { enableScripts: true },
   );
-}
-
-/**
- * Retrieves the compute pool from the Flink statements view provider.
- * Throws an error if no compute pool is found.
- */
-function getComputePool(): CCloudFlinkComputePool {
-  const computePool = FlinkStatementsViewProvider.getInstance().computePool;
-  if (!computePool) {
-    throw new Error("Compute pool not found");
-  }
-  return computePool;
-}
-
-/**
- * Creates a Flink SQL statement results API service using the provided sidecar and compute pool.
- */
-function createFlinkService(sidecar: any, computePool: CCloudFlinkComputePool) {
-  return sidecar.getFlinkSqlStatementResultsApi({
-    environmentId: computePool.environmentId,
-    provider: computePool.provider,
-    region: computePool.region,
-  });
 }
