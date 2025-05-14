@@ -21,7 +21,7 @@ export const generateRowId = (row: any[], upsertColumns?: number[]): string => {
   }
 
   // Trade CPU for memory and base64 encode the concatenated row values.
-  return Buffer.from(JSON.stringify(result.join("-")).replace(/[\\"]/g, "")).toString("base64");
+  return JSON.stringify(result.join("-")).replace(/[\\"]/g, "");
 };
 
 export const mapColumnsToRowData = (

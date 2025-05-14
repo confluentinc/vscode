@@ -13,6 +13,7 @@ import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { SidecarHandle } from "./sidecar";
+import { ViewMode } from "./utils/flinkStatementResultColumns";
 import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
@@ -30,7 +31,9 @@ type MessageType =
   | "GetSearchQuery"
   | "SetVisibleColumns"
   | "GetStatementMeta"
-  | "StopStatement";
+  | "StopStatement"
+  | "ToggleViewMode"
+  | "GetViewMode";
 
 type StreamState = "running" | "completed";
 
@@ -48,6 +51,7 @@ type StreamState = "running" | "completed";
  */
 export class FlinkStatementResultsManager {
   private _results: Signal<Map<string, any>>;
+  private _rawResults: Signal<any[]>;
   private _state: Signal<StreamState>;
   private _moreResults: Signal<boolean>;
   private _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
@@ -60,6 +64,7 @@ export class FlinkStatementResultsManager {
   private _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
   private _statementRefreshInterval: NodeJS.Timeout | undefined;
+  private _viewMode!: Signal<ViewMode>;
 
   private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
   private _flinkStatementsSqlApi: StatementsSqlV1Api;
@@ -75,6 +80,7 @@ export class FlinkStatementResultsManager {
     private readonly resourceLoader: CCloudResourceLoader = CCloudResourceLoader.getInstance(),
   ) {
     this._results = os.signal(new Map<string, any>());
+    this._rawResults = os.signal<any[]>([]);
     this._state = os.signal<StreamState>("running");
     this._moreResults = os.signal(true);
     this._latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
@@ -86,6 +92,8 @@ export class FlinkStatementResultsManager {
 
     this._flinkStatementResultsSqlApi = sidecar.getFlinkSqlStatementResultsApi(statement);
     this._flinkStatementsSqlApi = sidecar.getFlinkSqlStatementsApi(statement);
+
+    this._viewMode = this.os.signal<ViewMode>("table");
 
     this.setupPolling();
   }
@@ -144,6 +152,7 @@ export class FlinkStatementResultsManager {
 
     try {
       const currentResults = this._results();
+      const currentRawResults = this._rawResults();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
       const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
         environment_id: this.statement.environmentId,
@@ -154,6 +163,10 @@ export class FlinkStatementResultsManager {
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       this.os.batch(() => {
+        // Store raw changelog data in order
+        this._rawResults([...currentRawResults, ...(resultsData?.data ?? [])]);
+
+        // Process results for table view
         parseResults({
           columns: this.statement.status?.traits?.schema?.columns ?? [],
           isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
@@ -308,25 +321,42 @@ export class FlinkStatementResultsManager {
       case "GetResults": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
+        // Use raw results if in changelog mode, otherwise use processed results
+        const results =
+          this._viewMode() === "changelog" ? this._rawResults() : this._filteredResults();
         return {
-          results: this._filteredResults().slice(offset, offset + limit),
+          results: results.slice(offset, offset + limit),
         };
       }
       case "GetResultsCount": {
-        return {
-          total: this._results().size,
-          filter: this._filteredResults().length,
-        };
+        if (this._viewMode() === "changelog") {
+          return {
+            total: this._rawResults().length,
+            filter: null,
+          };
+        } else {
+          return {
+            total: this._results().size,
+            filter: this._filteredResults().length,
+          };
+        }
       }
       case "Search": {
-        this._searchQuery(body.search ?? "");
-        this._filteredResults(this.filterResultsBySearch());
+        // Only apply search in table mode
+        if (this._viewMode() !== "changelog") {
+          this._searchQuery(body.search ?? "");
+          this._filteredResults(this.filterResultsBySearch());
+        }
         this.notifyUI();
         return null;
       }
       case "SetVisibleColumns": {
         this._visibleColumns(body.visibleColumns ?? null);
-        this._filteredResults(this.filterResultsBySearch());
+
+        // Only update filtered results in case of table mode
+        if (this._viewMode() === "table") {
+          this._filteredResults(this.filterResultsBySearch());
+        }
         return null;
       }
       case "GetSearchQuery": {
@@ -349,7 +379,9 @@ export class FlinkStatementResultsManager {
       case "PreviewResult": {
         // plural if all results else singular
         const filename = `flink-statement-result${body?.result === undefined ? "s" : ""}-${new Date().getTime()}.json`;
-        const content = body?.result ?? this._filteredResults();
+        const content =
+          body?.result ??
+          (this._viewMode() === "changelog" ? this._rawResults() : this._filteredResults());
 
         showJsonPreview(filename, content);
 
@@ -378,6 +410,14 @@ export class FlinkStatementResultsManager {
       }
       case "StopStatement": {
         return this.stopStatement();
+      }
+      case "ToggleViewMode": {
+        this._viewMode(this._viewMode() === "table" ? "changelog" : "table");
+        this.notifyUI();
+        return null;
+      }
+      case "GetViewMode": {
+        return this._viewMode();
       }
       default: {
         const _exhaustiveCheck: never = type;
