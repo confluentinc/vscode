@@ -14,6 +14,7 @@ import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { SidecarHandle } from "./sidecar";
+import { ViewMode } from "./utils/flinkStatementResultColumns";
 import { parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
@@ -32,7 +33,9 @@ export type MessageType =
   | "Search"
   | "SetVisibleColumns"
   | "GetStatementMeta"
-  | "StopStatement";
+  | "StopStatement"
+  | "SetViewMode"
+  | "GetViewMode";
 
 // Define the post function type based on the overloads
 export type PostFunction = {
@@ -75,6 +78,8 @@ export type PostFunction = {
     areResultsViewable: boolean;
   }>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
+  (type: "SetViewMode", body: { viewMode: ViewMode; timestamp?: number }): Promise<null>;
+  (type: "GetViewMode", body: { timestamp?: number }): Promise<ViewMode>;
 };
 
 /**
@@ -91,6 +96,7 @@ export type PostFunction = {
  */
 export class FlinkStatementResultsManager {
   private _results: Signal<Map<string, any>>;
+  private _rawResults: Signal<any[]>;
   private _state: Signal<StreamState>;
   private _moreResults: Signal<boolean>;
   private _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
@@ -103,6 +109,7 @@ export class FlinkStatementResultsManager {
   private _filteredResults: Signal<any[]>;
   private _fetchCount = 0;
   private _statementRefreshInterval: NodeJS.Timeout | undefined;
+  private _viewMode!: Signal<ViewMode>;
 
   private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
   private _flinkStatementsSqlApi: StatementsSqlV1Api;
@@ -118,6 +125,7 @@ export class FlinkStatementResultsManager {
     private readonly resourceLoader: CCloudResourceLoader = CCloudResourceLoader.getInstance(),
   ) {
     this._results = os.signal(new Map<string, any>());
+    this._rawResults = os.signal<any[]>([]);
     this._state = os.signal<StreamState>("running");
     this._moreResults = os.signal(true);
     this._latestResult = os.signal<GetSqlv1StatementResult200Response | null>(null);
@@ -129,6 +137,8 @@ export class FlinkStatementResultsManager {
 
     this._flinkStatementResultsSqlApi = sidecar.getFlinkSqlStatementResultsApi(statement);
     this._flinkStatementsSqlApi = sidecar.getFlinkSqlStatementsApi(statement);
+
+    this._viewMode = this.os.signal<ViewMode>("table");
 
     this.setupPolling();
   }
@@ -187,6 +197,7 @@ export class FlinkStatementResultsManager {
 
     try {
       const currentResults = this._results();
+      const currentRawResults = this._rawResults();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
       const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult({
         environment_id: this.statement.environmentId,
@@ -197,6 +208,10 @@ export class FlinkStatementResultsManager {
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       this.os.batch(() => {
+        // Store raw changelog data in order
+        this._rawResults([...currentRawResults, ...(resultsData?.data ?? [])]);
+
+        // Process results for table view
         parseResults({
           columns: this.statement.status?.traits?.schema?.columns ?? [],
           isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
@@ -346,7 +361,7 @@ export class FlinkStatementResultsManager {
     });
   }
 
-  handleMessage(type: MessageType, body: any): any {
+  handleMessage<T extends MessageType>(type: T, body: any): any {
     switch (type) {
       case "GetResults": {
         const offset = body.page * body.pageSize;
@@ -357,11 +372,12 @@ export class FlinkStatementResultsManager {
       }
       case "GetResultsCount": {
         return {
-          total: this._results().size,
+          total: this._viewMode() === "table" ? this._results().size : this._rawResults().length,
           filter: this._filteredResults().length,
         };
       }
       case "Search": {
+        // Only apply search in table mode
         this._searchQuery(body.search ?? "");
         this._filteredResults(this.filterResultsBySearch());
         this.notifyUI();
@@ -416,6 +432,15 @@ export class FlinkStatementResultsManager {
       case "StopStatement": {
         return this.stopStatement();
       }
+      case "SetViewMode": {
+        this._viewMode(body.viewMode! as ViewMode);
+        this._filteredResults(this.filterResultsBySearch());
+        this.notifyUI();
+        return null;
+      }
+      case "GetViewMode": {
+        return this._viewMode();
+      }
       default: {
         const _exhaustiveCheck: never = type;
         return _exhaustiveCheck;
@@ -424,9 +449,9 @@ export class FlinkStatementResultsManager {
   }
 
   private getResultsArray() {
-    return Array.from(this._results().values()).map((row: Map<string, any>) =>
-      Object.fromEntries(row),
-    );
+    return this._viewMode() === "table"
+      ? Array.from(this._results().values()).map((row: Map<string, any>) => Object.fromEntries(row))
+      : Array.from(this._rawResults());
   }
 
   dispose() {
