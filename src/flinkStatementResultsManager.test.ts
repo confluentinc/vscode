@@ -12,11 +12,26 @@ import { createResponseError } from "../tests/unit/testUtils";
 import { MessageType, PostFunction } from "./flinkStatementResultsManager";
 import { FlinkStatement, Phase } from "./models/flinkStatement";
 import { WebviewStorage } from "./webview/comms/comms";
-import { createFakeWebviewStorage } from "./webview/comms/fakeStorage";
 import {
   FlinkStatementResultsViewModel,
   ResultsViewerStorageState,
 } from "./webview/flink-statement-results";
+
+class FakeWebviewStorage<T> implements WebviewStorage<T> {
+  private storage: T | undefined;
+
+  get(): T | undefined {
+    return this.storage;
+  }
+
+  set(state: T): void {
+    this.storage = state;
+  }
+}
+
+function createFakeWebviewStorage<T>(): WebviewStorage<T> {
+  return new FakeWebviewStorage<T>();
+}
 
 describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () => {
   let sandbox: sinon.SinonSandbox;
