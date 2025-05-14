@@ -16,7 +16,7 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../preferences/constants";
-import * as telementyEvents from "../telemetry/events";
+import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
 
 describe("FlinkStatementsViewProvider", () => {
@@ -120,7 +120,7 @@ describe("FlinkStatementsViewProvider", () => {
         nonterminalStatementsToPoll: undefined,
       };
 
-      logUsageStub = sandbox.stub(telementyEvents, "logUsage");
+      logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
       sandbox.stub(workspace, "getConfiguration").returns({
         get: (param: string) => {
           if (param === STATEMENT_POLLING_CONCURRENCY) {
@@ -152,7 +152,7 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledOnce(logUsageStub);
       sinon.assert.calledWith(
         logUsageStub,
-        telementyEvents.UserEvent.FlinkStatementViewStatistics,
+        telemetryEvents.UserEvent.FlinkStatementViewStatistics,
         {
           compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
           environment_id: undefined,
@@ -180,7 +180,7 @@ describe("FlinkStatementsViewProvider", () => {
 
       sinon.assert.calledWith(
         logUsageStub,
-        telementyEvents.UserEvent.FlinkStatementViewStatistics,
+        telemetryEvents.UserEvent.FlinkStatementViewStatistics,
         {
           compute_pool_id: undefined,
           environment_id: TEST_CCLOUD_ENVIRONMENT.id,
