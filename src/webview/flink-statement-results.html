@@ -89,8 +89,6 @@
               placeholder="Search across results…"
               type="search"
               size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
               data-on-keydown="this.handleKeydown(event)"
               data-on-input="this.handleInput(event)"
               >Search</vscode-text-field
@@ -549,6 +547,10 @@
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
-    <script type="module" nonce="${nonce}" src="${path('flink-statement-results.js')}"></script>
+    <script
+      type="module"
+      nonce="${nonce}"
+      src="${path('flink-statement-results-init.js')}"
+    ></script>
   </body>
 </html>
