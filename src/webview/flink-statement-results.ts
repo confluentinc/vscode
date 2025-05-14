@@ -61,6 +61,27 @@ export class FlinkStatementResultsViewModel extends ViewModel {
 
   readonly pagePersistWatcher: () => void;
 
+  /**
+   * Creates a new instance of FlinkStatementResultsViewModel.
+   *
+   * The constructor initializes all reactive properties and sets up the initial state:
+   * - Creates signals for pagination, column visibility, and search functionality
+   * - Sets up default column widths and visibility
+   * - Initializes storage with default values if none exist
+   * - Establishes communication channels with the host environment
+   *
+   * @param os The ObservableScope instance that manages reactive state and signals.
+   *            This is used to create and manage all reactive properties of the view model.
+   * @param timestamp A Signal<number> that represents the current timestamp.
+   *                   This is used to force re-renders of the view model when needed.
+   *                   The timestamp is updated whenever the view model needs to refresh.
+   * @param storage Optional WebviewStorage instance for persisting view model state.
+   *                 If not provided, a new storage instance will be created.
+   *                 Used to store and retrieve column widths, visibility flags, and other UI state.
+   * @param post Callback function for sending messages to the host environment.
+   *              If not provided, defaults to using sendWebviewMessage.
+   *              Used to communicate state changes and user actions back to the extension.
+   */
   constructor(
     os: Scope,
     private timestamp: Signal<number>,
