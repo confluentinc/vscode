@@ -196,6 +196,29 @@
             "resourceKind"
           ]
         }
+      },
+      {
+        "name": "get_environments",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "environments"
+        ],
+        "displayName": "Get Environments",
+        "modelDescription": "Get a list of environments available for a specific connection. Environments are logical groupings of resources that may contain Kafka clusters, Schema Registry, and Flink compute pools. Use this when the user asks about their environments or needs to locate resource IDs for other operations.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "connectionId": {
+              "type": "string",
+              "description": "The ID of the connection to get environments for."
+            }
+          },
+          "required": [
+            "connectionId"
+          ]
+        }
       }
     ],
     "commands": [
