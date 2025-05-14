@@ -38,8 +38,9 @@ describe("chat/summarizers/connections.ts", () => {
 
     const result: string = summarizeConnection(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
 
-    assert.ok(result.includes(connection.spec.name!));
-    assert.ok(result.includes("State:"));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.includes(`${connection.spec.name!}`));
+    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
     assert.ok(result.includes("Auth Session Expires At:"));
   });
 
@@ -64,10 +65,15 @@ describe("chat/summarizers/connections.ts", () => {
 
     const result: string = summarizeConnection(connection);
 
-    assert.ok(result.includes(connection.spec.name!));
-    assert.ok(result.includes("Kafka: Running"));
-    assert.ok(result.includes("Schema Registry: Running"), result);
-    assert.ok(result.includes(`Schema Registry URI: ${TEST_LOCAL_SCHEMA_REGISTRY.uri}`));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.includes(`"${connection.spec.name!}"`));
+
+    assert.ok(result.includes("Kafka"));
+    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+
+    assert.ok(result.includes("Schema Registry"));
+    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`URI: ${TEST_LOCAL_SCHEMA_REGISTRY.uri}`));
   });
 
   it("summarizeConnection() should summarize a `DIRECT` connection with successfully-connected Kafka and SR", () => {
@@ -95,20 +101,28 @@ describe("chat/summarizers/connections.ts", () => {
 
     const result: string = summarizeConnection(connection);
 
-    assert.ok(result.includes(connection.spec.name!));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.includes(`"${connection.spec.name!}"`));
+
+    assert.ok(result.includes("Kafka Cluster"));
+    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
     assert.ok(result.includes(`Bootstrap Servers: ${TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers}`));
-    assert.ok(result.includes(`Schema Registry URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
+
+    assert.ok(result.includes("Schema Registry"));
+    assert.ok(result.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.includes(`URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
   });
 
   it("summarizeCCloudConnection() should include authentication expiration details", () => {
     const connection: Connection = TEST_AUTHENTICATED_CCLOUD_CONNECTION;
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeCCloudConnection(connection, summary);
 
-    assert.ok(result.value.includes("State:"));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
     assert.ok(result.value.includes("Auth Session Expires At:"));
     assert.ok(result.value.includes("hour")); // should include "in X hours" text
   });
@@ -128,10 +142,11 @@ describe("chat/summarizers/connections.ts", () => {
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${expiringConnection.spec.name}"`,
+      `### "${expiringConnection.spec.name}"`,
     );
     const result: MarkdownString = summarizeCCloudConnection(expiringConnection, summary);
 
+    // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Sign-In Link:"));
     assert.ok(result.value.includes(TEST_AUTHENTICATED_CCLOUD_CONNECTION.metadata.sign_in_uri!));
   });
@@ -153,10 +168,11 @@ describe("chat/summarizers/connections.ts", () => {
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${errorConnection.spec.name}"`,
+      `### "${errorConnection.spec.name}"`,
     );
     const result: MarkdownString = summarizeCCloudConnection(errorConnection, summary);
 
+    // ignore any headers, indentations, spacing, etc.
     assert.ok(result.value.includes("Errors:"));
     assert.ok(result.value.includes(errorMessage));
   });
@@ -169,11 +185,13 @@ describe("chat/summarizers/connections.ts", () => {
       .returns(true);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeLocalConnection(connection, summary);
 
-    assert.ok(result.value.includes("Kafka: Running"));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes("Kafka"));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
     // we won't get any bootstrap servers from the connection until we migrate to a DIRECT type;
     // that can only be checked via the Docker engine API currently
   });
@@ -186,11 +204,13 @@ describe("chat/summarizers/connections.ts", () => {
       .returns(false);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeLocalConnection(connection, summary);
 
-    assert.ok(result.value.includes("Kafka: Not Running"));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes("Kafka"));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.None}`));
   });
 
   it("summarizeLocalConnection() should show Schema Registry as running and include the URI when available", () => {
@@ -211,12 +231,14 @@ describe("chat/summarizers/connections.ts", () => {
       .returns(true);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeLocalConnection(connection, summary);
 
-    assert.ok(result.value.includes("Schema Registry: Running"));
-    assert.ok(result.value.includes(`Schema Registry URI: ${TEST_LOCAL_SCHEMA_REGISTRY.uri}`));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes("Schema Registry"));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
+    assert.ok(result.value.includes(`URI: ${TEST_LOCAL_SCHEMA_REGISTRY.uri}`));
   });
 
   it("summarizeLocalConnection() should show Schema Registry as not running when unavailable", () => {
@@ -227,12 +249,14 @@ describe("chat/summarizers/connections.ts", () => {
       .returns(false);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeLocalConnection(connection, summary);
 
-    assert.ok(result.value.includes("Schema Registry: Not Running"));
-    assert.ok(!result.value.includes("Schema Registry URI:"));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes("Schema Registry"));
+    assert.ok(result.value.includes(`Status: ${ConnectedState.None}`));
+    assert.ok(!result.value.includes("URI:"));
   });
 
   it("summarizeDirectConnection() should include Kafka cluster details when available", () => {
@@ -253,10 +277,11 @@ describe("chat/summarizers/connections.ts", () => {
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeDirectConnection(connection, summary);
 
+    // ignore any headers, indentations, spacing, etc.
     assert.ok(
       result.value.includes(`Bootstrap Servers: ${TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers}`),
     );
@@ -265,6 +290,7 @@ describe("chat/summarizers/connections.ts", () => {
 
   it("summarizeDirectConnection() should include Kafka cluster errors when present", () => {
     const errorMessage = "Error connecting to Kafka";
+    const status: ConnectedState = ConnectedState.Failed;
     const connection: Connection = ConnectionFromJSON({
       ...TEST_DIRECT_CONNECTION,
       spec: {
@@ -276,7 +302,7 @@ describe("chat/summarizers/connections.ts", () => {
       status: {
         ...TEST_DIRECT_CONNECTION.status,
         kafka_cluster: {
-          state: ConnectedState.Failed,
+          state: status,
           errors: {
             sign_in: { message: errorMessage },
           },
@@ -285,19 +311,21 @@ describe("chat/summarizers/connections.ts", () => {
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeDirectConnection(connection, summary);
 
+    // ignore any headers, indentations, spacing, etc.
     assert.ok(
       result.value.includes(`Bootstrap Servers: ${TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers}`),
     );
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Failed}`));
+    assert.ok(result.value.includes(`Status: ${status}`));
     assert.ok(result.value.includes("Errors:"));
     assert.ok(result.value.includes(errorMessage));
   });
 
   it("summarizeDirectConnection() should include Schema Registry details when available", () => {
+    const status: ConnectedState = ConnectedState.Attempting;
     const connection: Connection = ConnectionFromJSON({
       ...TEST_DIRECT_CONNECTION,
       spec: {
@@ -309,22 +337,25 @@ describe("chat/summarizers/connections.ts", () => {
       status: {
         ...TEST_DIRECT_CONNECTION.status,
         schema_registry: {
-          state: ConnectedState.Success,
+          state: status,
         },
       },
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeDirectConnection(connection, summary);
 
-    assert.ok(result.value.includes(`Schema Registry URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Success}`));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes(`Schema Registry`));
+    assert.ok(result.value.includes(`Status: ${status}`));
+    assert.ok(result.value.includes(`URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
   });
 
   it("summarizeDirectConnection() should include Schema Registry errors when present", () => {
     const errorMessage = "Error connecting to Schema Registry";
+    const status: ConnectedState = ConnectedState.Failed;
     const connection: Connection = ConnectionFromJSON({
       ...TEST_DIRECT_CONNECTION,
       spec: {
@@ -336,7 +367,7 @@ describe("chat/summarizers/connections.ts", () => {
       status: {
         ...TEST_DIRECT_CONNECTION.status,
         schema_registry: {
-          state: ConnectedState.Failed,
+          state: status,
           errors: {
             sign_in: { message: errorMessage },
           },
@@ -345,12 +376,14 @@ describe("chat/summarizers/connections.ts", () => {
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeDirectConnection(connection, summary);
 
-    assert.ok(result.value.includes(`Schema Registry URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
-    assert.ok(result.value.includes(`Status: ${ConnectedState.Failed}`));
+    // ignore any headers, indentations, spacing, etc.
+    assert.ok(result.value.includes(`Schema Registry`));
+    assert.ok(result.value.includes(`Status: ${status}`));
+    assert.ok(result.value.includes(`URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
     assert.ok(result.value.includes("Errors:"));
     assert.ok(result.value.includes(errorMessage));
   });
@@ -379,13 +412,14 @@ describe("chat/summarizers/connections.ts", () => {
     } satisfies Connection);
 
     const summary: MarkdownString = new MarkdownString().appendMarkdown(
-      `- "${connection.spec.name}"`,
+      `### "${connection.spec.name}"`,
     );
     const result: MarkdownString = summarizeDirectConnection(connection, summary);
 
+    // ignore any headers, indentations, spacing, etc.
     assert.ok(
       result.value.includes(`Bootstrap Servers: ${TEST_DIRECT_KAFKA_CLUSTER.bootstrapServers}`),
     );
-    assert.ok(result.value.includes(`Schema Registry URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
+    assert.ok(result.value.includes(`URI: ${TEST_DIRECT_SCHEMA_REGISTRY.uri}`));
   });
 });
