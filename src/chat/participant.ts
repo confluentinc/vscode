@@ -7,6 +7,7 @@ import {
   ChatResponseTurn,
   LanguageModelChat,
   LanguageModelChatMessage,
+  LanguageModelChatMessageRole,
   LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
@@ -237,6 +238,18 @@ export async function handleChatMessage(
 
     // NOTE: uncomment for local debugging
     // debugLogChatMessages(messages);
+
+    const latestMessage: LanguageModelChatMessage = messages[messages.length - 1];
+    const isNotUserMessage: boolean = latestMessage.role !== LanguageModelChatMessageRole.User;
+    const isNotTextPart: boolean =
+      latestMessage.content.length === 0 ||
+      latestMessage.content[0] instanceof LanguageModelToolResultPart;
+    if (isNotUserMessage || isNotTextPart) {
+      // the latest message needs to be a `User` message, and on older versions of the Copilot Chat
+      // extension (<0.27.0), it also can't be a tool result, so we have to add a new User message
+      // to the end of the messages array
+      messages.push(userMessage(request.prompt));
+    }
 
     const response: LanguageModelChatResponse = await model.sendRequest(
       messages,
