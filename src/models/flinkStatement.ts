@@ -203,7 +203,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    * For statement results to be viewable, it must satisfy these conditions:
    * 1. The statement must have been created in the last 24 hours
    *    (which is the TTL for the statement result to be deleted.)
-   * 2. The statement phase indicates viewable {@link VIEWABLE_PHASES viewable.}
+   * 2. The statement phase indicates {@link VIEWABLE_PHASES viewability.}
    */
   get areResultsViewable(): boolean {
     if (!this.createdAt) {
