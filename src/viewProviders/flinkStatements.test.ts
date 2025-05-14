@@ -1,13 +1,22 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window } from "vscode";
+import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { FlinkStatement } from "../models/flinkStatement";
+import { FlinkStatement, Phase } from "../models/flinkStatement";
+import {
+  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
+  DEFAULT_STATEMENT_POLLING_LIMIT,
+  STATEMENT_POLLING_CONCURRENCY,
+  STATEMENT_POLLING_FREQUENCY_SECONDS,
+  STATEMENT_POLLING_LIMIT,
+} from "../preferences/constants";
+import * as telementyEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
 
 describe("FlinkStatementsViewProvider", () => {
@@ -35,10 +44,12 @@ describe("FlinkStatementsViewProvider", () => {
   describe("refresh()", () => {
     let changeFireStub: sinon.SinonStub;
     let resourcesClearStub: sinon.SinonStub;
+    let logTelemetryStub: sinon.SinonStub;
 
     beforeEach(() => {
       changeFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
       resourcesClearStub = sandbox.stub(viewProvider["resourcesInTreeView"], "clear");
+      logTelemetryStub = sandbox.stub(viewProvider, "logTelemetry");
     });
 
     it("clears when no resource is selected", async () => {
@@ -47,6 +58,7 @@ describe("FlinkStatementsViewProvider", () => {
 
       sinon.assert.calledOnce(changeFireStub);
       sinon.assert.calledOnce(resourcesClearStub);
+      sinon.assert.notCalled(logTelemetryStub);
     });
 
     it("fetches new statements when a resource is selected", async () => {
@@ -62,8 +74,21 @@ describe("FlinkStatementsViewProvider", () => {
       const resource = TEST_CCLOUD_ENVIRONMENT;
       viewProvider["resource"] = resource;
 
-      // Mock the getFlinkStatements method to return a resolved promise
-      resourceLoader.getFlinkStatements.resolves([]);
+      // Three statements total, one running and two stopped.
+      resourceLoader.getFlinkStatements.resolves([
+        createFlinkStatement({
+          name: "statement1",
+          phase: Phase.RUNNING,
+        }),
+        createFlinkStatement({
+          name: "statement2",
+          phase: Phase.STOPPED,
+        }),
+        createFlinkStatement({
+          name: "statement3",
+          phase: Phase.STOPPED,
+        }),
+      ]);
 
       await viewProvider.refresh();
 
@@ -71,6 +96,106 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledOnce(resourcesClearStub);
       sinon.assert.calledTwice(changeFireStub);
       sinon.assert.calledOnce(resourceLoader.getFlinkStatements);
+      sinon.assert.calledOnce(logTelemetryStub);
+      sinon.assert.calledWith(logTelemetryStub, 3, 1);
+    });
+  });
+
+  /** Subset of workspace configs */
+  type PollingConfigs = {
+    nonterminalPollingFrequency: number | undefined;
+    nonterminalPollingConcurrency: number | undefined;
+    nonterminalStatementsToPoll: number | undefined;
+  };
+
+  describe("logTelemetry()", () => {
+    let logUsageStub: sinon.SinonStub;
+    let pollingConfigs: PollingConfigs;
+
+    beforeEach(() => {
+      // default to user not having any of our germane configs set at all.
+      pollingConfigs = {
+        nonterminalPollingFrequency: undefined,
+        nonterminalPollingConcurrency: undefined,
+        nonterminalStatementsToPoll: undefined,
+      };
+
+      logUsageStub = sandbox.stub(telementyEvents, "logUsage");
+      sandbox.stub(workspace, "getConfiguration").returns({
+        get: (param: string) => {
+          if (param === STATEMENT_POLLING_CONCURRENCY) {
+            return pollingConfigs.nonterminalPollingConcurrency;
+          }
+          if (param === STATEMENT_POLLING_FREQUENCY_SECONDS) {
+            return pollingConfigs.nonterminalPollingFrequency;
+          }
+          if (param === STATEMENT_POLLING_LIMIT) {
+            return pollingConfigs.nonterminalStatementsToPoll;
+          }
+          return undefined;
+        },
+      } as WorkspaceConfiguration);
+    });
+
+    it("logs telemetry with compute_pool_id and default configs", () => {
+      const totalStatements = 3;
+      const nonTerminalStatements = 1;
+      viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      // Terrible custom configs.
+      pollingConfigs.nonterminalPollingConcurrency = 1;
+      pollingConfigs.nonterminalPollingFrequency = 2;
+      pollingConfigs.nonterminalStatementsToPoll = 300;
+
+      viewProvider.logTelemetry(totalStatements, nonTerminalStatements);
+
+      sinon.assert.calledOnce(logUsageStub);
+      sinon.assert.calledWith(
+        logUsageStub,
+        telementyEvents.UserEvent.FlinkStatementViewStatistics,
+        {
+          compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+          environment_id: undefined,
+
+          statement_count: totalStatements,
+          non_terminal_statement_count: nonTerminalStatements,
+          terminal_statement_count: totalStatements - nonTerminalStatements,
+
+          // Should have called with all the defaults, since this user
+          // smells like not having set any of the polling configs.
+          nonterminal_polling_concurrency: pollingConfigs.nonterminalPollingConcurrency,
+          nonterminal_polling_frequency: pollingConfigs.nonterminalPollingFrequency,
+          nonterminal_statements_to_poll: pollingConfigs.nonterminalStatementsToPoll,
+        },
+      );
+    });
+
+    it("logs telemetry with environment_id and custom configs", () => {
+      const totalStatements = 7011;
+      const nonTerminalStatements = 3053;
+      viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
+      viewProvider.logTelemetry(totalStatements, nonTerminalStatements);
+
+      sinon.assert.calledOnce(logUsageStub);
+
+      sinon.assert.calledWith(
+        logUsageStub,
+        telementyEvents.UserEvent.FlinkStatementViewStatistics,
+        {
+          compute_pool_id: undefined,
+          environment_id: TEST_CCLOUD_ENVIRONMENT.id,
+
+          statement_count: totalStatements,
+          non_terminal_statement_count: nonTerminalStatements,
+          terminal_statement_count: totalStatements - nonTerminalStatements,
+
+          // Should have called with all the defaults, since this user
+          // smells like not having set any of the polling configs.
+          nonterminal_polling_concurrency: DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+          nonterminal_polling_frequency: DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
+          nonterminal_statements_to_poll: DEFAULT_STATEMENT_POLLING_LIMIT,
+        },
+      );
     });
   });
 
