@@ -365,7 +365,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  searchTimer: NodeJS.Timeout | null = null;
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
