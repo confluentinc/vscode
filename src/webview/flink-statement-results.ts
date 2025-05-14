@@ -41,7 +41,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     startTime: string | null;
     detail: string | null;
     failed: boolean;
-    isResultsViewable: boolean;
+    areResultsViewable: boolean;
   }>;
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
@@ -137,13 +137,13 @@ export class FlinkStatementResultsViewModel extends ViewModel {
         startTime: null,
         detail: null,
         failed: false,
-        isResultsViewable: true,
+        areResultsViewable: true,
       },
     );
 
     /** For now, the only way to expose a loading spinner. */
     this.waitingForResults = this.derive(() => {
-      return this.resultCount().total === 0 && this.statementMeta().isResultsViewable;
+      return this.resultCount().total === 0 && this.statementMeta().areResultsViewable;
     });
 
     this.emptyFilterResult = this.derive(

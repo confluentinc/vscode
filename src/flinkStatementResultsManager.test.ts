@@ -210,7 +210,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       detail: ctx.statement.status?.detail ?? null,
       failed: ctx.statement.failed,
       stoppable: ctx.statement.stoppable,
-      isResultsViewable: ctx.statement.isResultsViewable,
+      areResultsViewable: ctx.statement.areResultsViewable,
     });
   });
 

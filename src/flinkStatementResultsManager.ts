@@ -72,7 +72,7 @@ export type PostFunction = {
     startTime: string | null;
     detail: string | null;
     failed: boolean;
-    isResultsViewable: boolean;
+    areResultsViewable: boolean;
   }>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
 };
