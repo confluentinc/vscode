@@ -1,5 +1,10 @@
 import { ObservableScope } from "inertial";
 import { SqlV1ResultSchema } from "../clients/flinkSql";
+import {
+  ViewMode,
+  createColumnDefinitions,
+  getColumnOrder,
+} from "../utils/flinkStatementResultColumns";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
@@ -11,6 +16,8 @@ const storage = createWebviewStorage<{
   colWidth: number[];
   columnVisibilityFlags: boolean[];
   page: number;
+  tablePage: number;
+  changelogPage: number;
 }>();
 
 addEventListener("DOMContentLoaded", () => {
@@ -38,6 +45,33 @@ class FlinkStatementResultsViewModel extends ViewModel {
   });
 
   page = this.signal(storage.get()?.page ?? 0);
+
+  tablePage = this.signal(storage.get()?.tablePage ?? 0);
+  changelogPage = this.signal(storage.get()?.changelogPage ?? 0);
+
+  /** Current view mode - either 'table' or 'changelog' */
+  viewMode = this.resolve(async () => {
+    return await post("GetViewMode", { timestamp: this.timestamp() });
+  }, "table" as ViewMode);
+
+  /** Toggle between table and changelog view modes */
+  async toggleViewMode() {
+    // Sets current page to toggled page
+    const currentPage = this.page();
+    if (this.viewMode() === "table") {
+      this.tablePage(currentPage);
+      this.page(this.changelogPage());
+      storage.set({ ...storage.get()!, tablePage: currentPage });
+    } else {
+      this.changelogPage(currentPage);
+      this.page(this.tablePage());
+      storage.set({ ...storage.get()!, changelogPage: currentPage });
+    }
+
+    // Trigger the toggle and notify UI of page change
+    await post("ToggleViewMode", { timestamp: this.timestamp() });
+  }
+
   pageSize = this.signal(100);
 
   pagePersistWatcher = this.watch(() => {
@@ -147,24 +181,13 @@ class FlinkStatementResultsViewModel extends ViewModel {
   /** List of all columns in the grid, with their content definition. */
   columns = this.derive(() => {
     const schema: SqlV1ResultSchema = this.schema();
-    const columns: Record<string, any> = {};
-
-    schema?.columns?.forEach((col, index) => {
-      columns[col.name] = {
-        index: index,
-        title: () => col.name,
-        children: (result: Record<string, any>) => result[col.name] ?? "NULL",
-        description: (result: Record<string, any>) => result[col.name] ?? "NULL",
-      };
-    });
-
-    return columns;
+    return createColumnDefinitions(schema, this.viewMode());
   });
 
   /** Static list of all columns in order shown in the UI. */
   allColumns = this.derive(() => {
     const schema = this.schema();
-    return schema.columns?.map((col) => col.name) ?? [];
+    return getColumnOrder(schema, this.viewMode());
   });
 
   /**
@@ -173,10 +196,10 @@ class FlinkStatementResultsViewModel extends ViewModel {
    */
   columnVisibilityFlags = this.derive(() => {
     const stored = storage.get()?.columnVisibilityFlags;
-    const schema = this.schema();
-    if (!stored || stored.length !== schema?.columns?.length) {
+    const allCols = this.allColumns();
+    if (!stored || stored.length !== allCols.length) {
       // Initialize with all columns visible
-      return Array(schema?.columns?.length).fill(true);
+      return Array(allCols.length).fill(true);
     }
     return stored;
   });
@@ -258,6 +281,10 @@ class FlinkStatementResultsViewModel extends ViewModel {
 
   /** Handle search input events */
   search(value: string) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return "";
+    }
     return value ?? "";
   }
 
@@ -266,6 +293,11 @@ class FlinkStatementResultsViewModel extends ViewModel {
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
       event.preventDefault();
@@ -285,6 +317,11 @@ class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   async handleInput(event: Event | InputEvent) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return;
+    }
+
     if (event.type === "input" && !(event instanceof InputEvent)) {
       if (this.searchTimer != null) {
         clearTimeout(this.searchTimer);
@@ -295,6 +332,11 @@ class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   async submitSearch(value: string) {
+    // Disable search in changelog mode
+    if (this.viewMode() === "changelog") {
+      return;
+    }
+
     if (this.searchTimer != null) {
       clearTimeout(this.searchTimer);
       this.searchTimer = null;
@@ -407,6 +449,8 @@ export function post(
   isResultsViewable: boolean;
 }>;
 export function post(type: "StopStatement", body: { timestamp?: number }): Promise<null>;
+export function post(type: "ToggleViewMode", body: { timestamp?: number }): Promise<null>;
+export function post(type: "GetViewMode", body: { timestamp?: number }): Promise<ViewMode>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
