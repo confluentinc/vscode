@@ -15,7 +15,9 @@ import { ContextValues, getContextValue } from "../../context/values";
 /** Create a string representation of a {@link Connection} object. */
 export function summarizeConnection(connection: Connection): string {
   const type: ConnectionType = connection.spec.type!;
-  let summary = new MarkdownString().appendMarkdown(`### "${connection.spec.name}"`);
+  let summary = new MarkdownString().appendMarkdown(
+    `### "${connection.spec.name}" (ID: ${connection.id})`,
+  );
 
   // add spec/status details depending on the connection type
   switch (type) {
