@@ -271,6 +271,45 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   describe("FlinkStatementResultsViewModel only", () => {
+    describe("viewMode", () => {
+      it("should initialize with table view mode", () => {
+        assert.strictEqual(vm.viewMode(), "table");
+      });
+
+      it("should toggle between table and changelog view modes", async () => {
+        // Initial state
+        assert.strictEqual(vm.viewMode(), "table");
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle to changelog
+        await vm.setViewMode("changelog");
+        await eventually(() => assert.strictEqual(vm.viewMode(), "changelog"));
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Change page in changelog mode
+        vm.page(2);
+        await eventually(() => assert.strictEqual(vm.page(), 2));
+
+        assert.strictEqual(vm.tablePage(), 0);
+        // We don't eagerly update the changelogPage..
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle back to table
+        await vm.setViewMode("table");
+
+        await eventually(() => {
+          assert.strictEqual(vm.viewMode(), "table");
+          assert.strictEqual(vm.page(), 0);
+          assert.strictEqual(vm.tablePage(), 0);
+          assert.strictEqual(vm.changelogPage(), 2);
+        });
+      });
+    });
+
     describe("schema and columns", () => {
       it("should create correct column definitions for table view", () => {
         const columns = vm.columns();
@@ -388,6 +427,17 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         const stored = storage.get()?.columnVisibilityFlags;
         assert.deepStrictEqual(stored, [false, true]);
       });
+
+      it("should handle column visibility in different view modes", async () => {
+        await vm.setViewMode("changelog");
+        const initialColumns = vm.visibleColumns();
+
+        await vm.toggleColumnVisibility(0);
+        const afterToggle = vm.visibleColumns();
+
+        assert.notDeepStrictEqual(initialColumns, afterToggle);
+      });
+    });
     });
 
     describe("search and input handling", () => {
