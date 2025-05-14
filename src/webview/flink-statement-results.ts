@@ -246,7 +246,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.colWidth = this.derive(
       () => {
         const columnsLength = this.allColumns().length;
-        const storedWidths = storage.get()?.colWidths;
+        const storedWidths = this.storage.get()?.colWidths;
         if (!storedWidths) {
           return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
         }
@@ -357,7 +357,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  searchTimer: NodeJS.Timeout | null = null;
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
