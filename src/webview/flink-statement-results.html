@@ -89,8 +89,6 @@
               placeholder="Search across results…"
               type="search"
               size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
               data-on-keydown="this.handleKeydown(event)"
               data-on-input="this.handleInput(event)"
               >Search</vscode-text-field
@@ -263,6 +261,29 @@
           >
             <span class="codicon codicon-json"></span>
           </vscode-button>
+        </div>
+        <div class="toggle-actions">
+          <template data-if="this.viewMode() === 'table'">
+            <vscode-button
+              appearance="icon"
+              aria-label="Click to view results as changelog"
+              data-on-click="this.setViewMode('changelog')"
+              title="Click to view results as changelog"
+            >
+              <span class="codicon codicon-insert"></span>
+            </vscode-button>
+          </template>
+
+          <template data-if="this.viewMode() === 'changelog'">
+            <vscode-button
+              appearance="icon"
+              aria-label="Click to view results as table (collapsed changelog)"
+              data-on-click="this.setViewMode('table')"
+              title="Click to view results as table (collapsed changelog)"
+            >
+              <span class="codicon codicon-table"></span>
+            </vscode-button>
+          </template>
         </div>
       </footer>
     </main>
@@ -547,8 +568,18 @@
         font-weight: bold;
         margin-bottom: 4px;
       }
+
+      .toggle-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 0.5rem;
+      }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
-    <script type="module" nonce="${nonce}" src="${path('flink-statement-results.js')}"></script>
+    <script
+      type="module"
+      nonce="${nonce}"
+      src="${path('flink-statement-results-init.js')}"
+    ></script>
   </body>
 </html>

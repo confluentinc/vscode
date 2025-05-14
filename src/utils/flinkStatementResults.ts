@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { v4 as uuidv4, validate, version } from "uuid";
 import { ColumnDetails } from "../clients/flinkSql";
 
 export enum Operation {
@@ -20,8 +20,7 @@ export const generateRowId = (row: any[], upsertColumns?: number[]): string => {
     result = row.filter((_, idx) => upsertColumns.includes(idx));
   }
 
-  // Trade CPU for memory and base64 encode the concatenated row values.
-  return Buffer.from(JSON.stringify(result.join("-")).replace(/[\\"]/g, "")).toString("base64");
+  return JSON.stringify(result.join("-")).replace(/[\\"]/g, "");
 };
 
 export const mapColumnsToRowData = (
@@ -34,17 +33,28 @@ export const mapColumnsToRowData = (
   }, new Map());
 };
 
-const isInsertOperation = (op: Operation) => {
-  // If `op` isn't present, treat it as an INSERT operation
+const isInsertOperation = (op: Operation | null) => {
+  // sometimes flink doesn't send `op`, so if it is not present, treat it as an INSERT operation
   if (op == null) {
     return true;
   }
   return [Operation.Insert, Operation.UpdateAfter].includes(op);
 };
 
-const UUID_REGEX = new RegExp(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-);
+export function validateUUIDSuffix(rowId: string) {
+  // UUID v4 is always 36 characters long
+  if (rowId.length < 36) {
+    return false;
+  }
+  // UUID v4 should be at the end of the rowId (const newRowId = `${rowId}-${idSuffix}`)
+  const uuid = rowId.slice(-36);
+  return (
+    // make sure it's not just a random long string
+    validate(uuid) &&
+    // we are using UUID v4 in parseResults, so we might as well check the version
+    version(uuid) === 4
+  );
+}
 
 /**
  * @param map A map to be updated.
@@ -110,7 +120,6 @@ export const parseResults = ({
       // and continue processing the row
     }
 
-    // Flink could drop `op`, which means it is `0`
     if (isInsertOperation(item.op)) {
       const data = mapColumnsToRowData(columns, item.row);
 
@@ -122,25 +131,24 @@ export const parseResults = ({
         }
       }
 
-      // If no upsert_columns and (is_append_only mode or rowId already exists), append UUID to allow for duplicate row
-      if (!hasUpsertColumns && (isAppendOnly || map.has(rowId))) {
-        const idSuffix = randomUUID();
+      if (
+        // If no upsert_columns and (is_append_only mode or rowId already exists), append UUID to allow for duplicate row
+        (!hasUpsertColumns && (isAppendOnly || map.has(rowId))) ||
+        // another case: even if we have upsert_columns, and rowId already exists, but the op is Insert,
+        // we want to create a new row with a new UUID to avoid overwriting the existing row
+        // see https://confluentinc.atlassian.net/browse/EXP-16582 for more details
+        (map.has(rowId) && item.op === Operation.Insert && hasUpsertColumns)
+      ) {
+        const idSuffix = uuidv4();
         const newRowId = `${rowId}-${idSuffix}`;
         map.set(newRowId, data);
       } else {
         map.set(rowId, data);
       }
-    } else if (hasUpsertColumns) {
-      // If we have upsert_columns, we can reliably use rowId to remove rows
-      map.delete(rowId);
     } else {
-      // Check all keys for a match with rowId, remove UUID to compare for duplicates as well
-      // Delete most recently inserted matching rowId
       const keyToDelete = Array.from(map.keys())
         .filter((key) => {
-          return (
-            key === rowId || (key.startsWith(rowId) && UUID_REGEX.test(key.split("-").at(-1) ?? ""))
-          );
+          return (key.startsWith(rowId) && validateUUIDSuffix(key)) || key === rowId;
         })
         .pop();
       if (keyToDelete) {
