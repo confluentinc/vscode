@@ -74,20 +74,27 @@ export async function initializeLanguageClient(
               }
               return next(event);
             },
-            provideCompletionItem: (document, position, context, token, next) => {
-              // Server adds backticks to all Entity completions, but this isn't expected by LSP
-              // so if the character before the word range is a backtick, adjust the position
-              const range = document.getWordRangeAtPosition(position);
-              const line = document.lineAt(position.line).text;
-              let positionToUse = position;
-              if (range) {
-                const charBeforeWordStart =
-                  range.start.character > 0 ? line.charAt(range.start.character - 1) : "";
-                if (charBeforeWordStart === "`") {
-                  positionToUse = new vscode.Position(position.line, range.start.character - 1);
-                }
+            provideCompletionItem: async (document, position, context, token, next) => {
+              const result: any = await next(document, position, context, token);
+              if (result) {
+                const items: any = result.items;
+                items.forEach((element: vscode.CompletionItem) => {
+                  // The server sends backticks in the filterText for all Resource completions, but vscode languageclient
+                  // will filter out these items if the completion range doesn't start with a backtick, so we remove them
+                  if (
+                    element.filterText &&
+                    element.filterText.startsWith("`") &&
+                    element.filterText.endsWith("`")
+                  ) {
+                    element.filterText = element.filterText.substring(
+                      1,
+                      element.filterText.length - 1,
+                    );
+                  }
+                });
+                return result;
               }
-              return next(document, positionToUse, context, token);
+              return [];
             },
             sendRequest: (type, params, token, next) => {
               // Server does not accept line positions > 0, so we need to convert them to single-line
