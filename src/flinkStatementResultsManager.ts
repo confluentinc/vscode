@@ -15,7 +15,7 @@ import { FlinkStatement } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { SidecarHandle } from "./sidecar";
 import { ViewMode } from "./utils/flinkStatementResultColumns";
-import { parseResults } from "./utils/flinkStatementResults";
+import { StatementResultsRow, parseResults } from "./utils/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
 
@@ -96,7 +96,7 @@ export type PostFunction = {
  */
 export class FlinkStatementResultsManager {
   private _results: Signal<Map<string, any>>;
-  private _rawResults: Signal<any[]>;
+  private _rawResults: Signal<StatementResultsRow[]>;
   private _state: Signal<StreamState>;
   private _moreResults: Signal<boolean>;
   private _latestResult: Signal<GetSqlv1StatementResult200Response | null>;
