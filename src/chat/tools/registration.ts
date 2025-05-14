@@ -2,6 +2,7 @@ import { Disposable, lm } from "vscode";
 import { BaseLanguageModelTool } from "./base";
 import { CreateProjectTool } from "./createProject";
 import { GetConnectionsTool } from "./getConnections";
+import { GetDockerContainersTool } from "./getDockerContainers";
 import { GetTemplateOptionsTool } from "./getTemplate";
 import { ListTemplatesTool } from "./listTemplates";
 import { setToolMap } from "./toolMap";
@@ -12,6 +13,7 @@ export function registerChatTools(): Disposable[] {
     new GetTemplateOptionsTool(),
     new CreateProjectTool(),
     new GetConnectionsTool(),
+    new GetDockerContainersTool(),
   ];
 
   const disposables: Disposable[] = [];

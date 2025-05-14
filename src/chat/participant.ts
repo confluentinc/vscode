@@ -308,17 +308,20 @@ export async function handleChatMessage(
         // TODO: move this into the tools themselves?
         stream.progress(tool.progressMessage);
 
-        if (toolCallsMade.has(JSON.stringify(toolCall))) {
+        // don't stringify the entire tool call object since the `callId` will change each time
+        const toolCallString = `${toolCall.name}:${JSON.stringify(toolCall.input)}`;
+        if (toolCallsMade.has(toolCallString)) {
           // don't process the same tool call twice
           logger.debug(`Tool "${toolCall.name}" already called with input "${toolCall.input}"`);
           messages.push(
             systemMessage(
-              `Tool "${toolCall.name}" already called with input "${JSON.stringify(toolCall.input)}". Do not repeatedly call tools with the same inputs. Use previous result(s) if possible.`,
+              `Tool "${toolCall.name}" already called with input "${JSON.stringify(toolCall.input)}". Do not repeatedly call tools with the same inputs. Refer to previous tool results in the conversation history.`,
             ),
           );
           continueConversation = true;
           continue;
         }
+        toolCallsMade.add(toolCallString);
 
         // each registered tool should contribute its own way of handling the invocation and
         // interacting with the stream
@@ -346,7 +349,6 @@ export async function handleChatMessage(
           ]);
           status = "error";
         }
-        toolCallsMade.add(JSON.stringify(toolCall));
 
         logUsage(UserEvent.CopilotInteraction, {
           status: `tool invocation ${status}`,
