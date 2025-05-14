@@ -111,7 +111,11 @@ export async function initializeLanguageClient(
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
               vscode.window.showErrorMessage(`Language server error: ${message}`);
-              return { action: ErrorAction.Continue, message: `${message ?? error.message}` };
+              return {
+                action: ErrorAction.Continue,
+                message: `${message ?? error.message}`,
+                handled: true,
+              };
             },
             closed: () => {
               logger.warn("Language server connection closed by the client's error handler");
