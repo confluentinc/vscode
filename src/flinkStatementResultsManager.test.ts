@@ -50,7 +50,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     os = ObservableScope();
     ctx = await createTestResultsManagerContext(sandbox, os);
 
-    timestamp = os.produce(Date.now(), (ts, _signal) => {
+    timestamp = os.produce(Date.now(), (ts) => {
       // Forces a re-render of the view model
       ts(Date.now());
     });
