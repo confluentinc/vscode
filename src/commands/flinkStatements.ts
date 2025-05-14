@@ -62,7 +62,7 @@ async function waitForStatementRunning(
       // if the statement is no longer found, break to raise error
       logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
       break;
-    } else if (refreshedStatement.isResultsViewable) {
+    } else if (refreshedStatement.areResultsViewable) {
       // Resolve if now in a viewable state
       return;
     }
