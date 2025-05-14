@@ -40,7 +40,7 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-    logger.debug("params:", params);
+
     // verify we're only trying to look up Kafka/SR containers
     const validKinds: LocalResourceKind[] = Object.values(LocalResourceKind);
     if (!validKinds.includes(params.resourceKind)) {
@@ -57,15 +57,9 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
     try {
       await client.systemPing(init);
     } catch (error) {
-      if (error instanceof Error) {
-        return new LanguageModelToolResult([
-          new LanguageModelTextPart(`Unable to connect to the Docker engine: "${error.message}"`),
-        ]);
-      } else {
-        return new LanguageModelToolResult([
-          new LanguageModelTextPart(`Unable to connect to the Docker engine: "${error}"`),
-        ]);
-      }
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(`Unable to connect to the Docker engine: "${error}"`),
+      ]);
     }
 
     // get the array of ContainerSummary objects first
