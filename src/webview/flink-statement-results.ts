@@ -1,190 +1,272 @@
-import { ObservableScope } from "inertial";
+import { Scope, Signal } from "inertial";
 import { SqlV1ResultSchema } from "../clients/flinkSql";
-import { applyBindings } from "./bindings/bindings";
+import { PostFunction, ResultCount, StreamState } from "../flinkStatementResultsManager";
 import { ViewModel } from "./bindings/view-model";
-import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
-import { Timer } from "./timer/timer";
+import { WebviewStorage, createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
-customElements.define("flink-timer", Timer);
-
-const storage = createWebviewStorage<{
-  colWidth: number[];
+export type ResultsViewerStorageState = {
+  colWidths: number[];
   columnVisibilityFlags: boolean[];
   page: number;
-}>();
+};
 
-addEventListener("DOMContentLoaded", () => {
-  const os = ObservableScope(queueMicrotask);
-  const ui = document.querySelector("main")!;
-  const vm = new FlinkStatementResultsViewModel(os);
-  applyBindings(ui, os, vm);
-});
+type ColumnDefinition = {
+  index: number;
+  title: () => string;
+  children: (result: Record<string, any>) => any;
+  description: (result: Record<string, any>) => any;
+};
 
-type ResultCount = { total: number; filter: number | null };
-type StreamState = "running" | "completed";
+type ColumnDefinitions = Record<string, ColumnDefinition>;
 
 /**
  * Top level view model for Flink Statement Results Viewer. It composes shared state and logic
  * available for the UI. It also talks to the "backend": sends and receives
  * messages from the host environment that manages statement results fetching.
+ *
+ * @see flinkStatementResultsManager.test.ts for tests.
  */
-class FlinkStatementResultsViewModel extends ViewModel {
-  /** This timestamp updates everytime the host environment wants UI to update. */
-  timestamp = this.produce(Date.now(), (ts, signal) => {
-    function handle(event: MessageEvent<any[]>) {
-      if (event.data[0] === "Timestamp") ts(Date.now());
-    }
-    addEventListener("message", handle, { signal });
-  });
+export class FlinkStatementResultsViewModel extends ViewModel {
+  readonly page: Signal<number>;
+  readonly pageSize: Signal<number>;
+  readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
+  readonly stopButtonClicked: Signal<boolean>;
+  readonly schema: Signal<SqlV1ResultSchema>;
+  readonly emptySnapshot: { results: any[] };
+  readonly snapshot: Signal<{ results: any[] }>;
+  readonly resultCount: Signal<ResultCount>;
+  readonly statementMeta: Signal<{
+    name: string;
+    status: string;
+    startTime: string | null;
+    detail: string | null;
+    failed: boolean;
+    isResultsViewable: boolean;
+  }>;
+  readonly waitingForResults: Signal<boolean>;
+  readonly emptyFilterResult: Signal<boolean>;
+  readonly hasResults: Signal<boolean>;
+  readonly streamState: Signal<StreamState>;
+  readonly streamError: Signal<{ message: string } | null>;
+  readonly pageStatLabel: Signal<string | null>;
+  readonly prevPageAvailable: Signal<boolean>;
+  readonly nextPageAvailable: Signal<boolean>;
+  readonly columns: Signal<ColumnDefinitions>;
+  readonly allColumns: Signal<string[]>;
+  readonly columnVisibilityFlags: Signal<boolean[]>;
+  readonly visibleColumns: Signal<string[]>;
+  readonly colWidth: Signal<number[]>;
+  readonly gridTemplateColumns: Signal<string>;
+  readonly pageButtons: Signal<(number | "ldot" | "rdot")[]>;
 
-  page = this.signal(storage.get()?.page ?? 0);
-  pageSize = this.signal(100);
+  readonly pagePersistWatcher: () => void;
 
-  pagePersistWatcher = this.watch(() => {
-    storage.set({ ...storage.get()!, page: this.page() });
-  });
+  constructor(
+    os: Scope,
+    private timestamp: Signal<number>,
+    private storage: WebviewStorage<ResultsViewerStorageState> = createWebviewStorage<ResultsViewerStorageState>(),
+    private post: PostFunction = ((type: string, body: any) =>
+      sendWebviewMessage(type, body)) as PostFunction,
+  ) {
+    super(os);
 
-  /** Schema information for the current statement */
-  schema = this.resolve(() => post("GetSchema", { timestamp: this.timestamp() }), {
-    columns: [],
-  } as SqlV1ResultSchema);
-
-  /** Initial state of results collection. Stored separately so we can use to reset state. */
-  emptySnapshot = { results: [] as any[] };
-  /**
-   * Get a snapshot of results from the host environment, whenever page is changed or
-   * the stream is updated. The snapshot includes result records.
-   */
-  snapshot = this.resolve(() => {
-    return post("GetResults", {
-      page: this.page(),
-      pageSize: this.pageSize(),
-      timestamp: this.timestamp(),
+    this.page = this.signal(storage.get()?.page ?? 0);
+    this.pageSize = this.signal(100);
+    this.pagePersistWatcher = this.watch(() => {
+      storage.set({ ...storage.get()!, page: this.page() });
     });
-  }, this.emptySnapshot);
 
-  /** Total count of results, along with count of filtered ones. */
-  resultCount = this.resolve(
-    () =>
-      post("GetResultsCount", {
+    /** Schema information for the current statement */
+    this.schema = this.resolve(() => this.post("GetSchema", { timestamp: this.timestamp() }), {
+      columns: [],
+    } as SqlV1ResultSchema);
+
+    /** Initial state of results collection. Stored separately so we can use to reset state. */
+    this.emptySnapshot = { results: [] as any[] };
+
+    /**
+     * Get a snapshot of results from the host environment, whenever page is changed or
+     * the stream is updated. The snapshot includes result records.
+     */
+    this.snapshot = this.resolve(() => {
+      return this.post("GetResults", {
+        page: this.page(),
+        pageSize: this.pageSize(),
         timestamp: this.timestamp(),
-      }),
-    {
-      total: 0,
-      filter: null,
-    },
-  );
+      });
+    }, this.emptySnapshot);
 
-  /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
-  statementMeta = this.resolve(() => post("GetStatementMeta", { timestamp: this.timestamp() }), {
-    name: "",
-    status: "",
-    startTime: null,
-    detail: null,
-    failed: false,
-    isResultsViewable: true,
-  });
-
-  /** For now, the only way to expose a loading spinner. */
-  waitingForResults = this.derive(() => {
-    return this.resultCount().total === 0 && this.statementMeta().isResultsViewable;
-  });
-
-  emptyFilterResult = this.derive(
-    () => this.resultCount().total > 0 && this.resultCount().filter === 0,
-  );
-  hasResults = this.derive(() => {
-    const { total, filter } = this.resultCount();
-    return filter != null ? filter > 0 : total > 0;
-  });
-
-  /**
-   * Short list of pages generated based on current results count and current
-   * page. Always shows first and last page, current page with two siblings.
-   */
-  pageButtons = this.derive(() => {
-    const { total, filter } = this.resultCount();
-    const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
-    const current = this.page();
-    if (max <= 0) return [];
-    const offset = 2;
-    const lo = Math.max(0, current - offset);
-    const hi = Math.min(current + offset, max);
-    const chunk: (number | "ldot" | "rdot")[] = Array.from(
-      { length: hi - lo + 1 },
-      (_, i) => i + lo,
+    this.resultCount = this.resolve(
+      () =>
+        this.post("GetResultsCount", {
+          timestamp: this.timestamp(),
+        }),
+      {
+        total: 0,
+        filter: null,
+      } as ResultCount,
     );
-    if (lo > 0) {
-      if (lo > 1) chunk.unshift(0, "ldot");
-      else chunk.unshift(0);
-    }
-    if (hi < max) {
-      if (hi < max - 1) chunk.push("rdot", max);
-      else chunk.push(max);
-    }
-    return chunk;
-  });
+
+    /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
+    this.statementMeta = this.resolve(
+      () => this.post("GetStatementMeta", { timestamp: this.timestamp() }),
+      {
+        name: "",
+        status: "",
+        startTime: null,
+        detail: null,
+        failed: false,
+        isResultsViewable: true,
+      },
+    );
+
+    /** For now, the only way to expose a loading spinner. */
+    this.waitingForResults = this.derive(() => {
+      return this.resultCount().total === 0 && this.statementMeta().isResultsViewable;
+    });
+
+    this.emptyFilterResult = this.derive(
+      () => this.resultCount().total > 0 && this.resultCount().filter === 0,
+    );
+    this.hasResults = this.derive(() => {
+      const { total, filter } = this.resultCount();
+      return filter != null ? filter > 0 : total > 0;
+    });
+
+    /**
+     * Short list of pages generated based on current results count and current
+     * page. Always shows first and last page, current page with two siblings.
+     */
+    this.pageButtons = this.derive(() => {
+      const { total, filter } = this.resultCount();
+      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
+      const current = this.page();
+      if (max <= 0) return [];
+      const offset = 2;
+      const lo = Math.max(0, current - offset);
+      const hi = Math.min(current + offset, max);
+      const chunk: (number | "ldot" | "rdot")[] = Array.from(
+        { length: hi - lo + 1 },
+        (_, i) => i + lo,
+      );
+      if (lo > 0) {
+        if (lo > 1) chunk.unshift(0, "ldot");
+        else chunk.unshift(0);
+      }
+      if (hi < max) {
+        if (hi < max - 1) chunk.push("rdot", max);
+        else chunk.push(max);
+      }
+      return chunk;
+    });
+
+    /** A description of current results range, based on the page and total number of results. */
+    this.pageStatLabel = this.derive(() => {
+      const offset = this.page() * this.pageSize();
+      const { total, filter } = this.resultCount();
+      if (total === 0) return null;
+      if (filter != null) {
+        return `Showing ${Math.min(offset + 1, filter).toLocaleString()}..${Math.min(offset + this.pageSize(), filter).toLocaleString()} of ${filter.toLocaleString()} results (total: ${total.toLocaleString()}).`;
+      }
+      return `Showing ${Math.min(offset + 1, total).toLocaleString()}..${Math.min(offset + this.pageSize(), total).toLocaleString()} of ${total.toLocaleString()} results.`;
+    });
+
+    this.prevPageAvailable = this.derive(() => this.page() > 0);
+    this.nextPageAvailable = this.derive(() => {
+      const count = this.resultCount();
+      const limit = count.filter ?? count.total;
+      return this.page() * this.pageSize() + this.pageSize() < limit;
+    });
+
+    /** List of all columns in the grid, with their content definition. */
+    this.columns = this.derive(() => {
+      const schema: SqlV1ResultSchema = this.schema();
+      const columns: Record<string, any> = {};
+
+      schema?.columns?.forEach((col, index) => {
+        columns[col.name] = {
+          index: index,
+          title: () => col.name,
+          children: (result: Record<string, any>) => result[col.name] ?? "NULL",
+          description: (result: Record<string, any>) => result[col.name] ?? "NULL",
+        };
+      });
+
+      return columns;
+    });
+
+    /** Static list of all columns in order shown in the UI. */
+    this.allColumns = this.derive(() => {
+      const schema = this.schema();
+      return schema.columns?.map((col) => col.name) ?? [];
+    });
+    /**
+     * A number which binary representation defines which columns are visible.
+     * This number assumes the order defined by `allColumns` array.
+     */
+    this.columnVisibilityFlags = this.derive(() => {
+      const stored = this.storage.get()?.columnVisibilityFlags;
+      const allCols = this.allColumns();
+      if (!stored || stored.length !== allCols.length) {
+        // Initialize with all columns visible
+        return Array(allCols.length).fill(true);
+      }
+      return stored;
+    });
+
+    /** List of currently visible column names. */
+    this.visibleColumns = this.derive(() => {
+      return this._visibleColumns();
+    });
+
+    /**
+     * List of column widths, in pixels.
+     */
+    this.colWidth = this.derive(
+      () => {
+        const columnsLength = this.allColumns().length;
+        const storedWidths = storage.get()?.colWidths;
+        if (!storedWidths) {
+          return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
+        }
+        return storedWidths;
+      },
+      // Equality function skips extra re-renders if values are similar
+      (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
+    );
+
+    /** Set to `style` prop to pass width values to CSS. */
+    this.gridTemplateColumns = this.derive(() => {
+      const widths = this.colWidth();
+      const columnNames = this.allColumns();
+      const flags = this.columnVisibilityFlags();
+      // Fallback in case we can't get columns
+      if (widths.length === 0 && columnNames.length === 0) {
+        return "--grid-template-columns: 1fr";
+      }
+      const visibleColumnWidths = columnNames
+        .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
+        .filter((col) => col.isVisible)
+        .map((col) => `${col.width}px`)
+        .join(" ");
+      return `--grid-template-columns: ${visibleColumnWidths}`;
+    });
+
+    /** Whether the stop button has been clicked */
+    this.stopButtonClicked = this.signal(false);
+
+    /** State of stream provided by the host: either running or completed. */
+    this.streamState = this.resolve(() => {
+      return this.post("GetStreamState", { timestamp: this.timestamp() });
+    }, "running");
+    this.streamError = this.resolve(() => {
+      return this.post("GetStreamError", { timestamp: this.timestamp() });
+    }, null);
+  }
+
   isPageButton(input: unknown) {
     return typeof input === "number";
   }
-  /** A description of current results range, based on the page and total number of results. */
-  pageStatLabel = this.derive(() => {
-    const offset = this.page() * this.pageSize();
-    const { total, filter } = this.resultCount();
-    if (total === 0) return null;
-    if (filter != null) {
-      return `Showing ${Math.min(offset + 1, filter).toLocaleString()}..${Math.min(offset + this.pageSize(), filter).toLocaleString()} of ${filter.toLocaleString()} results (total: ${total.toLocaleString()}).`;
-    }
-    return `Showing ${Math.min(offset + 1, total).toLocaleString()}..${Math.min(offset + this.pageSize(), total).toLocaleString()} of ${total.toLocaleString()} results.`;
-  });
-  prevPageAvailable = this.derive(() => this.page() > 0);
-  nextPageAvailable = this.derive(() => {
-    const count = this.resultCount();
-    const limit = count.filter ?? count.total;
-    return this.page() * this.pageSize() + this.pageSize() < limit;
-  });
-
-  /** List of all columns in the grid, with their content definition. */
-  columns = this.derive(() => {
-    const schema: SqlV1ResultSchema = this.schema();
-    const columns: Record<string, any> = {};
-
-    schema?.columns?.forEach((col, index) => {
-      columns[col.name] = {
-        index: index,
-        title: () => col.name,
-        children: (result: Record<string, any>) => result[col.name] ?? "NULL",
-        description: (result: Record<string, any>) => result[col.name] ?? "NULL",
-      };
-    });
-
-    return columns;
-  });
-
-  /** Static list of all columns in order shown in the UI. */
-  allColumns = this.derive(() => {
-    const schema = this.schema();
-    return schema.columns?.map((col) => col.name) ?? [];
-  });
-
-  /**
-   * A number which binary representation defines which columns are visible.
-   * This number assumes the order defined by `allColumns` array.
-   */
-  columnVisibilityFlags = this.derive(() => {
-    const stored = storage.get()?.columnVisibilityFlags;
-    const schema = this.schema();
-    if (!stored || stored.length !== schema?.columns?.length) {
-      // Initialize with all columns visible
-      return Array(schema?.columns?.length).fill(true);
-    }
-    return stored;
-  });
-
-  /** List of currently visible column names. */
-  visibleColumns = this.derive(() => {
-    return this._visibleColumns();
-  });
 
   private _visibleColumns() {
     const flags = this.columnVisibilityFlags();
@@ -216,8 +298,8 @@ class FlinkStatementResultsViewModel extends ViewModel {
 
     toggled[index] = !toggled[index];
     this.columnVisibilityFlags(toggled);
-    storage.set({ ...storage.get()!, columnVisibilityFlags: toggled });
-    await post("SetVisibleColumns", {
+    this.storage.set({ ...this.storage.get()!, columnVisibilityFlags: toggled });
+    await this.post("SetVisibleColumns", {
       visibleColumns: this._visibleColumns(),
       timestamp: this.timestamp(),
     });
@@ -250,19 +332,11 @@ class FlinkStatementResultsViewModel extends ViewModel {
     // drop temporary state so the move event doesn't change anything after the pointer is released
     this.resizeColumnDelta(null);
     // persist changes to local storage
-    storage.set({ ...storage.get()!, colWidth: this.colWidth() });
-  }
-
-  /** Temporary state for resizing events. */
-  resizeColumnDelta = this.signal<number | null>(null);
-
-  /** Handle search input events */
-  search(value: string) {
-    return value ?? "";
+    this.storage.set({ ...this.storage.get()!, colWidths: this.colWidth() });
   }
 
   /** The text search query string. */
-  searchTimer: ReturnType<typeof setTimeout> | null = null;
+  searchTimer: NodeJS.Timeout | null = null;
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
@@ -270,7 +344,7 @@ class FlinkStatementResultsViewModel extends ViewModel {
     if (event.key === "Enter") {
       event.preventDefault();
       // Trigger a search update
-      this.snapshot(this.emptySnapshot);
+      this.snapshot({ results: [] });
       // when user hits Enter, search query submitted immediately
       const value = target.value.trim();
       this.submitSearch(value);
@@ -290,7 +364,7 @@ class FlinkStatementResultsViewModel extends ViewModel {
         clearTimeout(this.searchTimer);
         this.searchTimer = null;
       }
-      await post("Search", { search: null, timestamp: this.timestamp() });
+      await this.post("Search", { search: null, timestamp: this.timestamp() });
     }
   }
 
@@ -300,113 +374,28 @@ class FlinkStatementResultsViewModel extends ViewModel {
       this.searchTimer = null;
     }
     if (value.length > 0) {
-      await post("Search", { search: value, timestamp: this.timestamp() });
+      await this.post("Search", { search: value, timestamp: this.timestamp() });
     } else {
-      await post("Search", { search: null, timestamp: this.timestamp() });
+      await this.post("Search", { search: null, timestamp: this.timestamp() });
     }
     this.page(0);
   }
 
   /** Preview the JSON content of a result row in a read-only editor */
   previewResult(result: Record<string, any>) {
-    return post("PreviewResult", { result, timestamp: this.timestamp() });
+    return this.post("PreviewResult", { result, timestamp: this.timestamp() });
   }
 
   previewAllResults() {
-    return post("PreviewAllResults", { timestamp: this.timestamp() });
+    return this.post("PreviewAllResults", { timestamp: this.timestamp() });
   }
-
-  /**
-   * List of column widths, in pixels.
-   */
-  colWidth = this.derive(
-    () => {
-      const columnsLength = this.allColumns().length;
-      const storedWidths = storage.get()?.colWidth;
-      if (!storedWidths) {
-        return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
-      }
-      return storedWidths;
-    },
-    // Equality function skips extra re-renders if values are similar
-    (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
-  );
-
-  /** Set to `style` prop to pass width values to CSS. */
-  gridTemplateColumns = this.derive(() => {
-    const widths = this.colWidth();
-    const columnNames = this.allColumns();
-    const flags = this.columnVisibilityFlags();
-    // Fallback in case we can't get columns
-    if (widths.length === 0 && columnNames.length === 0) {
-      return "--grid-template-columns: 1fr";
-    }
-    const visibleColumnWidths = columnNames
-      .map((_, index) => ({ index, isVisible: flags[index], width: widths[index] }))
-      .filter((col) => col.isVisible)
-      .map((col) => `${col.width}px`)
-      .join(" ");
-    return `--grid-template-columns: ${visibleColumnWidths}`;
-  });
-
-  /** Whether the stop button has been clicked */
-  stopButtonClicked = this.signal(false);
-
-  /** State of stream provided by the host: either running or completed. */
-  streamState = this.resolve(() => {
-    return post("GetStreamState", { timestamp: this.timestamp() });
-  }, "running");
-  streamError = this.resolve(() => {
-    return post("GetStreamError", { timestamp: this.timestamp() });
-  }, null);
 
   async stopStatement() {
     this.stopButtonClicked(true);
-    await post("StopStatement", { timestamp: this.timestamp() });
+    await this.post("StopStatement", { timestamp: this.timestamp() });
 
     // Reset the button state after a short delay
     // in case the stop failed for some reason
     setTimeout(() => this.stopButtonClicked(false), 2000);
   }
-}
-
-export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
-export function post(
-  type: "GetStreamError",
-  body: { timestamp?: number },
-): Promise<{ message: string } | null>;
-export function post(
-  type: "GetResults",
-  body: { page: number; pageSize: number; timestamp?: number },
-): Promise<{ results: Map<string, any>[] }>;
-export function post(type: "GetResultsCount", body: { timestamp?: number }): Promise<ResultCount>;
-export function post(type: "GetSchema", body: { timestamp?: number }): Promise<SqlV1ResultSchema>;
-export function post(
-  type: "PreviewResult",
-  body: { result: Record<string, any>; timestamp?: number },
-): Promise<null>;
-export function post(type: "PreviewAllResults", body: { timestamp?: number }): Promise<null>;
-export function post(
-  type: "Search",
-  body: { search: string | null; timestamp?: number },
-): Promise<null>;
-export function post(
-  type: "SetVisibleColumns",
-  body: { visibleColumns: string[] | null; timestamp?: number },
-): Promise<null>;
-export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
-export function post(
-  type: "GetStatementMeta",
-  body: { timestamp?: number },
-): Promise<{
-  name: string;
-  status: string;
-  startTime: string | null;
-  detail: string | null;
-  failed: boolean;
-  isResultsViewable: boolean;
-}>;
-export function post(type: "StopStatement", body: { timestamp?: number }): Promise<null>;
-export function post(type: any, body: any): Promise<unknown> {
-  return sendWebviewMessage(type, body);
 }
