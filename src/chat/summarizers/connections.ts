@@ -80,7 +80,7 @@ export function summarizeLocalConnection(
   const kafkaAvailable: boolean =
     getContextValue(ContextValues.localKafkaClusterAvailable) ?? false;
   summary
-    .appendMarkdown("\n- Kafka Cluster")
+    .appendMarkdown("\n- Kafka")
     .appendMarkdown(
       `\n  - Status: ${kafkaAvailable ? ConnectedState.Success : ConnectedState.None}`,
     );
