@@ -230,7 +230,7 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("getTreeItem()", () => {
-    it("with label set to statement name", () => {
+    it("returns FlinkStatementTreeItem with label set to statement name", () => {
       const statement = createFlinkStatement();
       const treeItem = viewProvider.getTreeItem(statement);
       assert.strictEqual(treeItem.label, statement.name);
