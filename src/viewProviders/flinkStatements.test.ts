@@ -5,6 +5,7 @@ import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { FlinkStatement } from "../models/flinkStatement";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
@@ -114,6 +115,69 @@ describe("FlinkStatementsViewProvider", () => {
         // papa's last name isnt bear.
         assert.deepStrictEqual(children, [youngestStatement, middleStatement]);
       });
+
+      describe("setCustomEventListeners() listener behavior", () => {
+        let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          onDidChangeTreeDataFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
+        });
+
+        describe("flinkStatementUpdated", () => {
+          it("updates reference to existing statements when flinkStatementUpdated fires", () => {
+            const statement = createFlinkStatement({
+              name: middleStatement.name,
+              updatedAt: new Date("2025-01-02"),
+            });
+
+            flinkStatementUpdated.fire(statement);
+
+            // Check that the statement was updated in the resourcesInTreeView map
+            const updatedStatement = resourcesInTreeView.get(statement.id);
+            assert.strictEqual(updatedStatement?.updatedAt, statement.updatedAt);
+
+            // Check that the fire method was called
+            sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+            sinon.assert.calledWith(onDidChangeTreeDataFireStub, updatedStatement);
+          });
+
+          it("handles update of statement that is not in the view", () => {
+            const statement = createFlinkStatement({
+              name: "not in view",
+              updatedAt: new Date("2025-01-02"),
+            });
+            flinkStatementUpdated.fire(statement);
+            // Check that the statement was not added to the resourcesInTreeView map
+            const updatedStatement = resourcesInTreeView.get(statement.id);
+            assert.strictEqual(updatedStatement, undefined);
+            // Check that the fire method was not called
+            sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+          });
+        });
+
+        describe("flinkStatementDeleted", () => {
+          it("removes statement from resourcesInTreeView when flinkStatementDeleted fires", () => {
+            flinkStatementDeleted.fire(oldestStatement.id);
+            // Should call the fire method with no arguments.
+            sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+            // Want to spell like this, but it fails:
+            // sinon.assert.calledOnceWithExactly(onDidChangeTreeDataFireStub, undefined);
+            // So have to old-school it, and it passes.
+            assert.strictEqual(onDidChangeTreeDataFireStub.args[0][0], undefined);
+          });
+
+          it("handles deletion of statement that is not in the view", () => {
+            const statement = createFlinkStatement({
+              name: "not in view",
+              updatedAt: new Date("2025-01-02"),
+            });
+            flinkStatementDeleted.fire(statement.id);
+            // No fire, no removals.
+            sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+            assert.strictEqual(resourcesInTreeView.size, 3);
+          });
+        });
+      });
     });
   });
 
@@ -166,7 +230,7 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   describe("getTreeItem()", () => {
-    it("returns FlinkStatementTreeItem", () => {
+    it("returns FlinkStatementTreeItem with label set to statement name", () => {
       const statement = createFlinkStatement();
       const treeItem = viewProvider.getTreeItem(statement);
       assert.strictEqual(treeItem.label, statement.name);

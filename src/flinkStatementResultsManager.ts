@@ -174,7 +174,7 @@ export class FlinkStatementResultsManager {
   }
 
   async fetchResults(): Promise<void> {
-    if (this._state() !== "running" || !this._moreResults() || !this.statement.isResultsViewable) {
+    if (this._state() !== "running" || !this._moreResults() || !this.statement.areResultsViewable) {
       // Self-destruct
       clearInterval(this._pollingInterval);
       this._pollingInterval = undefined;
@@ -410,7 +410,7 @@ export class FlinkStatementResultsManager {
           detail: this.statement.status?.detail ?? null,
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
-          isResultsViewable: this.statement.isResultsViewable,
+          areResultsViewable: this.statement.areResultsViewable,
         };
       }
       case "StopStatement": {
