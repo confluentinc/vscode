@@ -8,7 +8,12 @@ import {
   LanguageModelToolResult,
   MarkdownString,
 } from "vscode";
-import { ContainerInspectResponse, ContainerSummary, SystemApi } from "../../clients/docker";
+import {
+  ContainerInspectResponse,
+  ContainerStateStatusEnum,
+  ContainerSummary,
+  SystemApi,
+} from "../../clients/docker";
 import { defaultRequestInit } from "../../docker/configs";
 import { LocalResourceKind } from "../../docker/constants";
 import { getContainer } from "../../docker/containers";
@@ -67,10 +72,14 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
     let summaries: ContainerSummary[] = [];
     switch (params.resourceKind) {
       case LocalResourceKind.Kafka:
-        summaries = await getLocalKafkaContainers();
+        summaries = await getLocalKafkaContainers({
+          statuses: [ContainerStateStatusEnum.Running],
+        });
         break;
       case LocalResourceKind.SchemaRegistry:
-        summaries = await getLocalSchemaRegistryContainers();
+        summaries = await getLocalSchemaRegistryContainers({
+          statuses: [ContainerStateStatusEnum.Running],
+        });
         break;
     }
     if (!summaries.length) {

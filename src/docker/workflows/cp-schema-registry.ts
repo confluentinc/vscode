@@ -4,6 +4,7 @@ import {
   ContainerCreateResponse,
   ContainerInspectResponse,
   ContainerListRequest,
+  ContainerStateStatusEnum,
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
@@ -75,7 +76,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
       this.imageRepo,
       this.imageTag,
-      true, // only extension-managed containers
+      { onlyExtensionManaged: true, statuses: [] },
     );
     if (existingContainers.length > 0) {
       // this will handle logging and notifications
@@ -164,7 +165,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
       this.imageRepo,
       this.imageTag,
-      true, // only extension-managed containers
+      { onlyExtensionManaged: true, statuses: [ContainerStateStatusEnum.Running] },
     );
     const count = existingContainers.length;
     const plural = count > 1 ? "s" : "";

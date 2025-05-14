@@ -4,7 +4,12 @@ import {
   tryToGetConnection,
   tryToUpdateConnection,
 } from ".";
-import { ContainerListRequest, ContainerSummary, Port } from "../../clients/docker";
+import {
+  ContainerListRequest,
+  ContainerStateStatusEnum,
+  ContainerSummary,
+  Port,
+} from "../../clients/docker";
 import { Connection, ConnectionSpec } from "../../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
 import {
@@ -67,24 +72,41 @@ export async function deleteLocalConnection(): Promise<void> {
 }
 
 /**
+ * Options for {@link getLocalResourceContainers} to filter the containers returned.
+ * @param onlyExtensionManaged Whether or not to filter containers with the
+ *   {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ * @param statuses Only include containers with the given {@link ContainerStateStatusEnum statuses}.
+ */
+export interface LocalResourceContainersOptions {
+  /** Only include containers managed by the extension by filtering labels for {@link MANAGED_CONTAINER_LABEL}. */
+  onlyExtensionManaged?: boolean;
+  /**
+   * Only include containers with the given {@link ContainerStateStatusEnum statuses}.
+   * Setting this to an empty array will mean no filtering by container `status` will happen.
+   */
+  statuses?: ContainerStateStatusEnum[];
+}
+
+/**
  * Helper function to list containers based on image repo and tag.
  * @param imageRepo The image repo to filter by.
  * @param imageTag The image tag to filter by.
- * @param onlyExtensionManaged Whether or not to filter containers with the
- *   {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ * @param options {@link LocalResourceContainersOptions Options} to filter the containers returned.
  */
 export async function getLocalResourceContainers(
   imageRepo: string,
   imageTag: string,
-  onlyExtensionManaged: boolean = false,
+  options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
 ): Promise<ContainerSummary[]> {
   const repoTag = `${imageRepo}:${imageTag}`;
   const filters: Record<string, any> = {
     ancestor: [repoTag],
-    status: ["running"],
   };
-  if (onlyExtensionManaged) {
+  if (options.onlyExtensionManaged === true) {
     filters.label = [MANAGED_CONTAINER_LABEL];
+  }
+  if (Array.isArray(options.statuses) && options.statuses.length > 0) {
+    filters.status = options.statuses;
   }
   const containerListRequest: ContainerListRequest = {
     all: true,
@@ -94,29 +116,27 @@ export async function getLocalResourceContainers(
 }
 
 /**
- * Get running Kafka containers based on the image name and tag in user/workspace settings.
- * @param onlyExtensionManaged Whether or not to filter containers with the
- * {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ * Get Kafka containers based on the image name and tag in user/workspace settings.
+ * @param options {@link LocalResourceContainersOptions Options} to filter the containers returned.
  */
 export async function getLocalKafkaContainers(
-  onlyExtensionManaged: boolean = false,
+  options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
 ): Promise<ContainerSummary[]> {
   const imageRepo: string = getLocalKafkaImageName();
   const imageTag: string = getLocalKafkaImageTag();
-  return await getLocalResourceContainers(imageRepo, imageTag, onlyExtensionManaged);
+  return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 
 /**
- * Get running Schema Registry containers based on the image name and tag in user/workspace settings.
- * @param onlyExtensionManaged Whether or not to filter containers with the
- *  {@link MANAGED_CONTAINER_LABEL} label. (default: `false`)
+ * Get Schema Registry containers based on the image name and tag in user/workspace settings.
+ * @param options {@link LocalResourceContainersOptions Options} to filter the containers returned.
  */
 export async function getLocalSchemaRegistryContainers(
-  onlyExtensionManaged: boolean = false,
+  options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
 ): Promise<ContainerSummary[]> {
   const imageRepo: string = getLocalSchemaRegistryImageName();
   const imageTag: string = getLocalSchemaRegistryImageTag();
-  return await getLocalResourceContainers(imageRepo, imageTag, onlyExtensionManaged);
+  return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 
 /** Discover any running Schema Registry containers and return the URI to include the REST proxy port. */
@@ -126,7 +146,10 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
     return;
   }
 
-  const containers: ContainerSummary[] = await getLocalSchemaRegistryContainers(true);
+  const containers: ContainerSummary[] = await getLocalSchemaRegistryContainers({
+    onlyExtensionManaged: true,
+    statuses: [ContainerStateStatusEnum.Running],
+  });
   if (containers.length === 0) {
     return;
   }
