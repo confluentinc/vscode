@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.197.0
+  version: 0.200.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -1072,6 +1072,8 @@ components:
     PreferencesSpec:
       type: object
       properties:
+        kerberos_config_file_path:
+          type: string
         tls_pem_paths:
           type: array
           items:
@@ -1402,25 +1404,25 @@ components:
     HealthResponse:
       type: object
       properties:
+        status:
+          enum:
+          - UP
+          - DOWN
+          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
     HealthCheck:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
         data:
           type: object
           nullable: true
         name:
+          type: string
+        status:
+          enum:
+          - UP
+          - DOWN
           type: string
