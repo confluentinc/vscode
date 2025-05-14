@@ -28,10 +28,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly pageSize: Signal<number>;
   readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
   readonly stopButtonClicked: Signal<boolean> = this.signal<boolean>(false);
+  readonly schema: Signal<SqlV1ResultSchema>;
+  readonly emptySnapshot: { results: any[] };
   readonly tablePage: Signal<number>;
   readonly changelogPage: Signal<number>;
   readonly viewMode: Signal<ViewMode>;
-  readonly schema: Signal<SqlV1ResultSchema>;
   readonly snapshot: Signal<{ results: any[] }>;
   readonly resultCount: Signal<ResultCount>;
   readonly statementMeta: Signal<{
@@ -90,13 +91,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   ) {
     super(os);
 
-    // Initialize signals that depend on storage
-    this.page = this.signal(this.storage.get()?.page ?? 0);
+    this.page = this.signal(storage.get()?.page ?? 0);
     this.tablePage = this.signal(0);
     this.changelogPage = this.signal(0);
     this.pageSize = this.signal(100);
-    this.tablePage = this.signal(0);
-    this.changelogPage = this.signal(0);
     this.viewMode = this.resolve(async () => {
       return await this.post("GetViewMode", { timestamp: this.timestamp() });
     }, "table" as ViewMode);
@@ -104,20 +102,25 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       storage.set({ ...storage.get()!, page: this.page() });
     });
 
+    /** Schema information for the current statement */
     this.schema = this.resolve(() => this.post("GetSchema", { timestamp: this.timestamp() }), {
       columns: [],
     } as SqlV1ResultSchema);
 
-    this.snapshot = this.resolve(
-      () => {
-        return this.post("GetResults", {
-          page: this.page(),
-          pageSize: this.pageSize(),
-          timestamp: this.timestamp(),
-        });
-      },
-      { results: [] },
-    );
+    /** Initial state of results collection. Stored separately so we can use to reset state. */
+    this.emptySnapshot = { results: [] as any[] };
+
+    /**
+     * Get a snapshot of results from the host environment, whenever page is changed or
+     * the stream is updated. The snapshot includes result records.
+     */
+    this.snapshot = this.resolve(() => {
+      return this.post("GetResults", {
+        page: this.page(),
+        pageSize: this.pageSize(),
+        timestamp: this.timestamp(),
+      });
+    }, this.emptySnapshot);
 
     this.resultCount = this.resolve(
       () =>
@@ -154,11 +157,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.hasResults = this.derive(() => {
       const { total, filter } = this.resultCount();
       return filter != null ? filter > 0 : total > 0;
-    });
-
-    // Set up watchers
-    this.pagePersistWatcher = this.watch(() => {
-      this.storage.set({ ...this.storage.get()!, page: this.page() });
     });
 
     /** A description of current results range, based on the page and total number of results. */
