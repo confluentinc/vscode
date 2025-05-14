@@ -27,12 +27,12 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly page: Signal<number>;
   readonly pageSize: Signal<number>;
   readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
-  readonly stopButtonClicked: Signal<boolean> = this.signal<boolean>(false);
-  readonly schema: Signal<SqlV1ResultSchema>;
-  readonly emptySnapshot: { results: any[] };
+  readonly stopButtonClicked: Signal<boolean>;
   readonly tablePage: Signal<number>;
   readonly changelogPage: Signal<number>;
   readonly viewMode: Signal<ViewMode>;
+  readonly schema: Signal<SqlV1ResultSchema>;
+  readonly emptySnapshot: { results: any[] };
   readonly snapshot: Signal<{ results: any[] }>;
   readonly resultCount: Signal<ResultCount>;
   readonly statementMeta: Signal<{
@@ -159,6 +159,33 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return filter != null ? filter > 0 : total > 0;
     });
 
+    /**
+     * Short list of pages generated based on current results count and current
+     * page. Always shows first and last page, current page with two siblings.
+     */
+    this.pageButtons = this.derive(() => {
+      const { total, filter } = this.resultCount();
+      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
+      const current = this.page();
+      if (max <= 0) return [];
+      const offset = 2;
+      const lo = Math.max(0, current - offset);
+      const hi = Math.min(current + offset, max);
+      const chunk: (number | "ldot" | "rdot")[] = Array.from(
+        { length: hi - lo + 1 },
+        (_, i) => i + lo,
+      );
+      if (lo > 0) {
+        if (lo > 1) chunk.unshift(0, "ldot");
+        else chunk.unshift(0);
+      }
+      if (hi < max) {
+        if (hi < max - 1) chunk.push("rdot", max);
+        else chunk.push(max);
+      }
+      return chunk;
+    });
+
     /** A description of current results range, based on the page and total number of results. */
     this.pageStatLabel = this.derive(() => {
       const offset = this.page() * this.pageSize();
@@ -241,32 +268,8 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return `--grid-template-columns: ${visibleColumnWidths}`;
     });
 
-    /**
-     * Short list of pages generated based on current results count and current
-     * page. Always shows first and last page, current page with two siblings.
-     */
-    this.pageButtons = this.derive(() => {
-      const { total, filter } = this.resultCount();
-      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
-      const current = this.page();
-      if (max <= 0) return [];
-      const offset = 2;
-      const lo = Math.max(0, current - offset);
-      const hi = Math.min(current + offset, max);
-      const chunk: (number | "ldot" | "rdot")[] = Array.from(
-        { length: hi - lo + 1 },
-        (_, i) => i + lo,
-      );
-      if (lo > 0) {
-        if (lo > 1) chunk.unshift(0, "ldot");
-        else chunk.unshift(0);
-      }
-      if (hi < max) {
-        if (hi < max - 1) chunk.push("rdot", max);
-        else chunk.push(max);
-      }
-      return chunk;
-    });
+    /** Whether the stop button has been clicked */
+    this.stopButtonClicked = this.signal(false);
 
     /** State of stream provided by the host: either running or completed. */
     this.streamState = this.resolve(() => {
@@ -275,6 +278,18 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.streamError = this.resolve(() => {
       return this.post("GetStreamError", { timestamp: this.timestamp() });
     }, null);
+  }
+
+  async setViewMode(viewMode: ViewMode) {
+    if (viewMode === "table") {
+      this.changelogPage(this.page());
+      this.page(this.tablePage());
+    } else {
+      this.tablePage(this.page());
+      this.page(this.changelogPage());
+    }
+
+    await this.post("SetViewMode", { viewMode, timestamp: this.timestamp() });
   }
 
   isPageButton(input: unknown) {
@@ -349,7 +364,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  searchTimer: NodeJS.Timeout | null = null;
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
   searchDebounceTime = 500;
 
   async handleKeydown(event: KeyboardEvent) {
