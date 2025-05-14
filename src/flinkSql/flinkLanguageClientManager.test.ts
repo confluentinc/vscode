@@ -8,22 +8,22 @@ import * as environmentsModule from "../graphql/environments";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FLINK_CONFIG_COMPUTE_POOL } from "../preferences/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import * as ccloud from "../sidecar/connections/ccloud";
-import { FlinkConfigurationManager } from "./flinkConfigManager";
+import { FlinkLanguageClientManager } from "./flinkLanguageClientManager";
 
-describe("FlinkConfigurationManager", () => {
+describe("FlinkLanguageClientManager", () => {
   let sandbox: sinon.SinonSandbox;
   let configStub: sinon.SinonStub;
   let contextValueStub: sinon.SinonStub;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
-  let flinkManager: FlinkConfigurationManager;
+  let flinkManager: FlinkLanguageClientManager;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let getEnvironmentsStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    FlinkConfigurationManager["instance"] = null;
+    FlinkLanguageClientManager["instance"] = null;
     configStub = sandbox.stub(vscode.workspace, "getConfiguration");
     const configMock = {
       get: sandbox.stub(),
@@ -38,13 +38,14 @@ describe("FlinkConfigurationManager", () => {
 
     getEnvironmentsStub = sandbox.stub(environmentsModule, "getEnvironments");
 
-    flinkManager = FlinkConfigurationManager.getInstance();
+    flinkManager = FlinkLanguageClientManager.getInstance();
     sandbox.stub(flinkManager, "promptChooseDefaultComputePool" as any).resolves();
     sandbox.stub(flinkManager, "checkFlinkResourcesAvailability" as any).resolves();
   });
+
   afterEach(() => {
     sandbox.restore();
-    FlinkConfigurationManager["instance"] = null;
+    FlinkLanguageClientManager["instance"] = null;
   });
 
   describe("validateFlinkSettings", () => {
@@ -64,8 +65,8 @@ describe("FlinkConfigurationManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs("computePoolId").returns("");
-      configMock.get.withArgs("database").returns("");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("");
+      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("");
       configStub.returns(configMock);
 
       const result = await flinkManager.validateFlinkSettings();
