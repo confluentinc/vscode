@@ -16,7 +16,9 @@ import {
   ConnectionsResourceApi,
   ConnectionType,
 } from "../../clients/sidecar";
+import { ContextValues, getContextValue } from "../../context/values";
 import { Logger } from "../../logging";
+import { getConnectionLabel } from "../../models/resource";
 import { getSidecar } from "../../sidecar";
 import { titleCase } from "../../utils";
 import { summarizeConnection } from "../summarizers/connections";
@@ -72,16 +74,27 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
         continue;
       }
 
+      // explicitly ignore the LOCAL connection if Kafka isn't running so we can hint at
+      // starting local resources
+      if (connectionType === ConnectionType.Local) {
+        const kafkaAvailable: boolean =
+          getContextValue(ContextValues.localKafkaClusterAvailable) ?? false;
+        if (!kafkaAvailable) {
+          this.missingConnectionTypes.push(connectionType);
+          continue;
+        }
+      }
+
       if (connections.length) {
         this.foundConnectionTypes.push(connectionType);
         // give each connection type its own markdown header
         const plural = connections.length === 1 ? "" : "s";
         let connectionGroupSummary = new MarkdownString(
-          `## ${titleCase(connectionType)} Connection${plural} (${connections.length})`,
+          `\n## ${getConnectionLabel(connectionType)} Connection${plural} (${connections.length})`,
         );
         // then summarize each connection
         connections.forEach((connection: Connection) => {
-          const connectionSummary: string = summarizeConnection(connection);
+          const connectionSummary: string = summarizeConnection(connection).trim();
           connectionGroupSummary = connectionGroupSummary.appendMarkdown(
             `\n\n${connectionSummary}`,
           );
@@ -91,6 +104,10 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
         // no connections of this type, so provide a hint to the model about how the user can connect
         this.missingConnectionTypes.push(connectionType);
       }
+    }
+
+    if (!connectionStrings.length) {
+      connectionStrings.push(new LanguageModelTextPart("No connections available."));
     }
 
     if (token.isCancellationRequested) {
@@ -125,16 +142,14 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     const resultParts: LanguageModelTextPart[] = [];
 
     if (this.foundConnectionTypes.length) {
-      const resultsHeader = new LanguageModelTextPart(
-        `Below are the details of available connections for you to reference and summarize to the user:\n`,
-      );
+      const resultsHeader = new LanguageModelTextPart(`Here are your available connections:`);
       resultParts.push(resultsHeader);
       resultParts.push(...(result.content as LanguageModelTextPart[]));
       // TODO: add footer hint for providing the connection type/ID for looking up resource details
     }
 
     if (parameters.connectionType && this.missingConnectionTypes.length) {
-      // TODO: add stream.markdown here for some text above the button?
+      stream.markdown(`**No ${getConnectionLabel(parameters.connectionType)} connection found.**`);
 
       // summarize missing connection types
       const missingTypes = this.missingConnectionTypes.map((ctype) => titleCase(ctype)).join(", ");
@@ -144,9 +159,9 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       resultParts.push(resultsHeader);
 
       // then add system-message hints about showing buttons for connecting
-      let buttonInstructions = "After explaining the connection status to the user, suggest:";
+      let buttonInstructions = "Based on what the user is trying to accomplish, recommend:";
       if (this.missingConnectionTypes.includes(ConnectionType.Ccloud)) {
-        buttonInstructions += `\n- They need to sign in to Confluent Cloud using the '${CCLOUD_SIGN_IN_BUTTON_LABEL}' button added above`;
+        buttonInstructions += `\n- Click the '${CCLOUD_SIGN_IN_BUTTON_LABEL}' button above to sign in to Confluent Cloud for managed Kafka services (recommended for production use cases)`;
         const ccloudCommand: Command = {
           command: "confluent.connections.ccloud.signIn",
           title: CCLOUD_SIGN_IN_BUTTON_LABEL,
@@ -155,7 +170,7 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
       if (this.missingConnectionTypes.includes(ConnectionType.Local)) {
         buttonInstructions +=
-          "\n- They can start local resources using the 'Start Local Resources' button added above";
+          "\n- Click the 'Start Local Resources' button above to launch a local development environment with Kafka and Schema Registry using Docker (ideal for learning and development)";
         const localCommand: Command = {
           command: "confluent.docker.startLocalResources",
           title: "Start Local Resources",
@@ -164,7 +179,7 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       }
       if (this.missingConnectionTypes.includes(ConnectionType.Direct)) {
         buttonInstructions +=
-          "\n- They can connect directly using the 'Add New Connection' button added above";
+          "\n- Click the 'Add New Connection' button above to connect to an existing Kafka cluster and/or Schema Registry instance (for Confluent Platform, self-managed clusters, or other Kafka deployments)";
         const directCommand: Command = {
           command: "confluent.connections.direct",
           title: "Add New Connection",
