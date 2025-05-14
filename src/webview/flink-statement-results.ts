@@ -82,12 +82,12 @@ class FlinkStatementResultsViewModel extends ViewModel {
     startTime: null,
     detail: null,
     failed: false,
-    isResultsViewable: true,
+    areResultsViewable: true,
   });
 
   /** For now, the only way to expose a loading spinner. */
   waitingForResults = this.derive(() => {
-    return this.resultCount().total === 0 && this.statementMeta().isResultsViewable;
+    return this.resultCount().total === 0 && this.statementMeta().areResultsViewable;
   });
 
   emptyFilterResult = this.derive(
@@ -404,7 +404,7 @@ export function post(
   startTime: string | null;
   detail: string | null;
   failed: boolean;
-  isResultsViewable: boolean;
+  areResultsViewable: boolean;
 }>;
 export function post(type: "StopStatement", body: { timestamp?: number }): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {

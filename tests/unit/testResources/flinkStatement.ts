@@ -1,6 +1,6 @@
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
-import { FlinkStatement } from "../../../src/models/flinkStatement";
+import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
 import { EnvironmentId, OrganizationId } from "../../../src/models/resource";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "./environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "./flinkComputePool";
@@ -10,7 +10,7 @@ export const TEST_CCLOUD_FLINK_STATEMENT = createFlinkStatement();
 
 export interface CreateFlinkStatementArgs {
   name?: string;
-  phase?: string;
+  phase?: Phase;
   detail?: string;
   sqlKind?: string;
   sqlStatement?: string;
@@ -40,7 +40,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       updated_at: overrides.updatedAt || new Date(),
     },
     status: {
-      phase: overrides.phase || "RUNNING",
+      phase: (overrides.phase as string) || Phase.RUNNING,
       detail: overrides.detail || "Running",
       traits: {
         sql_kind: overrides.sqlKind || "SELECT",
