@@ -10,16 +10,11 @@ import {
 } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient");
-
-let languageClient: LanguageClient | null = null;
-let reconnectCounter = 0;
-const MAX_RECONNECT_ATTEMPTS = 2;
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed
@@ -27,15 +22,10 @@ const MAX_RECONNECT_ATTEMPTS = 2;
  * - User is authenticated with CCloud
  * - User has selected a compute pool
  */
-export async function initializeLanguageClient(url: string): Promise<LanguageClient | null> {
-  // Reset reconnect counter on new initialization
-  reconnectCounter = 0;
-
-  if (languageClient) {
-    logger.info("Language client already initialized");
-    return languageClient;
-  }
-
+export async function initializeLanguageClient(
+  url: string,
+  onWebSocketDisconnect: () => void,
+): Promise<LanguageClient | null> {
   let accessToken: string | undefined = await getStorageManager().getSecret(
     SecretStorageKeys.SIDECAR_AUTH_TOKEN,
   );
@@ -74,9 +64,13 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
             },
             didChange: (event, next) => {
               // Clear diagnostics when document changes, so user sees only latest issues
-              const diagnostics = languageClient?.diagnostics;
-              if (diagnostics) {
-                diagnostics.delete(event.document.uri);
+              const diagnostics = vscode.languages.getDiagnostics(event.document.uri);
+              if (diagnostics.length > 0) {
+                vscode.languages.getDiagnostics().forEach(([uri, diags]) => {
+                  if (uri.toString() === event.document.uri.toString()) {
+                    vscode.languages.createDiagnosticCollection("flinksql").delete(uri);
+                  }
+                });
               }
               return next(event);
             },
@@ -121,7 +115,7 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
             },
             closed: () => {
               logger.warn("Language server connection closed by the client's error handler");
-              handleWebSocketDisconnect(url);
+              onWebSocketDisconnect();
               return {
                 action: CloseAction.Restart,
                 handled: true,
@@ -130,7 +124,7 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
           },
         };
 
-        languageClient = new LanguageClient(
+        const languageClient = new LanguageClient(
           "confluent.flinksqlLanguageServer",
           "ConfluentFlinkSQL",
           serverOptions,
@@ -154,60 +148,6 @@ export async function initializeLanguageClient(url: string): Promise<LanguageCli
   });
 }
 
-/**
- * Try to reconnect to the language server
- * @param url The WebSocket URL to reconnect to
- */
-async function handleWebSocketDisconnect(url: string): Promise<void> {
-  // Skip reconnection attempts if we're not authenticated
-  if (!hasCCloudAuthSession()) {
-    logger.warn("Not attempting reconnection: User not authenticated with CCloud");
-    return;
-  }
-
-  // If we've reached max attempts, stop trying to reconnect
-  if (reconnectCounter >= MAX_RECONNECT_ATTEMPTS) {
-    logger.error(`Failed to reconnect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
-    return;
-  }
-
-  reconnectCounter++;
-  restartLanguageClient(url);
-}
-
-/**
- * Restarts the language client
- * @param url The WebSocket URL to connect to
- */
-async function restartLanguageClient(url: string): Promise<void> {
-  // Dispose of the existing client if it exists
-  //  && languageClient.state === 2 // Maybe & is running state to prevent error
-  if (languageClient) {
-    logger.info("Disposing existing language client");
-    try {
-      await languageClient.dispose();
-      // Make sure the client is nullified even if there's an error
-      languageClient = null;
-    } catch (e) {
-      logger.error(`Error stopping language client: ${e}`);
-      // Still set to null to avoid keeping references to a potentially broken client
-      languageClient = null;
-    }
-  }
-
-  // Try to initialize a new client
-  try {
-    logger.info("Attempting to initialize new language client");
-    await initializeLanguageClient(url);
-    // Reset counter on successful reconnection
-    reconnectCounter = 0;
-  } catch (e) {
-    logger.error(`Failed to reconnect: ${e}`);
-    // The next reconnection attempt will happen through handleWebSocketDisconnect
-    handleWebSocketDisconnect(url);
-  }
-}
-
 /** Helper to convert vscode.Position to always have {line: 0...},
  * since CCloud Flink Language Server does not support multi-line completions at this time */
 function convertToSingleLinePosition(
@@ -223,12 +163,4 @@ function convertToSingleLinePosition(
   }
   singleLinePosition += position.character;
   return new vscode.Position(0, singleLinePosition);
-}
-
-/**
- * Checks if the language client is currently connected and healthy
- * @returns True if the client is connected, false otherwise
- */
-export function isLanguageClientConnected(): boolean {
-  return languageClient !== null && languageClient.needsStart() === false;
 }
