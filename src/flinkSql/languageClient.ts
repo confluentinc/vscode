@@ -97,18 +97,24 @@ export async function initializeLanguageClient(
               return [];
             },
             sendRequest: (type, params, token, next) => {
-              // Server does not accept line positions > 0, so we need to convert them to single-line
-              if (params && (params as any).position && (params as any).textDocument?.uri) {
-                const uri = (params as any).textDocument.uri;
-                const document = vscode.workspace.textDocuments.find(
-                  (doc) => doc.uri.toString() === uri,
-                );
-                if (document) {
-                  const originalPosition = (params as any).position;
-                  (params as any).position = convertToSingleLinePosition(
-                    document,
-                    new vscode.Position(originalPosition.line, originalPosition.character),
+              // Server does not accept line positions > 0 for completions, so we need to convert them to single-line
+              if (
+                typeof type === "object" &&
+                type.method &&
+                type.method === "textDocument/completion"
+              ) {
+                if (params && (params as any).position && (params as any).textDocument?.uri) {
+                  const uri = (params as any).textDocument.uri;
+                  const document = vscode.workspace.textDocuments.find(
+                    (doc) => doc.uri.toString() === uri,
                   );
+                  if (document) {
+                    const originalPosition = (params as any).position;
+                    (params as any).position = convertToSingleLinePosition(
+                      document,
+                      new vscode.Position(originalPosition.line, originalPosition.character),
+                    );
+                  }
                 }
               }
 
