@@ -102,7 +102,7 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
     let summary = new MarkdownString(`# Docker Containers (${containers.length})`);
     containers.forEach((container: ContainerInspectResponse) => {
       const containerSummary: string = summarizeLocalDockerContainer(container);
-      summary = summary.appendMarkdown(containerSummary);
+      summary = summary.appendMarkdown(`\n${containerSummary}`);
     });
     containerStrings.push(new LanguageModelTextPart(summary.value));
 

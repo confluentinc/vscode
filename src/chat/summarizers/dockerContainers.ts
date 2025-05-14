@@ -11,27 +11,27 @@ import { ContainerInspectResponse } from "../../clients/docker";
  */
 export function summarizeLocalDockerContainer(container: ContainerInspectResponse): string {
   const containerName = container.Name?.replace("/", "") ?? "";
-  const summary = new MarkdownString().appendMarkdown(`- "${containerName}"`);
+  const summary = new MarkdownString().appendMarkdown(`### "${containerName}"`);
 
   const image: string | undefined = container.Config?.Image;
   if (image) {
-    summary.appendMarkdown(`\n**Image:** ${container.Config?.Image}`);
+    summary.appendMarkdown(`\n- Image: ${container.Config?.Image}`);
   }
 
   const env: string[] = container.Config?.Env ?? [];
   if (env.length) {
-    summary.appendMarkdown(`\n**Environment Variables:**`);
+    summary.appendMarkdown(`\n- Environment Variables:`);
     env.forEach((envVar) => {
       if (envVar.startsWith("KAFKA_")) {
         const [key, value] = envVar.split("=");
         if (value !== "") {
-          summary.appendMarkdown(`\n  - **${key}:** ${value}`);
+          summary.appendMarkdown(`\n  - ${key}: ${value}`);
         }
       }
     });
   }
 
-  summary.appendMarkdown(`\n**Status:** ${container.State?.Status}`);
+  summary.appendMarkdown(`\n- Status: ${container.State?.Status}`);
 
   return summary.value;
 }
