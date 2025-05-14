@@ -9,7 +9,7 @@ type ColumnDefinition = {
   description: (result: Record<string, any>) => any;
 };
 
-type ColumnDefinitions = Record<string, ColumnDefinition>;
+export type ColumnDefinitions = Record<string, ColumnDefinition>;
 
 const OPERATION_TYPES = {
   0: "+I",

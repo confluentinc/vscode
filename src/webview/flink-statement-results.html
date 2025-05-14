@@ -89,11 +89,8 @@
               placeholder="Search across results…"
               type="search"
               size="50"
-              data-prop-value="this.search()"
-              data-on-change="this.search(event.target.value)"
               data-on-keydown="this.handleKeydown(event)"
               data-on-input="this.handleInput(event)"
-              data-prop-disabled="this.viewMode() === 'changelog'"
               >Search</vscode-text-field
             >
           </div>
@@ -270,7 +267,7 @@
             <vscode-button
               appearance="icon"
               aria-label="Click to view results as changelog"
-              data-on-click="this.toggleViewMode()"
+              data-on-click="this.setViewMode('changelog')"
               title="Click to view results as changelog"
             >
               <span class="codicon codicon-insert"></span>
@@ -281,7 +278,7 @@
             <vscode-button
               appearance="icon"
               aria-label="Click to view results as table (collapsed changelog)"
-              data-on-click="this.toggleViewMode()"
+              data-on-click="this.setViewMode('table')"
               title="Click to view results as table (collapsed changelog)"
             >
               <span class="codicon codicon-table"></span>
@@ -579,6 +576,10 @@
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
-    <script type="module" nonce="${nonce}" src="${path('flink-statement-results.js')}"></script>
+    <script
+      type="module"
+      nonce="${nonce}"
+      src="${path('flink-statement-results-init.js')}"
+    ></script>
   </body>
 </html>
