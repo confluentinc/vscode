@@ -389,7 +389,6 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         assert.deepStrictEqual(stored, [false, true]);
       });
     });
-    });
 
     describe("search and input handling", () => {
       it("should handle Enter key for immediate search", async () => {
