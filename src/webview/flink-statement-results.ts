@@ -11,7 +11,7 @@ import { ViewModel } from "./bindings/view-model";
 import { WebviewStorage, createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
 export type ResultsViewerStorageState = {
-  columnWidths: number[];
+  colWidths: number[];
   columnVisibilityFlags: boolean[];
   page: number;
 };
@@ -26,10 +26,11 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   readonly tablePage: Signal<number>;
   readonly changelogPage: Signal<number>;
   readonly pageSize: Signal<number>;
-  readonly resizeColumnDelta: Signal<number | null>;
+  readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
   readonly stopButtonClicked: Signal<boolean>;
   readonly viewMode: Signal<ViewMode>;
   readonly schema: Signal<SqlV1ResultSchema>;
+  readonly emptySnapshot: { results: any[] };
   readonly snapshot: Signal<{ results: any[] }>;
   readonly resultCount: Signal<ResultCount>;
   readonly statementMeta: Signal<{
@@ -67,33 +68,36 @@ export class FlinkStatementResultsViewModel extends ViewModel {
   ) {
     super(os);
 
-    // Initialize signals that depend on storage
-    this.page = this.signal(this.storage.get()?.page ?? 0);
+    this.page = this.signal(storage.get()?.page ?? 0);
     this.tablePage = this.signal(0);
     this.changelogPage = this.signal(0);
     this.pageSize = this.signal(100);
-    this.resizeColumnDelta = this.signal<number | null>(null);
-    this.stopButtonClicked = this.signal(false);
-
-    // Initialize resolves that depend on storage
     this.viewMode = this.resolve(async () => {
       return await this.post("GetViewMode", { timestamp: this.timestamp() });
     }, "table" as ViewMode);
+    this.pagePersistWatcher = this.watch(() => {
+      storage.set({ ...storage.get()!, page: this.page() });
+    });
 
+    /** Schema information for the current statement */
     this.schema = this.resolve(() => this.post("GetSchema", { timestamp: this.timestamp() }), {
       columns: [],
     } as SqlV1ResultSchema);
 
-    this.snapshot = this.resolve(
-      () => {
-        return this.post("GetResults", {
-          page: this.page(),
-          pageSize: this.pageSize(),
-          timestamp: this.timestamp(),
-        });
-      },
-      { results: [] },
-    );
+    /** Initial state of results collection. Stored separately so we can use to reset state. */
+    this.emptySnapshot = { results: [] as any[] };
+
+    /**
+     * Get a snapshot of results from the host environment, whenever page is changed or
+     * the stream is updated. The snapshot includes result records.
+     */
+    this.snapshot = this.resolve(() => {
+      return this.post("GetResults", {
+        page: this.page(),
+        pageSize: this.pageSize(),
+        timestamp: this.timestamp(),
+      });
+    }, this.emptySnapshot);
 
     this.resultCount = this.resolve(
       () =>
@@ -106,6 +110,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       } as ResultCount,
     );
 
+    /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
     this.statementMeta = this.resolve(
       () => this.post("GetStatementMeta", { timestamp: this.timestamp() }),
       {
@@ -131,17 +136,31 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return filter != null ? filter > 0 : total > 0;
     });
 
-    this.streamState = this.resolve(() => {
-      return this.post("GetStreamState", { timestamp: this.timestamp() });
-    }, "running" as StreamState);
-
-    this.streamError = this.resolve(() => {
-      return this.post("GetStreamError", { timestamp: this.timestamp() });
-    }, null);
-
-    // Set up watchers
-    this.pagePersistWatcher = this.watch(() => {
-      this.storage.set({ ...this.storage.get()!, page: this.page() });
+    /**
+     * Short list of pages generated based on current results count and current
+     * page. Always shows first and last page, current page with two siblings.
+     */
+    this.pageButtons = this.derive(() => {
+      const { total, filter } = this.resultCount();
+      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
+      const current = this.page();
+      if (max <= 0) return [];
+      const offset = 2;
+      const lo = Math.max(0, current - offset);
+      const hi = Math.min(current + offset, max);
+      const chunk: (number | "ldot" | "rdot")[] = Array.from(
+        { length: hi - lo + 1 },
+        (_, i) => i + lo,
+      );
+      if (lo > 0) {
+        if (lo > 1) chunk.unshift(0, "ldot");
+        else chunk.unshift(0);
+      }
+      if (hi < max) {
+        if (hi < max - 1) chunk.push("rdot", max);
+        else chunk.push(max);
+      }
+      return chunk;
     });
 
     /** A description of current results range, based on the page and total number of results. */
@@ -199,7 +218,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.colWidth = this.derive(
       () => {
         const columnsLength = this.allColumns().length;
-        const storedWidths = this.storage.get()?.columnWidths;
+        const storedWidths = storage.get()?.colWidths;
         if (!storedWidths) {
           return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
         }
@@ -226,32 +245,16 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       return `--grid-template-columns: ${visibleColumnWidths}`;
     });
 
-    /**
-     * Short list of pages generated based on current results count and current
-     * page. Always shows first and last page, current page with two siblings.
-     */
-    this.pageButtons = this.derive(() => {
-      const { total, filter } = this.resultCount();
-      const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
-      const current = this.page();
-      if (max <= 0) return [];
-      const offset = 2;
-      const lo = Math.max(0, current - offset);
-      const hi = Math.min(current + offset, max);
-      const chunk: (number | "ldot" | "rdot")[] = Array.from(
-        { length: hi - lo + 1 },
-        (_, i) => i + lo,
-      );
-      if (lo > 0) {
-        if (lo > 1) chunk.unshift(0, "ldot");
-        else chunk.unshift(0);
-      }
-      if (hi < max) {
-        if (hi < max - 1) chunk.push("rdot", max);
-        else chunk.push(max);
-      }
-      return chunk;
-    });
+    /** Whether the stop button has been clicked */
+    this.stopButtonClicked = this.signal(false);
+
+    /** State of stream provided by the host: either running or completed. */
+    this.streamState = this.resolve(() => {
+      return this.post("GetStreamState", { timestamp: this.timestamp() });
+    }, "running");
+    this.streamError = this.resolve(() => {
+      return this.post("GetStreamError", { timestamp: this.timestamp() });
+    }, null);
   }
 
   async setViewMode(viewMode: ViewMode) {
@@ -334,7 +337,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     // drop temporary state so the move event doesn't change anything after the pointer is released
     this.resizeColumnDelta(null);
     // persist changes to local storage
-    this.storage.set({ ...this.storage.get()!, columnWidths: this.colWidth() });
+    this.storage.set({ ...this.storage.get()!, colWidths: this.colWidth() });
   }
 
   /** The text search query string. */
