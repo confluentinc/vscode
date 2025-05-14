@@ -1,12 +1,6 @@
 import { Scope, Signal } from "inertial";
 import { SqlV1ResultSchema } from "../clients/flinkSql";
 import { PostFunction, ResultCount, StreamState } from "../flinkStatementResultsManager";
-import {
-  ColumnDefinitions,
-  ViewMode,
-  createColumnDefinitions,
-  getColumnOrder,
-} from "../utils/flinkStatementResultColumns";
 import { ViewModel } from "./bindings/view-model";
 import { WebviewStorage, createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
@@ -16,6 +10,15 @@ export type ResultsViewerStorageState = {
   page: number;
 };
 
+type ColumnDefinition = {
+  index: number;
+  title: () => string;
+  children: (result: Record<string, any>) => any;
+  description: (result: Record<string, any>) => any;
+};
+
+type ColumnDefinitions = Record<string, ColumnDefinition>;
+
 /**
  * Top level view model for Flink Statement Results Viewer. It composes shared state and logic
  * available for the UI. It also talks to the "backend": sends and receives
@@ -23,12 +26,9 @@ export type ResultsViewerStorageState = {
  */
 export class FlinkStatementResultsViewModel extends ViewModel {
   readonly page: Signal<number>;
-  readonly tablePage: Signal<number>;
-  readonly changelogPage: Signal<number>;
   readonly pageSize: Signal<number>;
   readonly resizeColumnDelta: Signal<number | null> = this.signal<number | null>(null);
   readonly stopButtonClicked: Signal<boolean>;
-  readonly viewMode: Signal<ViewMode>;
   readonly schema: Signal<SqlV1ResultSchema>;
   readonly emptySnapshot: { results: any[] };
   readonly snapshot: Signal<{ results: any[] }>;
@@ -69,12 +69,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     super(os);
 
     this.page = this.signal(storage.get()?.page ?? 0);
-    this.tablePage = this.signal(0);
-    this.changelogPage = this.signal(0);
     this.pageSize = this.signal(100);
-    this.viewMode = this.resolve(async () => {
-      return await this.post("GetViewMode", { timestamp: this.timestamp() });
-    }, "table" as ViewMode);
     this.pagePersistWatcher = this.watch(() => {
       storage.set({ ...storage.get()!, page: this.page() });
     });
@@ -184,15 +179,25 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     /** List of all columns in the grid, with their content definition. */
     this.columns = this.derive(() => {
       const schema: SqlV1ResultSchema = this.schema();
-      return createColumnDefinitions(schema, this.viewMode());
+      const columns: Record<string, any> = {};
+
+      schema?.columns?.forEach((col, index) => {
+        columns[col.name] = {
+          index: index,
+          title: () => col.name,
+          children: (result: Record<string, any>) => result[col.name] ?? "NULL",
+          description: (result: Record<string, any>) => result[col.name] ?? "NULL",
+        };
+      });
+
+      return columns;
     });
 
     /** Static list of all columns in order shown in the UI. */
     this.allColumns = this.derive(() => {
       const schema = this.schema();
-      return getColumnOrder(schema, this.viewMode());
+      return schema.columns?.map((col) => col.name) ?? [];
     });
-
     /**
      * A number which binary representation defines which columns are visible.
      * This number assumes the order defined by `allColumns` array.
@@ -255,18 +260,6 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     this.streamError = this.resolve(() => {
       return this.post("GetStreamError", { timestamp: this.timestamp() });
     }, null);
-  }
-
-  async setViewMode(viewMode: ViewMode) {
-    if (viewMode === "table") {
-      this.changelogPage(this.page());
-      this.page(this.tablePage());
-    } else {
-      this.tablePage(this.page());
-      this.page(this.changelogPage());
-    }
-
-    await this.post("SetViewMode", { viewMode, timestamp: this.timestamp() });
   }
 
   isPageButton(input: unknown) {
