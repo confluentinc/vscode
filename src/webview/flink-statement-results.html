@@ -91,6 +91,7 @@
               size="50"
               data-on-keydown="this.handleKeydown(event)"
               data-on-input="this.handleInput(event)"
+              data-prop-disabled="this.viewMode() === 'changelog'"
               >Search</vscode-text-field
             >
           </div>
@@ -576,6 +577,10 @@
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
-    <script type="module" nonce="${nonce}" src="${path('flink-statement-results-init.js')}"></script>
+    <script
+      type="module"
+      nonce="${nonce}"
+      src="${path('flink-statement-results-init.js')}"
+    ></script>
   </body>
 </html>
