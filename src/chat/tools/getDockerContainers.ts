@@ -8,12 +8,7 @@ import {
   LanguageModelToolResult,
   MarkdownString,
 } from "vscode";
-import {
-  ContainerInspectResponse,
-  ContainerStateStatusEnum,
-  ContainerSummary,
-  SystemApi,
-} from "../../clients/docker";
+import { ContainerInspectResponse, ContainerSummary, SystemApi } from "../../clients/docker";
 import { defaultRequestInit } from "../../docker/configs";
 import { LocalResourceKind } from "../../docker/constants";
 import { getContainer } from "../../docker/containers";
@@ -62,17 +57,18 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
       ]);
     }
 
-    // get the array of ContainerSummary objects first
+    // get the array of ContainerSummary objects first -- not filtering by container status so the
+    // model can see all Kafka/SR containers (running, stopped, etc.)
     let summaries: ContainerSummary[] = [];
     switch (params.resourceKind) {
       case LocalResourceKind.Kafka:
         summaries = await getLocalKafkaContainers({
-          statuses: [ContainerStateStatusEnum.Running],
+          statuses: [],
         });
         break;
       case LocalResourceKind.SchemaRegistry:
         summaries = await getLocalSchemaRegistryContainers({
-          statuses: [ContainerStateStatusEnum.Running],
+          statuses: [],
         });
         break;
     }
