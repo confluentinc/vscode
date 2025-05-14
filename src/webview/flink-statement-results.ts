@@ -23,6 +23,8 @@ type ColumnDefinitions = Record<string, ColumnDefinition>;
  * Top level view model for Flink Statement Results Viewer. It composes shared state and logic
  * available for the UI. It also talks to the "backend": sends and receives
  * messages from the host environment that manages statement results fetching.
+ *
+ * @see flinkStatementResultsManager.test.ts for tests.
  */
 export class FlinkStatementResultsViewModel extends ViewModel {
   readonly page: Signal<number>;

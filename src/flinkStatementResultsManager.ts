@@ -25,13 +25,11 @@ export type MessageType =
   | "GetResults"
   | "GetResultsCount"
   | "GetSchema"
-  | "GetMaxSize"
   | "GetStreamState"
   | "GetStreamError"
   | "PreviewResult"
   | "PreviewAllResults"
   | "Search"
-  | "GetSearchQuery"
   | "SetVisibleColumns"
   | "GetStatementMeta"
   | "StopStatement";
@@ -65,7 +63,6 @@ export type PostFunction = {
     type: "SetVisibleColumns",
     body: { visibleColumns: string[] | null; timestamp?: number },
   ): Promise<null>;
-  (type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
   (
     type: "GetStatementMeta",
     body: { timestamp?: number },
@@ -375,9 +372,6 @@ export class FlinkStatementResultsManager {
         this._filteredResults(this.filterResultsBySearch());
         return null;
       }
-      case "GetSearchQuery": {
-        return this._searchQuery() ?? "";
-      }
       case "GetSchema": {
         if (!this.statement) {
           return { columns: [] };
@@ -387,9 +381,6 @@ export class FlinkStatementResultsManager {
             columns: [],
           }
         );
-      }
-      case "GetMaxSize": {
-        return String(this.resultLimit);
       }
       case "PreviewAllResults":
       case "PreviewResult": {

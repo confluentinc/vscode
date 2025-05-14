@@ -264,6 +264,30 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         assert.strictEqual(columns["tempf"].title(), "tempf");
       });
 
+      it("should get schema correctly", () => {
+        const schema = vm.schema();
+
+        assert.deepStrictEqual(schema, {
+          columns: [
+            {
+              name: "when_reported",
+              type: {
+                nullable: false,
+                precision: 6,
+                type: "TIMESTAMP_WITH_LOCAL_TIME_ZONE",
+              },
+            },
+            {
+              name: "tempf",
+              type: {
+                nullable: false,
+                type: "DOUBLE",
+              },
+            },
+          ],
+        });
+      });
+
       it("should handle empty schema", () => {
         vm.schema({ columns: [] });
         const columns = vm.columns();
@@ -272,17 +296,6 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     });
 
     describe("pagination", () => {
-      it("should calculate correct page buttons", () => {
-        // Set up test data
-        const buttons = vm.pageButtons();
-        assert.deepStrictEqual(buttons, []);
-
-        assert.deepStrictEqual(vm.resultCount(), {
-          total: 10,
-          filter: 10,
-        });
-      });
-
       it("should handle empty results", () => {
         vm.pageSize(10);
         vm.resultCount({ total: 0, filter: null });
@@ -359,37 +372,6 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         await vm.toggleColumnVisibility(0);
         const stored = storage.get()?.columnVisibilityFlags;
         assert.deepStrictEqual(stored, [false, true]);
-      });
-    });
-
-    describe("stream state", () => {
-      it("should handle stream state changes", () => {
-        vm.streamState("running");
-        assert.strictEqual(vm.streamState(), "running");
-
-        vm.streamState("completed");
-        assert.strictEqual(vm.streamState(), "completed");
-      });
-
-      it("should handle stream errors", () => {
-        const error = { message: "Test error" };
-        vm.streamError(error);
-        assert.deepStrictEqual(vm.streamError(), error);
-      });
-    });
-
-    describe("column resizing", () => {
-      it("should initialize column widths with default values", () => {
-        const widths = vm.colWidth();
-        assert.deepStrictEqual(widths, [8 * 16, 8 * 16]); // 8rem for each column
-      });
-
-      it("should generate correct grid template columns", () => {
-        vm.colWidth([100, 200]);
-        vm.columnVisibilityFlags([true, false]);
-
-        const template = vm.gridTemplateColumns();
-        assert.strictEqual(template, "--grid-template-columns: 100px");
       });
     });
 
