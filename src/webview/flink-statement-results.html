@@ -82,20 +82,21 @@
           </template>
         </section>
 
-        <section>
-          <div class="flex-row">
-            <vscode-text-field
-              id="results-search"
-              placeholder="Search across results…"
-              type="search"
-              size="50"
-              data-on-keydown="this.handleKeydown(event)"
-              data-on-input="this.handleInput(event)"
-              data-prop-disabled="this.viewMode() === 'changelog'"
-              >Search</vscode-text-field
-            >
-          </div>
-        </section>
+        <template data-if="this.viewMode() === 'table'">
+          <section>
+            <div class="flex-row">
+              <vscode-text-field
+                id="results-search"
+                placeholder="Search across results…"
+                type="search"
+                size="50"
+                data-on-keydown="this.handleKeydown(event)"
+                data-on-input="this.handleInput(event)"
+                >Search</vscode-text-field
+              >
+            </div>
+          </section>
+        </template>
       </header>
 
       <section class="content">
