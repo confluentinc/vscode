@@ -9,6 +9,7 @@ import {
 import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
 import { createResponseError } from "../tests/unit/testUtils";
+import { GetSqlv1StatementResult200Response } from "./clients/flinkSql";
 import { MessageType, PostFunction } from "./flinkStatementResultsManager";
 import { FlinkStatement, Phase } from "./models/flinkStatement";
 import { WebviewStorage } from "./webview/comms/comms";
@@ -268,6 +269,56 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     await vm.stopStatement();
 
     assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 1);
+  });
+
+  it("should abort in-flight get results when stopping statement", async () => {
+    // Clear the polling interval so we can control when fetchResults is called
+    if (ctx.manager["_pollingInterval"]) {
+      clearInterval(ctx.manager["_pollingInterval"]);
+      ctx.manager["_pollingInterval"] = undefined;
+    }
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+
+    // Create a promise that we can reject manually to simulate the aborted request
+    let rejectRequest: (reason: Error) => void;
+    const requestPromise = new Promise<GetSqlv1StatementResult200Response>((_resolve, reject) => {
+      rejectRequest = reject;
+    });
+
+    // Start a get results request that will be in flight
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.returns(requestPromise);
+
+    // Start the get results request
+    const fetchPromise = ctx.manager.fetchResults();
+
+    // Wait for the request to actually start
+    await eventually(() => {
+      assert.ok(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.calledOnce);
+    });
+
+    // While that's in flight, start stopping the statement
+    const stopPromise = vm.stopStatement();
+
+    // Verify the abort controller was triggered
+    assert.ok(ctx.manager["_getResultsAbortController"].signal.aborted);
+
+    // Verify the in-flight request was aborted
+    const callArgs = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.firstCall.args[1];
+    assert.ok(
+      callArgs && typeof callArgs === "object" && "signal" in callArgs && callArgs.signal?.aborted,
+    );
+
+    // Now reject the request
+    const abortError = new Error("Aborted") as Error & { cause?: { name: string } };
+    abortError.cause = { name: "AbortError" };
+    rejectRequest!(abortError);
+
+    // Complete both operations
+    await Promise.all([fetchPromise, stopPromise]);
+
+    // Try another fetch - should not make a new request
+    await ctx.manager["fetchResults"]();
+    assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
   });
 
   describe("FlinkStatementResultsViewModel only", () => {
