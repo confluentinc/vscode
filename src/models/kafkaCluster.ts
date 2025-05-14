@@ -47,6 +47,10 @@ export class CCloudKafkaCluster extends KafkaCluster {
   get ccloudApiKeysUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
+
+  searchableText(): string {
+    return `${this.name} ${this.id} ${this.provider}/${this.region}`;
+  }
 }
 
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */
