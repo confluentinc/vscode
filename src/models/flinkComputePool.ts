@@ -52,6 +52,10 @@ export class CCloudFlinkComputePool extends FlinkComputePool implements IEnvProv
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/flink/pools/${this.id}/overview`;
   }
+
+  searchableText(): string {
+    return `${this.name} ${this.id} ${this.provider}/${this.region}`;
+  }
 }
 
 export class FlinkComputePoolTreeItem extends TreeItem {
