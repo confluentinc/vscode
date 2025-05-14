@@ -1,4 +1,4 @@
-import { Disposable, TreeDataProvider, TreeItem } from "vscode";
+import { Disposable, TreeDataProvider, TreeItem, workspace, WorkspaceConfiguration } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   currentFlinkStatementsResourceChanged,
@@ -10,7 +10,17 @@ import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
+import {
+  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
+  DEFAULT_STATEMENT_POLLING_LIMIT,
+  STATEMENT_POLLING_CONCURRENCY,
+  STATEMENT_POLLING_FREQUENCY_SECONDS,
+  STATEMENT_POLLING_LIMIT,
+} from "../preferences/constants";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { BaseViewProvider } from "./base";
+
 /**
  * View controller for Flink statements. Can be assigned to track either
  * a single compute cluster, or a CCloud environment.
@@ -105,6 +115,8 @@ export class FlinkStatementsViewProvider
             this.statementManager.register(this.managerClientId, nonTerminalStatements);
           }
 
+          this.logTelemetry(statements.length, nonTerminalStatements.length);
+
           // inform the view that we have new toplevel data.
           this._onDidChangeTreeData.fire();
         },
@@ -183,5 +195,34 @@ export class FlinkStatementsViewProvider
 
     // if either focused on an entire environement or nothing at all, return null.
     return null;
+  }
+
+  /**
+   * Log telemetry for the number of statements loaded into the view.
+   * @param totalStatements The total number of statements in the view.
+   * @param nonTerminalStatements The number of non-terminal statements in the view.
+   */
+  logTelemetry(totalStatements: number, nonTerminalStatements: number): void {
+    const configs: WorkspaceConfiguration = workspace.getConfiguration();
+    logUsage(UserEvent.FlinkStatementViewStatistics, {
+      // What resource was just loaded. Will be one or the other.
+      compute_pool_id: this.computePool?.id,
+      environment_id: this.resource instanceof CCloudEnvironment ? this.resource.id : undefined,
+
+      // stats about how many statements / kinds we have.
+      statement_count: totalStatements,
+      non_terminal_statement_count: nonTerminalStatements,
+      terminal_statement_count: totalStatements - nonTerminalStatements,
+
+      // user's settings for polling the non-terminal statements, germane
+      // to compare against the above.
+      nonterminal_polling_concurrency:
+        configs.get<number>(STATEMENT_POLLING_CONCURRENCY) ?? DEFAULT_STATEMENT_POLLING_CONCURRENCY,
+      nonterminal_polling_frequency:
+        configs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS) ??
+        DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
+      nonterminal_statements_to_poll:
+        configs.get<number>(STATEMENT_POLLING_LIMIT) ?? DEFAULT_STATEMENT_POLLING_LIMIT,
+    });
   }
 }
