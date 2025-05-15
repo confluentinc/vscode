@@ -3,7 +3,6 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import * as contextValues from "../context/values";
 import * as environmentsModule from "../graphql/environments";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -15,7 +14,6 @@ import { FlinkLanguageClientManager } from "./flinkLanguageClientManager";
 describe("FlinkLanguageClientManager", () => {
   let sandbox: sinon.SinonSandbox;
   let configStub: sinon.SinonStub;
-  let contextValueStub: sinon.SinonStub;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
   let flinkManager: FlinkLanguageClientManager;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
@@ -29,7 +27,6 @@ describe("FlinkLanguageClientManager", () => {
       get: sandbox.stub(),
     };
     configStub.returns(configMock);
-    contextValueStub = sandbox.stub(contextValues, "getContextValue");
     hasCCloudAuthSessionStub = sandbox.stub(ccloud, "hasCCloudAuthSession");
     hasCCloudAuthSessionStub.returns(false);
 
@@ -50,18 +47,18 @@ describe("FlinkLanguageClientManager", () => {
 
   describe("validateFlinkSettings", () => {
     it("should return false if Flink is disabled", async () => {
-      contextValueStub.withArgs(contextValues.ContextValues.flinkEnabled).returns(false);
+      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(false);
       const result = await flinkManager.validateFlinkSettings();
 
       // Verify only method called was check for Flink enabled status
-      assert.strictEqual(contextValueStub.called, true);
+      sinon.assert.calledOnce(flinkManager.getIsFlinkEnabled as sinon.SinonStub);
       assert.strictEqual(configStub.called, false);
       assert.strictEqual(result, false);
     });
 
     it("should return false when computePoolId is missing", async () => {
       // Set up mocks -> Flink is enabled but no settings set
-      contextValueStub.withArgs(contextValues.ContextValues.flinkEnabled).returns(true);
+      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
       const configMock = {
         get: sandbox.stub(),
       };
@@ -75,7 +72,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should return false when compute pool is invalid", async () => {
       // Set up mocks -> Flink is enabled with invalid compute pool
-      contextValueStub.withArgs(contextValues.ContextValues.flinkEnabled).returns(true);
+      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
       const configMock = {
         get: sandbox.stub(),
       };
@@ -95,7 +92,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should return true when compute pool is valid", async () => {
       // Set up mocks -> Flink is enabled with valid compute pool
-      contextValueStub.withArgs(contextValues.ContextValues.flinkEnabled).returns(true);
+      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
       const configMock = {
         get: sandbox.stub(),
       };
@@ -114,7 +111,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should check resources availability when compute pool is set", async () => {
       // Set up mocks to indicate Flink is enabled with all settings
-      contextValueStub.withArgs(contextValues.ContextValues.flinkEnabled).returns(true);
+      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
       const configMock = {
         get: sandbox.stub(),
       };
