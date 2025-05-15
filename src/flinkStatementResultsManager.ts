@@ -323,24 +323,27 @@ export class FlinkStatementResultsManager {
     initialBackoffMs: number = 100,
     maxBackoffMs: number = 10_000,
   ): Promise<T> {
+    let lastErr: Error | undefined;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await operation();
       } catch (err) {
+        lastErr = err as Error;
         if (isResponseErrorWithStatus(err, 409)) {
           if (attempt < maxRetries - 1) {
             const backoffMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
-            logger.info(
+            logger.debug(
               `Retrying ${operationName} after 409 conflict. Attempt ${attempt + 1}/${maxRetries}. Waiting ${backoffMs}ms`,
             );
             await new Promise((resolve) => setTimeout(resolve, backoffMs));
           }
         } else {
-          throw err;
+          break;
         }
       }
     }
-    throw new Error(`${operationName} failed after ${maxRetries} retries`);
+
+    throw lastErr;
   }
 
   private async stopStatement(): Promise<void> {
@@ -353,7 +356,9 @@ export class FlinkStatementResultsManager {
         await this._stopStatement();
       }, "stop statement");
     } catch (err) {
-      logError(err, "Failed to stop Flink statement");
+      logError(err, "Failed to stop Flink statement", {
+        extra: { functionName: "stopStatement" },
+      });
       this._latestError({ message: "Failed to stop Flink statement" });
     }
   }

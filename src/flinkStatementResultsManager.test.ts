@@ -359,12 +359,18 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should handle fetch results with max retries exceeded", async () => {
+    if (ctx.manager["_pollingInterval"]) {
+      clearInterval(ctx.manager["_pollingInterval"]);
+      ctx.manager["_pollingInterval"] = undefined;
+    }
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+
     // Mock the getSqlv1StatementResult to always fail with 409
     const responseError = createResponseError(409, "Conflict", "test");
     ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
 
     // Trigger a fetch
-    await ctx.manager["fetchResults"]();
+    await ctx.manager.fetchResults();
 
     await eventually(() => {
       assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 5);
