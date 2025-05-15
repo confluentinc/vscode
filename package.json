@@ -1759,7 +1759,7 @@
           {
             "id": "cc-flink-statements",
             "title": "Confluent Cloud for Apache Flink",
-            "description": "Author, submit, and view the result of Flink SQL statements in Confluent Cloud.\n[Enable Flink Support](command:confluent.support.openSettings)",
+            "description": "Author, submit, and view the result of Flink SQL statements in Confluent Cloud.\n[Enable Flink Support](command:workbench.action.openSettings?%5B%22%40id%3Aconfluent.preview.enableFlink%22%5D)",
             "media": {
               "markdown": "resources/walkthrough/flink/statements.md"
             },
@@ -1773,7 +1773,7 @@
           {
             "id": "copilot",
             "title": "Copiloting Your Data Streaming",
-            "description": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications. \n[Enable Copilot Chat Participant](command:confluent.support.openSettings)",
+            "description": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications. \n[Enable Copilot Chat Participant](command:workbench.action.openSettings?%5B%22%40ext%3Aconfluentinc.vscode-confluent%20copilot%22%5D)",
             "media": {
               "image": "resources/walkthrough/copilot.png",
               "altText": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications."
