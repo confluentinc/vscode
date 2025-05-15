@@ -253,9 +253,8 @@ export async function submitFlinkStatementCommand(
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
-    logError(err, "Submit Flink statement unexpected error");
-
     if (isResponseError(err) && err.response.status === 400) {
+      // Something unhappy, usually a bad SQL statement.
       // will be array of objs with 'details' human readable messages.
       const responseErrors: { errors: [{ detail: string }] } = await extractResponseBody(err);
       logger.error(JSON.stringify(responseErrors, null, 2));
@@ -265,6 +264,14 @@ export async function submitFlinkStatementCommand(
         .join("\n");
       await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
     } else {
+      logError(err, "Submit Flink statement unexpected error", {
+        extra: {
+          statementLength: statement.length,
+          computePoolId: computePool.id,
+          currentDatabase,
+          statementName,
+        },
+      });
       await showErrorNotificationWithButtons(`Error submitting statement: ${err}`);
     }
   }
