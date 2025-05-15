@@ -195,17 +195,21 @@ export class FlinkStatementResultsManager {
     try {
       const currentResults = this._results();
       const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-      const response = await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
-        {
-          environment_id: this.statement.environmentId,
-          organization_id: this.statement.organizationId,
-          name: this.statement.name,
-          page_token: pageToken,
-        },
-        {
-          signal: this._getResultsAbortController.signal,
-        },
-      );
+
+      const response = await this.retryWithBackoff(async () => {
+        return await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
+          {
+            environment_id: this.statement.environmentId,
+            organization_id: this.statement.organizationId,
+            name: this.statement.name,
+            page_token: pageToken,
+          },
+          {
+            signal: this._getResultsAbortController.signal,
+          },
+        );
+      }, "fetch statement results");
+
       const resultsData: SqlV1StatementResultResults = response.results ?? {};
 
       this.os.batch(() => {
@@ -312,36 +316,45 @@ export class FlinkStatementResultsManager {
     );
   }
 
-  private async stopStatement(): Promise<void> {
-    const MAX_RETRIES = 5;
-    const INITIAL_BACKOFF_MS = 100;
-    const MAX_BACKOFF_MS = 10_000;
-
-    // Abort any in-flight GET results requests
-    this._getResultsAbortController.abort();
-
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxRetries: number = 5,
+    initialBackoffMs: number = 100,
+    maxBackoffMs: number = 10_000,
+  ): Promise<T> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        await this.refreshStatement();
-        await this._stopStatement();
-        return;
+        return await operation();
       } catch (err) {
-        // 409 means we didn't send the PUT request with the latest statement spec, so we retry
         if (isResponseErrorWithStatus(err, 409)) {
-          if (attempt < MAX_RETRIES - 1) {
-            const backoffMs = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
+          if (attempt < maxRetries - 1) {
+            const backoffMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
             logger.info(
-              `Retrying stop statement after 409 conflict. Attempt ${attempt + 1}/${MAX_RETRIES}. Waiting ${backoffMs}ms`,
+              `Retrying ${operationName} after 409 conflict. Attempt ${attempt + 1}/${maxRetries}. Waiting ${backoffMs}ms`,
             );
             await new Promise((resolve) => setTimeout(resolve, backoffMs));
           }
         } else {
-          // If it's not a 409 or we're out of retries, log and throw
-          logError(err, "Failed to stop Flink statement");
-          this._latestError({ message: "Failed to stop Flink statement" });
-          return;
+          throw err;
         }
       }
+    }
+    throw new Error(`${operationName} failed after ${maxRetries} retries`);
+  }
+
+  private async stopStatement(): Promise<void> {
+    // Abort any in-flight GET results requests
+    this._getResultsAbortController.abort();
+
+    try {
+      await this.retryWithBackoff(async () => {
+        await this.refreshStatement();
+        await this._stopStatement();
+      }, "stop statement");
+    } catch (err) {
+      logError(err, "Failed to stop Flink statement");
+      this._latestError({ message: "Failed to stop Flink statement" });
     }
   }
 
