@@ -2,7 +2,13 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { createResponseError } from "../tests/unit/testUtils";
 import { ResponseError } from "./clients/sidecar";
-import { getNestedErrorChain, hasErrorCause, isResponseErrorWithStatus, logError } from "./errors";
+import {
+  extractResponseBody,
+  getNestedErrorChain,
+  hasErrorCause,
+  isResponseErrorWithStatus,
+  logError,
+} from "./errors";
 import { Logger } from "./logging";
 
 describe("errors.ts logError()", () => {
@@ -160,5 +166,34 @@ describe("errors.ts isResponseErrorWithStatus()", () => {
   it("should return true for a response error with the same status", () => {
     const error = createResponseError(404, "Not Found", "test");
     assert.strictEqual(isResponseErrorWithStatus(error, 404), true);
+  });
+});
+
+describe("errors.ts extractResponseBody()", () => {
+  it("should return the response body as JSON if it is valid JSON", async () => {
+    const embeddedObject = { message: "test" };
+    const error = createResponseError(400, "Bad Request", JSON.stringify(embeddedObject));
+    const body = await extractResponseBody(error);
+    assert.deepStrictEqual(embeddedObject, body);
+  });
+
+  it("should return the response body as string if it is not valid JSON", async () => {
+    const textResponse = "test random not-json {";
+    const error = createResponseError(400, "Bad Request", textResponse);
+    const body = await extractResponseBody(error);
+    assert.strictEqual(body, textResponse);
+  });
+
+  it("should throw if the error is not a ResponseError", async () => {
+    const error = new Error("test");
+    assert.rejects(
+      async () => {
+        await extractResponseBody(error as any);
+      },
+      {
+        name: "Error",
+        message: "extractResponseBody() called with non-ResponseError",
+      },
+    );
   });
 });

@@ -253,18 +253,31 @@ export async function submitFlinkStatementCommand(
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
-    logError(err, "Submit Flink statement unexpected error");
-
     if (isResponseError(err) && err.response.status === 400) {
-      // will be array of objs with 'details' human readable messages.
-      const responseErrors: { errors: [{ detail: string }] } = await extractResponseBody(err);
-      logger.error(JSON.stringify(responseErrors, null, 2));
+      // Usually a bad SQL statement.
+      // The error string should be JSON, have 'errors' as an array of objs with 'details' human readable messages.
+      const objFromResponse = await extractResponseBody(err);
+      let errorMessages: string;
+      if (objFromResponse && typeof objFromResponse === "object" && "errors" in objFromResponse) {
+        const responseErrors: { errors: [{ detail: string }] } = objFromResponse;
+        logger.error(JSON.stringify(responseErrors, null, 2));
 
-      const errorMessages = responseErrors.errors
-        .map((e: { detail: string }) => e.detail)
-        .join("\n");
+        errorMessages = responseErrors.errors.map((e: { detail: string }) => e.detail).join("\n");
+      } else {
+        // will be the raw error string.
+        errorMessages = objFromResponse;
+      }
       await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
     } else {
+      // wasn't a 400 ResponseError. So who knows? We don't expect this to happen.
+      logError(err, "Submit Flink statement unexpected error", {
+        extra: {
+          statementLength: statement.length,
+          computePoolId: computePool.id,
+          currentDatabase,
+          statementName,
+        },
+      });
       await showErrorNotificationWithButtons(`Error submitting statement: ${err}`);
     }
   }

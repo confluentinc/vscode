@@ -1327,7 +1327,7 @@
         },
         {
           "command": "confluent.statements.create",
-          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@1"
         },
         {
@@ -1342,7 +1342,7 @@
         },
         {
           "command": "confluent.statements.refresh",
-          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@4"
         },
         {
