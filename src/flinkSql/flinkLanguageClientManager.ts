@@ -55,7 +55,6 @@ export class FlinkLanguageClientManager implements Disposable {
     this.disposables.push(
       workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId === "flinksql") {
-          logger.debug("Flink SQL file opened, checking for language client");
           await this.maybeStartLanguageClient();
         }
       }),
@@ -107,7 +106,6 @@ export class FlinkLanguageClientManager implements Disposable {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
     const defaultPoolId: string = config.get(FLINK_CONFIG_COMPUTE_POOL, "");
     const defaultDatabase: string = config.get(FLINK_CONFIG_DATABASE, "");
-    logger.debug("pool/db =>", defaultPoolId, defaultDatabase);
     return {
       database: defaultDatabase,
       computePoolId: defaultPoolId,
@@ -123,19 +121,15 @@ export class FlinkLanguageClientManager implements Disposable {
     }
     const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
-      logger.debug("Flink compute pool not set");
       await this.promptChooseDefaultComputePool();
       return false;
     }
 
-    logger.debug("Flink compute pool is:", computePoolId);
     const computeValid = await this.checkFlinkResourcesAvailability(computePoolId);
     if (!computeValid) {
-      logger.debug("Flink compute pool is not valid, prompting user");
       await this.promptChooseDefaultComputePool();
       return false;
     }
-    logger.debug("Flink compute pool is valid");
     return true;
   }
 
@@ -187,14 +181,12 @@ export class FlinkLanguageClientManager implements Disposable {
       const currentOrg = await getCurrentOrganization();
       const organizationId = currentOrg?.id ?? "";
       if (!organizationId) {
-        logger.error("No organization ID found");
         return null;
       }
 
       // Find the environment containing this compute pool
       const environments = await getEnvironments();
       if (!environments || environments.length === 0) {
-        logger.error("No environments found");
         return null;
       }
 
@@ -212,10 +204,10 @@ export class FlinkLanguageClientManager implements Disposable {
         }
       }
 
-      logger.error(`Could not find environment containing compute pool ${computePoolId}`);
+      logger.warn(`Could not find environment containing compute pool ${computePoolId}`);
       return null;
     } catch (error) {
-      logger.error("Error finding compute pool", error);
+      logger.error("Error while looking up compute pool", error);
       return null;
     }
   }
@@ -248,7 +240,6 @@ export class FlinkLanguageClientManager implements Disposable {
     if (this.languageClient) {
       if (this.isLanguageClientConnected()) {
         // If we already have a client and it's healthy we're cool
-        logger.debug("Language client connection confirmed active");
         return;
       } else {
         logger.debug("Language client connection not active, stopping and reinitializing");
@@ -274,10 +265,8 @@ export class FlinkLanguageClientManager implements Disposable {
     }
 
     try {
-      logger.debug("Initializing Flink SQL language client");
       let url: string | undefined;
       if (this.lastWebSocketUrl && this.lastWebSocketUrl.includes(computePoolId)) {
-        logger.debug("Using cached WebSocket URL for reconnection");
         url = this.lastWebSocketUrl;
       } else {
         url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
@@ -329,16 +318,12 @@ export class FlinkLanguageClientManager implements Disposable {
   private async restartLanguageClient(): Promise<void> {
     // Dispose of the existing client if it exists
     await this.cleanupLanguageClient();
-
-    // Try to initialize a new client
     try {
-      logger.debug("Attempting to initialize new language client");
       await this.maybeStartLanguageClient();
       // Reset counter on successful reconnection
       this.reconnectCounter = 0;
     } catch (e) {
       logger.error(`Failed to reconnect: ${e}`);
-      // Try again if we haven't reached max attempts
       if (this.reconnectCounter < this.MAX_RECONNECT_ATTEMPTS) {
         this.handleWebSocketDisconnect();
       }
@@ -348,12 +333,10 @@ export class FlinkLanguageClientManager implements Disposable {
   private async cleanupLanguageClient(): Promise<void> {
     try {
       if (this.languageClient) {
-        logger.debug("Deleting language client private instance");
         await this.languageClient.dispose();
         this.languageClient = null;
       }
       if (this.lastWebSocketUrl) {
-        logger.debug("Clearing cached WebSocket URL");
         this.lastWebSocketUrl = null;
       }
     } catch (error) {
@@ -367,12 +350,11 @@ export class FlinkLanguageClientManager implements Disposable {
    * `workspace/didChangeConfiguration` notification
    */
   private async notifyConfigChanged(): Promise<void> {
-    logger.debug("Flink configuration changed");
     // We have a lang client, send the updated settings
     if (this.languageClient && this.isLanguageClientConnected()) {
       const { database, computePoolId } = this.getFlinkSqlSettings();
       if (!computePoolId) {
-        logger.debug("No compute pool ID configured, not sending configuration update");
+        // No compute pool selected, don't send settings
         return;
       }
       const poolInfo = await this.lookupComputePoolInfo(computePoolId);
@@ -380,12 +362,6 @@ export class FlinkLanguageClientManager implements Disposable {
 
       // Don't send with undefined settings, server will override existing settings with empty/undefined values
       if (environmentId && database && computePoolId) {
-        logger.debug("Sending complete configuration to language server", {
-          computePoolId,
-          environmentId,
-          database,
-        });
-
         this.languageClient.sendNotification("workspace/didChangeConfiguration", {
           settings: {
             AuthToken: "{{ ccloud.data_plane_token }}",
@@ -415,10 +391,6 @@ export class FlinkLanguageClientManager implements Disposable {
    * Show notification for user to select default compute pool, database
    */
   private async promptChooseDefaultComputePool(): Promise<void> {
-    // if (this.hasPromptedForSettings) {
-    //   logger.debug("Already prompted for Flink settings this session, skipping");
-    //   return;
-    // }
     if (!hasCCloudAuthSession()) {
       return; // This method should not be called if not authenticated
     }
@@ -434,10 +406,7 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   public async dispose(): Promise<void> {
-    logger.debug("Disposing FlinkLanguageClientManager");
     await this.cleanupLanguageClient();
-
-    // Dispose all other disposables
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
   }

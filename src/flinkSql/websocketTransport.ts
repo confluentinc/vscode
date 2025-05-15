@@ -28,10 +28,8 @@ class WebsocketMessageReader implements MessageReader {
     this.socket.on("message", (data: Buffer | string) => {
       try {
         const strData = typeof data === "string" ? data : data.toString("utf8");
-        logger.debug(`Received message from language server: ${strData}`);
         const message = JSON.parse(strData);
         this.messageEmitter.fire(message);
-        logger.debug("Message emitted to language client");
       } catch (e) {
         logger.error(`Error parsing LSP message: ${e}`);
         this.errorEmitter.fire(e as Error);
@@ -55,7 +53,6 @@ class WebsocketMessageReader implements MessageReader {
 
   public listen(callback: DataCallback): Disposable {
     return this.messageEmitter.event((event) => {
-      logger.debug(`Calling callback with message: ${JSON.stringify(event)}`);
       callback(event);
     });
   }
@@ -93,8 +90,6 @@ class WebsocketMessageWriter implements MessageWriter {
 
     try {
       const messageStr = JSON.stringify(message);
-      logger.debug(`Sending message to language server: ${messageStr}`);
-
       return new Promise<void>((resolve, reject) => {
         this.socket.send(messageStr, (error) => {
           if (error) {
@@ -102,7 +97,6 @@ class WebsocketMessageWriter implements MessageWriter {
             this.errorEmitter.fire([error, message, undefined]);
             reject(error);
           } else {
-            logger.debug("Message sent successfully");
             resolve();
           }
         });
@@ -136,7 +130,6 @@ export class WebsocketTransport implements MessageTransports {
   private socket: WebSocket;
 
   constructor(socket: WebSocket) {
-    logger.debug("Creating websocket transport");
     this.socket = socket;
     this.reader = new WebsocketMessageReader(socket);
     this.writer = new WebsocketMessageWriter(socket);
@@ -146,9 +139,7 @@ export class WebsocketTransport implements MessageTransports {
     logger.debug("Disposing websocket transport");
     // Make sure we close the writer first to send any pending messages
     try {
-      (this.writer as WebsocketMessageWriter).end().catch((err) => {
-        logger.error(`Error ending writer: ${err}`);
-      });
+      (this.writer as WebsocketMessageWriter).end();
     } catch (err) {
       logger.error(`Error calling writer.end(): ${err}`);
     }
@@ -162,7 +153,6 @@ export class WebsocketTransport implements MessageTransports {
       this.socket.readyState === WebSocket.OPEN ||
       this.socket.readyState === WebSocket.CONNECTING
     ) {
-      logger.debug("Closing WebSocket connection in transport dispose");
       try {
         this.socket.close(1000, "Transport disposed");
       } catch (err) {

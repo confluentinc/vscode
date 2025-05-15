@@ -30,9 +30,8 @@ export async function initializeLanguageClient(
     SecretStorageKeys.SIDECAR_AUTH_TOKEN,
   );
   if (!accessToken) {
-    logger.error("No access token found");
-    vscode.window.showErrorMessage(
-      "Failed to initialize Flink SQL language client: No access token found",
+    logger.error(
+      "Failed to initialize Flink SQL language client: No access token found for language client",
     );
     return null;
   }
@@ -42,7 +41,7 @@ export async function initializeLanguageClient(
     });
     ws.onerror = (error) => {
       logger.error(`WebSocket connection error: ${error}`);
-      reject(new Error("Failed to connect to Flink SQL language server"));
+      reject(new Error("Failed to connect to Flink SQL language server")); //FIXME here's one error that surfaces to users
     };
     ws.onopen = async () => {
       logger.debug("WebSocket connection opened");
@@ -59,7 +58,6 @@ export async function initializeLanguageClient(
           ],
           middleware: {
             didOpen: (document, next) => {
-              logger.info(`FlinkSQL document opened: ${document.uri}`);
               return next(document);
             },
             didChange: (event, next) => {
@@ -121,7 +119,7 @@ export async function initializeLanguageClient(
           },
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
-              vscode.window.showErrorMessage(`Language server error: ${message}`);
+              vscode.window.showErrorMessage(`Language server error: ${message}`); // FIXME do we want to show this to users?
               return {
                 action: ErrorAction.Continue,
                 message: `${message ?? error.message}`,
@@ -147,7 +145,7 @@ export async function initializeLanguageClient(
         );
 
         await languageClient.start();
-        logger.info("FlinkSQL Language Server started");
+        logger.debug("FlinkSQL Language Server started");
         languageClient.setTrace(Trace.Verbose);
         resolve(languageClient);
       } catch (e) {
