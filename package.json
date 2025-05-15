@@ -1915,7 +1915,7 @@
     "opentelemetry-instrumentation-fetch-node": "^1.2.3",
     "rotating-file-stream": "^3.2.6",
     "tail": "^2.2.6",
-    "undici": "^6.19.8",
+    "undici": "^6.21.2",
     "unzipit": "^1.4.3",
     "uuid": "^11.1.0",
     "vscode-json-languageservice": "^5.4.2",
