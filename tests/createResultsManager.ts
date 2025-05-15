@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { ObservableScope } from "inertial";
+import { Scope } from "inertial";
 import sinon from "sinon";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
 import { FlinkStatementResultsManager } from "../src/flinkStatementResultsManager";
@@ -41,8 +41,8 @@ export interface FlinkStatementResultsManagerTestContext {
  */
 
 export async function createTestResultsManagerContext(
-  sandbox = sinon.createSandbox(),
-  os = ObservableScope(),
+  sandbox: sinon.SinonSandbox,
+  os: Scope,
 ): Promise<FlinkStatementResultsManagerTestContext> {
   // Create sidecar and API mocks
   const mockSidecar = sandbox.createStubInstance(sidecar.SidecarHandle);
@@ -96,7 +96,7 @@ export async function createTestResultsManagerContext(
     DEFAULT_RESULTS_LIMIT,
     // Polling interval of 1ms
     1,
-     // Refresh interval
+    // Refresh interval
     100,
     resourceLoader,
   );
