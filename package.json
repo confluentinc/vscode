@@ -722,13 +722,14 @@
           "confluent.flink.computePoolId": {
             "type": "string",
             "default": "",
-            "order": 1,
-            "description": "ID for the CCloud compute pool to use as default for Flink SQL operations."
+            "order": 2,
+            "description": "ID for the compute pool to use as a default in Confluent Cloud for Apache Flink® SQL operations."
           },
           "confluent.flink.database": {
             "type": "string",
+            "order": 3,
             "default": "",
-            "description": "Name or ID for CCloud Kafka® cluster to use as the default Flink SQL database."
+            "description": "Name or ID for Apache Kafka® cluster in Confluent to use as the default Confluent Cloud for Apache Flink® SQL database."
           },
           "confluent.flink.updateComputePoolIdFromCodelens": {
             "markdownDescription": "Controls whether or not to update `#confluent.flink.computePoolId#` after selecting a compute pool from the 'Set Compute Pool' codelens.",
