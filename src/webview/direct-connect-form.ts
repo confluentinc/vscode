@@ -55,6 +55,31 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.getAuthTypes()?.kafka ?? "None";
   });
 
+  /** Get OS info and krb5 config path */
+  osInfo = this.resolve(async () => {
+    return await post("GetOSInfo", {});
+  }, null);
+
+  krb5ConfigPath = this.resolve(async () => {
+    return await post("GetKrb5ConfigPath", {});
+  }, null);
+
+  showMacOSKerberosMessage = this.derive(() => {
+    const isMacOS = this.osInfo()?.platform === "darwin";
+    const hasKrb5Config = this.krb5ConfigPath() !== "";
+    const isKerberos = this.kafkaAuthType() === "Kerberos";
+
+    return isMacOS && isKerberos && !hasKrb5Config;
+  });
+
+  vscodeUriScheme = this.resolve(async () => {
+    return await post("GetVsCodeUriScheme", {});
+  }, null);
+
+  krb5ConfigPathExtensionSettingUrl = this.derive(() => {
+    return `${this.vscodeUriScheme()}://settings/confluent.krb5ConfigPath`;
+  });
+
   // SSL enabled is true by default. If this is undefined it means the user never set/saved it
   kafkaSslEnabled = this.derive(() => {
     if (this.spec()?.kafka_cluster?.ssl?.enabled?.toString() === "false") return false;
@@ -297,6 +322,9 @@ export function post(
   type: "SaveFormAuthType",
   body: { inputName: string; inputValue: SupportedAuthTypes },
 ): Promise<null>;
+export function post(type: "GetOSInfo", body: any): Promise<{ platform: string }>;
+export function post(type: "GetKrb5ConfigPath", body: any): Promise<string>;
+export function post(type: "GetVsCodeUriScheme", body: any): Promise<string>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
