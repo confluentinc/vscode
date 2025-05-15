@@ -11,8 +11,10 @@ import * as errors from "../errors";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import {
+  DEFAULT_KRB5_CONFIG_PATH,
   DEFAULT_SSL_PEM_PATHS,
   DEFAULT_TRUST_ALL_CERTIFICATES,
+  KRB5_CONFIG_PATH,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
@@ -63,15 +65,18 @@ describe("preferences/updates", function () {
     // default values, no user changes
     const tlsPemPaths: string[] = DEFAULT_SSL_PEM_PATHS;
     const trustAllCerts = DEFAULT_TRUST_ALL_CERTIFICATES;
+    const krb5Config = DEFAULT_KRB5_CONFIG_PATH;
 
     getConfigurationStub.withArgs(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS).returns(tlsPemPaths);
     getConfigurationStub
       .withArgs(SSL_VERIFY_SERVER_CERT_DISABLED, DEFAULT_TRUST_ALL_CERTIFICATES)
       .returns(trustAllCerts);
+    getConfigurationStub.withArgs(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH).returns(krb5Config);
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
     assert.deepStrictEqual(result, {
+      kerberos_config_file_path: krb5Config,
       tls_pem_paths: DEFAULT_SSL_PEM_PATHS,
       trust_all_certificates: DEFAULT_TRUST_ALL_CERTIFICATES,
     });
@@ -81,15 +86,18 @@ describe("preferences/updates", function () {
     // simulate user changing from the default values
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
+    const krb5Config = "path/to/custom/krb5.conf";
 
     getConfigurationStub.withArgs(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS).returns(tlsPemPaths);
     getConfigurationStub
       .withArgs(SSL_VERIFY_SERVER_CERT_DISABLED, DEFAULT_TRUST_ALL_CERTIFICATES)
       .returns(trustAllCerts);
+    getConfigurationStub.withArgs(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH).returns(krb5Config);
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
     assert.deepStrictEqual(result, {
+      kerberos_config_file_path: krb5Config,
       tls_pem_paths: tlsPemPaths,
       trust_all_certificates: trustAllCerts,
     });
@@ -99,16 +107,19 @@ describe("preferences/updates", function () {
     // simulate user changing from the default values
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
+    const krb5Config = "path/to/custom/krb5.conf";
 
     getConfigurationStub.withArgs(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS).returns(tlsPemPaths);
     getConfigurationStub
       .withArgs(SSL_VERIFY_SERVER_CERT_DISABLED, DEFAULT_TRUST_ALL_CERTIFICATES)
       .returns(trustAllCerts);
+    getConfigurationStub.withArgs(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH).returns(krb5Config);
 
     const fakePreferences: Preferences = {
       api_version: "gateway/v1",
       kind: "Preferences",
       spec: {
+        kerberos_config_file_path: krb5Config,
         tls_pem_paths: tlsPemPaths,
         trust_all_certificates: trustAllCerts,
       },
