@@ -13,6 +13,11 @@ export const SSL_PEM_PATHS = prefix + "ssl.pemPaths";
 /** Default value for the {@link SSL_PEM_PATHS} setting. */
 export const DEFAULT_SSL_PEM_PATHS: string[] = [];
 
+/** Path to the krb5.conf file for Kerberos authentication in direct connections. */
+export const KRB5_CONFIG_PATH = prefix + "krb5ConfigPath";
+/** Default value for the {@link KRB5_CONFIG_PATH} setting. */
+export const DEFAULT_KRB5_CONFIG_PATH = "";
+
 /**
  * Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka
  * connections or resources.

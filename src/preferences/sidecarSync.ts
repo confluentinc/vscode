@@ -13,8 +13,10 @@ import {
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import {
+  DEFAULT_KRB5_CONFIG_PATH,
   DEFAULT_SSL_PEM_PATHS,
   DEFAULT_TRUST_ALL_CERTIFICATES,
+  KRB5_CONFIG_PATH,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
@@ -33,10 +35,12 @@ export function loadPreferencesFromWorkspaceConfig(): PreferencesSpec {
     SSL_VERIFY_SERVER_CERT_DISABLED,
     DEFAULT_TRUST_ALL_CERTIFICATES,
   );
+  const krb5ConfigPath: string = configs.get(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH);
 
   return {
     tls_pem_paths: pemPaths,
     trust_all_certificates: trustAllCerts,
+    kerberos_config_file_path: krb5ConfigPath,
   };
 }
 
