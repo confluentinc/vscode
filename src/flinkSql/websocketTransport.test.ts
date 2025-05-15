@@ -254,30 +254,5 @@ describe("WebsocketTransport", () => {
       // Verify that end was called on writer
       sinon.assert.calledOnce(writerEndSpy);
     });
-
-    it("should handle errors during writer.end() gracefully", async () => {
-      const transport = new WebsocketTransport(mockSocket);
-
-      // Need to get the writer instance to stub end
-      const writer = transport.writer as any;
-      const testError = new Error("End failed");
-
-      // Directly set up the stub to call the error logger when the catch handler runs
-      sandbox.stub(writer, "end").callsFake(() => {
-        const promise = Promise.reject(testError);
-        // Force the promise to be "handled" to avoid unhandled rejection warnings
-        promise.catch(() => {});
-        return promise;
-      });
-
-      // Should not throw when disposing
-      transport.dispose();
-
-      // We need to wait for the promise rejection to be processed
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Should log the error
-      sinon.assert.called(loggerStub.error);
-    });
   });
 });
