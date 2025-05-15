@@ -9,7 +9,11 @@ import {
 import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
 import { createResponseError } from "../tests/unit/testUtils";
-import { GetSqlv1StatementResult200Response } from "./clients/flinkSql";
+import {
+  GetSqlv1StatementResult200Response,
+  GetSqlv1StatementResult200ResponseApiVersionEnum,
+  GetSqlv1StatementResult200ResponseKindEnum,
+} from "./clients/flinkSql";
 import { MessageType, PostFunction } from "./flinkStatementResultsManager";
 import { FlinkStatement, Phase } from "./models/flinkStatement";
 import { WebviewStorage } from "./webview/comms/comms";
@@ -219,10 +223,10 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     // Mock the updateSqlv1Statement to fail with 409 twice then succeed
     ctx.flinkSqlStatementsApi.updateSqlv1Statement
       .onFirstCall()
-      .rejects(createResponseError(409, "Conflict", "test"));
+      .rejects(createResponseError(409, "Conflict", "{}"));
     ctx.flinkSqlStatementsApi.updateSqlv1Statement
       .onSecondCall()
-      .rejects(createResponseError(409, "Conflict", "test"));
+      .rejects(createResponseError(409, "Conflict", "{}"));
     ctx.flinkSqlStatementsApi.updateSqlv1Statement.onThirdCall().resolves();
 
     await vm.stopStatement();
@@ -234,7 +238,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
   it("should handle StopStatement message with max retries exceeded", async () => {
     // Mock the updateSqlv1Statement to always fail with 409
-    const responseError = createResponseError(409, "Conflict", "test");
+    const responseError = createResponseError(409, "Conflict", "{}");
     ctx.flinkSqlStatementsApi.updateSqlv1Statement.rejects(responseError);
 
     // Call stop statement and expect it to throw after max retries
@@ -263,7 +267,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
   it("should handle non-409 errors in StopStatement immediately", async () => {
     ctx.flinkSqlStatementsApi.updateSqlv1Statement.rejects(
-      createResponseError(500, "Server Error", "test"),
+      createResponseError(500, "Server Error", "{}"),
     );
 
     await vm.stopStatement();
@@ -319,6 +323,81 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     // Try another fetch - should not make a new request
     await ctx.manager["fetchResults"]();
     assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
+  });
+
+  it("should retry get statement results when 409", async () => {
+    if (ctx.manager["_pollingInterval"]) {
+      clearInterval(ctx.manager["_pollingInterval"]);
+      ctx.manager["_pollingInterval"] = undefined;
+    }
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+
+    // Mock the getSqlv1StatementResult to fail with 409 twice then succeed
+    // This happens if the statement results are not ready yet
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+      .onFirstCall()
+      .rejects(createResponseError(409, "Conflict", "{}"));
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+      .onSecondCall()
+      .rejects(createResponseError(409, "Conflict", "{}"));
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.onThirdCall().resolves({
+      api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
+      kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
+      metadata: {},
+      results: {
+        data: [],
+      },
+    });
+
+    // Trigger a fetch
+    await ctx.manager.fetchResults();
+
+    // Verify the request was made 3 times
+    await eventually(() => {
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 3);
+    });
+  });
+
+  it("should handle fetch results with max retries exceeded", async () => {
+    if (ctx.manager["_pollingInterval"]) {
+      clearInterval(ctx.manager["_pollingInterval"]);
+      ctx.manager["_pollingInterval"] = undefined;
+    }
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+
+    // Mock the getSqlv1StatementResult to always fail with 409
+    const responseError = createResponseError(409, "Conflict", "{}");
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
+
+    // Trigger a fetch
+    await ctx.manager.fetchResults();
+
+    await eventually(() => {
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 5);
+      // Verify error state is set
+      assert.ok(ctx.manager["_latestError"]());
+    });
+  });
+
+  it("should not retry on non-409 errors during fetch", async () => {
+    if (ctx.manager["_pollingInterval"]) {
+      clearInterval(ctx.manager["_pollingInterval"]);
+      ctx.manager["_pollingInterval"] = undefined;
+    }
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+
+    // Mock the getSqlv1StatementResult to fail with 500
+    const responseError = createResponseError(500, "Internal Server Error", "{}");
+    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
+
+    // Trigger a fetch
+    await ctx.manager.fetchResults();
+
+    await eventually(() => {
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
+      // Verify error state is set
+      assert.ok(ctx.manager["_latestError"]());
+    });
   });
 
   describe("FlinkStatementResultsViewModel only", () => {
