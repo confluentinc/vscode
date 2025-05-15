@@ -179,7 +179,13 @@ export class FlinkStatementResultsManager {
 
   async fetchResults(): Promise<void> {
     if (this._fetchResultsLocked) {
-      logger.warn("Fetch results is locked, skipping fetch.");
+      // setInterval fires off the callbacks even if the previous one is still running
+      // (meaning we could still be awaiting a response from the GET results API)
+      // If we don't guard against only one instance of this function running at a time,
+      // we could end up with out of order application of changelogs.
+
+      // This callback being fired with another concurrently executing instance
+      // is expected and doesn't warrant a log.
       return;
     }
     this._fetchResultsLocked = true;
@@ -198,7 +204,6 @@ export class FlinkStatementResultsManager {
       let reportable: { message: string } | null = null;
       let shouldComplete = false;
       this._fetchCount++;
-      logger.debug(`Fetching statement results...: ${this._fetchCount}`);
 
       try {
         const currentResults = this._results();
