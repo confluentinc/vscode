@@ -275,132 +275,201 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 1);
   });
 
-  it("should abort in-flight get results when stopping statement", async () => {
-    // Clear the polling interval so we can control when fetchResults is called
-    if (ctx.manager["_pollingInterval"]) {
+  describe("with fetchResults not running in a setInterval", () => {
+    beforeEach(() => {
       clearInterval(ctx.manager["_pollingInterval"]);
       ctx.manager["_pollingInterval"] = undefined;
-    }
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
 
-    // Create a promise that we can reject manually to simulate the aborted request
-    let rejectRequest: (reason: Error) => void;
-    const requestPromise = new Promise<GetSqlv1StatementResult200Response>((_resolve, reject) => {
-      rejectRequest = reject;
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
     });
 
-    // Start a get results request that will be in flight
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.returns(requestPromise);
+    it("should abort in-flight get results when stopping statement", async () => {
+      // Clear the polling interval so we can control when fetchResults is called
 
-    // Start the get results request
-    const fetchPromise = ctx.manager.fetchResults();
+      // Create a promise that we can reject manually to simulate the aborted request
+      let rejectRequest: (reason: Error) => void;
+      const requestPromise = new Promise<GetSqlv1StatementResult200Response>((_resolve, reject) => {
+        rejectRequest = reject;
+      });
 
-    // Wait for the request to actually start
-    await eventually(() => {
-      assert.ok(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.calledOnce);
-    });
+      // Start a get results request that will be in flight
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.returns(requestPromise);
 
-    // While that's in flight, start stopping the statement
-    const stopPromise = vm.stopStatement();
+      // Start the get results request
+      const fetchPromise = ctx.manager.fetchResults();
 
-    // Verify the abort controller was triggered
-    assert.ok(ctx.manager["_getResultsAbortController"].signal.aborted);
+      // Wait for the request to actually start
+      await eventually(() => {
+        assert.ok(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.calledOnce);
+      });
 
-    // Verify the in-flight request was aborted
-    const callArgs = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.firstCall.args[1];
-    assert.ok(
-      callArgs && typeof callArgs === "object" && "signal" in callArgs && callArgs.signal?.aborted,
-    );
+      // While that's in flight, start stopping the statement
+      const stopPromise = vm.stopStatement();
 
-    // Now reject the request
-    const abortError = new Error("Aborted") as Error & { cause?: { name: string } };
-    abortError.cause = { name: "AbortError" };
-    rejectRequest!(abortError);
+      // Verify the abort controller was triggered
+      assert.ok(ctx.manager["_getResultsAbortController"].signal.aborted);
 
-    // Complete both operations
-    await Promise.all([fetchPromise, stopPromise]);
+      // Verify the in-flight request was aborted
+      const callArgs = ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.firstCall.args[1];
+      assert.ok(
+        callArgs &&
+          typeof callArgs === "object" &&
+          "signal" in callArgs &&
+          callArgs.signal?.aborted,
+      );
 
-    // Try another fetch - should not make a new request
-    await ctx.manager["fetchResults"]();
-    assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
-  });
+      // Now reject the request
+      const abortError = new Error("Aborted") as Error & { cause?: { name: string } };
+      abortError.cause = { name: "AbortError" };
+      rejectRequest!(abortError);
 
-  it("should retry get statement results when 409", async () => {
-    if (ctx.manager["_pollingInterval"]) {
-      clearInterval(ctx.manager["_pollingInterval"]);
-      ctx.manager["_pollingInterval"] = undefined;
-    }
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+      // Complete both operations
+      await Promise.all([fetchPromise, stopPromise]);
 
-    // Mock the getSqlv1StatementResult to fail with 409 twice then succeed
-    // This happens if the statement results are not ready yet
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
-      .onFirstCall()
-      .rejects(createResponseError(409, "Conflict", "{}"));
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
-      .onSecondCall()
-      .rejects(createResponseError(409, "Conflict", "{}"));
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.onThirdCall().resolves({
-      api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
-      kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
-      metadata: {},
-      results: {
-        data: [],
-      },
-    });
-
-    // Trigger a fetch
-    await ctx.manager.fetchResults();
-
-    // Verify the request was made 3 times
-    await eventually(() => {
-      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 3);
-    });
-  });
-
-  it("should handle fetch results with max retries exceeded", async () => {
-    if (ctx.manager["_pollingInterval"]) {
-      clearInterval(ctx.manager["_pollingInterval"]);
-      ctx.manager["_pollingInterval"] = undefined;
-    }
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
-
-    // Mock the getSqlv1StatementResult to always fail with 409
-    const responseError = createResponseError(409, "Conflict", "{}");
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
-
-    // Trigger a fetch
-    await ctx.manager.fetchResults();
-
-    await eventually(() => {
-      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 5);
-      // Verify error state is set
-      assert.ok(ctx.manager["_latestError"]());
-    });
-  });
-
-  it("should not retry on non-409 errors during fetch", async () => {
-    if (ctx.manager["_pollingInterval"]) {
-      clearInterval(ctx.manager["_pollingInterval"]);
-      ctx.manager["_pollingInterval"] = undefined;
-    }
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
-
-    // Mock the getSqlv1StatementResult to fail with 500
-    const responseError = createResponseError(500, "Internal Server Error", "{}");
-    ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
-
-    // Trigger a fetch
-    await ctx.manager.fetchResults();
-
-    await eventually(() => {
+      // Try another fetch - should not make a new request
+      await ctx.manager["fetchResults"]();
       assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
-      // Verify error state is set
-      assert.ok(ctx.manager["_latestError"]());
+    });
+
+    it("should retry get statement results when 409", async () => {
+      // Mock the getSqlv1StatementResult to fail with 409 twice then succeed
+      // This happens if the statement results are not ready yet
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onFirstCall()
+        .rejects(createResponseError(409, "Conflict", "{}"));
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult
+        .onSecondCall()
+        .rejects(createResponseError(409, "Conflict", "{}"));
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.onThirdCall().resolves({
+        api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
+        kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
+        metadata: {},
+        results: {
+          data: [],
+        },
+      });
+
+      // Trigger a fetch
+      await ctx.manager.fetchResults();
+
+      // Verify the request was made 3 times
+      await eventually(() => {
+        assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 3);
+      });
+    });
+
+    it("should handle fetch results with max retries exceeded", async () => {
+      // Mock the getSqlv1StatementResult to always fail with 409
+      const responseError = createResponseError(409, "Conflict", "{}");
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
+
+      // Trigger a fetch
+      await ctx.manager.fetchResults();
+
+      await eventually(() => {
+        assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 5);
+        // Verify error state is set
+        assert.ok(ctx.manager["_latestError"]());
+      });
+    });
+
+    it("should not retry on non-409 errors during fetch", async () => {
+      // Mock the getSqlv1StatementResult to fail with 500
+      const responseError = createResponseError(500, "Internal Server Error", "{}");
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
+
+      // Trigger a fetch
+      await ctx.manager.fetchResults();
+
+      await eventually(() => {
+        assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
+        // Verify error state is set
+        assert.ok(ctx.manager["_latestError"]());
+      });
+    });
+
+    it("should only allow one instance of fetchResults to run at a time", async () => {
+      // Create a promise that we can resolve manually to simulate a slow API call
+      let resolveRequest: (value: GetSqlv1StatementResult200Response) => void;
+      const requestPromise = new Promise<GetSqlv1StatementResult200Response>((resolve) => {
+        resolveRequest = resolve;
+      });
+
+      // Mock the API call to use our controllable promise
+      ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.returns(requestPromise);
+
+      // Start multiple concurrent fetchResults calls
+      const fetchPromises = [
+        ctx.manager.fetchResults(),
+        ctx.manager.fetchResults(),
+        ctx.manager.fetchResults(),
+        ctx.manager.fetchResults(),
+        ctx.manager.fetchResults(),
+        ctx.manager.fetchResults(),
+      ];
+
+      // Wait a bit to ensure all calls have started
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Verify only one API call was made
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
+
+      // Resolve the API call
+      resolveRequest!({
+        api_version: GetSqlv1StatementResult200ResponseApiVersionEnum.SqlV1,
+        kind: GetSqlv1StatementResult200ResponseKindEnum.StatementResult,
+        metadata: {},
+        results: { data: [] },
+      });
+
+      // Wait for all calls to complete
+      await Promise.all(fetchPromises);
+
+      // Verify still only one API call was made
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
     });
   });
 
   describe("FlinkStatementResultsViewModel only", () => {
+    describe("viewMode", () => {
+      it("should initialize with table view mode", () => {
+        assert.strictEqual(vm.viewMode(), "table");
+      });
+
+      it("should toggle between table and changelog view modes", async () => {
+        // Initial state
+        assert.strictEqual(vm.viewMode(), "table");
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle to changelog
+        await vm.setViewMode("changelog");
+        await eventually(() => assert.strictEqual(vm.viewMode(), "changelog"));
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Change page in changelog mode
+        vm.page(2);
+        await eventually(() => assert.strictEqual(vm.page(), 2));
+
+        assert.strictEqual(vm.tablePage(), 0);
+        // We don't eagerly update the changelogPage..
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle back to table
+        await vm.setViewMode("table");
+
+        await eventually(() => {
+          assert.strictEqual(vm.viewMode(), "table");
+          assert.strictEqual(vm.page(), 0);
+          assert.strictEqual(vm.tablePage(), 0);
+          assert.strictEqual(vm.changelogPage(), 2);
+        });
+      });
+    });
+
     describe("schema and columns", () => {
       it("should create correct column definitions for table view", () => {
         const columns = vm.columns();
