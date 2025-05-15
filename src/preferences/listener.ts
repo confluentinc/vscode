@@ -11,6 +11,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK,
+  KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
@@ -47,6 +48,13 @@ export function createConfigChangeListener(): Disposable {
           `"${LOCAL_DOCKER_SOCKET_PATH}" changed:`,
           configs.get(LOCAL_DOCKER_SOCKET_PATH),
         );
+        return;
+      }
+
+      if (event.affectsConfiguration(KRB5_CONFIG_PATH)) {
+        // inform the sidecar that the krb5 config path has changed
+        logger.debug(`"${KRB5_CONFIG_PATH}" config changed`);
+        await updatePreferences();
         return;
       }
 

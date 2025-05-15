@@ -21,7 +21,10 @@ describe("models/flinkComputePool.ts CCloudFlinkComputePool", () => {
   it("should generate correct searchableText", () => {
     const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
 
-    assert.strictEqual(pool.searchableText(), `${pool.name} ${pool.id}`);
+    assert.strictEqual(
+      pool.searchableText(),
+      `${pool.name} ${pool.id} ${pool.provider}/${pool.region}`,
+    );
   });
 });
 

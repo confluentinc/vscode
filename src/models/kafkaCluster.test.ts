@@ -3,8 +3,8 @@ import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
-import { createKafkaClusterTooltip, LocalKafkaCluster } from "./kafkaCluster";
 import { UTM_SOURCE_VSCODE } from "../constants";
+import { createKafkaClusterTooltip, LocalKafkaCluster } from "./kafkaCluster";
 describe("createKafkaClusterTooltip()", () => {
   it("should return the correct tooltip for a Confluent Cloud Kafka cluster", () => {
     const tooltipString = createKafkaClusterTooltip(TEST_CCLOUD_KAFKA_CLUSTER).value;
@@ -47,6 +47,13 @@ describe("Test CCloudKafkaCluster properties", () => {
     assert.strictEqual(
       `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_KAFKA_CLUSTER.ccloudApiKeysUrl,
+    );
+  });
+
+  it("searchableText should return the correct string for ccloud kafka cluster", () => {
+    assert.strictEqual(
+      `${TEST_CCLOUD_KAFKA_CLUSTER.name} ${TEST_CCLOUD_KAFKA_CLUSTER.id} ${TEST_CCLOUD_KAFKA_CLUSTER.provider}/${TEST_CCLOUD_KAFKA_CLUSTER.region}`,
+      TEST_CCLOUD_KAFKA_CLUSTER.searchableText(),
     );
   });
 });
