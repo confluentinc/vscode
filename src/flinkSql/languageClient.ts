@@ -119,7 +119,7 @@ export async function initializeLanguageClient(
           },
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
-              vscode.window.showErrorMessage(`Language server error: ${message}`); // FIXME do we want to show this to users?
+              logger.error(`Language server error: ${message}`);
               return {
                 action: ErrorAction.Continue,
                 message: `${message ?? error.message}`,
@@ -146,7 +146,7 @@ export async function initializeLanguageClient(
 
         await languageClient.start();
         logger.debug("FlinkSQL Language Server started");
-        languageClient.setTrace(Trace.Verbose);
+        languageClient.setTrace(Trace.Compact);
         resolve(languageClient);
       } catch (e) {
         logger.error(`Error starting FlinkSQL language server: ${e}`);
