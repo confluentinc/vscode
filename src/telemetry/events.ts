@@ -20,6 +20,7 @@ export enum UserEvent {
   ViewSearchAction = "View Search Action",
   SchemaAction = "Schema Action",
   FlinkStatementAction = "Flink Statement Action",
+  FlinkStatementViewStatistics = "Flink Statement View Statistics",
   CopilotInteraction = "Copilot Interaction",
 }
 
