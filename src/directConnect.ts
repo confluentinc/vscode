@@ -1,16 +1,26 @@
 import { randomUUID } from "crypto";
-import { Disposable, Uri, ViewColumn, window, WebviewPanel } from "vscode";
+import { platform } from "os";
+import {
+  Disposable,
+  Uri,
+  ViewColumn,
+  WebviewPanel,
+  WorkspaceConfiguration,
+  env,
+  window,
+  workspace,
+} from "vscode";
 import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
+import { DirectConnectionManager } from "./directConnectManager";
 import { getCredentialsType } from "./directConnections/credentials";
 import { SupportedAuthTypes } from "./directConnections/types";
-import { DirectConnectionManager } from "./directConnectManager";
 import { directConnectionsChanged } from "./emitters";
 import { ConnectionId } from "./models/resource";
-import { getResourceManager } from "./storage/resourceManager";
-import { CustomConnectionSpec } from "./storage/resourceManager";
+import { DEFAULT_KRB5_CONFIG_PATH, KRB5_CONFIG_PATH } from "./preferences/constants";
+import { CustomConnectionSpec, getResourceManager } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import { post, PostResponse, TestResponse } from "./webview/direct-connect-form";
+import { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
 
 type MessageSender = OverloadUnion<typeof post>;
@@ -207,6 +217,18 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       case "SaveFormAuthType":
         updateAuthType(body.inputName, body.inputValue);
         return null satisfies MessageResponse<"SaveFormAuthType">;
+      case "GetOSInfo":
+        return { platform: platform() } satisfies MessageResponse<"GetOSInfo">;
+      case "GetKrb5ConfigPath": {
+        const config: WorkspaceConfiguration = workspace.getConfiguration();
+        return config.get(
+          KRB5_CONFIG_PATH,
+          DEFAULT_KRB5_CONFIG_PATH,
+        ) satisfies MessageResponse<"GetKrb5ConfigPath">;
+      }
+      case "GetVsCodeUriScheme": {
+        return env.uriScheme satisfies MessageResponse<"GetVsCodeUriScheme">;
+      }
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);

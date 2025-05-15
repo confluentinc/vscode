@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.3.0-69",
+  "version": "1.3.0-70",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -666,6 +666,11 @@
         "icon": "Clear Settings",
         "title": "Reset CCloud Flink Metadata",
         "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.connections.setKrb5ConfigPath",
+        "title": "Set Kerberos krb5.conf Path",
+        "category": "Confluent: Connections"
       }
     ],
     "configuration": [
@@ -727,6 +732,11 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
+          },
+          "confluent.krb5ConfigPath": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Path to the `krb5.conf` file to use for Kerberos authentication in direct connections. This setting is used when connecting to Kafka clusters that require Kerberos authentication. (You can also use the [\"Set Kerberos krb5.conf Path\" command](command:confluent.connections.setKrb5ConfigPath).)"
           }
         }
       },

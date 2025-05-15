@@ -9,7 +9,7 @@ import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { SSL_PEM_PATHS } from "../preferences/constants";
+import { KRB5_CONFIG_PATH, SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import {
   CustomConnectionSpec,
@@ -304,6 +304,30 @@ export async function exportDirectConnection(item: DirectEnvironment) {
   }
 }
 
+export async function setKrb5ConfigPath() {
+  const uris: Uri[] | undefined = await window.showOpenDialog({
+    openLabel: "Select Kerberos config",
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      "Kerberos Config": ["conf"],
+      "All Files": ["*"],
+    },
+  });
+
+  if (uris && uris.length > 0) {
+    const selectedPath = uris[0].fsPath;
+    if (selectedPath.endsWith(".conf")) {
+      const config = workspace.getConfiguration();
+      await config.update(KRB5_CONFIG_PATH, selectedPath, true);
+      window.showInformationMessage(`Kerberos config path set to: ${selectedPath}`);
+    } else {
+      window.showErrorMessage("No file selected. Please select a krb5.conf file.");
+    }
+  }
+}
+
 export function registerConnectionCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.connections.ccloud.signIn", ccloudSignIn),
@@ -314,6 +338,7 @@ export function registerConnectionCommands(): Disposable[] {
     // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.export", exportDirectConnection),
+    registerCommandWithLogging("confluent.connections.setKrb5ConfigPath", setKrb5ConfigPath),
   ];
 }
 
