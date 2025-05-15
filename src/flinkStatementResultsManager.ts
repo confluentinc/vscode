@@ -108,6 +108,8 @@ export class FlinkStatementResultsManager {
   private _flinkStatementResultsSqlApi: StatementResultsSqlV1Api;
   private _flinkStatementsSqlApi: StatementsSqlV1Api;
 
+  private _fetchResultsLocked = false;
+
   constructor(
     private os: Scope,
     private statement: FlinkStatement,
@@ -176,117 +178,133 @@ export class FlinkStatementResultsManager {
   }
 
   async fetchResults(): Promise<void> {
-    if (
-      this._state() !== "running" ||
-      !this._moreResults() ||
-      !this.statement.areResultsViewable ||
-      this._getResultsAbortController.signal.aborted
-    ) {
-      // Self-destruct
-      clearInterval(this._pollingInterval);
-      this._pollingInterval = undefined;
+    if (this._fetchResultsLocked) {
+      // setInterval fires off the callbacks even if the previous one is still running
+      // (meaning we could still be awaiting a response from the GET results API)
+      // If we don't guard against only one instance of this function running at a time,
+      // we could end up with out of order application of changelogs.
+
+      // This callback being fired with another concurrently executing instance
+      // is expected and doesn't warrant a log.
       return;
     }
-
-    let reportable: { message: string } | null = null;
-    let shouldComplete = false;
-    this._fetchCount++;
-
+    this._fetchResultsLocked = true;
     try {
-      const currentResults = this._results();
-      const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
-
-      const response = await this.retryWithBackoff(async () => {
-        return await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
-          {
-            environment_id: this.statement.environmentId,
-            organization_id: this.statement.organizationId,
-            name: this.statement.name,
-            page_token: pageToken,
-          },
-          {
-            signal: this._getResultsAbortController.signal,
-          },
-        );
-      }, "fetch statement results");
-
-      const resultsData: SqlV1StatementResultResults = response.results ?? {};
-
-      this.os.batch(() => {
-        parseResults({
-          columns: this.statement.status?.traits?.schema?.columns ?? [],
-          isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
-          upsertColumns: this.statement.status?.traits?.upsert_columns,
-          limit: this.resultLimit,
-          map: currentResults,
-          rows: resultsData.data,
-        });
-        this._filteredResults(this.filterResultsBySearch());
-        // Check if we have more results to fetch
-        if (this.extractPageToken(response?.metadata?.next) === undefined) {
-          this._moreResults(false);
-          this._state("completed");
-        }
-        this._latestError(null);
-        this._latestResult(response);
-        this.notifyUI();
-      });
-    } catch (error) {
-      if (error instanceof FetchError && error?.cause?.name === "AbortError") {
-        logger.info("Statement results fetch was aborted");
+      if (
+        this._state() !== "running" ||
+        !this._moreResults() ||
+        !this.statement.areResultsViewable ||
+        this._getResultsAbortController.signal.aborted
+      ) {
+        // Self-destruct
+        clearInterval(this._pollingInterval);
+        this._pollingInterval = undefined;
         return;
       }
+      let reportable: { message: string } | null = null;
+      let shouldComplete = false;
+      this._fetchCount++;
 
-      if (isResponseError(error)) {
-        const payload = await error.response.json();
-        if (!payload?.aborted) {
-          const status = error.response.status;
-          shouldComplete = status >= 400;
-          switch (status) {
-            case 401: {
-              reportable = { message: "Authentication required." };
-              break;
-            }
-            case 403: {
-              reportable = { message: "Insufficient permissions to read statement results." };
-              break;
-            }
-            case 404: {
-              reportable = { message: "Statement not found." };
-              break;
-            }
-            case 429: {
-              reportable = { message: "Too many requests. Try again later." };
-              break;
-            }
-            default: {
-              reportable = { message: "Something went wrong." };
-              logError(error, "flink statement results", {
-                extra: { status: status.toString(), payload },
-              });
-              showErrorNotificationWithButtons("Error response while fetching statement results.");
-              break;
-            }
-          }
-          logger.error(
-            `An error occurred during statement results fetching. Status ${error.response.status}`,
+      try {
+        const currentResults = this._results();
+        const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
+
+        const response = await this.retryWithBackoff(async () => {
+          return await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
+            {
+              environment_id: this.statement.environmentId,
+              organization_id: this.statement.organizationId,
+              name: this.statement.name,
+              page_token: pageToken,
+            },
+            {
+              signal: this._getResultsAbortController.signal,
+            },
           );
+        }, "fetch statement results");
+
+        const resultsData: SqlV1StatementResultResults = response.results ?? {};
+
+        this.os.batch(() => {
+          parseResults({
+            columns: this.statement.status?.traits?.schema?.columns ?? [],
+            isAppendOnly: this.statement.status?.traits?.is_append_only ?? true,
+            upsertColumns: this.statement.status?.traits?.upsert_columns,
+            limit: this.resultLimit,
+            map: currentResults,
+            rows: resultsData.data,
+          });
+          this._filteredResults(this.filterResultsBySearch());
+          // Check if we have more results to fetch
+          if (this.extractPageToken(response?.metadata?.next) === undefined) {
+            this._moreResults(false);
+            this._state("completed");
+          }
+          this._latestError(null);
+          this._latestResult(response);
+          this.notifyUI();
+        });
+      } catch (error) {
+        if (error instanceof FetchError && error?.cause?.name === "AbortError") {
+          logger.info("Statement results fetch was aborted");
+          return;
         }
-      } else if (error instanceof Error) {
-        logger.error(error.message);
-        reportable = { message: "An internal error occurred." };
-        shouldComplete = true;
+
+        if (isResponseError(error)) {
+          const payload = await error.response.json();
+          if (!payload?.aborted) {
+            const status = error.response.status;
+            shouldComplete = status >= 400;
+            switch (status) {
+              case 401: {
+                reportable = { message: "Authentication required." };
+                break;
+              }
+              case 403: {
+                reportable = { message: "Insufficient permissions to read statement results." };
+                break;
+              }
+              case 404: {
+                reportable = { message: "Statement not found." };
+                break;
+              }
+              case 429: {
+                reportable = { message: "Too many requests. Try again later." };
+                break;
+              }
+              default: {
+                reportable = { message: "Something went wrong." };
+                logError(error, "flink statement results", {
+                  extra: { status: status.toString(), payload },
+                });
+                showErrorNotificationWithButtons(
+                  "Error response while fetching statement results.",
+                );
+                break;
+              }
+            }
+            logger.error(
+              `An error occurred during statement results fetching. Status ${error.response.status}`,
+            );
+          }
+        } else if (error instanceof Error) {
+          logger.error(error.message);
+          reportable = { message: "An internal error occurred." };
+          shouldComplete = true;
+        }
+      } finally {
+        this.os.batch(() => {
+          if (shouldComplete) {
+            this._state("completed");
+          }
+          if (reportable != null) {
+            this._latestError(reportable);
+          }
+          this.notifyUI();
+        });
       }
     } finally {
-      this.os.batch(() => {
-        if (shouldComplete) {
-          this._state("completed");
-        }
-        if (reportable != null) {
-          this._latestError(reportable);
-        }
-        this.notifyUI();
-      });
+      this._fetchResultsLocked = false;
     }
   }
 
