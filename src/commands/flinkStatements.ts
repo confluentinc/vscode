@@ -261,11 +261,22 @@ export async function submitFlinkStatementCommand(
       if (objFromResponse && typeof objFromResponse === "object" && "errors" in objFromResponse) {
         const responseErrors: { errors: [{ detail: string }] } = objFromResponse;
         logger.error(JSON.stringify(responseErrors, null, 2));
-
         errorMessages = responseErrors.errors.map((e: { detail: string }) => e.detail).join("\n");
       } else {
-        // will be the raw error string.
+        // will be the raw error string. Wacky we couldn't parse it. Flink backend change?
         errorMessages = objFromResponse;
+
+        // Log in Sentry and logger (we invite the user to open logs / file issue in
+        // showErrorNotificationWithButtons(), so good for them to see this in the logs.)
+        logError(err, `Unparseable 400 response submitting statement: ${errorMessages}`, {
+          extra: {
+            errorMessages,
+            statementLength: statement.length,
+            computePoolId: computePool.id,
+            currentDatabase,
+            statementName,
+          },
+        });
       }
       await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
     } else {
