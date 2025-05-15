@@ -31,6 +31,18 @@ describe("FlinkStatement", () => {
     assert.strictEqual(statement.id, "statement0@env0", "Expected id to be made of name@env");
   });
 
+  it("should construct the right CCloud URL", () => {
+    const statement = createFlinkStatement({
+      name: "statement0",
+      environmentId: "env0" as EnvironmentId,
+      computePoolId: "pool0",
+    });
+
+    const expectedUrl =
+      "https://confluent.cloud/environments/env0/flink/statements/statement0/activity?utm_source=vscode-ext";
+    assert.strictEqual(statement.ccloudUrl, expectedUrl, "Expected ccloudUrl to be correct");
+  });
+
   it("isTerminal returns true for terminal phases", () => {
     for (const phase of TERMINAL_PHASES) {
       const statement = createFlinkStatement({ phase });

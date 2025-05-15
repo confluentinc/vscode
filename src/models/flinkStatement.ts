@@ -130,7 +130,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   }
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.id}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.name}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
   get isTerminal(): boolean {
