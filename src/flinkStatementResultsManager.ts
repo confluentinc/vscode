@@ -238,6 +238,7 @@ export class FlinkStatementResultsManager {
       }
 
       if (isResponseError(error)) {
+        logger.info(JSON.stringify(error.response, null, 2));
         const payload = await error.response.json();
         if (!payload?.aborted) {
           const status = error.response.status;
