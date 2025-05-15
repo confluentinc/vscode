@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.3.0
+
 ### Added
 
 - Intellisense features for FlinkSQL language documents, provided by a connection to Confluent
