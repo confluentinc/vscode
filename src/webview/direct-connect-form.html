@@ -130,6 +130,18 @@
             </select>
           </div>
           <div class="content-wrapper">
+            <template data-if="this.showMacOSKerberosMessage()">
+              <div class="msg-banner error">
+                <span>
+                  On MacOS, you must set the <code>krb5.conf</code> file path in the extension
+                  settings under
+                  <a data-attr-href="this.krb5ConfigPathExtensionSettingUrl()"
+                    ><code>confluent.krb5ConfigPath</code></a
+                  >
+                  for Kerberos authentication to work.
+                </span>
+              </div>
+            </template>
             <auth-credentials
               data-prop-namespace="'kafka_cluster'"
               data-on-change="this.updateValue(event.detail)"
