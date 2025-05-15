@@ -1,7 +1,6 @@
 import { Disposable, WorkspaceConfiguration, commands, window, workspace } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ContextValues, getContextValue } from "../context/values";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -89,8 +88,7 @@ export class FlinkLanguageClientManager implements Disposable {
     this.disposables.push(
       workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration(ENABLE_FLINK)) {
-          const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
-          if (isFlinkEnabled) {
+          if (this.getIsFlinkEnabled()) {
             await this.maybeStartLanguageClient();
           } else {
             logger.debug("Flink is disabled in settings, stopping language client");
@@ -101,6 +99,11 @@ export class FlinkLanguageClientManager implements Disposable {
     );
   }
 
+  public getIsFlinkEnabled(): boolean {
+    const config: WorkspaceConfiguration = workspace.getConfiguration();
+    const isFlinkEnabled = config.get(ENABLE_FLINK, false);
+    return isFlinkEnabled;
+  }
   /** Get the global/workspace settings for Flink, if any */
   public getFlinkSqlSettings(): FlinkSqlSettings {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
@@ -114,8 +117,7 @@ export class FlinkLanguageClientManager implements Disposable {
 
   /** Verify that Flink is enabled + the compute pool id setting exists and is in an environment we know about */
   public async validateFlinkSettings(): Promise<boolean> {
-    const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
-    if (!isFlinkEnabled) {
+    if (!this.getIsFlinkEnabled()) {
       logger.debug("Flink is not enabled in settings, skipping configuration prompt");
       return false;
     }
@@ -247,8 +249,7 @@ export class FlinkLanguageClientManager implements Disposable {
       }
     }
     // Otherwise, we need to check if the prerequisites are met
-    const isFlinkEnabled = getContextValue(ContextValues.flinkEnabled);
-    if (!isFlinkEnabled) {
+    if (!this.getIsFlinkEnabled()) {
       logger.debug("Flink is not enabled, not initializing language client");
       return;
     }
