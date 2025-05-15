@@ -6,6 +6,7 @@ Confluent technology. This extension provides a robust, delightful experience fo
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
 ![](resources/readme-screenshot-light.png)
+![](resources/readme-screenshot-flinklight.png)
 
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
 Confluent, and read the docs at the [Confluent documentation](https://docs.confluent.io/) site.
