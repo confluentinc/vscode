@@ -70,6 +70,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetEnvironmentsParameters;
 
+    stream.progress("Retrieving available environments...");
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -78,6 +79,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       },
       token,
     );
+    stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
