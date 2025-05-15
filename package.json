@@ -1773,7 +1773,7 @@
           {
             "id": "copilot",
             "title": "Copiloting Your Data Streaming",
-            "description": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications.",
+            "description": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications. \n[Enable Copilot Chat Participant](command:confluent.support.openSettings)",
             "media": {
               "image": "resources/walkthrough/copilot.png",
               "altText": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications."
