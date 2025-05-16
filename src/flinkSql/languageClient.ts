@@ -60,16 +60,6 @@ export async function initializeLanguageClient(
             didOpen: (document, next) => {
               return next(document);
             },
-            didChange: (event, next) => {
-              // Clear diagnostics when document changes, so user sees only latest issues
-              const diagnostics = vscode.languages.getDiagnostics(event.document.uri);
-              if (diagnostics.length > 0) {
-                const diagnosticCollection =
-                  vscode.languages.createDiagnosticCollection("flinksql");
-                diagnosticCollection.delete(event.document.uri);
-              }
-              return next(event);
-            },
             provideCompletionItem: async (document, position, context, token, next) => {
               const result: any = await next(document, position, context, token);
               if (result) {
@@ -117,13 +107,17 @@ export async function initializeLanguageClient(
               return next(type, params, token);
             },
           },
+          initializationFailedHandler: (error) => {
+            logger.error(`Language server initialization failed: ${error}`);
+            return true; // Don't send the user an error, we are handling it
+          },
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
               logger.error(`Language server error: ${message}`);
               return {
                 action: ErrorAction.Continue,
                 message: `${message ?? error.message}`,
-                handled: true,
+                handled: true, // Don't send the user an error, we are handling it
               };
             },
             closed: () => {
@@ -131,7 +125,7 @@ export async function initializeLanguageClient(
               onWebSocketDisconnect();
               return {
                 action: CloseAction.Restart,
-                handled: true,
+                handled: true, // Don't send the user an error, we are handling it
               };
             },
           },
