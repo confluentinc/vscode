@@ -352,7 +352,7 @@ export class FlinkStatementResultsManager {
         lastErr = err as Error;
         if (isResponseErrorWithStatus(err, 409)) {
           if (attempt < maxRetries - 1) {
-            logger.info(
+            logger.debug(
               `Retrying ${operationName} after 409 conflict. Attempt ${attempt + 1}/${maxRetries}. Waiting ${backoffMs}ms`,
             );
             await new Promise((resolve) => setTimeout(resolve, backoffMs));
