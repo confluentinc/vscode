@@ -219,33 +219,6 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     });
   });
 
-  it("should handle StopStatement message with retries", async () => {
-    // Mock the updateSqlv1Statement to fail with 409 twice then succeed
-    ctx.flinkSqlStatementsApi.updateSqlv1Statement
-      .onFirstCall()
-      .rejects(createResponseError(409, "Conflict", "{}"));
-    ctx.flinkSqlStatementsApi.updateSqlv1Statement
-      .onSecondCall()
-      .rejects(createResponseError(409, "Conflict", "{}"));
-    ctx.flinkSqlStatementsApi.updateSqlv1Statement.onThirdCall().resolves();
-
-    await vm.stopStatement();
-
-    await eventually(() => {
-      assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 3);
-    });
-  });
-
-  it("should handle StopStatement message with max retries exceeded", async () => {
-    // Mock the updateSqlv1Statement to always fail with 409
-    const responseError = createResponseError(409, "Conflict", "{}");
-    ctx.flinkSqlStatementsApi.updateSqlv1Statement.rejects(responseError);
-
-    // Call stop statement and expect it to throw after max retries
-    await vm.stopStatement();
-    assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 5);
-  });
-
   it("should stop polling when statement is not results viewable", async () => {
     assert.ok(ctx.manager["_pollingInterval"] as NodeJS.Timeout);
 
@@ -276,16 +249,57 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   describe("with fetchResults not running in a setInterval", () => {
+    let clock: sinon.SinonFakeTimers;
+
     beforeEach(() => {
       clearInterval(ctx.manager["_pollingInterval"]);
       ctx.manager["_pollingInterval"] = undefined;
-
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
+
+      // TODO: Eventually, the idea would be to move this fake timer up to
+      //       the top-level describe's beforeEach.
+      //       See https://github.com/confluentinc/vscode/issues/1807
+      clock = sinon.useFakeTimers({ shouldClearNativeTimers: true });
+    });
+
+    afterEach(() => {
+      clock.restore();
+    });
+
+    it("should handle StopStatement message with retries", async () => {
+      // Mock the updateSqlv1Statement to fail with 409 twice then succeed
+      ctx.flinkSqlStatementsApi.updateSqlv1Statement
+        .onFirstCall()
+        .rejects(createResponseError(409, "Conflict", "{}"));
+      ctx.flinkSqlStatementsApi.updateSqlv1Statement
+        .onSecondCall()
+        .rejects(createResponseError(409, "Conflict", "{}"));
+      ctx.flinkSqlStatementsApi.updateSqlv1Statement.onThirdCall().resolves();
+
+      const stopPromise = vm.stopStatement();
+
+      await clock.tickAsync(3000);
+
+      await stopPromise;
+
+      assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 3);
+    });
+
+    it("should handle StopStatement message with max retries exceeded", async () => {
+      // Mock the updateSqlv1Statement to always fail with 409
+      const responseError = createResponseError(409, "Conflict", "{}");
+      ctx.flinkSqlStatementsApi.updateSqlv1Statement.rejects(responseError);
+
+      // Call stop statement and expect it to throw after max retries
+      const stopPromise = vm.stopStatement();
+
+      await clock.tickAsync(61 * 500);
+
+      await stopPromise;
+      assert.equal(ctx.flinkSqlStatementsApi.updateSqlv1Statement.callCount, 60);
     });
 
     it("should abort in-flight get results when stopping statement", async () => {
-      // Clear the polling interval so we can control when fetchResults is called
-
       // Create a promise that we can reject manually to simulate the aborted request
       let rejectRequest: (reason: Error) => void;
       const requestPromise = new Promise<GetSqlv1StatementResult200Response>((_resolve, reject) => {
@@ -350,12 +364,17 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       });
 
       // Trigger a fetch
-      await ctx.manager.fetchResults();
+      const fetchPromise = ctx.manager.fetchResults();
+
+      // Advance time to trigger retries
+      await clock.tickAsync(500);
+      await clock.tickAsync(500);
+      await clock.tickAsync(500);
+
+      await fetchPromise;
 
       // Verify the request was made 3 times
-      await eventually(() => {
-        assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 3);
-      });
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 3);
     });
 
     it("should handle fetch results with max retries exceeded", async () => {
@@ -364,13 +383,16 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
 
       // Trigger a fetch
-      await ctx.manager.fetchResults();
+      const fetchPromise = ctx.manager.fetchResults();
 
-      await eventually(() => {
-        assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 5);
-        // Verify error state is set
-        assert.ok(ctx.manager["_latestError"]());
-      });
+      // Advance time to trigger all retries
+      await clock.tickAsync(61 * 500);
+
+      await fetchPromise;
+
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 60);
+      // Verify error state is set
+      assert.ok(ctx.manager["_latestError"]());
     });
 
     it("should not retry on non-409 errors during fetch", async () => {
@@ -379,13 +401,16 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.rejects(responseError);
 
       // Trigger a fetch
-      await ctx.manager.fetchResults();
+      const fetchPromise = ctx.manager.fetchResults();
 
-      await eventually(() => {
-        assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
-        // Verify error state is set
-        assert.ok(ctx.manager["_latestError"]());
-      });
+      // Advance time to ensure no retries happen
+      await clock.tickAsync(1000);
+
+      await fetchPromise;
+
+      assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
+      // Verify error state is set
+      assert.ok(ctx.manager["_latestError"]());
     });
 
     it("should only allow one instance of fetchResults to run at a time", async () => {
@@ -405,11 +430,10 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         ctx.manager.fetchResults(),
         ctx.manager.fetchResults(),
         ctx.manager.fetchResults(),
-        ctx.manager.fetchResults(),
       ];
 
-      // Wait a bit to ensure all calls have started
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Advance time to ensure all calls have started
+      await clock.tickAsync(50);
 
       // Verify only one API call was made
       assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
