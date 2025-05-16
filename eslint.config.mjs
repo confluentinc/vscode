@@ -33,6 +33,7 @@ export default [
       "no-undef": "off",
       "no-unused-vars": "off",
       "no-redeclare": "off",
+      "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-unused-vars": "warn",
       // Some untyped things may require extra effort to be fixed
       "@typescript-eslint/no-explicit-any": "off",
@@ -47,6 +48,10 @@ export default [
         ...globals.builtin,
         ...globals.browser,
         ...globals.node,
+      },
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
