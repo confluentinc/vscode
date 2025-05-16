@@ -58,6 +58,7 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
@@ -244,7 +245,7 @@ async function _activateExtension(
     uriHandler,
     WebsocketManager.getInstance(),
     FlinkStatementManager.getInstance(),
-    // initializeFlinkLanguageClientManager(), // FIXME: temporarily disabled while we troubleshoot error handling from client
+    initializeFlinkLanguageClientManager(), // FIXME: temporarily disabled while we troubleshoot error handling from client
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
