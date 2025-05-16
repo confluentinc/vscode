@@ -209,7 +209,7 @@ export class FlinkStatementResultsManager {
         const currentResults = this._results();
         const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
 
-        const response = await this.retryWithBackoff(async () => {
+        const response = await this.retry(async () => {
           return await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
             {
               environment_id: this.statement.environmentId,
@@ -334,12 +334,15 @@ export class FlinkStatementResultsManager {
     );
   }
 
-  private async retryWithBackoff<T>(
+  /**
+   * Retries {@link maxRetries} times with a constant backoff delay of
+   * {@link backoffMs}. Nothing fancy.
+   */
+  private async retry<T>(
     operation: () => Promise<T>,
     operationName: string,
-    maxRetries: number = 5,
-    initialBackoffMs: number = 100,
-    maxBackoffMs: number = 10_000,
+    maxRetries: number = 60,
+    backoffMs: number = 500,
   ): Promise<T> {
     let lastErr: Error | undefined;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -349,7 +352,6 @@ export class FlinkStatementResultsManager {
         lastErr = err as Error;
         if (isResponseErrorWithStatus(err, 409)) {
           if (attempt < maxRetries - 1) {
-            const backoffMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
             logger.debug(
               `Retrying ${operationName} after 409 conflict. Attempt ${attempt + 1}/${maxRetries}. Waiting ${backoffMs}ms`,
             );
@@ -369,7 +371,7 @@ export class FlinkStatementResultsManager {
     this._getResultsAbortController.abort();
 
     try {
-      await this.retryWithBackoff(async () => {
+      await this.retry(async () => {
         await this.refreshStatement();
         await this._stopStatement();
       }, "stop statement");
