@@ -1862,7 +1862,7 @@
     "@twbs/fantasticon": "3.0.0",
     "@types/archiver": "^6.0.3",
     "@types/d3": "^7.4.3",
-    "@types/eslint__js": "^8.42.3",
+    "@types/eslint__js": "^9.0.0",
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.67",
