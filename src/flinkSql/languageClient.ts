@@ -119,13 +119,17 @@ export async function initializeLanguageClient(
               return next(type, params, token);
             },
           },
+          initializationFailedHandler: (error) => {
+            logger.error(`Language server initialization failed: ${error}`);
+            return true; // Don't send the user an error, we are handling it
+          },
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
               logger.error(`Language server error: ${message}`);
               return {
                 action: ErrorAction.Continue,
                 message: `${message ?? error.message}`,
-                handled: true,
+                handled: true, // Don't send the user an error, we are handling it
               };
             },
             closed: () => {
@@ -133,7 +137,7 @@ export async function initializeLanguageClient(
               onWebSocketDisconnect();
               return {
                 action: CloseAction.Restart,
-                handled: true,
+                handled: true, // Don't send the user an error, we are handling it
               };
             },
           },
