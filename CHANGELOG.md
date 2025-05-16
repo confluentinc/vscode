@@ -32,7 +32,7 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Fixed an issue preventing users from connecting directly to a Schema Registry instance with
-  self-signed certificates
+  self-signed certificates without hostname verification
 
 \*_These updates require the `confluent.preview.enableFlink` setting to be enabled._
 
