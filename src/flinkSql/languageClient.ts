@@ -62,16 +62,6 @@ export async function initializeLanguageClient(
             didOpen: (document, next) => {
               return next(document);
             },
-            didChange: (event, next) => {
-              // Clear diagnostics when document changes, so user sees only latest issues
-              const diagnostics = vscode.languages.getDiagnostics(event.document.uri);
-              if (diagnostics.length > 0) {
-                const diagnosticCollection =
-                  vscode.languages.createDiagnosticCollection("flinksql");
-                diagnosticCollection.delete(event.document.uri);
-              }
-              return next(event);
-            },
             provideCompletionItem: async (document, position, context, token, next) => {
               const result: any = await next(document, position, context, token);
               if (result) {
