@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import { Disposable, QuickInputButton, QuickPick, QuickPickOptions, window } from "vscode";
 import { QuickPickItemWithValue } from "../types";
 
 /**
@@ -10,9 +10,9 @@ import { QuickPickItemWithValue } from "../types";
  *   title: "Select an item",
  *   placeHolder: "Search items...",
  *   canSelectMany: true,
- *   buttons: [vscode.QuickInputButtons.Back],
+ *   buttons: [QuickInputButtons.Back],
  *   onButtonClicked: async (button, quickPick) => {
- *     if (button === vscode.QuickInputButtons.Back) {
+ *     if (button === QuickInputButtons.Back) {
  *       quickPick.hide();
  *     }
  *   },
@@ -23,7 +23,7 @@ import { QuickPickItemWithValue } from "../types";
  * ```
  */
 export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
-  extends vscode.QuickPickOptions {
+  extends QuickPickOptions {
   /**
    * Callback triggered when a button on a specific QuickPick item is clicked.
    * Useful for implementing actions specific to individual items.
@@ -39,9 +39,9 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
    * ```
    */
   onItemButtonClicked?: (event: {
-    button: vscode.QuickInputButton;
+    button: QuickInputButton;
     item: T;
-    quickPick: vscode.QuickPick<T>;
+    quickPick: QuickPick<T>;
   }) => Promise<void> | void;
 
   /**
@@ -55,7 +55,7 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
    * }
    * ```
    */
-  onSelectionChange?: (items: readonly T[], quickPick: vscode.QuickPick<T>) => void;
+  onSelectionChange?: (items: readonly T[], quickPick: QuickPick<T>) => void;
 
   /**
    * Callback triggered when the active (highlighted) item changes.
@@ -70,7 +70,7 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
    * }
    * ```
    */
-  onActiveItemChange?: (item: T | undefined, quickPick: vscode.QuickPick<T>) => void;
+  onActiveItemChange?: (item: T | undefined, quickPick: QuickPick<T>) => void;
 
   /**
    * Navigation buttons displayed at the top of the QuickPick.
@@ -79,12 +79,12 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
    * @example
    * ```typescript
    * buttons: [
-   *   vscode.QuickInputButtons.Back,
-   *   { iconPath: new vscode.ThemeIcon('refresh') }
+   *   QuickInputButtons.Back,
+   *   { iconPath: new ThemeIcon('refresh') }
    * ]
    * ```
    */
-  buttons?: readonly vscode.QuickInputButton[];
+  buttons?: readonly QuickInputButton[];
 
   /**
    * Callback triggered when a navigation button is clicked.
@@ -101,10 +101,7 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
    * }
    * ```
    */
-  onButtonClicked?: (
-    button: vscode.QuickInputButton,
-    quickPick: vscode.QuickPick<T>,
-  ) => Promise<void> | void;
+  onButtonClicked?: (button: QuickInputButton, quickPick: QuickPick<T>) => Promise<void> | void;
 
   /**
    * Enables multi-select mode in the QuickPick.
@@ -144,7 +141,7 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
    * }
    * ```
    */
-  onDidAccept?: (quickPick: vscode.QuickPick<T>) => Promise<void> | void;
+  onDidAccept?: (quickPick: QuickPick<T>) => Promise<void> | void;
 }
 
 /**
@@ -158,9 +155,8 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
 export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
-): Promise<{ quickPick: vscode.QuickPick<T>; selectedItems: T[] }> {
-  const quickPick = vscode.window.createQuickPick<T>();
-  let selectedItems: T[] = [];
+): Promise<{ quickPick: QuickPick<T>; selectedItems: T[] }> {
+  const quickPick: QuickPick<T> = window.createQuickPick<T>();
 
   // Set standard options
   if (options) {
@@ -176,6 +172,11 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   // Set items (handle promise if needed)
   if (!(items instanceof Promise)) {
     quickPick.items = items;
+
+    // Set default selected items if provided and items are already available
+    if (options?.selectedItems && options.selectedItems.length > 0) {
+      quickPick.selectedItems = options.selectedItems;
+    }
   } else {
     // Handle promise asynchronously
     (async () => {
@@ -190,62 +191,64 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
     })();
   }
 
-  // Set default selected items if provided and items are already available
-  if (!(items instanceof Promise) && options?.selectedItems && options.selectedItems.length > 0) {
-    quickPick.selectedItems = options.selectedItems;
-  }
+  const disposables: Disposable[] = [];
 
   // Set up event handlers
   if (options?.onSelectionChange) {
-    quickPick.onDidChangeSelection((items: readonly T[]) => {
-      options.onSelectionChange?.(items, quickPick);
-    });
+    const onSelectionChangeSub: Disposable = quickPick.onDidChangeSelection(
+      (items: readonly T[]) => {
+        options.onSelectionChange?.(items, quickPick);
+      },
+    );
+    disposables.push(onSelectionChangeSub);
   }
 
   if (options?.onActiveItemChange) {
-    quickPick.onDidChangeActive((items: readonly T[]) => {
+    const onActiveItemChangeSub: Disposable = quickPick.onDidChangeActive((items: readonly T[]) => {
       options.onActiveItemChange?.(items[0], quickPick);
     });
+    disposables.push(onActiveItemChangeSub);
   }
 
   if (options?.onItemButtonClicked) {
-    quickPick.onDidTriggerItemButton((event) => {
+    const onItemButtonClickedSub: Disposable = quickPick.onDidTriggerItemButton((event) => {
       options.onItemButtonClicked?.({
         button: event.button,
         item: event.item as T,
         quickPick,
       });
     });
+    disposables.push(onItemButtonClickedSub);
   }
 
   if (options?.onButtonClicked) {
-    quickPick.onDidTriggerButton((button) => {
+    const onButtonClickedSub: Disposable = quickPick.onDidTriggerButton((button) => {
       options.onButtonClicked?.(button, quickPick);
     });
+    disposables.push(onButtonClickedSub);
   }
 
-  if (options?.onDidAccept) {
-    quickPick.onDidAccept(() => {
-      options.onDidAccept?.(quickPick);
-    });
-  } else {
-    quickPick.onDidAccept(() => {
-      selectedItems = [...quickPick.selectedItems];
-      quickPick.hide();
-      return;
-    });
-  }
+  // the only time we actually set `selectedItems` is when the user accepts the quickpick, where we
+  // then copy over any items marked for selection. we can't just return quickpick.selectedItems
+  // because other events may have caused the quickpick to be hidden and we may not want to return
+  // the selected items at that point.
+  const selectedItems: T[] = [];
+  const onDidAcceptSub: Disposable = quickPick.onDidAccept(() => {
+    if (options?.onDidAccept) {
+      // handle any additional behavior before hiding, if a custom onDidAccept is provided
+      options.onDidAccept(quickPick);
+    }
+    selectedItems.push(...quickPick.selectedItems);
+    quickPick.hide();
+  });
+  disposables.push(onDidAcceptSub);
 
   // Show the QuickPick and return a promise that resolves when it's hidden
   quickPick.show();
   return new Promise((resolve) => {
-    quickPick.onDidHide(() => {
-      // If we have pre-selected items and haven't captured any selections yet,
-      // use the pre-selected items
-      if (selectedItems.length === 0 && options?.selectedItems) {
-        selectedItems = [...options.selectedItems];
-      }
-      // disposables.forEach((d) => d.dispose());
+    const onDidHideSub: Disposable = quickPick.onDidHide(() => {
+      onDidHideSub.dispose();
+      disposables.forEach((d) => d.dispose());
       resolve({ quickPick, selectedItems });
     });
   });
