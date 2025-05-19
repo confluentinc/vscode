@@ -120,7 +120,10 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetDockerContainersParameters;
 
-    stream.progress("Retrieving available containers...");
+    stream.progress(
+      `Retrieving available Docker containers with parameters: ${JSON.stringify(parameters)}...`,
+    );
+
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {

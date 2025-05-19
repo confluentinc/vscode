@@ -97,7 +97,10 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
     const parameters = toolCall.input as ICreateProjectParameters;
 
     // handle the core tool invocation
-    stream.progress("Making request to create project...");
+    stream.progress(
+      `Making request to create project with templateId: ${parameters.templateId} and options: ${JSON.stringify(parameters.templateOptions)}...`,
+    );
+
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -110,10 +113,8 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
-    // ...existing code...
-
     stream.progress(
-      `Created project: ${result.content
+      `Created project with template name: ${parameters.templateId}. Result: ${result.content
         .map((part) => (part instanceof LanguageModelTextPart ? part.value : ""))
         .join(" ")}.`,
     );

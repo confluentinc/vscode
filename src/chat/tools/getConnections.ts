@@ -123,7 +123,9 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetConnectionsParameters;
-    stream.progress("Retrieving available connections...");
+    stream.progress(
+      `Retrieving available connections for connectionType: ${parameters.connectionType}...`,
+    );
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -132,7 +134,9 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       },
       token,
     );
-    stream.progress(`Found ${result.content.length} connections.`);
+    stream.progress(
+      `Found ${result.content.length} connections for connectionType: ${parameters.connectionType}.`,
+    );
     if (!result.content.length) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);

@@ -64,7 +64,10 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IListTemplatesParameters;
-    stream.progress("Retrieving available project templates...");
+    stream.progress(
+      `Retrieving available project templates with parameters: ${JSON.stringify(parameters)}...`,
+    );
+
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {

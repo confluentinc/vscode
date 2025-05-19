@@ -72,7 +72,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetTemplateOptions;
 
-    stream.progress("Retrieving available template options...");
+    stream.progress(`Retrieving template options for templateId: ${parameters.templateId}...`);
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -81,7 +81,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       },
       token,
     );
-    stream.progress(`Found ${this.resultCount} template options.`);
+    stream.progress(`Found ${this.resultCount} options for templateId: ${parameters.templateId}.`);
     if (!this.resultCount) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
