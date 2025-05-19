@@ -196,22 +196,18 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   }
 
   const disposables: Disposable[] = [];
-  
+
   // Set up event handlers
   if (options?.onSelectionChange) {
-    disposables.push(
-      quickPick.onDidChangeSelection((items: readonly T[]) => {
-        options.onSelectionChange?.(items, quickPick);
-      })
-    );
+    quickPick.onDidChangeSelection((items: readonly T[]) => {
+      options.onSelectionChange?.(items, quickPick);
+    });
   }
 
   if (options?.onActiveItemChange) {
-    disposables.push(
-      quickPick.onDidChangeActive((items: readonly T[]) => {
-        options.onActiveItemChange?.(items[0], quickPick);
-      });
-    )
+    quickPick.onDidChangeActive((items: readonly T[]) => {
+      options.onActiveItemChange?.(items[0], quickPick);
+    });
   }
 
   if (options?.onItemButtonClicked) {
@@ -251,7 +247,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
       if (selectedItems.length === 0 && options?.selectedItems) {
         selectedItems = [...options.selectedItems];
       }
-      disposables.forEach(d => d.dispose());
+      disposables.forEach((d) => d.dispose());
       resolve({ quickPick, selectedItems });
     });
   });
