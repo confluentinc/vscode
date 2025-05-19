@@ -82,7 +82,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     );
     stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
-      // cancellation / no results
+      // cancellation
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 

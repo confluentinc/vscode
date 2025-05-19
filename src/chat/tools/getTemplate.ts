@@ -51,9 +51,11 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       ]);
     }
 
-    this.resultCount = Array.isArray(matchingTemplate.spec?.options)
-      ? matchingTemplate.spec.options.length
-      : 0;
+    const templateOptions = matchingTemplate.spec?.options;
+
+    if (templateOptions !== undefined) {
+      this.resultCount = Object.keys(templateOptions).length;
+    }
 
     const templateInfo = new LanguageModelTextPart(summarizeTemplateOptions(matchingTemplate));
 
