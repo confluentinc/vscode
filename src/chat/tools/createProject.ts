@@ -22,7 +22,6 @@ export interface ICreateProjectParameters {
 
 export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParameters> {
   readonly name = "create_project";
-  readonly progressMessage = "Setting up project...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<ICreateProjectParameters>,
@@ -110,6 +109,7 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
+
     stream.progress(`Created project: ${result.content}.`);
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];

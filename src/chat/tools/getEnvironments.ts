@@ -24,7 +24,6 @@ export interface IGetEnvironmentsParameters {
 
 export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsParameters> {
   readonly name = "get_environments";
-  readonly progressMessage = "Looking up environments...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetEnvironmentsParameters>,

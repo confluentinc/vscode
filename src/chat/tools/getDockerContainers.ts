@@ -28,7 +28,6 @@ export interface IGetDockerContainersParameters {
 
 export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerContainersParameters> {
   readonly name = "get_dockerContainers";
-  readonly progressMessage = "Checking available Docker containers...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetDockerContainersParameters>,

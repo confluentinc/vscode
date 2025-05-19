@@ -21,7 +21,6 @@ export interface IListTemplatesParameters {
 
 export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParameters> {
   readonly name = "list_projectTemplates";
-  readonly progressMessage = "Checking available project templates...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTemplatesParameters>,

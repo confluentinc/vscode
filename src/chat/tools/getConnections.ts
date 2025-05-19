@@ -32,7 +32,6 @@ export interface IGetConnectionsParameters {
 
 export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsParameters> {
   readonly name = "get_connections";
-  readonly progressMessage = "Checking available connections...";
 
   foundConnectionTypes: ConnectionType[] = [];
   missingConnectionTypes: ConnectionType[] = [];

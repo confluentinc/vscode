@@ -21,7 +21,6 @@ export interface IGetTemplateOptions {
 
 export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOptions> {
   readonly name = "get_templateOptions";
-  readonly progressMessage = "Looking up project template options...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetTemplateOptions>,
