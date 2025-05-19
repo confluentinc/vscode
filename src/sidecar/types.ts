@@ -15,22 +15,6 @@ export interface SidecarLogFormat {
   processId: number;
 }
 
-/** Sidecar is not currently running (better start a new one!) */
-export class NoSidecarRunningError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/** Sidecar could not start up successfully, annotated with determined reason. */
-export class SidecarFatalError extends Error {
-  public reason: SidecarStartupFailureReason;
-  constructor(reason: SidecarStartupFailureReason, message: string) {
-    super(message);
-    this.reason = reason;
-  }
-}
-
 /** Annotates a SidecarFatalError with our guess as to the reason */
 export enum SidecarStartupFailureReason {
   /** Some other process camped out on {@see SIDECAR_PORT} */

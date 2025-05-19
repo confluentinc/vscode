@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { OUTPUT_CHANNEL } from "../logging";
+import { SIDECAR_OUTPUT_CHANNEL } from "../sidecar/logging";
 
 async function showOutputChannelCommand() {
   // make sure the Output panel is visible first
