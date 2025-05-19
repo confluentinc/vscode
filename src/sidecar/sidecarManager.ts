@@ -7,27 +7,29 @@ import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sid
 import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
-import { Logger, OUTPUT_CHANNEL } from "../logging";
+import { Logger } from "../logging";
 import { getStorageManager } from "../storage";
-import {
-  SIDECAR_BASE_URL,
-  SIDECAR_LOGFILE_NAME,
-  SIDECAR_PORT,
-  SIDECAR_PROCESS_ID_HEADER,
-} from "./constants";
+import { SIDECAR_BASE_URL, SIDECAR_PORT, SIDECAR_PROCESS_ID_HEADER } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
-import { join, normalize } from "path";
+import { normalize } from "path";
 import { Tail } from "tail";
-import { EXTENSION_VERSION, SIDECAR_OUTPUT_CHANNEL } from "../constants";
+import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { SecretStorageKeys } from "../storage/constants";
-import { WriteableTmpDir } from "../utils/file";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
+import {
+  NoSidecarExecutableError,
+  NoSidecarRunningError,
+  SidecarFatalError,
+  WrongAuthSecretError,
+} from "./errors";
+import { getSidecarLogfilePath, startTailingSidecarLogs } from "./logging";
+import { SidecarLogFormat } from "./types";
 import { pause } from "./utils";
 
 /** Header name for the workspace's PID in the request headers. */
@@ -46,9 +48,12 @@ export const WAIT_FOR_SIDECAR_DEATH_MS = 4_000; // 4 seconds.
 const MAX_ATTEMPTS = 10;
 
 const logger = new Logger("sidecarManager");
-// Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
-// which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
-// we won't be in position to restart / rehandshake with the sidecar if needed.
+
+/**
+ * Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
+ * which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
+ * we won't be in position to restart / rehandshake with the sidecar if needed.
+ */
 export class SidecarManager {
   // Counters for logging purposes.
   private getHandleCallNumSource: number = 0;
@@ -60,7 +65,7 @@ export class SidecarManager {
   private myPid: string = process.pid.toString();
 
   // tail -F actor for the sidecar log file.
-  private logTailer: Tail | null = null;
+  private logTailer: Tail | undefined = undefined;
 
   private sidecarContacted: boolean = false;
   private websocketManager: WebsocketManager | null = null;
@@ -106,7 +111,7 @@ export class SidecarManager {
     let accessToken: string | undefined = await this.getAuthTokenFromSecretStore();
 
     if (this.logTailer == null) {
-      this.startTailingSidecarLogs();
+      this.logTailer = startTailingSidecarLogs();
     }
 
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
@@ -552,45 +557,10 @@ export class SidecarManager {
   dispose() {
     if (this.logTailer) {
       this.logTailer.unwatch();
-      this.logTailer = null;
+      this.logTailer = undefined;
     }
 
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
-  }
-}
-
-/** Sidecar is not currently running (better start a new one!) */
-class NoSidecarRunningError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/** Sidecar could not start up successfully */
-class SidecarFatalError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/**
- *  If the auth token we have on record for the sidecar is rejected, will need to
- * restart it. Fortunately it tells us its PID in the response headers, so we know
- * what to kill.
- */
-class WrongAuthSecretError extends Error {
-  public sidecar_process_id: number;
-
-  constructor(message: string, sidecar_process_id: number) {
-    super(message);
-    this.sidecar_process_id = sidecar_process_id;
-  }
-}
-
-/** Could not find the sidecar executable. */
-class NoSidecarExecutableError extends Error {
-  constructor(message: string) {
-    super(message);
   }
 }
 
@@ -780,11 +750,4 @@ function confirmSidecarProcessIsRunning(
     });
   }
   return isRunning;
-}
-
-/**
- * Construct the full pathname to the sidecar log file.
- */
-export function getSidecarLogfilePath(): string {
-  return join(WriteableTmpDir.getInstance().get(), SIDECAR_LOGFILE_NAME);
 }
