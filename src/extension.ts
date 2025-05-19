@@ -31,12 +31,7 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import {
-  AUTH_PROVIDER_ID,
-  AUTH_PROVIDER_LABEL,
-  IconNames,
-  SIDECAR_OUTPUT_CHANNEL,
-} from "./constants";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -70,6 +65,7 @@ import { registerProjectGenerationCommands, setProjectScaffoldListener } from ".
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
+import { SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { getStorageManager, StorageManager } from "./storage";

@@ -7,7 +7,7 @@ import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { CURRENT_LOGFILE_NAME, getLogFileDir, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
 import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
-import { getSidecarLogfilePath } from "../sidecar/sidecarManager";
+import { getSidecarLogfilePath } from "../sidecar/logging";
 import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
 
 const logger = new Logger("commands.support");
