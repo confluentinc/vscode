@@ -7,27 +7,29 @@ import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sid
 import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
-import { Logger, OUTPUT_CHANNEL } from "../logging";
+import { Logger } from "../logging";
 import { getStorageManager } from "../storage";
-import {
-  SIDECAR_BASE_URL,
-  SIDECAR_LOGFILE_NAME,
-  SIDECAR_PORT,
-  SIDECAR_PROCESS_ID_HEADER,
-} from "./constants";
+import { SIDECAR_BASE_URL, SIDECAR_PORT, SIDECAR_PROCESS_ID_HEADER } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
-import { join, normalize } from "path";
+import { normalize } from "path";
 import { Tail } from "tail";
-import { EXTENSION_VERSION, SIDECAR_OUTPUT_CHANNEL } from "../constants";
+import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { SecretStorageKeys } from "../storage/constants";
-import { WriteableTmpDir } from "../utils/file";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
+import {
+  NoSidecarExecutableError,
+  NoSidecarRunningError,
+  SidecarFatalError,
+  WrongAuthSecretError,
+} from "./errors";
+import { getSidecarLogfilePath, startTailingSidecarLogs } from "./logging";
+import { SidecarLogFormat } from "./types";
 import { pause } from "./utils";
 
 /** Header name for the workspace's PID in the request headers. */
@@ -46,9 +48,12 @@ export const WAIT_FOR_SIDECAR_DEATH_MS = 4_000; // 4 seconds.
 const MAX_ATTEMPTS = 10;
 
 const logger = new Logger("sidecarManager");
-// Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
-// which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
-// we won't be in position to restart / rehandshake with the sidecar if needed.
+
+/**
+ * Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
+ * which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
+ * we won't be in position to restart / rehandshake with the sidecar if needed.
+ */
 export class SidecarManager {
   // Counters for logging purposes.
   private getHandleCallNumSource: number = 0;
@@ -60,7 +65,7 @@ export class SidecarManager {
   private myPid: string = process.pid.toString();
 
   // tail -F actor for the sidecar log file.
-  private logTailer: Tail | null = null;
+  private logTailer: Tail | undefined = undefined;
 
   private sidecarContacted: boolean = false;
   private websocketManager: WebsocketManager | null = null;
@@ -106,7 +111,7 @@ export class SidecarManager {
     let accessToken: string | undefined = await this.getAuthTokenFromSecretStore();
 
     if (this.logTailer == null) {
-      this.startTailingSidecarLogs();
+      this.logTailer = startTailingSidecarLogs();
     }
 
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
@@ -537,67 +542,6 @@ export class SidecarManager {
   }
 
   /**
-   * Set up tailing the sidecar log file onto the vscode output channel.
-   **/
-  private startTailingSidecarLogs() {
-    // Create sidecar's log file if it doesn't exist so that we can
-    // start tailing it right away before the sidecar process may exist.
-
-    const sidecarLogfilePath = getSidecarLogfilePath();
-    try {
-      fs.accessSync(sidecarLogfilePath);
-    } catch {
-      fs.writeFileSync(sidecarLogfilePath, "");
-    }
-
-    try {
-      this.logTailer = new Tail(sidecarLogfilePath);
-    } catch (e) {
-      SIDECAR_OUTPUT_CHANNEL.appendLine(
-        `Failed to tail sidecar log file "${sidecarLogfilePath}": ${e}`,
-      );
-      return;
-    }
-
-    SIDECAR_OUTPUT_CHANNEL.appendLine(
-      `Tailing the extension's sidecar logs from "${sidecarLogfilePath}" ...`,
-    );
-
-    // Take note of the start of exception lines in the log file, show as toast (if user has allowed via config)
-    // Define a regex pattern to find "ERROR", a parenthesized thread name, and capture everything after it
-    const regex = /ERROR.*\(([^)]+)\)\s*(.*)$/;
-
-    this.logTailer.on("line", (data: any) => {
-      const line: string = data.toString();
-      const errorMatch = line.match(regex);
-      if (errorMatch) {
-        const config = vscode.workspace.getConfiguration();
-        const notifySidecarExceptions = config.get(
-          "confluent.debugging.showSidecarExceptions",
-          false,
-        );
-        if (notifySidecarExceptions) {
-          showErrorNotificationWithButtons(`[Debugging] Sidecar error: ${errorMatch[2]}`, {
-            "Open Sidecar Logs": () =>
-              vscode.commands.executeCommand("confluent.showSidecarOutputChannel"),
-            "Open Settings": () =>
-              vscode.commands.executeCommand(
-                "workbench.action.openSettings",
-                "@id:confluent.debugging.showSidecarExceptions",
-              ),
-          });
-        }
-      }
-
-      appendSidecarLogToOutputChannel(line);
-    });
-
-    this.logTailer.on("error", (data: any) => {
-      OUTPUT_CHANNEL.error(`Error tailing sidecar log: ${data.toString()}`);
-    });
-  }
-
-  /**
    * Get the auth token secret from the storage manager. Returns empty string if none found.
    **/
   async getAuthTokenFromSecretStore(): Promise<string> {
@@ -613,45 +557,10 @@ export class SidecarManager {
   dispose() {
     if (this.logTailer) {
       this.logTailer.unwatch();
-      this.logTailer = null;
+      this.logTailer = undefined;
     }
 
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
-  }
-}
-
-/** Sidecar is not currently running (better start a new one!) */
-class NoSidecarRunningError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/** Sidecar could not start up successfully */
-class SidecarFatalError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/**
- *  If the auth token we have on record for the sidecar is rejected, will need to
- * restart it. Fortunately it tells us its PID in the response headers, so we know
- * what to kill.
- */
-class WrongAuthSecretError extends Error {
-  public sidecar_process_id: number;
-
-  constructor(message: string, sidecar_process_id: number) {
-    super(message);
-    this.sidecar_process_id = sidecar_process_id;
-  }
-}
-
-/** Could not find the sidecar executable. */
-class NoSidecarExecutableError extends Error {
-  constructor(message: string) {
-    super(message);
   }
 }
 
@@ -764,74 +673,6 @@ export function safeKill(process_id: number, signal: NodeJS.Signals | 0 = "SIGTE
   }
 }
 
-/** @see https://quarkus.io/guides/logging#logging-format */
-interface SidecarLogFormat {
-  timestamp: string;
-  sequence: number;
-  loggerClassName: string; // usually "org.jboss.logging.Logger"
-  loggerName: string;
-  level: string;
-  message: string;
-  threadName: string;
-  threadId: number;
-  mdc: Record<string, unknown>;
-  ndc: string;
-  hostName: string;
-  processName: string;
-  processId: number;
-}
-
-/**
- * Parse and append a sidecar log line to the {@link SIDECAR_OUTPUT_CHANNEL output channel} based on
- * its `level`.
- */
-export function appendSidecarLogToOutputChannel(line: string) {
-  // DEBUGGING: uncomment to see raw log lines in the output channel
-  // SIDECAR_OUTPUT_CHANNEL.trace(line);
-
-  let log: SidecarLogFormat;
-  try {
-    log = JSON.parse(line) as SidecarLogFormat;
-  } catch (e) {
-    if (e instanceof Error) {
-      OUTPUT_CHANNEL.error(`Failed to parse sidecar log line: ${e.message}\n\t${line}`);
-    }
-    return;
-  }
-  if (!(log.level && log.loggerName && log.message)) {
-    // log the raw object at `info` level:
-    SIDECAR_OUTPUT_CHANNEL.appendLine(line);
-    return;
-  }
-
-  let logMsg = `[${log.loggerName}] ${log.message}`;
-
-  const logArgs = [];
-  if (log.mdc && Object.keys(log.mdc).length > 0) {
-    logArgs.push(log.mdc);
-  }
-
-  switch (log.level) {
-    case "DEBUG":
-      SIDECAR_OUTPUT_CHANNEL.debug(logMsg, ...logArgs);
-      break;
-    case "INFO":
-      SIDECAR_OUTPUT_CHANNEL.info(logMsg, ...logArgs);
-      break;
-    case "WARN":
-      SIDECAR_OUTPUT_CHANNEL.warn(logMsg, ...logArgs);
-      break;
-    case "ERROR":
-      SIDECAR_OUTPUT_CHANNEL.error(logMsg, ...logArgs);
-      break;
-    default:
-      // still shows up as `info` in the output channel
-      SIDECAR_OUTPUT_CHANNEL.appendLine(
-        `[${log.level}] ${logMsg} ${logArgs.length > 0 ? JSON.stringify(logArgs) : ""}`.trim(),
-      );
-  }
-}
-
 /**
  * Check if a process is running by sending a signal 0 to it. If the process is running, it will not
  * throw an error.
@@ -909,11 +750,4 @@ function confirmSidecarProcessIsRunning(
     });
   }
   return isRunning;
-}
-
-/**
- * Construct the full pathname to the sidecar log file.
- */
-export function getSidecarLogfilePath(): string {
-  return join(WriteableTmpDir.getInstance().get(), SIDECAR_LOGFILE_NAME);
 }
