@@ -156,8 +156,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
 ): Promise<{ quickPick: QuickPick<T>; selectedItems: T[] }> {
-  const quickPick = window.createQuickPick<T>();
-  let selectedItems: T[] = [];
+  const quickPick: QuickPick<T> = window.createQuickPick<T>();
 
   // Set standard options
   if (options) {
@@ -173,6 +172,11 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   // Set items (handle promise if needed)
   if (!(items instanceof Promise)) {
     quickPick.items = items;
+
+    // Set default selected items if provided and items are already available
+    if (options?.selectedItems && options.selectedItems.length > 0) {
+      quickPick.selectedItems = options.selectedItems;
+    }
   } else {
     // Handle promise asynchronously
     (async () => {
@@ -187,62 +191,63 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
     })();
   }
 
-  // Set default selected items if provided and items are already available
-  if (!(items instanceof Promise) && options?.selectedItems && options.selectedItems.length > 0) {
-    quickPick.selectedItems = options.selectedItems;
-  }
-
   const disposables: Disposable[] = [];
 
   // Set up event handlers
   if (options?.onSelectionChange) {
-    disposables.push(
-      quickPick.onDidChangeSelection((items: readonly T[]) => {
+    const onSelectionChangeSub: Disposable = quickPick.onDidChangeSelection(
+      (items: readonly T[]) => {
         options.onSelectionChange?.(items, quickPick);
-      }),
+      },
     );
+    disposables.push(onSelectionChangeSub);
   }
 
   if (options?.onActiveItemChange) {
-    disposables.push(
-      quickPick.onDidChangeActive((items: readonly T[]) => {
-        options.onActiveItemChange?.(items[0], quickPick);
-      }),
-    );
+    const onActiveItemChangeSub: Disposable = quickPick.onDidChangeActive((items: readonly T[]) => {
+      options.onActiveItemChange?.(items[0], quickPick);
+    });
+    disposables.push(onActiveItemChangeSub);
   }
 
   if (options?.onItemButtonClicked) {
-    quickPick.onDidTriggerItemButton((event) => {
+    const onItemButtonClickedSub: Disposable = quickPick.onDidTriggerItemButton((event) => {
       options.onItemButtonClicked?.({
         button: event.button,
         item: event.item as T,
         quickPick,
       });
     });
+    disposables.push(onItemButtonClickedSub);
   }
 
   if (options?.onButtonClicked) {
-    quickPick.onDidTriggerButton((button) => {
+    const onButtonClickedSub: Disposable = quickPick.onDidTriggerButton((button) => {
       options.onButtonClicked?.(button, quickPick);
     });
+    disposables.push(onButtonClickedSub);
   }
 
-  if (options?.onDidAccept) {
-    quickPick.onDidAccept(() => {
-      options.onDidAccept?.(quickPick);
-    });
-  } else {
-    quickPick.onDidAccept(() => {
-      selectedItems = [...quickPick.selectedItems];
-      quickPick.hide();
-      return;
-    });
-  }
+  // the only time we actually set `selectedItems` is when the user accepts the quickpick, where we
+  // then copy over any items marked for selection. we can't just return quickpick.selectedItems
+  // because other events may have caused the quickpick to be hidden and we may not want to return
+  // the selected items at that point.
+  const selectedItems: T[] = [];
+  const onDidAcceptSub: Disposable = quickPick.onDidAccept(() => {
+    if (options?.onDidAccept) {
+      // handle any additional behavior before hiding, if a custom onDidAccept is provided
+      options.onDidAccept(quickPick);
+    }
+    selectedItems.push(...quickPick.selectedItems);
+    quickPick.hide();
+  });
+  disposables.push(onDidAcceptSub);
 
   // Show the QuickPick and return a promise that resolves when it's hidden
   quickPick.show();
   return new Promise((resolve) => {
-    quickPick.onDidHide(() => {
+    const onDidHideSub: Disposable = quickPick.onDidHide(() => {
+      onDidHideSub.dispose();
       disposables.forEach((d) => d.dispose());
       resolve({ quickPick, selectedItems });
     });
