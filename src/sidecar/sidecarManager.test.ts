@@ -2,14 +2,16 @@ import * as assert from "assert";
 import "mocha";
 import { join } from "path";
 import * as sinon from "sinon";
-import { SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { OUTPUT_CHANNEL } from "../logging";
+import {
+  appendSidecarLogToOutputChannel,
+  getSidecarLogfilePath,
+  SIDECAR_OUTPUT_CHANNEL,
+} from "../sidecar/logging";
 import { WriteableTmpDir } from "../utils/file";
 import { SIDECAR_LOGFILE_NAME } from "./constants";
 import {
-  appendSidecarLogToOutputChannel,
   constructSidecarEnv,
-  getSidecarLogfilePath,
   killSidecar,
   MOMENTARY_PAUSE_MS,
   safeKill,
