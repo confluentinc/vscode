@@ -305,8 +305,6 @@ export async function handleChatMessage(
           stream.markdown(errorMsg);
           return toolCallMetadata;
         }
-        // TODO: move this into the tools themselves?
-        stream.progress(tool.progressMessage);
 
         // don't stringify the entire tool call object since the `callId` will change each time
         const toolCallString = `${toolCall.name}:${JSON.stringify(toolCall.input)}`;
