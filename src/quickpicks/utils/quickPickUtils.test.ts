@@ -1,13 +1,13 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import "mocha";
 import { createEnhancedQuickPick, EnhancedQuickPickOptions } from "./quickPickUtils";
 
 describe("createEnhancedQuickPick", () => {
   let sandbox: sinon.SinonSandbox;
   let createQuickPickStub: sinon.SinonStub;
   let quickPickMock: vscode.QuickPick<any>;
+  let hideStub: sinon.SinonStub;
   let onDidChangeSelectionStub: sinon.SinonStub;
   let onDidChangeActiveStub: sinon.SinonStub;
   let onDidTriggerItemButtonStub: sinon.SinonStub;
@@ -18,13 +18,15 @@ describe("createEnhancedQuickPick", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
+    hideStub = sandbox.stub();
+
     // Create explicit stubs for each event handler
-    onDidChangeSelectionStub = sandbox.stub();
-    onDidChangeActiveStub = sandbox.stub();
-    onDidTriggerItemButtonStub = sandbox.stub();
-    onDidTriggerButtonStub = sandbox.stub();
-    onDidAcceptStub = sandbox.stub();
-    onDidHideStub = sandbox.stub();
+    onDidChangeSelectionStub = sandbox.stub().returns({ dispose: () => {} });
+    onDidChangeActiveStub = sandbox.stub().returns({ dispose: () => {} });
+    onDidTriggerItemButtonStub = sandbox.stub().returns({ dispose: () => {} });
+    onDidTriggerButtonStub = sandbox.stub().returns({ dispose: () => {} });
+    onDidAcceptStub = sandbox.stub().returns({ dispose: () => {} });
+    onDidHideStub = sandbox.stub().returns({ dispose: () => {} });
 
     // Create a mock QuickPick with all required properties and methods
     quickPickMock = {
@@ -39,7 +41,7 @@ describe("createEnhancedQuickPick", () => {
       selectedItems: [],
       busy: false,
       show: sandbox.stub(),
-      hide: sandbox.stub(),
+      hide: hideStub,
       dispose: sandbox.stub(),
       onDidChangeSelection: onDidChangeSelectionStub,
       onDidChangeActive: onDidChangeActiveStub,
@@ -116,40 +118,37 @@ describe("createEnhancedQuickPick", () => {
   });
 
   describe("Items handling", () => {
-    it("should handle both direct and promised items", async () => {
+    it("should handle non-Promise items", async () => {
       const items = [{ label: "Item 1" }, { label: "Item 2" }];
-      const itemsPromise = Promise.resolve(items);
 
-      // Test with direct items
       const directQuickPickPromise = createEnhancedQuickPick(items);
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
-      const { quickPick: directQuickPick, selectedItems: directSelectedItems } =
-        await directQuickPickPromise;
-      assert.deepStrictEqual(directQuickPick.items, items);
-      assert.deepStrictEqual(directSelectedItems, []);
 
-      // Reset the hide handler stub for the next test
-      onDidHideStub.reset();
+      const { quickPick, selectedItems } = await directQuickPickPromise;
+      assert.deepStrictEqual(quickPick.items, items);
+      assert.deepStrictEqual(selectedItems, []);
+    });
 
-      // Test with promised items
+    it("should handle Promised items", async () => {
+      const items = [{ label: "Item 1" }, { label: "Item 2" }];
+      const itemsPromise = Promise.resolve(items);
+
       const promisedQuickPickPromise = createEnhancedQuickPick(itemsPromise);
       assert.strictEqual(quickPickMock.busy, true);
 
-      // Wait for the promise to resolve and the next tick to process
       await itemsPromise;
       await new Promise(process.nextTick);
 
       assert.strictEqual(quickPickMock.busy, false);
       assert.deepStrictEqual(quickPickMock.items, items);
 
-      // Trigger hide to resolve the promise
-      const promisedHideHandler = onDidHideStub.args[0][0];
-      promisedHideHandler();
-      const { quickPick: promisedQuickPick, selectedItems: promisedSelectedItems } =
-        await promisedQuickPickPromise;
-      assert.deepStrictEqual(promisedQuickPick.items, items);
-      assert.deepStrictEqual(promisedSelectedItems, []);
+      const hideHandler = onDidHideStub.args[0][0];
+      hideHandler();
+
+      const { quickPick, selectedItems } = await promisedQuickPickPromise;
+      assert.deepStrictEqual(quickPick.items, items);
+      assert.deepStrictEqual(selectedItems, []);
     });
 
     it("should handle selected items with promised items", async () => {
@@ -161,14 +160,47 @@ describe("createEnhancedQuickPick", () => {
 
       await itemsPromise;
       await new Promise(process.nextTick);
+      // make sure items are pre-selected in the QuickPick
+      sinon.assert.match(quickPickMock, {
+        selectedItems: selectedItems,
+      });
 
-      assert.deepStrictEqual(quickPickMock.selectedItems, selectedItems);
+      // simulate user accepting the QuickPick by triggering the onDidAccept handler, which is
+      // required for any returned selectedItems
+      const acceptHandler = onDidAcceptStub.args[0][0];
+      acceptHandler();
+
+      sinon.assert.calledOnce(hideStub);
 
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
       const { quickPick, selectedItems: resultSelectedItems } = await quickPickPromise;
       assert.deepStrictEqual(quickPick.selectedItems, selectedItems);
       assert.deepStrictEqual(resultSelectedItems, selectedItems);
+    });
+
+    it("should not return selectedItems when QuickPick is hidden without accepting", async () => {
+      // set up quickpick with items and pre-selected items
+      const items = [{ label: "Item 1" }, { label: "Item 2" }];
+      const preSelectedItems = [items[0]];
+      const quickPickPromise = createEnhancedQuickPick(items, {
+        selectedItems: preSelectedItems,
+        canSelectMany: true,
+      });
+
+      // make sure items are pre-selected in the QuickPick
+      sinon.assert.match(quickPickMock, {
+        selectedItems: preSelectedItems,
+      });
+
+      // hide the QuickPick without calling onDidAccept
+      const hideHandler = onDidHideStub.args[0][0];
+      hideHandler();
+
+      const { selectedItems } = await quickPickPromise;
+
+      // selectedItems should be empty despite having pre-selected items
+      assert.deepStrictEqual(selectedItems, []);
     });
   });
 
