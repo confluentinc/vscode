@@ -15,6 +15,15 @@ export interface SidecarLogFormat {
   processId: number;
 }
 
+export interface SidecarOutputs {
+  /** Reformatted log lines from the sidecar */
+  logLines: string[];
+  /** The parsed-from-JSON log lines from the sidecar */
+  parsedLogLines: SidecarLogFormat[];
+  /** sidecar stderr lines */
+  stderrLines: string[];
+}
+
 /** Annotates a SidecarFatalError with our guess as to the reason */
 export enum SidecarStartupFailureReason {
   /** Some other process camped out on {@see SIDECAR_PORT} */

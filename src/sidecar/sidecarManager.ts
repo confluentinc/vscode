@@ -29,8 +29,13 @@ import {
   WrongAuthSecretError,
 } from "./errors";
 import { getSidecarLogfilePath, startTailingSidecarLogs } from "./logging";
-import { SidecarLogFormat, SidecarStartupFailureReason } from "./types";
-import { divineSidecarStartupFailureReasonFromLogs, pause } from "./utils";
+import { SidecarStartupFailureReason } from "./types";
+import {
+  divineSidecarStartupFailureReason,
+  gatherSidecarOutputs,
+  isProcessRunning,
+  pause,
+} from "./utils";
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
@@ -453,9 +458,9 @@ export class SidecarManager {
           } else {
             // after a short delay, confirm that the sidecar process didn't immediately exit and/or
             // write any stderr to the file
-            setTimeout(() => {
+            setTimeout(async () => {
               try {
-                confirmSidecarProcessIsRunning(sidecarPid, logPrefix, stderrPath);
+                await this.confirmSidecarProcessIsRunning(sidecarPid, logPrefix, stderrPath);
               } catch (err) {
                 if (err instanceof SidecarFatalError) {
                   // XXX improve this to also be based on err.reason
@@ -561,6 +566,57 @@ export class SidecarManager {
       return existing_secret;
     }
     return "";
+  }
+
+  /**
+   * Check the sidecar process status to ensure it has started up, logging any stderr output and the
+   * last few lines of the sidecar log file.
+   *
+   * @throws SidecarFatalError if the sidecar process is not running, annotated with
+   * our best guess as to why it failed to start (attribute `reason`). Will have already
+   * made the call to logError() as needed.
+   *
+   * @param pid The sidecar process ID.
+   * @param logPrefix A prefix for logging messages.
+   * @param stderrPath The path to the sidecar's stderr file defined at process spawn time.
+   */
+  async confirmSidecarProcessIsRunning(
+    pid: number,
+    logPrefix: string,
+    stderrPath: string,
+  ): Promise<void> {
+    // check if the sidecar process is running for windows or unix
+    const isRunning: boolean = isProcessRunning(pid);
+    logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
+
+    if (isRunning) {
+      return;
+    }
+
+    if (!isRunning) {
+      // for some reason the sidecar process died immediately after startup, so log the error and
+      // report to Sentry so we can investigate.
+
+      const outputs = await gatherSidecarOutputs(stderrPath);
+
+      let failureReason: SidecarStartupFailureReason = divineSidecarStartupFailureReason(
+        process.platform,
+        outputs,
+      );
+
+      const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
+
+      const error = new SidecarFatalError(failureReason, failureMsg);
+      logError(error, `sidecar process failed to start`, {
+        extra: {
+          stderr: outputs.stderrLines.join("\n"),
+          logs: outputs.logLines.join("\n"),
+          reason: failureReason,
+        },
+      });
+
+      throw error;
+    }
   }
 
   dispose() {
@@ -682,102 +738,5 @@ export function safeKill(process_id: number, signal: NodeJS.Signals | 0 = "SIGTE
     process.kill(process_id, signal);
   } catch (e) {
     logger.error(`Failed to deliver signal ${signal} to process ${process_id}: ${e}`);
-  }
-}
-
-/**
- * Check if a process is running by sending a signal 0 to it. If the process is running, it will not
- * throw an error.
- * @see https://man7.org/linux/man-pages/man2/kill.2.html#:~:text=%2Dpid.-,If%20sig%20is%200,-%2C%20then%20no%20signal
- *
- * @param pid The process ID to check.
- * @returns True if the process is running, false otherwise.
- */
-function isProcessRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    // ignore EPERM and others until we need to care about more processes than the sidecar, which we
-    // spawned originally
-    return false;
-  }
-}
-
-/**
- * Check the sidecar process status to ensure it has started up, logging any stderr output and the
- * last few lines of the sidecar log file.
- *
- * @throws SidecarFatalError if the sidecar process is not running, annotated with
- * our best guess as to why it failed to start (attribute `reason`). Will have already
- * made the call to logError() as needed.
- *
- * @param pid The sidecar process ID.
- * @param logPrefix A prefix for logging messages.
- * @param stderrPath The path to the sidecar's stderr file defined at process spawn time.
- */
-function confirmSidecarProcessIsRunning(pid: number, logPrefix: string, stderrPath: string): void {
-  // check if the sidecar process is running for windows or unix
-  const isRunning: boolean = isProcessRunning(pid);
-  logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
-
-  if (isRunning) {
-    return;
-  }
-
-  // check stderr file for any process start errors
-  let stderrContent = "";
-  try {
-    stderrContent = fs.readFileSync(stderrPath, "utf8");
-    if (stderrContent.trim()) {
-      logger.error(`${logPrefix}: Sidecar stderr output: ${stderrContent}`);
-    }
-  } catch (e) {
-    logger.error(`${logPrefix}: Failed to read sidecar stderr file: ${e}`);
-  }
-
-  if (!isRunning) {
-    // for some reason the sidecar process died immediately after startup, so log the error and
-    // report to Sentry so we can investigate.
-
-    // Try to read+parse sidecar logs to notice any startup errors (occupied port, missing
-    // configs, etc.)
-    const reformattedLogLines: string[] = [];
-    const parsedLines: SidecarLogFormat[] = [];
-    try {
-      const logs = fs.readFileSync(getSidecarLogfilePath(), "utf8").trim().split("\n").slice(-20);
-      for (const rawLogLine in logs) {
-        try {
-          const parsed = JSON.parse(rawLogLine.trim()) as SidecarLogFormat;
-          parsedLines.push(parsed);
-
-          const formatted = `\t> ${parsed.timestamp} ${parsed.level} [${parsed.loggerName}] ${parsed.message}`;
-          reformattedLogLines.push(formatted);
-        } catch {
-          // JSON parsing issue. Only append the raw line to logLines.
-          reformattedLogLines.push(rawLogLine);
-        }
-      }
-      logger.error(`${logPrefix}: Latest sidecar log lines:\n${reformattedLogLines.join("\n")}`);
-    } catch (e) {
-      logger.error(`${logPrefix}: Failed to read sidecar log file: ${e}`);
-    }
-
-    let failureReason: SidecarStartupFailureReason = SidecarStartupFailureReason.UNKNOWN;
-    if (parsedLines.length > 0) {
-      failureReason = divineSidecarStartupFailureReasonFromLogs(process.platform, parsedLines);
-    }
-
-    const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
-    const error = new SidecarFatalError(failureReason, failureMsg);
-    logError(error, `sidecar process failed to start`, {
-      extra: {
-        stderr: stderrContent,
-        logs: reformattedLogLines.join("\n"),
-        reason: error.reason,
-      },
-    });
-
-    throw error;
   }
 }
