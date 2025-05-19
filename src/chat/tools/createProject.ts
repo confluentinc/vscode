@@ -98,6 +98,7 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
     const parameters = toolCall.input as ICreateProjectParameters;
 
     // handle the core tool invocation
+    stream.progress("Making request to create project...");
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -109,7 +110,7 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
-
+    stream.progress(`Created project: ${result.content}.`);
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
     // no header/footer messages needed here
