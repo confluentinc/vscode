@@ -110,7 +110,13 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
-    stream.progress(`Created project: ${result.content}.`);
+    // ...existing code...
+
+    stream.progress(
+      `Created project: ${result.content
+        .map((part) => (part instanceof LanguageModelTextPart ? part.value : ""))
+        .join(" ")}.`,
+    );
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
     // no header/footer messages needed here
