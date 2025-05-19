@@ -21,7 +21,8 @@ export interface IGetTemplateOptions {
 
 export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOptions> {
   readonly name = "get_templateOptions";
-  readonly progressMessage = "Looking up project template options...";
+
+  private resultCount: number = 0;
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetTemplateOptions>,
@@ -50,6 +51,12 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       ]);
     }
 
+    const templateOptions = matchingTemplate.spec?.options;
+
+    if (templateOptions !== undefined) {
+      this.resultCount = Object.keys(templateOptions).length;
+    }
+
     const templateInfo = new LanguageModelTextPart(summarizeTemplateOptions(matchingTemplate));
 
     if (token.isCancellationRequested) {
@@ -67,6 +74,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetTemplateOptions;
 
+    stream.progress(`Retrieving template options for templateId: ${parameters.templateId}...`);
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -75,7 +83,8 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       },
       token,
     );
-    if (!result.content.length) {
+    stream.progress(`Found ${this.resultCount} options for templateId: ${parameters.templateId}.`);
+    if (!this.resultCount) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }

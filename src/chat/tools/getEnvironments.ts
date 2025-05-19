@@ -24,7 +24,6 @@ export interface IGetEnvironmentsParameters {
 
 export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsParameters> {
   readonly name = "get_environments";
-  readonly progressMessage = "Looking up environments...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetEnvironmentsParameters>,
@@ -70,6 +69,9 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetEnvironmentsParameters;
 
+    stream.progress(
+      `Retrieving available environments with parameters: ${JSON.stringify(parameters)}...`,
+    );
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -78,8 +80,9 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       },
       token,
     );
+    stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
-      // cancellation / no results
+      // cancellation
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
