@@ -73,7 +73,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       },
       token,
     );
-    stream.progress(`Found ${result.content.length} project templates...`);
+    stream.progress(`Found ${result.content.length} project templates.`);
     if (!result.content.length) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
