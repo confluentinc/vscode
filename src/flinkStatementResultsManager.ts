@@ -345,6 +345,7 @@ export class FlinkStatementResultsManager {
     return results.filter((row) =>
       Object.entries(row)
         .filter(([key]) => visibleColumns === null || visibleColumns.includes(key))
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .some(([_, value]) => value !== null && String(value).toLowerCase().includes(searchLower)),
     );
   }
