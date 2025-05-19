@@ -139,9 +139,13 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       },
       token,
     );
-    stream.progress(
-      `Found ${result.content.length} connections for connectionType: ${parameters.connectionType}.`,
-    );
+    if (!parameters.connectionType) {
+      stream.progress(`Found ${result.content.length} connections.`);
+    } else {
+      stream.progress(
+        `Found ${result.content.length} connections for connectionType: ${parameters.connectionType}.`,
+      );
+    }
     if (!result.content.length) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
