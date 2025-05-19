@@ -22,6 +22,8 @@ export interface IGetTemplateOptions {
 export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOptions> {
   readonly name = "get_templateOptions";
 
+  private resultCount: number = 0;
+
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetTemplateOptions>,
     token: CancellationToken,
@@ -49,6 +51,10 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       ]);
     }
 
+    this.resultCount = Array.isArray(matchingTemplate.spec?.options)
+      ? matchingTemplate.spec.options.length
+      : 0;
+
     const templateInfo = new LanguageModelTextPart(summarizeTemplateOptions(matchingTemplate));
 
     if (token.isCancellationRequested) {
@@ -75,8 +81,8 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       },
       token,
     );
-    stream.progress(`Found ${result.content.length} template options...`);
-    if (!result.content.length) {
+    stream.progress(`Found ${this.resultCount} template options.`);
+    if (!this.resultCount) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
