@@ -117,7 +117,10 @@ export function createResponseError(
     statusText,
     clone: () => ({
       text: () => Promise.resolve(body),
+      json: () => Promise.resolve(JSON.parse(body)),
     }),
+    text: () => Promise.resolve(body),
+    json: () => Promise.resolve(JSON.parse(body)),
   } as Response;
   return new ResponseError(response);
 }

@@ -253,18 +253,42 @@ export async function submitFlinkStatementCommand(
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
-    logError(err, "Submit Flink statement unexpected error");
-
     if (isResponseError(err) && err.response.status === 400) {
-      // will be array of objs with 'details' human readable messages.
-      const responseErrors: { errors: [{ detail: string }] } = await extractResponseBody(err);
-      logger.error(JSON.stringify(responseErrors, null, 2));
+      // Usually a bad SQL statement.
+      // The error string should be JSON, have 'errors' as an array of objs with 'details' human readable messages.
+      const objFromResponse = await extractResponseBody(err);
+      let errorMessages: string;
+      if (objFromResponse && typeof objFromResponse === "object" && "errors" in objFromResponse) {
+        const responseErrors: { errors: [{ detail: string }] } = objFromResponse;
+        logger.error(JSON.stringify(responseErrors, null, 2));
+        errorMessages = responseErrors.errors.map((e: { detail: string }) => e.detail).join("\n");
+      } else {
+        // will be the raw error string. Wacky we couldn't parse it. Flink backend change?
+        errorMessages = objFromResponse;
 
-      const errorMessages = responseErrors.errors
-        .map((e: { detail: string }) => e.detail)
-        .join("\n");
+        // Log in Sentry and logger (we invite the user to open logs / file issue in
+        // showErrorNotificationWithButtons(), so good for them to see this in the logs.)
+        logError(err, `Unparseable 400 response submitting statement: ${errorMessages}`, {
+          extra: {
+            errorMessages,
+            statementLength: statement.length,
+            computePoolId: computePool.id,
+            currentDatabase,
+            statementName,
+          },
+        });
+      }
       await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
     } else {
+      // wasn't a 400 ResponseError. So who knows? We don't expect this to happen.
+      logError(err, "Submit Flink statement unexpected error", {
+        extra: {
+          statementLength: statement.length,
+          computePoolId: computePool.id,
+          currentDatabase,
+          statementName,
+        },
+      });
       await showErrorNotificationWithButtons(`Error submitting statement: ${err}`);
     }
   }

@@ -52,15 +52,25 @@ export function isResponseErrorWithStatus(
   return isResponseError(error) && error.response.status === statusCode;
 }
 
-export async function extractResponseBody(error: unknown): Promise<any> {
-  if (isResponseError(error)) {
-    const responseError = error as AnyResponseError;
-    const respJson = await responseError.response.clone().json();
-    if (respJson) {
-      return respJson;
-    }
+/**
+ * If error is a response error, try to decode its response body
+ * from JSON and return the resulting object.
+ *
+ * If the response body is not JSON, return the text instead.
+ *
+ * If the error is not a response error, raise an error.
+ */
+export async function extractResponseBody(error: AnyResponseError): Promise<any> {
+  if (!isResponseError(error)) {
+    throw new Error("extractResponseBody() called with non-ResponseError");
   }
-  return undefined;
+
+  const responseError = error as AnyResponseError;
+  try {
+    return await responseError.response.clone().json();
+  } catch {
+    return await responseError.response.clone().text();
+  }
 }
 
 /**

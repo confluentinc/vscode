@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-5-15
+Date generated: 2025-5-16
 
-Revision ID: 354c699b73608f2e5efef8c39e49106267d23a1e
+Revision ID: b018f115c730f827b74e1b81a18b80726b0a2661
 
 ================================================================================
 ================================================================================
@@ -448,7 +448,7 @@ No licenses found
 - tslib (1.14.1) [0BSD]
 - tslib (2.8.1) [0BSD]
 - typescript (5.4.5) [Apache-2.0]
-- undici (6.21.1) [MIT]
+- undici (6.21.2) [MIT]
 - undici-types (5.26.5) [MIT]
 - unplugin (1.0.1) [MIT]
 - unzipit (1.4.3) [MIT]
@@ -460,6 +460,10 @@ No licenses found
 - uuid (8.3.2) [MIT]
 - uzip-module (1.0.3) [MIT]
 - vscode-json-languageservice (5.4.2) [MIT, BSD-2-Clause]
+- vscode-jsonrpc (8.2.0) [MIT]
+- vscode-languageclient (9.0.1) [MIT]
+- vscode-languageserver (9.0.1) [MIT]
+- vscode-languageserver-protocol (3.17.5) [MIT]
 - vscode-languageserver-textdocument (1.0.12) [MIT]
 - vscode-languageserver-types (3.17.5) [MIT]
 - vscode-uri (3.0.8) [MIT]
@@ -18457,10 +18461,6 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 Copyright 2010-2022 Mike Bostock
 
@@ -22101,7 +22101,7 @@ ISC
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 The ISC License
@@ -22616,10 +22616,6 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 The ISC License
 
@@ -24112,6 +24108,10 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The ISC License
 
@@ -28999,7 +28999,7 @@ Package Depth: Transitive
 
 --------------------------------------------------------------------------------
 File matches:
-tslib.d.ts
+tslib.es6.js
 --------------------------------------------------------------------------------
 
 Copyright (c) Microsoft Corporation.
@@ -29229,9 +29229,9 @@ END OF TERMS AND CONDITIONS
 * Package Info *
 
 --------------------------------------------------------------------------------
-Package Title: undici (6.21.1)
+Package Title: undici (6.21.2)
 
-Package Locator: npm+undici$6.21.1
+Package Locator: npm+undici$6.21.2
 
 Package Depth: Direct
 --------------------------------------------------------------------------------
@@ -29833,6 +29833,458 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISE
 
 
 * Package Info *
+
+--------------------------------------------------------------------------------
+Package Title: vscode-jsonrpc (8.2.0)
+
+Package Locator: npm+vscode-jsonrpc$8.2.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+--------------------------------------------------------------------------------
+File matches:
+browser.d.ts
+browser.js
+lib/browser/main.js
+lib/browser/ril.js
+lib/common/api.js
+lib/common/cancellation.js
+lib/common/connection.js
+lib/common/disposable.js
+lib/common/encoding.js
+lib/common/events.js
+lib/common/is.js
+lib/common/linkedMap.js
+lib/common/messageBuffer.js
+lib/common/messageReader.js
+lib/common/messages.js
+lib/common/messageWriter.js
+lib/common/ral.js
+lib/common/semaphore.js
+lib/common/sharedArrayCancellation.js
+lib/node/main.js
+lib/node/ril.js
+License.txt
+node.d.ts
+node.js
+package.json
+typings/thenable.d.ts
+--------------------------------------------------------------------------------
+
+Copyright (c)  Microsoft Corporation
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+* Package Info *
+
+* Notice File(s) *
+
+thirdpartynotices.txt
+NOTICES AND INFORMATION
+Do Not Translate or Localize
+
+This software incorporates material from third parties.
+Microsoft makes certain open source code available at https://3rdpartysource.microsoft.com,
+or you may send a check or money order for US $5.00, including the product name,
+the open source component name, platform, and version number, to:
+
+Source Code Compliance Team
+Microsoft Corporation
+One Microsoft Way
+Redmond, WA 98052
+USA
+
+Notwithstanding any other terms, you may reverse engineer this software to the extent
+required to debug changes to any libraries licensed under the GNU Lesser General Public License.
+
+
+--------------------------------------------------------------------------------
+Package Title: vscode-languageclient (9.0.1)
+
+Package Locator: npm+vscode-languageclient$9.0.1
+
+Package Depth: Direct
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+--------------------------------------------------------------------------------
+File matches:
+browser.d.ts
+browser.js
+lib/browser/main.js
+lib/common/api.js
+lib/common/callHierarchy.js
+lib/common/client.js
+lib/common/codeAction.js
+lib/common/codeConverter.js
+lib/common/codeLens.js
+lib/common/colorProvider.js
+lib/common/completion.js
+lib/common/configuration.js
+lib/common/declaration.js
+lib/common/definition.js
+lib/common/diagnostic.js
+lib/common/documentHighlight.js
+lib/common/documentLink.js
+lib/common/documentSymbol.js
+lib/common/executeCommand.js
+lib/common/features.js
+lib/common/fileOperations.js
+lib/common/fileSystemWatcher.js
+lib/common/foldingRange.js
+lib/common/formatting.js
+lib/common/hover.js
+lib/common/implementation.js
+lib/common/inlayHint.js
+lib/common/inlineCompletion.js
+lib/common/inlineValue.js
+lib/common/linkedEditingRange.js
+lib/common/notebook.js
+lib/common/progress.js
+lib/common/progressPart.js
+lib/common/protocolCallHierarchyItem.js
+lib/common/protocolCodeAction.js
+lib/common/protocolCodeLens.js
+lib/common/protocolCompletionItem.js
+lib/common/protocolConverter.js
+lib/common/protocolDiagnostic.js
+lib/common/protocolDocumentLink.js
+lib/common/protocolInlayHint.js
+lib/common/protocolTypeHierarchyItem.js
+lib/common/protocolWorkspaceSymbol.js
+lib/common/reference.js
+lib/common/rename.js
+lib/common/selectionRange.js
+lib/common/semanticTokens.js
+lib/common/signatureHelp.js
+lib/common/textSynchronization.js
+lib/common/typeDefinition.js
+lib/common/typeHierarchy.js
+lib/common/utils/async.js
+lib/common/utils/is.js
+lib/common/utils/uuid.js
+lib/common/workspaceFolder.js
+lib/common/workspaceSymbol.js
+lib/node/main.js
+lib/node/processes.js
+lib/node/terminateProcess.sh
+License.txt
+node.d.ts
+node.js
+package.json
+--------------------------------------------------------------------------------
+
+Copyright (c)  Microsoft Corporation
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+* Package Info *
+
+--------------------------------------------------------------------------------
+Package Title: vscode-languageserver (9.0.1)
+
+Package Locator: npm+vscode-languageserver$9.0.1
+
+Package Depth: Direct
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+--------------------------------------------------------------------------------
+File matches:
+browser.d.ts
+browser.js
+lib/browser/main.js
+lib/common/api.js
+lib/common/callHierarchy.js
+lib/common/configuration.js
+lib/common/diagnostic.js
+lib/common/fileOperations.js
+lib/common/foldingRange.js
+lib/common/inlayHint.js
+lib/common/inlineCompletion.proposed.js
+lib/common/inlineValue.js
+lib/common/linkedEditingRange.js
+lib/common/moniker.js
+lib/common/notebook.js
+lib/common/progress.js
+lib/common/semanticTokens.js
+lib/common/server.js
+lib/common/showDocument.js
+lib/common/textDocuments.js
+lib/common/typeHierarchy.js
+lib/common/utils/is.js
+lib/common/utils/uuid.js
+lib/common/workspaceFolder.js
+lib/node/files.js
+lib/node/main.js
+lib/node/resolve.js
+License.txt
+node.d.ts
+node.js
+package.json
+thirdpartynotices.txt
+typings/thenable.d.ts
+--------------------------------------------------------------------------------
+
+Copyright (c)  Microsoft Corporation
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+* Package Info *
+
+* Notice File(s) *
+
+thirdpartynotices.txt
+NOTICES AND INFORMATION
+Do Not Translate or Localize
+
+This software incorporates material from third parties.
+Microsoft makes certain open source code available at https://3rdpartysource.microsoft.com,
+or you may send a check or money order for US $5.00, including the product name,
+the open source component name, platform, and version number, to:
+
+Source Code Compliance Team
+Microsoft Corporation
+One Microsoft Way
+Redmond, WA 98052
+USA
+
+Notwithstanding any other terms, you may reverse engineer this software to the extent
+required to debug changes to any libraries licensed under the GNU Lesser General Public License.
+
+
+---------------------------------------------------------
+
+vscode-jsonrpc - MIT
+https://github.com/Microsoft/vscode-languageserver-node#readme
+
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation
+
+All rights reserved.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+vscode-languageserver-protocol - MIT
+https://github.com/Microsoft/vscode-languageserver-node#readme
+
+Copyright (c) TypeFox and others.
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation
+
+All rights reserved.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+vscode-languageserver-types - MIT
+https://github.com/Microsoft/vscode-languageserver-node#readme
+
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation
+
+All rights reserved.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+---------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+Package Title: vscode-languageserver-protocol (3.17.5)
+
+Package Locator: npm+vscode-languageserver-protocol$3.17.5
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+--------------------------------------------------------------------------------
+File matches:
+browser.d.ts
+browser.js
+lib/browser/main.js
+lib/common/api.js
+lib/common/connection.js
+lib/common/messages.js
+lib/common/protocol.$.js
+lib/common/protocol.callHierarchy.js
+lib/common/protocol.colorProvider.js
+lib/common/protocol.configuration.js
+lib/common/protocol.declaration.js
+lib/common/protocol.diagnostic.js
+lib/common/protocol.fileOperations.js
+lib/common/protocol.foldingRange.js
+lib/common/protocol.implementation.js
+lib/common/protocol.inlayHint.js
+lib/common/protocol.inlineCompletion.js
+lib/common/protocol.inlineValue.js
+lib/common/protocol.js
+lib/common/protocol.linkedEditingRange.js
+lib/common/protocol.moniker.js
+lib/common/protocol.notebook.js
+lib/common/protocol.progress.js
+lib/common/protocol.selectionRange.js
+lib/common/protocol.semanticTokens.js
+lib/common/protocol.showDocument.js
+lib/common/protocol.typeDefinition.js
+lib/common/protocol.typeHierarchy.js
+lib/common/protocol.workspaceFolder.js
+lib/common/utils/is.js
+lib/node/main.js
+License.txt
+node.d.ts
+node.js
+package.json
+thirdpartynotices.txt
+--------------------------------------------------------------------------------
+
+Copyright (c)  Microsoft Corporation
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+* Package Info *
+
+* Notice File(s) *
+
+thirdpartynotices.txt
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+For Microsoft vscode-languageclient
+
+This project incorporates material from the project(s) listed below (collectively, “Third Party Code”).
+Microsoft is not the original author of the Third Party Code.  The original copyright notice and license
+under which Microsoft received such Third Party Code are set out below. This Third Party Code is licensed
+to you under their original license terms set forth below.  Microsoft reserves all other rights not expressly
+granted, whether by implication, estoppel or otherwise.
+
+1.       DefinitelyTyped version 0.0.1 (https://github.com/borisyankov/DefinitelyTyped)
+
+This project is licensed under the MIT license.
+Copyrights are respective of each contributor listed at the beginning of each definition file.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
 
 --------------------------------------------------------------------------------
 Package Title: vscode-languageserver-textdocument (1.0.12)
@@ -39532,6 +39984,8 @@ Copyright (c) 2017 these people](https://github.com/rollup/rollup/graphs/contrib
 
 Copyright (c) Microsoft
 
+Copyright (c) Microsoft Corporation
+
 Copyright (c) 2013 Nathan Rajlich &lt;nathan@tootallnate.net&gt;
 
 Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -39569,8 +40023,6 @@ Copyright (c) 2020 Engineering at FullStory
 Copyright (c) Kevin Mårtensson <kevinmartensson@gmail.com> (github.com/kevva)
 
 Copyright (c) 2011 Felix Geisendörfer (felix@debuggable.com)
-
-Copyright (c) Microsoft Corporation
 
 Copyright (c) 2015 Rich Harris
 
@@ -40078,4 +40530,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-5-15
+Report Generated by FOSSA on 2025-5-16

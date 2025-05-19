@@ -4,17 +4,40 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.3.0
+
 ### Added
 
-- Can submit new SQL statements to a Flink compute pool
-- Can view SQL statement results
-- Configurable default settings for `compute pool` and `database` for Flink operations
-- Codelenses for Flink SQL documents to support:
-  - submitting statements
-  - signing in to CCloud
-  - setting a compute pool
-  - setting a catalog and database
-  - updating default pool/database settings
+- Initial support for the Flink SQL document language, including:
+  - Syntax highlighting
+  - `.flink.sql` file extension support
+  - Ability to submit documents as Flink statements to a Flink compute pool\*
+  - Built-in rendering of statement results\*
+  - Configurable settings for using default compute pool and database IDs
+  - Codelenses for:
+    - signing in to CCloud
+    - submitting statements
+    - setting a compute pool for a specific statement document
+    - setting a catalog and database for a specific statement document
+- Additional project generation features:
+  - Support for Schema Registry configurations in multiple project template forms
+  - Right-click context menu item to generate a project from a Flink compute pool in the Resources
+    view\*
+- New setting for providing a Kerberos config file path for direct connections
+- Initial Copilot chat participant support\*\*:
+  - New `@Confluent` chat participant for Copilot chat
+  - Basic sidebar contextual information for connections, environments, clusters, and getting
+    started with new projects
+
+### Fixed
+
+- Fixed an issue preventing users from connecting directly to a Schema Registry instance with
+  self-signed certificates without hostname verification
+
+\*_These updates require the `confluent.preview.enableFlink` setting to be enabled._
+
+\*\*_Copilot chat participant and related tools require the
+`confluent.experimental.enableChatParticipant` setting to be enabled._
 
 ## 1.2.1
 
