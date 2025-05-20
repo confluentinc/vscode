@@ -9,7 +9,12 @@ import * as vscode from "vscode";
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { getStorageManager } from "../storage";
-import { SIDECAR_BASE_URL, SIDECAR_PORT, SIDECAR_PROCESS_ID_HEADER } from "./constants";
+import {
+  MOMENTARY_PAUSE_MS,
+  SIDECAR_BASE_URL,
+  SIDECAR_PORT,
+  SIDECAR_PROCESS_ID_HEADER,
+} from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
@@ -28,26 +33,17 @@ import {
   SidecarFatalError,
   WrongAuthSecretError,
 } from "./errors";
-import { getSidecarLogfilePath, startTailingSidecarLogs } from "./logging";
-import { SidecarStartupFailureReason } from "./types";
 import {
   divineSidecarStartupFailureReason,
   gatherSidecarOutputs,
-  isProcessRunning,
-  pause,
-} from "./utils";
+  getSidecarLogfilePath,
+  startTailingSidecarLogs,
+} from "./logging";
+import { SidecarStartupFailureReason } from "./types";
+import { isProcessRunning, killSidecar, pause, wasConnRefused } from "./utils";
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
-
-export const MOMENTARY_PAUSE_MS = 500; // half a second.
-/**
- * Time to wait after having delivered a SIGTERM to sidecar before
- * promoting to SIGKILL. The ratio of this to {@link MOMENTARY_PAUSE_MS}
- * is the number of times {@link killSidecar} will pause+poll loop waiting
- * for an old (by either version or access token) sidecar to die.
- **/
-export const WAIT_FOR_SIDECAR_DEATH_MS = 4_000; // 4 seconds.
 
 /** How many loop attempts to try in startSidecar() and doHand */
 const MAX_ATTEMPTS = 10;
@@ -597,7 +593,7 @@ export class SidecarManager {
       // for some reason the sidecar process died immediately after startup, so log the error and
       // report to Sentry so we can investigate.
 
-      const outputs = await gatherSidecarOutputs(stderrPath);
+      const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
 
       let failureReason: SidecarStartupFailureReason = divineSidecarStartupFailureReason(
         process.platform,
@@ -629,28 +625,6 @@ export class SidecarManager {
   }
 }
 
-// The following functions exported for testing purposes.
-/** Introspect into an exception's cause stack to discern if was ultimately caused by ECONNREFUSED. */
-export function wasConnRefused(e: any): boolean {
-  // They don't make this easy, do they? Have to dig into a few layers of causes, then also
-  // array of aggregated errors to find the root cause expressed as `code == 'ECONNREFUSED'`.
-
-  if (e == null) {
-    // null or undefined?
-    return false;
-  } else if (e.code) {
-    return e.code === "ECONNREFUSED";
-  } else if (e.cause) {
-    return wasConnRefused(e.cause);
-  } else if (e.errors) {
-    // Fortunately when happens in real life, it's always within the first error in the array.
-    return wasConnRefused(e.errors[0]);
-  } else {
-    // If we can't find it in the main eager branching above, then it wasn't ECONNREFUSED.
-    return false;
-  }
-}
-
 /**
  * Construct the environment for the sidecar process.
  * @param env The current environment, parameterized for test purposes.
@@ -676,67 +650,4 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   }
 
   return sidecar_env;
-}
-
-/**
- * Kill the sidecar process by its PID. Will raise an exception if the PID does not seem like a concrete process id. See kill(2).
- *
- * After delivering the SIGTERM signal, we will wait in a loop for at
- * most WAIT_FOR_SIDECAR_DEATH_MS in MOMENTARY_PAUSE_MS increments in to wait for the process
- * dies. If it has not by the end, we upgrade to using SIGKILL, then repeat
- * the procedure.
- *
- * @param process_id The sidecar's process id.
- * @param signal The signal to send to the process. Default is SIGTERM.
- */
-export async function killSidecar(process_id: number, signal: "SIGTERM" | "SIGKILL" = "SIGTERM") {
-  if (process_id <= 1) {
-    logger.warn("Refusing to kill process with PID <= 1");
-    throw new Error(`Refusing to kill process with PID <= 1`);
-  }
-
-  safeKill(process_id, signal);
-  logger.debug(`Delivered ${signal} to old sidecar process ${process_id}`);
-
-  // Now loop for at most maxWaitMs, checking if the process is still running, pausing
-  // between checks each time.
-  let isRunning: boolean = isProcessRunning(process_id);
-  let remainingWaitMs = WAIT_FOR_SIDECAR_DEATH_MS;
-  while (isRunning && remainingWaitMs > 0) {
-    logger.info(`Waiting for old sidecar process ${process_id} to die ...`);
-    await pause(MOMENTARY_PAUSE_MS);
-    remainingWaitMs -= MOMENTARY_PAUSE_MS;
-
-    isRunning = isProcessRunning(process_id);
-  }
-
-  if (isRunning) {
-    logger.warn(
-      `Old sidecar process ${process_id} still running after ${WAIT_FOR_SIDECAR_DEATH_MS}ms.`,
-    );
-    if (signal === "SIGTERM") {
-      logger.warn(`Upgrading to using SIGKILL ...`);
-      await killSidecar(process_id, "SIGKILL");
-    } else {
-      logger.warn(`SIGKILL signal already sent, giving up.`);
-      throw new SidecarFatalError(
-        SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
-        "Failed to kill old sidecar process",
-      );
-    }
-  } else {
-    // Successful kill. fallthrough to return.
-    logger.debug(
-      `Old sidecar process ${process_id} has died, took ${WAIT_FOR_SIDECAR_DEATH_MS - remainingWaitMs}ms.`,
-    );
-  }
-}
-
-/** Try / catch wrapper around process.kill(). Always returns. */
-export function safeKill(process_id: number, signal: NodeJS.Signals | 0 = "SIGTERM") {
-  try {
-    process.kill(process_id, signal);
-  } catch (e) {
-    logger.error(`Failed to deliver signal ${signal} to process ${process_id}: ${e}`);
-  }
 }
