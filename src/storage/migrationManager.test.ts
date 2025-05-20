@@ -3,8 +3,9 @@ import {
   getStubbedGlobalState,
   getStubbedSecretStorage,
   getStubbedWorkspaceState,
-  StubbedMemento,
+  StubbedGlobalState,
   StubbedSecretStorage,
+  StubbedWorkspaceState,
 } from "../../tests/stubs/extensionStorage";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { DURABLE_STORAGE_VERSION_KEY, MigrationStorageType } from "./constants";
@@ -37,7 +38,7 @@ describe("storage/migrationManager", () => {
   it(`migrate*() for workspaceState should call executeMigrations() when storage version is incorrect`, async () => {
     // stub the storage version returned
     const storedVersion = 1;
-    const stubbedWorkspaceState: StubbedMemento = await getStubbedWorkspaceState(sandbox);
+    const stubbedWorkspaceState: StubbedWorkspaceState = getStubbedWorkspaceState(sandbox);
     stubbedWorkspaceState.get.returns(storedVersion);
 
     await migrateWorkspaceState();
@@ -58,7 +59,7 @@ describe("storage/migrationManager", () => {
 
   it(`migrate*() for workspaceState should not call executeMigrations() when storage version is correct`, async () => {
     // stub the correct storage version returned
-    const stubbedWorkspaceState: StubbedMemento = await getStubbedWorkspaceState(sandbox);
+    const stubbedWorkspaceState: StubbedWorkspaceState = getStubbedWorkspaceState(sandbox);
     stubbedWorkspaceState.get.returns(CODEBASE_STORAGE_VERSION);
 
     await migrateWorkspaceState();
@@ -71,7 +72,7 @@ describe("storage/migrationManager", () => {
   it(`migrate*() for globalState should call executeMigrations() when storage version is incorrect`, async () => {
     // stub the storage version returned
     const storedVersion = 1;
-    const stubbedGlobalState: StubbedMemento = await getStubbedGlobalState(sandbox);
+    const stubbedGlobalState: StubbedGlobalState = getStubbedGlobalState(sandbox);
     stubbedGlobalState.get.returns(storedVersion);
 
     await migrateGlobalState();
@@ -92,7 +93,7 @@ describe("storage/migrationManager", () => {
 
   it(`migrate*() for globalState should not call executeMigrations() when storage version is correct`, async () => {
     // stub the correct storage version returned
-    const stubbedGlobalState: StubbedMemento = await getStubbedGlobalState(sandbox);
+    const stubbedGlobalState: StubbedGlobalState = getStubbedGlobalState(sandbox);
     stubbedGlobalState.get.returns(CODEBASE_STORAGE_VERSION);
 
     await migrateGlobalState();
@@ -105,7 +106,7 @@ describe("storage/migrationManager", () => {
   it(`migrate*() for secrets should call executeMigrations() when storage version is incorrect`, async () => {
     // stub the storage version returned
     const storedVersion = 1;
-    const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
     stubbedSecretStorage.get.resolves(storedVersion);
 
     await migrateSecretStorage();
@@ -126,7 +127,7 @@ describe("storage/migrationManager", () => {
 
   it(`migrate*() for secrets should not call executeMigrations() when storage version is correct`, async () => {
     // stub the correct storage version returned
-    const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
     stubbedSecretStorage.get.resolves(CODEBASE_STORAGE_VERSION);
 
     await migrateSecretStorage();

@@ -198,7 +198,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     const handleSessionRemovedStub = sandbox.stub().resolves();
     authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
-    const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
     await authProvider.removeSession("sessionId");
 
@@ -232,7 +232,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   });
 
   it("handleSessionCreated() should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
-    const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
     await authProvider["handleSessionCreated"](TEST_CCLOUD_AUTH_SESSION, true);
 
@@ -251,7 +251,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   });
 
   it("handleSessionRemoved() should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
-    const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
     authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
     await authProvider["handleSessionRemoved"](true);
@@ -388,7 +388,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
       const setAuthFlowCompletedStub = sandbox
         .stub(getResourceManager(), "setAuthFlowCompleted")
         .resolves();
-      const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+      const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
       const showResetPasswordNotificationStub = sandbox.stub(
         authProvider,
         "showResetPasswordNotification",
@@ -409,7 +409,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
       .stub(getResourceManager(), "setAuthFlowCompleted")
       .resolves();
     const ccloudAuthSessionInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
-    const stubbedSecretStorage: StubbedSecretStorage = await getStubbedSecretStorage(sandbox);
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
     const showResetPasswordNotificationStub = sandbox.stub(
       authProvider,
       "showResetPasswordNotification",
