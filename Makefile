@@ -7,8 +7,8 @@ include ./mk-files/semaphore.mk
 .PHONY: install-dependencies
 install-dependencies:
 	npm ci --prefer-offline --include=dev
-	sudo npx playwright install
-	sudo npx playwright install-deps
+	npx playwright install
+	npx playwright install-deps
 
 # Install additional test dependencies to run VS Code testing in headless mode
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
