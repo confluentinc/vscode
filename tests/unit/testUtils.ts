@@ -6,7 +6,6 @@ import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
 import { Subject } from "../../src/models/schema";
 import { SchemaRegistry } from "../../src/models/schemaRegistry";
-import { StorageManager } from "../../src/storage";
 
 /**
  * Convenience function to get the extension.
@@ -54,12 +53,6 @@ export async function getTestExtensionContext(
   const context = extension.exports;
   setExtensionContext(context);
   return context;
-}
-
-export async function getTestStorageManager(): Promise<StorageManager> {
-  // the extension needs to be activated before we can use the StorageManager
-  await getTestExtensionContext();
-  return StorageManager.getInstance();
 }
 
 /** Create a Kafka TopicData instance, as if from a REST response. */
