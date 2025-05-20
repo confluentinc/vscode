@@ -1,13 +1,16 @@
 import { SinonSandbox, SinonStub } from "sinon";
 import { ExtensionContext, Memento, SecretStorage } from "vscode";
-import { getTestExtensionContext } from "../unit/testUtils";
+import * as storageUtils from "../../src/storage/utils";
 
 /** The {@link Memento} interface, where all methods are replaced with {@link SinonStub stubs} */
 export interface StubbedMemento extends Memento {
   get: SinonStub;
   keys: SinonStub;
   update: SinonStub;
-  setKeysForSync?: SinonStub;
+}
+
+export interface StubbedGlobalState extends StubbedMemento {
+  setKeysForSync: SinonStub;
 }
 
 /**
@@ -15,8 +18,16 @@ export interface StubbedMemento extends Memento {
  * @param sandbox The {@link SinonSandbox} to use for stubbing.
  * @returns A promise that resolves to the stubbed global state {@link Memento}.
  */
-export async function getStubbedGlobalState(sandbox: SinonSandbox): Promise<StubbedMemento> {
-  return await getStubbedMemento(sandbox, "globalState");
+export async function getStubbedGlobalState(sandbox: SinonSandbox): Promise<StubbedGlobalState> {
+  const stubbedMemento: StubbedMemento = await getStubbedMemento(sandbox);
+  // not part of the Memento interface directly; see
+  // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/6f0a6fe9cdd5fe26424749033c0159aa3186854b/types/vscode/index.d.ts#L8390
+  const stubbedGlobalState: StubbedGlobalState = {
+    ...stubbedMemento,
+    setKeysForSync: sandbox.stub(),
+  };
+  sandbox.stub(storageUtils, "getGlobalState").returns(stubbedGlobalState);
+  return stubbedGlobalState;
 }
 
 /**
@@ -25,7 +36,9 @@ export async function getStubbedGlobalState(sandbox: SinonSandbox): Promise<Stub
  * @returns A promise that resolves to the stubbed workspace state {@link Memento}.
  */
 export async function getStubbedWorkspaceState(sandbox: SinonSandbox): Promise<StubbedMemento> {
-  return await getStubbedMemento(sandbox, "workspaceState");
+  const stubbedWorkspaceState: StubbedMemento = await getStubbedMemento(sandbox);
+  sandbox.stub(storageUtils, "getWorkspaceState").returns(stubbedWorkspaceState);
+  return stubbedWorkspaceState;
 }
 
 /**
@@ -36,27 +49,13 @@ export async function getStubbedWorkspaceState(sandbox: SinonSandbox): Promise<S
  */
 async function getStubbedMemento(
   sandbox: SinonSandbox,
-  type: "globalState" | "workspaceState",
-): Promise<StubbedMemento> {
-  const context: ExtensionContext = await getTestExtensionContext();
-
+): Promise<StubbedMemento | StubbedGlobalState> {
   const stubbedMemento: StubbedMemento = {
     // stub `get` to handle both overload signatures
-    get: sandbox.stub().callsFake((key: string, defaultValue?: any) => {
-      return defaultValue !== undefined ? defaultValue : undefined;
-    }),
+    get: sandbox.stub(),
     keys: sandbox.stub().returns([]),
     update: sandbox.stub().resolves(),
   };
-
-  if (type === "globalState") {
-    const setKeysForSyncStub = sandbox.stub().returns(undefined);
-    // not part of the Memento interface directly; see
-    // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/6f0a6fe9cdd5fe26424749033c0159aa3186854b/types/vscode/index.d.ts#L8390
-    (stubbedMemento as any).setKeysForSync = setKeysForSyncStub;
-  }
-
-  sandbox.stub(context, type).returns(stubbedMemento);
   return stubbedMemento;
 }
 
@@ -83,8 +82,7 @@ export async function getStubbedSecretStorage(
     delete: sandbox.stub().resolves(),
     onDidChange: sandbox.stub(),
   };
-  // stub the ExtensionContext to use our stubbed interface
-  const context: ExtensionContext = await getTestExtensionContext();
-  sandbox.stub(context, "secrets").returns(stubbedSecretStorage);
+  // stub our helper functions since ExtensionContext.secrets can't be stubbed directly
+  sandbox.stub(storageUtils, "getSecretStorage").returns(stubbedSecretStorage);
   return stubbedSecretStorage;
 }
