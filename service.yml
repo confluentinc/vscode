@@ -19,6 +19,7 @@ sonarqube:
     - javascript
     - typescript
   enable: true
+  main_branch: main
   coverage_reports:
     - coverage/lcov.info
     - coverage/lcov-functional.info
