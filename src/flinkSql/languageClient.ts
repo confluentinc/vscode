@@ -10,8 +10,8 @@ import {
 } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
-import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
+import { getSecretStorage } from "../storage/utils";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient");
@@ -26,7 +26,7 @@ export async function initializeLanguageClient(
   url: string,
   onWebSocketDisconnect: () => void,
 ): Promise<LanguageClient | null> {
-  let accessToken: string | undefined = await getStorageManager().getSecret(
+  let accessToken: string | undefined = await getSecretStorage().get(
     SecretStorageKeys.SIDECAR_AUTH_TOKEN,
   );
   if (!accessToken) {
