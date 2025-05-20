@@ -3,7 +3,7 @@ import { normalize } from "path";
 import * as sinon from "sinon";
 import { Uri } from "vscode";
 import * as logging from "../logging";
-import { getSidecarLogfilePath } from "../sidecar/sidecarManager";
+import { getSidecarLogfilePath } from "../sidecar/logging";
 import { extensionLogFileUris, sidecarLogFileUri } from "./support";
 
 describe("commands/support.ts", function () {
