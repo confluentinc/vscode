@@ -70,4 +70,8 @@ export enum SecretStorageKeys {
 
 /** Key used to store the current storage version across global/workspace state and SecretStorage. */
 export const DURABLE_STORAGE_VERSION_KEY = "storageVersion";
-export type MigrationStorageType = "global" | "workspace" | "secret";
+export enum MigrationStorageType {
+  GLOBAL = "global",
+  WORKSPACE = "workspace",
+  SECRET = "secret",
+}
