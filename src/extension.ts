@@ -149,9 +149,14 @@ async function _activateExtension(
   // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
   setExtensionContext(context);
 
-  // register the log output channels and debugging commands before anything else, in case we need
-  // to reset global/workspace state or there's a problem further down with extension activation
-  context.subscriptions.push(OUTPUT_CHANNEL, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
+  // register the log output channels, debugging commands, and support commands to ensure we have
+  // visibility into the extension and sidecar logs and can download support .zip and/or file issues
+  context.subscriptions.push(
+    OUTPUT_CHANNEL,
+    SIDECAR_OUTPUT_CHANNEL,
+    ...registerDebugCommands(),
+    ...registerSupportCommands(),
+  );
   // automatically display and focus the Confluent extension output channel in development mode
   // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
   // host window during debugging
@@ -221,7 +226,6 @@ async function _activateExtension(
     ...registerEnvironmentCommands(),
     ...registerSchemaRegistryCommands(),
     ...registerSchemaCommands(),
-    ...registerSupportCommands(),
     ...registerTopicCommands(),
     ...registerDiffCommands(),
     ...registerExtraCommands(),
