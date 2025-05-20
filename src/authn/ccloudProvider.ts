@@ -16,9 +16,9 @@ import {
   getCCloudConnection,
 } from "../sidecar/connections/ccloud";
 import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
-import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
+import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
@@ -215,13 +215,13 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     let sessionSecret: string | undefined;
     let authComplete: string | undefined;
 
-    const storageManager = getStorageManager();
+    const secretStorage: vscode.SecretStorage = getSecretStorage();
     // check with the sidecar to see if we have an existing CCloud connection, and also check in to
     // see what the (persistent, cross-workspace) secret store says about existence of a session
     [connection, sessionSecret, authComplete] = await Promise.all([
       getCCloudConnection(),
-      storageManager.getSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
-      storageManager.getSecret(SecretStorageKeys.AUTH_COMPLETED),
+      secretStorage.get(SecretStorageKeys.AUTH_SESSION_EXISTS),
+      secretStorage.get(SecretStorageKeys.AUTH_COMPLETED),
     ]);
 
     if (connection && ["NO_TOKEN", "FAILED"].includes(connection.status.authentication.status)) {
@@ -244,12 +244,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       logger.debug("getSessions() session secret exists but no connection found, removing secret");
       // WARNING: if you add a value below, also add it to the if block, otherwise it may not trigger the onChange event when setting later
       await Promise.all([
-        storageManager.deleteSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
-        storageManager.deleteSecret(SecretStorageKeys.AUTH_COMPLETED),
+        secretStorage.delete(SecretStorageKeys.AUTH_SESSION_EXISTS),
+        secretStorage.delete(SecretStorageKeys.AUTH_COMPLETED),
         // don't check this in the if block above since it changes with AUTH_COMPLETED
-        storageManager.deleteSecret(SecretStorageKeys.AUTH_PASSWORD_RESET),
+        secretStorage.delete(SecretStorageKeys.AUTH_PASSWORD_RESET),
         // we don't need to check for this up above, just clear it out if we don't have a connection
-        storageManager.deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+        secretStorage.delete(SecretStorageKeys.CCLOUD_AUTH_STATUS),
       ]);
     } else if (!sessionSecretExists && connectionExists) {
       // NOTE: this should never happen, because in order for the connection to be made with the
@@ -331,7 +331,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // to prevent any last-minute requests from passing through the middleware
     await Promise.all([
       deleteCCloudConnection(),
-      getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+      getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_STATUS),
     ]);
     await this.handleSessionRemoved(true);
     ccloudConnected.fire(false);
@@ -492,7 +492,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
-      await getStorageManager().setSecret(SecretStorageKeys.AUTH_SESSION_EXISTS, "true");
+      await getSecretStorage().store(SecretStorageKeys.AUTH_SESSION_EXISTS, "true");
     }
   }
 
@@ -521,11 +521,11 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
-      const storageManager = getStorageManager();
+      const secretStorage: vscode.SecretStorage = getSecretStorage();
       await Promise.all([
-        storageManager.deleteSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
-        storageManager.deleteSecret(SecretStorageKeys.AUTH_COMPLETED),
-        storageManager.deleteSecret(SecretStorageKeys.AUTH_PASSWORD_RESET),
+        secretStorage.delete(SecretStorageKeys.AUTH_SESSION_EXISTS),
+        secretStorage.delete(SecretStorageKeys.AUTH_COMPLETED),
+        secretStorage.delete(SecretStorageKeys.AUTH_PASSWORD_RESET),
       ]);
     }
   }
@@ -589,7 +589,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         // clear any existing auth session so the user can sign in again with their new password
         await Promise.all([
           deleteCCloudConnection(),
-          getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+          getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_STATUS),
         ]);
         ccloudAuthSessionInvalidated.fire();
         this.showResetPasswordNotification();

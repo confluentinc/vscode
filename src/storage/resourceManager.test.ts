@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { randomUUID } from "crypto";
 import { Uri } from "vscode";
-import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -16,7 +15,7 @@ import {
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
-import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ConnectionSpec,
   KafkaClusterConfigFromJSON,
@@ -42,14 +41,14 @@ import {
   stringToMap,
 } from "./resourceManager";
 import { UriMetadata, UriMetadataMap } from "./types";
+import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
 describe("ResourceManager (CCloud) environment methods", function () {
-  let storageManager: StorageManager;
   let environments: CCloudEnvironment[];
 
   before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
+    // extension needs to be activated before any storage management can be done
+    await getTestExtensionContext();
     environments = [
       new CCloudEnvironment({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-1" as EnvironmentId }),
       new CCloudEnvironment({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-2" as EnvironmentId }),
@@ -58,12 +57,12 @@ describe("ResourceManager (CCloud) environment methods", function () {
 
   beforeEach(async () => {
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   it("setCCloudEnvironments() should correctly store Environments", async () => {
@@ -77,7 +76,7 @@ describe("ResourceManager (CCloud) environment methods", function () {
 
   it("getCCloudEnvironments() should correctly retrieve Environments", async () => {
     const resourceManager = getResourceManager();
-    // set the environments in the StorageManager before retrieving them
+    // set the environments in extension storage before retrieving them
     await resourceManager.setCCloudEnvironments(environments);
     // verify the environments were retrieved correctly
     const retrievedEnvironments: CCloudEnvironment[] =
@@ -86,7 +85,7 @@ describe("ResourceManager (CCloud) environment methods", function () {
   });
 
   it("getCCloudEnvironment() should correctly retrieve an Environment", async () => {
-    // set the environments in the StorageManager before retrieving one
+    // set the environments in extension storage before retrieving one
     await getResourceManager().setCCloudEnvironments(environments);
     // verify the environment was retrieved correctly
     const environment: CCloudEnvironment | null = await getResourceManager().getCCloudEnvironment(
@@ -97,7 +96,7 @@ describe("ResourceManager (CCloud) environment methods", function () {
 
   it("getCCloudEnvironment() should return null if the environment is not found", async () => {
     const resourceManager = getResourceManager();
-    // set the environments in the StorageManager before retrieving one
+    // set the environments in extension storage before retrieving one
     await resourceManager.setCCloudEnvironments(environments);
     // verify the environment was not found
     const missingEnvironment: CCloudEnvironment | null =
@@ -106,12 +105,12 @@ describe("ResourceManager (CCloud) environment methods", function () {
   });
 
   it("deleteCCloudEnvironments() should correctly delete Environments", async () => {
-    // set the environments in the StorageManager before deleting them
+    // set the environments in extension storage before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudEnvironments(environments);
     await resourceManager.deleteCCloudEnvironments();
     // verify the environments were deleted correctly
-    const missingEnvironments = await storageManager.getWorkspaceState(
+    const missingEnvironments: CCloudEnvironment[] | undefined = await getWorkspaceState().get(
       WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS,
     );
     assert.deepStrictEqual(missingEnvironments, undefined);
@@ -119,13 +118,12 @@ describe("ResourceManager (CCloud) environment methods", function () {
 });
 
 describe("ResourceManager Kafka cluster methods", function () {
-  let storageManager: StorageManager;
   let ccloudClusters: CCloudKafkaCluster[];
   let localClusters: LocalKafkaCluster[];
 
   before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
+    // extension needs to be activated before any storage management can be done
+    await getTestExtensionContext();
     ccloudClusters = [
       CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "test-cluster-id-1" }),
       CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "test-cluster-id-2" }),
@@ -137,12 +135,12 @@ describe("ResourceManager Kafka cluster methods", function () {
 
   beforeEach(async () => {
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   it("CCLOUD: setCCloudKafkaClusters() should correctly store Kafka clusters", async () => {
@@ -177,7 +175,7 @@ describe("ResourceManager Kafka cluster methods", function () {
       }),
     ];
     await resourceManager.setCCloudKafkaClusters(newClusters);
-    // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
+    // verify the clusters were stored correctly
     let storedClustersByEnv: CCloudKafkaClustersByEnv =
       await resourceManager.getCCloudKafkaClusters();
     assert.ok(storedClustersByEnv);
@@ -188,7 +186,7 @@ describe("ResourceManager Kafka cluster methods", function () {
 
   it("CCLOUD: setCCloudKafkaClusters() shouldn't duplicate clusters when setting clusters that already exist", async () => {
     const resourceManager = getResourceManager();
-    // set the clusters in the StorageManager before setting them again
+    // set the clusters in extension storage before setting them again
     await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // set the clusters again
     await resourceManager.setCCloudKafkaClusters(ccloudClusters);
@@ -272,12 +270,12 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: deleteCCloudKafkaClusters() should correctly delete Kafka clusters", async () => {
-    // set the clusters in the StorageManager before deleting them
+    // set the clusters in extension storage before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     await resourceManager.deleteCCloudKafkaClusters();
     // verify the clusters were deleted correctly
-    const missingClusters = await storageManager.getWorkspaceState(
+    const missingClusters: CCloudKafkaCluster[] | undefined = getWorkspaceState().get(
       WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
     );
     assert.deepStrictEqual(missingClusters, undefined);
@@ -285,7 +283,7 @@ describe("ResourceManager Kafka cluster methods", function () {
 
   it("LOCAL: getLocalKafkaClusters() should correctly retrieve Kafka clusters", async () => {
     const resourceManager = getResourceManager();
-    // set the clusters in the StorageManager before retrieving them
+    // set the clusters in extension storage before retrieving them
     await resourceManager.setLocalKafkaClusters(localClusters);
     // verify the clusters were retrieved correctly
     const retrievedClusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
@@ -320,21 +318,19 @@ describe("ResourceManager Kafka cluster methods", function () {
 });
 
 describe("ResourceManager (CCloud) Schema Registry methods", function () {
-  let storageManager: StorageManager;
-
   before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
+    // extension needs to be activated before any storage management can be done
+    await getTestExtensionContext();
   });
 
   beforeEach(async () => {
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   it("CCLOUD: setCCloudSchemaRegistries() should correctly store Schema Registries", async () => {
@@ -354,7 +350,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 
     const rm = getResourceManager();
     await rm.setCCloudSchemaRegistries(testSchemaRegistries);
-    // verify the Schema Registry was stored correctly by checking through the StorageManager instead of the ResourceManager
+    // verify the Schema Registry was stored correctly
     let storedSchemaRegistries: CCloudSchemaRegistryByEnv = await rm.getCCloudSchemaRegistries();
     assert.ok(storedSchemaRegistries);
     assert.ok(storedSchemaRegistries instanceof Map);
@@ -367,7 +363,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   });
 
   it("CCLOUD: setCCloudSchemaRegistries() setting with empty array should overwrite existing Schema Registries", async () => {
-    // set the Schema Registry in the StorageManager before setting them again
+    // set the Schema Registry in extension storage before setting them again
     const rm = getResourceManager();
     await rm.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
     // fetching now should return the stored Schema Registry
@@ -496,7 +492,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   });
 
   it("CCLOUD: deleteCCloudTopics() should correctly delete all ccloud Kafka topics", async () => {
-    // set the topics in the StorageManager before deleting them
+    // set the topics in extension storage before deleting them
     const resourceManager = getResourceManager();
     const otherCcloudCluster = CCloudKafkaCluster.create({
       ...TEST_CCLOUD_KAFKA_CLUSTER,
@@ -555,12 +551,12 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   });
 
   it("CCLOUD: deleteCCloudSchemaRegistries() should correctly delete Schema Registries", async () => {
-    // set the Schema Registry in the StorageManager before deleting them
+    // set the Schema Registry in extension storage before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.deleteCCloudSchemaRegistries();
     // verify the Schema Registry was deleted correctly
-    const missingClusters = await storageManager.getWorkspaceState(
+    const missingClusters: CCloudSchemaRegistry[] | undefined = getWorkspaceState().get(
       WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
     );
     assert.deepStrictEqual(missingClusters, undefined);
@@ -568,12 +564,11 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 });
 
 describe("ResourceManager Kafka topic methods", function () {
-  let storageManager: StorageManager;
   let ccloudTopics: KafkaTopic[];
 
   before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
+    // extension needs to be activated before any storage management can be done
+    await getTestExtensionContext();
     ccloudTopics = [
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
@@ -582,12 +577,12 @@ describe("ResourceManager Kafka topic methods", function () {
 
   beforeEach(async () => {
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   it("getClusterForTopic() should return the correct cloud or local cluster accordingly", async () => {
@@ -626,7 +621,7 @@ describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;
 
   before(async () => {
-    // extension needs to be activated before storage manager(s) can be used
+    // extension needs to be activated before any storage management can be done
     await getTestExtensionContext();
   });
 
@@ -731,23 +726,21 @@ describe("ResourceManager direct connection methods", function () {
 });
 
 describe("ResourceManager SR subject methods", function () {
-  let storageManager: StorageManager;
   let resourceManager: ResourceManager;
 
   before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
+    // extension needs to be activated before any storage management can be done
     resourceManager = getResourceManager();
   });
 
   this.beforeEach(async () => {
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   this.afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   function createTestSubjects(schemaRegistry: SchemaRegistry, count: number): Subject[] {
@@ -870,7 +863,7 @@ describe("ResourceManager SR subject methods", function () {
   });
 
   it("deleteCCloudResources() + deleteCCloudSubjects() should correctly delete only ccloud SR subjects", async () => {
-    // set the subjects in the StorageManager before deleting them
+    // set the subjects in extension storage before deleting them
     await resourceManager.setSubjects(
       TEST_CCLOUD_SCHEMA_REGISTRY,
       createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
@@ -889,7 +882,7 @@ describe("ResourceManager SR subject methods", function () {
   });
 
   it("deleteLocalSubjects() should correctly delete only local SR subjects", async () => {
-    // set the subjects in the StorageManager before deleting them
+    // set the subjects in extension storage before deleting them
     await resourceManager.setSubjects(
       TEST_CCLOUD_SCHEMA_REGISTRY,
       createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
@@ -909,13 +902,11 @@ describe("ResourceManager SR subject methods", function () {
 });
 
 describe("ResourceManager general utility methods", function () {
-  let storageManager: StorageManager;
-
   let ccloudTopics: KafkaTopic[];
 
   before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
+    // extension needs to be activated before any storage management can be done
+    await getTestExtensionContext();
 
     ccloudTopics = [
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
@@ -925,12 +916,12 @@ describe("ResourceManager general utility methods", function () {
 
   beforeEach(async () => {
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   it("CCLOUD: deleteCCloudResources() should correctly delete all CCloud resources", async () => {
@@ -951,7 +942,6 @@ describe("ResourceManager general utility methods", function () {
 
 describe("ResourceManager Uri metadata methods", () => {
   let resourceManager: ResourceManager;
-  let storageManager: StorageManager;
 
   const testUri: Uri = Uri.parse("file:///test-file.sql");
   const testMetadata: UriMetadata = {
@@ -959,21 +949,20 @@ describe("ResourceManager Uri metadata methods", () => {
   };
 
   before(async () => {
-    // extension needs to be activated before storage manager can be used
+    // extension needs to be activated before any storage management can be done
     await getTestExtensionContext();
   });
 
   beforeEach(async () => {
-    storageManager = await getTestStorageManager();
     resourceManager = getResourceManager();
 
     // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   afterEach(async () => {
     // clean up after each test
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
   });
 
   it("should set and get Uri metadata correctly", async () => {
