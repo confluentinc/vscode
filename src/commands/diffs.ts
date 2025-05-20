@@ -5,8 +5,8 @@ import { ContextValues, setContextValue } from "../context/values";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
-import { getStorageManager } from "../storage";
 import { WorkspaceStorageKeys } from "../storage/constants";
+import { getWorkspaceState } from "../storage/utils";
 
 const logger = new Logger("commands.diffs");
 
@@ -20,7 +20,7 @@ export async function selectForCompareCommand(item: any) {
   const uri: vscode.Uri = item instanceof vscode.Uri ? item : convertItemToUri(item);
   logger.debug("Selected item for compare", uri);
   // convert to string before storing so we can Uri.parse it later since Uri is not serializable
-  await getStorageManager().setWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI, uri.toString());
+  await getWorkspaceState().update(WorkspaceStorageKeys.DIFF_BASE_URI, uri.toString());
   // allows the "Compare with Selected" command to be used
   await setContextValue(ContextValues.resourceSelectedForCompare, true);
 }
@@ -34,9 +34,7 @@ export async function compareWithSelectedCommand(item: any) {
   // is likely already a Uri
   const uri2: vscode.Uri = item instanceof vscode.Uri ? item : convertItemToUri(item);
   logger.debug("Comparing with selected item", uri2);
-  const uri1str: string | undefined = await getStorageManager().getWorkspaceState(
-    WorkspaceStorageKeys.DIFF_BASE_URI,
-  );
+  const uri1str: string | undefined = getWorkspaceState().get(WorkspaceStorageKeys.DIFF_BASE_URI);
   if (!uri1str) {
     logger.error("No resource selected for compare; this shouldn't happen", uri2);
     return;
