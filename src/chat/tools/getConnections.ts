@@ -32,7 +32,6 @@ export interface IGetConnectionsParameters {
 
 export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsParameters> {
   readonly name = "get_connections";
-  readonly progressMessage = "Checking available connections...";
 
   foundConnectionTypes: ConnectionType[] = [];
   missingConnectionTypes: ConnectionType[] = [];
@@ -124,6 +123,13 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetConnectionsParameters;
+    if (!parameters.connectionType) {
+      stream.progress(`Retrieving available connections with no connection type specified...`);
+    } else {
+      stream.progress(
+        `Retrieving available connections for connectionType: ${parameters.connectionType}...`,
+      );
+    }
 
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
@@ -133,6 +139,13 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       },
       token,
     );
+    if (!parameters.connectionType) {
+      stream.progress(`Found ${result.content.length} connections.`);
+    } else {
+      stream.progress(
+        `Found ${result.content.length} connections for connectionType: ${parameters.connectionType}.`,
+      );
+    }
     if (!result.content.length) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
