@@ -455,6 +455,45 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   describe("FlinkStatementResultsViewModel only", () => {
+    describe("viewMode", () => {
+      it("should initialize with table view mode", () => {
+        assert.strictEqual(vm.viewMode(), "table");
+      });
+
+      it("should toggle between table and changelog view modes", async () => {
+        // Initial state
+        assert.strictEqual(vm.viewMode(), "table");
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle to changelog
+        await vm.setViewMode("changelog");
+        await eventually(() => assert.strictEqual(vm.viewMode(), "changelog"));
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Change page in changelog mode
+        vm.page(2);
+        await eventually(() => assert.strictEqual(vm.page(), 2));
+
+        assert.strictEqual(vm.tablePage(), 0);
+        // We don't eagerly update the changelogPage..
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle back to table
+        await vm.setViewMode("table");
+
+        await eventually(() => {
+          assert.strictEqual(vm.viewMode(), "table");
+          assert.strictEqual(vm.page(), 0);
+          assert.strictEqual(vm.tablePage(), 0);
+          assert.strictEqual(vm.changelogPage(), 2);
+        });
+      });
+    });
+
     describe("schema and columns", () => {
       it("should create correct column definitions for table view", () => {
         const columns = vm.columns();
@@ -599,6 +638,34 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         await new Promise((resolve) => setTimeout(resolve, vm.searchDebounceTime));
         assert.strictEqual(vm.searchTimer, null);
       });
+    });
+
+    it("should handle column widths correctly when toggling between changelog and table mode", async () => {
+      // Test default column widths
+      assert.deepStrictEqual(vm.colWidth(), [128, 128]); // 8rem * 16px = 128px for each column
+
+      const setWidths = (widths: number[]) => {
+        vm.colWidth(widths);
+        storage.set({ ...storage.get()!, colWidths: vm.colWidth() });
+      };
+
+      setWidths([150, 200]);
+
+      // Test switching to changelog view mode
+      await vm.setViewMode("changelog");
+      assert.deepStrictEqual(vm.colWidth(), [128, 150, 200]); // Default width for Operation column + stored widths
+
+      // Change width of Operation column
+      setWidths([64, 150, 200]);
+
+      // Test switching back to table view mode
+      await vm.setViewMode("table");
+      assert.deepStrictEqual(vm.colWidth(), [150, 200]); // Should remove Operation column width
+
+      await vm.setViewMode("changelog");
+      // Assert that changes to Operation column's width are persisted
+      // across view mode toggles.
+      assert.deepStrictEqual(vm.colWidth(), [64, 150, 200]);
     });
   });
 });
