@@ -49,28 +49,35 @@ export function isProcessRunning(pid: number): boolean {
 
 export async function gatherSidecarOutputs(stderrPath: string): Promise<SidecarOutputs> {
   const myLogger = logger.withCallpoint("gatherSidecarOutputs");
-  // Try to read+parse sidecar logs to notice any startup errors (occupied port, missing
+  // Try to read+parse most recennt 20 sidecar logs to notice any startup errors (occupied port, missing
   // configs, etc.)
   const reformattedLogLines: string[] = [];
   const parsedLines: SidecarLogFormat[] = [];
 
+  const sidecarLogfilePath = getSidecarLogfilePath();
+
   let rawLogs: string[] = [];
   try {
-    rawLogs = (await readFile(Uri.file(getSidecarLogfilePath()))).trim().split("\n").slice(-20);
+    rawLogs = (await readFile(Uri.file(sidecarLogfilePath))).trim().split("\n").slice(-20);
   } catch (e) {
     myLogger.error(`Failed to read sidecar log file: ${e}`);
   }
 
-  for (const rawLogLine in rawLogs) {
+  for (const rawLogLine of rawLogs) {
     try {
       const parsed = JSON.parse(rawLogLine.trim()) as SidecarLogFormat;
+      if (!parsed || !parsed.timestamp || !parsed.level || !parsed.loggerName || !parsed.message) {
+        throw new Error("Corrupted log line");
+      }
       parsedLines.push(parsed);
 
       const formatted = `\t> ${parsed.timestamp} ${parsed.level} [${parsed.loggerName}] ${parsed.message}`;
       reformattedLogLines.push(formatted);
     } catch {
-      // JSON parsing issue. Only append the raw line to logLines.
-      reformattedLogLines.push(rawLogLine);
+      // JSON parsing or post-JSON structure issue. Only append the raw line to logLines (if nonempty).
+      if (rawLogLine !== "") {
+        reformattedLogLines.push(rawLogLine);
+      }
     }
   }
 
