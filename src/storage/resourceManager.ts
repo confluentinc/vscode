@@ -91,7 +91,7 @@ export class ResourceManager {
   static instance: ResourceManager | null = null;
   static getInstance(): ResourceManager {
     if (!ResourceManager.instance) {
-      // will throw an ExtensionContextNotSetError if the context isn't available for StorageManager
+      // will throw an ExtensionContextNotSetError if the context isn't set during activation
       ResourceManager.instance = new ResourceManager();
     }
     return ResourceManager.instance;

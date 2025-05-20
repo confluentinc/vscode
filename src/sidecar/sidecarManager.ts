@@ -542,7 +542,7 @@ export class SidecarManager {
   }
 
   /**
-   * Get the auth token secret from the storage manager. Returns empty string if none found.
+   * Get the auth token secret from the secret storage. Returns empty string if none found.
    **/
   async getAuthTokenFromSecretStore(): Promise<string> {
     const existing_secret: string | undefined = await getSecretStorage().get(

@@ -145,7 +145,7 @@ async function _activateExtension(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
   // must be done first to allow any other downstream callers to call `getExtensionContext()`
-  // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
+  // (e.g. for globalState/workspaceState/secrets storage, webviews for extension root path, etc)
   setExtensionContext(context);
 
   // register the log output channels and debugging commands before anything else, in case we need
@@ -161,8 +161,8 @@ async function _activateExtension(
   // set up initial feature flags and the LD client
   await setupFeatureFlags();
 
-  // configure the StorageManager for extension access to secrets and global/workspace states, and
-  // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
+  // configure extension access to secrets and global/workspace states, and set the initial context
+  // values for the VS Code UI to inform the `when` clauses in package.json
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
 
@@ -444,11 +444,13 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   ];
 }
 
-/** Initialize the StorageManager singleton instance and handle any necessary migrations. */
+/**
+ * Handle any necessary migrations for globalState/workspaceState/secrets that need to happen
+ * before the extension can proceed.
+ */
 async function setupStorage(): Promise<void> {
-  // Handle any storage migrations that need to happen before the extension can proceed.
   await migrateStorageIfNeeded();
-  logger.info("Storage manager initialized and migrations completed");
+  logger.info("Extension state/storage migrations completed");
 }
 
 /**

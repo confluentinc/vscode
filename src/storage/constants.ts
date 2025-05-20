@@ -1,5 +1,5 @@
 /** Workspace state keys. A single enum to hold all of the keys the extension uses
- * to cache data within the workspace storage via ResourceManager + StorageManager. */
+ * to cache data within the workspace storage via ResourceManager. */
 export enum WorkspaceStorageKeys {
   /** Environments found in ccloud */
   CCLOUD_ENVIRONMENTS = "ccloudEnvironments",
