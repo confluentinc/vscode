@@ -690,6 +690,11 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   sidecar_env["VSCODE_VERSION"] = vscode.version;
   sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
 
+  // Temp for Derek testing, may be good to include a setting for implying
+  // these ("Guard against slow connections to Kafka" or something)
+  sidecar_env["IDE_SIDECAR_CONNECTIONS_DIRECT_TIMEOUT_SECONDS"] = "10";
+  sidecar_env["IDE_SIDECAR_CONNECTIONS_DIRECT_REFRESH_STATUS_INTERVAL_SECONDS"] = "10";
+
   // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
   // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
   // port will still be guarded by the firewall.
