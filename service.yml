@@ -24,7 +24,7 @@ sonarqube:
     - coverage/lcov.info
     - coverage/lcov-functional.info
   coverage_sources:
-    - src/**/*.ts
+    - src
   coverage_exclusions:
     - .vscode-test/**/*
     - bin/**/*
