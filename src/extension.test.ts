@@ -9,7 +9,6 @@ import {
 } from "./context/extension";
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
-import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -58,11 +57,6 @@ describe("ExtensionContext", () => {
         callable: () => ConfluentCloudAuthProvider.getInstance(),
         source: "ConfluentCloudAuthProvider",
         clear: () => (ConfluentCloudAuthProvider["instance"] = null),
-      },
-      {
-        callable: () => StorageManager.getInstance(),
-        source: "StorageManager",
-        clear: () => (StorageManager["instance"] = null),
       },
       {
         callable: () => ResourceManager.getInstance(),
