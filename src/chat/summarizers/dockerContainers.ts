@@ -1,5 +1,7 @@
-import { MarkdownString } from "vscode";
+import { MarkdownString, workspace } from "vscode";
 import { ContainerInspectResponse } from "../../clients/docker";
+import { DEFAULT_KAFKA_IMAGE_REPO, DEFAULT_SCHEMA_REGISTRY_REPO } from "../../docker/constants";
+import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../preferences/constants";
 
 /**
  * Create a string representation of a {@link ContainerInspectResponse} object, limiting the
@@ -13,25 +15,80 @@ export function summarizeLocalDockerContainer(container: ContainerInspectRespons
   const containerName = container.Name?.replace("/", "") ?? "";
   const summary = new MarkdownString().appendMarkdown(`### "${containerName}"`);
 
+  const config = workspace.getConfiguration();
+  const kafkaImageRepo: string = config.get(LOCAL_KAFKA_IMAGE) ?? DEFAULT_KAFKA_IMAGE_REPO;
+  const schemaRegistryImageRepo: string =
+    config.get(LOCAL_SCHEMA_REGISTRY_IMAGE) ?? DEFAULT_SCHEMA_REGISTRY_REPO;
+
+  // Get the full image string from container config
   const image: string | undefined = container.Config?.Image;
-  if (image) {
-    summary.appendMarkdown(`\n- Image: ${container.Config?.Image}`);
-  }
 
-  const env: string[] = container.Config?.Env ?? [];
-  if (env.length) {
-    summary.appendMarkdown(`\n- Environment Variables:`);
-    env.forEach((envVar) => {
-      if (envVar.startsWith("KAFKA_")) {
-        const [key, value] = envVar.split("=");
-        if (value !== "") {
-          summary.appendMarkdown(`\n  - ${key}: ${value}`);
-        }
-      }
+  // Check if image contains the repo name rather than container name
+  if (image?.includes(kafkaImageRepo)) {
+    if (image) {
+      summary.appendMarkdown(`\n- Image: ${image}`);
+    }
+
+    const ports = container.NetworkSettings?.Ports ?? {};
+    const portMappings = Object.entries(ports).map(([containerPort, hostBindings]) => {
+      const hostPort = hostBindings?.[0]?.HostPort;
+      return { containerPort, hostPort: hostPort ?? containerPort };
     });
+
+    const env: string[] = container.Config?.Env ?? [];
+    if (env.length || portMappings.length) {
+      summary.appendMarkdown(`\n- Environment Variables:`);
+      // Add port mappings as environment variables
+      portMappings.forEach(({ containerPort, hostPort }) => {
+        summary.appendMarkdown(`\n  - PORT_${containerPort.split("/")[0]}: ${hostPort}`);
+      });
+      env.forEach((envVar) => {
+        if (envVar.startsWith("KAFKA_") || envVar.startsWith("SCHEMA_REGISTRY_")) {
+          const [key, value] = envVar.split("=");
+          if (value !== "") {
+            summary.appendMarkdown(`\n  - ${key}: ${value}`);
+          }
+        }
+      });
+    }
+
+    summary.appendMarkdown(`\n- Status: ${container.State?.Status}`);
+
+    return summary.value;
+  } else if (image?.includes(schemaRegistryImageRepo)) {
+    const image: string | undefined = container.Config?.Image;
+    if (image) {
+      summary.appendMarkdown(`\n- Image: ${container.Config?.Image}`);
+    }
+
+    const ports = container.NetworkSettings?.Ports ?? {};
+    const portMappings = Object.entries(ports).map(([containerPort, hostBindings]) => {
+      const hostPort = hostBindings?.[0]?.HostPort;
+      return { containerPort, hostPort: hostPort ?? containerPort };
+    });
+
+    const env: string[] = container.Config?.Env ?? [];
+    if (env.length || portMappings.length) {
+      summary.appendMarkdown(`\n- Environment Variables:`);
+      // Add port mappings as environment variables
+      portMappings.forEach(({ containerPort, hostPort }) => {
+        summary.appendMarkdown(`\n  - PORT_${containerPort.split("/")[0]}: ${hostPort}`);
+      });
+      env.forEach((envVar) => {
+        if (envVar.startsWith("KAFKA_") || envVar.startsWith("SCHEMA_REGISTRY_")) {
+          const [key, value] = envVar.split("=");
+          if (value !== "") {
+            summary.appendMarkdown(`\n  - ${key}: ${value}`);
+          }
+        }
+      });
+    }
+
+    summary.appendMarkdown(`\n- Status: ${container.State?.Status}`);
+
+    return summary.value;
+  } else {
+    summary.appendMarkdown(`\n- Error: Unrecognized container type`);
+    return summary.value;
   }
-
-  summary.appendMarkdown(`\n- Status: ${container.State?.Status}`);
-
-  return summary.value;
 }
