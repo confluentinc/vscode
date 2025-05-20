@@ -36,7 +36,7 @@ blocks:
     task:
       env_vars:
         - name: RUN_SONARQUBE_SCAN
-          value: true
+          value: "true"
       agent:
         machine:
           type: s1-prod-ubuntu24-04-amd64-1
