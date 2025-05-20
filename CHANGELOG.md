@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Fixed an issue where the "File Issue" button would not work if the extension failed to activate
+  properly. [#1823](https://github.com/confluentinc/vscode/issues/1823)
+
 ## 1.3.0
 
 ### Added
