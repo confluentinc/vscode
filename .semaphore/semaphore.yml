@@ -64,7 +64,8 @@ blocks:
             - make store-test-results-to-semaphore
             # Ensures that we run the SonarQube scan only in this block, and not in the other blocks
             # where this epilogue is referenced.
-            - [[ "${RUN_SONARQUBE_SCAN}" == "true" ]] && emit-sonarqube-data --run_only_sonar_scan
+            - |
+              [[ "${RUN_SONARQUBE_SCAN}" == "true" ]] && emit-sonarqube-data --run_only_sonar_scan
 
   - name: "Build & Test (VS Code: linux arm64)"
     dependencies: []
