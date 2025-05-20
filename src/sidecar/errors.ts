@@ -29,10 +29,3 @@ export class WrongAuthSecretError extends Error {
     this.sidecar_process_id = sidecar_process_id;
   }
 }
-
-/** Could not find the sidecar executable. */
-export class NoSidecarExecutableError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}

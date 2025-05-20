@@ -4,6 +4,7 @@ import { MOMENTARY_PAUSE_MS } from "./constants";
 import {
   isProcessRunning,
   killSidecar,
+  normalizedSidecarPath,
   safeKill,
   WAIT_FOR_SIDECAR_DEATH_MS,
   wasConnRefused,
@@ -66,7 +67,6 @@ describe("sidecar/utils.ts", () => {
     beforeEach(() => {
       sandbox = sinon.createSandbox();
       killStub = sandbox.stub(process, "kill");
-      // sandbox.stub(utils, "pause").resolves();
       clock = sandbox.useFakeTimers(Date.now());
     });
 
@@ -236,6 +236,23 @@ describe("sidecar/utils.ts", () => {
       for (const error of nonConnRefusedErrors) {
         assert.strictEqual(false, wasConnRefused(error));
       }
+    });
+  });
+
+  describe("normalizedSidecarPath()", () => {
+    const skipIfNotWin32 = process.platform !== "win32" ? it.skip : it;
+    const skipIfWin32 = process.platform === "win32" ? it.skip : it;
+
+    skipIfNotWin32("Should correct from double slashes on Windows", () => {
+      const path = "\\\\Users\\user\\Documents\\\\sidecar";
+      const normalizedPath = normalizedSidecarPath(path);
+      assert.strictEqual(normalizedPath, "\\Users\\user\\Documents\\sidecar");
+    });
+
+    skipIfWin32("Should not modify paths on non-Windows platforms", () => {
+      const path = "/Users/user/Documents/sidecar";
+      const normalizedPath = normalizedSidecarPath(path);
+      assert.strictEqual(normalizedPath, path);
     });
   });
 });

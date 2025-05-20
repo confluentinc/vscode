@@ -21,7 +21,7 @@ describe("sidecar/logging.ts", () => {
         logLines: [],
         stderrLines: [],
       };
-      const result = divineSidecarStartupFailureReason("linux", outputs);
+      const result = divineSidecarStartupFailureReason(outputs);
       assert.strictEqual(result, SidecarStartupFailureReason.PORT_IN_USE);
     });
 
@@ -31,7 +31,7 @@ describe("sidecar/logging.ts", () => {
         logLines: [],
         stderrLines: [],
       };
-      const result = divineSidecarStartupFailureReason("linux", outputs);
+      const result = divineSidecarStartupFailureReason(outputs);
       assert.strictEqual(result, SidecarStartupFailureReason.UNKNOWN);
     });
   });

@@ -1,5 +1,11 @@
+import fs from "fs";
+import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
+import { normalize } from "path";
+import { logError } from "../errors";
 import { Logger } from "../logging";
-import { MOMENTARY_PAUSE_MS } from "./constants";
+import { showErrorNotificationWithButtons } from "../notifications";
+import { checkSidecarOsAndArch } from "./checkArchitecture";
+import { MOMENTARY_PAUSE_MS, SIDECAR_PORT } from "./constants";
 import { SidecarFatalError } from "./errors";
 import { SidecarStartupFailureReason } from "./types";
 
@@ -121,5 +127,81 @@ export function wasConnRefused(e: any): boolean {
   } else {
     // If we can't find it in the main eager branching above, then it wasn't ECONNREFUSED.
     return false;
+  }
+}
+
+/** Return the full path to the sidecar executable. */
+export function normalizedSidecarPath(path: string): string {
+  // check platform and adjust the path, so we don't end up with paths like:
+  // "C:/c:/Users/.../ide-sidecar-0.26.0-runner.exe"
+  if (process.platform === "win32") {
+    path = normalize(path.replace(/^[/\\]+/, ""));
+  }
+
+  return path;
+}
+
+/**
+ * Check the sidecar file at the given path. Checks performed:
+ *   1. File exists
+ *   2. File is for the proper platform and architecture
+ * @param path The path to the sidecar file.
+ * @throws SidecarFatalError with corresponding reason if any of the checks fail.
+ */
+export function checkSidecarFile(executablePath: string) {
+  // 1. Check if the file exists and is executable
+  try {
+    fs.accessSync(executablePath, fs.constants.X_OK);
+  } catch (e) {
+    logError(e, `Sidecar executable "${executablePath}" does not exist or is not executable`, {
+      extra: {
+        executablePath,
+        originalExecutablePath: sidecarExecutablePath,
+        currentSidecarVersion,
+      },
+    });
+    throw new SidecarFatalError(
+      SidecarStartupFailureReason.MISSING_EXECUTABLE,
+      `Component ${executablePath} does not exist or is not executable`,
+    );
+  }
+
+  // 2. Check for architecture/platform mismatch
+  // (will itself throw SidecarFatalError if the check fails)
+  checkSidecarOsAndArch(executablePath);
+}
+
+export async function showSidecarStartupErrorMessage(
+  e: unknown,
+  platform: NodeJS.Platform,
+): Promise<void> {
+  if (e instanceof SidecarFatalError) {
+    logger.error(`showSidecarStartupErrorMessage(): ${e.message} (${e.reason})`);
+    switch (e.reason) {
+      case SidecarStartupFailureReason.PORT_IN_USE:
+        switch (platform) {
+          case "win32":
+            void showErrorNotificationWithButtons(
+              `(Windows) Sidecar port ${SIDECAR_PORT} is in use by another process. Please kill that process and try again.`,
+            );
+            break;
+          default:
+            void showErrorNotificationWithButtons(
+              `(UNIX) Sidecar port ${SIDECAR_PORT} is in use by another process. Please kill that process and try again.`,
+            );
+            break;
+        }
+        break;
+
+      default:
+        void showErrorNotificationWithButtons(
+          `Sidecar failed to start: ${e.message}. Please check the logs for more details.`,
+        );
+        break;
+    }
+  } else {
+    void showErrorNotificationWithButtons(
+      `Sidecar failed to start: ${e}. Please check the logs for more details.`,
+    );
   }
 }

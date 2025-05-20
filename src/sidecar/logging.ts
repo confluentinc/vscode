@@ -199,7 +199,6 @@ export async function gatherSidecarOutputs(
 }
 
 export function divineSidecarStartupFailureReason(
-  platform: NodeJS.Platform,
   outputs: SidecarOutputs,
 ): SidecarStartupFailureReason {
   // Check for the presence of specific error messages in the logs

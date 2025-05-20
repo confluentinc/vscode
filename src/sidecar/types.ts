@@ -26,13 +26,34 @@ export interface SidecarOutputs {
 
 /** Annotates a SidecarFatalError with our guess as to the reason */
 export enum SidecarStartupFailureReason {
-  /** Some other process camped out on {@see SIDECAR_PORT} */
-  PORT_IN_USE = "PORT_IN_USE",
-  CANNOT_KILL_OLD_PROCESS = "CANNOT_KILL_OLD_PROCESS",
-  SPAWN_RESULT_UNDEFINED_PID = "SPAWN_RESULT_UNDEFINED_PID",
-  OLD_SIDECAR_DID_NOT_SEND_PID = "OLD_SIDECAR_DID_NOT_SEND_PID",
+  /** Trying to hit the healthcheck route returned 404.
+   * Some sort of http server is on the port, but not the sidecar.
+   */
+  NON_SIDECAR_HTTP_SERVER = "NON_SIDECAR_HTTP_SERVER",
 
+  /** Quarkus startup logs indicated some other process camped out on {@see SIDECAR_PORT}. */
+  PORT_IN_USE = "PORT_IN_USE",
+
+  /** Error when trying to kill() uncooperative or wrong-version running sidecar. */
+  CANNOT_KILL_OLD_PROCESS = "CANNOT_KILL_OLD_PROCESS",
+
+  /** spawn() raised an error */
+  SPAWN_ERROR = "SPAWN_ERROR",
+
+  /** Sidecar process was started, but did not return a PID */
+  SPAWN_RESULT_UNDEFINED_PID = "SPAWN_RESULT_UNDEFINED_PID",
+
+  /** Could not find sidecar executable */
+  MISSING_EXECUTABLE = "MISSING_EXECUTABLE",
+
+  /** Sidecar file is for the wrong architecture */
   WRONG_ARCHITECTURE = "WRONG_ARCHITECTURE",
+
+  /** Handshake failed after many attempts */
+  HANDSHAKE_FAILED = "HANDSHAKE_FAILED",
+
+  /** Exceeded MAX_ATTEMPTS */
+  MAX_ATTEMPTS_EXCEEDED = "MAX_ATTEMPTS_EXCEEDED",
 
   /** No discernable reason */
   UNKNOWN = "UNKNOWN",
