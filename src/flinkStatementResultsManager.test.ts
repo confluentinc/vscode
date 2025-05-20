@@ -639,5 +639,33 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         assert.strictEqual(vm.searchTimer, null);
       });
     });
+
+    it("should handle column widths correctly when toggling between changelog and table mode", async () => {
+      // Test default column widths
+      assert.deepStrictEqual(vm.colWidth(), [128, 128]); // 8rem * 16px = 128px for each column
+
+      const setWidths = (widths: number[]) => {
+        vm.colWidth(widths);
+        storage.set({ ...storage.get()!, colWidths: vm.colWidth() });
+      };
+
+      setWidths([150, 200]);
+
+      // Test switching to changelog view mode
+      await vm.setViewMode("changelog");
+      assert.deepStrictEqual(vm.colWidth(), [128, 150, 200]); // Default width for Operation column + stored widths
+
+      // Change width of Operation column
+      setWidths([64, 150, 200]);
+
+      // Test switching back to table view mode
+      await vm.setViewMode("table");
+      assert.deepStrictEqual(vm.colWidth(), [150, 200]); // Should remove Operation column width
+
+      await vm.setViewMode("changelog");
+      // Assert that changes to Operation column's width are persisted
+      // across view mode toggles.
+      assert.deepStrictEqual(vm.colWidth(), [64, 150, 200]);
+    });
   });
 });

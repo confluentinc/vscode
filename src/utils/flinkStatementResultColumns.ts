@@ -56,7 +56,7 @@ export function createColumnDefinitions(
     };
   } else {
     // Add data columns for table view
-    return addSchemaColumns(schema, 0, (result, col, _index) => result[col.name] ?? "NULL");
+    return addSchemaColumns(schema, 0, (result, col) => result[col.name] ?? "NULL");
   }
 }
 

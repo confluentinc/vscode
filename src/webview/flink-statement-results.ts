@@ -245,6 +245,19 @@ export class FlinkStatementResultsViewModel extends ViewModel {
         if (!storedWidths) {
           return Array(columnsLength).fill(8 * 16); // Default 8rem width for each column (1rem = 16px)
         }
+
+        // If view mode was toggled
+        if (Math.abs(columnsLength - storedWidths.length) === 1) {
+          if (this.viewMode() === "changelog") {
+            // Set default width for the extra "Operation" column
+            return [8 * 16, ...storedWidths];
+          } else {
+            // Remove the width for the "Operation" column
+            // when we're in table view mode
+            return storedWidths.slice(1);
+          }
+        }
+
         return storedWidths;
       },
       // Equality function skips extra re-renders if values are similar
