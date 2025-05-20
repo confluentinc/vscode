@@ -1,11 +1,13 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ExtensionContext, Memento, SecretStorage } from "vscode";
 import { getExtensionContext } from "../context/extension";
+import { GlobalState, WorkspaceState } from "./types";
 
 /**
  * Minimal wrapper around the {@link ExtensionContext}'s
  * {@linkcode ExtensionContext.globalState globalState} to allow stubbing {@link Memento} for tests.
  */
-export function getGlobalState(): Memento & { setKeysForSync(keys: readonly string[]): void } {
+export function getGlobalState(): GlobalState {
   const context: ExtensionContext = getExtensionContext();
   return context.globalState;
 }
@@ -14,7 +16,7 @@ export function getGlobalState(): Memento & { setKeysForSync(keys: readonly stri
  * Minimal wrapper around the {@link ExtensionContext}'s
  * {@linkcode ExtensionContext.workspaceState workspaceState} to allow stubbing {@link Memento} for tests.
  */
-export function getWorkspaceState(): Memento {
+export function getWorkspaceState(): WorkspaceState {
   const context: ExtensionContext = getExtensionContext();
   return context.workspaceState;
 }
@@ -30,7 +32,7 @@ export function getSecretStorage(): SecretStorage {
 
 /** Clears all keys from the `workspaceState` of the {@link ExtensionContext}. */
 export async function clearWorkspaceState(): Promise<void> {
-  const workspaceState: Memento = getWorkspaceState();
+  const workspaceState: WorkspaceState = getWorkspaceState();
   const keys: readonly string[] = workspaceState.keys();
   const deletePromises: Thenable<void>[] = keys.map((key) => workspaceState.update(key, undefined));
   await Promise.all(deletePromises);
