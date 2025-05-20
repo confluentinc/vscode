@@ -35,7 +35,7 @@ describe("storage/migrationManager", () => {
     sandbox.restore();
   });
 
-  it(`migrate*() for workspaceState should call executeMigrations() when storage version is incorrect`, async () => {
+  it(`migrateWorkspaceState() should call executeMigrations() when storage version is incorrect`, async () => {
     // stub the storage version returned
     const storedVersion = 1;
     const stubbedWorkspaceState: StubbedWorkspaceState = getStubbedWorkspaceState(sandbox);
@@ -57,7 +57,7 @@ describe("storage/migrationManager", () => {
     );
   });
 
-  it(`migrate*() for workspaceState should not call executeMigrations() when storage version is correct`, async () => {
+  it(`migrateWorkspaceState() should not call executeMigrations() when storage version is correct`, async () => {
     // stub the correct storage version returned
     const stubbedWorkspaceState: StubbedWorkspaceState = getStubbedWorkspaceState(sandbox);
     stubbedWorkspaceState.get.returns(CODEBASE_STORAGE_VERSION);
@@ -69,7 +69,7 @@ describe("storage/migrationManager", () => {
     sinon.assert.notCalled(stubbedWorkspaceState.update);
   });
 
-  it(`migrate*() for globalState should call executeMigrations() when storage version is incorrect`, async () => {
+  it(`migrateGlobalState() should call executeMigrations() when storage version is incorrect`, async () => {
     // stub the storage version returned
     const storedVersion = 1;
     const stubbedGlobalState: StubbedGlobalState = getStubbedGlobalState(sandbox);
@@ -91,7 +91,7 @@ describe("storage/migrationManager", () => {
     );
   });
 
-  it(`migrate*() for globalState should not call executeMigrations() when storage version is correct`, async () => {
+  it(`migrateGlobalState() for globalState should not call executeMigrations() when storage version is correct`, async () => {
     // stub the correct storage version returned
     const stubbedGlobalState: StubbedGlobalState = getStubbedGlobalState(sandbox);
     stubbedGlobalState.get.returns(CODEBASE_STORAGE_VERSION);
@@ -103,7 +103,7 @@ describe("storage/migrationManager", () => {
     sinon.assert.notCalled(stubbedGlobalState.update);
   });
 
-  it(`migrate*() for secrets should call executeMigrations() when storage version is incorrect`, async () => {
+  it(`migrateSecretStorage() should call executeMigrations() when storage version is incorrect`, async () => {
     // stub the storage version returned
     const storedVersion = 1;
     const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
@@ -125,7 +125,7 @@ describe("storage/migrationManager", () => {
     );
   });
 
-  it(`migrate*() for secrets should not call executeMigrations() when storage version is correct`, async () => {
+  it(`migrateSecretStorage() should not call executeMigrations() when storage version is correct`, async () => {
     // stub the correct storage version returned
     const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
     stubbedSecretStorage.get.resolves(CODEBASE_STORAGE_VERSION);
