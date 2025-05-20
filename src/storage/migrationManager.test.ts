@@ -1,6 +1,12 @@
-import * as assert from "assert";
 import * as sinon from "sinon";
-import { StorageManager } from ".";
+import {
+  getStubbedGlobalState,
+  getStubbedSecretStorage,
+  getStubbedWorkspaceState,
+  StubbedGlobalState,
+  StubbedSecretStorage,
+  StubbedWorkspaceState,
+} from "../../tests/stubs/extensionStorage";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { DURABLE_STORAGE_VERSION_KEY, MigrationStorageType } from "./constants";
 import {
@@ -12,11 +18,9 @@ import {
 import * as migrationUtils from "./migrations/utils";
 
 describe("storage/migrationManager", () => {
-  let manager: StorageManager;
   let sandbox: sinon.SinonSandbox;
-  let getStorageVersionStub: sinon.SinonStub;
+
   let executeMigrationsStub: sinon.SinonStub;
-  let setStorageVersionStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
@@ -25,63 +29,111 @@ describe("storage/migrationManager", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     executeMigrationsStub = sandbox.stub(migrationUtils, "executeMigrations");
-
-    manager = StorageManager.getInstance();
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  type TestMigrationSetup = [
-    keyof StorageManager,
-    (manager: StorageManager) => Promise<void>,
-    MigrationStorageType,
-    keyof StorageManager,
-  ];
-  const testSetup: TestMigrationSetup[] = [
-    ["getGlobalState", migrateGlobalState, "global", "setGlobalState"],
-    ["getWorkspaceState", migrateWorkspaceState, "workspace", "setWorkspaceState"],
-    ["getSecret", migrateSecretStorage, "secret", "setSecret"],
-  ];
+  it(`migrate*() for workspaceState should call executeMigrations() when storage version is incorrect`, async () => {
+    // stub the storage version returned
+    const storedVersion = 1;
+    const stubbedWorkspaceState: StubbedWorkspaceState = getStubbedWorkspaceState(sandbox);
+    stubbedWorkspaceState.get.returns(storedVersion);
 
-  for (const [
-    managerGetMethodName,
-    migrationFunc,
-    storageType,
-    managerSetMethodName,
-  ] of testSetup) {
-    it(`migrate*() for "${storageType}" state/storage should call executeMigrations() when storage version is incorrect`, async () => {
-      // stub the storage version returned
-      const storedVersion = 1;
-      getStorageVersionStub = sandbox.stub(manager, managerGetMethodName).resolves(storedVersion);
-      setStorageVersionStub = sandbox.stub(manager, managerSetMethodName);
+    await migrateWorkspaceState();
 
-      await migrationFunc(manager);
+    sinon.assert.calledOnceWithExactly(stubbedWorkspaceState.get, DURABLE_STORAGE_VERSION_KEY);
+    sinon.assert.calledOnceWithExactly(
+      executeMigrationsStub,
+      storedVersion,
+      CODEBASE_STORAGE_VERSION,
+      MigrationStorageType.WORKSPACE,
+    );
+    sinon.assert.calledOnceWithExactly(
+      stubbedWorkspaceState.update,
+      DURABLE_STORAGE_VERSION_KEY,
+      CODEBASE_STORAGE_VERSION,
+    );
+  });
 
-      assert.ok(getStorageVersionStub.calledOnceWith(DURABLE_STORAGE_VERSION_KEY));
-      assert.ok(
-        executeMigrationsStub.calledOnceWith(storedVersion, CODEBASE_STORAGE_VERSION, storageType),
-      );
-      // also ensure we stamp the correct storage version after migration
-      // (secret storage version must be a string though)
-      const expectedVersion =
-        storageType === "secret" ? String(CODEBASE_STORAGE_VERSION) : CODEBASE_STORAGE_VERSION;
-      assert.ok(setStorageVersionStub.calledOnceWith(DURABLE_STORAGE_VERSION_KEY, expectedVersion));
-    });
+  it(`migrate*() for workspaceState should not call executeMigrations() when storage version is correct`, async () => {
+    // stub the correct storage version returned
+    const stubbedWorkspaceState: StubbedWorkspaceState = getStubbedWorkspaceState(sandbox);
+    stubbedWorkspaceState.get.returns(CODEBASE_STORAGE_VERSION);
 
-    it(`migrate*() for "${storageType}" state/storage should not call executeMigrations() when storage version is correct`, async () => {
-      // stub the correct storage version returned
-      getStorageVersionStub = sandbox
-        .stub(manager, managerGetMethodName)
-        .resolves(CODEBASE_STORAGE_VERSION);
-      setStorageVersionStub = sandbox.stub(manager, managerSetMethodName);
+    await migrateWorkspaceState();
 
-      await migrationFunc(manager);
+    sinon.assert.calledOnceWithExactly(stubbedWorkspaceState.get, DURABLE_STORAGE_VERSION_KEY);
+    sinon.assert.notCalled(executeMigrationsStub);
+    sinon.assert.notCalled(stubbedWorkspaceState.update);
+  });
 
-      assert.ok(getStorageVersionStub.calledOnceWith(DURABLE_STORAGE_VERSION_KEY));
-      assert.ok(executeMigrationsStub.notCalled);
-      assert.ok(setStorageVersionStub.notCalled);
-    });
-  }
+  it(`migrate*() for globalState should call executeMigrations() when storage version is incorrect`, async () => {
+    // stub the storage version returned
+    const storedVersion = 1;
+    const stubbedGlobalState: StubbedGlobalState = getStubbedGlobalState(sandbox);
+    stubbedGlobalState.get.returns(storedVersion);
+
+    await migrateGlobalState();
+
+    sinon.assert.calledOnceWithExactly(stubbedGlobalState.get, DURABLE_STORAGE_VERSION_KEY);
+    sinon.assert.calledOnceWithExactly(
+      executeMigrationsStub,
+      storedVersion,
+      CODEBASE_STORAGE_VERSION,
+      MigrationStorageType.GLOBAL,
+    );
+    sinon.assert.calledOnceWithExactly(
+      stubbedGlobalState.update,
+      DURABLE_STORAGE_VERSION_KEY,
+      CODEBASE_STORAGE_VERSION,
+    );
+  });
+
+  it(`migrate*() for globalState should not call executeMigrations() when storage version is correct`, async () => {
+    // stub the correct storage version returned
+    const stubbedGlobalState: StubbedGlobalState = getStubbedGlobalState(sandbox);
+    stubbedGlobalState.get.returns(CODEBASE_STORAGE_VERSION);
+
+    await migrateGlobalState();
+
+    sinon.assert.calledOnceWithExactly(stubbedGlobalState.get, DURABLE_STORAGE_VERSION_KEY);
+    sinon.assert.notCalled(executeMigrationsStub);
+    sinon.assert.notCalled(stubbedGlobalState.update);
+  });
+
+  it(`migrate*() for secrets should call executeMigrations() when storage version is incorrect`, async () => {
+    // stub the storage version returned
+    const storedVersion = 1;
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
+    stubbedSecretStorage.get.resolves(storedVersion);
+
+    await migrateSecretStorage();
+
+    sinon.assert.calledOnceWithExactly(stubbedSecretStorage.get, DURABLE_STORAGE_VERSION_KEY);
+    sinon.assert.calledOnceWithExactly(
+      executeMigrationsStub,
+      storedVersion,
+      CODEBASE_STORAGE_VERSION,
+      MigrationStorageType.SECRET,
+    );
+    sinon.assert.calledOnceWithExactly(
+      stubbedSecretStorage.store,
+      DURABLE_STORAGE_VERSION_KEY,
+      String(CODEBASE_STORAGE_VERSION), // secret storage expects string values
+    );
+  });
+
+  it(`migrate*() for secrets should not call executeMigrations() when storage version is correct`, async () => {
+    // stub the correct storage version returned
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
+    stubbedSecretStorage.get.resolves(CODEBASE_STORAGE_VERSION);
+
+    await migrateSecretStorage();
+
+    sinon.assert.calledOnceWithExactly(stubbedSecretStorage.get, DURABLE_STORAGE_VERSION_KEY);
+    sinon.assert.notCalled(executeMigrationsStub);
+    sinon.assert.notCalled(stubbedSecretStorage.store);
+  });
 });

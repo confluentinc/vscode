@@ -7,7 +7,6 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Schema } from "../models/schema";
-import { getStorageManager } from "../storage";
 import { WorkspaceStorageKeys } from "../storage/constants";
 import * as diffs from "./diffs";
 
@@ -15,9 +14,11 @@ describe("commands/diffs.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let executeCommandStub: sinon.SinonStub;
   let setContextValueStub: sinon.SinonStub;
+  let workspaceState: vscode.Memento;
 
   before(async () => {
-    await getTestExtensionContext();
+    const context: vscode.ExtensionContext = await getTestExtensionContext();
+    workspaceState = context.workspaceState;
   });
 
   beforeEach(() => {
@@ -28,7 +29,7 @@ describe("commands/diffs.ts", () => {
 
   afterEach(async () => {
     // clear stored URI between tests
-    await getStorageManager().deleteWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI);
+    await workspaceState.update(WorkspaceStorageKeys.DIFF_BASE_URI, undefined);
     sandbox.restore();
   });
 
@@ -38,7 +39,7 @@ describe("commands/diffs.ts", () => {
 
     await diffs.selectForCompareCommand(schema);
 
-    const storedUriString = await getStorageManager().getWorkspaceState(
+    const storedUriString: string | undefined = workspaceState.get(
       WorkspaceStorageKeys.DIFF_BASE_URI,
     );
     assert.strictEqual(storedUriString, expectedUri.toString());
@@ -52,7 +53,7 @@ describe("commands/diffs.ts", () => {
   it("selectForCompareCommand() should do nothing when no item is provided", async () => {
     await diffs.selectForCompareCommand(undefined);
 
-    const storedUri = await getStorageManager().getWorkspaceState(
+    const storedUri: string | undefined = await workspaceState.get(
       WorkspaceStorageKeys.DIFF_BASE_URI,
     );
     assert.strictEqual(storedUri, undefined);
@@ -87,7 +88,7 @@ describe("commands/diffs.ts", () => {
     const schema = TEST_LOCAL_SCHEMA;
 
     // Clear any existing stored URI
-    await getStorageManager().setWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI, undefined);
+    await workspaceState.update(WorkspaceStorageKeys.DIFF_BASE_URI, undefined);
 
     await diffs.compareWithSelectedCommand(schema);
 

@@ -14,7 +14,7 @@ import {
 import {
   createTestSubject,
   createTestTopicData,
-  getTestStorageManager,
+  getTestExtensionContext,
 } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
@@ -43,7 +43,7 @@ describe("ResourceLoader::getSubjects()", () => {
   let rmSetSubjectsStub: sinon.SinonStub;
 
   before(async () => {
-    await getTestStorageManager();
+    await getTestExtensionContext();
     resourceManager = getResourceManager();
   });
 
@@ -251,7 +251,7 @@ describe("ResourceLoader::clearCache()", () => {
   let rmSetSubjectsStub: sinon.SinonStub;
 
   before(async () => {
-    await getTestStorageManager();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {
