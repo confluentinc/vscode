@@ -1,6 +1,5 @@
 import { Mutex } from "async-mutex";
-import { Uri } from "vscode";
-import { getStorageManager, StorageManager } from ".";
+import { SecretStorage, Uri } from "vscode";
 import { AuthCallbackEvent } from "../authn/types";
 import {
   ConnectionSpec,
@@ -9,7 +8,9 @@ import {
   ConnectionType,
   Status,
 } from "../clients/sidecar";
+import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
+import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -18,7 +19,8 @@ import { Schema, Subject } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
-import { UriMetadata, UriMetadataMap } from "./types";
+import { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
+import { getGlobalState, getSecretStorage, getWorkspaceState } from "./utils";
 
 const logger = new Logger("storage.resourceManager");
 
@@ -62,12 +64,21 @@ type SubjectStringCache = Map<string, string[] | undefined>;
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
-  static instance: ResourceManager | null = null;
-
   /** Mutexes for each workspace/secret storage key to prevent conflicting concurrent writes */
   private mutexes: Map<WorkspaceStorageKeys | SecretStorageKeys, Mutex> = new Map();
 
-  private constructor(private storage: StorageManager) {
+  private globalState: GlobalState;
+  private workspaceState: WorkspaceState;
+  private secrets: SecretStorage;
+
+  private constructor() {
+    if (!getExtensionContext()) {
+      throw new ExtensionContextNotSetError("ResourceManager");
+    }
+    this.globalState = getGlobalState();
+    this.workspaceState = getWorkspaceState();
+    this.secrets = getSecretStorage();
+
     // Initialize mutexes for each workspace/secret storage key
     for (const key of [
       ...Object.values(WorkspaceStorageKeys),
@@ -77,10 +88,11 @@ export class ResourceManager {
     }
   }
 
+  static instance: ResourceManager | null = null;
   static getInstance(): ResourceManager {
     if (!ResourceManager.instance) {
       // will throw an ExtensionContextNotSetError if the context isn't available for StorageManager
-      ResourceManager.instance = new ResourceManager(getStorageManager());
+      ResourceManager.instance = new ResourceManager();
     }
     return ResourceManager.instance;
   }
@@ -128,7 +140,7 @@ export class ResourceManager {
    * Set the list of available CCloud environments in extension state.
    */
   async setCCloudEnvironments(environments: CCloudEnvironment[]): Promise<void> {
-    await this.storage.setWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS, environments);
+    await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS, environments);
   }
 
   /**
@@ -138,9 +150,7 @@ export class ResourceManager {
   async getCCloudEnvironments(): Promise<CCloudEnvironment[]> {
     // Will be deserialized plain JSON objects, not instances of CCloudEnvironment.
     const plain_json_environments: CCloudEnvironment[] =
-      (await this.storage.getWorkspaceState<CCloudEnvironment[]>(
-        WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS,
-      )) ?? [];
+      this.workspaceState.get(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS) ?? [];
 
     // Promote each member to be an instance of CCloudEnvironment
     return plain_json_environments.map((env) => new CCloudEnvironment(env));
@@ -160,7 +170,7 @@ export class ResourceManager {
    * Delete the list of available CCloud environments from extension state
    */
   async deleteCCloudEnvironments(): Promise<void> {
-    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
+    await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS, undefined);
   }
 
   // KAFKA CLUSTERS
@@ -189,7 +199,7 @@ export class ResourceManager {
         // replace any existing clusters for the environment with the new clusters
         existingEnvClusters.set(envId, newClusters);
       }
-      await this.storage.setWorkspaceState(storageKey, mapToString(existingEnvClusters));
+      await this.workspaceState.update(storageKey, mapToString(existingEnvClusters));
     });
   }
 
@@ -199,7 +209,7 @@ export class ResourceManager {
    */
   async getCCloudKafkaClusters(): Promise<CCloudKafkaClustersByEnv> {
     // Get the JSON-stringified map from storage
-    const clustersByEnvString: string | undefined = await this.storage.getWorkspaceState(
+    const clustersByEnvString: string | undefined = this.workspaceState.get(
       WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
     );
     const clustersByEnv: Map<string, object[]> = clustersByEnvString
@@ -252,11 +262,11 @@ export class ResourceManager {
     const storageKey = WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS;
     await this.runWithMutex(storageKey, async () => {
       if (!environment) {
-        return await this.storage.deleteWorkspaceState(storageKey);
+        return await this.workspaceState.update(storageKey, undefined);
       }
       const clusters = await this.getCCloudKafkaClusters();
       clusters.delete(environment);
-      await this.storage.setWorkspaceState(storageKey, mapToString(clusters));
+      await this.workspaceState.update(storageKey, mapToString(clusters));
     });
   }
 
@@ -265,7 +275,7 @@ export class ResourceManager {
    * @param clusters The list of local Kafka clusters to set
    */
   async setLocalKafkaClusters(clusters: LocalKafkaCluster[]): Promise<void> {
-    await this.storage.setWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, clusters);
+    await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, clusters);
   }
 
   /**
@@ -273,10 +283,10 @@ export class ResourceManager {
    * @returns The list of local Kafka clusters
    */
   async getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
-    const plainJsonLocalClusters =
-      (await this.storage.getWorkspaceState<LocalKafkaCluster[]>(
-        WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
-      )) ?? [];
+    const plainJsonLocalClusters: LocalKafkaCluster[] = this.workspaceState.get(
+      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
+      [],
+    );
 
     // Promote each member to be an instance of LocalKafkaCluster, return.
     return plainJsonLocalClusters.map((cluster) => LocalKafkaCluster.create(cluster));
@@ -311,7 +321,7 @@ export class ResourceManager {
     clusters.forEach((cluster) => {
       clustersByEnv.set(cluster.environmentId, cluster);
     });
-    await this.storage.setWorkspaceState(
+    await this.workspaceState.update(
       WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
       mapToString(clustersByEnv),
     );
@@ -323,7 +333,7 @@ export class ResourceManager {
    */
   async getCCloudSchemaRegistries(): Promise<CCloudSchemaRegistryByEnv> {
     // Get the JSON-stringified map from storage
-    const registriesByEnvString: string | undefined = await this.storage.getWorkspaceState(
+    const registriesByEnvString: string | undefined = this.workspaceState.get(
       WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
     );
     const registriesByEnv: Map<string, object> = registriesByEnvString
@@ -368,7 +378,7 @@ export class ResourceManager {
    * Delete the list of available local Kafka clusters from extension state.
    */
   async deleteLocalKafkaClusters(): Promise<void> {
-    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS);
+    await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, undefined);
   }
 
   /**
@@ -380,11 +390,11 @@ export class ResourceManager {
     const storageKey = WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES;
     await this.runWithMutex(storageKey, async () => {
       if (!environment) {
-        return await this.storage.deleteWorkspaceState(storageKey);
+        return await this.workspaceState.update(storageKey, undefined);
       }
       const schemaRegistriesByEnv = await this.getCCloudSchemaRegistries();
       schemaRegistriesByEnv.delete(environment);
-      await this.storage.setWorkspaceState(storageKey, mapToString(schemaRegistriesByEnv));
+      await this.workspaceState.update(storageKey, mapToString(schemaRegistriesByEnv));
     });
   }
 
@@ -420,7 +430,7 @@ export class ResourceManager {
     await this.runWithMutex(workspaceStorageKey, async () => {
       // Get the JSON-stringified map from storage
       const subjectsByRegistryString: string | undefined =
-        await this.storage.getWorkspaceState<string>(workspaceStorageKey);
+        await this.workspaceState.get(workspaceStorageKey);
 
       const subjectsStringsByRegistryID: SubjectStringCache = subjectsByRegistryString
         ? stringToMap(subjectsByRegistryString)
@@ -437,7 +447,7 @@ export class ResourceManager {
 
       // Now save the updated map of registry id -> subject list into workspace storage
       // (JSON-stringified) according to the connection type's storage key.
-      await this.storage.setWorkspaceState(
+      await this.workspaceState.update(
         workspaceStorageKey,
         mapToString(subjectsStringsByRegistryID),
       );
@@ -464,7 +474,7 @@ export class ResourceManager {
     // into subjectsByRegistryIDString.
     await this.runWithMutex(key, async () => {
       // Get the JSON-stringified map of this conn-type's map from storage
-      subjectsByRegistryIDString = await this.storage.getWorkspaceState<string>(key);
+      subjectsByRegistryIDString = await this.workspaceState.get(key);
     });
 
     const subjectStringsByRegistryID: SubjectStringCache = subjectsByRegistryIDString
@@ -505,7 +515,7 @@ export class ResourceManager {
    * Delete all ccloud schema registry subjects.
    */
   async deleteCCloudSubjects(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS);
+    return await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS, undefined);
   }
 
   /**
@@ -515,7 +525,7 @@ export class ResourceManager {
    * @see {@link deleteCCloudResources}, probably need equivalents for both.
    */
   async deleteLocalSubjects(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS);
+    return await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS, undefined);
   }
 
   /**
@@ -559,8 +569,7 @@ export class ResourceManager {
 
     await this.runWithMutex(key, async () => {
       // Get the JSON-stringified map from storage
-      const topicsByClusterString: string | undefined =
-        await this.storage.getWorkspaceState<string>(key);
+      const topicsByClusterString: string | undefined = this.workspaceState.get(key);
       const topicsByCluster: Map<string, object[]> = topicsByClusterString
         ? stringToMap(topicsByClusterString)
         : new Map<string, object[]>();
@@ -569,7 +578,7 @@ export class ResourceManager {
       topicsByCluster.set(cluster.id, topics);
 
       // Now save the updated cluster topics into the proper key'd storage.
-      await this.storage.setWorkspaceState(key, mapToString(topicsByCluster));
+      await this.workspaceState.update(key, mapToString(topicsByCluster));
     });
   }
 
@@ -583,8 +592,7 @@ export class ResourceManager {
     const key = this.topicKeyForCluster(cluster);
 
     // Get the JSON-stringified map from storage
-    const topicsByClusterString: string | undefined =
-      await this.storage.getWorkspaceState<string>(key);
+    const topicsByClusterString: string | undefined = this.workspaceState.get(key);
     const topicsByCluster: Map<string, object[]> = topicsByClusterString
       ? stringToMap(topicsByClusterString)
       : new Map<string, object[]>();
@@ -606,7 +614,7 @@ export class ResourceManager {
    * Delete all ccloud topics from workspace state, such as when user logs out from ccloud.
    */
   async deleteCCloudTopics(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS);
+    return await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS, undefined);
   }
 
   /**
@@ -633,11 +641,8 @@ export class ResourceManager {
    */
   async setAuthFlowCompleted(authCallback: AuthCallbackEvent): Promise<void> {
     await Promise.all([
-      this.storage.setSecret(SecretStorageKeys.AUTH_COMPLETED, String(authCallback.success)),
-      this.storage.setSecret(
-        SecretStorageKeys.AUTH_PASSWORD_RESET,
-        String(authCallback.resetPassword),
-      ),
+      this.secrets.store(SecretStorageKeys.AUTH_COMPLETED, String(authCallback.success)),
+      this.secrets.store(SecretStorageKeys.AUTH_PASSWORD_RESET, String(authCallback.resetPassword)),
     ]);
   }
 
@@ -646,28 +651,24 @@ export class ResourceManager {
    * @returns `true` if the auth flow completed successfully; `false` otherwise
    */
   async getAuthFlowCompleted(): Promise<boolean> {
-    const success: string | undefined = await this.storage.getSecret(
-      SecretStorageKeys.AUTH_COMPLETED,
-    );
+    const success: string | undefined = await this.secrets.get(SecretStorageKeys.AUTH_COMPLETED);
     return success === "true";
   }
 
   /** Get the flag indicating whether or not the user has reset their password recently. */
   async getAuthFlowPasswordReset(): Promise<boolean> {
-    const reset: string | undefined = await this.storage.getSecret(
-      SecretStorageKeys.AUTH_PASSWORD_RESET,
-    );
+    const reset: string | undefined = await this.secrets.get(SecretStorageKeys.AUTH_PASSWORD_RESET);
     return reset === "true";
   }
 
   /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
   async setCCloudAuthStatus(status: Status): Promise<void> {
-    await this.storage.setSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS, String(status));
+    await this.secrets.store(SecretStorageKeys.CCLOUD_AUTH_STATUS, String(status));
   }
 
   /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
   async getCCloudAuthStatus(): Promise<string | undefined> {
-    return await this.storage.getSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS);
+    return await this.secrets.get(SecretStorageKeys.CCLOUD_AUTH_STATUS);
   }
 
   // DIRECT CONNECTIONS - entirely handled through SecretStorage
@@ -675,7 +676,7 @@ export class ResourceManager {
   /** Look up the {@link ConnectionId}:{@link ConnectionSpec} map for any existing `DIRECT` connections. */
   async getDirectConnections(): Promise<DirectConnectionsById> {
     // Get the JSON-stringified map from storage
-    const connectionsString: string | undefined = await this.storage.getSecret(
+    const connectionsString: string | undefined = await this.secrets.get(
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
     const connectionsById: Map<string, object> = connectionsString
@@ -710,7 +711,7 @@ export class ResourceManager {
           CustomConnectionSpecToJSON(spec),
         ]),
       );
-      await this.storage.setSecret(key, JSON.stringify(serializedConnections));
+      await this.secrets.store(key, JSON.stringify(serializedConnections));
     });
   }
 
@@ -719,14 +720,14 @@ export class ResourceManager {
     return await this.runWithMutex(key, async () => {
       const connections: DirectConnectionsById = await this.getDirectConnections();
       connections.delete(id);
-      await this.storage.setSecret(key, mapToString(connections));
+      await this.secrets.store(key, mapToString(connections));
     });
   }
 
   async deleteDirectConnections(): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
-      await this.storage.deleteSecret(key);
+      await this.secrets.delete(key);
     });
   }
 
@@ -734,15 +735,12 @@ export class ResourceManager {
 
   /** Store the full {@link UriMetadataMap} (for possibly multiple {@link Uri}s). */
   private async setAllUriMetadata(metadataMap: UriMetadataMap): Promise<void> {
-    await this.storage.setWorkspaceState(
-      WorkspaceStorageKeys.URI_METADATA,
-      mapToString(metadataMap),
-    );
+    await this.workspaceState.update(WorkspaceStorageKeys.URI_METADATA, mapToString(metadataMap));
   }
 
   /** Get the full {@link UriMetadataMap} (for possibly multiple {@link Uri}s). */
   async getAllUriMetadata(): Promise<UriMetadataMap> {
-    const metadataString: string | undefined = await this.storage.getWorkspaceState<string>(
+    const metadataString: string | undefined = this.workspaceState.get(
       WorkspaceStorageKeys.URI_METADATA,
     );
     return metadataString ? (stringToMap(metadataString) as UriMetadataMap) : new Map();
@@ -752,7 +750,7 @@ export class ResourceManager {
   async deleteAllUriMetadata(): Promise<void> {
     const key = WorkspaceStorageKeys.URI_METADATA;
     await this.runWithMutex(key, async () => {
-      await this.storage.deleteWorkspaceState(key);
+      await this.workspaceState.update(key, undefined);
     });
   }
 
