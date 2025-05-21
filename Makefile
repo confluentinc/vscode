@@ -54,7 +54,7 @@ test: setup-test-env install-test-dependencies install-dependencies
 e2e: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
 		@if [ $$(uname -s) = "Linux" ]; then \
-			xvfb-run -a npx gulp e2e; \
+			npx gulp --series bundle testBuild && xvfb-run npx gulp e2eRun; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			if pgrep -x "Dock" > /dev/null; then \
 					echo "GUI session is active."; \
