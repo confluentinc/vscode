@@ -47,6 +47,7 @@ export const test = base.extend<TestFixtures>({
         process.platform === "darwin" && "--disable-gpu",
         "--no-sandbox",
         "--disable-gpu-sandbox",
+        "--verbose",
         "--disable-updates",
         "--skip-welcome",
         "--skip-release-notes",

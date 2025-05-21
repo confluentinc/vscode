@@ -15,7 +15,10 @@ async function enableFlink(page: Page) {
 
   // HACK
   await page.keyboard.type(`{"confluent.preview.enableFlink`);
+  // Sleep
+  await page.waitForTimeout(50);
   await page.keyboard.press("Enter");
+  await page.waitForTimeout(50);
   await page.keyboard.type("true");
 
   // Save the file
