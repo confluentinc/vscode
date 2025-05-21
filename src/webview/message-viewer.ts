@@ -3,8 +3,8 @@ import { type PartitionData } from "../clients/kafkaRest";
 import { type PartitionConsumeRecord } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
-import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
+import { createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 import { Timer } from "./timer/timer";
 
 customElements.define("messages-histogram", Histogram);
