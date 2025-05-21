@@ -1,6 +1,11 @@
-import { test } from "./base";
+import { test } from "vscode-test-playwright";
+
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
+
+test.beforeAll(async ({ page }) => {
+  await openConfluentExtension(page);
+});
 
 test.describe(() => {
   test("should load the extension properly", async ({ page }) => {
@@ -8,6 +13,8 @@ test.describe(() => {
   });
 
   test("sign in to confluent cloud", async ({ page, electronApp }) => {
+    await openConfluentExtension(page);
+
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
   });
 });
