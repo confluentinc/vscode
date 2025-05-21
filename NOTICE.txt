@@ -15,9 +15,3 @@ https://github.com/apache/flink/blob/9e6bcee710b13b8f64a73c99c3164f7551e1e829/to
 A portion of the code in src/webview/popover/popover.ts was adapted from
 Floating UI (https://github.com/floating-ui/floating-ui).
 Copyright (c) 2021 Floating UI contributors
-
-The code in tests/e2e/vscode-test-playwright was adapted from
-vscode-test-playwright (https://github.com/ruifigueira/vscode-test-playwright/).
-   Portions Copyright (c) Rui Figueira.
-   Portions Copyright (c) Microsoft Corporation.
-   Portions Copyright 2017 Google Inc.
