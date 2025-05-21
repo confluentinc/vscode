@@ -504,12 +504,14 @@ describe("FlinkStatementResultsViewModel only", () => {
   describe("with default statement", () => {
     let vm: FlinkStatementResultsViewModel;
     let storage: WebviewStorage<ResultsViewerStorageState>;
+    let ctx: FlinkStatementResultsManagerTestContext;
 
     beforeEach(async () => {
-      ({ storage, vm } = await createTestResultsManagerContext(sandbox, statement));
+      ({ storage, vm, ctx } = await createTestResultsManagerContext(sandbox, statement));
     });
 
     afterEach(() => {
+      ctx.manager.dispose();
       vm.dispose();
     });
 
