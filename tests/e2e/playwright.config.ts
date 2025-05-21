@@ -3,7 +3,7 @@ import { configDotenv } from "dotenv";
 import { globSync } from "glob";
 import path from "path";
 import { fileURLToPath } from "url";
-import { VSCodeTestOptions, VSCodeWorkerOptions } from "./vscode-test-playwright";
+import { VSCodeTestOptions, VSCodeWorkerOptions } from "vscode-test-playwright";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
