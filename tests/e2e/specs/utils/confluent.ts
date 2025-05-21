@@ -15,6 +15,6 @@ export async function openConfluentExtension(page: Page): Promise<void> {
   // so this function is safe to use regardless.
   await page.getByText("Confluent Cloud").waitFor({
     state: "visible",
-    timeout: 10_000,
+    timeout: 30_000,
   });
 }

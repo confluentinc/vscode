@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
+import { test } from "vscode-test-playwright";
 import { DEFAULT_FLINK_SQL_FILE_EXTENSION } from "../../../src/flinkSql/constants";
-import { test } from "./base";
 import { login } from "./utils/confluentCloud";
 
 async function enableFlink(page: Page) {
@@ -15,7 +15,10 @@ async function enableFlink(page: Page) {
 
   // HACK
   await page.keyboard.type(`{"confluent.preview.enableFlink`);
+  // Sleep
+  await page.waitForTimeout(50);
   await page.keyboard.press("Enter");
+  await page.waitForTimeout(50);
   await page.keyboard.type("true");
 
   // Save the file
@@ -26,7 +29,7 @@ async function enableFlink(page: Page) {
 }
 
 test.describe("Flink statements and statement results", () => {
-  test("should submit Flink statement", async ({ page, electronApp }) => {
+  test("should submit Flink statement", async ({ workbox: page, electronApp }) => {
     // First, login to Confluent Cloud
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
 
@@ -74,15 +77,15 @@ test.describe("Flink statements and statement results", () => {
     // TODO: Inspecting iframe properly needs some work, exercise for reader to
     //       look into it and fix.
     // Get the iframe and evaluate within its context
-    // const frame = await page.waitForSelector("iframe");
-    // if (!frame) {
-    //   throw new Error("Results iframe not found");
-    // }
+    const frame = await page.waitForSelector("iframe");
+    if (!frame) {
+      throw new Error("Results iframe not found");
+    }
 
-    // const frameContent = await frame.contentFrame();
-    // if (!frameContent) {
-    //   throw new Error("Could not get iframe content");
-    // }
+    const frameContent = await frame.contentFrame();
+    if (!frameContent) {
+      throw new Error("Could not get iframe content");
+    }
 
     // // Wait for and check the results within the iframe context
     // const iframePage = await frameContent.page();
