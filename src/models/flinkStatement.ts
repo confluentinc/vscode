@@ -178,6 +178,10 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return (this.sqlKind ?? "") === "INSERT_INTO";
   }
 
+  get isForeground(): boolean {
+    return (this.sqlKind ?? "") === "SELECT";
+  }
+
   /**
    * Update this FlinkStatement with metadata, status, spec from another FlinkStatement.
    *

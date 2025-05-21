@@ -19,19 +19,24 @@ sonarqube:
     - javascript
     - typescript
   enable: true
+  main_branch: main
   coverage_reports:
     - coverage/lcov.info
     - coverage/lcov-functional.info
+  coverage_sources:
+    - src
   coverage_exclusions:
-    - ".vscode-test/**/*"
-    - "bin/**/*"
-    - "node_modules/**/*"
-    - "mk-files/**/*"
-    - "src/clients/**/*"
-    - "tests/**/*"
-    - "userdata/**/*"
-    - "Gulpfile.mjs"
-    - "src/testing.ts"
-    - "playwright.config.ts"
+    - .vscode-test/**/*
+    - bin/**/*
+    - node_modules/**/*
+    - mk-files/**/*
+    - src/clients/**/*
+    - tests/**/*
+    - userdata/**/*
+    - Gulpfile.mjs
+    - src/testing.ts
+    - playwright.config.ts
+    - src/**/*.test.ts
+    - src/**/*.spec.ts
 make:
   enable: false

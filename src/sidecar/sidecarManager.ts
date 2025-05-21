@@ -8,7 +8,6 @@ import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
 import { Logger } from "../logging";
-import { getStorageManager } from "../storage";
 import {
   MOMENTARY_PAUSE_MS,
   SIDECAR_BASE_URL,
@@ -24,6 +23,7 @@ import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
+import { getSecretStorage } from "../storage/utils";
 import { NoSidecarRunningError, SidecarFatalError, WrongAuthSecretError } from "./errors";
 import {
   divineSidecarStartupFailureReason,
@@ -467,7 +467,7 @@ export class SidecarManager {
             await pause(MOMENTARY_PAUSE_MS);
 
             accessToken = await this.doHandshake();
-            await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
+            await getSecretStorage().store(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
 
             logger.info(
               `${logPrefix}(handshake attempt ${i}): Successful, got auth token, stored in secret store.`,
@@ -519,10 +519,10 @@ export class SidecarManager {
   }
 
   /**
-   * Get the auth token secret from the storage manager. Returns empty string if none found.
+   * Get the auth token secret from the secret storage. Returns empty string if none found.
    **/
   async getAuthTokenFromSecretStore(): Promise<string> {
-    const existing_secret = await getStorageManager().getSecret(
+    const existing_secret: string | undefined = await getSecretStorage().get(
       SecretStorageKeys.SIDECAR_AUTH_TOKEN,
     );
     if (existing_secret) {

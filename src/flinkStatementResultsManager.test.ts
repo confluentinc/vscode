@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { ObservableScope, Scope, Signal } from "inertial";
 import sinon from "sinon";
 import * as messageUtils from "../src/documentProviders/message";
 import {
@@ -14,7 +13,6 @@ import {
   GetSqlv1StatementResult200ResponseApiVersionEnum,
   GetSqlv1StatementResult200ResponseKindEnum,
 } from "./clients/flinkSql";
-import { MessageType, PostFunction } from "./flinkStatementResultsManager";
 import { FlinkStatement, Phase } from "./models/flinkStatement";
 import { WebviewStorage } from "./webview/comms/comms";
 import {
@@ -22,20 +20,17 @@ import {
   ResultsViewerStorageState,
 } from "./webview/flink-statement-results";
 
-class FakeWebviewStorage<T> implements WebviewStorage<T> {
-  private storage: T | undefined;
-
-  get(): T | undefined {
-    return this.storage;
-  }
-
-  set(state: T): void {
-    this.storage = state;
-  }
-}
-
-function createFakeWebviewStorage<T>(): WebviewStorage<T> {
-  return new FakeWebviewStorage<T>();
+function createMockStatement(): FlinkStatement {
+  const fakeFlinkStatement = loadFixture(
+    "flink-statement-results-processing/fake-flink-statement.json",
+  );
+  const mockStatement = new FlinkStatement(fakeFlinkStatement);
+  mockStatement.metadata = {
+    ...mockStatement.metadata,
+    created_at: new Date(),
+    updated_at: new Date(),
+  };
+  return mockStatement;
 }
 
 describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () => {
@@ -44,34 +39,19 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   const expectedParsedResults = loadFixture(
     "flink-statement-results-processing/expected-parsed-results.json",
   );
-  let os: Scope;
-  let storage: WebviewStorage<ResultsViewerStorageState>;
-  let post: PostFunction;
-  let timestamp: Signal<number>;
   let vm: FlinkStatementResultsViewModel;
+  const statement: FlinkStatement = createMockStatement();
 
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
-    os = ObservableScope();
-    ctx = await createTestResultsManagerContext(sandbox, os);
 
-    timestamp = os.produce(Date.now(), (ts) => {
-      // Forces a re-render of the view model
-      ts(Date.now());
-    });
-    storage = createFakeWebviewStorage<ResultsViewerStorageState>();
-
-    // Create a post function that directly delegates to the results manager instance
-    // and bypasses the webview comms altogether.
-    post = (type: MessageType, body: any) => ctx.manager.handleMessage(type, body);
-
-    vm = new FlinkStatementResultsViewModel(os, timestamp, storage, post);
+    ({ ctx, vm } = await createTestResultsManagerContext(sandbox, statement));
   });
 
   afterEach(() => {
     sandbox.restore();
     ctx.manager.dispose();
-    os.dispose();
+    vm.dispose();
   });
 
   it("should process results from fixtures correctly", async () => {
@@ -145,6 +125,59 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     assert.strictEqual(totalCount.filter, 10);
   });
 
+  it("should filter results based on search query across table and changelog mode", async () => {
+    const searchValue = "80.8";
+    await vm.submitSearch(searchValue);
+
+    await eventually(() => {
+      assert.deepEqual(vm.resultCount(), {
+        filter: 4,
+        total: 10,
+      });
+    });
+
+    await vm.setViewMode("changelog");
+
+    await eventually(() => {
+      assert.deepEqual(vm.resultCount(), {
+        filter: 4,
+        total: 468,
+      });
+    });
+
+    // Clear the search
+    await vm.submitSearch("");
+
+    // We should see all of the changelog results
+    await eventually(() => {
+      assert.deepEqual(vm.resultCount(), {
+        filter: 468,
+        total: 468,
+      });
+    });
+
+    // Now search for a value that's only present in the changelog view
+    await vm.submitSearch("63.5");
+
+    await eventually(() => {
+      assert.deepEqual(vm.resultCount(), {
+        filter: 12,
+        total: 468,
+      });
+    });
+
+    // Switch to table view
+    await vm.setViewMode("table");
+
+    // We should see no results
+    await eventually(() => {
+      assert.deepEqual(vm.resultCount(), {
+        filter: 0,
+        total: 10,
+      });
+    });
+  });
+
   it("should filter results based on search query only in visible columns", async () => {
     await eventually(() => assert.deepEqual(vm.visibleColumns(), ["when_reported", "tempf"]));
     // Exists in both columns but we should only get results
@@ -216,6 +249,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       failed: ctx.statement.failed,
       stoppable: ctx.statement.stoppable,
       areResultsViewable: ctx.statement.areResultsViewable,
+      isForeground: ctx.statement.isForeground,
     });
   });
 
@@ -453,8 +487,73 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       assert.equal(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.callCount, 1);
     });
   });
+});
 
-  describe("FlinkStatementResultsViewModel only", () => {
+describe("FlinkStatementResultsViewModel only", () => {
+  let sandbox: sinon.SinonSandbox;
+  const statement = createMockStatement();
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  describe("with default statement", () => {
+    let vm: FlinkStatementResultsViewModel;
+    let storage: WebviewStorage<ResultsViewerStorageState>;
+    let ctx: FlinkStatementResultsManagerTestContext;
+
+    beforeEach(async () => {
+      ({ storage, vm, ctx } = await createTestResultsManagerContext(sandbox, statement));
+    });
+
+    afterEach(() => {
+      ctx.manager.dispose();
+      vm.dispose();
+    });
+
+    describe("viewMode", () => {
+      it("should initialize with table view mode", () => {
+        assert.strictEqual(vm.viewMode(), "table");
+      });
+
+      it("should toggle between table and changelog view modes", async () => {
+        // Initial state
+        assert.strictEqual(vm.viewMode(), "table");
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle to changelog
+        await vm.setViewMode("changelog");
+        await eventually(() => assert.strictEqual(vm.viewMode(), "changelog"));
+        assert.strictEqual(vm.page(), 0);
+        assert.strictEqual(vm.tablePage(), 0);
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Change page in changelog mode
+        vm.page(2);
+        await eventually(() => assert.strictEqual(vm.page(), 2));
+
+        assert.strictEqual(vm.tablePage(), 0);
+        // We don't eagerly update the changelogPage..
+        assert.strictEqual(vm.changelogPage(), 0);
+
+        // Toggle back to table
+        await vm.setViewMode("table");
+
+        await eventually(() => {
+          assert.strictEqual(vm.viewMode(), "table");
+          assert.strictEqual(vm.page(), 0);
+          assert.strictEqual(vm.tablePage(), 0);
+          assert.strictEqual(vm.changelogPage(), 2);
+        });
+      });
+    });
+
     describe("schema and columns", () => {
       it("should create correct column definitions for table view", () => {
         const columns = vm.columns();
@@ -600,5 +699,59 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
         assert.strictEqual(vm.searchTimer, null);
       });
     });
+
+    it("should handle column widths correctly when toggling between changelog and table mode", async () => {
+      // Test default column widths
+      assert.deepStrictEqual(vm.colWidth(), [128, 128]); // 8rem * 16px = 128px for each column
+
+      const setWidths = (widths: number[]) => {
+        vm.colWidth(widths);
+        storage.set({ ...storage.get()!, colWidths: vm.colWidth() });
+      };
+
+      setWidths([150, 200]);
+
+      // Test switching to changelog view mode
+      await vm.setViewMode("changelog");
+      assert.deepStrictEqual(vm.colWidth(), [128, 150, 200]); // Default width for Operation column + stored widths
+
+      // Change width of Operation column
+      setWidths([64, 150, 200]);
+
+      // Test switching back to table view mode
+      await vm.setViewMode("table");
+      assert.deepStrictEqual(vm.colWidth(), [150, 200]); // Should remove Operation column width
+
+      await vm.setViewMode("changelog");
+      // Assert that changes to Operation column's width are persisted
+      // across view mode toggles.
+      assert.deepStrictEqual(vm.colWidth(), [64, 150, 200]);
+    });
+  });
+
+  it("should not allow toggling view modes for non-foreground statements", async () => {
+    const explainStatement: FlinkStatement = new FlinkStatement({
+      ...statement,
+      status: {
+        ...statement.status,
+        traits: {
+          ...statement.status.traits,
+          sql_kind: "EXPLAIN",
+        },
+      },
+    });
+    const { vm, ctx } = await createTestResultsManagerContext(sandbox, explainStatement);
+    try {
+      assert.equal(vm.viewMode(), "table");
+
+      // Try changing view mode
+      vm.setViewMode("changelog");
+
+      // No effect
+      assert.equal(vm.viewMode(), "table");
+    } finally {
+      ctx.manager.dispose();
+      vm.dispose();
+    }
   });
 });

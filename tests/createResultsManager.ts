@@ -1,14 +1,30 @@
 import * as assert from "assert";
-import { Scope } from "inertial";
-import sinon from "sinon";
+import { ObservableScope } from "inertial";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
-import { FlinkStatementResultsManager } from "../src/flinkStatementResultsManager";
+import { FlinkStatementResultsManager, MessageType } from "../src/flinkStatementResultsManager";
 import { CCloudResourceLoader } from "../src/loaders/ccloudResourceLoader";
 import { FlinkStatement } from "../src/models/flinkStatement";
 import * as sidecar from "../src/sidecar";
 import { DEFAULT_RESULTS_LIMIT } from "../src/utils/flinkStatementResults";
+import { WebviewStorage } from "../src/webview/comms/comms";
+import {
+  FlinkStatementResultsViewModel,
+  ResultsViewerStorageState,
+} from "../src/webview/flink-statement-results";
 import { eventually } from "./eventually";
 import { loadFixture } from "./fixtures/utils";
+
+class FakeWebviewStorage<T> implements WebviewStorage<T> {
+  private storage: T | undefined;
+
+  get(): T | undefined {
+    return this.storage;
+  }
+
+  set(state: T): void {
+    this.storage = state;
+  }
+}
 
 export interface FlinkStatementResultsManagerTestContext {
   manager: FlinkStatementResultsManager;
@@ -23,7 +39,7 @@ export interface FlinkStatementResultsManagerTestContext {
 }
 
 /**
- * Creates a FlinkStatementResultsManager instance pre-loaded with WeatherData fixture results for testing.
+ * Creates a FlinkStatementResultsViewModel and FlinkStatementResultsManager instance pre-loaded with WeatherData fixture results for testing.
  *
  * This helper loads a sequence of 5 fixture files containing statement results and configures the manager
  * to process them.
@@ -37,13 +53,17 @@ export interface FlinkStatementResultsManagerTestContext {
  * After initialization, the manager will have processed 10 total result rows that can be retrieved
  * via GetResults/GetResultsCount messages.
  *
- * @returns Initialized FlinkStatementResultsManager with processed results
+ * @returns Initialized FlinkStatementResultsViewModel and FlinkStatementResultsManager with processed results
  */
 
 export async function createTestResultsManagerContext(
   sandbox: sinon.SinonSandbox,
-  os: Scope,
-): Promise<FlinkStatementResultsManagerTestContext> {
+  statement: FlinkStatement,
+): Promise<{
+  ctx: FlinkStatementResultsManagerTestContext;
+  storage: WebviewStorage<ResultsViewerStorageState>;
+  vm: FlinkStatementResultsViewModel;
+}> {
   // Create sidecar and API mocks
   const mockSidecar = sandbox.createStubInstance(sidecar.SidecarHandle);
   sandbox.stub(sidecar, "getSidecar").resolves(mockSidecar);
@@ -58,16 +78,6 @@ export async function createTestResultsManagerContext(
   const resourceLoader = CCloudResourceLoader.getInstance();
   const refreshFlinkStatementStub = sandbox.stub(resourceLoader, "refreshFlinkStatement");
 
-  const fakeFlinkStatement = loadFixture(
-    "flink-statement-results-processing/fake-flink-statement.json",
-  );
-  const mockStatement = new FlinkStatement(fakeFlinkStatement);
-  mockStatement.metadata = {
-    ...mockStatement.metadata,
-    created_at: new Date(),
-    updated_at: new Date(),
-  };
-
   const notifyUIStub = sandbox.stub();
 
   const stmtResults = Array.from({ length: 5 }, (_, i) =>
@@ -75,7 +85,7 @@ export async function createTestResultsManagerContext(
   );
 
   // Update the refreshFlinkStatement stub to return the mock statement
-  refreshFlinkStatementStub.returns(Promise.resolve(mockStatement));
+  refreshFlinkStatementStub.returns(Promise.resolve(statement));
 
   let callCount = 0;
   flinkSqlStatementResultsApi.getSqlv1StatementResult.callsFake(() => {
@@ -88,9 +98,11 @@ export async function createTestResultsManagerContext(
     return Promise.resolve(response);
   });
 
+  const os = ObservableScope();
+
   const manager = new FlinkStatementResultsManager(
     os,
-    mockStatement,
+    statement,
     mockSidecar,
     notifyUIStub,
     DEFAULT_RESULTS_LIMIT,
@@ -117,15 +129,31 @@ export async function createTestResultsManagerContext(
     assert.deepStrictEqual(results, { results: expectedParsedResults });
   }, 10_000);
 
+  const storage = new FakeWebviewStorage<ResultsViewerStorageState>();
+  const timestamp = os.produce(Date.now(), (ts) => {
+    // Forces a re-render of the view model
+    ts(Date.now());
+  });
+
+  // Create a post function that directly delegates to the results manager instance
+  // and bypasses the webview comms altogether.
+  const post = (type: MessageType, body: any) => manager.handleMessage(type, body);
+
+  const vm = new FlinkStatementResultsViewModel(os, timestamp, storage, post);
+
   return {
-    manager,
-    statement: mockStatement,
-    sidecar: mockSidecar,
-    refreshFlinkStatementStub,
-    flinkSqlStatementsApi,
-    flinkSqlStatementResultsApi,
-    notifyUIStub,
-    resourceLoader,
-    sandbox,
+    ctx: {
+      manager,
+      statement,
+      sidecar: mockSidecar,
+      refreshFlinkStatementStub,
+      flinkSqlStatementsApi,
+      flinkSqlStatementResultsApi,
+      notifyUIStub,
+      resourceLoader,
+      sandbox,
+    },
+    vm,
+    storage,
   };
 }

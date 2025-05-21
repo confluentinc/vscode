@@ -22,7 +22,6 @@ export interface ICreateProjectParameters {
 
 export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParameters> {
   readonly name = "create_project";
-  readonly progressMessage = "Setting up project...";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<ICreateProjectParameters>,
@@ -98,6 +97,10 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
     const parameters = toolCall.input as ICreateProjectParameters;
 
     // handle the core tool invocation
+    stream.progress(
+      `Making request to create project with templateId: ${parameters.templateId} and options: ${JSON.stringify(parameters.templateOptions)}...`,
+    );
+
     const result: LanguageModelToolResult = await this.invoke(
       {
         input: parameters,
@@ -110,6 +113,11 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
+    stream.progress(
+      `Created project with template name: ${parameters.templateId}. Result: ${result.content
+        .map((part) => (part instanceof LanguageModelTextPart ? part.value : ""))
+        .join(" ")}.`,
+    );
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
     // no header/footer messages needed here
