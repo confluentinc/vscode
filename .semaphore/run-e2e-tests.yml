@@ -27,3 +27,4 @@ blocks:
         - name: "Run Playwright E2E Tests"
           commands:
             - make e2e
+            - artifact push workflow playwright-report

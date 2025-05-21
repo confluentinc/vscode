@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
+import { test } from "vscode-test-playwright";
 import { DEFAULT_FLINK_SQL_FILE_EXTENSION } from "../../../src/flinkSql/constants";
-import { test } from "./base";
 import { login } from "./utils/confluentCloud";
 
 async function enableFlink(page: Page) {
@@ -29,7 +29,7 @@ async function enableFlink(page: Page) {
 }
 
 test.describe("Flink statements and statement results", () => {
-  test("should submit Flink statement", async ({ page, electronApp }) => {
+  test("should submit Flink statement", async ({ workbox: page, electronApp }) => {
     // First, login to Confluent Cloud
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
 
