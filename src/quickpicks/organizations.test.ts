@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import * as vscode from "vscode";
+import { ThemeIcon, window } from "vscode";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { IconNames } from "../constants";
 import * as organizationsGraphQL from "../graphql/organizations";
@@ -28,8 +28,8 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
-    showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
+    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 
     // graphql stubs
     getOrganizationsStub = sandbox.stub(organizationsGraphQL, "getOrganizations");
@@ -66,10 +66,7 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
     assert.strictEqual(currentOrgItem.value, TEST_CCLOUD_ORGANIZATION);
     assert.strictEqual(currentOrgItem.label, TEST_CCLOUD_ORGANIZATION.name);
     assert.strictEqual(currentOrgItem.description, TEST_CCLOUD_ORGANIZATION.id);
-    assert.strictEqual(
-      (currentOrgItem.iconPath as vscode.ThemeIcon).id,
-      IconNames.CURRENT_RESOURCE,
-    );
+    assert.strictEqual((currentOrgItem.iconPath as ThemeIcon).id, IconNames.CURRENT_RESOURCE);
 
     // check the non-current org's properties
     const nonCurrentOrgItem = quickPickItems.find((item) => item.value!.current === false);
@@ -77,7 +74,7 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
     assert.strictEqual(nonCurrentOrgItem.value, nonCurrentOrg);
     assert.strictEqual(nonCurrentOrgItem.label, nonCurrentOrg.name);
     assert.strictEqual(nonCurrentOrgItem.description, nonCurrentOrg.id);
-    assert.strictEqual((nonCurrentOrgItem.iconPath as vscode.ThemeIcon).id, IconNames.ORGANIZATION);
+    assert.strictEqual((nonCurrentOrgItem.iconPath as ThemeIcon).id, IconNames.ORGANIZATION);
 
     // verify sort order
     const alphabeticallySortedOrgs = [...testOrganizations].sort((a, b) =>
