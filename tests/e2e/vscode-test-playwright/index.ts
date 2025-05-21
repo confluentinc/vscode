@@ -237,6 +237,11 @@ export const test = base.extend<
           "--disable-gpu-sandbox",
           // https://github.com/microsoft/vscode-test/issues/120
           "--disable-updates",
+          ...(process.platform === "linux" ? ["--disable-dev-shm-usage", "--disable-gpu"] : []),
+          ...(process.platform === "darwin" ? ["--disable-gpu"] : []),
+          ...(process.env["VERBOSE"] ? ["--verbose"] : []),
+          "--enable-smoke-test-driver",
+          "--use-inmemory-secretstorage",
           "--skip-welcome",
           "--skip-release-notes",
           "--disable-workspace-trust",
@@ -244,7 +249,9 @@ export const test = base.extend<
           `--user-data-dir=${path.join(cachePath, "user-data")}`,
           `--extensionTestsPath=${path.join(__dirname, "injected", "index")}`,
           ...(extensionDevelopmentPath
-            ? [`--extensionDevelopmentPath=${extensionDevelopmentPath}`]
+            ? ([`--extensionDevelopmentPath=${extensionDevelopmentPath}`].filter(
+                Boolean,
+              ) as string[])
             : []),
           baseDir,
         ],
