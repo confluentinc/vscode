@@ -34,12 +34,12 @@ const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
-export const e2e = series(clean, build, testBuild, e2eRun);
 export const liveTest = series(clean, build, testBuild);
 liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
 
 export const bundle = series(clean, build, pack);
+export const e2e = series(bundle, testBuild, e2eRun);
 
 export const clicktest = series(bundle, install);
 
@@ -734,10 +734,14 @@ export function functional(done) {
 }
 
 export function e2eRun(done) {
-  const result = spawnSync("npx", ["playwright", "test", "tests/e2e"], {
-    stdio: "inherit",
-    shell: IS_WINDOWS,
-  });
+  const result = spawnSync(
+    "npx",
+    ["playwright", "test", "-c", "tests/e2e/playwright.config.ts", "tests/e2e"],
+    {
+      stdio: "inherit",
+      shell: IS_WINDOWS,
+    },
+  );
   if (result.error) throw result.error;
   return done(result.status);
 }
