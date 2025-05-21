@@ -68,6 +68,44 @@
       }
     ],
     "languageModelTools": [
+            {
+        "name": "list_Topics",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "topics"
+        ],
+        "displayName": "List Topics",
+        "modelDescription": "List all available topics in the Kafka cluster. Use this when the user asks about available topics or you want to show them a list of topics.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kafkaClusterId": {
+              "type": "string",
+              "description": "The ID of the Kafka cluster to list topics for."
+
+            },
+            "topicNameSubstring": {
+              "type": "string",
+              "description": "An optional substring to filter the list of topics by name."
+            },
+            "environmentId": {
+              "type": "string",
+              "description": "The ID of the environment for the Kafka cluster."
+            },
+            "connectionId": {
+              "type": "string",
+              "description": "The ID of the connection for the Kafka cluster."
+            }
+          },
+          "required": [
+            "kafkaClusterId",
+            "environmentId",
+            "connectionId"
+          ]
+        }
+      },
       {
         "name": "list_projectTemplates",
         "when": "confluent.chatParticipantEnabled",
