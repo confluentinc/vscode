@@ -1,4 +1,4 @@
-import { ElectronApplication, chromium } from "@playwright/test";
+import { ElectronApplication, chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { openConfluentExtension } from "./confluent";
 
@@ -131,10 +131,11 @@ export async function login(
   await signInButton.click();
 
   // Wait for dialogs to return
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(1500);
+
+  await expect(electronApp.evaluate(() => (global as any).__interceptedUrl)).toBeTruthy();
 
   authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
-
   if (!authUrl) {
     throw new Error("Failed to capture OAuth URL from shell.openExternal");
   }
