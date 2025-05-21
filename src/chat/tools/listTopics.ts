@@ -68,27 +68,30 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
         new LanguageModelTextPart("No Kafka cluster found for the given ID."),
       ]);
     }
-
     const topics = await loader.getTopicsForCluster(kafkaCluster);
     if (!(Array.isArray(topics) && topics.length)) {
+      logger.debug(`No topics found for cluster ${kafkaClusterId}`);
       return new LanguageModelToolResult([
         new LanguageModelTextPart("No topics found for the given Kafka cluster."),
       ]);
     }
 
-    let sampleTopics: KafkaTopic[] = [];
+    let sampleTopics: KafkaTopic[] = [...topics]; // Create a copy of the topics array
     const topicNameSubstring = params.topicNameSubstring;
 
     if (topicNameSubstring) {
-      const filteredTopics = topics.filter((topic) =>
+      sampleTopics = sampleTopics.filter((topic) =>
         topic.name.toLowerCase().includes(topicNameSubstring.toLowerCase()),
       );
-      sampleTopics.push(...filteredTopics);
+      logger.debug(
+        `Filtered topics by substring "${topicNameSubstring}": ${sampleTopics.length} matches`,
+      );
     }
 
     // if sample topics is more than 30, slice it to 30
     if (sampleTopics.length > 30) {
       sampleTopics = sampleTopics.slice(0, 30);
+      logger.debug(`Limited topics to 30 samples`);
     }
 
     if (token.isCancellationRequested) {
@@ -96,6 +99,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       return new LanguageModelToolResult([]);
     }
 
+    logger.debug(`Summarizing ${sampleTopics.length} topics`);
     return new LanguageModelToolResult(summarizeTopics(sampleTopics));
   }
   async processInvocation(
@@ -105,9 +109,17 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IListTopicsParameters;
-    stream.progress(
-      `Retrieving available topics with parameters: ${JSON.stringify(parameters)}...`,
-    );
+    const progressMessage = [
+      "Retrieving available topics for:",
+      `- Cluster ID: ${parameters.kafkaClusterId}`,
+      `- Environment ID: ${parameters.environmentId}`,
+    ];
+
+    if (parameters.topicNameSubstring) {
+      progressMessage.push(`- Filter: "${parameters.topicNameSubstring}"`);
+    }
+
+    stream.progress(progressMessage.join("\n"));
 
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
@@ -117,31 +129,29 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       },
       token,
     );
-    stream.progress(`Found ${result.content.length} topics.`);
-    if (!result.content.length) {
-      // cancellation / no results
-      return new TextOnlyToolResultPart(toolCall.callId, []);
-    }
 
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
+    logger.debug("Tool invocation listtopics result:", result);
+    if (!result.content.length) {
+      const noResultsMessage = new LanguageModelTextPart(
+        `No topics found in cluster ${parameters.kafkaClusterId}. ` +
+          `Make sure the cluster exists and you have the correct permissions.`,
+      );
+      resultParts.push(noResultsMessage);
+      stream.progress("No topics found.");
+      return new TextOnlyToolResultPart(toolCall.callId, resultParts);
+    }
 
-    // Add header
+    stream.progress(`Found ${result.content.length} topics.`);
+
+    // Add header for successful results
     const resultsHeader = new LanguageModelTextPart(
       `Found ${result.content.length} topics in cluster ${parameters.kafkaClusterId}:\n`,
     );
     resultParts.push(resultsHeader);
-
     // Add content
     resultParts.push(...(result.content as LanguageModelTextPart[]));
-
-    // Add footer
-    const resultsFooter = new LanguageModelTextPart(
-      `List up to 30 topic with relevant info on them (names, schema registry info) for the user. 
-    1. First, call the getConnections tool to get the connection ID.
-    2. Then, use the connection ID to set up the resource loader and eventually get the topics.`,
-    );
-    resultParts.push(resultsFooter);
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
