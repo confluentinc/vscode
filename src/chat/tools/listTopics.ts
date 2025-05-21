@@ -112,6 +112,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     const progressMessage = [
       "Retrieving available topics for:",
       `- Cluster ID: ${parameters.kafkaClusterId}`,
+      `- Connection ID: ${parameters.connectionId}`,
       `- Environment ID: ${parameters.environmentId}`,
     ];
 
