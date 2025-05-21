@@ -375,6 +375,7 @@ describe("commands/documents.ts resetCCloudMetadataForUriCommand()", () => {
 
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
   let uriMetadataSetFireStub: sinon.SinonStub;
+  let hasCCloudAuthSessionStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -383,6 +384,11 @@ describe("commands/documents.ts resetCCloudMetadataForUriCommand()", () => {
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
 
     uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
+
+    // assume the user is signed in to CCloud for most tests
+    hasCCloudAuthSessionStub = sandbox
+      .stub(ccloudConnections, "hasCCloudAuthSession")
+      .returns(true);
   });
 
   afterEach(() => {
@@ -394,6 +400,16 @@ describe("commands/documents.ts resetCCloudMetadataForUriCommand()", () => {
     await resetCCloudMetadataForUriCommand();
 
     sinon.assert.notCalled(stubResourceManager.setUriMetadata);
+    sinon.assert.notCalled(uriMetadataSetFireStub);
+  });
+
+  it("should do nothing when no CCloud auth session is available", async () => {
+    // simulate user not being signed in to CCloud
+    hasCCloudAuthSessionStub.returns(false);
+
+    await resetCCloudMetadataForUriCommand(testUri);
+
+    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
