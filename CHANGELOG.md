@@ -4,6 +4,19 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Added functionality to the Results Viewer to allow users to toggle between table and changelog
+  view modes:
+  - **Table view** shows the current state of the data by collapsing the changelog stream - records are
+    updated in place rather than showing the full history of changes
+  - **Changelog view** shows the raw results from the Flink API, where each record includes an opcode
+    indicating how it should be interpreted in the context of the overall result:
+    - `+I`: Insert operation (new row added)
+    - `-U`: UpdateBefore operation (previous version of updated row)
+    - `+U`: UpdateAfter operation (new version of updated row)
+    - `-D`: Delete operation (row removed)
+
 ## 1.3.0
 
 ### Added
@@ -711,3 +724,17 @@ Early access release of the extension.
   - Read-only schema definition viewer
 - Feedback and issue form links from the Support view
 - Project file generation for scaffolding new Kafka applications
+
+### Changed
+
+- Added functionality to the Results Viewer to allow users to toggle between table and changelog
+  view modes:
+  - Table view shows the current state of the data
+  - Changelog view shows the stream of updates using Flink SQL's changelog concept, which tracks
+    data changes through row kinds:
+    - +I: Insert operation (new row added)
+    - -U: UpdateBefore operation (previous version of updated row)
+    - +U: UpdateAfter operation (new version of updated row)
+    - -D: Delete operation (row removed) This changelog system, similar to Change Data Capture (CDC)
+      in relational databases, helps users understand how their data evolved over time and debug
+      streaming applications by showing the complete history of changes.
