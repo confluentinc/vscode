@@ -1,4 +1,4 @@
-import { ElectronApplication, chromium } from "@playwright/test";
+import { ElectronApplication, chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { openConfluentExtension } from "./confluent";
 
