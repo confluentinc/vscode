@@ -131,11 +131,10 @@ export async function login(
   await signInButton.click();
 
   // Wait for dialogs to return
-  await page.waitForTimeout(1500);
-
-  await expect(electronApp.evaluate(() => (global as any).__interceptedUrl)).toBeTruthy();
+  await page.waitForTimeout(200);
 
   authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
+
   if (!authUrl) {
     throw new Error("Failed to capture OAuth URL from shell.openExternal");
   }
