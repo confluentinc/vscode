@@ -19,6 +19,9 @@ global_job_config:
   prologue:
     commands:
       - checkout
+  env_vars:
+    - name: "DEBUG"
+      value: "pw:browser*"
 
 blocks:
   - name: "Run E2E Tests"
