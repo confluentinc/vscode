@@ -51,6 +51,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   afterEach(() => {
     sandbox.restore();
     ctx.manager.dispose();
+    vm.dispose();
   });
 
   it("should process results from fixtures correctly", async () => {
@@ -737,16 +738,18 @@ describe("FlinkStatementResultsViewModel only", () => {
         },
       },
     });
-    const { vm } = await createTestResultsManagerContext(sandbox, explainStatement);
+    const { vm, ctx } = await createTestResultsManagerContext(sandbox, explainStatement);
+    try {
+      assert.equal(vm.viewMode(), "table");
 
-    assert.equal(vm.viewMode(), "table");
+      // Try changing view mode
+      vm.setViewMode("changelog");
 
-    // Try changing view mode
-    vm.setViewMode("changelog");
-
-    // No effect
-    assert.equal(vm.viewMode(), "table");
-
-    vm.dispose();
+      // No effect
+      assert.equal(vm.viewMode(), "table");
+    } finally {
+      ctx.manager.dispose();
+      vm.dispose();
+    }
   });
 });
