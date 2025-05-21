@@ -51,7 +51,7 @@ test.describe("Flink statements and statement results viewer", () => {
       // Submit the statement
       await submitFlinkStatement(page, testCase.fileName);
 
-      const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
+      webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
       // Wait for statement to run and verify status
       await verifyStatementStatus(webview, testCase.eventualExpectedStatus);

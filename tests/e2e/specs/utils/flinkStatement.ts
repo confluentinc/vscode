@@ -54,13 +54,15 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
  */
 export async function stopStatement(webview: FrameLocator) {
   // Check if the stop button is disabled
-  if (await webview.getByTestId(FlinkStatementTestIds.stopStatementButton).isDisabled()) {
-    console.log("Stop button is disabled, skipping stop operation");
+  const stopButton = webview.getByTestId(FlinkStatementTestIds.stopStatementButton);
+  const disabled = await stopButton.getAttribute("disabled");
+
+  if (disabled === "disabled") {
     return;
   }
 
   // Click the stop button
-  await webview.getByTestId(FlinkStatementTestIds.stopStatementButton).click();
+  await stopButton.click();
 
   // Wait for the statement to be stopped
   await expect(webview.getByTestId(FlinkStatementTestIds.statementStatus)).toHaveText("STOPPED");
