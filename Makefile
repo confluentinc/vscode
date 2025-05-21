@@ -8,6 +8,7 @@ include ./mk-files/semaphore.mk
 install-dependencies:
 	npm ci --prefer-offline --include=dev
 	npx playwright install
+	npx playwright install-deps
 
 # Install additional test dependencies to run VS Code testing in headless mode
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
@@ -48,6 +49,23 @@ test: setup-test-env install-test-dependencies install-dependencies
 			npx gulp test; \
 	fi
 	npx gulp functional
+
+.PHONY: e2e-tests
+e2e: setup-test-env install-test-dependencies install-dependencies
+	npx gulp ci
+		@if [ $$(uname -s) = "Linux" ]; then \
+			npx gulp --series bundle testBuild && xvfb-run npx gulp e2eRun; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			if pgrep -x "Dock" > /dev/null; then \
+					echo "GUI session is active."; \
+					npx gulp e2e; \
+			else \
+					echo "No active GUI session. Aborting tests."; \
+					exit 1; \
+			fi \
+	else \
+			npx gulp e2e; \
+	fi
 
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
