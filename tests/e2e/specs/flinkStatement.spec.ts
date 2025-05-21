@@ -1,6 +1,6 @@
-import { Page } from "@playwright/test";
-import { test } from "../vscode-test-playwright";
+import { Page, expect } from "@playwright/test";
 import { DEFAULT_FLINK_SQL_FILE_EXTENSION } from "../../../src/flinkSql/constants";
+import { test } from "../vscode-test-playwright";
 import { login } from "./utils/confluentCloud";
 
 async function enableFlink(page: Page) {
@@ -29,7 +29,7 @@ async function enableFlink(page: Page) {
 }
 
 test.describe("Flink statements and statement results", () => {
-  test("should submit Flink statement", async ({ workbox: page, electronApp }) => {
+  test("should submit Flink statement", async ({ page, electronApp }) => {
     // First, login to Confluent Cloud
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
 
@@ -74,22 +74,36 @@ test.describe("Flink statements and statement results", () => {
     // Assert that a new Results Viewer tab with "Statement : ..." opens up
     await page.waitForSelector("text=Statement:");
 
-    // TODO: Inspecting iframe properly needs some work, exercise for reader to
-    //       look into it and fix.
-    // Get the iframe and evaluate within its context
-    const frame = await page.waitForSelector("iframe");
-    if (!frame) {
-      throw new Error("Results iframe not found");
-    }
+    const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
-    const frameContent = await frame.contentFrame();
-    if (!frameContent) {
-      throw new Error("Could not get iframe content");
-    }
+    // Wait for statement to run and 200 results to be streamed in.
+    await expect(webview.getByTestId("statement-status")).toHaveText("RUNNING", {
+      timeout: 30_000,
+    });
+    await expect(webview.getByTestId("results-stats")).toHaveText(
+      "Showing 1..100 of 200 results (total: 200).",
+    );
 
-    // // Wait for and check the results within the iframe context
-    // const iframePage = await frameContent.page();
-    // NOT WORKING
-    // await expect(iframePage.getByTestId("results-stats")).toHaveText("200 results");
+    // Sleep for a few seconds for more results to poll in.
+    await page.waitForTimeout(2000);
+
+    // We should continue to have 200 results.
+    await expect(webview.getByTestId("results-stats")).toHaveText(
+      "Showing 1..100 of 200 results (total: 200).",
+    );
+
+    // Now stop the statement by clicking the Stop button
+    await webview.getByTestId("stop-statement-button").click();
+    // Wait for statement to transition to STOPPED.
+    await expect(webview.getByTestId("statement-status")).toHaveText("STOPPED");
+
+    // Assert that an Info message is displayed
+    await expect(webview.getByTestId("statement-detail-info")).toHaveText(
+      // This message comes straight from the Confluent Cloud Flink REST API.
+      "This statement was stopped manually.",
+    );
+
+    // Assert there there is no error message
+    await expect(webview.getByTestId("statement-detail-error")).toBeHidden();
   });
 });

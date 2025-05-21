@@ -248,5 +248,3 @@ promotions:
     pipeline_file: validate-sidecar-version.yml
     auto_promote:
       when: "result = 'passed' and change_in(['/.versions/ide-sidecar.txt', '/src/clients/sidecar-openapi-specs/sidecar.openapi.yaml'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
-  - name: Run E2E Tests
-    pipeline_file: run-e2e-tests.yml

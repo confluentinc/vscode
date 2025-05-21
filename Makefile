@@ -50,23 +50,6 @@ test: setup-test-env install-test-dependencies install-dependencies
 	fi
 	npx gulp functional
 
-.PHONY: e2e-tests
-e2e: setup-test-env install-test-dependencies install-dependencies
-	npx gulp ci
-		@if [ $$(uname -s) = "Linux" ]; then \
-			npx gulp --series bundle testBuild && xvfb-run npx gulp e2eRun; \
-	elif [ $$(uname -s) = "Darwin" ]; then \
-			if pgrep -x "Dock" > /dev/null; then \
-					echo "GUI session is active."; \
-					npx gulp e2e; \
-			else \
-					echo "No active GUI session. Aborting tests."; \
-					exit 1; \
-			fi \
-	else \
-			npx gulp e2e; \
-	fi
-
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
 .PHONY: validate-bump

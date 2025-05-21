@@ -8,11 +8,7 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1920, height: 1080 },
   },
-  timeout: 120000,
   workers: 1,
-  expect: {
-    timeout: 10000,
-  },
   globalSetup: "./tests/e2e/setup.ts",
   testMatch: "**/*.spec.ts",
   reporter: [
