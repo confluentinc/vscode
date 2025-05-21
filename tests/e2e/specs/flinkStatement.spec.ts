@@ -1,5 +1,5 @@
 import { Page } from "@playwright/test";
-import { test } from "vscode-test-playwright";
+import { test } from "../vscode-test-playwright";
 import { DEFAULT_FLINK_SQL_FILE_EXTENSION } from "../../../src/flinkSql/constants";
 import { login } from "./utils/confluentCloud";
 
