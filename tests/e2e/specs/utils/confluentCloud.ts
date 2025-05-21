@@ -40,7 +40,9 @@ async function handleAuthFlow(
   password: string,
   electronApp: ElectronApplication,
 ): Promise<void> {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    headless: false,
+  });
   const context = await browser.newContext();
   const authPage = await context.newPage();
 

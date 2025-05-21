@@ -5,10 +5,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { VSCodeTestOptions, VSCodeWorkerOptions } from "vscode-test-playwright";
 
-configDotenv();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+configDotenv({
+  path: path.join(__dirname, "..", "..", ".env"),
+});
 
 const vsix: string = globSync(path.resolve(__dirname, "..", "..", "out", "*.vsix")).at(0) as string;
 
