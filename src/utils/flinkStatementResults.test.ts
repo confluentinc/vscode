@@ -89,6 +89,7 @@ describe("utils/flinkStatementResults", () => {
         isAppendOnly: true,
         map: new Map(),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const res = Array.from(resMap, ([_, data]) => ({ ...Object.fromEntries(data) }));
 
       assert.equal(res.length, 2);
@@ -126,6 +127,7 @@ describe("utils/flinkStatementResults", () => {
         isAppendOnly: false,
         map: new Map(),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const res2 = Array.from(resMap2, ([_, data]) => ({ ...Object.fromEntries(data) }));
 
       assert.equal(res2.length, 4);
@@ -170,6 +172,7 @@ describe("utils/flinkStatementResults", () => {
         map: new Map(),
         upsertColumns: [0],
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const res = Array.from(resMap, ([_, data]) => ({ ...Object.fromEntries(data) }));
 
       assert.equal(res.length, 2);
@@ -202,6 +205,7 @@ describe("utils/flinkStatementResults", () => {
         isAppendOnly: false,
         map: new Map(),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const res2 = Array.from(resMap2, ([_, data]) => ({ ...Object.fromEntries(data) }));
 
       assert.equal(res2.length, 2);
