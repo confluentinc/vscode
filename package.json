@@ -83,8 +83,7 @@
           "properties": {
             "kafkaClusterId": {
               "type": "string",
-              "description": "The ID of the Kafka cluster to list topics for."
-
+              "description": "The ID of the specific Kafka cluster to list topics for. Note: This is distinct from the connection and environment IDs, which will share the same value in LOCAL and DIRECT connection types."
             },
             "topicNameSubstring": {
               "type": "string",
@@ -92,11 +91,11 @@
             },
             "environmentId": {
               "type": "string",
-              "description": "The ID of the environment for the Kafka cluster."
+              "description": "The ID of the environment containing the Kafka cluster. For CCLOUD connections, this is a distinct environment ID. For LOCAL and DIRECT connections, this will match the connectionId."
             },
             "connectionId": {
               "type": "string",
-              "description": "The ID of the connection for the Kafka cluster."
+              "description": "The ID of the connection to use. Identifies which connection configuration to use when accessing the Kafka cluster."
             }
           },
           "required": [
