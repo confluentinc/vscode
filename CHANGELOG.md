@@ -4,6 +4,24 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Added functionality to the Results Viewer to allow users to toggle between table and changelog
+  view modes:
+  - **Table view** shows the current state of the data by collapsing the changelog stream - records
+    are updated in place rather than showing the full history of changes
+  - **Changelog view** shows the raw results from the Flink API, where each record includes an
+    opcode indicating how it should be interpreted in the context of the overall result:
+    - `+I`: Insert operation (new row added)
+    - `-U`: UpdateBefore operation (previous version of updated row)
+    - `+U`: UpdateAfter operation (new version of updated row)
+    - `-D`: Delete operation (row removed)
+
+### Fixed
+
+- Fixed an issue where the "File Issue" button would not work if the extension failed to activate
+  properly. [#1823](https://github.com/confluentinc/vscode/issues/1823)
+
 ## 1.3.0
 
 ### Added
