@@ -35,14 +35,19 @@ export const test = base.extend<TestFixtures>({
     testProjectPath = path.resolve(__dirname, "..", "..", "..", "out");
 
     const userDataDir = path.join(defaultCachePath, "user-data");
+    const crashReports = path.join(defaultCachePath, "crash-reports");
     const logsPath = path.join(defaultCachePath, "logs");
 
     // Launch VS Code
     const electronApp = await _electron.launch({
       executablePath: vscodePath,
       args: [
+        process.platform === "linux" && "--disable-dev-shm-usage",
+        process.platform === "linux" && "--disable-gpu",
+        process.platform === "darwin" && "--disable-gpu",
         "--no-sandbox",
         "--disable-gpu-sandbox",
+        "--verbose",
         "--disable-updates",
         "--skip-welcome",
         "--skip-release-notes",
@@ -50,11 +55,13 @@ export const test = base.extend<TestFixtures>({
         "--enable-proposed-api",
         "--disable-telemetry",
         "--disable-extensions",
+        "--use-inmemory-secretstorage",
+        `--crash-reporter-directory=${crashReports}`,
         `--extensionDevelopmentPath=${testProjectPath}`,
         `--user-data-dir=${userDataDir}`,
         `--logsPath=${logsPath}`,
         testProjectPath,
-      ],
+      ].filter(Boolean) as string[],
       env: Object.fromEntries(
         Object.entries(process.env)
           .filter(([_, value]) => value !== undefined)

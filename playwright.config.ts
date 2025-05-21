@@ -8,7 +8,7 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1920, height: 1080 },
   },
-  timeout: 60000,
+  timeout: 120000,
   workers: 1,
   expect: {
     timeout: 10000,
