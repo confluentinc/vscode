@@ -48,7 +48,7 @@ function appendEnvironmentVars(summary: MarkdownString, container: ContainerInsp
  */
 export function summarizeLocalDockerContainer(container: ContainerInspectResponse): string {
   const containerName = container.Name?.replace("/", "") ?? "";
-  const summary = new MarkdownString().appendMarkdown(`# "${containerName}"`);
+  const summary = new MarkdownString().appendMarkdown(`## "${containerName}"`);
 
   const config = workspace.getConfiguration();
   const kafkaImageRepo: string = config.get(LOCAL_KAFKA_IMAGE) ?? DEFAULT_KAFKA_IMAGE_REPO;
