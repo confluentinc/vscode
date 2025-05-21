@@ -68,7 +68,6 @@ import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
-import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
@@ -146,7 +145,7 @@ async function _activateExtension(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
   // must be done first to allow any other downstream callers to call `getExtensionContext()`
-  // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
+  // (e.g. for globalState/workspaceState/secrets storage, webviews for extension root path, etc)
   setExtensionContext(context);
 
   // register the log output channels and debugging commands before anything else, in case we need
@@ -162,8 +161,8 @@ async function _activateExtension(
   // set up initial feature flags and the LD client
   await setupFeatureFlags();
 
-  // configure the StorageManager for extension access to secrets and global/workspace states, and
-  // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
+  // configure extension access to secrets and global/workspace states, and set the initial context
+  // values for the VS Code UI to inform the `when` clauses in package.json
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
 
@@ -261,7 +260,7 @@ async function _activateExtension(
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
   // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
-  getStorageManager().deleteSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
+  void context.secrets.delete(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
 
   // Watch for sidecar pushing connection state changes over websocket.
   // (side effect of causing the watcher to be created)
@@ -445,12 +444,13 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   ];
 }
 
-/** Initialize the StorageManager singleton instance and handle any necessary migrations. */
+/**
+ * Handle any necessary migrations for globalState/workspaceState/secrets that need to happen
+ * before the extension can proceed.
+ */
 async function setupStorage(): Promise<void> {
-  const manager = StorageManager.getInstance();
-  // Handle any storage migrations that need to happen before the extension can proceed.
-  await migrateStorageIfNeeded(manager);
-  logger.info("Storage manager initialized and migrations completed");
+  await migrateStorageIfNeeded();
+  logger.info("Extension state/storage migrations completed");
 }
 
 /**

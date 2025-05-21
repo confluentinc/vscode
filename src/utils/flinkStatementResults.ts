@@ -77,7 +77,7 @@ export const parseResults = ({
   columns: ColumnDetails[];
   isAppendOnly: boolean;
   limit?: number;
-  map: Map<string, any>;
+  map: Map<string, Map<string, any>>;
   rows?: StatementResultsRow[] | null;
   upsertColumns?: number[];
 }) => {
