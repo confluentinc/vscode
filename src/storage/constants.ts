@@ -1,5 +1,5 @@
 /** Workspace state keys. A single enum to hold all of the keys the extension uses
- * to cache data within the workspace storage via ResourceManager + StorageManager. */
+ * to cache data within the workspace storage via ResourceManager. */
 export enum WorkspaceStorageKeys {
   /** Environments found in ccloud */
   CCLOUD_ENVIRONMENTS = "ccloudEnvironments",
@@ -70,4 +70,8 @@ export enum SecretStorageKeys {
 
 /** Key used to store the current storage version across global/workspace state and SecretStorage. */
 export const DURABLE_STORAGE_VERSION_KEY = "storageVersion";
-export type MigrationStorageType = "global" | "workspace" | "secret";
+export enum MigrationStorageType {
+  GLOBAL = "global",
+  WORKSPACE = "workspace",
+  SECRET = "secret",
+}

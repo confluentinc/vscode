@@ -2,21 +2,22 @@ import { chromium } from "@playwright/test";
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
 import {
   TEST_AUTHENTICATED_CCLOUD_CONNECTION,
   TEST_CCLOUD_CONNECTION,
   TEST_CCLOUD_USER,
 } from "../../tests/unit/testResources/connection";
-import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { Connection } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { getSidecar } from "../sidecar";
 import * as ccloud from "../sidecar/connections/ccloud";
 import * as watcher from "../sidecar/connections/watcher";
-import { getStorageManager, StorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
-import { getResourceManager } from "../storage/resourceManager";
+import { getResourceManager, ResourceManager } from "../storage/resourceManager";
+import { clearWorkspaceState } from "../storage/utils";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
@@ -110,7 +111,9 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   });
 
   it("createSession() should update the auth status secret on successful authentication", async () => {
-    const setSecretStub = sandbox.stub(getStorageManager(), "setSecret").resolves();
+    const setCCloudAuthStatusStub = sandbox
+      .stub(ResourceManager.getInstance(), "setCCloudAuthStatus")
+      .resolves();
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication completes successfully
     browserAuthFlowStub.resolves({ success: true, resetPassword: false });
@@ -118,8 +121,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     await authProvider.createSession();
 
     sinon.assert.calledWith(
-      setSecretStub,
-      SecretStorageKeys.CCLOUD_AUTH_STATUS,
+      setCCloudAuthStatusStub,
       TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
     );
   });
@@ -196,12 +198,12 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     const handleSessionRemovedStub = sandbox.stub().resolves();
     authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
-    const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
     await authProvider.removeSession("sessionId");
 
     assert.ok(deleteConnectionStub.called);
-    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.CCLOUD_AUTH_STATUS));
+    assert.ok(stubbedSecretStorage.delete.calledWith(SecretStorageKeys.CCLOUD_AUTH_STATUS));
     assert.ok(handleSessionRemovedStub.calledWith(true));
   });
 
@@ -230,42 +232,40 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   });
 
   it("handleSessionCreated() should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
-    const storageManager = getStorageManager();
-    const setSecretStub = sandbox.stub(storageManager, "setSecret").resolves();
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
     await authProvider["handleSessionCreated"](TEST_CCLOUD_AUTH_SESSION, true);
 
     assert.strictEqual(authProvider["_session"], TEST_CCLOUD_AUTH_SESSION);
-    assert.ok(setSecretStub.calledWith(SecretStorageKeys.AUTH_SESSION_EXISTS, "true"));
-    assert.ok(stubOnDidChangeSessions.fire.called);
-    assert.ok(
-      stubOnDidChangeSessions.fire.calledWith({
-        added: [TEST_CCLOUD_AUTH_SESSION],
-        removed: [],
-        changed: [],
-      }),
+    sinon.assert.calledWith(
+      stubbedSecretStorage.store,
+      SecretStorageKeys.AUTH_SESSION_EXISTS,
+      "true",
     );
+    sinon.assert.called(stubOnDidChangeSessions.fire);
+    sinon.assert.calledWith(stubOnDidChangeSessions.fire, {
+      added: [TEST_CCLOUD_AUTH_SESSION],
+      removed: [],
+      changed: [],
+    });
   });
 
   it("handleSessionRemoved() should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
-    const storageManager = getStorageManager();
-    const deleteSecretStub = sandbox.stub(storageManager, "deleteSecret").resolves();
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
 
     authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
     await authProvider["handleSessionRemoved"](true);
 
     assert.strictEqual(authProvider["_session"], null);
-    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_SESSION_EXISTS));
-    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_COMPLETED));
-    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_PASSWORD_RESET));
-    assert.ok(stubOnDidChangeSessions.fire.called);
-    assert.ok(
-      stubOnDidChangeSessions.fire.calledWith({
-        added: [],
-        removed: [TEST_CCLOUD_AUTH_SESSION],
-        changed: [],
-      }),
-    );
+    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.AUTH_SESSION_EXISTS);
+    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.AUTH_COMPLETED);
+    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.AUTH_PASSWORD_RESET);
+    sinon.assert.called(stubOnDidChangeSessions.fire);
+    sinon.assert.calledWith(stubOnDidChangeSessions.fire, {
+      added: [],
+      removed: [TEST_CCLOUD_AUTH_SESSION],
+      changed: [],
+    });
   });
 
   it("handleSessionSecretChange() should call handleSessionCreated() when a session is available", async () => {
@@ -388,7 +388,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
       const setAuthFlowCompletedStub = sandbox
         .stub(getResourceManager(), "setAuthFlowCompleted")
         .resolves();
-      const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
+      const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
       const showResetPasswordNotificationStub = sandbox.stub(
         authProvider,
         "showResetPasswordNotification",
@@ -399,7 +399,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
 
       sinon.assert.calledWith(setAuthFlowCompletedStub, { success, resetPassword: false });
       sinon.assert.notCalled(deleteConnectionStub);
-      sinon.assert.notCalled(deleteSecretStub);
+      sinon.assert.notCalled(stubbedSecretStorage.delete);
       sinon.assert.notCalled(showResetPasswordNotificationStub);
     });
   }
@@ -409,7 +409,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
       .stub(getResourceManager(), "setAuthFlowCompleted")
       .resolves();
     const ccloudAuthSessionInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
-    const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
+    const stubbedSecretStorage: StubbedSecretStorage = getStubbedSecretStorage(sandbox);
     const showResetPasswordNotificationStub = sandbox.stub(
       authProvider,
       "showResetPasswordNotification",
@@ -422,21 +422,19 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
 
     sinon.assert.calledWith(setAuthFlowCompletedStub, { success: false, resetPassword: true });
     sinon.assert.calledOnce(deleteConnectionStub);
-    sinon.assert.calledWith(deleteSecretStub, SecretStorageKeys.CCLOUD_AUTH_STATUS);
+    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_AUTH_STATUS);
     sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
     sinon.assert.calledOnce(showResetPasswordNotificationStub);
   });
 });
 
 describe("CCloud auth flow", () => {
-  let storageManager: StorageManager;
-
   before(async () => {
-    storageManager = await getTestStorageManager();
+    await getTestExtensionContext();
   });
 
   beforeEach(async () => {
-    await storageManager.clearWorkspaceState();
+    await clearWorkspaceState();
     // make sure we don't have a lingering CCloud connection from other tests
     await ccloud.deleteCCloudConnection();
   });

@@ -3,7 +3,15 @@ import { readFileSync } from "fs";
 import { homedir } from "os";
 import { join, normalize } from "path";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
-import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  commands,
+  env,
+  SecretStorage,
+  Uri,
+  window,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
 import { logError } from "../errors";
 import { Logger } from "../logging";
@@ -14,8 +22,8 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../preferences/constants";
-import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
+import { getSecretStorage } from "../storage/utils";
 import {
   DEFAULT_KAFKA_IMAGE_REPO,
   DEFAULT_KAFKA_IMAGE_TAG,
@@ -89,8 +97,8 @@ function getDockerCredsStore(): string | undefined {
  * @see https://docs.docker.com/reference/cli/docker/login/#credential-stores
  */
 async function getDockerCredentials(): Promise<string | undefined> {
-  const storageManager = getStorageManager();
-  const cachedDockerCreds: string | undefined = await storageManager.getSecret(
+  const secretStorage: SecretStorage = getSecretStorage();
+  const cachedDockerCreds: string | undefined = await secretStorage.get(
     SecretStorageKeys.DOCKER_CREDS_SECRET_KEY,
   );
   if (cachedDockerCreds) {
@@ -116,7 +124,7 @@ async function getDockerCredentials(): Promise<string | undefined> {
       serveraddress: "https://index.docker.io/v1/",
     };
     const encodedCreds: string = Buffer.from(JSON.stringify(authConfig)).toString("base64");
-    await storageManager.setSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY, encodedCreds);
+    await secretStorage.store(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY, encodedCreds);
     return encodedCreds;
   } catch (error) {
     logger.debug("failed to load Docker credentials:", error);

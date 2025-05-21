@@ -9,6 +9,7 @@ import {
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
+import { getCredentialsType } from "./directConnections/credentials";
 import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { DirectResourceLoader, ResourceLoader } from "./loaders";
@@ -27,10 +28,10 @@ import {
   DirectConnectionsById,
   getResourceManager,
 } from "./storage/resourceManager";
+import { getSecretStorage } from "./storage/utils";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
-import { getCredentialsType } from "./directConnections/credentials";
 
 const logger = new Logger("directConnectManager");
 
@@ -67,7 +68,7 @@ export class DirectConnectionManager {
   }
 
   private setEventListeners(): Disposable[] {
-    const connectionsListener: Disposable = getExtensionContext().secrets.onDidChange(
+    const connectionsListener: Disposable = getSecretStorage().onDidChange(
       async ({ key }: SecretStorageChangeEvent) => {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
