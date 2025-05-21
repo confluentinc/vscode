@@ -14,9 +14,7 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   // Click on the first Flink compute pool
   await (await page.getByText("AWS.us-east-1")).click();
 
-  await page.keyboard.press("ControlOrMeta+P");
-  await page.keyboard.type(fileName);
-  await page.keyboard.press("Enter");
+  await openFixtureFile(page, fileName);
 
   // Move the mouse and hover over Flink Statements
   (await page.getByLabel("Flink Statements - main-test-env").all())[0].hover();
@@ -45,6 +43,12 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
 
   // We don't make assumptions about whether the statement will go into RUNNING state or not.
   // That's up to the caller to decide.
+}
+
+export async function openFixtureFile(page: Page, fileName: string) {
+  await page.keyboard.press("ControlOrMeta+P");
+  await page.keyboard.type(fileName);
+  await page.keyboard.press("Enter");
 }
 
 /**

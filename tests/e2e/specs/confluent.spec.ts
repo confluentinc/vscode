@@ -3,10 +3,6 @@ import { test } from "vscode-test-playwright";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
-test.beforeAll(async ({ page }) => {
-  await openConfluentExtension(page);
-});
-
 test.describe(() => {
   test("should load the extension properly", async ({ page }) => {
     await openConfluentExtension(page);

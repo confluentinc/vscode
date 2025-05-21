@@ -10,10 +10,6 @@ import {
   verifyStatementStatus,
 } from "./utils/flinkStatement";
 
-test.beforeAll(async ({ page }) => {
-  await openConfluentExtension(page);
-});
-
 test.describe("Flink statements and statement results viewer", () => {
   let webview: FrameLocator;
 
