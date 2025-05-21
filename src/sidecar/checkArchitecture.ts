@@ -1,7 +1,6 @@
 // Determine the platform + archictecture of the sidecar binary and compare it to the current platform + architecture.
 
 import fs from "fs";
-import { env, Uri, window } from "vscode";
 import { Logger } from "../logging";
 import { titleCase } from "../utils";
 import { SidecarFatalError } from "./errors";
@@ -23,14 +22,6 @@ export function checkSidecarOsAndArch(sidecarPath: string): void {
 
   if (!ourBuild.equals(sidecarBuild)) {
     const errorMsg = `This Confluent extension is built for a different platform (${sidecarBuild.platform}-${sidecarBuild.arch}), whereas your VS Code is on ${ourBuild.platform}-${ourBuild.arch}.`;
-    // XXX TODO move this error message to be done in general
-    // handling of SidecarFatalError.
-    const button = "Open Marketplace";
-    window.showErrorMessage(errorMsg, button).then((action) => {
-      if (action === button) {
-        env.openExternal(Uri.parse("vscode:extension/confluentinc.vscode-confluent"));
-      }
-    });
     throw new SidecarFatalError(SidecarStartupFailureReason.WRONG_ARCHITECTURE, errorMsg);
   }
 }

@@ -1,11 +1,16 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as notifications from "../notifications";
+import { NotificationButtons } from "../notifications";
 import { MOMENTARY_PAUSE_MS } from "./constants";
+import { SidecarFatalError } from "./errors";
+import { SidecarStartupFailureReason } from "./types";
 import {
   isProcessRunning,
   killSidecar,
   normalizedSidecarPath,
   safeKill,
+  showSidecarStartupErrorMessage,
   WAIT_FOR_SIDECAR_DEATH_MS,
   wasConnRefused,
 } from "./utils";
@@ -253,6 +258,154 @@ describe("sidecar/utils.ts", () => {
       const path = "/Users/user/Documents/sidecar";
       const normalizedPath = normalizedSidecarPath(path);
       assert.strictEqual(normalizedPath, path);
+    });
+  });
+
+  describe("showSidecarStartupErrorMessage()", () => {
+    let sandbox: sinon.SinonSandbox;
+
+    let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    type TestCase = {
+      reason: SidecarStartupFailureReason;
+      expectedRegex: RegExp;
+    };
+    for (const testCase of [
+      {
+        reason: SidecarStartupFailureReason.PORT_IN_USE,
+        expectedRegex: /is in use by another process/,
+      },
+
+      {
+        reason: SidecarStartupFailureReason.NON_SIDECAR_HTTP_SERVER,
+        expectedRegex: /which seems to be a web server/,
+      },
+
+      {
+        reason: SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
+        expectedRegex: /Failed to kill old sidecar process/,
+      },
+      {
+        reason: SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN,
+        expectedRegex: /Windows anti-virus issue/,
+      },
+      {
+        reason: SidecarStartupFailureReason.SPAWN_ERROR,
+        expectedRegex: /was not able to be spawned/,
+      },
+      {
+        reason: SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID,
+        expectedRegex: /resulting PID was undefined/,
+      },
+
+      {
+        reason: SidecarStartupFailureReason.HANDSHAKE_FAILED,
+        expectedRegex: /Handshake failed/,
+      },
+      {
+        reason: SidecarStartupFailureReason.MAX_ATTEMPTS_EXCEEDED,
+        expectedRegex: /Handshake failed after/,
+      },
+      {
+        reason: SidecarStartupFailureReason.UNKNOWN,
+        expectedRegex: /Please check the logs for more details/,
+      },
+    ] as TestCase[]) {
+      it(`should show expected error message for ${testCase.reason}`, async () => {
+        const error = new SidecarFatalError(testCase.reason, "Test error");
+        await showSidecarStartupErrorMessage(error);
+
+        sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+        const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
+        // assert that the message contains the expected regex
+        assert.strictEqual(
+          message.match(testCase.expectedRegex) !== null,
+          true,
+          `Message: ${message}`,
+        );
+      });
+    }
+
+    // Then some special case ones.
+    // These depend on the message embedded in the error.
+    it("should show expected error message for MISSING_EXECUTABLE", async () => {
+      const error = new SidecarFatalError(
+        SidecarStartupFailureReason.MISSING_EXECUTABLE,
+        "Component /path/to/sidecar does not exist or is not executable",
+      );
+      await showSidecarStartupErrorMessage(error);
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
+      // assert that the message contains the expected regex
+      assert.strictEqual(
+        message.match(/does not exist or is not executable/) !== null,
+        true,
+        `Message: ${message}`,
+      );
+    });
+
+    it("should show expected error message for CANNOT_GET_SIDECAR_PID", async () => {
+      const error = new SidecarFatalError(
+        SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID,
+        "Cannot get PID from prior running sidecar",
+      );
+      await showSidecarStartupErrorMessage(error);
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
+      // assert that the message contains the expected regex
+      assert.strictEqual(
+        message.match(/Cannot get PID from prior running sidecar/) !== null,
+        true,
+        `Message: ${message}`,
+      );
+    });
+
+    it("should show expected error message for WRONG_ARCHITECTURE and have a button", async () => {
+      const error = new SidecarFatalError(
+        SidecarStartupFailureReason.WRONG_ARCHITECTURE,
+        "This Confluent extension is built for a different platform",
+      );
+      await showSidecarStartupErrorMessage(error);
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
+      // assert that the message contains the expected regex
+      assert.strictEqual(
+        message.match(/This Confluent extension is built for a different platform/) !== null,
+        true,
+        `Message: ${message}`,
+      );
+      // Prove expected button is there.
+      const buttons: NotificationButtons = showErrorNotificationWithButtonsStub.getCall(0).args[1];
+      assert.strictEqual(
+        buttons["Open Marketplace"] !== undefined,
+        true,
+        `Button: ${JSON.stringify(buttons)}`,
+      );
+    });
+
+    it("Should handle unknown error gracefully", async () => {
+      const error = new Error("Unknown error");
+      await showSidecarStartupErrorMessage(error);
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
+      // assert that the message contains the expected regex
+      assert.strictEqual(
+        message.match(/Please check the logs for more details/) !== null,
+        true,
+        `Message: ${message}`,
+      );
     });
   });
 });

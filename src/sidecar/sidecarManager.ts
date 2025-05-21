@@ -190,7 +190,24 @@ export class SidecarManager {
       );
     } catch (e) {
       // This is the only place we show sidecar startup issues to the user.
-      void showSidecarStartupErrorMessage(e, process.platform);
+
+      // Ensure the error was logged to the error logger and Sentry.
+      if (e instanceof SidecarFatalError) {
+        logError(e, "Sidecar startup SidecarFatalError", {
+          extra: {
+            reason: e.reason,
+          },
+        });
+      } else {
+        logError(e, "Sidecar startup error", {
+          extra: {
+            reason: "Unknown",
+          },
+        });
+      }
+
+      void showSidecarStartupErrorMessage(e);
+
       throw e;
     } finally {
       // If we get here, we need to clear the pending handle promise.
@@ -234,24 +251,21 @@ export class SidecarManager {
           `Failed to get sidecar PID when needing to kill sidecar due to bad version (${wantedMessage}): ${e}`,
           e,
         );
-        vscode.window.showErrorMessage(
+
+        throw new SidecarFatalError(
+          SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID,
           `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
         );
-        throw e;
       }
 
       try {
         // Kill the sidecar process. May possible raise permission errors if, say, the sidecar is running as a different user.
         await killSidecar(sidecarPid);
       } catch (e) {
-        logger.error(
+        throw new SidecarFatalError(
+          SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
           `Failed to kill sidecar process ${sidecarPid} due to bad version (${wantedMessage}): ${e}`,
-          e,
         );
-        vscode.window.showErrorMessage(
-          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
-        );
-        throw e;
       }
 
       // Allow the old one a little bit of time to die off.
@@ -404,10 +418,19 @@ export class SidecarManager {
             });
           } catch (e) {
             // Failure to spawn the process. Reject and return (we're the main codepath here).
+            let reason: SidecarStartupFailureReason;
+
+            if (e instanceof Error && /UNKNOWN/.test(e.message)) {
+              reason = SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN;
+            } else {
+              reason = SidecarStartupFailureReason.SPAWN_ERROR;
+            }
+
             const err = new SidecarFatalError(
-              SidecarStartupFailureReason.SPAWN_ERROR,
-              (e as Error).message,
+              reason,
+              `${logPrefix}: Failed to spawn sidecar process: ${(e as Error).message}`,
             );
+
             reject(err);
             return;
           } finally {
@@ -548,7 +571,6 @@ export class SidecarManager {
     logPrefix: string,
     stderrPath: string,
   ): Promise<void> {
-    // check if the sidecar process is running for windows or unix
     const isRunning: boolean = isProcessRunning(pid);
     logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
 
@@ -567,6 +589,8 @@ export class SidecarManager {
       const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
 
       const error = new SidecarFatalError(failureReason, failureMsg);
+
+      // Send to sentry and error logger.
       logError(error, `sidecar process failed to start`, {
         extra: {
           stderr: outputs.stderrLines.join("\n"),
@@ -574,6 +598,17 @@ export class SidecarManager {
           reason: failureReason,
         },
       });
+
+      // prettyprint the last few lines of the sidecar log file to logs, 'cause user will probably
+      // open the logs.
+      logger.error(
+        `${logPrefix}: Latest sidecar log lines:\n${outputs.parsedLogLines
+          .slice(-5)
+          .map((sidecarLogEvent) => {
+            return `\t> ${sidecarLogEvent.timestamp} ${sidecarLogEvent.level} [${sidecarLogEvent.loggerName}] ${sidecarLogEvent.message}`;
+          })
+          .join("\n")}`,
+      );
 
       throw error;
     }

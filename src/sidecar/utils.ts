@@ -1,9 +1,10 @@
 import fs from "fs";
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
 import { normalize } from "path";
+import { env, Uri } from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import { showErrorNotificationWithButtons } from "../notifications";
+import { NotificationButtons, showErrorNotificationWithButtons } from "../notifications";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import { MOMENTARY_PAUSE_MS, SIDECAR_PORT } from "./constants";
 import { SidecarFatalError } from "./errors";
@@ -171,34 +172,77 @@ export function checkSidecarFile(executablePath: string) {
   checkSidecarOsAndArch(executablePath);
 }
 
-export async function showSidecarStartupErrorMessage(
-  e: unknown,
-  platform: NodeJS.Platform,
-): Promise<void> {
+/**
+ * If there's an error that kicks us out of starting up the sidecar, this
+ * is the ONLY place to present that error to the user.
+ *
+ * It is most desired for these errors to come as a SidecarFatalError
+ * carrying a SidecarStartupFailureReason.
+ */
+export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> {
   if (e instanceof SidecarFatalError) {
     logger.error(`showSidecarStartupErrorMessage(): ${e.message} (${e.reason})`);
+    const portBoilerplate = `Sidecar could not start, port ${SIDECAR_PORT} is in use by another process`;
+    const checkLogsBoilerplate = `Please check the logs for more details`;
+    let buttons: NotificationButtons | undefined = undefined;
+    let message: string;
     switch (e.reason) {
       case SidecarStartupFailureReason.PORT_IN_USE:
-        switch (platform) {
-          case "win32":
-            void showErrorNotificationWithButtons(
-              `(Windows) Sidecar port ${SIDECAR_PORT} is in use by another process. Please kill that process and try again.`,
-            );
-            break;
-          default:
-            void showErrorNotificationWithButtons(
-              `(UNIX) Sidecar port ${SIDECAR_PORT} is in use by another process. Please kill that process and try again.`,
-            );
-            break;
-        }
+        message = `${portBoilerplate}. If you have multiple IDE types open with the extension installed (like VS Code and VS Code Insiders), please close all but one. Otherwise, check for other applications using this port.`;
+        break;
+
+      case SidecarStartupFailureReason.NON_SIDECAR_HTTP_SERVER:
+        message = `${portBoilerplate}, which seems to be a web server but is not our sidecar. Please check for other applications using this port.`;
+        break;
+
+      case SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS:
+        message = `Sidecar failed to start: Failed to kill old sidecar process. ${checkLogsBoilerplate}.`;
+        break;
+
+      case SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN:
+        message = `Sidecar executable was not able to be spawned. This is likely due to a Windows anti-virus issue. Please check your anti-virus settings and try again.  "${sidecarExecutablePath}" needs to be approved to be executed for this extension to work.`;
+        break;
+
+      case SidecarStartupFailureReason.SPAWN_ERROR:
+        message = `Sidecar executable was not able to be spawned. ${checkLogsBoilerplate}.`;
+        break;
+
+      case SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID:
+        message = `Sidecar executable was not able to be spawned -- resulting PID was undefined. ${checkLogsBoilerplate}.`;
+        break;
+
+      case SidecarStartupFailureReason.MISSING_EXECUTABLE:
+        // "Component {executablePath} does not exist or is not executable"
+        message = `${e.message}. ${checkLogsBoilerplate}.`;
+        break;
+
+      case SidecarStartupFailureReason.WRONG_ARCHITECTURE:
+        message = e.message;
+        buttons = {
+          "Open Marketplace": () => {
+            env.openExternal(Uri.parse("vscode:extension/confluentinc.vscode-confluent"));
+          },
+        };
+        break;
+
+      case SidecarStartupFailureReason.HANDSHAKE_FAILED:
+        message = `Sidecar failed to start: Handshake failed. ${checkLogsBoilerplate}.`;
+        break;
+
+      case SidecarStartupFailureReason.MAX_ATTEMPTS_EXCEEDED:
+        message = `Sidecar failed to start: Handshake failed after repeated attempts. ${checkLogsBoilerplate}.`;
+        break;
+
+      case SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID:
+        message = e.message;
         break;
 
       default:
-        void showErrorNotificationWithButtons(
-          `Sidecar failed to start: ${e.message}. Please check the logs for more details.`,
-        );
+        message = `Sidecar failed to start: ${e.message}. ${checkLogsBoilerplate}.`;
         break;
     }
+
+    void showErrorNotificationWithButtons(message, buttons);
   } else {
     void showErrorNotificationWithButtons(
       `Sidecar failed to start: ${e}. Please check the logs for more details.`,

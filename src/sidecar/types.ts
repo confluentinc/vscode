@@ -37,8 +37,11 @@ export enum SidecarStartupFailureReason {
   /** Error when trying to kill() uncooperative or wrong-version running sidecar. */
   CANNOT_KILL_OLD_PROCESS = "CANNOT_KILL_OLD_PROCESS",
 
-  /** spawn() raised an error */
+  /** spawn() raised a general error */
   SPAWN_ERROR = "SPAWN_ERROR",
+
+  /** spawn() raised exactly UNKNOWN error, indicating Win32 anti-virus issues */
+  SPAWN_RESULT_UNKNOWN = "SPAWN_RESULT_UNKNOWN",
 
   /** Sidecar process was started, but did not return a PID */
   SPAWN_RESULT_UNDEFINED_PID = "SPAWN_RESULT_UNDEFINED_PID",
@@ -54,6 +57,9 @@ export enum SidecarStartupFailureReason {
 
   /** Exceeded MAX_ATTEMPTS */
   MAX_ATTEMPTS_EXCEEDED = "MAX_ATTEMPTS_EXCEEDED",
+
+  /** Could not get PID from prior running sidecar */
+  CANNOT_GET_SIDECAR_PID = "CANNOT_GET_SIDECAR_PID",
 
   /** No discernable reason */
   UNKNOWN = "UNKNOWN",

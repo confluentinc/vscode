@@ -37,14 +37,16 @@ export async function showWarningNotificationWithButtons(
   return showNotificationWithButtons("warning", message, buttons);
 }
 
+export type NotificationButtons = Record<string, (() => void) | (() => Promise<void>)>;
+
 /** Shows an **error** notification with `message` and custom action buttons.
  * @param message Message to display in the notification
- * @param buttons Optional map of button labels to callback functions; defaults to showing
+ * @param buttons Optional record of button labels to callback functions; defaults to showing
  *   "Open Logs" and "File Issue" buttons if not provided.
  */
 export async function showErrorNotificationWithButtons(
   message: string,
-  buttons?: Record<string, (() => void) | (() => Promise<void>)>,
+  buttons?: NotificationButtons,
 ) {
   return showNotificationWithButtons("error", message, buttons);
 }
