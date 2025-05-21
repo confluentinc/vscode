@@ -8,41 +8,42 @@ import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
 import { Logger } from "../logging";
-import { SIDECAR_BASE_URL, SIDECAR_PORT, SIDECAR_PROCESS_ID_HEADER } from "./constants";
+import {
+  MOMENTARY_PAUSE_MS,
+  SIDECAR_BASE_URL,
+  SIDECAR_PORT,
+  SIDECAR_PROCESS_ID_HEADER,
+} from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
-import { normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError } from "../errors";
-import { showErrorNotificationWithButtons } from "../notifications";
 import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
-import { checkSidecarOsAndArch } from "./checkArchitecture";
+import { NoSidecarRunningError, SidecarFatalError, WrongAuthSecretError } from "./errors";
 import {
-  NoSidecarExecutableError,
-  NoSidecarRunningError,
-  SidecarFatalError,
-  WrongAuthSecretError,
-} from "./errors";
-import { getSidecarLogfilePath, startTailingSidecarLogs } from "./logging";
-import { SidecarLogFormat } from "./types";
-import { pause } from "./utils";
+  divineSidecarStartupFailureReason,
+  gatherSidecarOutputs,
+  getSidecarLogfilePath,
+  startTailingSidecarLogs,
+} from "./logging";
+import { SidecarStartupFailureReason } from "./types";
+import {
+  checkSidecarFile,
+  isProcessRunning,
+  killSidecar,
+  normalizedSidecarPath,
+  pause,
+  showSidecarStartupErrorMessage,
+  wasConnRefused,
+} from "./utils";
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
-
-export const MOMENTARY_PAUSE_MS = 500; // half a second.
-/**
- * Time to wait after having delivered a SIGTERM to sidecar before
- * promoting to SIGKILL. The ratio of this to {@link MOMENTARY_PAUSE_MS}
- * is the number of times {@link killSidecar} will pause+poll loop waiting
- * for an old (by either version or access token) sidecar to die.
- **/
-export const WAIT_FOR_SIDECAR_DEATH_MS = 4_000; // 4 seconds.
 
 /** How many loop attempts to try in startSidecar() and doHand */
 const MAX_ATTEMPTS = 10;
@@ -92,6 +93,10 @@ export class SidecarManager {
    * @param callnum What call number this is, for logging purposes.
    * @returns Promise<SidecarHandle> A promise that will resolve with a SidecarHandle object
    *          for actual sidecar interaction.
+   *
+   * @throws SidecarFatalError If the sidecar process fails to start. Best guess as to why
+   *         is in the `reason` attribute of the error.
+   *
    */
   private async getHandlePromise(callnum: number): Promise<SidecarHandle> {
     // Try to make a request to the sidecar to see if it's running.
@@ -114,34 +119,32 @@ export class SidecarManager {
       this.logTailer = startTailingSidecarLogs();
     }
 
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      const logPrefix = `getHandlePromise(${callnum} attempt ${i})`;
+    try {
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        const logPrefix = `getHandlePromise(${callnum} attempt ${i})`;
 
-      try {
-        if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
-          // 1. The sidecar is running and healthy, in which case we're probably done.
-          // (this is the only path that may resolve this promise successfully)
-          const handle = new SidecarHandle(accessToken, this.myPid, this.handleIdSource++);
-
-          if (!this.sidecarContacted) {
-            // Do the one-time-only things re/this sidecar process, whether or not
-            // we had to start it up or was already running.
-            await this.firstSidecarContactActions(handle);
-          }
-
-          // websocket connection may need connecting or reconnecting
-          // independent of first sidecar contact.
-          if (!this.websocketManager?.isConnected()) {
-            await this.setupWebsocketManager(accessToken);
-          }
-
-          // This client is good to go. Resolve the promise with it.
-          this.pendingHandlePromise = null;
-
-          return handle;
-        }
-      } catch (e) {
         try {
+          if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
+            // 1. The sidecar is running and healthy, in which case we're probably done.
+            // (this is the only path that may resolve this promise successfully)
+            const handle = new SidecarHandle(accessToken, this.myPid, this.handleIdSource++);
+
+            if (!this.sidecarContacted) {
+              // Do the one-time-only things re/this sidecar process, whether or not
+              // we had to start it up or was already running.
+              await this.firstSidecarContactActions(handle);
+            }
+
+            // websocket connection may need connecting or reconnecting
+            // independent of first sidecar contact.
+            if (!this.websocketManager?.isConnected()) {
+              await this.setupWebsocketManager(accessToken);
+            }
+
+            // This client is good to go. Resolve the promise with it.
+            return handle;
+          }
+        } catch (e) {
           if (e instanceof NoSidecarRunningError) {
             // 2. The sidecar is not running (we got ECONNREFUSED), in which case we need to start it.
             logger.info(`${logPrefix}: No sidecar running, starting sidecar`);
@@ -159,7 +162,10 @@ export class SidecarManager {
               logger.error(
                 `${logPrefix}: failed to kill sidecar process ${e.sidecar_process_id}: ${e}`,
               );
-              throw e;
+              throw new SidecarFatalError(
+                SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
+                `Failed to kill old sidecar process ${e.sidecar_process_id}: ${e}`,
+              );
             }
 
             await pause(MOMENTARY_PAUSE_MS);
@@ -172,24 +178,41 @@ export class SidecarManager {
             continue;
           } else {
             logger.error(`${logPrefix}: unhandled error`, e);
-            this.pendingHandlePromise = null;
             throw e;
           }
-        } catch (e) {
-          // as thrown by startSidecar()
-          if (e instanceof NoSidecarExecutableError) {
-            logger.error(`${logPrefix}: sidecar executable not found`, e);
-          } else if (e instanceof SidecarFatalError) {
-            logger.error(`${logPrefix}: sidecar process failed to start`, e);
-          }
-          this.pendingHandlePromise = null;
-          throw e;
         }
-      } // end catch.
-    } // end for loop.
-    // If we get here, we've tried MAX_ATTEMPTS times and failed. Throw an error.
-    this.pendingHandlePromise = null;
-    throw new Error(`getHandlePromise(${callnum}): failed to start sidecar`);
+      } // end for loop.
+
+      // If we get here, we've tried MAX_ATTEMPTS times and failed. Throw an error.
+      throw new SidecarFatalError(
+        SidecarStartupFailureReason.MAX_ATTEMPTS_EXCEEDED,
+        `getHandlePromise(${callnum}): failed to start sidecar`,
+      );
+    } catch (e) {
+      // This is the only place we show sidecar startup issues to the user.
+
+      // Ensure the error was logged to the error logger and Sentry.
+      if (e instanceof SidecarFatalError) {
+        logError(e, "Sidecar startup SidecarFatalError", {
+          extra: {
+            reason: e.reason,
+          },
+        });
+      } else {
+        logError(e, "Sidecar startup error", {
+          extra: {
+            reason: "Unknown",
+          },
+        });
+      }
+
+      void showSidecarStartupErrorMessage(e);
+
+      throw e;
+    } finally {
+      // If we get here, we need to clear the pending handle promise.
+      this.pendingHandlePromise = null;
+    }
   }
 
   /**
@@ -228,24 +251,21 @@ export class SidecarManager {
           `Failed to get sidecar PID when needing to kill sidecar due to bad version (${wantedMessage}): ${e}`,
           e,
         );
-        vscode.window.showErrorMessage(
+
+        throw new SidecarFatalError(
+          SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID,
           `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
         );
-        throw e;
       }
 
       try {
         // Kill the sidecar process. May possible raise permission errors if, say, the sidecar is running as a different user.
         await killSidecar(sidecarPid);
       } catch (e) {
-        logger.error(
+        throw new SidecarFatalError(
+          SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
           `Failed to kill sidecar process ${sidecarPid} due to bad version (${wantedMessage}): ${e}`,
-          e,
         );
-        vscode.window.showErrorMessage(
-          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
-        );
-        throw e;
       }
 
       // Allow the old one a little bit of time to die off.
@@ -299,6 +319,12 @@ export class SidecarManager {
       });
       if (response.status === 200) {
         return true;
+      } else if (response.status === 404) {
+        // There's a HTTP server running, but it's not the sidecar.
+        throw new SidecarFatalError(
+          SidecarStartupFailureReason.NON_SIDECAR_HTTP_SERVER,
+          `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 404`,
+        );
       } else if (response.status === 401) {
         // Unauthorized. Will need to restart sidecar.
         // print out the response headers
@@ -319,18 +345,21 @@ export class SidecarManager {
           } else {
             // sidecar quarkus dev mode may skip initialization and still return 401 and this header, but
             // with PID 0, which we will never want to try to kill -- kills whole process group!
-            throw new Error(
+            throw new SidecarFatalError(
+              SidecarStartupFailureReason.HANDSHAKE_FAILED,
               `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401, but claimed PID ${sidecar_pid_int} in the response headers!`,
             );
           }
         } else {
-          throw new Error(
-            `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401, but without a PID in the response headers!`,
+          throw new SidecarFatalError(
+            SidecarStartupFailureReason.HANDSHAKE_FAILED,
+            `Sidecar 401'd the handshake, but did not send its PID in the response headers!`,
           );
         }
       } else {
-        throw new Error(
-          `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned unhandled status ${response.status}`,
+        throw new SidecarFatalError(
+          SidecarStartupFailureReason.HANDSHAKE_FAILED,
+          `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned unexpected status ${response.status}`,
         );
       }
     } catch (e) {
@@ -345,53 +374,27 @@ export class SidecarManager {
     }
   }
 
-  sidecarArchitectureBlessed: boolean | null = null;
   /**
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
    **/
   private async startSidecar(callnum: number): Promise<string> {
     observabilityContext.sidecarStartCount++;
+
     return new Promise<string>((resolve, reject) => {
       (async () => {
         const logPrefix = `startSidecar(${callnum})`;
         logger.info(`${logPrefix}: Starting new sidecar process`);
 
-        let executablePath = sidecarExecutablePath;
-        // check platform and adjust the path, so we don't end up with paths like:
-        // "C:/c:/Users/.../ide-sidecar-0.26.0-runner.exe"
-        if (process.platform === "win32") {
-          executablePath = normalize(executablePath.replace(/^[/\\]+/, ""));
-        }
         this.sidecarContacted = false;
 
-        if (this.sidecarArchitectureBlessed === null) {
-          // check to see if the sidecar file exists
-          logger.info(`exe path ${executablePath}, version ${currentSidecarVersion}`);
-          try {
-            fs.accessSync(executablePath);
-          } catch (e) {
-            logError(e, `Sidecar executable "${executablePath}" does not exist`, {
-              extra: {
-                originalExecutablePath: sidecarExecutablePath,
-                currentSidecarVersion,
-              },
-            });
-            reject(new NoSidecarExecutableError(`Component ${executablePath} does not exist`));
-          }
+        let executablePath = normalizedSidecarPath(sidecarExecutablePath);
 
-          // Now check to see if is cooked for the right OS + architecture
-          try {
-            checkSidecarOsAndArch(executablePath);
-            this.sidecarArchitectureBlessed = true;
-          } catch (e) {
-            this.sidecarArchitectureBlessed = false;
-            logger.error(`${logPrefix}: component has wrong architecture`, e);
-            reject(new SidecarFatalError((e as Error).message));
-            return;
-          }
-        } else if (this.sidecarArchitectureBlessed === false) {
-          // We already know the sidecar architecture is wrong, so don't bother trying to start it.
-          reject(new SidecarFatalError(`${logPrefix}: component has wrong architecture`));
+        try {
+          // Will raise SidecarFatalError on any issue found.
+          checkSidecarFile(executablePath);
+        } catch (e) {
+          logger.error(`${logPrefix}: sidecar executable failed checks`, e);
+          reject(e);
           return;
         }
 
@@ -415,10 +418,20 @@ export class SidecarManager {
             });
           } catch (e) {
             // Failure to spawn the process. Reject and return (we're the main codepath here).
-            logError(e, `${logPrefix}: sidecar component spawn error`, {
-              extra: { functionName: "startSidecar" },
-            });
-            reject(e);
+            let reason: SidecarStartupFailureReason;
+
+            if (e instanceof Error && /UNKNOWN/.test(e.message)) {
+              reason = SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN;
+            } else {
+              reason = SidecarStartupFailureReason.SPAWN_ERROR;
+            }
+
+            const err = new SidecarFatalError(
+              reason,
+              `${logPrefix}: Failed to spawn sidecar process: ${(e as Error).message}`,
+            );
+
+            reject(err);
             return;
           } finally {
             // close the file descriptor for stderr; child process will inherit it
@@ -434,6 +447,7 @@ export class SidecarManager {
 
           if (sidecarPid === undefined) {
             const err = new SidecarFatalError(
+              SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID,
               `${logPrefix}: sidecar process returned undefined PID`,
             );
             logError(err, "sidecar process spawn", { extra: { functionName: "startSidecar" } });
@@ -442,41 +456,26 @@ export class SidecarManager {
           } else {
             // after a short delay, confirm that the sidecar process didn't immediately exit and/or
             // write any stderr to the file
-            setTimeout(() => {
+            setTimeout(async () => {
               try {
-                const isRunning: boolean = confirmSidecarProcessIsRunning(
-                  sidecarPid!,
-                  logPrefix,
-                  stderrPath,
-                );
-                if (!isRunning) {
-                  // reject the promise if the sidecar process is not running so we stop attempting
-                  // to handshake with it
-                  const err = new SidecarFatalError(`${logPrefix}: sidecar process is not running`);
-                  logError(err, "sidecar process check", {
-                    extra: { functionName: "startSidecar" },
-                  });
-                  reject(err);
-                  // show a notification to the user to Open Logs or File Issue
-                  showErrorNotificationWithButtons(
-                    `Sidecar process ${sidecarPid} failed to start. Please check the logs for more details.`,
-                  );
-                  return;
-                }
-              } catch (e) {
-                logError(e, "sidecar process check", { extra: { functionName: "startSidecar" } });
+                await this.confirmSidecarProcessIsRunning(sidecarPid, logPrefix, stderrPath);
+              } catch (err) {
+                // Reject the startSidecar promise.
+                reject(err);
               }
             }, 2000);
           }
-
-          // May think about a  sidecarProcess.on("exit", (code: number) => { ... }) here to catch early exits,
-          // but the sidecar file architecture check above should catch most of those cases.
         } catch (e) {
-          // Failure to spawn the process. Reject and return (we're the main codepath here).
-          logError(e, `${logPrefix}: sidecar component spawn fatal error`, {
+          // Unexpected error. Wrap it in a SidecarFatalError and reject.
+          logError(e, `${logPrefix}: Unexpected error`, {
             extra: { functionName: "startSidecar" },
           });
-          reject(e);
+          const err = new SidecarFatalError(
+            SidecarStartupFailureReason.UNKNOWN,
+            `${logPrefix}: Unexpected error: ${e}`,
+          );
+
+          reject(err);
           return;
         }
 
@@ -517,7 +516,8 @@ export class SidecarManager {
 
         // Didn't resolve and return within the loop, so reject.
         reject(
-          new Error(
+          new SidecarFatalError(
+            SidecarStartupFailureReason.HANDSHAKE_FAILED,
             `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts`,
           ),
         );
@@ -554,6 +554,66 @@ export class SidecarManager {
     return "";
   }
 
+  /**
+   * Check the sidecar process status to ensure it has started up, logging any stderr output and the
+   * last few lines of the sidecar log file.
+   *
+   * @throws SidecarFatalError if the sidecar process is not running, annotated with
+   * our best guess as to why it failed to start (attribute `reason`). Will have already
+   * made the call to logError() as needed.
+   *
+   * @param pid The sidecar process ID.
+   * @param logPrefix A prefix for logging messages.
+   * @param stderrPath The path to the sidecar's stderr file defined at process spawn time.
+   */
+  async confirmSidecarProcessIsRunning(
+    pid: number,
+    logPrefix: string,
+    stderrPath: string,
+  ): Promise<void> {
+    const isRunning: boolean = isProcessRunning(pid);
+    logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
+
+    if (isRunning) {
+      return;
+    }
+
+    if (!isRunning) {
+      // for some reason the sidecar process died immediately after startup, so log the error and
+      // report to Sentry so we can investigate.
+
+      const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
+
+      let failureReason: SidecarStartupFailureReason = divineSidecarStartupFailureReason(outputs);
+
+      const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
+
+      const error = new SidecarFatalError(failureReason, failureMsg);
+
+      // Send to sentry and error logger.
+      logError(error, `sidecar process failed to start`, {
+        extra: {
+          stderr: outputs.stderrLines.join("\n"),
+          logs: outputs.logLines.join("\n"),
+          reason: failureReason,
+        },
+      });
+
+      // prettyprint the last few lines of the sidecar log file to logs, 'cause user will probably
+      // open the logs.
+      logger.error(
+        `${logPrefix}: Latest sidecar log lines:\n${outputs.parsedLogLines
+          .slice(-5)
+          .map((sidecarLogEvent) => {
+            return `\t> ${sidecarLogEvent.timestamp} ${sidecarLogEvent.level} [${sidecarLogEvent.loggerName}] ${sidecarLogEvent.message}`;
+          })
+          .join("\n")}`,
+      );
+
+      throw error;
+    }
+  }
+
   dispose() {
     if (this.logTailer) {
       this.logTailer.unwatch();
@@ -561,28 +621,6 @@ export class SidecarManager {
     }
 
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
-  }
-}
-
-// The following functions exported for testing purposes.
-/** Introspect into an exception's cause stack to discern if was ultimately caused by ECONNREFUSED. */
-export function wasConnRefused(e: any): boolean {
-  // They don't make this easy, do they? Have to dig into a few layers of causes, then also
-  // array of aggregated errors to find the root cause expressed as `code == 'ECONNREFUSED'`.
-
-  if (e == null) {
-    // null or undefined?
-    return false;
-  } else if (e.code) {
-    return e.code === "ECONNREFUSED";
-  } else if (e.cause) {
-    return wasConnRefused(e.cause);
-  } else if (e.errors) {
-    // Fortunately when happens in real life, it's always within the first error in the array.
-    return wasConnRefused(e.errors[0]);
-  } else {
-    // If we can't find it in the main eager branching above, then it wasn't ECONNREFUSED.
-    return false;
   }
 }
 
@@ -611,143 +649,4 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   }
 
   return sidecar_env;
-}
-
-/**
- * Kill the sidecar process by its PID. Will raise an exception if the PID does not seem like a concrete process id. See kill(2).
- *
- * After delivering the SIGTERM signal, we will wait in a loop for at
- * most WAIT_FOR_SIDECAR_DEATH_MS in MOMENTARY_PAUSE_MS increments in to wait for the process
- * dies. If it has not by the end, we upgrade to using SIGKILL, then repeat
- * the procedure.
- *
- * @param process_id The sidecar's process id.
- * @param signal The signal to send to the process. Default is SIGTERM.
- */
-export async function killSidecar(process_id: number, signal: "SIGTERM" | "SIGKILL" = "SIGTERM") {
-  if (process_id <= 1) {
-    logger.warn("Refusing to kill process with PID <= 1");
-    throw new Error(`Refusing to kill process with PID <= 1`);
-  }
-
-  safeKill(process_id, signal);
-  logger.debug(`Delivered ${signal} to old sidecar process ${process_id}`);
-
-  // Now loop for at most maxWaitMs, checking if the process is still running, pausing
-  // between checks each time.
-  let isRunning: boolean = isProcessRunning(process_id);
-  let remainingWaitMs = WAIT_FOR_SIDECAR_DEATH_MS;
-  while (isRunning && remainingWaitMs > 0) {
-    logger.info(`Waiting for old sidecar process ${process_id} to die ...`);
-    await pause(MOMENTARY_PAUSE_MS);
-    remainingWaitMs -= MOMENTARY_PAUSE_MS;
-
-    isRunning = isProcessRunning(process_id);
-  }
-
-  if (isRunning) {
-    logger.warn(
-      `Old sidecar process ${process_id} still running after ${WAIT_FOR_SIDECAR_DEATH_MS}ms.`,
-    );
-    if (signal === "SIGTERM") {
-      logger.warn(`Upgrading to using SIGKILL ...`);
-      await killSidecar(process_id, "SIGKILL");
-    } else {
-      logger.warn(`SIGKILL signal already sent, giving up.`);
-      throw new SidecarFatalError("Failed to kill old sidecar process");
-    }
-  } else {
-    // Successful kill. fallthrough to return.
-    logger.debug(
-      `Old sidecar process ${process_id} has died, took ${WAIT_FOR_SIDECAR_DEATH_MS - remainingWaitMs}ms.`,
-    );
-  }
-}
-
-/** Try / catch wrapper around process.kill(). Always returns. */
-export function safeKill(process_id: number, signal: NodeJS.Signals | 0 = "SIGTERM") {
-  try {
-    process.kill(process_id, signal);
-  } catch (e) {
-    logger.error(`Failed to deliver signal ${signal} to process ${process_id}: ${e}`);
-  }
-}
-
-/**
- * Check if a process is running by sending a signal 0 to it. If the process is running, it will not
- * throw an error.
- * @see https://man7.org/linux/man-pages/man2/kill.2.html#:~:text=%2Dpid.-,If%20sig%20is%200,-%2C%20then%20no%20signal
- *
- * @param pid The process ID to check.
- * @returns True if the process is running, false otherwise.
- */
-function isProcessRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    // ignore EPERM and others until we need to care about more processes than the sidecar, which we
-    // spawned originally
-    return false;
-  }
-}
-
-/**
- * Check the sidecar process status to ensure it has started up, logging any stderr output and the
- * last few lines of the sidecar log file.
- *
- * @param pid The sidecar process ID.
- * @param logPrefix A prefix for logging messages.
- * @param stderrPath The path to the sidecar's stderr file defined at process spawn time.
- */
-function confirmSidecarProcessIsRunning(
-  pid: number,
-  logPrefix: string,
-  stderrPath: string,
-): boolean {
-  // check if the sidecar process is running for windows or unix
-  const isRunning: boolean = isProcessRunning(pid);
-  logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
-
-  // check stderr file for any process start errors
-  let stderrContent = "";
-  try {
-    stderrContent = fs.readFileSync(stderrPath, "utf8");
-    if (stderrContent.trim()) {
-      logger.error(`${logPrefix}: Sidecar stderr output: ${stderrContent}`);
-    }
-  } catch (e) {
-    logger.error(`${logPrefix}: Failed to read sidecar stderr file: ${e}`);
-  }
-
-  // try to read+parse sidecar logs to watch for any startup errors (occupied port, missing
-  // configs, etc.)
-  const logLines: string[] = [];
-  try {
-    const logs = fs.readFileSync(getSidecarLogfilePath(), "utf8").trim().split("\n").slice(-20);
-    logLines.push(
-      ...logs.map((jsonStr) => {
-        try {
-          const line = JSON.parse(jsonStr.trim()) as SidecarLogFormat;
-          return `\t> ${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`;
-        } catch {
-          return `\t> ${jsonStr}`;
-        }
-      }),
-    );
-    logger.info(`${logPrefix}: Latest sidecar log lines:\n${logLines.join("\n")}`);
-  } catch (e) {
-    logger.error(`${logPrefix}: Failed to read sidecar log file: ${e}`);
-  }
-
-  if (!isRunning) {
-    // for some reason the sidecar process died immediately after startup, so log the error and
-    // report to Sentry so we can investigate
-    const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
-    const error = new SidecarFatalError(failureMsg);
-    logError(error, `sidecar process failed to start`, {
-      extra: { stderr: stderrContent, logs: logLines.join("\n") },
-    });
-  }
-  return isRunning;
 }
