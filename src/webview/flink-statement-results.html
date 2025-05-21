@@ -82,21 +82,21 @@
           </template>
         </section>
 
-        <template data-if="this.viewMode() === 'table'">
-          <section>
-            <div class="flex-row">
-              <vscode-text-field
-                id="results-search"
-                placeholder="Search across results…"
-                type="search"
-                size="50"
-                data-on-keydown="this.handleKeydown(event)"
-                data-on-input="this.handleInput(event)"
-                >Search</vscode-text-field
-              >
-            </div>
-          </section>
-        </template>
+        <section>
+          <div class="flex-row">
+            <vscode-text-field
+              id="results-search"
+              placeholder="Search across results…"
+              type="search"
+              size="50"
+              data-prop-value="this.search()"
+              data-on-change="this.search(event.target.value)"
+              data-on-keydown="this.handleKeydown(event)"
+              data-on-input="this.handleInput(event)"
+              >Search</vscode-text-field
+            >
+          </div>
+        </section>
       </header>
 
       <section class="content">
@@ -265,7 +265,7 @@
           </vscode-button>
         </div>
         <div class="toggle-actions">
-          <template data-if="this.viewMode() === 'table'">
+          <template data-if="this.viewMode() === 'table' && this.statementMeta().isForeground">
             <vscode-button
               appearance="icon"
               aria-label="Click to view results as changelog"

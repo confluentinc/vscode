@@ -42,6 +42,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     detail: string | null;
     failed: boolean;
     areResultsViewable: boolean;
+    isForeground: boolean;
   }>;
   readonly waitingForResults: Signal<boolean>;
   readonly emptyFilterResult: Signal<boolean>;
@@ -133,7 +134,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
       } as ResultCount,
     );
 
-    /** Statement metadata (name, status, SQL, start time, detail, failed, sqlHtml) */
+    /** Statement metadata used for rendering UI elements */
     this.statementMeta = this.resolve(
       () => this.post("GetStatementMeta", { timestamp: this.timestamp() }),
       {
@@ -143,6 +144,7 @@ export class FlinkStatementResultsViewModel extends ViewModel {
         detail: null,
         failed: false,
         areResultsViewable: true,
+        isForeground: false,
       },
     );
 
@@ -293,7 +295,17 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     }, null);
   }
 
+  search = this.resolve(async () => {
+    return await this.post("GetSearchQuery", { timestamp: this.timestamp() });
+  }, "");
+
   async setViewMode(viewMode: ViewMode) {
+    console.log("statementmeta", this.statementMeta());
+    if (!this.statementMeta().isForeground) {
+      // Non-foreground statements do not changelog views.
+      return;
+    }
+
     if (viewMode === "table") {
       this.changelogPage(this.page());
       this.page(this.tablePage());
