@@ -231,7 +231,7 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   /**
-   * Ensures the language client is initialized if prerequisites are met
+   * Ensures the default language client is initialized if prerequisites are met
    * Prerequisites:
    * - User is authenticated with CCloud
    * - User has selected a compute pool to use for websocket connection (language server route is region/provider specific)
