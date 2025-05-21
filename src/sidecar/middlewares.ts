@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { getExtensionContext } from "../context/extension";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
+import { getSecretStorage } from "../storage/utils";
 import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
 
 const logger = new Logger("sidecar.middlewares");
@@ -191,7 +191,7 @@ export class CCloudAuthStatusMiddleware implements Middleware {
 
     // block the request that got us into this flow until the auth status "secret" changes
     await new Promise((resolve) => {
-      const secretSubscriber: vscode.Disposable = getExtensionContext().secrets.onDidChange(
+      const secretSubscriber: vscode.Disposable = getSecretStorage().onDidChange(
         async ({ key }: vscode.SecretStorageChangeEvent) => {
           // any change (other status or the "secret" being deleted entirely) will resolve and unblock requests
           if (key === SecretStorageKeys.CCLOUD_AUTH_STATUS) {

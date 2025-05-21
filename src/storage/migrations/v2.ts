@@ -1,8 +1,8 @@
-import { ExtensionContext } from "vscode";
-import { getExtensionContext } from "../../context/extension";
+import { SecretStorage } from "vscode";
 import { Logger } from "../../logging";
 import { SecretStorageKeys } from "../constants";
 import { mapToString } from "../resourceManager";
+import { getSecretStorage } from "../utils";
 import { BaseMigration } from "./base";
 
 const logger = new Logger("storage.migrations.v2");
@@ -16,11 +16,11 @@ export class MigrationV2 extends BaseMigration {
    *  the `formConnectionType` field.
    */
   async upgradeSecretStorage(): Promise<void> {
-    const context: ExtensionContext = getExtensionContext();
+    const secretStorage: SecretStorage = getSecretStorage();
 
     // NOTE: we aren't using other helper methods, types, interfaces, etc. here to avoid having to
     // migrate those as well, but the storage key should be fine on its own
-    const connectionSpecsStr: string | undefined = await context.secrets.get(
+    const connectionSpecsStr: string | undefined = await secretStorage.get(
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
     if (!connectionSpecsStr) {
@@ -61,7 +61,7 @@ export class MigrationV2 extends BaseMigration {
 
     if (updatedConnectionSpecs.size > 0) {
       logger.debug(`Adding 'ssl' defaults to ${updatedConnectionSpecs.size} ConnectionSpec(s)`);
-      await context.secrets.store(
+      await secretStorage.store(
         SecretStorageKeys.DIRECT_CONNECTIONS,
         mapToString(updatedConnectionSpecs),
       );
@@ -75,11 +75,11 @@ export class MigrationV2 extends BaseMigration {
    * - Remove `ssl` fields from ConnectionSpecs' `kafka_cluster` and `schema_registry` configs.
    */
   async downgradeSecretStorage(): Promise<void> {
-    const context: ExtensionContext = getExtensionContext();
+    const secretStorage: SecretStorage = getSecretStorage();
 
     // NOTE: we aren't using other helper methods, types, interfaces, etc. here to avoid having to
     // migrate those as well, but the storage key should be fine on its own
-    const connectionSpecsStr: string | undefined = await context.secrets.get(
+    const connectionSpecsStr: string | undefined = await secretStorage.get(
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
     if (!connectionSpecsStr) {
@@ -113,7 +113,7 @@ export class MigrationV2 extends BaseMigration {
 
     if (updatedConnectionSpecs.size > 0) {
       logger.debug(`Removing 'ssl' defaults from ${updatedConnectionSpecs.size} ConnectionSpec(s)`);
-      await context.secrets.store(
+      await secretStorage.store(
         SecretStorageKeys.DIRECT_CONNECTIONS,
         mapToString(updatedConnectionSpecs),
       );

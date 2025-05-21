@@ -12,13 +12,13 @@ export abstract class BaseMigration {
     this.logger.debug(`${isUpgrade ? "upgrading" : "downgrading"} ${logMsg}...`);
     try {
       switch (storageType) {
-        case "global":
+        case MigrationStorageType.GLOBAL:
           await (isUpgrade ? this.upgradeGlobalState() : this.downgradeGlobalState());
           break;
-        case "workspace":
+        case MigrationStorageType.WORKSPACE:
           await (isUpgrade ? this.upgradeWorkspaceState() : this.downgradeWorkspaceState());
           break;
-        case "secret":
+        case MigrationStorageType.SECRET:
           await (isUpgrade ? this.upgradeSecretStorage() : this.downgradeSecretStorage());
           break;
         default:
