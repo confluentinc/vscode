@@ -7,6 +7,7 @@ import {
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
 } from "vscode";
+import { LOCAL_CONNECTION_ID } from "../../constants";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { KafkaCluster } from "../../models/kafkaCluster";
@@ -55,7 +56,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     if (
       connectionId === environmentId &&
       connectionId === kafkaClusterId &&
-      kafkaClusterId === "vscode-local-connection"
+      kafkaClusterId === LOCAL_CONNECTION_ID
     ) {
       logger.debug("Detected local setup: using connectionId as environmentId and kafkaClusterId.");
       environmentId = connectionId;
