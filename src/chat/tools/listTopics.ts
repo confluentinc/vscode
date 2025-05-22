@@ -26,7 +26,6 @@ export interface IListTopicsParameters {
 
 export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters> {
   readonly name = "list_topics";
-
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTopicsParameters>,
     token: CancellationToken,
@@ -38,18 +37,29 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       return new LanguageModelToolResult([new LanguageModelTextPart("No connection ID provided.")]);
     }
 
-    const environmentId = params.environmentId;
+    let environmentId = params.environmentId;
     if (!environmentId) {
       return new LanguageModelToolResult([
         new LanguageModelTextPart("No environment ID provided."),
       ]);
     }
 
-    const kafkaClusterId = params.kafkaClusterId;
+    let kafkaClusterId = params.kafkaClusterId;
     if (!kafkaClusterId) {
       return new LanguageModelToolResult([
         new LanguageModelTextPart("No Kafka cluster ID provided."),
       ]);
+    }
+
+    // Handle cases where all IDs are the same (local setup)
+    if (
+      connectionId === environmentId &&
+      connectionId === kafkaClusterId &&
+      kafkaClusterId === "vscode-local-connection"
+    ) {
+      logger.debug("Detected local setup: using connectionId as environmentId and kafkaClusterId.");
+      environmentId = connectionId;
+      kafkaClusterId = connectionId;
     }
 
     const loader = ResourceLoader.getInstance(connectionId);
@@ -62,12 +72,18 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
         new LanguageModelTextPart("No Kafka clusters found for the given environment ID."),
       ]);
     }
+
     const kafkaCluster = kafkaClusters.find((cluster) => cluster.id === kafkaClusterId);
     if (!kafkaCluster) {
       return new LanguageModelToolResult([
-        new LanguageModelTextPart("No Kafka cluster found for the given ID."),
+        new LanguageModelTextPart(
+          `No Kafka cluster found for the given ID (${kafkaClusterId}). Available clusters: ${kafkaClusters
+            .map((c) => c.id)
+            .join(", ")}`,
+        ),
       ]);
     }
+
     const topics = await loader.getTopicsForCluster(kafkaCluster);
     if (!(Array.isArray(topics) && topics.length)) {
       logger.debug(`No topics found for cluster ${kafkaClusterId}`);
