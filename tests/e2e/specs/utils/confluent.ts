@@ -8,7 +8,7 @@ import { Page } from "@playwright/test";
 export async function openConfluentExtension(page: Page): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
 
-  const confluentTab = await page.getByRole("tab", { name: "Confluent" }).locator("a");
+  const confluentTab = await page.getByRole("tab", { name: "Confluent" }).locator("a").first();
   await confluentTab.click();
 
   // The "Confluent Cloud" text will be present whether logged in or not
@@ -17,4 +17,11 @@ export async function openConfluentExtension(page: Page): Promise<void> {
     state: "visible",
     timeout: 30_000,
   });
+
+  // Close any notifications that pop up on load. These make it impossible to
+  // interact with UI elements hidden behind them.
+  const clearableNotifications = await page.getByLabel(/Clear Notification/).all();
+  for (const notification of clearableNotifications) {
+    await notification.click();
+  }
 }
