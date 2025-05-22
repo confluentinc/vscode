@@ -5,10 +5,14 @@ import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 import { openFixtureFile } from "./utils/flinkStatement";
 
-async function createNewSubject(page: any, subjectName: string, schemaFile: string) {
+async function createNewSubject(page: Page, subjectName: string, schemaFile: string) {
   await page.getByLabel(/Schemas.*Section/).click();
+  await page.getByLabel(/Schemas.*Section/).hover();
   await page.getByLabel("Select Schema Registry").click();
+  await expect(page.getByPlaceholder("Select a Schema Registry")).toBeVisible();
   await page.getByPlaceholder("Select a Schema Registry").click();
+
+  // Select the first option.
   await page.keyboard.press("Enter");
 
   await openFixtureFile(page, schemaFile);
@@ -26,7 +30,9 @@ async function createNewSubject(page: any, subjectName: string, schemaFile: stri
   await page.getByLabel("Schema Subject").fill(subjectName);
   await page.getByLabel("Schema Subject").press("Enter");
 
-  await page.getByText(/Schema registered to new subject.*/, { exact: true }).isVisible();
+  await expect(
+    page.getByText(/Schema registered to new subject.*/, { exact: true }).first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "View in Schema Registry" }).click();
 }
 
@@ -141,7 +147,7 @@ test.describe("Schema related functionality", () => {
   });
 
   test.describe("using direct connection to Confluent Cloud Schema Registry using SR API Key", async () => {
-    test.beforeEach(async ({ page, electronApp, _enableRecorder }) => {
+    test.beforeEach(async ({ page, electronApp }) => {
       // Stub the dialog that tells you the connection was created
       await stubMultipleDialogs(electronApp, [
         {
@@ -191,7 +197,7 @@ test.describe("Schema related functionality", () => {
 
       await webview.getByRole("button", { name: "Save" }).click();
 
-      // TODO: Click on the connection and focus SR.
+      // TODO: Check that connection was established successfully.
     });
 
     test("create a new subject and evolve it", testSchemaEvolution);

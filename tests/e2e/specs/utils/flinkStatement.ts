@@ -47,7 +47,8 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
 
 export async function openFixtureFile(page: Page, fileName: string) {
   await page.keyboard.press("ControlOrMeta+P");
-  await page.keyboard.type(fileName);
+  await expect(page.getByPlaceholder("Search files by name")).toBeVisible();
+  await page.getByPlaceholder("Search files by name").fill(fileName);
   await page.keyboard.press("Enter");
 }
 
