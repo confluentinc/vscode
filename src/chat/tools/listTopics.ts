@@ -114,7 +114,8 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     }
 
     logger.debug(`Summarizing ${sampleTopics.length} topics`);
-    return new LanguageModelToolResult([new LanguageModelTextPart(summarizeTopics(sampleTopics))]);
+    const summary = sampleTopics.map(summarizeTopics).join("\n");
+    return new LanguageModelToolResult([new LanguageModelTextPart(summary)]);
   }
   async processInvocation(
     request: ChatRequest,
