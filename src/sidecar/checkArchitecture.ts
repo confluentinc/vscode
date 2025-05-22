@@ -6,7 +6,7 @@ import { titleCase } from "../utils";
 import { SidecarFatalError } from "./errors";
 import { SidecarStartupFailureReason } from "./types";
 
-const logger = new Logger("sidecar.diagnoseErrors");
+const logger = new Logger("sidecar.checkArchitecture");
 
 /**
  * Check sidecar's OS and architecture against the current OS and architecture.
@@ -43,6 +43,8 @@ export class PlatformArch {
     let os = this.platform;
     if (os === "darwin") {
       os = "OS X (Darwin)";
+    } else if (os === "win32") {
+      os = "Windows";
     } else {
       // titlecase either windows or linux
       os = titleCase(os);

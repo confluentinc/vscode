@@ -618,7 +618,6 @@ export class SidecarManager {
       this.logTailer.unwatch();
       this.logTailer = undefined;
     }
-
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
   }
 }
