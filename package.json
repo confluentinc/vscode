@@ -69,7 +69,7 @@
     ],
     "languageModelTools": [
             {
-        "name": "list_Topics",
+        "name": "list_topics",
         "when": "confluent.chatParticipantEnabled",
         "tags": [
           "topics"

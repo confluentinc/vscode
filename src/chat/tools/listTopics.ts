@@ -25,7 +25,7 @@ export interface IListTopicsParameters {
 }
 
 export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters> {
-  readonly name = "list_Topics";
+  readonly name = "list_topics";
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTopicsParameters>,
