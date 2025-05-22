@@ -734,6 +734,7 @@ export function functional(done) {
 }
 
 export function e2eRun(done) {
+  // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
   const command = [
