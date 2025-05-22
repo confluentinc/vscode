@@ -1,8 +1,9 @@
+import * as fs from "fs";
 import * as os from "os";
 import * as vscode from "vscode";
 
 /**
- * Very thin wrappers around {@link vscode.workspace.fs} and related methods which cannot
+ * Very thin wrappers around {@link vscode.workspace.fs} and {@link fs} related methods and functions which cannot
  * be stubbed directly in tests due to implementation directly in C, not JS.
  */
 
@@ -41,4 +42,23 @@ export async function deleteFile(uri: vscode.Uri): Promise<void> {
  */
 export function tmpdir(): string {
   return os.tmpdir();
+}
+
+/** Wrapper for fs.writeFileSync() */
+export function writeFileSync(
+  path: fs.PathOrFileDescriptor,
+  data: string | NodeJS.ArrayBufferView,
+  options?: fs.WriteFileOptions,
+): void {
+  fs.writeFileSync(path, data, options);
+}
+
+/** Wrapper for fs.openSync() */
+export function openSync(path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode | null): number {
+  return fs.openSync(path, flags, mode);
+}
+
+/** Wrapper for fs.closeSync() */
+export function closeSync(fd: number): void {
+  fs.closeSync(fd);
 }

@@ -19,30 +19,35 @@ describe("getSidecarPlatformArch", () => {
     const path = platformArchToBinaryName.get("linux-x64");
     const platformArch = getSidecarPlatformArch(path!);
     assert.deepStrictEqual(platformArch, new PlatformArch("linux", "x64"));
+    assert.strictEqual(platformArch.toString(), "Linux on x64");
   });
 
   it("should return the correct platform and architecture for a Linux+arm sidecar", () => {
     const path = platformArchToBinaryName.get("linux-arm64");
     const platformArch = getSidecarPlatformArch(path!);
     assert.deepStrictEqual(platformArch, new PlatformArch("linux", "arm64"));
+    assert.strictEqual(platformArch.toString(), "Linux on arm64");
   });
 
   it("should return the correct platform and architecture for a OSX+amd sidecar", () => {
     const path = platformArchToBinaryName.get("darwin-x64");
     const platformArch = getSidecarPlatformArch(path!);
     assert.deepStrictEqual(platformArch, new PlatformArch("darwin", "x64"));
+    assert.strictEqual(platformArch.toString(), "OS X (Darwin) on x64");
   });
 
   it("should return the correct platform and architecture for a OSX+aarch64 sidecar", () => {
     const path = platformArchToBinaryName.get("darwin-arm64");
     const platformArch = getSidecarPlatformArch(path!);
     assert.deepStrictEqual(platformArch, new PlatformArch("darwin", "arm64"));
+    assert.strictEqual(platformArch.toString(), "OS X (Darwin) on arm64 (Apple Silicon)");
   });
 
   it("should return the correct platform and architecture for a Windows+x64 sidecar", () => {
     const path = platformArchToBinaryName.get("win32-x64");
     const platformArch = getSidecarPlatformArch(path!);
     assert.deepStrictEqual(platformArch, new PlatformArch("win32", "x64"));
+    assert.strictEqual(platformArch.toString(), "Windows on x64");
   });
 });
 
