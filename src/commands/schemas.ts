@@ -14,7 +14,7 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../notifications";
-import { schemaTypeQuickPick } from "../quickpicks/schemas";
+import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
@@ -363,6 +363,32 @@ async function deleteSchemaVersionCommand(schema: Schema) {
 }
 
 async function deleteSchemaSubjectCommand(subject: Subject) {
+  if (subject === undefined) {
+    const schemaViewProvider = getSchemasViewProvider();
+    const registry = schemaViewProvider.schemaRegistry!;
+    if (!registry) {
+      logger.error("Could not determine schema registry");
+      return;
+    }
+
+    let subjectName: string | undefined = await schemaSubjectQuickPick(
+      registry,
+      false,
+      "Choose a subject to delete",
+    );
+    if (!subjectName) {
+      logger.error("Could not determine schema subject");
+      return;
+    }
+
+    subject = new Subject(
+      subjectName,
+      registry.connectionId,
+      registry.environmentId,
+      registry.schemaRegistryId,
+    );
+  }
+
   if (!(subject instanceof Subject)) {
     logger.error("deleteSchemaSubjectCommand called with invalid argument type", subject);
     return;

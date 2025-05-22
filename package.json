@@ -1109,10 +1109,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemas.deleteSubject",
-          "when": "false"
-        },
-        {
           "command": "confluent.schemas.evolveSchemaSubject",
           "when": "false"
         },

@@ -25,6 +25,7 @@ setup-test-env:
 	@echo "Pulling automated-test-user credentials from Vault into .env file for testing"
 	@echo "E2E_USERNAME=$(shell vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)" > .env
 	@echo "E2E_PASSWORD=$(shell vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)" >> .env
+	@echo "E2E_SR_API_KEY='$(shell vault kv get -field=E2E_SR_API_KEY v1/ci/kv/vscodeextension/testing)'" >> .env
 
 .PHONY: remove-test-env
 remove-test-env:
