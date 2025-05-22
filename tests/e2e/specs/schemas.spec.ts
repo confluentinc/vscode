@@ -6,6 +6,8 @@ import { login } from "./utils/confluentCloud";
 import { openFixtureFile } from "./utils/flinkStatement";
 
 async function createNewSubject(page: Page, subjectName: string, schemaFile: string) {
+  await openFixtureFile(page, schemaFile);
+
   await page.getByLabel(/Schemas.*Section/).click();
   await page.getByLabel(/Schemas.*Section/).hover();
   await page.getByLabel("Select Schema Registry").click();
@@ -14,8 +16,6 @@ async function createNewSubject(page: Page, subjectName: string, schemaFile: str
 
   // Select the first option.
   await page.keyboard.press("Enter");
-
-  await openFixtureFile(page, schemaFile);
 
   await page.getByLabel(/Schemas.*Section/).hover();
   await page.getByLabel("Upload Schema to Schema Registry", { exact: true }).click();
@@ -33,40 +33,46 @@ async function createNewSubject(page: Page, subjectName: string, schemaFile: str
   await expect(
     page.getByText(/Schema registered to new subject.*/, { exact: true }).first(),
   ).toBeVisible();
-  await page.getByRole("button", { name: "View in Schema Registry" }).click();
 }
 
 async function evolveSchema(page: Page, subjectName: string, fixtureFile: string) {
-  await page.getByLabel(subjectName).first().hover({ timeout: 200 });
-  await page.getByRole("button", { name: "Evolve Latest Schema" }).click();
-  await expect(page.getByText(/.*draft.confluent.avsc/, { exact: true }).first()).toBeVisible();
-  await page
-    .getByText(/.*draft.confluent.avsc/, { exact: true })
-    .first()
-    .click();
-
   await openFixtureFile(page, fixtureFile);
+  // Copy the schema to the clipboard.
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("ControlOrMeta+c");
 
-  await page
-    .getByText(/.*draft.confluent.avsc/, { exact: true })
-    .first()
-    .click();
+  await page.getByLabel(subjectName).first().hover({ timeout: 200 });
+  await page.getByRole("button", { name: "Evolve Latest Schema" }).click();
+  // Wait for the unsaved schema document to open.
+  await page.waitForTimeout(1000);
+
+  await page.getByRole("tab", { name: subjectName }).first().click();
+  // Wait for the tab to be focused.
+  await page.waitForTimeout(200);
+  // Paste the schema into the tab.
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("Backspace");
   await page.keyboard.press("ControlOrMeta+v");
 
-  await uploadSchema(page, subjectName, "draft");
+  // The unsaved file buffer will start with the subject name, so we can just use that.
+  await uploadSchema(page, subjectName);
 }
 
-async function uploadSchema(page: any, subjectName: string, fileBufferTitle: string) {
+/**
+ * Upload a schema to the Schema Registry. Caller is expected to have opened
+ * and focused the file buffer with the schema to upload.
+ *
+ * @param page - The Playwright page object.
+ * @param subjectName - The name of the subject to upload the schema to.
+ */
+async function uploadSchema(page: any, subjectName: string) {
   await page.getByLabel(/Schemas.*Section/).hover();
   await expect(page.getByLabel("Upload Schema to Schema Registry", { exact: true })).toBeVisible();
   await page.getByLabel("Upload Schema to Schema Registry", { exact: true }).click();
 
+  await expect(page.getByPlaceholder("Select a file")).toBeVisible();
   await page.getByPlaceholder("Select a file").click();
-  await page.keyboard.type(fileBufferTitle);
+  // Select the first option.
   await page.keyboard.press("Enter");
 
   await page.keyboard.type("AVRO");
@@ -115,6 +121,13 @@ test.describe("Schema related functionality", () => {
     }
   });
 
+  /**
+   * Steps:
+   * 1. Create a new subject.
+   * 2. Evolve the schema using an incompatible schema and verify that the evolution fails.
+   * 3. Evolve the schema using a compatible schema and verify that the evolution succeeds.
+   * 4. Delete the subject.
+   */
   async function testSchemaEvolution({ page }: { page: Page }) {
     const randomValue = Math.random().toString(36).substring(2, 15);
     subjectName = `customer-${randomValue}-value`;
