@@ -7,7 +7,6 @@ import {
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
 } from "vscode";
-import { LOCAL_CONNECTION_ID } from "../../constants";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { KafkaCluster } from "../../models/kafkaCluster";
@@ -53,14 +52,12 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     }
 
     // Handle cases where all IDs are the same (local setup)
-    if (
-      connectionId === environmentId &&
-      connectionId === kafkaClusterId &&
-      kafkaClusterId === LOCAL_CONNECTION_ID
-    ) {
-      logger.debug("Detected local setup: using connectionId as environmentId and kafkaClusterId.");
-      environmentId = connectionId;
-      kafkaClusterId = connectionId;
+    if (kafkaClusterId === environmentId) {
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(
+          `Kafka cluster ID and environment ID are the same (${kafkaClusterId}). Please use get_environments to retrieve the Kafka cluster ID.`,
+        ),
+      ]);
     }
 
     const loader = ResourceLoader.getInstance(connectionId);
