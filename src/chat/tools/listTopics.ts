@@ -15,7 +15,7 @@ import { KafkaTopic } from "../../models/topic";
 import { summarizeTopics } from "../summarizers/topics";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
-const logger = new Logger("chat.tools.listTemplates");
+const logger = new Logger("chat.tools.listTopics");
 
 export interface IListTopicsParameters {
   kafkaClusterId: string;
@@ -146,13 +146,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     const resultParts: LanguageModelTextPart[] = [];
 
     if (!result.content.length) {
-      const noResultsMessage = new LanguageModelTextPart(
-        `No topics found in cluster ${parameters.kafkaClusterId}. ` +
-          `Make sure the cluster exists and you have the correct permissions.`,
-      );
-      resultParts.push(noResultsMessage);
-      stream.progress("No topics found.");
-      return new TextOnlyToolResultPart(toolCall.callId, resultParts);
+      return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
     stream.progress(`Found ${result.content.length} topics.`);
