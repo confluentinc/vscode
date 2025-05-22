@@ -1,10 +1,11 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { commands, window, workspace } from "vscode";
+import { getStubbedLocalResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_LOCAL_SUBJECT } from "../../../tests/unit/testResources/schema";
 import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
-import { LocalResourceLoader, ResourceLoader } from "../../loaders";
+import { LocalResourceLoader } from "../../loaders";
 import { Subject } from "../../models/schema";
 import { USE_TOPIC_NAME_STRATEGY } from "../../preferences/constants";
 import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
@@ -17,9 +18,8 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
   let executeCommandStub: sinon.SinonStub;
   let schemaSubjectQuickPickStub: sinon.SinonStub;
 
-  let resourceLoaderStub: sinon.SinonStub;
   // use local loaders for these tests; no functional difference between local/CCloud/direct here
-  let resourceLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
+  let stubbedLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -32,9 +32,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
     schemaSubjectQuickPickStub = sandbox.stub(schemaQuickPicks, "schemaSubjectQuickPick");
 
     // ResourceLoader stubs
-    resourceLoaderStub = sandbox.stub(ResourceLoader, "getInstance");
-    resourceLoader = sandbox.createStubInstance(LocalResourceLoader);
-    resourceLoaderStub.returns(resourceLoader);
+    stubbedLoader = getStubbedLocalResourceLoader(sandbox);
   });
 
   afterEach(() => {
@@ -42,7 +40,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
   });
 
   it(`should return subject name for ${SubjectNameStrategy.TOPIC_NAME} strategy when subject exists`, async () => {
-    resourceLoader.getSubjects.resolves([TEST_LOCAL_SUBJECT]);
+    stubbedLoader.getSubjects.resolves([TEST_LOCAL_SUBJECT]);
     const expectedSubjectName = `${TEST_LOCAL_KAFKA_TOPIC.name}-value`;
 
     const result = await getSubjectNameForStrategy(
@@ -50,11 +48,11 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
       TEST_LOCAL_KAFKA_TOPIC,
       "value",
       TEST_LOCAL_SCHEMA_REGISTRY,
-      resourceLoader,
+      stubbedLoader,
     );
 
     assert.strictEqual(result, expectedSubjectName);
-    sinon.assert.calledOnceWithExactly(resourceLoader.getSubjects, TEST_LOCAL_SCHEMA_REGISTRY);
+    sinon.assert.calledOnceWithExactly(stubbedLoader.getSubjects, TEST_LOCAL_SCHEMA_REGISTRY);
     sinon.assert.notCalled(schemaSubjectQuickPickStub);
     sinon.assert.notCalled(showErrorNotificationStub);
   });
@@ -67,7 +65,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
       TEST_LOCAL_SUBJECT.environmentId,
       TEST_LOCAL_SUBJECT.schemaRegistryId,
     );
-    resourceLoader.getSubjects.resolves([differentSubject]);
+    stubbedLoader.getSubjects.resolves([differentSubject]);
 
     await assert.rejects(
       async () =>
@@ -76,7 +74,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
           TEST_LOCAL_KAFKA_TOPIC,
           "key",
           TEST_LOCAL_SCHEMA_REGISTRY,
-          resourceLoader,
+          stubbedLoader,
         ),
       {
         message: `No "key" schema subject found for topic "${TEST_LOCAL_KAFKA_TOPIC.name}" using the ${SubjectNameStrategy.TOPIC_NAME} strategy.`,
@@ -95,7 +93,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
       TEST_LOCAL_SUBJECT.environmentId,
       TEST_LOCAL_SUBJECT.schemaRegistryId,
     );
-    resourceLoader.getSubjects.resolves([differentSubject]);
+    stubbedLoader.getSubjects.resolves([differentSubject]);
     // user clicked the "Open Settings" button
     showErrorNotificationStub.resolves("Open Settings");
 
@@ -106,7 +104,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
           TEST_LOCAL_KAFKA_TOPIC,
           "key",
           TEST_LOCAL_SCHEMA_REGISTRY,
-          resourceLoader,
+          stubbedLoader,
         ),
       {
         message: `No "key" schema subject found for topic "${TEST_LOCAL_KAFKA_TOPIC.name}" using the ${SubjectNameStrategy.TOPIC_NAME} strategy.`,
@@ -132,7 +130,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
       TEST_LOCAL_KAFKA_TOPIC,
       "value",
       TEST_LOCAL_SCHEMA_REGISTRY,
-      resourceLoader,
+      stubbedLoader,
     );
 
     assert.strictEqual(result, subjectName);
@@ -158,7 +156,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
       TEST_LOCAL_KAFKA_TOPIC,
       "key",
       TEST_LOCAL_SCHEMA_REGISTRY,
-      resourceLoader,
+      stubbedLoader,
     );
 
     assert.strictEqual(result, subjectName);
@@ -179,7 +177,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
       TEST_LOCAL_KAFKA_TOPIC,
       "value",
       TEST_LOCAL_SCHEMA_REGISTRY,
-      resourceLoaderStub as unknown as ResourceLoader,
+      stubbedLoader,
     );
 
     assert.strictEqual(result, undefined);
@@ -187,7 +185,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
   });
 
   it("should throw an error and show a notification if the subject isn't found", async () => {
-    resourceLoader.getSubjects.resolves([]);
+    stubbedLoader.getSubjects.resolves([]);
 
     await assert.rejects(
       async () =>
@@ -196,7 +194,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
           TEST_LOCAL_KAFKA_TOPIC,
           "key",
           TEST_LOCAL_SCHEMA_REGISTRY,
-          resourceLoader,
+          stubbedLoader,
         ),
       {
         message: `No "key" schema subject found for topic "${TEST_LOCAL_KAFKA_TOPIC.name}" using the ${SubjectNameStrategy.TOPIC_NAME} strategy.`,
