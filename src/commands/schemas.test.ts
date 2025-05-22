@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { commands } from "vscode";
+import { getStubbedResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
@@ -103,15 +104,15 @@ function generateGetLatestSchemasForTopicTests<
 ): () => void {
   return function () {
     let sandbox: sinon.SinonSandbox;
-    let resourceLoaderStub: sinon.SinonStub;
-    let resourceLoader: sinon.SinonStubbedInstance<ResourceLoaderType>;
+
+    let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoaderType>;
     let testTopic: KafkaTopic;
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      resourceLoaderStub = sandbox.stub(ResourceLoader, "getInstance");
-      resourceLoader = sandbox.createStubInstance(resourceLoaderClass);
-      resourceLoaderStub.returns(resourceLoader);
+      stubbedLoader = getStubbedResourceLoader(
+        sandbox,
+      ) as sinon.SinonStubbedInstance<ResourceLoaderType>;
 
       // Ensure that testTopic smells like it has a schema and is named "test-topic", the default expectation of these tests.
       testTopic = KafkaTopic.create({ ...baseTopic, hasSchema: true, name: "test-topic" });
@@ -133,7 +134,7 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     it("hates topics without subject groups", async function () {
-      resourceLoader.getTopicSubjectGroups.resolves([]);
+      stubbedLoader.getTopicSubjectGroups.resolves([]);
       await assert.rejects(
         async () => {
           await getLatestSchemasForTopic(testTopic);
@@ -145,11 +146,11 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
+      stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
 
       // Doesn't really matter that we're mixing local and CCloud here, just wanting to test returning
       // multiple subjects with multiple schemas each.
-      resourceLoader.getTopicSubjectGroups.resolves([
+      stubbedLoader.getTopicSubjectGroups.resolves([
         TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
         TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
       ]);
@@ -173,14 +174,13 @@ function generateGetLatestSchemasForTopicTests<
   };
 }
 
-describe("commands::schema determineLatestSchema() tests", () => {
+describe("commands/schemas.ts determineLatestSchema()", () => {
   let sandbox: sinon.SinonSandbox;
-  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
+  let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    loaderStub = sandbox.createStubInstance(ResourceLoader);
-    sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
+    stubbedLoader = getStubbedResourceLoader(sandbox);
   });
 
   afterEach(() => {
@@ -196,7 +196,7 @@ describe("commands::schema determineLatestSchema() tests", () => {
     const expectedSchema = TEST_CCLOUD_SCHEMA;
     const subject = TEST_CCLOUD_SUBJECT;
 
-    loaderStub.getSchemasForSubject.resolves([expectedSchema]);
+    stubbedLoader.getSchemasForSubject.resolves([expectedSchema]);
 
     const result = await determineLatestSchema("test", subject);
 

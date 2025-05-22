@@ -1,12 +1,13 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window, workspace, WorkspaceConfiguration } from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
-import { CCloudResourceLoader, ResourceLoader } from "../loaders";
+import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
@@ -62,8 +63,6 @@ describe("FlinkStatementsViewProvider", () => {
     });
 
     it("fetches new statements when a resource is selected", async () => {
-      const resourceLoader = sinon.createStubInstance(CCloudResourceLoader);
-      sandbox.stub(ResourceLoader, "getInstance").returns(resourceLoader);
       const windowWithProgressStub = sandbox
         .stub(window, "withProgress")
         .callsFake((_, callback) => {
@@ -74,8 +73,10 @@ describe("FlinkStatementsViewProvider", () => {
       const resource = TEST_CCLOUD_ENVIRONMENT;
       viewProvider["resource"] = resource;
 
+      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
+        getStubbedCCloudResourceLoader(sandbox);
       // Three statements total, one running and two stopped.
-      resourceLoader.getFlinkStatements.resolves([
+      stubbedLoader.getFlinkStatements.resolves([
         createFlinkStatement({
           name: "statement1",
           phase: Phase.RUNNING,
@@ -95,7 +96,7 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledOnce(windowWithProgressStub);
       sinon.assert.calledOnce(resourcesClearStub);
       sinon.assert.calledTwice(changeFireStub);
-      sinon.assert.calledOnce(resourceLoader.getFlinkStatements);
+      sinon.assert.calledOnce(stubbedLoader.getFlinkStatements);
       sinon.assert.calledOnce(logTelemetryStub);
       sinon.assert.calledWith(logTelemetryStub, 3, 1);
     });
