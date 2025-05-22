@@ -1,4 +1,5 @@
 import { Page, expect } from "@playwright/test";
+import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { test } from "vscode-test-playwright";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
@@ -108,11 +109,10 @@ test.describe("Schema related functionality", () => {
     }
   });
 
-  test("create a new subject and evolve it", async ({ page, electronApp }) => {
+  async function testSchemaEvolution({ page }: { page: Page }) {
     const randomValue = Math.random().toString(36).substring(2, 15);
     subjectName = `customer-${randomValue}-value`;
 
-    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
     await createNewSubject(page, subjectName, "customer.avsc");
     await evolveSchema(page, subjectName, "customer_bad_evolution.avsc");
 
@@ -130,5 +130,90 @@ test.describe("Schema related functionality", () => {
         exact: true,
       }),
     ).toBeVisible();
+  }
+
+  test.describe("using Confluent Cloud connection", async () => {
+    test.beforeEach(async ({ page, electronApp }) => {
+      await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
+    });
+
+    test("create a new subject and evolve it", testSchemaEvolution);
+  });
+
+  test.describe("using direct connection to Confluent Cloud Schema Registry using SR API Key", async () => {
+    test.beforeEach(async ({ page, electronApp, _enableRecorder }) => {
+      // Stub the dialog that tells you the connection was created
+      await stubMultipleDialogs(electronApp, [
+        {
+          method: "showMessageBox",
+          value: {
+            response: 0, // Simulates clicking "OK"
+            checkboxChecked: false,
+          },
+        },
+      ]);
+
+      await page.getByLabel("Resources Section").hover();
+      await page.getByLabel("Add New Connection").click();
+      await page.getByLabel("Enter manually").locator("a").click();
+      const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
+
+      const { apiKey, apiSecret, endpoint } = extractConfluentCredentials();
+
+      await webview.locator("#name").click();
+      await page.waitForTimeout(100);
+      await page.keyboard.type("Playwright");
+
+      await webview.locator("#formconnectiontype").click();
+      await page.waitForTimeout(100);
+
+      await webview.locator("#formconnectiontype").selectOption("Confluent Cloud");
+
+      await webview.locator('[id="schema_registry\\.uri"]').click();
+      // Wait for the input to be focused.
+      await page.waitForTimeout(100);
+      await page.keyboard.type(endpoint);
+
+      await webview.locator('[id="schema_registry\\.auth_type"]').click();
+      await webview.locator('[id="schema_registry\\.auth_type"]').selectOption("API");
+
+      await webview.locator('[id="schema_registry\\.credentials\\.api_key"]').click();
+      await page.waitForTimeout(100);
+      await page.keyboard.type(apiKey);
+
+      await webview.locator('[id="schema_registry\\.credentials\\.api_secret"]').click();
+      await page.waitForTimeout(100);
+      await page.keyboard.type(apiSecret);
+
+      // First test
+      await webview.getByRole("button", { name: "Test" }).click();
+      await expect(webview.getByText("Connection test succeeded")).toBeVisible();
+
+      await webview.getByRole("button", { name: "Save" }).click();
+
+      // TODO: Click on the connection and focus SR.
+    });
+
+    test("create a new subject and evolve it", testSchemaEvolution);
   });
 });
+
+/**
+ * Extracts the API key, secret, and endpoint from the E2E_SR_API_KEY environment variable. The
+ * environment variable contains the text of the downloaded API key from Confluent Cloud, which contains
+ * the API key, secret, and endpoint (as well as Resource scope, Environment, and Resource, which we
+ * don't need).
+ * @returns { apiKey: string, apiSecret: string, endpoint: string }
+ */
+function extractConfluentCredentials() {
+  const e2e_sr_api_key = process.env.E2E_SR_API_KEY!;
+  const apiKeyMatch = e2e_sr_api_key.match(/API key:\s*([A-Z0-9]+)/)!;
+  const apiSecretMatch = e2e_sr_api_key.match(/API secret:\s*([A-Za-z0-9]+)/)!;
+  const endpointMatch = e2e_sr_api_key.match(/Endpoint:\s*(\S+)/)!;
+
+  return {
+    apiKey: apiKeyMatch[1],
+    apiSecret: apiSecretMatch[1],
+    endpoint: endpointMatch[1],
+  };
+}
