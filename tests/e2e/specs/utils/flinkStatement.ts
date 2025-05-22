@@ -41,9 +41,6 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
   await page.waitForSelector("text=Statement:");
 
-  // Assert that we can see the columns immediately.
-  await expect(page.getByTestId(FlinkStatementTestIds.columnRow)).toBeVisible();
-
   // We don't make assumptions about whether the statement will go into RUNNING state or not.
   // That's up to the caller to decide.
 }
@@ -119,6 +116,9 @@ export async function testFlinkStatement(page: Page, params: FlinkStatementTestP
   await submitFlinkStatement(page, params.fileName);
 
   const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
+
+  // Assert that we can see the columns immediately.
+  await expect(webview.getByTestId(FlinkStatementTestIds.columnRow)).toBeVisible();
 
   // Wait for statement to run and verify status
   await verifyStatementStatus(webview, params.eventualExpectedStatus);
