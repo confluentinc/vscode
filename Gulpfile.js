@@ -734,14 +734,23 @@ export function functional(done) {
 }
 
 export function e2eRun(done) {
-  const result = spawnSync(
-    "npx",
-    ["playwright", "test", "-c", "tests/e2e/playwright.config.ts", "tests/e2e"],
-    {
-      stdio: "inherit",
-      shell: IS_WINDOWS,
-    },
-  );
+  // Get all arguments after 'gulp e2e'
+  const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
+
+  const command = [
+    "playwright",
+    "test",
+    "-c",
+    "tests/e2e/playwright.config.ts",
+    "tests/e2e",
+    ...(testFilter ? ["-g", testFilter] : []),
+  ];
+  console.log("Running command: npx", command.join(" "));
+
+  const result = spawnSync("npx", command, {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
   if (result.error) throw result.error;
   return done(result.status);
 }
