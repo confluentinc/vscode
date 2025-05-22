@@ -13,6 +13,8 @@ configDotenv({
 });
 
 const vsix: string = globSync(path.resolve(__dirname, "..", "..", "out", "*.vsix")).at(0) as string;
+const isInsiders = process.env.TERM_PROGRAM_VERSION?.endsWith("insider");
+const vscodeVersion = process.env.VSCODE_VERSION || (isInsiders ? "insiders" : "stable");
 
 export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
   testDir: path.join(__dirname, "specs"),
@@ -30,13 +32,9 @@ export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
     vscodeTrace: "on",
   },
   projects: [
-    // {
-    //   name: "insiders",
-    //   use: { vscodeVersion: "insiders" },
-    // },
     {
-      name: "stable",
-      use: { vscodeVersion: "stable" },
+      name: vscodeVersion,
+      use: { vscodeVersion },
     },
   ],
 });
