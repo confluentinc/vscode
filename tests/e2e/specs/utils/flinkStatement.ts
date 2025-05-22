@@ -46,7 +46,9 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
 }
 
 export async function openFixtureFile(page: Page, fileName: string) {
+  // Could be interrupted by other events while typing.
   await page.keyboard.press("ControlOrMeta+P");
+  await expect(page.getByPlaceholder("Search files by name")).toBeVisible();
   await page.keyboard.type(fileName);
   await page.keyboard.press("Enter");
 }
