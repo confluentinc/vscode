@@ -100,7 +100,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     }
 
     logger.debug(`Summarizing ${sampleTopics.length} topics`);
-    return new LanguageModelToolResult(summarizeTopics(sampleTopics));
+    return new LanguageModelToolResult([new LanguageModelTextPart(summarizeTopics(sampleTopics))]);
   }
   async processInvocation(
     request: ChatRequest,
@@ -110,10 +110,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IListTopicsParameters;
     const progressMessage = [
-      "Retrieving available topics for:",
-      `- Cluster ID: ${parameters.kafkaClusterId}`,
-      `- Connection ID: ${parameters.connectionId}`,
-      `- Environment ID: ${parameters.environmentId}`,
+      `Retrieving available topics for Cluster ID: ${parameters.kafkaClusterId}`,
     ];
 
     if (parameters.topicNameSubstring) {
@@ -133,7 +130,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
 
     // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
-    logger.debug("Tool invocation listtopics result:", result);
+
     if (!result.content.length) {
       const noResultsMessage = new LanguageModelTextPart(
         `No topics found in cluster ${parameters.kafkaClusterId}. ` +
