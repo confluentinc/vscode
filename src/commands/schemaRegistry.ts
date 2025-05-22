@@ -4,7 +4,7 @@ import { currentSchemaRegistryChanged } from "../emitters";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPickWithViewProgress } from "../quickpicks/schemaRegistries";
 
-async function selectSchemaRegistryCommand(item?: SchemaRegistry) {
+export async function selectSchemaRegistryCommand(item?: SchemaRegistry) {
   // ensure whatever was passed in is a SchemaRegistry instance; if not, prompt the user to pick one
   const schemaRegistry =
     item instanceof SchemaRegistry ? item : await schemaRegistryQuickPickWithViewProgress();

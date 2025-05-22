@@ -67,7 +67,7 @@ export async function schemaSubjectQuickPick(
     subjectItems,
     {
       title,
-      placeHolder: "Select existing subject or to create a new one",
+      placeHolder: `Select existing subject${includeCreateNew ? "or create a new one" : ""}`,
       ignoreFocusOut: true,
     },
   );
