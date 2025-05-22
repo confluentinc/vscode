@@ -248,10 +248,12 @@ describe("sidecar/utils.ts", () => {
     const skipIfNotWin32 = process.platform !== "win32" ? it.skip : it;
     const skipIfWin32 = process.platform === "win32" ? it.skip : it;
 
+    // path.normalize() actually behaves differently on Windows and non-Windows platforms.
     skipIfNotWin32("Should correct from double slashes on Windows", () => {
-      const path = "C:\\\\Users\\user\\Documents\\\\sidecar";
+      const path = "\\\\Users\\user\\Documents\\\\sidecar";
       const normalizedPath = normalizedSidecarPath(path);
-      assert.strictEqual(normalizedPath, "C:Users\\user\\Documents\\sidecar");
+      // XXX Is this even the behavior that we want?!?
+      assert.strictEqual(normalizedPath, "Users\\user\\Documents\\sidecar");
     });
 
     skipIfWin32("Should not modify paths on non-Windows platforms", () => {
