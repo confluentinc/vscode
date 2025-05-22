@@ -1,6 +1,5 @@
 import { ElectronApplication, chromium } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
-import { openConfluentExtension } from "./confluent";
 
 /**
  * Sets up dialog stubs for the authentication flow
@@ -118,9 +117,6 @@ export async function login(
       return originalOpenExternal(url);
     };
   });
-
-  // Open the extension
-  await openConfluentExtension(page);
 
   // Hover over "No Connection" to make sign-in button visible
   const ccloudConnection = await page.getByText("Confluent Cloud(No connection)");
