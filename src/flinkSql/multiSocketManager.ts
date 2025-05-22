@@ -1,6 +1,8 @@
 import { TextDocument } from "vscode";
 import { Message } from "vscode-languageclient/node";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
+import { SIDECAR_PORT } from "../sidecar/constants";
 import { ConnectionStatus, LanguageServerConnection } from "./socketConnectionManager";
 
 const logger = new Logger("flinkSql.multiServerManager");
@@ -20,6 +22,20 @@ export class MultiServerManager {
   private _messageHandler: ((message: Message) => void) | null = null;
 
   /**
+   * Build the WebSocket URL for a given compute pool id.
+   * This should be the single source of truth for URL construction.
+   */
+  public static buildWebSocketUrl(options: {
+    organizationId: string;
+    environmentId: string;
+    region: string;
+    provider: string;
+  }): string {
+    const { organizationId, environmentId, region, provider } = options;
+    return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
+  }
+
+  /**
    * Set a message handler for all servers
    * @param handler The handler function to call with received messages
    */
@@ -34,24 +50,25 @@ export class MultiServerManager {
 
   /**
    * Register a new server with a unique ID and connection info
-   * @param id Unique identifier for this server
-   * @param url WebSocket URL
+   * @param computePoolId Unique identifier for this server (should match compute pool id)
+   * @param poolInfo Object containing organizationId, environmentId, region, provider
    * @param documentFilter Function to determine if a document should use this server
    * @param isDefault Whether this should be the default server when no match is found
    */
   public registerServer(
-    id: string,
-    url: string,
+    computePoolId: string,
+    poolInfo: { organizationId: string; environmentId: string; region: string; provider: string },
     documentFilter: (document: TextDocument) => boolean,
     isDefault: boolean = false,
   ): void {
-    if (this.servers.has(id)) {
-      logger.warn(`Server with ID '${id}' already registered, replacing`);
-      this.servers.get(id)?.manager.dispose();
+    if (this.servers.has(computePoolId)) {
+      logger.warn(`Server with ID '${computePoolId}' already registered, replacing`);
+      this.servers.get(computePoolId)?.manager.dispose(); // TODO NC probably don't need to replace?
     }
 
+    const url = MultiServerManager.buildWebSocketUrl(poolInfo);
     const manager = new LanguageServerConnection(url);
-    this.servers.set(id, { url, manager, documentFilter });
+    this.servers.set(computePoolId, { url, manager, documentFilter });
 
     // Set message handler if we already have one
     if (this._messageHandler) {
@@ -60,24 +77,24 @@ export class MultiServerManager {
 
     // Monitor connection status for logging
     manager.onConnectionStatusChange((status) => {
-      logger.debug(`Server '${id}' connection status: ${status}`);
+      logger.debug(`Server '${computePoolId}' connection status: ${status}`);
     });
 
     if (isDefault) {
-      this.defaultServerId = id;
+      this.defaultServerId = computePoolId;
     }
   }
 
   /**
    * Get the appropriate server for a given document
    * @param document The document to route
-   * @returns The server info or null if no match
+   * @returns The server info or null if no match is found
    */
   public getServerForDocument(document: TextDocument): ServerInfo | null {
     // Try to find a server that matches the document filter
-    for (const [id, serverInfo] of this.servers.entries()) {
+    for (const [computePoolId, serverInfo] of this.servers.entries()) {
       if (serverInfo.documentFilter(document)) {
-        logger.debug(`Routing document ${document.uri.toString()} to server '${id}'`);
+        logger.debug(`Routing document ${document.uri.toString()} to server '${computePoolId}'`);
         return serverInfo;
       }
     }
@@ -96,18 +113,18 @@ export class MultiServerManager {
 
   /**
    * Connect to a specific server by ID
-   * @param id The server ID to connect to
+   * @param computePoolId The server ID to connect to
    */
-  public async connectToServer(id: string): Promise<void> {
-    const server = this.servers.get(id);
+  public async connectToServer(computePoolId: string): Promise<void> {
+    const server = this.servers.get(computePoolId);
     if (!server) {
-      throw new Error(`Server with ID '${id}' not found`);
+      throw new Error(`Server with ID '${computePoolId}' not found`);
     }
 
     try {
       await server.manager.connect();
     } catch (error) {
-      logger.error(`Failed to connect to server '${id}': ${error}`);
+      logger.error(`Failed to connect to server '${computePoolId}': ${error}`);
       throw error;
     }
   }
@@ -116,14 +133,16 @@ export class MultiServerManager {
    * Connect to all registered servers
    */
   public async connectAll(): Promise<void> {
-    const connectionPromises = Array.from(this.servers.entries()).map(async ([id, server]) => {
-      try {
-        await server.manager.connect();
-        logger.debug(`Connected to server '${id}'`);
-      } catch (error) {
-        logger.error(`Failed to connect to server '${id}': ${error}`);
-      }
-    });
+    const connectionPromises = Array.from(this.servers.entries()).map(
+      async ([computePoolId, server]) => {
+        try {
+          await server.manager.connect();
+          logger.debug(`Connected to server '${computePoolId}'`);
+        } catch (error) {
+          logger.error(`Failed to connect to server '${computePoolId}': ${error}`);
+        }
+      },
+    );
 
     await Promise.all(connectionPromises);
   }
@@ -162,10 +181,10 @@ export class MultiServerManager {
 
   /**
    * Get the connection status for a specific server
-   * @param id The server ID
+   * @param computePoolId The server ID
    */
-  public getServerStatus(id: string): ConnectionStatus | null {
-    const server = this.servers.get(id);
+  public getServerStatus(computePoolId: string): ConnectionStatus | null {
+    const server = this.servers.get(computePoolId);
     if (!server) {
       return null;
     }
@@ -188,8 +207,8 @@ export class MultiServerManager {
    * Dispose all server connections
    */
   public dispose(): void {
-    for (const [id, server] of this.servers.entries()) {
-      logger.debug(`Disposing server '${id}'`);
+    for (const [computePoolId, server] of this.servers.entries()) {
+      logger.debug(`Disposing server '${computePoolId}'`);
       server.manager.dispose();
     }
     this.servers.clear();

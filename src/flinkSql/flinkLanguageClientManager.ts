@@ -1,6 +1,5 @@
 import { Disposable, WorkspaceConfiguration, commands, window, workspace } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -12,7 +11,6 @@ import {
   FLINK_CONFIG_DATABASE,
 } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { SIDECAR_PORT } from "../sidecar/constants";
 import { initializeLanguageClient } from "./languageClient";
 
 const logger = new Logger("flinkLanguageClientManager");
@@ -215,22 +213,6 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   /**
-   * Builds the WebSocket URL for the Flink SQL Language Server
-   * @param computePoolId The ID of the compute pool to use
-   * @returns (string) WebSocket URL, or Error if pool info couldn't be retrieved
-   */
-  private async buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<string> {
-    const poolInfo = await this.lookupComputePoolInfo(computePoolId);
-    if (!poolInfo) {
-      throw new Error(`Could not find environment containing compute pool ${computePoolId}`);
-    }
-    const { organizationId, environmentId, region, provider } = poolInfo;
-    const url = `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
-    this.lastWebSocketUrl = url;
-    return url;
-  }
-
-  /**
    * Ensures the default language client is initialized if prerequisites are met
    * Prerequisites:
    * - User is authenticated with CCloud
@@ -266,21 +248,15 @@ export class FlinkLanguageClientManager implements Disposable {
     }
 
     try {
-      let url: string | undefined;
-      if (this.lastWebSocketUrl && this.lastWebSocketUrl.includes(computePoolId)) {
-        url = this.lastWebSocketUrl;
-      } else {
-        url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
-          logger.error("Failed to build WebSocket URL:", error);
-          return undefined;
-        });
+      // Instead of building the URL here, gather pool info for MultiServerManager
+      const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+      if (!poolInfo) {
+        logger.error("Could not find compute pool info for id: " + computePoolId);
+        return;
       }
-      if (!url) return;
 
-      // Reset reconnect counter on new initialization
-      this.reconnectCounter = 0;
-
-      this.languageClient = await initializeLanguageClient(url, () =>
+      // Pass poolInfo to the server provider (which will call registerServer)
+      this.languageClient = await initializeLanguageClient(computePoolId, poolInfo, () =>
         this.handleWebSocketDisconnect(),
       );
       if (this.languageClient) {

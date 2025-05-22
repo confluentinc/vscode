@@ -329,10 +329,10 @@ class FlinkSqlMessageTransports implements MessageTransports {
   constructor(serverManager: MultiServerManager, documentSelector: vscode.DocumentSelector) {
     this.serverManager = serverManager;
     this.reader = new FlinkSqlMessageReader();
-    this.writer = new FlinkSqlMessageWriter(serverManager, documentSelector);
+    this.writer = new FlinkSqlMessageWriter(this.serverManager, documentSelector);
 
     // Connect the message handler so incoming WebSocket messages get forwarded to the reader
-    serverManager.setMessageHandler((message: Message) => {
+    this.serverManager.setMessageHandler((message: Message) => {
       this.forwardIncomingMessage(message);
     });
   }
@@ -354,9 +354,23 @@ export class FlinkServerProvider {
   private messageTransports: FlinkSqlMessageTransports | null = null;
   private documentSelector: vscode.DocumentSelector;
 
-  constructor(serverManager: MultiServerManager, documentSelector: vscode.DocumentSelector) {
-    this.serverManager = serverManager;
+  constructor(
+    documentSelector: vscode.DocumentSelector,
+    computePoolId: string,
+    poolInfo: { organizationId: string; environmentId: string; region: string; provider: string },
+  ) {
+    this.serverManager = new MultiServerManager();
     this.documentSelector = documentSelector;
+
+    // Register the default server using computePoolId and poolInfo
+    this.serverManager.registerServer(
+      computePoolId,
+      poolInfo,
+      (document) =>
+        document.languageId === "flinksql" ||
+        !!vscode.languages.match({ pattern: "**/*.flink.sql" }, document),
+      true, // Set as default server
+    );
   }
 
   /**

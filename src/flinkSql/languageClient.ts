@@ -10,7 +10,6 @@ import {
 } from "vscode-languageclient/node";
 import { Logger } from "../logging";
 import { FlinkServerProvider } from "./flinkServerProvider";
-import { MultiServerManager } from "./multiSocketManager";
 
 const logger = new Logger("flinkSql.languageClient");
 
@@ -21,7 +20,8 @@ const logger = new Logger("flinkSql.languageClient");
  * - User has selected a compute pool
  */
 export async function initializeLanguageClient(
-  url: string,
+  computePoolId: string,
+  poolInfo: { organizationId: string; environmentId: string; region: string; provider: string },
   onWebSocketDisconnect: () => void,
 ): Promise<LanguageClient | null> {
   try {
@@ -30,17 +30,12 @@ export async function initializeLanguageClient(
       { scheme: "untitled", language: "flinksql" },
       { pattern: "**/*.flink.sql" },
     ];
-    const serverManager = new MultiServerManager();
-    logger.debug("Registering default server");
-    serverManager.registerServer(
-      "default",
-      url,
-      (document) =>
-        document.languageId === "flinksql" ||
-        !!vscode.languages.match({ pattern: "**/*.flink.sql" }, document),
-      true, // Set as default server
+    const serverOptionsProvider = new FlinkServerProvider(
+      documentSelector,
+      computePoolId,
+      poolInfo,
     );
-    const serverOptionsProvider = new FlinkServerProvider(serverManager, documentSelector);
+
     const serverOptions = await serverOptionsProvider.getServerOptions();
     const clientOptions: LanguageClientOptions = {
       documentSelector,
