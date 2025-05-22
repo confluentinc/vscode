@@ -148,7 +148,7 @@ export async function gatherSidecarOutputs(
   stderrPath: string,
 ): Promise<SidecarOutputs> {
   const myLogger = logger.withCallpoint("gatherSidecarOutputs");
-  // Try to read+parse most recennt 20 sidecar logs to notice any startup errors (occupied port, missing
+  // Try to read+parse most recent 20 sidecar logs to notice any startup errors (occupied port, missing
   // configs, etc.)
   const reformattedLogLines: string[] = [];
   const parsedLines: SidecarLogFormat[] = [];
