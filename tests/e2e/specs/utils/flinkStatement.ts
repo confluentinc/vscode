@@ -41,6 +41,9 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
   await page.waitForSelector("text=Statement:");
 
+  // Assert that we can see the columns immediately.
+  await expect(page.getByTestId(FlinkStatementTestIds.columnRow)).toBeVisible();
+
   // We don't make assumptions about whether the statement will go into RUNNING state or not.
   // That's up to the caller to decide.
 }
