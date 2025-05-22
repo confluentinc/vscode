@@ -1,10 +1,8 @@
 // sidecar manager module
 
-import { ChildProcess, spawn } from "child_process";
-import fs from "fs";
+import { ChildProcess } from "child_process";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
-import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
 import { Logger } from "../logging";
@@ -19,7 +17,6 @@ import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
 import { Tail } from "tail";
-import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
@@ -34,19 +31,23 @@ import {
 import { SidecarStartupFailureReason } from "./types";
 import {
   checkSidecarFile,
+  constructSidecarEnv,
   isProcessRunning,
   killSidecar,
   normalizedSidecarPath,
   pause,
   showSidecarStartupErrorMessage,
+  spawn,
   wasConnRefused,
 } from "./utils";
+
+import { closeSync, openSync, writeFileSync } from "../utils/fsWrappers";
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
 /** How many loop attempts to try in startSidecar() and doHand */
-const MAX_ATTEMPTS = 10;
+export const MAX_ATTEMPTS = 10;
 
 const logger = new Logger("sidecarManager");
 
@@ -376,6 +377,9 @@ export class SidecarManager {
 
   /**
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
+   *
+   * Any errors encountered will be thrown as SidecarFatalError, which will be caught
+   * at higher levels and logged to Sentry by that higher level.
    **/
   private async startSidecar(callnum: number): Promise<string> {
     observabilityContext.sidecarStartCount++;
@@ -393,7 +397,6 @@ export class SidecarManager {
           // Will raise SidecarFatalError on any issue found.
           checkSidecarFile(executablePath);
         } catch (e) {
-          logger.error(`${logPrefix}: sidecar executable failed checks`, e);
           reject(e);
           return;
         }
@@ -405,8 +408,8 @@ export class SidecarManager {
         const stderrPath = `${getSidecarLogfilePath()}.stderr`;
         try {
           // try to create a file to track any stderr output from the sidecar process
-          fs.writeFileSync(stderrPath, "");
-          const stderrFd = fs.openSync(stderrPath, "w");
+          writeFileSync(stderrPath, "");
+          const stderrFd = openSync(stderrPath, "w");
 
           let sidecarProcess: ChildProcess;
           try {
@@ -436,7 +439,7 @@ export class SidecarManager {
           } finally {
             // close the file descriptor for stderr; child process will inherit it
             // and write to it
-            fs.closeSync(stderrFd);
+            closeSync(stderrFd);
           }
 
           const sidecarPid: number | undefined = sidecarProcess.pid;
@@ -448,9 +451,8 @@ export class SidecarManager {
           if (sidecarPid === undefined) {
             const err = new SidecarFatalError(
               SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID,
-              `${logPrefix}: sidecar process returned undefined PID`,
+              `${logPrefix}: sidecar process has undefined PID`,
             );
-            logError(err, "sidecar process spawn", { extra: { functionName: "startSidecar" } });
             reject(err);
             return;
           } else {
@@ -467,9 +469,6 @@ export class SidecarManager {
           }
         } catch (e) {
           // Unexpected error. Wrap it in a SidecarFatalError and reject.
-          logError(e, `${logPrefix}: Unexpected error`, {
-            extra: { functionName: "startSidecar" },
-          });
           const err = new SidecarFatalError(
             SidecarStartupFailureReason.UNKNOWN,
             `${logPrefix}: Unexpected error: ${e}`,
@@ -529,7 +528,7 @@ export class SidecarManager {
    * Hit the handshake endpoint on the sidecar to get an auth token.
    * @returns The auth token string.
    */
-  private async doHandshake(): Promise<string> {
+  async doHandshake(): Promise<string> {
     const config = new Configuration({
       basePath: `http://localhost:${SIDECAR_PORT}`,
       headers: { [WORKSPACE_PROCESS_ID_HEADER]: process.pid.toString() },
@@ -622,31 +621,4 @@ export class SidecarManager {
 
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
   }
-}
-
-/**
- * Construct the environment for the sidecar process.
- * @param env The current environment, parameterized for test purposes.
- * @returns The environment object for the sidecar process.
- */
-export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const sidecar_env = Object.create(env);
-  sidecar_env["QUARKUS_LOG_FILE_ENABLE"] = "true";
-  sidecar_env["QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT"] = "false";
-  sidecar_env["QUARKUS_LOG_FILE_PATH"] = getSidecarLogfilePath();
-  sidecar_env["VSCODE_VERSION"] = vscode.version;
-  sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
-
-  // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
-  // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
-  // port will still be guarded by the firewall.
-  // We also need to use the IPv6 loopback address for the OAuth redirect URI instead of the IPv4
-  // (127.0.0.1) address, as the latter is not reachable from WSL2.
-  if (env.WSL_DISTRO_NAME) {
-    sidecar_env["QUARKUS_HTTP_HOST"] = "0.0.0.0";
-    sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_OAUTH_REDIRECT_URI"] =
-      "http://[::1]:26636/gateway/v1/callback-vscode-docs";
-  }
-
-  return sidecar_env;
 }

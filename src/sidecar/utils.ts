@@ -1,13 +1,17 @@
+import * as childProcess from "child_process";
 import fs from "fs";
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
 import { normalize } from "path";
+import * as vscode from "vscode";
 import { env, Uri } from "vscode";
+import { EXTENSION_VERSION } from "../constants";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { NotificationButtons, showErrorNotificationWithButtons } from "../notifications";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import { MOMENTARY_PAUSE_MS, SIDECAR_PORT } from "./constants";
 import { SidecarFatalError } from "./errors";
+import { getSidecarLogfilePath } from "./logging";
 import { SidecarStartupFailureReason } from "./types";
 
 const logger = new Logger("sidecar/utils.ts");
@@ -26,6 +30,33 @@ export const WAIT_FOR_SIDECAR_DEATH_MS = 4_000; // 4 seconds.
 export async function pause(delay: number): Promise<void> {
   // pause an iota
   await new Promise((timeout_resolve) => setTimeout(timeout_resolve, delay));
+}
+
+/**
+ * Construct the environment for the sidecar process.
+ * @param env The current environment, parameterized for test purposes.
+ * @returns The environment object for the sidecar process.
+ */
+export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const sidecar_env = Object.create(env);
+  sidecar_env["QUARKUS_LOG_FILE_ENABLE"] = "true";
+  sidecar_env["QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT"] = "false";
+  sidecar_env["QUARKUS_LOG_FILE_PATH"] = getSidecarLogfilePath();
+  sidecar_env["VSCODE_VERSION"] = vscode.version;
+  sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
+
+  // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
+  // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
+  // port will still be guarded by the firewall.
+  // We also need to use the IPv6 loopback address for the OAuth redirect URI instead of the IPv4
+  // (127.0.0.1) address, as the latter is not reachable from WSL2.
+  if (env.WSL_DISTRO_NAME) {
+    sidecar_env["QUARKUS_HTTP_HOST"] = "0.0.0.0";
+    sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_OAUTH_REDIRECT_URI"] =
+      "http://[::1]:26636/gateway/v1/callback-vscode-docs";
+  }
+
+  return sidecar_env;
 }
 
 /**
@@ -180,10 +211,11 @@ export function checkSidecarFile(executablePath: string) {
  * carrying a SidecarStartupFailureReason.
  */
 export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> {
+  const checkLogsBoilerplate = `Please check the logs for more details`;
+
   if (e instanceof SidecarFatalError) {
     logger.error(`showSidecarStartupErrorMessage(): ${e.message} (${e.reason})`);
     const portBoilerplate = `Sidecar could not start, port ${SIDECAR_PORT} is in use by another process`;
-    const checkLogsBoilerplate = `Please check the logs for more details`;
     let buttons: NotificationButtons | undefined = undefined;
     let message: string;
     switch (e.reason) {
@@ -216,15 +248,6 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
         message = `${e.message}. ${checkLogsBoilerplate}.`;
         break;
 
-      case SidecarStartupFailureReason.WRONG_ARCHITECTURE:
-        message = e.message;
-        buttons = {
-          "Open Marketplace": () => {
-            env.openExternal(Uri.parse("vscode:extension/confluentinc.vscode-confluent"));
-          },
-        };
-        break;
-
       case SidecarStartupFailureReason.HANDSHAKE_FAILED:
         message = `Sidecar failed to start: Handshake failed. ${checkLogsBoilerplate}.`;
         break;
@@ -233,8 +256,21 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
         message = `Sidecar failed to start: Handshake failed after repeated attempts. ${checkLogsBoilerplate}.`;
         break;
 
+      case SidecarStartupFailureReason.WRONG_ARCHITECTURE:
       case SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID:
+        // These two use the error message embedded in the exception,
+        // in that the raising point
         message = e.message;
+
+        // But we can add a button to open the marketplace in case of WRONG_ARCHITECTURE.
+        // (User direct installed from, say github, but grabbed the wrong vsix)
+        if (e.reason === SidecarStartupFailureReason.WRONG_ARCHITECTURE) {
+          buttons = {
+            "Open Marketplace": () => {
+              env.openExternal(Uri.parse("vscode:extension/confluentinc.vscode-confluent"));
+            },
+          };
+        }
         break;
 
       default:
@@ -244,8 +280,18 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
 
     void showErrorNotificationWithButtons(message, buttons);
   } else {
+    // Was some truly unexpected exception!
     void showErrorNotificationWithButtons(
-      `Sidecar failed to start: ${e}. Please check the logs for more details.`,
+      `Sidecar failed to start: ${e}. ${checkLogsBoilerplate}.`,
     );
   }
+}
+
+/** Stubbable wrapper over child_process.spawn() */
+export function spawn(
+  command: string,
+  args: readonly string[],
+  options: childProcess.SpawnOptions,
+): childProcess.ChildProcess {
+  return childProcess.spawn(command, args, options);
 }
