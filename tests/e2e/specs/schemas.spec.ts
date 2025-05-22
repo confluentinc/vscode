@@ -9,7 +9,7 @@ test.describe("Schema related functionality", () => {
     await openConfluentExtension(page);
   });
 
-  test("should create a new subject", async ({ page, electronApp }) => {
+  test("create a new subject and evolve it", async ({ page, electronApp }) => {
     const randomValue = Math.random().toString(36).substring(2, 15);
     const subjectName = `customer-${randomValue}-value`;
     try {
