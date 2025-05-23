@@ -76,7 +76,9 @@
         ],
         "displayName": "List Topics",
         "modelDescription": "List all available topics in the Kafka cluster. Use this when the user asks about available topics or you want to show them a list of topics.",
-        "canBeReferencedInPrompt": false,
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "listTopics",
+        "userDescription": "List all available topics in the Kafka cluster.", 
         "icon": "$(list-selection)",
         "inputSchema": {
           "type": "object",
