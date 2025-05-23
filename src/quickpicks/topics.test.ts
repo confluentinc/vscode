@@ -1,8 +1,15 @@
 import * as assert from "assert";
-import sinon from "sinon";
-import * as vscode from "vscode";
+import * as sinon from "sinon";
+import { commands, ThemeIcon, window } from "vscode";
+import {
+  getStubbedCCloudResourceLoader,
+  getStubbedDirectResourceLoader,
+  getStubbedLocalResourceLoader,
+  getStubbedResourceLoader,
+} from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
@@ -16,13 +23,11 @@ import { QuickPickItemWithValue } from "./types";
 describe("quickpicks/topics.ts topicQuickPick()", function () {
   let sandbox: sinon.SinonSandbox;
 
-  let withProgressStub: sinon.SinonStub;
-  let getInstanceStub: sinon.SinonStub;
-  let showQuickPickStub: sinon.SinonStub;
   let showInfoStub: sinon.SinonStub;
+  let showQuickPickStub: sinon.SinonStub;
   let executeCommandStub: sinon.SinonStub;
 
-  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
+  let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
 
   const topicWithoutSchema = TEST_LOCAL_KAFKA_TOPIC;
   const topicWithSchema = KafkaTopic.create({
@@ -37,16 +42,13 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    withProgressStub = sandbox.stub(vscode.window, "withProgress");
-    withProgressStub.callsFake((_options, callback) => callback());
-    showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
-    showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
-    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
+    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
+    showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 
-    loaderStub = sandbox.createStubInstance(ResourceLoader);
-    getInstanceStub = sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
+    stubbedLoader = getStubbedResourceLoader(sandbox);
     // return the two test topics for most tests
-    loaderStub.getTopicsForCluster.resolves(testTopics);
+    stubbedLoader.getTopicsForCluster.resolves(testTopics);
   });
 
   afterEach(function () {
@@ -62,23 +64,13 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     assert.strictEqual(options.ignoreFocusOut, true);
   });
 
-  it("should display progress in the Topics view while loading", async function () {
-    await topicQuickPick(TEST_CCLOUD_KAFKA_CLUSTER);
-
-    sinon.assert.calledOnce(withProgressStub);
-    const options = withProgressStub.firstCall.args[0];
-    assert.strictEqual(options.location.viewId, "confluent-topics");
-    assert.strictEqual(options.title, "Loading topics...");
-  });
-
-  it("should get topics from the ResourceLoader with the correct connectionId", async function () {
+  it("should not pass forceRefresh=true to getTopicsForCluster by default", async function () {
     await topicQuickPick(TEST_LOCAL_KAFKA_CLUSTER);
 
-    sinon.assert.calledOnceWithExactly(getInstanceStub, TEST_LOCAL_KAFKA_CLUSTER.connectionId);
     sinon.assert.calledOnceWithExactly(
-      loaderStub.getTopicsForCluster,
+      stubbedLoader.getTopicsForCluster,
       TEST_LOCAL_KAFKA_CLUSTER,
-      false,
+      false, // not force-refreshing by default
     );
   });
 
@@ -86,7 +78,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     await topicQuickPick(TEST_LOCAL_KAFKA_CLUSTER, true);
 
     sinon.assert.calledOnceWithExactly(
-      loaderStub.getTopicsForCluster,
+      stubbedLoader.getTopicsForCluster,
       TEST_LOCAL_KAFKA_CLUSTER,
       true,
     );
@@ -109,7 +101,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     assert.strictEqual(topicItemsWithSchema.length, 1);
     assert.strictEqual(topicItemsWithSchema[0].value, topicWithSchema);
     assert.strictEqual(topicItemsWithSchema[0].label, topicWithSchema.name);
-    assert.strictEqual((topicItemsWithSchema[0].iconPath as vscode.ThemeIcon).id, IconNames.TOPIC);
+    assert.strictEqual((topicItemsWithSchema[0].iconPath as ThemeIcon).id, IconNames.TOPIC);
 
     const topicItemsWithoutSchema: QuickPickItemWithValue<KafkaTopic>[] = quickPickItems.filter(
       (item: QuickPickItemWithValue<KafkaTopic>) => !item.value!.hasSchema,
@@ -118,7 +110,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     assert.strictEqual(topicItemsWithoutSchema[0].value, topicWithoutSchema);
     assert.strictEqual(topicItemsWithoutSchema[0].label, topicWithoutSchema.name);
     assert.strictEqual(
-      (topicItemsWithoutSchema[0].iconPath as vscode.ThemeIcon).id,
+      (topicItemsWithoutSchema[0].iconPath as ThemeIcon).id,
       IconNames.TOPIC_WITHOUT_SCHEMA,
     );
   });
@@ -145,7 +137,9 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
 
   it("should skip the quickpick and show an info notification when no topics are found for the Kafka cluster", async function () {
     // no topics in the cluster
-    loaderStub.getTopicsForCluster.resolves([]);
+    stubbedLoader.getTopicsForCluster.resolves([]);
+    // user dismissed the info notification
+    showInfoStub.resolves(undefined);
 
     const result = await topicQuickPick(TEST_CCLOUD_KAFKA_CLUSTER);
 
@@ -162,7 +156,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
 
   it("should allow creating a topic from the info notification when no topics are found for the Kafka cluster", async function () {
     // no topics in the cluster
-    loaderStub.getTopicsForCluster.resolves([]);
+    stubbedLoader.getTopicsForCluster.resolves([]);
     // user clicked "Create Topic" in the info notification
     showInfoStub.resolves("Create Topic");
 
@@ -180,5 +174,52 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
       "confluent.topics.create",
       TEST_LOCAL_KAFKA_CLUSTER,
     );
+  });
+});
+
+// separate test suite so we don't interfere with `stubbedLoader` in the above suite
+describe("quickpicks/topics.ts topicQuickPick() ResourceLoader usage", function () {
+  let sandbox: sinon.SinonSandbox;
+
+  const testTopics: KafkaTopic[] = [TEST_LOCAL_KAFKA_TOPIC];
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+    // we don't care about the actual quickpick result in these tests
+    sandbox.stub(window, "showQuickPick").resolves();
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should use the LocalResourceLoader for local clusters", async function () {
+    const localLoader = getStubbedLocalResourceLoader(sandbox);
+    localLoader.getTopicsForCluster.resolves(testTopics);
+
+    await topicQuickPick(TEST_LOCAL_KAFKA_CLUSTER);
+
+    sinon.assert.calledOnce(localLoader.getTopicsForCluster);
+    sinon.assert.calledWith(localLoader.getTopicsForCluster, TEST_LOCAL_KAFKA_CLUSTER);
+  });
+
+  it("should use the CCloudResourceLoader for CCloud clusters", async function () {
+    const ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
+    ccloudLoader.getTopicsForCluster.resolves(testTopics);
+
+    await topicQuickPick(TEST_CCLOUD_KAFKA_CLUSTER);
+
+    sinon.assert.calledOnce(ccloudLoader.getTopicsForCluster);
+    sinon.assert.calledWith(ccloudLoader.getTopicsForCluster, TEST_CCLOUD_KAFKA_CLUSTER);
+  });
+
+  it("should use the DirectResourceLoader for direct connection clusters", async function () {
+    const directLoader = getStubbedDirectResourceLoader(sandbox);
+    directLoader.getTopicsForCluster.resolves(testTopics);
+
+    await topicQuickPick(TEST_DIRECT_KAFKA_CLUSTER);
+
+    sinon.assert.calledOnce(directLoader.getTopicsForCluster);
+    sinon.assert.calledWith(directLoader.getTopicsForCluster, TEST_DIRECT_KAFKA_CLUSTER);
   });
 });
