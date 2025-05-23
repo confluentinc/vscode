@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-5-16
+Date generated: 2025-5-22
 
-Revision ID: b018f115c730f827b74e1b81a18b80726b0a2661
+Revision ID: 0bccc0ee9299933ab905c4ef46591c2685493d24
 
 ================================================================================
 ================================================================================
@@ -248,7 +248,7 @@ No licenses found
 - d3-quadtree (3.0.1) [ISC]
 - d3-random (3.0.1) [ISC]
 - d3-scale (4.0.2) [ISC]
-- d3-scale-chromatic (3.1.0) [ISC, Apache-2.0]
+- d3-scale-chromatic (3.1.0) [Apache-2.0, ISC]
 - d3-selection (3.0.0) [ISC]
 - d3-shape (3.2.0) [ISC]
 - d3-time (3.1.0) [ISC]
@@ -527,8 +527,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @0no-co/graphqlsp (1.12.12)
 
@@ -564,8 +562,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @ampproject/remapping (2.3.0)
@@ -789,8 +785,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/code-frame (7.26.2)
 
@@ -827,8 +821,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/compat-data (7.24.7)
@@ -872,8 +864,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/core (7.24.7)
 
@@ -915,8 +905,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/generator (7.24.7)
@@ -960,8 +948,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-compilation-targets (7.24.7)
 
@@ -1003,8 +989,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-environment-visitor (7.24.7)
@@ -1048,8 +1032,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-function-name (7.24.7)
 
@@ -1091,8 +1073,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-hoist-variables (7.24.7)
@@ -1136,8 +1116,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-module-imports (7.24.7)
 
@@ -1179,8 +1157,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-module-transforms (7.24.7)
@@ -1224,8 +1200,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-simple-access (7.24.7)
 
@@ -1267,8 +1241,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-split-export-declaration (7.24.7)
@@ -1312,8 +1284,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-string-parser (7.25.9)
 
@@ -1355,8 +1325,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-validator-identifier (7.25.9)
@@ -1400,8 +1368,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-validator-option (7.24.7)
 
@@ -1443,8 +1409,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helpers (7.26.10)
@@ -1488,8 +1452,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/parser (7.26.10)
 
@@ -1528,8 +1490,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @babel/template (7.26.9)
@@ -1573,8 +1533,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/traverse (7.24.7)
 
@@ -1617,8 +1575,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @babel/types (7.26.10)
 
@@ -1660,8 +1616,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @colors/colors (1.6.0)
@@ -1713,8 +1667,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @dabh/diagnostics (2.0.3)
 
@@ -1754,8 +1706,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @gql.tada/cli-utils (1.5.2)
@@ -2181,8 +2131,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @gql.tada/internal (1.0.5)
 
@@ -2297,8 +2245,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @isaacs/cliui (8.0.2)
 
@@ -2333,8 +2279,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/gen-mapping (0.3.5)
 
@@ -2368,8 +2312,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/resolve-uri (3.1.2)
@@ -2409,8 +2351,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/set-array (1.2.1)
 
@@ -2449,8 +2389,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/sourcemap-codec (1.4.15)
@@ -2493,8 +2431,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/trace-mapping (0.3.25)
 
@@ -2534,8 +2470,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @lukeed/csprng (1.1.0)
 
@@ -2572,8 +2506,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @lukeed/uuid (2.0.1)
@@ -2612,8 +2544,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-element (1.13.0)
 
@@ -2650,8 +2580,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-foundation (2.49.6)
@@ -2703,8 +2631,6 @@ Copyright (C) 2006 by Rob Landley <rob@landley.net>
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-react-wrapper (0.3.24)
@@ -2792,8 +2718,6 @@ Permission to use, copy, modify, and/or distribute this software for any purpose
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-web-utilities (5.4.1)
 
@@ -2829,8 +2753,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/api (1.9.0)
@@ -3257,8 +3179,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/api-logs (0.57.2)
 
@@ -3531,8 +3451,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/context-async-hooks (1.30.1)
 
@@ -3758,8 +3676,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/core (1.30.1)
@@ -4132,8 +4048,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation (0.46.0)
 
@@ -4406,8 +4320,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation (0.57.2)
@@ -4688,8 +4600,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-amqplib (0.46.1)
 
@@ -4914,8 +4824,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-connect (0.43.1)
@@ -5144,8 +5052,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-dataloader (0.16.1)
 
@@ -5370,8 +5276,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-express (0.47.1)
@@ -5602,8 +5506,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-fastify (0.44.2)
 
@@ -5833,8 +5735,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-fs (0.19.1)
 
@@ -6060,8 +5960,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-generic-pool (0.43.1)
 
@@ -6285,8 +6183,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-graphql (0.47.1)
@@ -6518,8 +6414,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-hapi (0.45.2)
 
@@ -6746,8 +6640,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-http (0.57.2)
@@ -6976,8 +6868,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-ioredis (0.47.1)
 
@@ -7204,8 +7094,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-kafkajs (0.7.1)
 
@@ -7429,8 +7317,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-knex (0.44.1)
@@ -7658,8 +7544,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-koa (0.47.1)
 
@@ -7886,8 +7770,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-lru-memoizer (0.44.1)
 
@@ -8111,8 +7993,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mongodb (0.52.0)
@@ -8340,8 +8220,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mongoose (0.46.1)
 
@@ -8566,8 +8444,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mysql (0.45.1)
@@ -8796,8 +8672,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mysql2 (0.45.2)
 
@@ -9023,8 +8897,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-pg (0.51.1)
@@ -9256,8 +9128,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-redis-4 (0.46.1)
 
@@ -9483,8 +9353,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-tedious (0.18.1)
@@ -9712,8 +9580,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-undici (0.10.1)
 
@@ -9940,8 +9806,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/redis-common (0.36.2)
 
@@ -10164,8 +10028,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/resources (1.30.1)
@@ -10523,8 +10385,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/sdk-trace-base (1.30.1)
 
@@ -10842,8 +10702,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/semantic-conventions (1.28.0)
 
@@ -11100,8 +10958,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/semantic-conventions (1.30.0)
@@ -11360,8 +11216,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/sql-common (0.40.1)
 
@@ -11584,8 +11438,6 @@ package.json
    limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @pkgjs/parseargs (0.11.0)
@@ -11834,8 +11686,6 @@ LICENSE
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @prisma/instrumentation (6.4.1)
 
@@ -12057,8 +11907,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-android-arm-eabi (4.24.0)
 
@@ -12094,8 +11942,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-android-arm64 (4.24.0)
@@ -12133,8 +11979,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-darwin-arm64 (4.24.0)
 
@@ -12170,8 +12014,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-darwin-x64 (4.24.0)
@@ -12209,8 +12051,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm-gnueabihf (4.24.0)
 
@@ -12246,8 +12086,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm-musleabihf (4.24.0)
@@ -12285,8 +12123,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm64-gnu (4.24.0)
 
@@ -12322,8 +12158,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm64-musl (4.24.0)
@@ -12361,8 +12195,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-powerpc64le-gnu (4.24.0)
 
@@ -12398,8 +12230,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-riscv64-gnu (4.24.0)
@@ -12437,8 +12267,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-s390x-gnu (4.24.0)
 
@@ -12474,8 +12302,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-x64-gnu (4.24.0)
@@ -12513,8 +12339,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-x64-musl (4.24.0)
 
@@ -12550,8 +12374,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-win32-arm64-msvc (4.24.0)
@@ -12589,8 +12411,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-win32-ia32-msvc (4.24.0)
 
@@ -12627,8 +12447,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-win32-x64-msvc (4.24.0)
 
@@ -12664,8 +12482,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @segment/analytics-core (1.6.0)
@@ -12706,8 +12522,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @segment/analytics-generic-utils (1.2.0)
@@ -12750,8 +12564,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @segment/analytics-node (2.1.2)
 
@@ -12793,8 +12605,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry-internal/node-cpu-profiler (2.1.0)
 
@@ -12835,8 +12645,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/babel-plugin-component-annotate (3.2.1)
@@ -12916,8 +12724,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/bundler-plugin-core (3.2.1)
 
@@ -12992,8 +12798,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli (2.42.2)
 
@@ -13041,8 +12845,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-darwin (2.42.2)
 
@@ -13086,8 +12888,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-arm (2.42.2)
@@ -13133,8 +12933,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-arm64 (2.42.2)
 
@@ -13178,8 +12976,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-i686 (2.42.2)
@@ -13225,8 +13021,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-x64 (2.42.2)
 
@@ -13270,8 +13064,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-win32-i686 (2.42.2)
@@ -13317,8 +13109,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-win32-x64 (2.42.2)
 
@@ -13362,8 +13152,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/core (9.3.0)
@@ -13415,8 +13203,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/node (9.3.0)
@@ -13485,8 +13271,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and limitations under the License.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/opentelemetry (9.3.0)
 
@@ -13528,8 +13312,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @sentry/profiling-node (9.3.0)
 
@@ -13565,8 +13347,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/rollup-plugin (3.2.1)
@@ -13642,8 +13422,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @types/connect (3.4.38)
 
@@ -13684,8 +13462,6 @@ package.json
     SOFTWARE
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @types/estree (1.0.6)
@@ -13728,8 +13504,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @types/mysql (2.15.26)
 
@@ -13771,8 +13545,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @types/node (18.19.67)
 
@@ -13808,8 +13580,6 @@ MIT
     SOFTWARE
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @types/pg (8.6.1)
@@ -13852,8 +13622,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @types/pg-pool (2.0.6)
 
@@ -13894,8 +13662,6 @@ package.json
     SOFTWARE
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @types/shimmer (1.2.0)
@@ -13938,8 +13704,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @types/tedious (4.0.14)
 
@@ -13980,8 +13744,6 @@ package.json
     SOFTWARE
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @types/triple-beam (1.3.5)
@@ -14024,8 +13786,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @volar/language-core (2.4.0-alpha.18)
 
@@ -14061,8 +13821,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @volar/source-map (2.4.0-alpha.18)
@@ -14104,8 +13862,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @vscode/codicons (0.0.36)
@@ -14652,8 +14408,6 @@ Creative Commons is not a party to its public licenses. Notwithstanding, Creativ
 Creative Commons may be contacted at creativecommons.org.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @vscode/l10n (0.0.18)
 
@@ -14689,8 +14443,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @vscode/webview-ui-toolkit (1.4.0)
@@ -14810,8 +14562,6 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @vue/compiler-core (3.4.34)
 
@@ -14847,8 +14597,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @vue/compiler-dom (3.4.34)
@@ -14890,8 +14638,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @vue/compiler-vue2 (2.7.16)
@@ -14943,8 +14689,6 @@ Permission to use, copy, modify, and/or distribute this software for any purpose
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: @vue/language-core (2.0.29)
 
@@ -14985,8 +14729,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: @vue/shared (3.4.34)
@@ -15029,8 +14771,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: abort-controller (3.0.0)
 
@@ -15071,8 +14811,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: acorn (8.14.0)
@@ -15115,8 +14853,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: acorn-import-assertions (1.9.0)
 
@@ -15152,8 +14888,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: acorn-import-attributes (1.9.5)
@@ -15196,8 +14930,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: agent-base (6.0.2)
 
@@ -15234,8 +14966,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: ansi-regex (5.0.1)
@@ -15274,8 +15004,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: ansi-regex (6.0.1)
 
@@ -15312,8 +15040,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: ansi-styles (4.3.0)
@@ -15352,8 +15078,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: ansi-styles (6.2.1)
 
@@ -15391,8 +15115,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: anymatch (3.1.3)
 
@@ -15427,8 +15149,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: archiver (7.0.1)
@@ -15471,8 +15191,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: archiver-utils (5.0.2)
 
@@ -15513,8 +15231,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: aria-query (5.3.0)
@@ -15736,8 +15452,6 @@ limitations under the License.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: async (2.6.4)
 
@@ -15771,8 +15485,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: async (3.2.6)
@@ -15812,8 +15524,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: async-mutex (0.5.0)
@@ -15855,8 +15565,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: axobject-query (4.1.0)
@@ -16079,8 +15787,6 @@ limitations under the License.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: b4a (1.6.6)
 
@@ -16301,8 +16007,6 @@ LICENSE
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: balanced-match (1.0.2)
 
@@ -16344,8 +16048,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: bare-events (2.4.2)
@@ -16568,8 +16270,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: base64-js (1.5.1)
 
@@ -16611,8 +16311,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: binary-extensions (2.3.0)
 
@@ -16650,8 +16348,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: brace-expansion (1.1.11)
 
@@ -16687,8 +16383,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: brace-expansion (2.0.1)
@@ -16732,8 +16426,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: braces (3.0.3)
 
@@ -16769,8 +16461,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: browserslist (4.23.1)
@@ -16811,8 +16501,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: buffer (6.0.3)
@@ -16855,8 +16543,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: buffer-crc32 (1.0.0)
 
@@ -16895,8 +16581,6 @@ FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TOR
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: caniuse-lite (1.0.30001639)
@@ -17313,8 +16997,6 @@ Creative Commons may be contacted at creativecommons.org.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: chokidar (3.6.0)
 
@@ -17356,8 +17038,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: cjs-module-lexer (1.4.3)
 
@@ -17389,8 +17069,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: code-red (1.0.4)
 
@@ -17416,8 +17094,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: color (3.2.1)
@@ -17460,8 +17136,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: color-convert (1.9.3)
 
@@ -17497,8 +17171,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: color-convert (2.0.1)
@@ -17541,8 +17213,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: color-name (1.1.3)
 
@@ -17568,8 +17238,6 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: color-name (1.1.4)
@@ -17597,8 +17265,6 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: color-string (1.9.1)
@@ -17641,8 +17307,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: colorspace (1.1.4)
 
@@ -17677,8 +17341,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: commander (7.2.0)
@@ -17722,8 +17384,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: compress-commons (6.0.2)
 
@@ -17735,10 +17395,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 Copyright (c) 2014 Chris Talkington, contributors.
 
@@ -17763,8 +17419,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: computeds (0.0.1)
@@ -17807,8 +17461,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: concat-map (0.0.1)
 
@@ -17841,8 +17493,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: convert-source-map (2.0.0)
@@ -17887,8 +17537,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: core-util-is (1.0.3)
 
@@ -17928,8 +17576,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: crc-32 (1.2.2)
@@ -18152,8 +17798,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: crc32-stream (6.0.0)
 
@@ -18194,8 +17838,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: cross-spawn (7.0.6)
@@ -18238,8 +17880,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: css-tree (2.3.1)
 
@@ -18279,8 +17919,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3 (7.9.0)
 
@@ -18312,8 +17950,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-array (3.2.4)
@@ -18348,8 +17984,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-axis (3.0.0)
 
@@ -18377,8 +18011,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-brush (3.0.0)
@@ -18413,8 +18045,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-chord (3.0.1)
 
@@ -18448,8 +18078,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-color (3.1.0)
 
@@ -18477,8 +18105,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-contour (4.0.2)
@@ -18512,8 +18138,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-delaunay (6.0.4)
@@ -18549,8 +18173,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-dispatch (3.0.1)
 
@@ -18583,8 +18205,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-drag (3.0.0)
@@ -18619,8 +18239,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-dsv (3.0.1)
 
@@ -18653,8 +18271,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-ease (3.0.1)
@@ -18704,8 +18320,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-fetch (3.0.1)
 
@@ -18738,8 +18352,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-force (3.0.0)
@@ -18774,8 +18386,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-format (3.1.0)
 
@@ -18808,8 +18418,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-geo (3.1.1)
@@ -18891,8 +18499,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-hierarchy (3.1.2)
 
@@ -18925,8 +18531,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-interpolate (3.0.1)
@@ -18961,8 +18565,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-path (3.1.0)
 
@@ -18995,8 +18597,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-polygon (3.0.1)
@@ -19031,8 +18631,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-quadtree (3.0.1)
 
@@ -19065,8 +18663,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-random (3.0.1)
@@ -19101,8 +18697,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-scale (4.0.2)
 
@@ -19136,8 +18730,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-scale-chromatic (3.1.0)
 
@@ -19147,17 +18739,7 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-ISC, Apache-2.0
-
-* ISC *
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
-
-Copyright (c) 2010-2024 Mike Bostock
-Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
-THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+Apache-2.0, ISC
 
 * Apache-2.0 *
 --------------------------------------------------------------------------------
@@ -19195,8 +18777,12 @@ CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
 
+* ISC *
 
-* Package Info *
+Copyright (c) 2010-2024 Mike Bostock
+Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
 
 --------------------------------------------------------------------------------
 Package Title: d3-selection (3.0.0)
@@ -19231,8 +18817,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-shape (3.2.0)
 
@@ -19265,8 +18849,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-time (3.1.0)
@@ -19301,8 +18883,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-time-format (4.1.0)
 
@@ -19335,8 +18915,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: d3-timer (3.0.1)
@@ -19371,8 +18949,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-transition (3.0.1)
 
@@ -19406,8 +18982,6 @@ THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: d3-zoom (3.0.0)
 
@@ -19440,8 +19014,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: dataclass (3.0.0-beta.1)
@@ -19478,8 +19050,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: de-indent (1.0.2)
 
@@ -19515,8 +19085,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: debug (4.4.0)
@@ -19559,8 +19127,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: dedent-js (1.0.1)
 
@@ -19601,8 +19167,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: delaunator (5.0.1)
 
@@ -19637,8 +19201,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: dequal (2.0.3)
@@ -19676,8 +19238,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: detect-libc (2.0.3)
@@ -19905,8 +19465,6 @@ README.md
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: dotenv (16.4.5)
 
@@ -19950,8 +19508,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: dset (3.1.4)
 
@@ -19989,8 +19545,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: eastasianwidth (0.2.0)
 
@@ -20026,8 +19580,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: electron-json-storage (4.6.0)
@@ -20071,8 +19623,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: electron-to-chromium (1.4.816)
 
@@ -20097,8 +19647,6 @@ Permission to use, copy, modify, and/or distribute this software for any purpose
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: emoji-regex (8.0.0)
@@ -20134,8 +19682,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: emoji-regex (9.2.2)
@@ -20177,8 +19723,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: enabled (2.0.0)
 
@@ -20218,8 +19762,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: encoding (0.1.13)
@@ -20285,8 +19827,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: entities (4.5.0)
 
@@ -20317,8 +19857,6 @@ THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRE
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: escalade (3.1.2)
@@ -20357,8 +19895,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: escape-string-regexp (4.0.0)
 
@@ -20396,8 +19932,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: estree-walker (2.0.2)
 
@@ -20418,8 +19952,6 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: estree-walker (3.0.3)
@@ -20446,8 +19978,6 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: event-target-shim (5.0.1)
@@ -20490,8 +20020,6 @@ SOFTWARE.
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: events (3.3.0)
@@ -20551,8 +20079,6 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: exenv-es6 (1.1.1)
 
@@ -20593,8 +20119,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: fast-deep-equal (2.0.1)
@@ -20638,8 +20162,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: fast-fifo (1.3.2)
 
@@ -20675,8 +20197,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: fecha (4.2.3)
@@ -20720,8 +20240,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: fill-range (7.1.1)
 
@@ -20763,8 +20281,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: find-up (5.0.0)
 
@@ -20801,8 +20317,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: fn.name (1.1.0)
@@ -20846,8 +20360,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: foreground-child (3.2.1)
 
@@ -20882,8 +20394,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: forwarded-parse (2.1.2)
@@ -20924,8 +20434,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: fs.realpath (1.0.0)
@@ -21017,8 +20525,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: fsevents (2.3.3)
 
@@ -21061,8 +20567,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: function-bind (1.1.2)
 
@@ -21103,8 +20607,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: gensync (1.0.0-beta.2)
 
@@ -21131,8 +20633,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: glob (10.4.1)
@@ -21164,8 +20664,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: glob (7.2.3)
 
@@ -21187,8 +20685,6 @@ Copyright (c)  Isaac Z. Schlueter and Contributors
 Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
 THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: glob (9.3.5)
@@ -21225,8 +20721,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: glob-parent (5.1.2)
 
@@ -21261,8 +20755,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: globals (11.12.0)
@@ -21300,8 +20792,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: gql.tada (1.8.3)
@@ -21343,8 +20833,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: graceful-fs (4.2.11)
 
@@ -21379,8 +20867,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: graphql (16.8.2)
@@ -21423,8 +20909,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: hasown (2.0.2)
 
@@ -21466,8 +20950,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: he (1.2.0)
 
@@ -21508,8 +20990,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: https-proxy-agent (5.0.1)
 
@@ -21546,8 +21026,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: iconv-lite (0.6.3)
@@ -21590,8 +21068,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: ieee754 (1.2.1)
 
@@ -21622,8 +21098,6 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: import-in-the-middle (1.13.1)
@@ -21889,48 +21363,6 @@ File matches:
 LICENSE-3rdparty.csv
 --------------------------------------------------------------------------------
 
-* Package Info *
-
-* Notice File(s) *
-
-NOTICE
-import-in-the-middle is licensed for use as follows:
-
-Copyright 2024 Node.js contributors. All rights reserved.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-This license applies to parts of import-in-the-middle originating from the
-https://github.com/DataDog/import-in-the-middle repository:
-
-    This product includes software developed at Datadog (https://www.datadoghq.com/).
-
-    Copyright 2021 Datadog, Inc.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-
-
 --------------------------------------------------------------------------------
 Package Title: import-in-the-middle (1.7.1)
 
@@ -22000,18 +21432,6 @@ File matches:
 LICENSE-3rdparty.csv
 --------------------------------------------------------------------------------
 
-* Package Info *
-
-* Notice File(s) *
-
-NOTICE
-Datadog import-in-the-middle
-Copyright 2021 Datadog, Inc.
-
-This product includes software developed at Datadog (https://www.datadoghq.com/).
-
-
-
 --------------------------------------------------------------------------------
 Package Title: imurmurhash (0.1.4)
 
@@ -22049,8 +21469,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: inertial (0.4.1)
 
@@ -22086,8 +21504,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: inflight (1.0.6)
 
@@ -22121,8 +21537,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: inherits (2.0.4)
@@ -22160,8 +21574,6 @@ PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: internmap (2.0.3)
 
@@ -22194,8 +21606,6 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: is-arrayish (0.3.2)
@@ -22239,8 +21649,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: is-binary-path (2.1.0)
 
@@ -22277,8 +21685,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: is-core-module (2.13.1)
@@ -22318,8 +21724,6 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: is-extglob (2.1.1)
@@ -22362,8 +21766,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: is-fullwidth-code-point (3.0.0)
 
@@ -22400,8 +21802,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: is-glob (4.0.3)
@@ -22444,8 +21844,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: is-number (7.0.0)
 
@@ -22487,8 +21885,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: is-reference (3.0.2)
 
@@ -22524,8 +21920,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: is-stream (2.0.1)
@@ -22564,8 +21958,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: isarray (1.0.0)
 
@@ -22603,8 +21995,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: isexe (2.0.0)
 
@@ -22634,8 +22024,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: jackspeak (3.4.0)
@@ -22712,8 +22100,6 @@ software or this license, under any kind of legal claim._**
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: jose (5.6.2)
 
@@ -22754,8 +22140,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: js-tokens (4.0.0)
@@ -22798,8 +22182,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: jsesc (2.5.2)
 
@@ -22839,8 +22221,6 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: json5 (2.2.3)
@@ -22894,8 +22274,6 @@ README.md
 --------------------------------------------------------------------------------
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: jsonc-parser (3.3.1)
 
@@ -22948,8 +22326,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: kuler (2.0.0)
 
@@ -22976,8 +22352,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-electron-client-sdk (1.7.0)
@@ -23011,8 +22385,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-eventsource (1.4.4)
@@ -23065,8 +22437,6 @@ Copyright (c) 1995-2003 by Internet Software Consortium
 Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
 THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-eventsource (2.0.3)
@@ -23126,8 +22496,6 @@ Permission to use, copy, modify, and distribute this software for any purpose wi
 THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-js-client-sdk (2.24.2)
 
@@ -23159,8 +22527,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-js-sdk-common (3.8.2)
@@ -23195,8 +22561,6 @@ limitations under the License.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-js-sdk-common (5.4.0)
 
@@ -23230,8 +22594,6 @@ limitations under the License.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: launchdarkly-node-client-sdk (3.3.0)
 
@@ -23263,8 +22625,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: lazystream (1.0.1)
@@ -23310,8 +22670,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: locate-character (3.0.0)
 
@@ -23347,8 +22705,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: locate-path (6.0.0)
@@ -23387,8 +22743,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: lockfile (1.0.4)
 
@@ -23423,8 +22777,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: lodash (4.17.21)
@@ -23519,8 +22871,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: logform (2.7.0)
 
@@ -23561,8 +22911,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: loose-envify (1.4.0)
@@ -23605,8 +22953,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: lower-case (2.0.2)
 
@@ -23643,8 +22989,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: lru-cache (10.2.2)
 
@@ -23679,8 +23023,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: lru-cache (5.1.1)
@@ -23717,8 +23059,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: magic-string (0.30.10)
 
@@ -23740,8 +23080,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: magic-string (0.30.8)
@@ -23769,8 +23107,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: mdn-data (2.0.30)
@@ -23908,8 +23244,6 @@ For more information, please see
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: minimatch (3.1.2)
 
@@ -23945,8 +23279,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: minimatch (5.1.6)
 
@@ -23980,8 +23312,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: minimatch (8.0.4)
@@ -24018,8 +23348,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: minimatch (9.0.4)
 
@@ -24054,8 +23382,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: minimist (1.2.8)
@@ -24095,8 +23421,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: minipass (4.2.8)
 
@@ -24130,8 +23454,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: minipass (7.1.2)
@@ -24167,8 +23489,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: mkdirp (0.5.6)
@@ -24210,8 +23530,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: module-details-from-path (1.0.3)
@@ -24255,8 +23573,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: ms (2.1.3)
 
@@ -24293,8 +23609,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: muggle-string (0.4.1)
@@ -24337,8 +23651,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: no-case (3.0.4)
 
@@ -24380,8 +23692,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: node-abi (3.74.0)
 
@@ -24422,8 +23732,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: node-fetch (2.7.0)
@@ -24467,8 +23775,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: node-localstorage (1.3.1)
 
@@ -24505,8 +23811,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: node-releases (2.0.14)
@@ -24549,8 +23853,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: normalize-path (3.0.0)
 
@@ -24592,8 +23894,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: once (1.4.0)
 
@@ -24628,8 +23928,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: one-time (1.0.0)
@@ -24667,8 +23965,6 @@ SOFTWARE.
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: opentelemetry-instrumentation-fetch-node (1.2.3)
@@ -24710,8 +24006,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: original (1.0.2)
@@ -24755,8 +24049,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: p-limit (3.1.0)
 
@@ -24794,8 +24086,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: p-locate (5.0.0)
 
@@ -24832,8 +24122,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: pascal-case (3.1.2)
@@ -24875,8 +24163,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: path-browserify (1.0.1)
@@ -24921,8 +24207,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: path-exists (4.0.0)
 
@@ -24959,8 +24243,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: path-is-absolute (1.0.1)
@@ -24999,8 +24281,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: path-key (3.1.1)
 
@@ -25037,8 +24317,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: path-parse (1.0.7)
@@ -25080,8 +24358,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: path-scurry (1.11.1)
@@ -25158,8 +24434,6 @@ software or this license, under any kind of legal claim.***
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: periscopic (3.1.0)
 
@@ -25186,8 +24460,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: pg-int8 (1.0.1)
@@ -25221,8 +24493,6 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: pg-protocol (1.7.1)
@@ -25265,8 +24535,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: pg-types (2.2.0)
 
@@ -25304,8 +24572,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: picocolors (1.1.1)
 
@@ -25340,8 +24606,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: picomatch (2.3.1)
@@ -25384,8 +24648,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: postgres-array (2.0.0)
 
@@ -25422,8 +24684,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: postgres-bytea (1.0.0)
@@ -25462,8 +24722,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: postgres-date (1.0.7)
 
@@ -25501,8 +24759,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: postgres-interval (1.2.0)
 
@@ -25539,8 +24795,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: process (0.11.10)
@@ -25584,8 +24838,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: process-nextick-args (2.0.1)
 
@@ -25622,8 +24874,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: progress (2.0.3)
@@ -25667,8 +24917,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: proxy-from-env (1.1.0)
 
@@ -25708,8 +24956,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: querystringify (2.2.0)
@@ -25753,8 +24999,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: queue-tick (1.0.1)
 
@@ -25796,8 +25040,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: react (18.3.1)
@@ -25852,8 +25094,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: readable-stream (2.3.8)
@@ -25920,8 +25160,6 @@ IN THE SOFTWARE.
 """
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: readable-stream (3.6.2)
@@ -25995,8 +25233,6 @@ IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: readable-stream (4.5.2)
 
@@ -26069,8 +25305,6 @@ IN THE SOFTWARE.
 """
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: readdir-glob (1.1.3)
@@ -26292,8 +25526,6 @@ package.json
    limitations under the License.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: readdirp (3.6.0)
 
@@ -26334,8 +25566,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: require-in-the-middle (7.5.2)
@@ -26380,8 +25610,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: requires-port (1.0.0)
 
@@ -26423,8 +25651,6 @@ SOFTWARE.
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: resolve (1.22.8)
@@ -26485,8 +25711,6 @@ Permission to use, copy, modify, and distribute this software for any purpose wi
 THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: rimraf (2.7.1)
 
@@ -26521,8 +25745,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: robust-predicates (3.0.2)
@@ -26566,8 +25788,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: rollup (4.24.0)
@@ -27268,8 +26488,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: rotating-file-stream (3.2.6)
 
@@ -27310,8 +26528,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: rw (1.3.3)
@@ -27359,8 +26575,6 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: safe-buffer (5.1.2)
 
@@ -27396,8 +26610,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: safe-buffer (5.2.1)
@@ -27440,8 +26652,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: safe-stable-stringify (2.5.0)
 
@@ -27482,8 +26692,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: safer-buffer (2.1.2)
@@ -27526,8 +26734,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: semver (6.3.1)
 
@@ -27563,8 +26769,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: semver (7.6.2)
 
@@ -27599,8 +26803,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: shebang-command (2.0.0)
@@ -27639,8 +26841,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: shebang-regex (3.0.0)
 
@@ -27677,8 +26877,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: shimmer (1.2.1)
@@ -27725,8 +26923,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: signal-exit (3.0.7)
 
@@ -27763,8 +26959,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: signal-exit (4.1.0)
 
@@ -27800,8 +26994,6 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
 ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: simple-swizzle (0.2.2)
@@ -27845,8 +27037,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: slide (1.1.6)
 
@@ -27881,8 +27071,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: source-map-js (1.2.1)
@@ -27943,8 +27131,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: stack-trace (0.0.10)
 
@@ -27981,8 +27167,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: streamx (2.18.0)
@@ -28025,8 +27209,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: string-width (4.2.3)
 
@@ -28063,8 +27245,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: string-width (5.1.2)
@@ -28103,8 +27283,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: string-width-cjs (4.2.3)
 
@@ -28116,8 +27294,6 @@ Package Depth: Transitive
 * Declared Licenses *
 No licenses found
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: string_decoder (1.1.1)
@@ -28185,8 +27361,6 @@ IN THE SOFTWARE.
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: string_decoder (1.3.0)
@@ -28257,8 +27431,6 @@ IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: strip-ansi (6.0.1)
 
@@ -28295,8 +27467,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: strip-ansi (7.1.0)
@@ -28335,8 +27505,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: strip-ansi-cjs (6.0.1)
 
@@ -28348,8 +27516,6 @@ Package Depth: Transitive
 * Declared Licenses *
 No licenses found
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: supports-preserve-symlinks-flag (1.0.0)
@@ -28392,8 +27558,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: svelte (4.2.19)
 
@@ -28420,8 +27584,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: svelte2tsx (0.7.13)
@@ -28463,8 +27625,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: tabbable (5.3.3)
@@ -28508,8 +27668,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: tail (2.2.6)
 
@@ -28551,8 +27709,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: tar-stream (3.1.7)
 
@@ -28593,8 +27749,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: text-decoder (1.1.0)
@@ -28817,8 +27971,6 @@ package.json
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: text-hex (1.0.0)
 
@@ -28859,8 +28011,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: to-regex-range (5.0.1)
@@ -28903,8 +28053,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: tr46 (0.0.3)
 
@@ -28940,8 +28088,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: triple-beam (1.4.1)
@@ -28984,8 +28130,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: tslib (1.14.1)
 
@@ -29015,8 +28159,6 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: tslib (2.8.1)
@@ -29053,8 +28195,6 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: typescript (5.4.5)
@@ -29226,8 +28366,6 @@ END OF TERMS AND CONDITIONS
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: undici (6.21.2)
 
@@ -29270,8 +28408,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: undici-types (5.26.5)
 
@@ -29307,8 +28443,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: unplugin (1.0.1)
@@ -29350,8 +28484,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: unzipit (1.4.3)
@@ -29416,8 +28548,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: update-browserslist-db (1.0.16)
 
@@ -29457,8 +28587,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: url-parse (1.5.10)
@@ -29501,8 +28629,6 @@ SOFTWARE.
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: util-deprecate (1.0.2)
@@ -29549,8 +28675,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: uuid (11.1.0)
 
@@ -29578,8 +28702,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: uuid (3.4.0)
@@ -29623,8 +28745,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: uuid (8.3.2)
 
@@ -29655,8 +28775,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: uzip-module (1.0.3)
@@ -29700,8 +28818,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: vscode-json-languageservice (5.4.2)
@@ -29832,8 +28948,6 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISE
  OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: vscode-jsonrpc (8.2.0)
 
@@ -29893,29 +29007,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-
-* Package Info *
-
-* Notice File(s) *
-
-thirdpartynotices.txt
-NOTICES AND INFORMATION
-Do Not Translate or Localize
-
-This software incorporates material from third parties.
-Microsoft makes certain open source code available at https://3rdpartysource.microsoft.com,
-or you may send a check or money order for US $5.00, including the product name,
-the open source component name, platform, and version number, to:
-
-Source Code Compliance Team
-Microsoft Corporation
-One Microsoft Way
-Redmond, WA 98052
-USA
-
-Notwithstanding any other terms, you may reverse engineer this software to the extent
-required to debug changes to any libraries licensed under the GNU Lesser General Public License.
 
 
 --------------------------------------------------------------------------------
@@ -30016,8 +29107,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: vscode-languageserver (9.0.1)
 
@@ -30084,97 +29173,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-
-* Package Info *
-
-* Notice File(s) *
-
-thirdpartynotices.txt
-NOTICES AND INFORMATION
-Do Not Translate or Localize
-
-This software incorporates material from third parties.
-Microsoft makes certain open source code available at https://3rdpartysource.microsoft.com,
-or you may send a check or money order for US $5.00, including the product name,
-the open source component name, platform, and version number, to:
-
-Source Code Compliance Team
-Microsoft Corporation
-One Microsoft Way
-Redmond, WA 98052
-USA
-
-Notwithstanding any other terms, you may reverse engineer this software to the extent
-required to debug changes to any libraries licensed under the GNU Lesser General Public License.
-
-
----------------------------------------------------------
-
-vscode-jsonrpc - MIT
-https://github.com/Microsoft/vscode-languageserver-node#readme
-
-Copyright (c) Microsoft Corporation.
-
-Copyright (c) Microsoft Corporation
-
-All rights reserved.
-
-MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
----------------------------------------------------------
-
----------------------------------------------------------
-
-vscode-languageserver-protocol - MIT
-https://github.com/Microsoft/vscode-languageserver-node#readme
-
-Copyright (c) TypeFox and others.
-Copyright (c) Microsoft Corporation.
-
-Copyright (c) Microsoft Corporation
-
-All rights reserved.
-
-MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
----------------------------------------------------------
-
----------------------------------------------------------
-
-vscode-languageserver-types - MIT
-https://github.com/Microsoft/vscode-languageserver-node#readme
-
-Copyright (c) Microsoft Corporation.
-
-Copyright (c) Microsoft Corporation
-
-All rights reserved.
-
-MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
----------------------------------------------------------
 
 
 --------------------------------------------------------------------------------
@@ -30248,44 +29246,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
-* Notice File(s) *
-
-thirdpartynotices.txt
-THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
-For Microsoft vscode-languageclient
-
-This project incorporates material from the project(s) listed below (collectively, “Third Party Code”).
-Microsoft is not the original author of the Third Party Code.  The original copyright notice and license
-under which Microsoft received such Third Party Code are set out below. This Third Party Code is licensed
-to you under their original license terms set forth below.  Microsoft reserves all other rights not expressly
-granted, whether by implication, estoppel or otherwise.
-
-1.       DefinitelyTyped version 0.0.1 (https://github.com/borisyankov/DefinitelyTyped)
-
-This project is licensed under the MIT license.
-Copyrights are respective of each contributor listed at the beginning of each definition file.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-
 --------------------------------------------------------------------------------
 Package Title: vscode-languageserver-textdocument (1.0.12)
 
@@ -30324,8 +29284,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: vscode-languageserver-types (3.17.5)
@@ -30366,29 +29324,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
-* Notice File(s) *
-
-thirdpartynotices.txt
-NOTICES AND INFORMATION
-Do Not Translate or Localize
-
-This software incorporates material from third parties.
-Microsoft makes certain open source code available at https://3rdpartysource.microsoft.com,
-or you may send a check or money order for US $5.00, including the product name,
-the open source component name, platform, and version number, to:
-
-Source Code Compliance Team
-Microsoft Corporation
-One Microsoft Way
-Redmond, WA 98052
-USA
-
-Notwithstanding any other terms, you may reverse engineer this software to the extent
-required to debug changes to any libraries licensed under the GNU Lesser General Public License.
-
-
 --------------------------------------------------------------------------------
 Package Title: vscode-uri (3.0.8)
 
@@ -30421,8 +29356,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: webidl-conversions (3.0.1)
 
@@ -30454,8 +29387,6 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: webpack-sources (3.2.3)
@@ -30498,8 +29429,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: webpack-virtual-modules (0.5.0)
 
@@ -30540,8 +29469,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: whatwg-url (5.0.0)
@@ -30584,8 +29511,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: which (2.0.2)
 
@@ -30620,8 +29545,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: winston (3.17.0)
@@ -30660,8 +29583,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: winston-transport (4.9.0)
@@ -30705,8 +29626,6 @@ SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: wrap-ansi (8.1.0)
 
@@ -30744,8 +29663,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: wrap-ansi-cjs (7.0.0)
 
@@ -30757,8 +29674,6 @@ Package Depth: Transitive
 * Declared Licenses *
 No licenses found
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: wrappy (1.0.2)
@@ -30795,8 +29710,6 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: write-file-atomic (1.3.4)
 
@@ -30817,8 +29730,6 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: write-file-atomic (2.4.3)
@@ -30845,8 +29756,6 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: ws (8.18.0)
@@ -30888,8 +29797,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: xtend (4.0.2)
 
@@ -30930,8 +29837,6 @@ THE SOFTWARE.
 
 
 
-* Package Info *
-
 --------------------------------------------------------------------------------
 Package Title: yallist (3.1.1)
 
@@ -30966,8 +29871,6 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: yocto-queue (0.1.0)
@@ -31005,8 +29908,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-* Package Info *
 
 --------------------------------------------------------------------------------
 Package Title: zip-stream (6.0.1)
@@ -31048,8 +29949,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-
-* Package Info *
 
 
 ================================================================================
@@ -40281,6 +39180,10 @@ SOFTWARE.
 --------------------------------------------------------------------------------
 No Associated License
 
+Copyright (c) 2012-2014 Chris Talkington, contributors.
+
+Copyright (c) 2015 Chris Talkington.
+
 Copyright (c) 2021 A11yance
 
 Copyright (c) 2019 Jon Schlinkert](https://github.com/jonschlinkert).
@@ -40305,7 +39208,11 @@ Copyright (c) 2010-2021 Mike Bostock
 
 Copyright (c) 2010-2021 Mike Bostock, 2001 Robert Penner
 
+Copyright (c) 2010-2024 Mike Bostock, 2008-2012 Charles Karney
+
 Copyright (c) 2015-2022 Mike Bostock
+
+Copyright (c) 2010-2024 Mike Bostock; 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State University
 
 Copyright (c) 2015 Toru Nagashima. All rights reserved.
 
@@ -40530,4 +39437,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-5-16
+Report Generated by FOSSA on 2025-5-22
