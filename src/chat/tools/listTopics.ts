@@ -12,7 +12,7 @@ import { Logger } from "../../logging";
 import { KafkaCluster } from "../../models/kafkaCluster";
 import { ConnectionId } from "../../models/resource";
 import { KafkaTopic } from "../../models/topic";
-import { summarizeTopics } from "../summarizers/topics";
+import { summarizeTopic } from "../summarizers/topics";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
 const logger = new Logger("chat.tools.listTopics");
@@ -114,8 +114,11 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     }
 
     logger.debug(`Summarizing ${sampleTopics.length} topics`);
-    const summary = sampleTopics.map(summarizeTopics).join("\n");
-    return new LanguageModelToolResult([new LanguageModelTextPart(summary)]);
+    const topicTextParts: LanguageModelTextPart[] = sampleTopics.map((topic) => {
+      const topicSummary = summarizeTopic(topic);
+      return new LanguageModelTextPart(topicSummary);
+    });
+    return new LanguageModelToolResult(topicTextParts);
   }
   async processInvocation(
     request: ChatRequest,
