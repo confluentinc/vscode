@@ -225,7 +225,7 @@ Here are some areas that we've yet to explore and that we may explore in the fut
    For anyone that looks into this, use the `DEBUG=pw:browser*` environment variable to get more
    detailed logs from the Playwright browser. And best of luck!
 
-   Here's the error that we got when we tried to run the tests on an Linux x64 machine:
+   Here's the error that we got when we tried to run the tests on an Linux x64 machine using `xvfb-run -a npx gulp e2e`:
 
     <details>
     <summary>Error message</summary>
