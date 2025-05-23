@@ -9,8 +9,7 @@ export default defineConfig({
     viewport: { width: 1920, height: 1080 },
   },
   workers: 1,
-  globalSetup: "./tests/e2e/setup.ts",
-  testMatch: "**/*.spec.ts",
+  testMatch: "src/**/*.spec.ts",
   reporter: [
     ["list"],
     ["rollwright/coverage-reporter", { name: "text" }],
