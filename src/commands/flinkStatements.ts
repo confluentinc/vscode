@@ -218,8 +218,9 @@ export async function submitFlinkStatementCommand(
         failure_reason: newStatement.status.detail,
       });
 
+      // limit the error message content so the notification isn't hidden automatically
       await showErrorNotificationWithButtons(
-        `Error submitting statement: ${newStatement.status.detail}`,
+        `Error submitting statement: ${newStatement.status.detail?.slice(0, 500)}`,
       );
       return;
     }
