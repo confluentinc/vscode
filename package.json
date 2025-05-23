@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.4.0-22",
+  "version": "1.4.0-23",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -68,7 +68,7 @@
       }
     ],
     "languageModelTools": [
-            {
+      {
         "name": "list_topics",
         "when": "confluent.chatParticipantEnabled",
         "tags": [
@@ -78,7 +78,7 @@
         "modelDescription": "List all available topics in the Kafka cluster. Use this when the user asks about available topics or you want to show them a list of topics.",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "listTopics",
-        "userDescription": "List all available topics in the Kafka cluster.", 
+        "userDescription": "List all available topics in the Kafka cluster.",
         "icon": "$(list-selection)",
         "inputSchema": {
           "type": "object",
