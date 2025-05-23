@@ -24,3 +24,5 @@ export const ENABLE_REQUEST_RESPONSE_LOGGING: boolean =
 export const SIDECAR_PROCESS_ID_HEADER = "x-sidecar-pid";
 
 export const SIDECAR_LOGFILE_NAME = "vscode-confluent-sidecar.log";
+
+export const MOMENTARY_PAUSE_MS = 500; // half a second.

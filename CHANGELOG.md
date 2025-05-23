@@ -21,6 +21,7 @@ All notable changes to this extension will be documented in this file.
 
 - Fixed an issue where the "File Issue" button would not work if the extension failed to activate
   properly. [#1823](https://github.com/confluentinc/vscode/issues/1823)
+- Improved sidecar startup diagnostics and presentation to the user in various cases.
 
 ## 1.3.0
 
