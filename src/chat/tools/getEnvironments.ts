@@ -97,7 +97,11 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       const resultsHeader = new LanguageModelTextPart("Here are your available environments:");
       resultParts.push(resultsHeader);
       resultParts.push(...contents);
-      // TODO: add footer hint for providing env child resource IDs for follow-up tool calls
+      // Add footer hint for follow-up tool calls
+      const footerHint = new LanguageModelTextPart(
+        "\nTo interact with these environments, use their IDs in follow-up tool calls, such as or 'list_topics'.",
+      );
+      resultParts.push(footerHint);
     }
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
