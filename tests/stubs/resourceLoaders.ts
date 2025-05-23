@@ -1,4 +1,4 @@
-import { SinonSandbox, SinonStubbedInstance } from "sinon";
+import { SinonSandbox, SinonStub, SinonStubbedInstance } from "sinon";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../../src/constants";
 import {
   CCloudResourceLoader,
@@ -6,6 +6,43 @@ import {
   LocalResourceLoader,
   ResourceLoader,
 } from "../../src/loaders";
+import { ConnectionId } from "../../src/models/resource";
+import { TEST_DIRECT_CONNECTION_ID } from "../unit/testResources/connection";
+
+/**
+ * The stub for the static `getInstance()` method of the {@link ResourceLoader} class, set within
+ * the {@link configureGetInstanceStub} function.
+ */
+export let getInstanceStub: SinonStub | undefined;
+
+/**
+ * Configures the stub for the static `getInstance()` method of the {@link ResourceLoader} class.
+ * If the stub already exists, it reuses it and updates the return value.
+ *
+ * This function is used to stub the `getInstance()` method for a specific connection ID and
+ * returns the stubbed instance of the {@link ResourceLoader} class.
+ *
+ * @param sandbox The {@link SinonSandbox} to use for creating stubs.
+ * @param loader The stubbed instance of the {@link ResourceLoader} class to return.
+ * @param connectionId Optional connection ID for which to register the stub.
+ */
+function configureGetInstanceStub(
+  sandbox: SinonSandbox,
+  loader: SinonStubbedInstance<
+    ResourceLoader | CCloudResourceLoader | LocalResourceLoader | DirectResourceLoader
+  >,
+  connectionId?: ConnectionId,
+): void {
+  if (!getInstanceStub) {
+    getInstanceStub = sandbox.stub(ResourceLoader, "getInstance");
+  }
+  // once we have a stub, we just specify the stubbed loader returned for the connectionId
+  if (connectionId) {
+    getInstanceStub.withArgs(connectionId).returns(loader);
+  } else {
+    getInstanceStub.returns(loader);
+  }
+}
 
 /**
  * Creates a stubbed instance of the abstract {@link ResourceLoader} class.
@@ -28,7 +65,7 @@ export function getStubbedResourceLoader(
   stubbedLoader.getSchemaRegistryForEnvironmentId = sandbox.stub();
   stubbedLoader.getTopicSubjectGroups = sandbox.stub();
   // stub the static method to return the stubbed instance
-  sandbox.stub(ResourceLoader, "getInstance").returns(stubbedLoader);
+  configureGetInstanceStub(sandbox, stubbedLoader);
   return stubbedLoader;
 }
 
@@ -49,7 +86,7 @@ export function getStubbedCCloudResourceLoader(
     sandbox.createStubInstance(CCloudResourceLoader);
   // stub the static methods to return the stubbed instance
   sandbox.stub(CCloudResourceLoader, "getInstance").returns(stubbedLoader);
-  sandbox.stub(ResourceLoader, "getInstance").withArgs(CCLOUD_CONNECTION_ID).returns(stubbedLoader);
+  configureGetInstanceStub(sandbox, stubbedLoader, CCLOUD_CONNECTION_ID);
   return stubbedLoader;
 }
 
@@ -70,40 +107,30 @@ export function getStubbedLocalResourceLoader(
     sandbox.createStubInstance(LocalResourceLoader);
   // stub the static methods to return the stubbed instance
   sandbox.stub(LocalResourceLoader, "getInstance").returns(stubbedLoader);
-  sandbox.stub(ResourceLoader, "getInstance").withArgs(LOCAL_CONNECTION_ID).returns(stubbedLoader);
+  configureGetInstanceStub(sandbox, stubbedLoader, LOCAL_CONNECTION_ID);
   return stubbedLoader;
 }
 
 /**
  * Creates a stubbed instance of the {@link DirectResourceLoader} class.
  *
- * This function stubs the static `getInstance()` method of {@link DirectResourceLoader}
- * and conditionally stubs the {@link ResourceLoader.getInstance} method for connection IDs
- * that are not {@linkcode CCLOUD_CONNECTION_ID} or {@linkcode LOCAL_CONNECTION_ID}.
- *
- * Unlike the other stub functions, this preserves any existing stubs for the `CCLOUD` and `LOCAL`
- * connections.
+ * Unlike the CCloud/local loader stub functions, this function does not stub the static
+ * `getInstance()` method of the {@link DirectResourceLoader} class, since it is not a singleton.
+ * Instead, it only stubs the {@link ResourceLoader} class's static `getInstance()` method to return
+ * the created stub based on the provided connection ID or the default {@linkcode TEST_DIRECT_CONNECTION_ID}.
  *
  * @param sandbox The {@link SinonSandbox} to use for creating stubs.
+ * @param connectionId Optional connection ID for which to register the stub. If not provided,
+ * the stub will be registered for the {@linkcode TEST_DIRECT_CONNECTION_ID}.
  * @returns A {@link SinonStubbedInstance} of the {@link DirectResourceLoader} class.
  */
 export function getStubbedDirectResourceLoader(
   sandbox: SinonSandbox,
+  connectionId?: ConnectionId,
 ): SinonStubbedInstance<DirectResourceLoader> {
   const stubbedLoader: SinonStubbedInstance<DirectResourceLoader> =
     sandbox.createStubInstance(DirectResourceLoader);
-  // stub the static methods to return the stubbed instance
-  sandbox.stub(DirectResourceLoader, "getInstance").returns(stubbedLoader);
-  const originalGetInstance = ResourceLoader.getInstance;
-  sandbox.stub(ResourceLoader, "getInstance").callsFake((connectionId) => {
-    // only stub the getInstance method for non-local and non-ccloud connections. otherwise, return
-    // the original instance (and if those are stubbed as well from the above functions, return
-    // those stubbed instances)
-    if (connectionId === CCLOUD_CONNECTION_ID || connectionId === LOCAL_CONNECTION_ID) {
-      return originalGetInstance.call(ResourceLoader, connectionId);
-    }
-    return stubbedLoader;
-  });
-
+  // don't stub DirectResourceLoader.getInstance() since it is not a singleton
+  configureGetInstanceStub(sandbox, stubbedLoader, connectionId ?? TEST_DIRECT_CONNECTION_ID);
   return stubbedLoader;
 }
