@@ -68,6 +68,45 @@
       }
     ],
     "languageModelTools": [
+            {
+        "name": "list_topics",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "topics"
+        ],
+        "displayName": "List Topics",
+        "modelDescription": "List all available topics in the Kafka cluster. Use this when the user asks about available topics or you want to show them a list of topics.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "listTopics",
+        "userDescription": "List all available topics in the Kafka cluster.", 
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kafkaClusterId": {
+              "type": "string",
+              "description": "The ID of the specific Kafka cluster to list topics for. Note: This is distinct from the connection and environment IDs, which will share the same value in LOCAL and DIRECT connection types."
+            },
+            "topicNameSubstring": {
+              "type": "string",
+              "description": "An optional substring to filter the list of topics by name."
+            },
+            "environmentId": {
+              "type": "string",
+              "description": "The ID of the environment containing the Kafka cluster. For CCLOUD connections, this is a distinct environment ID. For LOCAL and DIRECT connections, this will match the connectionId."
+            },
+            "connectionId": {
+              "type": "string",
+              "description": "The ID of the connection to use. Identifies which connection configuration to use when accessing the Kafka cluster."
+            }
+          },
+          "required": [
+            "kafkaClusterId",
+            "environmentId",
+            "connectionId"
+          ]
+        }
+      },
       {
         "name": "list_projectTemplates",
         "when": "confluent.chatParticipantEnabled",
