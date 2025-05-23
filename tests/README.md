@@ -204,7 +204,7 @@ Here are some gotchas that we've encountered while developing and debugging the 
    `await expect(<locator>).toBeVisible();`) for the subject schemas to be listed before proceeding
    to open the Command Palette.
 
-1. If you're using `page.getByText` or `page.getByLabel` to locate an element, you may (almost
+1. If you're using `page.getByText` (or similar `getBy*` APIs) to locate an element, you may (almost
    always) run into cases where it's going to match multiple elements. In most cases, the first
    element is what you want, so you can use the `first` modifier to get the first element.
 
