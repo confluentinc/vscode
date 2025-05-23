@@ -119,6 +119,9 @@ export async function testFlinkStatement(page: Page, params: FlinkStatementTestP
 
   const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
+  // Assert that we can see the columns immediately.
+  await expect(webview.getByTestId(FlinkStatementTestIds.columnRow)).toBeVisible();
+
   // Wait for statement to run and verify status
   await verifyStatementStatus(webview, params.eventualExpectedStatus);
 

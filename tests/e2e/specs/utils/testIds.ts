@@ -13,4 +13,6 @@ export enum FlinkStatementTestIds {
 
   // Results related
   resultsStats = "results-stats",
+  waitingForResults = "waiting-for-results",
+  columnRow = "column-row",
 }
