@@ -99,7 +99,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       resultParts.push(...contents);
       // Add footer hint for follow-up tool calls
       const footerHint = new LanguageModelTextPart(
-        "\nTo interact with these environments, use their IDs in follow-up tool calls, such as or 'list_topics'.",
+        "\nTo interact with these environments, use their IDs in follow-up tool calls, such as 'list_topics'.",
       );
       resultParts.push(footerHint);
     }

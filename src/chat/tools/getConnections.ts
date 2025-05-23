@@ -160,7 +160,7 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       resultParts.push(...(result.content as LanguageModelTextPart[]));
       // Add footer hint for providing the connection type/ID for looking up resource details
       const footerHint = new LanguageModelTextPart(
-        "\nTo interact with these connections, use their IDs in follow-up tool calls, such as 'list_environments' or 'list_topics'.",
+        "\nTo interact with these connections, use their IDs in follow-up tool calls, such as 'get_environments' or 'list_topics'.",
       );
       resultParts.push(footerHint);
     }
