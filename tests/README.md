@@ -22,7 +22,8 @@ launch VS Code and interact with it programmatically.
 - `specs` directory contains the test files.
 - `specs/utils` directory contains utility functions for the tests.
 
-> [!NOTE] What's the difference between `gulp e2e` and `gulp functional`?
+> [!NOTE] 
+> What's the difference between `gulp e2e` and `gulp functional`?
 >
 > `gulp e2e` runs the E2E tests in the `tests/e2e/specs` directory, whereas `gulp functional` runs
 > the functional tests present scattered across the `src` directory. Both use Playwright to run the
@@ -31,7 +32,8 @@ launch VS Code and interact with it programmatically.
 
 ### Running the E2E tests
 
-> [!IMPORTANT] Please close any already-open VS Code windows before running the tests. This is
+> [!IMPORTANT] 
+> Please close any already-open VS Code windows before running the tests. This is
 > because the tests launch their own VS Code instance and need to properly handle browser auth
 > callbacks.
 
