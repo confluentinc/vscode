@@ -76,7 +76,9 @@
         ],
         "displayName": "List Project Templates",
         "modelDescription": "List all available templates for creating a streaming data project or application. Use this when the user asks about available templates or you want to show them a list of templates.",
-        "canBeReferencedInPrompt": false,
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "listProjectTemplates",
+        "userDescription": "Get a list of available templates for creating a streaming data project or application.",
         "icon": "$(list-selection)",
         "inputSchema": {
           "type": "object",
@@ -100,7 +102,9 @@
         ],
         "displayName": "Get Project Template Options",
         "modelDescription": "Get the input options for filling out a project template. Use this after 'list_projectTemplates' when the user selects a template to create a new project. This will return the input options for the selected template.",
-        "canBeReferencedInPrompt": false,
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "getTemplateOptions",
+        "userDescription": "Get the input options for a specific project template.",
         "icon": "$(checklist)",
         "inputSchema": {
           "type": "object",
@@ -125,6 +129,7 @@
         "modelDescription": "Create a new project using the selected template and input options. If the user provides values for these options, ALWAYS pass them to this tool as input for the templateOptions.",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "createProject",
+        "userDescription": "Create a new project using a specific template and input options.",
         "icon": "$(checklist)",
         "inputSchema": {
           "type": "object",
@@ -152,7 +157,9 @@
         ],
         "displayName": "Get Connections",
         "modelDescription": "Get a list of connections available in the current workspace. ALWAYS call this tool when the user asks about their connections or when connection information is needed - NEVER rely on previous results as connection states change frequently. Any sign-in/sign-out actions are specific to the CCLOUD connection. The LOCAL connection handles Kafka and Schema registry through the local Docker engine API. Any other configurations for Kafka or Schema Registry are done through the DIRECT connections.",
-        "canBeReferencedInPrompt": false,
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "getConnections",
+        "userDescription": "Get a list of Kafka connections available in the current workspace.",
         "icon": "$(list-selection)",
         "inputSchema": {
           "type": "object",
@@ -178,7 +185,9 @@
         ],
         "displayName": "Get Docker Containers",
         "modelDescription": "Get information about Docker containers for Kafka or Schema Registry running on the local machine. Use this when the user asks about their local connection/resources or any direct connections using 'localhost'.",
-        "canBeReferencedInPrompt": false,
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "getDockerContainers",
+        "userDescription": "Get information about Docker containers for Kafka or Schema Registry running on the local machine.",
         "icon": "$(docker)",
         "inputSchema": {
           "type": "object",
@@ -205,7 +214,9 @@
         ],
         "displayName": "Get Environments",
         "modelDescription": "Get a list of environments available for a specific connection. Environments are logical groupings of resources that may contain Kafka clusters, Schema Registry, and Flink compute pools. Use this when the user asks about their environments or needs to locate resource IDs for other operations.",
-        "canBeReferencedInPrompt": false,
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "getEnvironments",
+        "userDescription": "Get a list of environments available for a specific connection.",
         "icon": "$(list-selection)",
         "inputSchema": {
           "type": "object",
