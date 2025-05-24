@@ -31,3 +31,10 @@ blocks:
         - name: "Run E2E Tests"
           commands:
             - make e2e
+      epilogue:
+        always:
+          commands:
+            - |
+              if [ -d test-results ]; then
+                artifact push workflow test-results
+              fi
