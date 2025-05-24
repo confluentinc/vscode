@@ -240,6 +240,7 @@ export const test = base.extend<
           "--disable-updates",
           "--skip-welcome",
           "--skip-release-notes",
+          "--disable-telemetry",
           "--use-inmemory-secretstorage",
           "--disable-workspace-trust",
           `--extensions-dir=${path.join(cachePath, "extensions")}`,
