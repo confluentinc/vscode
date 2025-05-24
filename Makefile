@@ -18,7 +18,7 @@ install-test-dependencies:
 	@echo "Installing test dependencies for $(shell uname -s)"
 	@if [ $$(uname -s) = "Linux" ]; then \
 			sudo apt-get update; \
-			sudo apt install -y libgbm1 libgtk-3-0 xvfb dbus-x11; \
+			sudo apt install -y libgbm1 libgtk-3-0 xvfb dbus-x11 libsecret-1-0 libsecret-1-dev gnome-keyring; \
 	fi
 
 .PHONY: setup-test-env
@@ -54,9 +54,8 @@ test: setup-test-env install-test-dependencies install-dependencies
 
 .PHONY: e2e
 e2e: setup-test-env install-test-dependencies install-dependencies
-	export XDG_RUNTIME_DIR=/tmp/runtime-$$(id -u) && \
-	mkdir -p $$XDG_RUNTIME_DIR && \
 	export $$(dbus-launch) && \
+	export $$(gnome-keyring-daemon --start) && \
 	npx gulp --series ci e2e
 
 # Validates bump based on current version (in package.json)
