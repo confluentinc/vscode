@@ -20,6 +20,7 @@ export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
   testDir: path.join(__dirname, "specs"),
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  maxFailures: process.env.CI ? 1 : 0,
   timeout: 120000,
   workers: 1,
   expect: {
