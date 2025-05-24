@@ -18,7 +18,7 @@ install-test-dependencies:
 	@echo "Installing test dependencies for $(shell uname -s)"
 	@if [ $$(uname -s) = "Linux" ]; then \
 			sudo apt-get update; \
-			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
+			sudo apt install -y libgbm1 libgtk-3-0 xvfb dbus-x11; \
 	fi
 
 .PHONY: setup-test-env
@@ -54,8 +54,8 @@ test: setup-test-env install-test-dependencies install-dependencies
 
 .PHONY: e2e
 e2e: setup-test-env install-test-dependencies install-dependencies
-	export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u) && \
-	export DBUS_SESSION_BUS_ADDRESS=/dev/null && \
+	export XDG_RUNTIME_DIR=/tmp/runtime-$$(id -u) && \
+	export $$(dbus-launch) && \
 	mkdir -p $$XDG_RUNTIME_DIR && \
 	npx gulp --series ci e2e
 
