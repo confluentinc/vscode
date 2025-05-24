@@ -738,6 +738,7 @@ export function e2eRun(done) {
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
   const command = [
+    "DEBUG=*",
     "xvfb-maybe",
     "playwright",
     "test",

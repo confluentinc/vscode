@@ -19,8 +19,6 @@ global_job_config:
   env_vars:
     - name: NODE_ENV
       value: "development"
-    - name: DEBUG
-      value: "*"
 
 blocks:
   - name: "Run E2E Tests"
