@@ -738,7 +738,6 @@ export function e2eRun(done) {
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
   const command = [
-    "DEBUG=*",
     "xvfb-maybe",
     "playwright",
     "test",
@@ -752,6 +751,10 @@ export function e2eRun(done) {
   const result = spawnSync("npx", command, {
     stdio: "inherit",
     shell: IS_WINDOWS,
+    env: {
+      ...process.env,
+      DEBUG: "*",
+    },
   });
   if (result.error) throw result.error;
   return done(result.status);
