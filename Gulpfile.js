@@ -751,6 +751,10 @@ export function e2eRun(done) {
   const result = spawnSync("npx", command, {
     stdio: "inherit",
     shell: IS_WINDOWS,
+    env: {
+      ...process.env,
+      DEBUG: "pw:browser,pw:channel,pw:error,-pw:test:protocol",
+    },
   });
   if (result.error) throw result.error;
   return done(result.status);
