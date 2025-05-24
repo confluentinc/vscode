@@ -55,6 +55,7 @@ test: setup-test-env install-test-dependencies install-dependencies
 .PHONY: e2e
 e2e: setup-test-env install-test-dependencies install-dependencies
 	export XDG_RUNTIME_DIR=/run/user/$$(id -u) && \
+	eval $$(dbus-launch --sh-syntax --exit-with-session) && \
 	npx gulp --series ci e2e
 
 # Validates bump based on current version (in package.json)
