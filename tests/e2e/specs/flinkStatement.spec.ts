@@ -1,5 +1,5 @@
 import { FrameLocator } from "@playwright/test";
-import { test } from "vscode-test-playwright";
+import { test } from "../vscode-test-playwright";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 import { enableFlink } from "./utils/flink";
