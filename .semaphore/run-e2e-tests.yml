@@ -20,7 +20,7 @@ global_job_config:
     - name: NODE_ENV
       value: "development"
     - name: DEBUG
-      value: "pw:browser*"
+      value: "*"
 
 blocks:
   - name: "Run E2E Tests"
