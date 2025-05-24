@@ -6,7 +6,8 @@ import { Page } from "@playwright/test";
  * @param page
  */
 export async function openConfluentExtension(page: Page): Promise<void> {
-  await page.waitForLoadState("domcontentloaded");
+  await page.waitForFunction(() => document.readyState === "complete", { timeout: 30000 });
+  await page.waitForLoadState("domcontentloaded", { timeout: 30000 });
 
   const confluentTab = await page.getByRole("tab", { name: "Confluent" }).locator("a").first();
   await confluentTab.click();
