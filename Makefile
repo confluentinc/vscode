@@ -54,7 +54,7 @@ test: setup-test-env install-test-dependencies install-dependencies
 
 .PHONY: e2e
 e2e: setup-test-env install-test-dependencies install-dependencies
-	npx gulp ci e2e
+	npx gulp --series ci e2e
 
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
