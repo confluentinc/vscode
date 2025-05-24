@@ -55,7 +55,6 @@ test: setup-test-env install-test-dependencies install-dependencies
 .PHONY: e2e
 e2e: setup-test-env install-test-dependencies install-dependencies
 	export XDG_RUNTIME_DIR=/run/user/$$(id -u) && \
-	mkdir -p $$XDG_RUNTIME_DIR && \
 	export $$(dbus-launch) && \
 	npx gulp --series ci e2e
 
