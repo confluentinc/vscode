@@ -72,7 +72,7 @@ export async function schemaRegistryQuickPick(
     }
     // TODO: offer button for creating a direct connection?
     window
-      .showInformationMessage("No Schema registries available.", login, local)
+      .showInformationMessage("No Schema Registries available.", login, local)
       .then((selected) => {
         if (selected === login) {
           commands.executeCommand("confluent.connections.ccloud.signIn");
