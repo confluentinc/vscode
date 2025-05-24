@@ -52,7 +52,7 @@ test: setup-test-env install-test-dependencies install-dependencies
 	fi
 	npx gulp functional
 
-.PHONY: test
+.PHONY: e2e
 e2e: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
 	@if [ $$(uname -s) = "Linux" ]; then \

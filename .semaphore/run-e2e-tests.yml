@@ -2,7 +2,7 @@ version: v1.0
 name: run-e2e-tests
 agent:
   machine:
-    type: s1-prod-macos-13-5-amd64
+    type: s1-prod-ubuntu24-04-amd64-3
 
 auto_cancel:
   running:
