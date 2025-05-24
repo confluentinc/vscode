@@ -1,7 +1,10 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { Disposable, EventEmitter, TreeItem, window } from "vscode";
-import { getStubbedResourceLoader } from "../../tests/stubs/resourceLoaders";
+import {
+  getStubbedCCloudResourceLoader,
+  resetResourceLoaderStubs,
+} from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import {
@@ -14,7 +17,7 @@ import { ConnectionType } from "../clients/sidecar";
 import * as contextValues from "../context/values";
 import { ContextValues } from "../context/values";
 import { ccloudConnected } from "../emitters";
-import { ResourceLoader } from "../loaders";
+import { CCloudResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem, Phase } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
@@ -180,6 +183,7 @@ describe("viewProviders/base.ts BaseViewProvider updateTreeViewDescription()", (
   });
 
   afterEach(() => {
+    resetResourceLoaderStubs();
     sandbox.restore();
     // reset singleton instances between tests
     BaseViewProvider["instanceMap"].clear();
@@ -200,8 +204,8 @@ describe("viewProviders/base.ts BaseViewProvider updateTreeViewDescription()", (
   it("should set the description and set .environment when a resource is focused", async () => {
     // specifically stub the CCloudResourceLoader since the ResourceLoader's `getEnvironments`
     // (abstract) method is considered undefined here
-    const stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader> =
-      getStubbedResourceLoader(sandbox);
+    const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
+      getStubbedCCloudResourceLoader(sandbox);
     stubbedLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
 
     const provider = TestViewProvider.getInstance();

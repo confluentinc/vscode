@@ -1,7 +1,11 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { commands } from "vscode";
-import { getStubbedResourceLoader } from "../../tests/stubs/resourceLoaders";
+import {
+  getStubbedCCloudResourceLoader,
+  getStubbedResourceLoader,
+  resetResourceLoaderStubs,
+} from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
@@ -119,6 +123,7 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     afterEach(function () {
+      resetResourceLoaderStubs();
       sandbox.restore();
     });
 
@@ -176,14 +181,15 @@ function generateGetLatestSchemasForTopicTests<
 
 describe("commands/schemas.ts determineLatestSchema()", () => {
   let sandbox: sinon.SinonSandbox;
-  let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
+  let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    stubbedLoader = getStubbedResourceLoader(sandbox);
+    stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
   });
 
   afterEach(() => {
+    resetResourceLoaderStubs();
     sandbox.restore();
   });
 
