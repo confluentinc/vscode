@@ -5,7 +5,7 @@
 - `unit` directory contains the a few utility functions that are used by the unit tests co-located
   with the production code in the [`src/`](../src) directory.
 - `stubs` directory contains the stubs for the production code that are used by the unit tests.
-- `e2e` as the name suggests, contains the E2E tests.
+- `e2e` as the name suggests, contains the end-to-end (E2E) tests.
 - `fixtures` directory contains the fixtures for all tests. Use the `loadFixture` function in
   [`fixtures/utils.ts`](fixtures/utils.ts) to read a particular fixture file.
 
@@ -14,26 +14,25 @@
 The E2E tests use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to
 launch VS Code and interact with it programmatically.
 
-### Folder structure
+### E2E Folder structure
 
 - `playwright.config.ts` file contains the configuration for the e2e tests. (Note: This is not to be
   confused with the `playwright.config.ts` file in the root of the project. The root configuration
-  file is used to run the `*.spec.ts` files in the `src` directory.)
+  file is used to run the `*.spec.ts` files in the `src` directory for webview-specific testing via
+  `gulp functional`.).)
 - `specs` directory contains the test files.
 - `specs/utils` directory contains utility functions for the tests.
 
-> [!NOTE] 
-> What's the difference between `gulp e2e` and `gulp functional`?
+> [!NOTE] What's the difference between `gulp e2e` and `gulp functional`?
 >
 > `gulp e2e` runs the E2E tests in the `tests/e2e/specs` directory, whereas `gulp functional` runs
-> the functional tests present scattered across the `src` directory. Both use Playwright to run the
+> the functional tests under `src/webview/` (and its subdirectories). Both use Playwright to run the
 > tests. However, the E2E tests run in a OS-native Electron window rather than just testing web
 > views in a browser environment.
 
 ### Running the E2E tests
 
-> [!IMPORTANT] 
-> Please close any already-open VS Code windows before running the tests. This is
+> [!IMPORTANT] Please close any already-open VS Code windows before running the tests. This is
 > because the tests launch their own VS Code instance and need to properly handle browser auth
 > callbacks.
 
@@ -126,15 +125,15 @@ Confluent Cloud authentication flow.
 
 #### Process for writing new tests
 
-Without trying to be too prescriptive, here's a process that has worked for us to efficiently write
-new E2E tests. Please update this section as we write more tests and learn about the best practices.
+This section outlines our current approach to writing E2E tests. As our testing practices evolve,
+this guide will be updated accordingly.
 
-You've been tasked with writing a new E2E test. You don't know where to start? I've got you covered.
+To create a new E2E test:
 
-1. First, look at the existing tests in the `tests/e2e/specs` directory. If you find a test file
-   that covers similar functionality, you can use that as a reference. If not, go ahead and create a
-   new test file with the format `<feature-name>.spec.ts`.
-1. Alright, now -- here's a skeleton for the test file. You can use this as a starting point:
+1. Review existing tests in `tests/e2e/specs` for similar functionality. If none exist, create a new
+   test file named `<feature-name>.spec.ts`.
+
+1. Use this basic test structure as a starting point:
 
    ```typescript
    import { test } from "vscode-test-playwright";
@@ -225,7 +224,8 @@ Here are some areas that we've yet to explore and that we may explore in the fut
    For anyone that looks into this, use the `DEBUG=pw:browser*` environment variable to get more
    detailed logs from the Playwright browser. And best of luck!
 
-   Here's the error that we got when we tried to run the tests on an Linux x64 machine using `xvfb-run -a npx gulp e2e`:
+   Here's the error that we got when we tried to run the tests on an Linux x64 machine using
+   `xvfb-run -a npx gulp e2e`:
 
     <details>
     <summary>Error message</summary>

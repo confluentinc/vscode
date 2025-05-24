@@ -339,12 +339,12 @@ task:
 
 #### E2E tests
 
-E2E tests are written for the extension's functionality in a real VS Code environment. These tests
+End-to-end (E2E) tests are written for the extension's functionality in a real VS Code environment. These tests
 use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to launch VS Code and
 interact with it programmatically. The tests are located in the [`tests/e2e`](../tests/e2e)
 directory.
 
-Go to [`tests/README.md#e2e-tests-using-playwright`](../tests/README.md#e2e-tests-using-playwright)
+Go to [E2E Tests using Playwright](../tests/README.md#e2e-tests-using-playwright)
 section for more information on running, debugging and writing E2E tests.
 
 In short, to run the E2E tests, use the following command:
