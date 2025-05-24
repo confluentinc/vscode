@@ -1,6 +1,6 @@
 import { Page, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
-import { test } from "vscode-test-playwright";
+import { test } from "../vscode-test-playwright";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 import { openFixtureFile } from "./utils/flinkStatement";
