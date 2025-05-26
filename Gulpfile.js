@@ -753,8 +753,7 @@ export function e2eRun(done) {
     shell: IS_WINDOWS,
     env: {
       ...process.env,
-      DISPLAY: ":99",
-      DEBUG: "*,-pw:test:protocol",
+      DEBUG: "*,-pw:test:protocol,-babel",
     },
   });
   if (result.error) throw result.error;
