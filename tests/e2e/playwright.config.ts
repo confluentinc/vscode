@@ -3,7 +3,7 @@ import { configDotenv } from "dotenv";
 import { globSync } from "glob";
 import path from "path";
 import { fileURLToPath } from "url";
-import { VSCodeTestOptions, VSCodeWorkerOptions } from "vscode-test-playwright";
+import { VSCodeTestOptions, VSCodeWorkerOptions } from "./vscode-test-playwright";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +20,7 @@ export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
   testDir: path.join(__dirname, "specs"),
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  maxFailures: process.env.CI ? 1 : 0,
   timeout: 120000,
   workers: 1,
   expect: {
