@@ -282,7 +282,17 @@ export const test = base.extend<
         }
       }
 
-      await electronApp.close();
+      try {
+        console.log("Attempting to close electron app...");
+        await electronApp.close();
+        console.log("Successfully closed electron app");
+      } catch (error) {
+        console.error("Failed to close electron app:", error);
+        // If we can't close the app normally, we'll exit the process
+        // This is a last resort to prevent hanging
+        console.error("Forcing process exit to prevent hanging...");
+        process.exit(1);
+      }
 
       const logPath = path.join(cachePath, "user-data", "logs");
       if (fs.existsSync(logPath)) {

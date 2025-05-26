@@ -21,14 +21,30 @@ class VSCodeTestServer {
   }
 
   async run() {
+    const cleanup = () => {
+      this.dispose();
+    };
+
+    // Handle various termination signals
+    process.on("SIGTERM", cleanup);
+    process.on("SIGINT", cleanup);
+    process.on("SIGHUP", cleanup);
+
     await Promise.all([
       // returning from run() will kill vscode before electron.close(), so we need to hang it until process exit
-      new Promise((resolve) => process.on("exit", resolve)),
+      new Promise((resolve) => {
+        process.on("exit", () => {
+          console.log("EXITING FROM VSCODE TEST SERVER");
+          cleanup();
+          resolve(undefined);
+        });
+      }),
       new Promise<void>((resolve, reject) => {
         this._ws.on("message", (data) => this._handleMessage(JSON.parse(data.toString())));
         this._ws.on("error", reject);
         this._ws.on("close", () => {
-          this.dispose();
+          console.log("WS CLOSE FROM VSCODE TEST SERVER");
+          cleanup();
           resolve();
         });
       }),
