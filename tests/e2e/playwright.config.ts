@@ -22,6 +22,7 @@ export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
   retries: process.env.CI ? 2 : 0,
   maxFailures: process.env.CI ? 1 : 0,
   timeout: 120000,
+  globalTimeout: 120000,
   workers: 1,
   expect: {
     timeout: 10000,
