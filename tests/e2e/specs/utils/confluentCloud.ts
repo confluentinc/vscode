@@ -1,30 +1,5 @@
-import { ElectronApplication, chromium } from "@playwright/test";
-import { stubMultipleDialogs } from "electron-playwright-helpers";
-
-/**
- * Sets up dialog stubs for the authentication flow
- * @param electronApp The Electron application instance
- */
-async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> {
-  await stubMultipleDialogs(electronApp, [
-    // Asks whether to Allow signing in with Confluent Cloud
-    {
-      method: "showMessageBox",
-      value: {
-        response: 0, // Simulates clicking "Allow"
-        checkboxChecked: false,
-      },
-    },
-    // Asks for permission to open the URL
-    {
-      method: "showMessageBox",
-      value: {
-        response: 0, // Simulates clicking "Open"
-        checkboxChecked: false,
-      },
-    },
-  ]);
-}
+import { ElectronApplication, chromium, expect } from "@playwright/test";
+import { stubAllDialogs } from "electron-playwright-helpers";
 
 /**
  * Handles the Confluent Cloud authentication flow in a separate browser
@@ -100,11 +75,12 @@ export async function login(
 ): Promise<void> {
   let authUrl: string | null = null;
 
-  await stubAuthDialogs(electronApp);
+  await stubAllDialogs(electronApp);
 
   // Intercept shell.openExternal calls
   // TODO: In a try/finally, de-intercept and put original impl back
-  await electronApp.evaluate(({ shell }) => {
+  await electronApp.evaluate((electron) => {
+    const shell = electron.shell;
     const originalOpenExternal = shell.openExternal;
     shell.openExternal = (url: string) => {
       console.log("Intercepted URL:", url);
@@ -126,10 +102,10 @@ export async function login(
   const signInButton = await page.getByRole("button", { name: "Sign in to Confluent Cloud" });
   await signInButton.click();
 
-  // Wait for dialogs to return
-  await page.waitForTimeout(200);
-
-  authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
+  await expect(async () => {
+    authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
+    expect(authUrl).toBeTruthy();
+  }).toPass({ timeout: 20_000 });
 
   if (!authUrl) {
     throw new Error("Failed to capture OAuth URL from shell.openExternal");
