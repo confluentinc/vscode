@@ -283,7 +283,22 @@ export const test = base.extend<
       }
 
       try {
-        console.log("Attempting to close electron app...");
+        console.log("Attempting to close windows...");
+        // First try to close any open windows
+        const windows = await electronApp.windows();
+        console.log(`Found ${windows.length} open windows`);
+        for (const window of windows) {
+          try {
+            console.log("Closing window...");
+            await window.close();
+            console.log("Window closed successfully");
+          } catch (windowError) {
+            console.error("Failed to close window:", windowError);
+          }
+        }
+
+        // Then try to close the app
+        console.log("Closing electron app...");
         await electronApp.close();
         console.log("Successfully closed electron app");
       } catch (error) {
