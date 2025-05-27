@@ -5,7 +5,6 @@ import {
   getStubbedCCloudResourceLoader,
   getStubbedDirectResourceLoader,
   getStubbedLocalResourceLoader,
-  resetResourceLoaderStubs,
 } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -70,7 +69,6 @@ describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function ()
 
   afterEach(function () {
     SchemasViewProvider["instance"] = null;
-    resetResourceLoaderStubs();
     sandbox.restore();
   });
 

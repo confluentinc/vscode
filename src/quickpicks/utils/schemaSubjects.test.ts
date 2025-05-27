@@ -1,10 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { commands, window, workspace } from "vscode";
-import {
-  getStubbedLocalResourceLoader,
-  resetResourceLoaderStubs,
-} from "../../../tests/stubs/resourceLoaders";
+import { getStubbedLocalResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_LOCAL_SUBJECT } from "../../../tests/unit/testResources/schema";
 import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
@@ -39,7 +36,6 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
   });
 
   afterEach(() => {
-    resetResourceLoaderStubs();
     sandbox.restore();
   });
 

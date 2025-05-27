@@ -1,10 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { workspace } from "vscode";
-import {
-  getStubbedLocalResourceLoader,
-  resetResourceLoaderStubs,
-} from "../../../tests/stubs/resourceLoaders";
+import { getStubbedLocalResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import {
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REVISED,
@@ -62,7 +59,6 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
   });
 
   afterEach(() => {
-    resetResourceLoaderStubs();
     sandbox.restore();
   });
 

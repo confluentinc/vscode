@@ -4,7 +4,6 @@ import { commands } from "vscode";
 import {
   getStubbedCCloudResourceLoader,
   getStubbedResourceLoader,
-  resetResourceLoaderStubs,
 } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -123,7 +122,6 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     afterEach(function () {
-      resetResourceLoaderStubs();
       sandbox.restore();
     });
 
@@ -189,7 +187,6 @@ describe("commands/schemas.ts determineLatestSchema()", () => {
   });
 
   afterEach(() => {
-    resetResourceLoaderStubs();
     sandbox.restore();
   });
 

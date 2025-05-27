@@ -5,7 +5,6 @@ import {
   getStubbedCCloudResourceLoader,
   getStubbedDirectResourceLoader,
   getStubbedLocalResourceLoader,
-  resetResourceLoaderStubs,
 } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -53,7 +52,6 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
   });
 
   afterEach(function () {
-    resetResourceLoaderStubs();
     sandbox.restore();
   });
 
@@ -192,7 +190,6 @@ describe("quickpicks/topics.ts topicQuickPick() ResourceLoader usage", function 
   });
 
   afterEach(function () {
-    resetResourceLoaderStubs();
     sandbox.restore();
   });
 

@@ -1,10 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { Disposable, EventEmitter, TreeItem, window } from "vscode";
-import {
-  getStubbedCCloudResourceLoader,
-  resetResourceLoaderStubs,
-} from "../../tests/stubs/resourceLoaders";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import {
@@ -183,7 +180,6 @@ describe("viewProviders/base.ts BaseViewProvider updateTreeViewDescription()", (
   });
 
   afterEach(() => {
-    resetResourceLoaderStubs();
     sandbox.restore();
     // reset singleton instances between tests
     BaseViewProvider["instanceMap"].clear();
