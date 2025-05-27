@@ -22,28 +22,46 @@ class VSCodeTestServer {
 
   async run() {
     const cleanup = () => {
+      console.log("[DEBUG] Starting WebSocket cleanup...");
       this.dispose();
+      console.log("[DEBUG] WebSocket cleanup completed");
     };
 
     // Handle various termination signals
-    process.on("SIGTERM", cleanup);
-    process.on("SIGINT", cleanup);
-    process.on("SIGHUP", cleanup);
+    process.on("SIGTERM", () => {
+      console.log("[DEBUG] Received SIGTERM signal");
+      cleanup();
+    });
+    process.on("SIGINT", () => {
+      console.log("[DEBUG] Received SIGINT signal");
+      cleanup();
+    });
+    process.on("SIGHUP", () => {
+      console.log("[DEBUG] Received SIGHUP signal");
+      cleanup();
+    });
 
     await Promise.all([
       // returning from run() will kill vscode before electron.close(), so we need to hang it until process exit
       new Promise((resolve) => {
         process.on("exit", () => {
-          console.log("EXITING FROM VSCODE TEST SERVER");
+          console.log("[DEBUG] Process exit event received");
           cleanup();
           resolve(undefined);
         });
       }),
       new Promise<void>((resolve, reject) => {
-        this._ws.on("message", (data) => this._handleMessage(JSON.parse(data.toString())));
-        this._ws.on("error", reject);
+        console.log("[DEBUG] Setting up WebSocket event handlers");
+        this._ws.on("message", (data) => {
+          console.log("[DEBUG] WebSocket message received");
+          this._handleMessage(JSON.parse(data.toString()));
+        });
+        this._ws.on("error", (error) => {
+          console.error("[DEBUG] WebSocket error:", error);
+          reject(error);
+        });
         this._ws.on("close", () => {
-          console.log("WS CLOSE FROM VSCODE TEST SERVER");
+          console.log("[DEBUG] WebSocket close event received");
           cleanup();
           resolve();
         });

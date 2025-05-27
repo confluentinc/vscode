@@ -227,6 +227,7 @@ export const test = base.extend<
         if (/^VSCODE_/i.test(prop)) delete env[prop];
       }
 
+      console.log("[DEBUG] Launching Electron app...");
       const electronApp = await _electron.launch({
         executablePath: installPath,
         env,
@@ -283,36 +284,65 @@ export const test = base.extend<
       }
 
       try {
-        console.log("Attempting to close windows...");
-        // First try to close any open windows
+        console.log("[DEBUG] Starting cleanup process...");
+
+        // Log process info
+        const process = electronApp.process();
+        console.log("[DEBUG] Electron process info:", {
+          pid: process.pid,
+          connected: process.connected,
+          killed: process.killed,
+        });
+
+        // Log active windows
+        console.log("[DEBUG] Attempting to close windows...");
         const windows = await electronApp.windows();
-        console.log(`Found ${windows.length} open windows`);
+        console.log(`[DEBUG] Found ${windows.length} open windows`);
+
         for (const window of windows) {
           try {
-            console.log("Closing window...");
-            await window.close();
-            console.log("Window closed successfully");
+            console.log("[DEBUG] Attempting to close window...");
+            const isClosed = await window.isClosed();
+            console.log("[DEBUG] Window closed state:", isClosed);
+
+            if (!isClosed) {
+              await window.close();
+              console.log("[DEBUG] Window close() completed");
+            }
           } catch (windowError) {
-            console.error("Failed to close window:", windowError);
+            console.error("[DEBUG] Failed to close window:", windowError);
           }
         }
 
-        // Then try to close the app
-        console.log("Closing electron app...");
+        // Log context state
+        console.log("[DEBUG] Checking browser context state...");
+        const pages = await context.pages();
+        console.log(`[DEBUG] Active pages in context: ${pages.length}`);
+
+        // Close the app
+        console.log("[DEBUG] Attempting to close electron app...");
         await electronApp.close();
-        console.log("Successfully closed electron app");
+        console.log("[DEBUG] Electron app close() completed");
+
+        // Verify process state
+        console.log("[DEBUG] Final process state:", {
+          pid: process.pid,
+          connected: process.connected,
+          killed: process.killed,
+        });
       } catch (error) {
-        console.error("Failed to close electron app:", error);
+        console.error("[DEBUG] Failed to close electron app:", error);
         // If we can't close the app normally, we'll exit the process
-        // This is a last resort to prevent hanging
-        console.error("Forcing process exit to prevent hanging...");
+        console.error("[DEBUG] Forcing process exit to prevent hanging...");
         process.exit(1);
       }
 
       const logPath = path.join(cachePath, "user-data", "logs");
       if (fs.existsSync(logPath)) {
+        console.log("[DEBUG] Copying VS Code logs...");
         const logOutputPath = test.info().outputPath("vscode-logs");
         await fs.promises.cp(logPath, logOutputPath, { recursive: true });
+        console.log("[DEBUG] VS Code logs copied successfully");
       }
     },
     { timeout: 0 },
