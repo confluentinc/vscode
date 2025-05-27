@@ -46,14 +46,26 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
   ): ProviderResult<PreparedToolInvocation> {
     const { input } = options;
     let invocationMessage: string;
-    let confirmationMessage: string;
+    let confirmationMessage: MarkdownString;
     if (input.connectionType) {
       invocationMessage = `Get all available ${getConnectionLabel(input.connectionType)} connections`;
-      confirmationMessage = `This tool will look up all available ${getConnectionLabel(input.connectionType)} connections. Do you want to proceed?`;
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## ${getConnectionLabel(input.connectionType)} Connections\n`)
+        .appendMarkdown(
+          `This tool will look up all available connections of type **${titleCase(input.connectionType)}**.`,
+        )
+        .appendMarkdown(`Results will show the connection ID, name, and other details.`)
+        .appendMarkdown(`Do you want to proceed?`);
     } else {
       invocationMessage = "Get all available Confluent/Kafka connections";
-      confirmationMessage =
-        "This tool will look up all available connections of all types (Confluent Cloud, local, and direct). Do you want to proceed?";
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Confluent/Kafka Connections Lookup\n`)
+        .appendMarkdown(`This tool will look up all available connections of all types`)
+        .appendMarkdown(`\n- **Confluent Cloud**: Managed Kafka services in the cloud`)
+        .appendMarkdown(`\n- **Local**: Kafka services running on your local machine`)
+        .appendMarkdown(`\n- **Direct**: Direct connections to Kafka services`)
+        .appendMarkdown(`Results will show the connection ID, name, and other details.`)
+        .appendMarkdown(`Do you want to proceed?`);
     }
     const confirmationMessages: LanguageModelToolConfirmationMessages = {
       title: "Get Connections",
