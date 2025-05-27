@@ -1941,7 +1941,7 @@
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.25.0",
-    "vscode-test-playwright": "^0.0.1-beta"
+    "xvfb-maybe": "^0.2.1"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
