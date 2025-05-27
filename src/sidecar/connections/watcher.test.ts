@@ -544,7 +544,7 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       ...TEST_DIRECT_CONNECTION,
       status: {
         kafka_cluster: { state: ConnectedState.Success },
-        schema_registry: { state: ConnectedState.Failed },
+        schema_registry: { state: ConnectedState.Failed }, // not checked in this test, ignore it
         authentication: { status: Status.NoToken },
       },
     };
@@ -564,7 +564,7 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
-        kafka_cluster: { state: ConnectedState.Failed },
+        kafka_cluster: { state: ConnectedState.Failed }, // not checked in this test, ignore it
         schema_registry: { state: ConnectedState.Success },
         authentication: { status: Status.NoToken },
       },
@@ -728,5 +728,51 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
     );
 
     assert.strictEqual(summaries.length, 0);
+  });
+
+  it("should include failedReason for DIRECT connection summaries where Kafka state is FAILED", async () => {
+    const kafkaFailedMessage = "Failed to connect to Kafka";
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: {
+          state: ConnectedState.Failed,
+          errors: { sign_in: { message: kafkaFailedMessage } },
+        },
+        schema_registry: { state: ConnectedState.Success },
+        authentication: { status: Status.NoToken },
+      },
+    };
+
+    const summaries: ConnectionSummary[] = await getConnectionSummaries(
+      connection,
+      ConnectedState.Failed,
+    );
+
+    assert.strictEqual(summaries.length, 1);
+    assert.strictEqual(summaries[0].failedReason, kafkaFailedMessage);
+  });
+
+  it("should include failedReason for DIRECT connection summaries where Schema Registry state is FAILED", async () => {
+    const srFailedMessage = "Failed to connect to Schema Registry";
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: { state: ConnectedState.Success },
+        schema_registry: {
+          state: ConnectedState.Failed,
+          errors: { sign_in: { message: srFailedMessage } },
+        },
+        authentication: { status: Status.NoToken },
+      },
+    };
+
+    const summaries: ConnectionSummary[] = await getConnectionSummaries(
+      connection,
+      ConnectedState.Failed,
+    );
+
+    assert.strictEqual(summaries.length, 1);
+    assert.strictEqual(summaries[0].failedReason, srFailedMessage);
   });
 });
