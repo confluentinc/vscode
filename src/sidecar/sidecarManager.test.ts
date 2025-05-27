@@ -1,440 +1,280 @@
 import * as assert from "assert";
 import "mocha";
-import { join } from "path";
 import * as sinon from "sinon";
-import { OUTPUT_CHANNEL } from "../logging";
-import {
-  appendSidecarLogToOutputChannel,
-  getSidecarLogfilePath,
-  SIDECAR_OUTPUT_CHANNEL,
-} from "../sidecar/logging";
-import { WriteableTmpDir } from "../utils/file";
-import { SIDECAR_LOGFILE_NAME } from "./constants";
-import {
-  constructSidecarEnv,
-  killSidecar,
-  MOMENTARY_PAUSE_MS,
-  safeKill,
-  WAIT_FOR_SIDECAR_DEATH_MS,
-  wasConnRefused,
-} from "./sidecarManager";
-
+import { Tail } from "tail";
+import * as errors from "../errors";
+import * as fsWrappers from "../utils/fsWrappers";
+import { SidecarFatalError } from "./errors";
+import * as sidecarLogging from "./logging";
+import { SidecarManager } from "./sidecarManager";
+import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
 import * as utils from "./utils";
 
-describe("Test wasConnRefused", () => {
-  it("wasConnRefused() should return true for various spellings of a connection refused error", () => {
-    const connRefusedErrors = [
-      { code: "ECONNREFUSED" },
-      { cause: { code: "ECONNREFUSED" } },
-      { cause: { cause: { code: "ECONNREFUSED" } } },
-      { cause: { cause: { errors: [{ code: "ECONNREFUSED" }] } } },
-    ];
+describe("sidecarManager.ts", () => {
+  describe("class SidecarManager", () => {
+    let sandbox: sinon.SinonSandbox;
+    let clock: sinon.SinonFakeTimers;
+    let manager: SidecarManager;
 
-    for (const error of connRefusedErrors) {
-      assert.strictEqual(true, wasConnRefused(error));
-    }
-  });
+    let logErrorStub: sinon.SinonStub;
 
-  it("wasConnRefused() should return false for non-connection-refused errors", () => {
-    const nonConnRefusedErrors = [
-      {},
-      null,
-      { code: "ECONNRESET" },
-      { cause: { code: "ECONNRESET" } },
-      { cause: { cause: { code: "ECONNRESET" } } },
-      { cause: { cause: { errors: [{ blah: false }] } } },
-    ];
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      clock = sandbox.useFakeTimers();
+      manager = new SidecarManager();
+      logErrorStub = sandbox.stub(errors, "logError");
+    });
 
-    for (const error of nonConnRefusedErrors) {
-      assert.strictEqual(false, wasConnRefused(error));
-    }
-  });
-});
+    afterEach(() => {
+      clock.restore();
+      sandbox.restore();
+    });
 
-describe("constructSidecarEnv tests", () => {
-  before(async () => {
-    // Ensure the tmpdir is established
-    await WriteableTmpDir.getInstance().determine();
-  });
+    describe("startSidecar()", () => {
+      let startSidecar: (callnum: number) => Promise<string>;
+      let checkSidecarFileStub: sinon.SinonStub;
+      let writeFileSync: sinon.SinonStub;
+      let closeSyncStub: sinon.SinonStub;
 
-  it("Will set QUARKUS_HTTP_HOST if env indicates WSL", () => {
-    const env = { WSL_DISTRO_NAME: "Ubuntu" };
-    const result = constructSidecarEnv(env);
-    assert.strictEqual(result.QUARKUS_HTTP_HOST, "0.0.0.0");
-  });
+      let spawnStub: sinon.SinonStub;
 
-  it("Will not set QUARKUS_HTTP_HOST if env does not indicate WSL", () => {
-    const env = {};
-    const result = constructSidecarEnv(env);
-    assert.strictEqual(result.QUARKUS_HTTP_HOST, undefined);
-  });
+      const stderrFiledescriptor = 42;
 
-  it("Sets logging env vars as expected", () => {
-    const env = {};
-    const result = constructSidecarEnv(env);
-    assert.strictEqual(result.QUARKUS_LOG_FILE_ENABLE, "true");
-    assert.strictEqual(result.QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT, "false");
-    assert.strictEqual(result.QUARKUS_LOG_FILE_PATH, getSidecarLogfilePath());
-  });
+      beforeEach(async () => {
+        // is private method, so have to reach a bit to be able to test it directly.
+        startSidecar = manager["startSidecar"].bind(manager);
+        // Default to the sidecar file being present by not throwing.
+        checkSidecarFileStub = sandbox.stub(utils, "checkSidecarFile");
+        writeFileSync = sandbox.stub(fsWrappers, "writeFileSync");
+        sandbox.stub(fsWrappers, "openSync").returns(stderrFiledescriptor);
+        closeSyncStub = sandbox.stub(fsWrappers, "closeSync");
 
-  it("Other preset env vars are set as expected", () => {
-    const env = { FOO: "bar" };
-    const result = constructSidecarEnv(env);
-    assert.strictEqual("bar", result.FOO);
-  });
-});
+        spawnStub = sandbox.stub(utils, "spawn");
+      });
 
-describe("killSidecar() tests", () => {
-  let sandbox: sinon.SinonSandbox;
-  let killStub: sinon.SinonStub;
-  let clock: sinon.SinonFakeTimers;
-  const pid = 1234;
+      afterEach(() => {
+        // logErrorStub should not have been caller at any time
+        // by startSidecar(). That's the responsibility of calling code.
+        sinon.assert.notCalled(logErrorStub);
+      });
 
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    killStub = sandbox.stub(process, "kill");
-    sandbox.stub(utils, "pause").resolves();
-    clock = sandbox.useFakeTimers(Date.now());
-  });
+      describe("Errors leading up to spawn()", () => {
+        it("handles missing sidecar file", async () => {
+          checkSidecarFileStub.throws(
+            new SidecarFatalError(
+              SidecarStartupFailureReason.MISSING_EXECUTABLE,
+              "Sidecar file not found",
+            ),
+          );
+          try {
+            await startSidecar(1);
+          } catch (e) {
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.MISSING_EXECUTABLE);
+              assert.strictEqual(e.message, "Sidecar file not found");
+              return;
+            }
+          }
 
-  afterEach(() => {
-    sandbox.restore();
-  });
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
 
-  it("refuses to kill nonpositive pids", async () => {
-    for (const pid of [0, -1, -2]) {
-      await assert.rejects(
-        async () => await killSidecar(pid),
-        /Refusing to kill process with PID <= 1/,
-      );
-    }
-  });
+        it("handles unexpected error raised when creating sidecar stderr file", async () => {
+          writeFileSync.throws(new Error("EPERM"));
+          try {
+            await startSidecar(1);
+          } catch (e) {
+            // was a truly unexpected error, should be coerced to a SidecarFatalError/UNKNOWN
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.UNKNOWN);
+              assert.strictEqual(e.message, "startSidecar(1): Unexpected error: Error: EPERM");
+              return;
+            }
+          }
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
 
-  it("Will try to kill positive pids", async () => {
-    // Expect first call to kill the pid with SIGTERM.
-    killStub.onFirstCall().returns(true);
-    // Second call should be kill(pid, 0) to check if the process is still alive. Indicate that
-    // it is not alive.
-    killStub.onSecondCall().throws(new Error("process does not exist"));
+        it("Handles spawn/UNKNONW error", async () => {
+          spawnStub.throws(new Error("UNKNOWN"));
+          try {
+            await startSidecar(1);
+          } catch (e) {
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN);
+              assert.strictEqual(
+                e.message,
+                "startSidecar(1): Failed to spawn sidecar process: UNKNOWN",
+              );
+              sinon.assert.calledWith(closeSyncStub, stderrFiledescriptor);
+              return;
+            }
+          }
 
-    await assert.doesNotReject(async () => await killSidecar(pid));
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
 
-    assert.strictEqual(killStub.callCount, 2);
-    assert.strictEqual(killStub.getCall(0).args[0], pid);
-    assert.strictEqual(killStub.getCall(0).args[1], "SIGTERM");
+        it("Handles spawn/random error", async () => {
+          spawnStub.throws(new Error("random error"));
+          try {
+            await startSidecar(1);
+          } catch (e) {
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.SPAWN_ERROR);
+              assert.strictEqual(
+                e.message,
+                "startSidecar(1): Failed to spawn sidecar process: random error",
+              );
+              sinon.assert.calledWith(closeSyncStub, stderrFiledescriptor);
+              return;
+            }
+          }
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
+      });
 
-    assert.strictEqual(killStub.getCall(1).args[0], pid);
-    assert.strictEqual(killStub.getCall(1).args[1], 0);
-  });
+      describe("After successful spawn()", () => {
+        let mockProcess: { pid: number | undefined; unref: () => void };
 
-  it("Will loop after SIGTERM until the process is dead, but then be content when it dies", async () => {
-    let checkCallCount = 0;
-    // Expect first call to kill the pid with SIGTERM.
-    killStub.callsFake(
-      // Set up so that the first call with SIGTERM returns true (process killed),
-      // then the first 3 calls with 0 return true (process still alive),
-      // then the last call with 0 throws an error (process not alive).
-      (pid: number, signal: string | number) => {
-        if (signal === "SIGTERM") {
-          return true; // let the call to kill the process succeed.
-        } else if (signal === 0) {
-          // Is checking to see if pid is still alive.
-          // Simulate the process being alive for first 3 checks.
-          checkCallCount++;
-          if (checkCallCount < 3) {
-            return true; // process still alive the first few times
-          } else {
-            throw new Error("process does not exist"); // process not alive anymore
+        let confirmSidecarProcessIsRunningStub: sinon.SinonStub;
+        let doHandshakeStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          mockProcess = {
+            pid: 1234,
+            unref: () => {},
+          };
+          spawnStub.returns(mockProcess);
+          confirmSidecarProcessIsRunningStub = sinon
+            .stub(manager, "confirmSidecarProcessIsRunning")
+            .resolves();
+
+          doHandshakeStub = sandbox.stub(manager, "doHandshake").resolves("access-token");
+          sandbox.stub(utils, "pause").resolves();
+        });
+
+        afterEach(() => {
+          sinon.assert.calledWith(closeSyncStub, stderrFiledescriptor);
+        });
+
+        it("Handles undefined PID", async () => {
+          mockProcess.pid = undefined;
+          try {
+            await startSidecar(1);
+          } catch (e) {
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID);
+              assert.strictEqual(e.message, "startSidecar(1): sidecar process has undefined PID");
+              return;
+            }
+          }
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
+
+        it("Handles confirmSidecarProcessIsRunning() error", async () => {
+          confirmSidecarProcessIsRunningStub.throws(
+            new SidecarFatalError(
+              SidecarStartupFailureReason.PORT_IN_USE,
+              "Port in use by another process",
+            ),
+          );
+          try {
+            const startPromise = startSidecar(1);
+            clock.tick(2001);
+            await startPromise;
+          } catch (e) {
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.PORT_IN_USE);
+              return;
+            }
+          }
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
+
+        it("Handles doHandshake() repeated ECONNREFUSED", async () => {
+          sandbox.stub(utils, "wasConnRefused").returns(true);
+          doHandshakeStub.throws(new Error("ECONNREFUSED"));
+          try {
+            // pause() is stubbed to resolve immediately, and
+            // wasConnRefused() is stubbed to always be true, so
+            // we should get a SidecarFatalError after MAX_ATTEMPTS.
+            await startSidecar(1);
+          } catch (e) {
+            if (e instanceof SidecarFatalError) {
+              assert.strictEqual(e.reason, SidecarStartupFailureReason.HANDSHAKE_FAILED);
+              return;
+            }
+          }
+          assert.fail("Expected SidecarFatalError to be thrown");
+        });
+      });
+    });
+
+    describe("confirmSidecarProcessIsRunning()", () => {
+      let isProcessRunningStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        isProcessRunningStub = sandbox.stub(utils, "isProcessRunning");
+      });
+
+      it("Happy when process is running", async () => {
+        isProcessRunningStub.returns(true);
+        // does not throw.
+        await manager.confirmSidecarProcessIsRunning(1234, "", "");
+      });
+
+      it("Does proper things when process is not running", async () => {
+        isProcessRunningStub.returns(false);
+        sandbox.stub(sidecarLogging, "gatherSidecarOutputs").resolves({
+          logLines: [],
+          parsedLogLines: [
+            {
+              timestamp: "2023-10-01T00:00:00.000Z",
+              level: "ERROR",
+              loggerName: "com.example.Sidecar",
+              message: "Oh noes! My port!",
+            } as SidecarLogFormat,
+          ],
+          stderrLines: [],
+        } as SidecarOutputs);
+
+        sandbox
+          .stub(sidecarLogging, "divineSidecarStartupFailureReason")
+          .returns(SidecarStartupFailureReason.PORT_IN_USE);
+
+        try {
+          await manager.confirmSidecarProcessIsRunning(2345, "prefix", "");
+        } catch (e) {
+          if (e instanceof SidecarFatalError) {
+            assert.strictEqual(
+              e.message,
+              "prefix: Sidecar process 2345 died immediately after startup",
+            );
+            // And sentry was sent extra goodies.
+            sinon.assert.called(logErrorStub);
+            return;
           }
         }
-      },
-    );
-
-    const promise = killSidecar(pid);
-
-    // first loop pause ...
-    await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
-    // second
-    await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
-    // third
-    await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
-
-    await assert.doesNotReject(promise);
-
-    assert.strictEqual(killStub.callCount, 4, "total call count"); // 1 kill + 3 checks
-    assert.strictEqual(checkCallCount, 3, "checkCallCount"); // 3 checks before process is dead
-  });
-
-  it("Will upgrade to SIGKILL if process is still alive after WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS checks", async () => {
-    let receivedSigTerm = false;
-    let receivedSigKill = false;
-    killStub.callsFake(
-      // Set up so that the first call with SIGTERM returns true (process killed),
-      // then the first 3 calls with 0 return true (process still alive),
-      // then the last call with 0 throws an error (process not alive).
-      (pid: number, signal: string | number) => {
-        if (signal === "SIGTERM") {
-          receivedSigTerm = true;
-          return true; // let the call to kill the process succeed.
-        } else if (signal === "SIGKILL") {
-          receivedSigKill = true;
-          return true; // let the call to kill the process succeed.
-        } else if (signal === 0) {
-          // Indicate is alive until receivedSigKill is delivered.
-          if (!receivedSigKill) {
-            return true; // process still alive the first few times
-          } else {
-            throw new Error("process does not exist"); // process not alive anymore
-          }
-        }
-      },
-    );
-
-    // Will send sigterm. Then loop poll for WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS
-    // times waiting for death, then will upgrade to SIGKILL.
-    const promise = killSidecar(pid);
-
-    for (let i = 0; i < WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS; i++) {
-      await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
-    }
-
-    await assert.doesNotReject(promise);
-
-    assert.strictEqual(receivedSigTerm, true, "receivedSigTerm");
-    assert.strictEqual(receivedSigKill, true, "receivedSigKill");
-  });
-
-  it("Throws if process is still alive after SIGKILL", async () => {
-    let receivedSigTerm = false;
-    let receivedSigKill = false;
-    killStub.callsFake(
-      // Simulate that for some reason the sidecar never dies, even after SIGKILL.
-      // (say, it is a zombie process or in device wait against bad NFS mount)
-      (pid: number, signal: string | number) => {
-        if (signal === "SIGTERM") {
-          receivedSigTerm = true;
-          return true; // let the call to kill the process succeed.
-        } else if (signal === "SIGKILL") {
-          receivedSigKill = true;
-        } else if (signal === 0) {
-          return true; // process always still alive
-        }
-      },
-    );
-
-    const promise = killSidecar(pid);
-
-    // loop through all of the sigterm checks, then the sigkill checks.
-    for (let i = 0; i < 2 * (WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS); i++) {
-      await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
-    }
-
-    await assert.rejects(promise, /Failed to kill old sidecar process/);
-
-    assert.strictEqual(receivedSigTerm, true, "receivedSigTerm");
-    assert.strictEqual(receivedSigKill, true, "receivedSigKill");
-  });
-});
-
-describe("safeKill() tests", () => {
-  let sandbox: sinon.SinonSandbox;
-  let killStub: sinon.SinonStub;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    killStub = sandbox.stub(process, "kill");
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
-  it("safeKill() should call kill with the correct arguments", () => {
-    const pid = 1234;
-    const signal = "SIGTERM";
-
-    safeKill(pid, signal);
-
-    assert.strictEqual(killStub.calledWith(pid, signal), true);
-  });
-
-  it("safeKill() should not throw an error if kill raises error", () => {
-    const pid = 1234;
-    const signal = "SIGTERM";
-
-    killStub.throws(new Error("test error"));
-
-    assert.doesNotThrow(() => {
-      safeKill(pid, signal);
-    });
-  });
-});
-
-describe("appendSidecarLogToOutputChannel() tests", () => {
-  let sandbox: sinon.SinonSandbox;
-
-  let debugStub: sinon.SinonStub;
-  let infoStub: sinon.SinonStub;
-  let warnStub: sinon.SinonStub;
-  let errorStub: sinon.SinonStub;
-  let appendLineStub: sinon.SinonStub;
-
-  let mainOutputErrorStub: sinon.SinonStub;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-
-    debugStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "debug");
-    infoStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "info");
-    warnStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "warn");
-    errorStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "error");
-    appendLineStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "appendLine");
-
-    mainOutputErrorStub = sandbox.stub(OUTPUT_CHANNEL, "error");
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
-  it("handles valid JSON logs with different levels", () => {
-    const testCases = [
-      {
-        input: JSON.stringify({
-          level: "DEBUG",
-          loggerName: "test",
-          message: "debug message",
-        }),
-        expectedStub: debugStub,
-        expectedMessage: "[test] debug message",
-      },
-      {
-        input: JSON.stringify({
-          level: "INFO",
-          loggerName: "test",
-          message: "info message",
-        }),
-        expectedStub: infoStub,
-        expectedMessage: "[test] info message",
-      },
-      {
-        input: JSON.stringify({
-          level: "WARN",
-          loggerName: "test",
-          message: "warn message",
-        }),
-        expectedStub: warnStub,
-        expectedMessage: "[test] warn message",
-      },
-      {
-        input: JSON.stringify({
-          level: "ERROR",
-          loggerName: "test",
-          message: "error message",
-        }),
-        expectedStub: errorStub,
-        expectedMessage: "[test] error message",
-      },
-    ];
-
-    testCases.forEach((testCase) => {
-      appendSidecarLogToOutputChannel(testCase.input);
-
-      sinon.assert.calledWith(testCase.expectedStub, testCase.expectedMessage);
-    });
-  });
-
-  it("handles invalid JSON", () => {
-    appendSidecarLogToOutputChannel("invalid json");
-
-    sinon.assert.calledWith(mainOutputErrorStub, sinon.match(/Failed to parse sidecar log line/));
-  });
-
-  it("handles log objects with missing fields", () => {
-    const logLine = JSON.stringify({ level: "INFO" });
-
-    appendSidecarLogToOutputChannel(logLine);
-
-    sinon.assert.calledWith(appendLineStub, logLine);
-  });
-
-  it("handles unexpected log levels", () => {
-    const logLine = JSON.stringify({
-      level: "UNKNOWN",
-      loggerName: "test",
-      message: "test message",
+        assert.fail("Expected NoSidecarRunningError to be thrown");
+      });
     });
 
-    appendSidecarLogToOutputChannel(logLine);
+    describe("dispose()", () => {
+      it("w/o logTailer", () => {
+        manager["logTailer"] = undefined;
+        // should do nothing.
+        manager.dispose();
+      });
 
-    sinon.assert.calledWith(appendLineStub, `[UNKNOWN] [test] test message`);
-  });
-
-  it("handles unexpected log levels with MDC data", () => {
-    const mdc = {
-      key1: "value1",
-      key2: "value2",
-    };
-    const logLine = JSON.stringify({
-      level: "UNKNOWN",
-      loggerName: "test",
-      message: "test message",
-      mdc,
+      it("w/ logTailer", () => {
+        const unwatchStub = sandbox.stub();
+        manager["logTailer"] = {
+          unwatch: unwatchStub,
+        } as unknown as Tail;
+        manager.dispose();
+        sinon.assert.calledOnce(unwatchStub);
+        // and should be dereferenced.
+        assert.strictEqual(manager["logTailer"], undefined);
+      });
     });
-
-    appendSidecarLogToOutputChannel(logLine);
-
-    sinon.assert.calledWith(
-      appendLineStub,
-      `[UNKNOWN] [test] test message ${JSON.stringify([mdc])}`,
-    );
-  });
-
-  it("handles MDC data", () => {
-    /** @see https://quarkus.io/guides/logging#use-mdc-to-add-contextual-log-information */
-    const mdc = {
-      key1: "value1",
-      key2: "value2",
-    };
-    const logLineWithMdc = JSON.stringify({
-      level: "INFO",
-      loggerName: "test",
-      message: "test message",
-      mdc,
-    });
-
-    appendSidecarLogToOutputChannel(logLineWithMdc);
-
-    sinon.assert.calledWith(infoStub, "[test] test message", mdc);
-  });
-});
-
-describe("getSidecarLogfilePath() tests", () => {
-  let sandbox: sinon.SinonSandbox;
-  let writeableTmpDirMock: sinon.SinonMock;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    writeableTmpDirMock = sandbox.mock(WriteableTmpDir.getInstance());
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
-  it("Returns the expected path when getWriteableTmpDir() succeeds", () => {
-    writeableTmpDirMock.expects("get").returns("/tmp");
-    const expectedPath = join("/tmp", SIDECAR_LOGFILE_NAME);
-    const actualPath = getSidecarLogfilePath();
-    assert.strictEqual(actualPath, expectedPath);
-  });
-
-  it("When getWriteableTmpDir() fails, getSidecarLogfilePath() should throw an error", () => {
-    writeableTmpDirMock
-      .expects("get")
-      .throws(new Error("get() called before determine() was awaited."));
-    assert.throws(() => {
-      getSidecarLogfilePath();
-    }, /get\(\) called before determine\(\) was awaited./);
   });
 });
