@@ -5,7 +5,6 @@ import {
   getStubbedCCloudResourceLoader,
   getStubbedDirectResourceLoader,
   getStubbedLocalResourceLoader,
-  getStubbedResourceLoader,
 } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -15,7 +14,7 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
-import { ResourceLoader } from "../loaders";
+import { LocalResourceLoader } from "../loaders";
 import { KafkaTopic } from "../models/topic";
 import { topicQuickPick } from "./topics";
 import { QuickPickItemWithValue } from "./types";
@@ -27,7 +26,8 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
   let showQuickPickStub: sinon.SinonStub;
   let executeCommandStub: sinon.SinonStub;
 
-  let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
+  // doesn't matter which loader we use, just that we match it to the right topic fixture
+  let stubbedLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
 
   const topicWithoutSchema = TEST_LOCAL_KAFKA_TOPIC;
   const topicWithSchema = KafkaTopic.create({
@@ -46,7 +46,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 
-    stubbedLoader = getStubbedResourceLoader(sandbox);
+    stubbedLoader = getStubbedLocalResourceLoader(sandbox);
     // return the two test topics for most tests
     stubbedLoader.getTopicsForCluster.resolves(testTopics);
   });
@@ -141,13 +141,13 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     // user dismissed the info notification
     showInfoStub.resolves(undefined);
 
-    const result = await topicQuickPick(TEST_CCLOUD_KAFKA_CLUSTER);
+    const result = await topicQuickPick(TEST_LOCAL_KAFKA_CLUSTER);
 
     assert.strictEqual(result, undefined);
     sinon.assert.calledOnce(showInfoStub);
     sinon.assert.calledWithExactly(
       showInfoStub,
-      `No topics found for Kafka cluster "${TEST_CCLOUD_KAFKA_CLUSTER.name}".`,
+      `No topics found for Kafka cluster "${TEST_LOCAL_KAFKA_CLUSTER.name}".`,
       "Create Topic",
     );
     sinon.assert.notCalled(showQuickPickStub);

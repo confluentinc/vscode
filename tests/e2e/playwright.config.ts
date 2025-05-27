@@ -27,8 +27,13 @@ export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
   },
   reporter: "html",
   use: {
+    // We run the tests against the bundled VSIX file.
     extensions: [vsix],
+    // The test VS Code window instance is launched with the `out` directory
+    // opened. This lets us load fixture files (the fixtures are copied over in the Gulp task `e2e`)
+    // Make sure to run `gulp bundle` if you changed the extension `src` code.
     baseDir: path.join(__dirname, "..", "..", "out"),
+    // Enables Playwright tracing to help with debugging. Super useful!
     vscodeTrace: "on",
   },
   projects: [
