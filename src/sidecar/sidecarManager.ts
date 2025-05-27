@@ -23,7 +23,7 @@ import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
 import { NoSidecarRunningError, SidecarFatalError, WrongAuthSecretError } from "./errors";
 import {
-  divineSidecarStartupFailureReason,
+  determineSidecarStartupFailureReason,
   gatherSidecarOutputs,
   getSidecarLogfilePath,
   startTailingSidecarLogs,
@@ -583,7 +583,8 @@ export class SidecarManager {
 
       const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
 
-      let failureReason: SidecarStartupFailureReason = divineSidecarStartupFailureReason(outputs);
+      let failureReason: SidecarStartupFailureReason =
+        determineSidecarStartupFailureReason(outputs);
 
       const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
 
