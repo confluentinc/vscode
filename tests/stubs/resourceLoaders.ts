@@ -10,26 +10,6 @@ import { ConnectionId } from "../../src/models/resource";
 import { TEST_DIRECT_CONNECTION_ID } from "../unit/testResources/connection";
 
 /**
- * The stub for the static `getInstance()` method of the {@link ResourceLoader} class, set within
- * the {@link configureResourceLoaderMethods} function.
- */
-let getInstanceStub: SinonStub | undefined;
-
-/**
- * The stub for the static `loaders()` method of the {@link ResourceLoader} class, set within
- * the {@link configureResourceLoaderMethods} function.
- */
-let loadersStub: SinonStub | undefined;
-
-/**
- * An array of stubbed instances of the {@link ResourceLoader} class, used to return the stubbed
- * loaders when the static `loaders()` method is called.
- */
-let stubbedLoaders: SinonStubbedInstance<
-  ResourceLoader | CCloudResourceLoader | LocalResourceLoader | DirectResourceLoader
->[] = [];
-
-/**
  * Configures the stubs for the static methods of the {@link ResourceLoader} class:
  * - `getInstance()`: Stubs the static method to return the provided loader instance.
  * - `loaders()`: Stubs the static method to return an array of stubbed loaders.
@@ -46,13 +26,15 @@ function configureResourceLoaderMethods(
   >,
   connectionId?: ConnectionId,
 ): void {
-  if (!getInstanceStub) {
+  // check if `ResourceLoader.getInstance()` has already been stubbed
+  let getInstanceStub: SinonStub | undefined = ResourceLoader.getInstance as SinonStub;
+  if (getInstanceStub && getInstanceStub.restore !== undefined) {
+    // if it has, we can reuse the stub
+    getInstanceStub = getInstanceStub as SinonStub;
+  } else {
+    // otherwise, create a new stub for `getInstance()`
     getInstanceStub = sandbox.stub(ResourceLoader, "getInstance");
   }
-  if (!loadersStub) {
-    loadersStub = sandbox.stub(ResourceLoader, "loaders");
-  }
-
   // once we have a getInstance stub, either specify the stubbed loader returned for the provided
   // connectionId or return the loader for the default case
   if (connectionId) {
@@ -61,31 +43,27 @@ function configureResourceLoaderMethods(
     getInstanceStub.returns(loader);
   }
 
-  // no need to use .withArgs() for the loaders() stub since it returns all loaders
+  // same check for `ResourceLoader.loaders()`
+  let loadersStub: SinonStub | undefined = ResourceLoader.loaders as SinonStub;
+  if (loadersStub && loadersStub.restore !== undefined) {
+    // if it has, we can reuse the stub
+    loadersStub = loadersStub as SinonStub;
+  } else {
+    // otherwise, create a new stub for `loaders()`
+    loadersStub = sandbox.stub(ResourceLoader, "loaders").returns([]);
+  }
+  // check the return value of the loadersStub and update it if necessary
+  let stubbedLoaders: Array<
+    SinonStubbedInstance<
+      ResourceLoader | CCloudResourceLoader | LocalResourceLoader | DirectResourceLoader
+    >
+  > = loadersStub();
+  // make sure the call count is reset to 0 in case any tests want to assert on it
+  loadersStub.resetHistory();
   if (!stubbedLoaders.includes(loader)) {
     stubbedLoaders.push(loader);
   }
   loadersStub.returns(stubbedLoaders);
-}
-
-/**
- * Resets the stubs for the static methods of the {@link ResourceLoader} class.
- *
- * This function restores the stubs for the static `getInstance()` and `loaders()` methods of the
- * {@link ResourceLoader} class, and clears
- * the array of stubbed loaders.
- * It should be called after each test to ensure that the stubs do not interfere with other tests.
- */
-export function resetResourceLoaderStubs(): void {
-  if (getInstanceStub) {
-    getInstanceStub.restore();
-    getInstanceStub = undefined;
-  }
-  if (loadersStub) {
-    loadersStub.restore();
-    loadersStub = undefined;
-  }
-  stubbedLoaders = [];
 }
 
 /**
