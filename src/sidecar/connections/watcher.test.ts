@@ -558,6 +558,7 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
     assert.strictEqual(summaries[0].connectionType, ConnectionType.Direct);
     assert.strictEqual(summaries[0].configType, "Kafka");
     assert.strictEqual(summaries[0].connectedState, ConnectedState.Success);
+    assert.strictEqual(summaries[0].failedReason, undefined);
   });
 
   it("should return a Schema Registry config summary when state matches for a DIRECT connection", async () => {
@@ -579,6 +580,7 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
     assert.strictEqual(summaries[0].connectionType, ConnectionType.Direct);
     assert.strictEqual(summaries[0].configType, "Schema Registry");
     assert.strictEqual(summaries[0].connectedState, ConnectedState.Success);
+    assert.strictEqual(summaries[0].failedReason, undefined);
   });
 
   it("should return Kafka+SR summaries when both states match for a DIRECT connection", async () => {
