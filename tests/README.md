@@ -16,7 +16,7 @@ launch VS Code and interact with it programmatically.
 
 ### E2E Folder structure
 
-- `playwright.config.ts` file contains the configuration for the e2e tests. (Note: This is not to be
+- `playwright.config.ts` file contains the configuration for the E2E tests. (Note: This is not to be
   confused with the `playwright.config.ts` file in the root of the project. The root configuration
   file is used to run the `*.spec.ts` files in the `src` directory for webview-specific testing via
   `gulp functional`.).)
@@ -41,7 +41,7 @@ launch VS Code and interact with it programmatically.
 We currently run the tests against Confluent Cloud production environment. We may add support for
 running against other non-production environments in the future.
 
-#### Pre-requisites
+#### Prerequisites
 
 First, we'll need to install the dependencies:
 
