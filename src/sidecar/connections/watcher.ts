@@ -198,7 +198,7 @@ export async function getConnectionSummaries(
           await getResourceManager().getDirectConnection(connection.id as ConnectionId);
 
         const kafkaClusterStatus: KafkaClusterStatus | undefined = connection.status.kafka_cluster;
-        if (kafkaClusterStatus && kafkaClusterStatus?.state === state) {
+        if (kafkaClusterStatus && kafkaClusterStatus.state === state) {
           const kafkaConfig: KafkaClusterConfig | undefined = connection.spec.kafka_cluster;
           states.push({
             connectionType: ConnectionType.Direct,
