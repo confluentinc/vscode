@@ -1,4 +1,4 @@
-import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
@@ -8,6 +8,7 @@ import { Environment } from "../models/environment";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.schemaRegistry");
 
@@ -49,7 +50,6 @@ export async function schemaRegistryQuickPick(
   const environments: Environment[] = [];
 
   const schemaRegistries: SchemaRegistry[] = [];
-  const registryIdMap: Map<string, SchemaRegistry> = new Map();
 
   // TODO: enforce ordering between CCloud loader, Local loader, and Direct loaders?
   for (const loader of ResourceLoader.loaders()) {
@@ -58,9 +58,6 @@ export async function schemaRegistryQuickPick(
     const registries: SchemaRegistry[] = await loader.getSchemaRegistries();
     if (registries.length > 0) {
       schemaRegistries.push(...registries);
-      for (const registry of registries) {
-        registryIdMap.set(registry.id, registry);
-      }
     }
   }
 
@@ -75,7 +72,7 @@ export async function schemaRegistryQuickPick(
     }
     // TODO: offer button for creating a direct connection?
     window
-      .showInformationMessage("No Schema registries available.", login, local)
+      .showInformationMessage("No Schema Registries available.", login, local)
       .then((selected) => {
         if (selected === login) {
           commands.executeCommand("confluent.connections.ccloud.signIn");
@@ -94,13 +91,13 @@ export async function schemaRegistryQuickPick(
 
   // convert all available Schema Registries to quick pick items and keep track of the last env name
   // used for the separators
-  const registryItems: QuickPickItem[] = [];
+  const registryItems: QuickPickItemWithValue<SchemaRegistry>[] = [];
 
-  // Determine the default registry to select, if any.
-  // Prefer defaultRegistryId if provided, otherwise the focused registry in the schemas view, if any.
+  // Determine the "current" Schema Registry to focus, if any.
   const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
-  const defaultRegistry: SchemaRegistry | null =
-    (defaultRegistryId && registryIdMap.get(defaultRegistryId)) || focusedRegistry;
+  const defaultRegistry: SchemaRegistry | null = defaultRegistryId
+    ? schemaRegistries.find((registry) => registry.id === defaultRegistryId) ?? null
+    : focusedRegistry;
 
   const defaultRegistryIndex: number = schemaRegistries.findIndex(
     (registry) => registry.id === defaultRegistry?.id,
@@ -119,7 +116,6 @@ export async function schemaRegistryQuickPick(
       logger.warn(`No environment found for Schema Registry ${registry.id}`);
       return;
     }
-    const isFocusedRegistry = focusedRegistry?.id === registry.id;
 
     // show a separator by connection type (not connection + env name like with Kafka clusters)
     const connectionLabel = getConnectionLabel(registry.connectionType);
@@ -131,7 +127,8 @@ export async function schemaRegistryQuickPick(
       lastSeparator = connectionLabel;
     }
 
-    // Brand the currently focused registry, if any
+    // use a different icon for the currently focused registry, if any
+    const isFocusedRegistry = focusedRegistry?.id === registry.id;
     const icon = isFocusedRegistry ? IconNames.CURRENT_RESOURCE : registry.iconName;
 
     // Add the registry to the quickpick
@@ -140,16 +137,18 @@ export async function schemaRegistryQuickPick(
       description: registry.id,
       detail: defaultRegistryId === registry.id ? "Default" : undefined,
       iconPath: new ThemeIcon(icon),
+      value: registry,
     });
   }
 
   // Prompt the user to select a Schema Registry
-  const chosenRegistryItem: QuickPickItem | undefined = await window.showQuickPick(registryItems, {
-    title,
-    placeHolder: "Select a Schema Registry",
-    ignoreFocusOut: true,
-  });
+  const chosenRegistryItem: QuickPickItemWithValue<SchemaRegistry> | undefined =
+    await window.showQuickPick(registryItems, {
+      title,
+      placeHolder: "Select a Schema Registry",
+      ignoreFocusOut: true,
+    });
 
-  // Return the selected SchemaRegistry model, else undefined
-  return chosenRegistryItem ? registryIdMap.get(chosenRegistryItem.description!) : undefined;
+  // Return the selected SchemaRegistry instance, else undefined
+  return chosenRegistryItem?.value;
 }
