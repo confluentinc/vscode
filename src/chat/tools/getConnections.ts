@@ -6,8 +6,11 @@ import {
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
+  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
   MarkdownString,
+  PreparedToolInvocation,
+  ProviderResult,
 } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../../authn/constants";
 import {
@@ -35,6 +38,22 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
 
   foundConnectionTypes: ConnectionType[] = [];
   missingConnectionTypes: ConnectionType[] = [];
+
+  prepareInvocation(
+    options: LanguageModelToolInvocationPrepareOptions<IGetConnectionsParameters>,
+    token: CancellationToken,
+  ): ProviderResult<PreparedToolInvocation> {
+    const { input } = options;
+    let invocationMessage: string;
+    if (input.connectionType) {
+      invocationMessage = `Preparing to retrieve connections for connectionType: ${input.connectionType}...`;
+    } else {
+      invocationMessage = "Preparing to retrieve all available connections...";
+    }
+    return {
+      invocationMessage,
+    };
+  }
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetConnectionsParameters>,
@@ -123,14 +142,13 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetConnectionsParameters;
+    let invocationMessage: string;
     if (!parameters.connectionType) {
-      stream.progress(`Retrieving available connections with no connection type specified...`);
+      invocationMessage = "Retrieving available connections with no connection type specified...";
     } else {
-      stream.progress(
-        `Retrieving available connections for connectionType: ${parameters.connectionType}...`,
-      );
+      invocationMessage = `Retrieving available connections for connectionType: ${parameters.connectionType}...`;
     }
-
+    stream.progress(invocationMessage);
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -140,12 +158,11 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       token,
     );
     if (!parameters.connectionType) {
-      stream.progress(`Found ${result.content.length} connections.`);
+      invocationMessage = `Found ${result.content.length} connections.`;
     } else {
-      stream.progress(
-        `Found ${result.content.length} connections for connectionType: ${parameters.connectionType}.`,
-      );
+      invocationMessage = `Found ${result.content.length} connections for connectionType: ${parameters.connectionType}.`;
     }
+    stream.progress(invocationMessage);
     if (!result.content.length) {
       // cancellation / no results
       return new TextOnlyToolResultPart(toolCall.callId, []);
