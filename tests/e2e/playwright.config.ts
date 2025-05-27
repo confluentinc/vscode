@@ -22,7 +22,9 @@ export default defineConfig<VSCodeTestOptions, VSCodeWorkerOptions>({
   retries: process.env.CI ? 2 : 0,
   maxFailures: process.env.CI ? 1 : 0,
   timeout: 120000,
-  globalTimeout: 120000,
+  // XXX: remove this once we've figured out why the test runner
+  //      hangs indefinitely after successfully executing the first test
+  globalTimeout: 180000,
   workers: 1,
   expect: {
     timeout: 10000,
