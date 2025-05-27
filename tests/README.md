@@ -43,8 +43,13 @@ running against other non-production environments in the future.
 
 #### Pre-requisites
 
-Tests that interact with a Confluent Cloud resource (e.g. submitting a Flink statement) require you
-to have a `.env` file with the following environment variables:
+First, we'll need to install the dependencies:
+
+```bash
+make install-dependencies
+```
+
+Next, we'll need a `.env` file with the following environment variables:
 
 - `E2E_USERNAME`: Confluent Cloud username
 - `E2E_PASSWORD`: Confluent Cloud password
@@ -122,8 +127,8 @@ tests.
    -- like the name suggests, it offers useful helpers to stub the Electron dialog windows among
    other utilities.
 
-   Grep for `stubMultipleDialogs` to see how we use it to stub the Electron dialog windows during the
-   Confluent Cloud authentication flow.
+   Grep for `stubMultipleDialogs` to see how we use it to stub the Electron dialog windows during
+   the Confluent Cloud authentication flow.
 
 #### Process for writing new tests
 
