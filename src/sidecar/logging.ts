@@ -1,12 +1,15 @@
 import { accessSync, writeFileSync } from "fs";
 import { join } from "path";
 import { Tail } from "tail";
-import { commands, LogOutputChannel, window, workspace } from "vscode";
-import { OUTPUT_CHANNEL } from "../logging";
+import { commands, LogOutputChannel, Uri, window, workspace } from "vscode";
+import { Logger, OUTPUT_CHANNEL } from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { WriteableTmpDir } from "../utils/file";
+import { readFile } from "../utils/fsWrappers";
 import { SIDECAR_LOGFILE_NAME } from "./constants";
-import { SidecarLogFormat } from "./types";
+import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
+
+const logger = new Logger("sidecar/logging.ts");
 
 /** Output channel for viewing sidecar logs. */
 export const SIDECAR_OUTPUT_CHANNEL: LogOutputChannel = window.createOutputChannel(
@@ -129,4 +132,82 @@ export function appendSidecarLogToOutputChannel(line: string) {
         `[${log.level}] ${logMsg} ${logArgs.length > 0 ? JSON.stringify(logArgs) : ""}`.trim(),
       );
   }
+}
+
+/**
+ * Gather the sidecar's log lines and stderr lines into a single object.
+ * Parses the 20 most recent sidecar log lines into a structured format.
+ *
+ * @param sidecarLogfilePath The path to the sidecar log file.
+ * @param stderrPath The path to the sidecar's stderr file.
+ *
+ * @returns SidecarOutputs structure containing the log lines, parsed log lines, and stderr lines.
+ */
+export async function gatherSidecarOutputs(
+  sidecarLogfilePath: string,
+  stderrPath: string,
+): Promise<SidecarOutputs> {
+  const myLogger = logger.withCallpoint("gatherSidecarOutputs");
+  // Try to read+parse most recent 20 sidecar logs to notice any startup errors (occupied port, missing
+  // configs, etc.)
+  const reformattedLogLines: string[] = [];
+  const parsedLines: SidecarLogFormat[] = [];
+
+  let rawLogs: string[] = [];
+  try {
+    rawLogs = (await readFile(Uri.file(sidecarLogfilePath))).trim().split("\n").slice(-20);
+  } catch (e) {
+    myLogger.error(`Failed to read sidecar log file: ${e}`);
+  }
+
+  for (const rawLogLine of rawLogs) {
+    try {
+      const parsed = JSON.parse(rawLogLine.trim()) as SidecarLogFormat;
+      if (!parsed || !parsed.timestamp || !parsed.level || !parsed.loggerName || !parsed.message) {
+        throw new Error("Corrupted log line");
+      }
+      parsedLines.push(parsed);
+
+      const formatted = `\t> ${parsed.timestamp} ${parsed.level} [${parsed.loggerName}] ${parsed.message}`;
+      reformattedLogLines.push(formatted);
+    } catch {
+      // JSON parsing or post-JSON structure issue. Only append the raw line to logLines (if nonempty).
+      if (rawLogLine !== "") {
+        reformattedLogLines.push(rawLogLine);
+      }
+    }
+  }
+
+  let stderrLines: string[] = [];
+  try {
+    let stderrContent = await readFile(Uri.file(stderrPath));
+    stderrContent = stderrContent.trim();
+    stderrLines = stderrContent.split("\n");
+    if (stderrLines.length === 1 && stderrLines[0] === "") {
+      // File was essentialy empty. Coerce to empty array.
+      stderrLines = [];
+    }
+  } catch (e) {
+    myLogger.error(`Failed to read sidecar stderr file: ${e}`);
+  }
+
+  return {
+    logLines: reformattedLogLines,
+    parsedLogLines: parsedLines,
+    stderrLines: stderrLines,
+  };
+}
+
+export function divineSidecarStartupFailureReason(
+  outputs: SidecarOutputs,
+): SidecarStartupFailureReason {
+  // Check for the presence of specific error messages in the logs
+  if (
+    outputs.parsedLogLines.some((log) => /seems to be in use by another process/.test(log.message))
+  ) {
+    return SidecarStartupFailureReason.PORT_IN_USE;
+  }
+
+  // If no specific error messages are found, return UNKNOWN
+  return SidecarStartupFailureReason.UNKNOWN;
 }

@@ -1,3 +1,5 @@
+import { SidecarStartupFailureReason } from "./types";
+
 /** Sidecar is not currently running (better start a new one!) */
 export class NoSidecarRunningError extends Error {
   constructor(message: string) {
@@ -5,10 +7,12 @@ export class NoSidecarRunningError extends Error {
   }
 }
 
-/** Sidecar could not start up successfully */
+/** Sidecar could not start up successfully, annotated with determined reason. */
 export class SidecarFatalError extends Error {
-  constructor(message: string) {
+  public reason: SidecarStartupFailureReason;
+  constructor(reason: SidecarStartupFailureReason, message: string) {
     super(message);
+    this.reason = reason;
   }
 }
 
@@ -23,12 +27,5 @@ export class WrongAuthSecretError extends Error {
   constructor(message: string, sidecar_process_id: number) {
     super(message);
     this.sidecar_process_id = sidecar_process_id;
-  }
-}
-
-/** Could not find the sidecar executable. */
-export class NoSidecarExecutableError extends Error {
-  constructor(message: string) {
-    super(message);
   }
 }
