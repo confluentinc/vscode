@@ -5,6 +5,7 @@ import {
   Command,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
@@ -45,13 +46,22 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
   ): ProviderResult<PreparedToolInvocation> {
     const { input } = options;
     let invocationMessage: string;
+    let confirmationMessage: string;
     if (input.connectionType) {
-      invocationMessage = `Preparing to retrieve connections for connectionType: ${input.connectionType}...`;
+      invocationMessage = `Get all available ${getConnectionLabel(input.connectionType)} connections`;
+      confirmationMessage = `This tool will look up all available ${getConnectionLabel(input.connectionType)} connections. Do you want to proceed?`;
     } else {
-      invocationMessage = "Preparing to retrieve all available connections...";
+      invocationMessage = "Get all available Confluent/Kafka connections";
+      confirmationMessage =
+        "This tool will look up all available connections of all types (Confluent Cloud, local, and direct). Do you want to proceed?";
     }
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "Get Connections",
+      message: confirmationMessage,
+    };
     return {
       invocationMessage,
+      confirmationMessages,
     };
   }
 
