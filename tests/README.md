@@ -23,7 +23,8 @@ launch VS Code and interact with it programmatically.
 - `specs` directory contains the test files.
 - `specs/utils` directory contains utility functions for the tests.
 
-> [!NOTE] What's the difference between `gulp e2e` and `gulp functional`?
+> [!NOTE] 
+> What's the difference between `gulp e2e` and `gulp functional`?
 >
 > `gulp e2e` runs the E2E tests in the `tests/e2e/specs` directory, whereas `gulp functional` runs
 > the functional tests under `src/webview/` (and its subdirectories). Both use Playwright to run the
@@ -32,7 +33,8 @@ launch VS Code and interact with it programmatically.
 
 ### Running the E2E tests
 
-> [!IMPORTANT] Please close any already-open VS Code windows before running the tests. This is
+> [!IMPORTANT] 
+> Please close any already-open VS Code windows before running the tests. This is
 > because the tests launch their own VS Code instance and need to properly handle browser auth
 > callbacks.
 
@@ -79,7 +81,7 @@ If you wanted to run the tests in a specific VS Code version, you can set the `V
 environment variable:
 
 ```bash
-    VSCODE_VERSION=1.93.2 gulp e2e
+VSCODE_VERSION=1.93.2 gulp e2e
 ```
 
 ### Debugging the E2E tests
@@ -120,8 +122,8 @@ tests.
    -- like the name suggests, it offers useful helpers to stub the Electron dialog windows among
    other utilities.
 
-Grep for `stubMultipleDialogs` to see how we use it to stub the Electron dialog windows during the
-Confluent Cloud authentication flow.
+   Grep for `stubMultipleDialogs` to see how we use it to stub the Electron dialog windows during the
+   Confluent Cloud authentication flow.
 
 #### Process for writing new tests
 
@@ -217,66 +219,8 @@ Here are some areas that we've yet to explore and that we may explore in the fut
 
 1. **Running the tests in Semaphore CI**
 
-   The test suite is not yet set up to run in Semaphore CI. Previous attempts at this were
-   unsuccessful due to some issues with using a X Virtual Framebuffer (Xvfb) to run the tests in a
-   headless mode.
-
-   For anyone that looks into this, use the `DEBUG=pw:browser*` environment variable to get more
-   detailed logs from the Playwright browser. And best of luck!
-
-   Here's the error that we got when we tried to run the tests on an Linux x64 machine using
-   `xvfb-run -a npx gulp e2e`:
-
-    <details>
-    <summary>Error message</summary>
-
-   ```
-     pw:browser <launching> /home/semaphore/vscode/.vscode-test/worker-0/vscode-linux-x64-1.100.2/code --inspect=0 --remote-debugging-port=0 --no-sandbox --disable-gpu-sandbox --disable-updates --disable-dev-shm-usage --disable-gpu --enable-smoke-test-driver --use-inmemory-secretstorage --skip-welcome --skip-release-notes --disable-workspace-trust --extensions-dir=/tmp/pwtest-uu44OE/extensions --user-data-dir=/tmp/pwtest-uu44OE/user-data --extensionTestsPath=/home/semaphore/vscode/tests/e2e/vscode-test-playwright/injected/index /home/semaphore/vscode/out +0ms04:06
-   pw:browser <launched> pid=8470 +5ms04:06
-   pw:browser [pid=8470][err] Debugger listening on ws://127.0.0.1:43213/706d2783-1e0b-43de-b5e7-af58e8147256 +93ms04:06
-   pw:browser [pid=8470][err] For help, see: https://nodejs.org/en/docs/inspector +0ms04:06
-   pw:browser <ws connecting> ws://127.0.0.1:43213/706d2783-1e0b-43de-b5e7-af58e8147256 +1ms04:06
-   pw:browser <ws connected> ws://127.0.0.1:43213/706d2783-1e0b-43de-b5e7-af58e8147256 +4ms04:06
-   pw:browser [pid=8470][err] Debugger attached. +0ms04:06
-   pw:browser [pid=8470][err] error: XDG_RUNTIME_DIR is invalid or not set in the environment. +3s04:09
-   pw:browser [pid=8470][err] [8470:0521/173017.138029:ERROR:bus.cc(407)] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix") +987ms04:10
-   pw:browser [pid=8470][err] [8470:0521/173017.138218:ERROR:bus.cc(407)] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix") +0ms04:10
-   pw:browser [pid=8470][err] [8470:0521/173017.138249:ERROR:bus.cc(407)] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix") +0ms04:10
-   pw:browser [pid=8470][err] [8470:0521/173017.138263:ERROR:bus.cc(407)] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix") +1ms04:10
-   pw:browser [pid=8470][err] [8470:0521/173017.138276:ERROR:object_proxy.cc(576)] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type:  +0ms04:10
-   pw:browser [pid=8470][err]  +51ms04:10
-   pw:browser [pid=8470][err] DevTools listening on ws://127.0.0.1:46663/devtools/browser/e11c7d09-445b-42d7-b190-58eb4a4cb585 +0ms04:10
-   pw:browser <ws connecting> ws://127.0.0.1:46663/devtools/browser/e11c7d09-445b-42d7-b190-58eb4a4cb585 +0ms04:10
-   pw:browser <ws connected> ws://127.0.0.1:46663/devtools/browser/e11c7d09-445b-42d7-b190-58eb4a4cb585 +5ms04:10
-   pw:browser [pid=8470][err] Warning: 'remote-debugging-port' is not in the list of known options, but still passed to Electron/Chromium. +31ms04:10
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:17.324Z] lifecycle (main): phase changed (value: 2) +98ms04:10
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:17.485Z] lifecycle (main): phase changed (value: 3) +161ms04:10
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:17.493Z] update#setState disabled +8ms04:10
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:17.493Z] update#ctor - updates are disabled by the environment +0ms04:10
-   pw:browser [pid=8470][err] [8470:0521/173017.493903:ERROR:bus.cc(407)] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix") +1ms04:10
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:19.987Z] lifecycle (main): phase changed (value: 4) +2s04:13
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.673Z] Lifecycle#app.on(before-quit) +2s04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.673Z] Lifecycle#onBeforeShutdown.fire() +0ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.674Z] Lifecycle#window.on('close') - window ID 1 +1ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.674Z] Lifecycle#unload() - window ID 1 +0ms04:14
-   pw:browser <ws disconnecting> ws://127.0.0.1:43213/706d2783-1e0b-43de-b5e7-af58e8147256 +41ms04:14
-   pw:browser [pid=8470][err] Debugger ending on ws://127.0.0.1:43213/706d2783-1e0b-43de-b5e7-af58e8147256 +0ms04:14
-   pw:browser [pid=8470][err] For help, see: https://nodejs.org/en/docs/inspector +1ms04:14
-   pw:browser <ws disconnected> ws://127.0.0.1:43213/706d2783-1e0b-43de-b5e7-af58e8147256 code=1005 reason= +0ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.728Z] Extension host with pid 9123 exited with code: 0, signal: unknown. +12ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.752Z] Lifecycle#onBeforeCloseWindow.fire() - window ID 1 +24ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.756Z] Lifecycle#window.on('closed') - window ID 1 +4ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.756Z] Lifecycle#onWillShutdown.fire() +0ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.758Z] Lifecycle#app.on(window-all-closed) +2ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.758Z] Lifecycle#app.on(will-quit) - begin +0ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.765Z] Lifecycle#app.on(will-quit) - after fireOnWillShutdown +7ms04:14
-   pw:browser [pid=8470][out] [main 2025-05-21T17:30:21.765Z] Lifecycle#app.on(will-quit) - calling app.quit() +0ms04:14
-   pw:browser [pid=8470] <process did exit: exitCode=0, signal=null> +34ms04:14
-   pw:browser [pid=8470] starting temporary directories cleanup +1ms04:14
-   pw:browser [pid=8470] finished temporary directories cleanup +2ms
-   ```
-
-    </details>
+   The test suite is not yet set up to run in Semaphore CI. Take a look at
+   [this PR](https://github.com/confluentinc/vscode/pull/1885) for a previous attempt at this.
 
 1. **Code coverage from the E2E tests**
 
