@@ -6,7 +6,9 @@ import {
   ConnectionSpec,
   ConnectionType,
   KafkaClusterConfig,
+  KafkaClusterStatus,
   SchemaRegistryConfig,
+  SchemaRegistryStatus,
 } from "../../clients/sidecar";
 import { getCredentialsType } from "../../directConnections/credentials";
 import { FormConnectionType, SupportedAuthTypes } from "../../directConnections/types";
@@ -120,34 +122,36 @@ export async function reportUsableState(connection: Connection) {
   // send an event for direct connections to help understand how often SUCCESS/FAILED happens,
   // for which configs, etc.
   if (connection.spec.type === ConnectionType.Direct) {
-    failedConnectionSummaries.forEach((state) => {
-      const configPrefix = state.configType === "Kafka" ? "kafka" : "schemaRegistry";
+    failedConnectionSummaries.forEach((summary) => {
+      const configPrefix = summary.configType === "Kafka" ? "kafka" : "schemaRegistry";
       logUsage(UserEvent.DirectConnectionAction, {
         action: "failed to connect",
-        type: state.type, // formConnectionType
-        specifiedConnectionType: state.specifiedConnectionType,
+        type: summary.type, // formConnectionType
+        specifiedConnectionType: summary.specifiedConnectionType,
         // withKafka or withSchemaRegistry
-        [`with${state.configType.replace(" ", "")}`]: true,
-        configType: state.configType,
+        [`with${summary.configType.replace(" ", "")}`]: true,
+        configType: summary.configType,
         // kafkaAuthType or schemaRegistryAuthType
-        [`${configPrefix}AuthType`]: state.authType,
+        [`${configPrefix}AuthType`]: summary.authType,
         // kafkaConfigSslEnabled or schemaRegistryConfigSslEnabled
-        [`${configPrefix}SslEnabled`]: state.sslEnabled,
+        [`${configPrefix}SslEnabled`]: summary.sslEnabled,
+        failedReason: summary.failedReason,
       });
     });
-    successfulConnectionSummaries.forEach((state) => {
-      const configPrefix = state.configType === "Kafka" ? "kafka" : "schemaRegistry";
+    successfulConnectionSummaries.forEach((summary) => {
+      const configPrefix = summary.configType === "Kafka" ? "kafka" : "schemaRegistry";
       logUsage(UserEvent.DirectConnectionAction, {
         action: "successfully connected",
-        type: state.type,
-        specifiedConnectionType: state.specifiedConnectionType,
+        type: summary.type,
+        specifiedConnectionType: summary.specifiedConnectionType,
         // withKafka or withSchemaRegistry
-        [`with${state.configType.replace(" ", "")}`]: true,
-        configType: state.configType,
+        [`with${summary.configType.replace(" ", "")}`]: true,
+        configType: summary.configType,
         // kafkaAuthType or schemaRegistryAuthType
-        [`${configPrefix}AuthType`]: state.authType,
+        [`${configPrefix}AuthType`]: summary.authType,
         // kafkaConfigSslEnabled or schemaRegistryConfigSslEnabled
-        [`${configPrefix}SslEnabled`]: state.sslEnabled,
+        [`${configPrefix}SslEnabled`]: summary.sslEnabled,
+        failedReason: summary.failedReason,
       });
     });
   }
@@ -171,6 +175,7 @@ export interface ConnectionSummary {
   specifiedConnectionType?: string; // "Other" form connection type's user-entered string
   authType?: SupportedAuthTypes | "Browser";
   sslEnabled?: boolean;
+  failedReason?: string; // only for `FAILED` states
 }
 
 /**
@@ -192,9 +197,8 @@ export async function getConnectionSummaries(
         const formSpec: CustomConnectionSpec | null =
           await getResourceManager().getDirectConnection(connection.id as ConnectionId);
 
-        const kafkaClusterState: ConnectedState | undefined =
-          connection.status.kafka_cluster?.state;
-        if (kafkaClusterState === state) {
+        const kafkaClusterStatus: KafkaClusterStatus | undefined = connection.status.kafka_cluster;
+        if (kafkaClusterStatus && kafkaClusterStatus.state === state) {
           const kafkaConfig: KafkaClusterConfig | undefined = connection.spec.kafka_cluster;
           states.push({
             connectionType: ConnectionType.Direct,
@@ -204,12 +208,13 @@ export async function getConnectionSummaries(
             authType: getCredentialsType(kafkaConfig?.credentials),
             sslEnabled: kafkaConfig?.ssl?.enabled ?? false,
             connectedState: state,
+            failedReason: kafkaClusterStatus.errors?.sign_in?.message,
           });
         }
 
-        const schemaRegistryState: ConnectedState | undefined =
-          connection.status.schema_registry?.state;
-        if (schemaRegistryState === state) {
+        const schemaRegistryState: SchemaRegistryStatus | undefined =
+          connection.status.schema_registry;
+        if (schemaRegistryState && schemaRegistryState.state === state) {
           const schemaRegistryConfig: SchemaRegistryConfig | undefined =
             connection.spec.schema_registry;
           states.push({
@@ -220,6 +225,7 @@ export async function getConnectionSummaries(
             authType: getCredentialsType(schemaRegistryConfig?.credentials),
             sslEnabled: schemaRegistryConfig?.ssl?.enabled ?? false,
             connectedState: state,
+            failedReason: schemaRegistryState.errors?.sign_in?.message,
           });
         }
       }
