@@ -34,6 +34,9 @@ export enum SidecarStartupFailureReason {
   /** Quarkus startup logs indicated some other process camped out on {@see SIDECAR_PORT}. */
   PORT_IN_USE = "PORT_IN_USE",
 
+  /** Running on an older linux that doesn't have the minimum version GLIBC required */
+  LINUX_GLIBC_NOT_FOUND = "LINUX_GLIBC_NOT_FOUND",
+
   /** Error when trying to kill() uncooperative or wrong-version running sidecar. */
   CANNOT_KILL_OLD_PROCESS = "CANNOT_KILL_OLD_PROCESS",
 
