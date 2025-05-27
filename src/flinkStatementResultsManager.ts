@@ -7,6 +7,7 @@ import {
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
 } from "./clients/flinkSql";
+import { viewStatementSqlCommand } from "./commands/flinkStatements";
 import { showJsonPreview } from "./documentProviders/message";
 import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
@@ -35,6 +36,7 @@ export type MessageType =
   | "SetVisibleColumns"
   | "GetStatementMeta"
   | "StopStatement"
+  | "ViewStatementSource"
   | "SetViewMode"
   | "GetViewMode";
 
@@ -81,6 +83,7 @@ export type PostFunction = {
     isForeground: boolean;
   }>;
   (type: "StopStatement", body: { timestamp?: number }): Promise<null>;
+  (type: "ViewStatementSource", body: { timestamp?: number }): Promise<null>;
   (type: "SetViewMode", body: { viewMode: ViewMode; timestamp?: number }): Promise<null>;
   (type: "GetViewMode", body: { timestamp?: number }): Promise<ViewMode>;
 };
@@ -412,6 +415,10 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  private async viewStatementSource(): Promise<void> {
+    await viewStatementSqlCommand(this.statement);
+  }
+
   private async _stopStatement() {
     await this._flinkStatementsSqlApi.updateSqlv1Statement({
       organization_id: this.statement.organizationId,
@@ -504,6 +511,9 @@ export class FlinkStatementResultsManager {
       }
       case "StopStatement": {
         return this.stopStatement();
+      }
+      case "ViewStatementSource": {
+        return this.viewStatementSource();
       }
       case "SetViewMode": {
         this._viewMode(body.viewMode! as ViewMode);
