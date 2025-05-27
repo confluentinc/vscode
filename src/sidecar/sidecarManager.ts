@@ -23,7 +23,7 @@ import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
 import { NoSidecarRunningError, SidecarFatalError, WrongAuthSecretError } from "./errors";
 import {
-  divineSidecarStartupFailureReason,
+  determineSidecarStartupFailureReason,
   gatherSidecarOutputs,
   getSidecarLogfilePath,
   startTailingSidecarLogs,
@@ -555,7 +555,7 @@ export class SidecarManager {
 
   /**
    * Check the sidecar process status to ensure it has started up, logging any stderr output and the
-   * last few lines of the sidecar log file.
+   * last few lines of the sidecar log file. Called a short time after the sidecar process is spawned.
    *
    * @throws SidecarFatalError if the sidecar process is not running, annotated with
    * our best guess as to why it failed to start (attribute `reason`). Will have already
@@ -574,32 +574,32 @@ export class SidecarManager {
     logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
 
     if (isRunning) {
+      // All done here.
       return;
     }
 
-    if (!isRunning) {
-      // for some reason the sidecar process died immediately after startup, so log the error and
-      // report to Sentry so we can investigate.
+    // For some reason the sidecar process died immediately after startup, so log the error and
+    // report to Sentry so we can investigate.
+    const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
 
-      const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
+    let failureReason: SidecarStartupFailureReason = determineSidecarStartupFailureReason(outputs);
 
-      let failureReason: SidecarStartupFailureReason = divineSidecarStartupFailureReason(outputs);
+    const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
 
-      const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
+    const error = new SidecarFatalError(failureReason, failureMsg);
 
-      const error = new SidecarFatalError(failureReason, failureMsg);
+    // Send to sentry and error logger.
+    logError(error, `sidecar process failed to start`, {
+      extra: {
+        stderr: outputs.stderrLines.join("\n"),
+        logs: outputs.logLines.join("\n"),
+        reason: failureReason,
+      },
+    });
 
-      // Send to sentry and error logger.
-      logError(error, `sidecar process failed to start`, {
-        extra: {
-          stderr: outputs.stderrLines.join("\n"),
-          logs: outputs.logLines.join("\n"),
-          reason: failureReason,
-        },
-      });
-
-      // prettyprint the last few lines of the sidecar log file to logs, 'cause user will probably
-      // open the logs.
+    // Prettyprint the last few lines of the sidecar logs and/or stderr to our logs, 'cause user will probably
+    // open our logs.
+    if (outputs.parsedLogLines.length > 0) {
       logger.error(
         `${logPrefix}: Latest sidecar log lines:\n${outputs.parsedLogLines
           .slice(-5)
@@ -608,9 +608,19 @@ export class SidecarManager {
           })
           .join("\n")}`,
       );
-
-      throw error;
     }
+
+    // Likewise for stderr. Will usually be either one or the other between this and the sidecar logs.
+    if (outputs.stderrLines.length > 0) {
+      logger.error(
+        `${logPrefix}: Latest sidecar stderr lines:\n${outputs.stderrLines
+          .slice(-5)
+          .map((line) => `\t> ${line}`)
+          .join("\n")}`,
+      );
+    }
+
+    throw error;
   }
 
   dispose() {

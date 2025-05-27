@@ -211,8 +211,6 @@ export function checkSidecarFile(executablePath: string) {
  * carrying a SidecarStartupFailureReason.
  */
 export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> {
-  const checkLogsBoilerplate = `Please check the logs for more details`;
-
   if (e instanceof SidecarFatalError) {
     logger.error(`showSidecarStartupErrorMessage(): ${e.message} (${e.reason})`);
     const portBoilerplate = `Sidecar could not start, port ${SIDECAR_PORT} is in use by another process`;
@@ -227,8 +225,12 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
         message = `${portBoilerplate}, which seems to be a web server but is not our sidecar. Please check for other applications using this port.`;
         break;
 
+      case SidecarStartupFailureReason.LINUX_GLIBC_NOT_FOUND:
+        message = `It appears your Linux installation is too old and does not have the required GLIBC version. We build on Ubuntu 22.04 and need at least GLIBC_2.32. Please upgrade your distribution to a more recent version.`;
+        break;
+
       case SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS:
-        message = `Sidecar failed to start: Failed to kill old sidecar process. ${checkLogsBoilerplate}.`;
+        message = `Sidecar failed to start: Failed to kill old sidecar process.`;
         break;
 
       case SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN:
@@ -236,30 +238,26 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
         break;
 
       case SidecarStartupFailureReason.SPAWN_ERROR:
-        message = `Sidecar executable was not able to be spawned. ${checkLogsBoilerplate}.`;
+        message = `Sidecar executable was not able to be spawned.`;
         break;
 
       case SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID:
-        message = `Sidecar executable was not able to be spawned -- resulting PID was undefined. ${checkLogsBoilerplate}.`;
-        break;
-
-      case SidecarStartupFailureReason.MISSING_EXECUTABLE:
-        // "Component {executablePath} does not exist or is not executable"
-        message = `${e.message}. ${checkLogsBoilerplate}.`;
+        message = `Sidecar executable was not able to be spawned -- resulting PID was undefined.`;
         break;
 
       case SidecarStartupFailureReason.HANDSHAKE_FAILED:
-        message = `Sidecar failed to start: Handshake failed. ${checkLogsBoilerplate}.`;
+        message = `Sidecar failed to start: Handshake failed.`;
         break;
 
       case SidecarStartupFailureReason.MAX_ATTEMPTS_EXCEEDED:
-        message = `Sidecar failed to start: Handshake failed after repeated attempts. ${checkLogsBoilerplate}.`;
+        message = `Sidecar failed to start: Handshake failed after repeated attempts.`;
         break;
 
+      case SidecarStartupFailureReason.MISSING_EXECUTABLE:
       case SidecarStartupFailureReason.WRONG_ARCHITECTURE:
       case SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID:
-        // These two use the error message embedded in the exception,
-        // in that the raising point
+        // These use the error message embedded in the exception,
+        // in that the raising point.
         message = e.message;
 
         // But we can add a button to open the marketplace in case of WRONG_ARCHITECTURE.
@@ -274,16 +272,14 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
         break;
 
       default:
-        message = `Sidecar failed to start: ${e.message}. ${checkLogsBoilerplate}.`;
+        message = `Sidecar failed to start: ${e.message}`;
         break;
     }
 
     void showErrorNotificationWithButtons(message, buttons);
   } else {
     // Was some truly unexpected exception!
-    void showErrorNotificationWithButtons(
-      `Sidecar failed to start: ${e}. ${checkLogsBoilerplate}.`,
-    );
+    void showErrorNotificationWithButtons(`Sidecar failed to start: ${e}`);
   }
 }
 
