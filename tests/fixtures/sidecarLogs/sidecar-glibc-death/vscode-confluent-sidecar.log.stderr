@@ -1,1 +1,3 @@
-/lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.25' not found
+/lib64/libc.so.6: version `GLIBC_2.33' not found (required by /home/user/.vscode-server/extensions/confluentinc.vscode-confluent-1.2.1/ide-sidecar-0.196.0-runner)
+/lib64/libc.so.6: version `GLIBC_2.32' not found (required by /home/user/.vscode-server/extensions/confluentinc.vscode-confluent-1.2.1/ide-sidecar-0.196.0-runner)
+/lib64/libc.so.6: version `GLIBC_2.34' not found (required by /home/user/.vscode-server/extensions/confluentinc.vscode-confluent-1.2.1/ide-sidecar-0.196.0-runner)
