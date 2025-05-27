@@ -48,7 +48,6 @@ test: setup-test-env install-test-dependencies install-dependencies
 			fi \
 	else \
 			npx gulp test; \
-			npx playwright install-deps
 	fi
 	npx gulp functional
 
