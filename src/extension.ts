@@ -58,7 +58,7 @@ import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
+import { ENABLE_CHAT_PARTICIPANT } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/sidecarSync";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
@@ -312,7 +312,6 @@ async function _activateExtension(
 async function setupContextValues() {
   // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-  const flinkEnabled = setContextValue(ContextValues.flinkEnabled, config.get(ENABLE_FLINK, false));
   const chatParticipantEnabled = setContextValue(
     ContextValues.chatParticipantEnabled,
     config.get(ENABLE_CHAT_PARTICIPANT, true),
@@ -378,7 +377,6 @@ async function setupContextValues() {
     MESSAGE_URI_SCHEME,
   ]);
   await Promise.all([
-    flinkEnabled,
     chatParticipantEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,

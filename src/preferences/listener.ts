@@ -1,16 +1,8 @@
-import {
-  commands,
-  ConfigurationChangeEvent,
-  Disposable,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import {
   ENABLE_CHAT_PARTICIPANT,
-  ENABLE_FLINK,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
@@ -61,18 +53,6 @@ export function createConfigChangeListener(): Disposable {
       // --- EXPERIMENTAL/PREVIEW SETTINGS --
       // Remove the sections below once the behavior is enabled by default and a setting is no
       // longer needed to opt-in to the feature.
-      if (event.affectsConfiguration(ENABLE_FLINK)) {
-        // user toggled the "Enable Flink" preview setting
-        const enabled = configs.get(ENABLE_FLINK, false);
-        logger.debug(`"${ENABLE_FLINK}" config changed`, { enabled });
-        setContextValue(ContextValues.flinkEnabled, enabled);
-        // refresh the Resources view to toggle visibility of compute pools under environments
-        if (hasCCloudAuthSession()) {
-          commands.executeCommand("confluent.resources.refresh");
-        }
-        return;
-      }
-
       if (event.affectsConfiguration(ENABLE_CHAT_PARTICIPANT)) {
         // user toggled the "Enable Chat Participant" experimental setting
         const enabled = configs.get(ENABLE_CHAT_PARTICIPANT, false);

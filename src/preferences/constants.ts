@@ -42,7 +42,6 @@ export const USE_TOPIC_NAME_STRATEGY =
 export const ALLOW_OLDER_SCHEMA_VERSIONS =
   prefix + "topic.produceMessages.schemas.allowOlderVersions";
 
-export const ENABLE_FLINK = prefix + "preview.enableFlink";
 export const ENABLE_CHAT_PARTICIPANT = prefix + "experimental.enableChatParticipant";
 
 /** Default Flink compute pool ID. */
