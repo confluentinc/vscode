@@ -52,10 +52,8 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
       confirmationMessage = new MarkdownString()
         .appendMarkdown(`## ${getConnectionLabel(input.connectionType)} Connections\n`)
         .appendMarkdown(
-          `This tool will look up all available connections of type **${getConnectionLabel(input.connectionType)}**.`,
-        )
-        .appendMarkdown(`Results will show the connection ID and name.`)
-        .appendMarkdown(`Do you want to proceed?`);
+          `This tool will look up all available connections of type **${getConnectionLabel(input.connectionType)}**. Results will show the connection ID and name. Do you want to proceed?`,
+        );
     } else {
       invocationMessage = "Get all available Confluent/Kafka connections";
       confirmationMessage = new MarkdownString()
