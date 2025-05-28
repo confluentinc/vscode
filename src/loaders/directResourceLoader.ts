@@ -36,8 +36,8 @@ export class DirectResourceLoader extends ResourceLoader {
   async getEnvironments(forceDeepRefresh: boolean = false): Promise<DirectEnvironment[]> {
     if (!this.cachedEnvironments || forceDeepRefresh) {
       // Look up the one-or-none DirectEnvironment for this connection.
-      const envs: DirectEnvironment | undefined = await getDirectResources(this.connectionId);
-      this.cachedEnvironments = envs ? [envs] : [];
+      const env: DirectEnvironment | undefined = await getDirectResources(this.connectionId);
+      this.cachedEnvironments = env ? [env] : [];
       this.logger.debug("getEnvironments() deep refresh");
     } else {
       this.logger.debug("getEnvironments() cache hit");
