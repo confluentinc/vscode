@@ -91,7 +91,7 @@ export class DirectConnectionManager {
           // purge the cache of existing loaders to ensure they re-fetch the latest resources next time
           // (may have been reconfigured, e.g. new kafka cluster or schema registry, or improved)
           for (const id of connections.keys()) {
-            if (!existingLoaderIds.includes(id)) {
+            if (!existingLoaderIds.has(id)) {
               this.initResourceLoader(id);
             } else {
               // Get this preexisting loader to purge its cache, so it can re-fetch the latest resources. The
@@ -100,9 +100,10 @@ export class DirectConnectionManager {
               // we get the change event, so we have to be conservative and purge the caches of any
               // existing direct loaders.
               const existingLoader = existingDirectLoadersById.get(id)!;
-              await existingLoader.purgeCache();
+              existingLoader.purgeCache();
             }
           }
+
           // part 2: remove any direct connections not in the secret storage to prevent
           // requests to orphaned resources/connections
           for (const id of existingLoaderIds) {

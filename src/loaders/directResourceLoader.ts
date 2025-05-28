@@ -51,7 +51,7 @@ export class DirectResourceLoader extends ResourceLoader {
   /**
    * Clear all cached data for this connection.
    */
-  async purgeCache(): Promise<void> {
+  purgeCache(): void {
     this.logger.debug("purgeCache()");
     this.cachedEnvironments = undefined;
   }
