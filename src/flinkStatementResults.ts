@@ -72,6 +72,8 @@ async function handleFlinkStatementResults(
   // Handle messages from the webview and delegate to the results manager
   const handler = handleWebviewMessage(panel.webview, (...args) => {
     let result;
+    // handleMessage() may end up reassigning many signals, so do
+    // so in a batch.
     os.batch(() => (result = resultsManager.handleMessage(...args)));
     return result;
   });
