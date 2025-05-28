@@ -91,7 +91,7 @@ export class DirectConnectionManager {
           // purge the cache of existing loaders to ensure they re-fetch the latest resources next time
           // (may have been reconfigured, e.g. new kafka cluster or schema registry, or improved)
           for (const id of connections.keys()) {
-            if (!existingLoaderIds.has(id)) {
+            if (!existingDirectLoadersById.has(id)) {
               this.initResourceLoader(id);
             } else {
               // Get this preexisting loader to purge its cache, so it can re-fetch the latest resources. The
