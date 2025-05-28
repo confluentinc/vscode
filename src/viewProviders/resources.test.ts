@@ -9,6 +9,7 @@ import {
   TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -121,7 +122,7 @@ describe("ResourceViewProvider methods", () => {
     getDirectConnectionsStub.resolves(
       new Map([[TEST_DIRECT_ENVIRONMENT.id, TEST_DIRECT_ENVIRONMENT]]),
     );
-    sandbox.stub(direct, "getDirectResources").resolves([TEST_DIRECT_ENVIRONMENT]);
+    sandbox.stub(direct, "getDirectResources").resolves(TEST_DIRECT_ENVIRONMENT);
 
     await provider.removeUnusedEnvironments();
 
@@ -256,7 +257,7 @@ describe("ResourceViewProvider loading functions", () => {
 
   it("loadDirectResources() should return an empty array when no direct connections exist", async () => {
     // no direct connections exist
-    sandbox.stub(direct, "getDirectResources").resolves([]);
+    sandbox.stub(direct, "getDirectResources").resolves();
 
     const result: DirectEnvironment[] = await loadDirectResources();
 
@@ -264,13 +265,19 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadDirectResources() should return an array of direct 'environments' if direct connections exist", async () => {
-    // direct connections exist
+    // direct connection exists in storage
+    sandbox
+      .stub(resourceManager.ResourceManager.getInstance(), "getDirectConnections")
+      .resolves(
+        new Map([[TEST_DIRECT_ENVIRONMENT.connectionId, TEST_DIRECT_CONNECTION_FORM_SPEC]]),
+      );
+    // and we get its resources back from the GraphQL query
     const testDirectEnv: DirectEnvironment = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
       schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
     });
-    sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
+    sandbox.stub(direct, "getDirectResources").resolves(testDirectEnv);
 
     const result: DirectEnvironment[] = await loadDirectResources();
 
@@ -459,7 +466,7 @@ describe("ResourceViewProvider search behavior", () => {
     sandbox.stub(org, "getCurrentOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     sandbox.stub(localConnections, "updateLocalConnection").resolves();
     sandbox.stub(local, "getLocalResources").resolves([]);
-    sandbox.stub(direct, "getDirectResources").resolves([]);
+    sandbox.stub(direct, "getDirectResources").resolves();
     sandbox.stub(ccloudLoader, "getSchemaRegistryForEnvironmentId").resolves();
 
     provider = ResourceViewProvider.getInstance();

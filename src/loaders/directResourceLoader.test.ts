@@ -12,8 +12,6 @@ import { DirectResourceLoader } from "./directResourceLoader";
 describe("DirectResourceLoader", () => {
   const connectionId = "test-connection-id";
 
-  // As if from GraphQL, describing multiple direct environments.
-  let totalEnvironments: DirectEnvironment[];
   let myEnvironment: DirectEnvironment;
 
   let sandbox: sinon.SinonSandbox;
@@ -52,37 +50,16 @@ describe("DirectResourceLoader", () => {
       }),
     });
 
-    // All environments returned by the GraphQL query.
-    totalEnvironments = [
-      myEnvironment,
-      // Another environment that is not the one we're testing.
-      new DirectEnvironment({
-        id: "another-environment-id" as EnvironmentId,
-        connectionId: "another-connection-id" as ConnectionId,
-        name: "Environment 2",
-        kafkaConfigured: true,
-        kafkaClusters: [
-          DirectKafkaCluster.create({
-            id: "kafka-cluster-2",
-            name: "Kafka Cluster 2",
-            bootstrapServers: "kafka2.example.com:9092",
-            uri: "kafka://kafka2.example.com:9092",
-            connectionId: "another-connection-id" as ConnectionId,
-            connectionType: ConnectionType.Direct,
-          }),
-        ],
-        schemaRegistryConfigured: false,
-        schemaRegistry: undefined,
-      }),
-    ];
-
+    // stub getDirectResources() to return our test environment.
     getDirectResourcesStub = sandbox
       .stub(directGraphQl, "getDirectResources")
-      .resolves(totalEnvironments);
+      .resolves(myEnvironment);
   });
+
   afterEach(() => {
     sandbox.restore();
   });
+
   describe("getEnvironments()", () => {
     it("Deep fetches once and caches the result", async () => {
       const environments = await loader.getEnvironments();
