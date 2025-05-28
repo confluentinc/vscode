@@ -19,8 +19,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- The `confluent.preview.enableFlink` setting is now enabled by default, allowing users to access
-  Flink features without needing to manually enable the preview setting.
+- The `confluent.preview.enableFlink` setting was removed and its functionality is now enabled by
+  default, allowing users to access Flink features without needing to manually opt in.
 
 ### Fixed
 
