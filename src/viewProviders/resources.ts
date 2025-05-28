@@ -45,13 +45,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import {
-  ConnectionId,
-  ConnectionLabel,
-  EnvironmentId,
-  isDirect,
-  ISearchable,
-} from "../models/resource";
+import { ConnectionId, ConnectionLabel, isDirect, ISearchable } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -417,8 +411,9 @@ export class ResourceViewProvider
             // if the connection is usable, we need to refresh the children of the environment
             // to potentially show the Kafka clusters and Schema Registry and update the collapsible
             // state of the item
-            const directEnvs = await getDirectResources();
-            const directEnv = directEnvs.find((env) => env.id === (id as unknown as EnvironmentId));
+            const directEnv: DirectEnvironment | undefined = await getDirectResources(
+              environment.connectionId,
+            );
             if (directEnv) {
               environment.kafkaClusters = directEnv.kafkaClusters;
               environment.schemaRegistry = directEnv.schemaRegistry;
@@ -671,9 +666,22 @@ export async function loadLocalResources(): Promise<
 }
 
 export async function loadDirectResources(): Promise<DirectEnvironment[]> {
-  // fetch all direct connections and their resources; each connection will be treated the same as a
-  // CCloud environment (connection ID and environment ID are the same)
-  const directEnvs = await getDirectResources();
+  // load all direct connection IDs and specs from storage (as the source of truth)
+  const directConnectionMap: DirectConnectionsById =
+    await getResourceManager().getDirectConnections();
+
+  // fetch all direct connections and their resources by connection ID, where each connection will
+  // be treated the same as a CCloud environment (connection ID and environment ID are the same)
+  const graphqlPromises: Promise<DirectEnvironment | undefined>[] = Array.from(
+    directConnectionMap.keys(),
+  ).map((id) => getDirectResources(id));
+  // filter out any undefined results (which shouldn't happen, but just in case)
+  const directEnvs: DirectEnvironment[] = await Promise.all(graphqlPromises).then(
+    (results): DirectEnvironment[] =>
+      results.filter((env): env is DirectEnvironment => env !== undefined),
+  );
+
   logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
-  return directEnvs;
+  // finally, sort the direct environments by name before returning them
+  return directEnvs.sort((a, b) => a.name.localeCompare(b.name));
 }
