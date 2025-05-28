@@ -444,6 +444,10 @@ schema and need to manually regenerate `sidecarGraphQL.d.ts`, run:
 npx gql-tada generate-output
 ```
 
+See the
+[`gql.tada` documentation](https://gql-tada.0no.co/get-started/workflows#generating-the-output-file)
+for more details.
+
 ### Updating NOTICE files
 
 <!-- prettier-ignore -->
