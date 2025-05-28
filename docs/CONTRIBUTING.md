@@ -442,7 +442,7 @@ schema and need to manually regenerate `sidecarGraphQL.d.ts`, run the following 
 root of the repository:
 
 ```bash
-npx gql-tada generate-output
+npx gql-tada generate output
 ```
 
 See the
