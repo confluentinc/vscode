@@ -422,7 +422,7 @@ where we can store these changes as `.patch` files.
 The `apigen` task tries to apply these patches to the OpenAPI specs before generating the client
 code by using a glob pattern to find all `.patch` files in the `patches` directory.
 
-### Update GraphQL definitions
+### Updating GraphQL definitions
 
 We use GraphQL queries to the sidecar process to retrieve information about available connections
 and their resources, such as environments, Kafka clusters, Schema Registry instances, and Flink
