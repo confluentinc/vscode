@@ -5,7 +5,6 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import {
   ENABLE_CHAT_PARTICIPANT,
-  ENABLE_FLINK,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
@@ -88,7 +87,6 @@ describe("preferences/listener", function () {
   });
 
   for (const [previewSetting, previewContextValue] of [
-    [ENABLE_FLINK, contextValues.ContextValues.flinkEnabled],
     [ENABLE_CHAT_PARTICIPANT, contextValues.ContextValues.chatParticipantEnabled],
   ]) {
     for (const enabled of [true, false]) {
