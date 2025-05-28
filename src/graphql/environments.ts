@@ -1,5 +1,4 @@
 import { graphql } from "gql.tada";
-import { workspace, WorkspaceConfiguration } from "vscode";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { logError } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
@@ -8,7 +7,6 @@ import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { ENABLE_FLINK } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
 
 /**
@@ -66,10 +64,6 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
     return envs;
   }
 
-  // TODO: remove this once Flink support is enabled by default
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const flinkEnabled: boolean = config.get(ENABLE_FLINK, false);
-
   environments.forEach((env) => {
     if (!env) {
       return;
@@ -100,7 +94,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
 
     // parse Flink Compute Pools
     let flinkComputePools: CCloudFlinkComputePool[] = [];
-    if (flinkEnabled && env.flinkComputePools) {
+    if (env.flinkComputePools) {
       const envFlinkComputePools = env.flinkComputePools.map(
         (pool: any): CCloudFlinkComputePool =>
           new CCloudFlinkComputePool({

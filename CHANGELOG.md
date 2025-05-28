@@ -17,6 +17,11 @@ All notable changes to this extension will be documented in this file.
     - `+U`: UpdateAfter operation (new version of updated row)
     - `-D`: Delete operation (row removed)
 
+### Changed
+
+- The `confluent.preview.enableFlink` setting is now enabled by default, allowing users to access
+  Flink features without needing to manually enable the preview setting.
+
 ### Fixed
 
 - Fixed an issue where the "File Issue" button would not work if the extension failed to activate

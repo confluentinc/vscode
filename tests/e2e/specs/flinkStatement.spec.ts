@@ -2,7 +2,6 @@ import { FrameLocator } from "@playwright/test";
 import { test } from "vscode-test-playwright";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
-import { enableFlink } from "./utils/flink";
 import {
   stopStatement,
   submitFlinkStatement,
@@ -19,9 +18,6 @@ test.describe("Flink statements and statement results viewer", () => {
 
     // Login to Confluent Cloud
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-
-    // Enable Flink (because it's currently disabled by default)
-    await enableFlink(page);
   });
 
   test.afterEach(async () => {
