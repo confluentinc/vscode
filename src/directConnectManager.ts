@@ -74,18 +74,36 @@ export class DirectConnectionManager {
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
           const connections: DirectConnectionsById =
             await getResourceManager().getDirectConnections();
-          // ensure all DirectResourceLoader instances are up to date
+          // ensure all DirectResourceLoader instances are up to date.
+
           // part 1: ensure any new connections have registered loaders; if this isn't done, hopping
           // workspaces and attempting to focus on a direct connection-based resource will fail with
-          // the `Unknown connection ID` error
-          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders()
-            .filter((loader) => loader.connectionType === "DIRECT")
-            .map((loader) => loader.connectionId);
+          // the `Unknown connection ID` error. And purge the cache of any existing loaders
+          // so they can re-fetch the latest resources, which may have just been reconfigured.
+
+          const existingDirectLoadersById: Map<ConnectionId, DirectResourceLoader> = new Map(
+            ResourceLoader.directLoaders().map((loader) => [loader.connectionId, loader]),
+          );
+
+          const existingLoaderIds: ConnectionId[] = Array.from(existingDirectLoadersById.keys());
+
+          // Either make new loaders for any connections that don't have one, or
+          // purge the cache of existing loaders to ensure they re-fetch the latest resources next time
+          // (may have been reconfigured, e.g. new kafka cluster or schema registry, or improved)
           for (const id of connections.keys()) {
-            if (!existingLoaderIds.includes(id)) {
+            if (!existingDirectLoadersById.has(id)) {
               this.initResourceLoader(id);
+            } else {
+              // Get this preexisting loader to purge its cache, so it can re-fetch the latest resources. The
+              // connection may have gained or lost kafka cluster or schema registry, or improved
+              // the spelling of which. Alas we don't know if this connection was changed at all when
+              // we get the change event, so we have to be conservative and purge the caches of any
+              // existing direct loaders.
+              const existingLoader = existingDirectLoadersById.get(id)!;
+              existingLoader.purgeCache();
             }
           }
+
           // part 2: remove any direct connections not in the secret storage to prevent
           // requests to orphaned resources/connections
           for (const id of existingLoaderIds) {
