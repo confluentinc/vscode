@@ -415,6 +415,7 @@ export class FlinkStatementResultsManager {
     }
   }
 
+  /** Open up a read-only view over the statement's sources SQL. */
   private async viewStatementSource(): Promise<void> {
     await viewStatementSqlCommand(this.statement);
   }
