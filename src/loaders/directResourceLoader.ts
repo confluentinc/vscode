@@ -28,7 +28,7 @@ export class DirectResourceLoader extends ResourceLoader {
     if (!this.cachedEnvironments || forceDeepRefresh) {
       // Fetch all of them, across all direct connections, sigh.
       const envs: DirectEnvironment[] = await getDirectResources();
-      // Filter down to just "mine."" Should only be an array of one DirectEnvironment
+      // Filter down to just "mine." Should be an array of one single DirectEnvironment.
       this.cachedEnvironments = envs.filter((env) => env.connectionId === this.connectionId);
     }
     return this.cachedEnvironments;
