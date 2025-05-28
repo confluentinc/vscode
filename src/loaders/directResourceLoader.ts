@@ -1,5 +1,6 @@
 import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
+import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
@@ -16,22 +17,43 @@ export class DirectResourceLoader extends ResourceLoader {
   connectionId: ConnectionId;
   cachedEnvironments: DirectEnvironment[] | undefined;
   connectionType = ConnectionType.Direct;
+  logger: Logger;
 
   // non-singleton since we have to manager per-connection loading
   constructor(id: ConnectionId) {
     super();
     this.connectionId = id;
+    this.logger = new Logger(`DirectResourceLoader ${id}`);
     this.cachedEnvironments = undefined;
   }
 
+  /**
+   * Get the environments for this connection. Will be a single-element array.
+   *
+   * If `forceDeepRefresh` is true, it will always fetch the environments from the server.
+   * Otherwise, it will return cached environments if available.
+   */
   async getEnvironments(forceDeepRefresh: boolean = false): Promise<DirectEnvironment[]> {
     if (!this.cachedEnvironments || forceDeepRefresh) {
       // Fetch all of them, across all direct connections, sigh.
       const envs: DirectEnvironment[] = await getDirectResources();
       // Filter down to just "mine." Should be an array of one single DirectEnvironment.
       this.cachedEnvironments = envs.filter((env) => env.connectionId === this.connectionId);
+
+      this.logger.debug("getEnvironments() deep refresh");
+    } else {
+      this.logger.debug("getEnvironments() cache hit");
     }
+
     return this.cachedEnvironments;
+  }
+
+  /**
+   * Clear all cached data for this connection.
+   */
+  async purgeCache(): Promise<void> {
+    this.logger.debug("purgeCache()");
+    this.cachedEnvironments = undefined;
   }
 
   async getKafkaClustersForEnvironmentId(environmentId: string): Promise<DirectKafkaCluster[]> {

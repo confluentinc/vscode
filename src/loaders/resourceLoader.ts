@@ -13,6 +13,7 @@ import { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+import { DirectResourceLoader } from "./directResourceLoader";
 import {
   correlateTopicsWithSchemaSubjects,
   fetchSchemasForSubject,
@@ -57,8 +58,16 @@ export abstract class ResourceLoader implements IResourceBase {
     ResourceLoader.registry.delete(connectionId);
   }
 
+  /** Get all registered resource loaders */
   static loaders(): ResourceLoader[] {
     return Array.from(ResourceLoader.registry.values());
+  }
+
+  /** Get all registered DirectResourceLoader instances */
+  static directLoaders(): DirectResourceLoader[] {
+    return ResourceLoader.loaders().filter(
+      (loader) => loader.connectionType === ConnectionType.Direct,
+    ) as DirectResourceLoader[];
   }
 
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
