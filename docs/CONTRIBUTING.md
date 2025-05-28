@@ -438,7 +438,8 @@ declarations file at
 **This file is auto-generated and should not be edited manually.**
 
 Usually, type generation will be done automatically based on `tsconfig.json`. If you update the
-schema and need to manually regenerate `sidecarGraphQL.d.ts`, run:
+schema and need to manually regenerate `sidecarGraphQL.d.ts`, run the following command from the
+root of the repository:
 
 ```bash
 npx gql-tada generate-output
