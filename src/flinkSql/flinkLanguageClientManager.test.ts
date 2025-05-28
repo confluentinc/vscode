@@ -46,19 +46,8 @@ describe("FlinkLanguageClientManager", () => {
   });
 
   describe("validateFlinkSettings", () => {
-    it("should return false if Flink is disabled", async () => {
-      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(false);
-      const result = await flinkManager.validateFlinkSettings();
-
-      // Verify only method called was check for Flink enabled status
-      sinon.assert.calledOnce(flinkManager.getIsFlinkEnabled as sinon.SinonStub);
-      assert.strictEqual(configStub.called, false);
-      assert.strictEqual(result, false);
-    });
-
     it("should return false when computePoolId is missing", async () => {
-      // Set up mocks -> Flink is enabled but no settings set
-      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
+      // Set up mocks -> no default Flink settings set
       const configMock = {
         get: sandbox.stub(),
       };
@@ -71,8 +60,7 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should return false when compute pool is invalid", async () => {
-      // Set up mocks -> Flink is enabled with invalid compute pool
-      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
+      // Set up mocks -> invalid default compute pool
       const configMock = {
         get: sandbox.stub(),
       };
@@ -91,8 +79,7 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should return true when compute pool is valid", async () => {
-      // Set up mocks -> Flink is enabled with valid compute pool
-      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
+      // Set up mocks -> valid default compute pool
       const configMock = {
         get: sandbox.stub(),
       };
@@ -110,8 +97,7 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should check resources availability when compute pool is set", async () => {
-      // Set up mocks to indicate Flink is enabled with all settings
-      sandbox.stub(flinkManager, "getIsFlinkEnabled").returns(true);
+      // Set up mocks to indicate valid default Flink settings
       const configMock = {
         get: sandbox.stub(),
       };

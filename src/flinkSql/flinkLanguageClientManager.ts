@@ -6,11 +6,7 @@ import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
-  ENABLE_FLINK,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../preferences/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { initializeLanguageClient } from "./languageClient";
@@ -83,27 +79,8 @@ export class FlinkLanguageClientManager implements Disposable {
         }
       }),
     );
-
-    // Monitor the Flink enabled setting
-    this.disposables.push(
-      workspace.onDidChangeConfiguration(async (e) => {
-        if (e.affectsConfiguration(ENABLE_FLINK)) {
-          if (this.getIsFlinkEnabled()) {
-            await this.maybeStartLanguageClient();
-          } else {
-            logger.debug("Flink is disabled in settings, stopping language client");
-            this.cleanupLanguageClient();
-          }
-        }
-      }),
-    );
   }
 
-  public getIsFlinkEnabled(): boolean {
-    const config: WorkspaceConfiguration = workspace.getConfiguration();
-    const isFlinkEnabled = config.get(ENABLE_FLINK, false);
-    return isFlinkEnabled;
-  }
   /** Get the global/workspace settings for Flink, if any */
   public getFlinkSqlSettings(): FlinkSqlSettings {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
@@ -117,10 +94,6 @@ export class FlinkLanguageClientManager implements Disposable {
 
   /** Verify that Flink is enabled + the compute pool id setting exists and is in an environment we know about */
   public async validateFlinkSettings(): Promise<boolean> {
-    if (!this.getIsFlinkEnabled()) {
-      logger.debug("Flink is not enabled in settings, skipping configuration prompt");
-      return false;
-    }
     const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
       await this.promptChooseDefaultComputePool();
@@ -249,10 +222,6 @@ export class FlinkLanguageClientManager implements Disposable {
       }
     }
     // Otherwise, we need to check if the prerequisites are met
-    if (!this.getIsFlinkEnabled()) {
-      logger.debug("Flink is not enabled, not initializing language client");
-      return;
-    }
     if (!hasCCloudAuthSession()) {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;

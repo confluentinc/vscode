@@ -793,15 +793,6 @@
       {
         "title": "Flink SQL Defaults",
         "properties": {
-          "confluent.preview.enableFlink": {
-            "type": "boolean",
-            "default": false,
-            "order": 0,
-            "description": "Enable Flink-related resource loading and associated actions.",
-            "tags": [
-              "preview"
-            ]
-          },
           "confluent.flink.computePoolId": {
             "type": "string",
             "default": "",
@@ -972,7 +963,6 @@
           "name": "Flink Statements",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "confluent.flinkEnabled",
           "contextualTitle": "Confluent: Flink Statements"
         },
         {
@@ -1839,7 +1829,7 @@
           {
             "id": "cc-flink-statements",
             "title": "Confluent Cloud for Apache Flink",
-            "description": "Author, submit, and view the result of Flink SQL statements in Confluent Cloud.\n[Enable Flink Support](command:workbench.action.openSettings?%5B%22%40id%3Aconfluent.preview.enableFlink%22%5D)",
+            "description": "Author, submit, and view the result of Flink SQL statements in Confluent Cloud.",
             "media": {
               "markdown": "resources/walkthrough/flink/statements.md"
             },
