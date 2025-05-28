@@ -339,18 +339,17 @@ task:
 
 #### E2E tests
 
-End-to-end (E2E) tests are written for the extension's functionality in a real VS Code environment. These tests
-use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to launch VS Code and
-interact with it programmatically. The tests are located in the [`tests/e2e`](../tests/e2e)
-directory.
+End-to-end (E2E) tests are written for the extension's functionality in a real VS Code environment.
+These tests use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to launch
+VS Code and interact with it programmatically. The tests are located in the
+[`tests/e2e`](../tests/e2e) directory.
 
-Go to [E2E Tests using Playwright](../tests/README.md#e2e-tests-using-playwright)
-section for more information on running, debugging and writing E2E tests.
+Go to [E2E Tests using Playwright](../tests/README.md#e2e-tests-using-playwright) section for more
+information on running, debugging and writing E2E tests.
 
 In short, to run the E2E tests, use the following command:
 
     gulp e2e
-
 
 #### Running the tests
 
@@ -422,6 +421,33 @@ where we can store these changes as `.patch` files.
 
 The `apigen` task tries to apply these patches to the OpenAPI specs before generating the client
 code by using a glob pattern to find all `.patch` files in the `patches` directory.
+
+### Updating GraphQL definitions
+
+We use GraphQL queries to the sidecar process to retrieve information about available connections
+and their resources, such as environments, Kafka clusters, Schema Registry instances, and Flink
+compute pools.
+
+To enable type-safe GraphQL operations, we rely on [`gql.tada`](https://gql-tada.0no.co/) to
+generate TypeScript types from our GraphQL schema. The
+[`src/graphql/sidecar.graphql`](https://github.com/confluentinc/vscode/blob/main/src/graphql/sidecar.graphql)
+file contains the GraphQL schema for the sidecar, which is used to generate the TypeScript
+declarations file at
+[`src/graphql/sidecarGraphQL.d.ts`](https://github.com/confluentinc/vscode/blob/main/src/graphql/sidecarGraphQL.d.ts).
+
+**This file is auto-generated and should not be edited manually.**
+
+Usually, type generation will be done automatically based on `tsconfig.json`. If you update the
+schema and need to manually regenerate `sidecarGraphQL.d.ts`, run the following command from the
+root of the repository:
+
+```bash
+npx gql-tada generate-output
+```
+
+See the
+[`gql.tada` documentation](https://gql-tada.0no.co/get-started/workflows#generating-the-output-file)
+for more details.
 
 ### Updating NOTICE files
 
