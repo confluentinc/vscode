@@ -14,18 +14,24 @@ import { ResourceLoader } from "./resourceLoader";
  */
 export class DirectResourceLoader extends ResourceLoader {
   connectionId: ConnectionId;
+  cachedEnvironments: DirectEnvironment[] | undefined;
   connectionType = ConnectionType.Direct;
 
   // non-singleton since we have to manager per-connection loading
   constructor(id: ConnectionId) {
     super();
     this.connectionId = id;
+    this.cachedEnvironments = undefined;
   }
 
-  async getEnvironments(): Promise<DirectEnvironment[]> {
-    const envs: DirectEnvironment[] = await getDirectResources();
-    // should only return an array of one DirectEnvironment
-    return envs.filter((env) => env.connectionId === this.connectionId);
+  async getEnvironments(forceDeepRefresh: boolean = false): Promise<DirectEnvironment[]> {
+    if (!this.cachedEnvironments || forceDeepRefresh) {
+      // Fetch all of them, across all direct connections, sigh.
+      const envs: DirectEnvironment[] = await getDirectResources();
+      // Filter down to just "mine."" Should only be an array of one DirectEnvironment
+      this.cachedEnvironments = envs.filter((env) => env.connectionId === this.connectionId);
+    }
+    return this.cachedEnvironments;
   }
 
   async getKafkaClustersForEnvironmentId(environmentId: string): Promise<DirectKafkaCluster[]> {
