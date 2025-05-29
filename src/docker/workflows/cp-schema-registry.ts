@@ -121,7 +121,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     }
     // inspect the containers to get the Docker network name and boostrap server host+port combos
     const kafkaNetworks: string[] = determineKafkaDockerNetworks(kafkaContainers);
-    const kafkaBootstrapServers = await determineKafkaBootstrapServers(kafkaContainers);
+    const kafkaBootstrapServers = determineKafkaBootstrapServers(kafkaContainers);
     this.logger.debug("Kafka container(s) found", {
       count: kafkaContainers.length,
       bootstrapServers: kafkaBootstrapServers,

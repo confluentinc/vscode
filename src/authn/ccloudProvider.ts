@@ -513,7 +513,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     } else {
       this._onDidChangeSessions.fire({
         added: [],
-        removed: [this._session!],
+        removed: [this._session],
         changed: [],
       });
       this._session = null;

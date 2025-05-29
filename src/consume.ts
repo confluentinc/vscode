@@ -164,7 +164,7 @@ export function activateMessageViewer(context: ExtensionContext) {
           if (envId == null) {
             return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
           }
-          loader = DirectResourceLoader.getInstance(envId! as ConnectionId);
+          loader = DirectResourceLoader.getInstance(envId as ConnectionId);
           break;
         default:
           return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");

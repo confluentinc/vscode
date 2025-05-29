@@ -366,7 +366,6 @@ export function validateBrokerInput(userInput: string): InputBoxValidationMessag
       severity: InputBoxValidationSeverity.Error,
     };
   }
-  return;
 }
 
 export interface KafkaContainerPorts {
