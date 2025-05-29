@@ -287,7 +287,7 @@ export async function handleChatMessage(
         stream.markdown(fragment.value);
       } else if (fragment instanceof LanguageModelToolCallPart) {
         // tool call: look up the tool from the map, process its invocation result(s), and continue on
-        const toolCall: LanguageModelToolCallPart = fragment as LanguageModelToolCallPart;
+        const toolCall: LanguageModelToolCallPart = fragment;
         const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(toolCall.name);
         logUsage(UserEvent.CopilotInteraction, {
           status: "tool call received from model",

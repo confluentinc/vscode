@@ -14,6 +14,7 @@ import {
   ResponseError,
 } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
+import { ResourceLoader } from "./loaders";
 import { ConnectionId } from "./models/resource";
 import * as sidecar from "./sidecar";
 import * as connections from "./sidecar/connections";
@@ -49,6 +50,7 @@ describe("DirectConnectionManager behavior", () => {
   let tryToUpdateConnectionStub: sinon.SinonStub;
 
   let stubbedConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
+  let waitForConnectionToBeStableStub: sinon.SinonStub;
 
   before(async () => {
     // DirectConnectionManager requires the extension context to be set
@@ -72,8 +74,11 @@ describe("DirectConnectionManager behavior", () => {
     tryToUpdateConnectionStub = sandbox
       .stub(connections, "tryToUpdateConnection")
       .resolves({} as any);
+
     // assume the connection is immediately usable for most tests
-    sandbox.stub(watcher, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
+    waitForConnectionToBeStableStub = sandbox
+      .stub(watcher, "waitForConnectionToBeStable")
+      .resolves(TEST_DIRECT_CONNECTION);
   });
 
   afterEach(async () => {
@@ -254,6 +259,12 @@ describe("DirectConnectionManager behavior", () => {
       ConnectionSpecFromJSON(args[0]),
       ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION_FORM_SPEC),
     );
+
+    sinon.assert.calledOnce(waitForConnectionToBeStableStub);
+    sinon.assert.calledWith(
+      waitForConnectionToBeStableStub,
+      TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+    );
   });
 
   it("rehydrateConnections() should not inform the sidecar of existing/tracked connections", async () => {
@@ -269,5 +280,46 @@ describe("DirectConnectionManager behavior", () => {
     await DirectConnectionManager.getInstance().rehydrateConnections();
 
     assert.ok(tryToCreateConnectionStub.notCalled);
+  });
+
+  describe("deleteConnection()", () => {
+    const TEST_DIRECT_CONNECTION_ID = TEST_DIRECT_CONNECTION.spec.id as ConnectionId;
+
+    let directConnectionManager: DirectConnectionManager;
+
+    beforeEach(() => {
+      // Can only be done after the extension context is set.
+      directConnectionManager = DirectConnectionManager.getInstance();
+    });
+
+    it("should handle if getDirectConnection(id) returned null", async () => {
+      // inject stub.
+      const rm = getResourceManager();
+      sandbox.stub(rm, "getDirectConnection").resolves(null);
+
+      await directConnectionManager.deleteConnection(TEST_DIRECT_CONNECTION_ID);
+    });
+
+    it("should work if getDirectConnection(id) returned a connection", async () => {
+      // inject stub.
+      const rm = getResourceManager();
+      sandbox.stub(rm, "getDirectConnection").resolves(TEST_DIRECT_CONNECTION_FORM_SPEC);
+      const deleteStub = sandbox.stub(rm, "deleteDirectConnection").resolves();
+      const tryToDeleteConnectionStub = sandbox
+        .stub(connections, "tryToDeleteConnection")
+        .resolves({} as any);
+
+      const deregisterInstanceStub = sandbox.stub(ResourceLoader, "deregisterInstance");
+
+      await directConnectionManager.deleteConnection(TEST_DIRECT_CONNECTION_ID);
+      assert.ok(deleteStub.calledOnce);
+      assert.ok(deleteStub.calledWith(TEST_DIRECT_CONNECTION_ID));
+
+      assert.ok(tryToDeleteConnectionStub.calledOnce);
+      assert.ok(tryToDeleteConnectionStub.calledWith(TEST_DIRECT_CONNECTION_ID));
+
+      assert.ok(deregisterInstanceStub.calledOnce);
+      assert.ok(deregisterInstanceStub.calledWith(TEST_DIRECT_CONNECTION_ID));
+    });
   });
 });

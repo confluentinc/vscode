@@ -216,7 +216,7 @@ describe("utils/workerPool.ts extract() tests", () => {
 
     assert.throws(
       () => {
-        const goodResults: number[] = extract(results);
+        extract(results);
       },
       { message: "test error 2" },
     );
