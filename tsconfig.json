@@ -17,7 +17,7 @@
       }
     ],
     "paths": {
-      "vscode-test-playwright": ["./node_modules/vscode-test-playwright/dist/index.d.ts"]
+      "vscode-test-playwright": ["./node_modules/vscode-test-playwright/dist"]
     }
   },
   "exclude": ["openapi-ts.config.ts"]
