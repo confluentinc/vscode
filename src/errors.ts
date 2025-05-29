@@ -65,11 +65,11 @@ export async function extractResponseBody(error: AnyResponseError): Promise<any>
     throw new Error("extractResponseBody() called with non-ResponseError");
   }
 
-  const responseError = error as AnyResponseError;
+  // Attempt to parse the response body as JSON, falling back to text if it fails
   try {
-    return await responseError.response.clone().json();
+    return await error.response.clone().json();
   } catch {
-    return await responseError.response.clone().text();
+    return await error.response.clone().text();
   }
 }
 
@@ -139,7 +139,7 @@ export async function logError(
 
   /** Light wrapper around the original error, used to update the name/message for easier debugging
    * and event tracking in Sentry. */
-  let wrappedError: Error = e as Error;
+  let wrappedError: Error = e;
   /** Used to add extra/additional data to the Sentry exception */
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
   /** Used to set the `contexts.response.status_code` for the Sentry exception */

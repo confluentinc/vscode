@@ -9,5 +9,5 @@ export function toKafkaTopicOperations(operations: string[]): KafkaTopicOperatio
     KAFKA_TOPIC_OPERATIONS.includes(op as KafkaTopicOperation),
   );
 
-  return validOperations as KafkaTopicOperation[];
+  return validOperations;
 }

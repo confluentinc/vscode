@@ -138,15 +138,15 @@ export function activateMessageViewer(context: ExtensionContext) {
     registerCommandWithLogging("confluent.topic.consume.fromUri", async (uri: Uri) => {
       const params = new URLSearchParams(uri.query);
       const origin = params.get("origin");
-      let envId = params.get("envId");
+      let directEnvId = params.get("envId");
       const clusterId = params.get("clusterId");
       const topicName = params.get("topicName");
       if (clusterId == null || topicName == null) {
         return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
       }
-      if (origin === "local" && !envId) {
+      if (origin === "local" && !directEnvId) {
         // backwards compatibility for old URIs before we started using local env IDs
-        envId = LOCAL_CONNECTION_ID;
+        directEnvId = LOCAL_CONNECTION_ID;
       }
 
       // we need to look up which ResourceLoader is responsible for the resources, whether they were
@@ -161,19 +161,19 @@ export function activateMessageViewer(context: ExtensionContext) {
           break;
         case "direct":
           // direct connections' env IDs are the same as their connection IDs
-          if (envId == null) {
+          if (directEnvId == null) {
             return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
           }
-          loader = DirectResourceLoader.getInstance(envId! as ConnectionId);
+          loader = DirectResourceLoader.getInstance(directEnvId as ConnectionId);
           break;
         default:
           return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
       }
 
-      if (envId == null) {
+      if (directEnvId == null) {
         return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
       }
-      const cluster = (await loader.getKafkaClustersForEnvironmentId(envId)).find(
+      const cluster = (await loader.getKafkaClustersForEnvironmentId(directEnvId)).find(
         (cluster) => cluster.id === clusterId,
       );
       if (cluster == null) {
