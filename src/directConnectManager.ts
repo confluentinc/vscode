@@ -68,72 +68,83 @@ export class DirectConnectionManager {
   }
 
   private setEventListeners(): Disposable[] {
+    // Register to call handleDirectConnectionsChanged() if the direct connections
+    // key in SecretStorage changes, which happens when a direct connection is added, edited,
+    // or deleted in the webview form, by either this or another workspace.
     const connectionsListener: Disposable = getSecretStorage().onDidChange(
       async ({ key }: SecretStorageChangeEvent) => {
-        // watch for any cross-workspace direct connection additions/removals
+        // watch for any cross-workspace (or self-made) direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
-          const connections: DirectConnectionsById =
-            await getResourceManager().getDirectConnections();
-          // ensure all DirectResourceLoader instances are up to date.
-
-          // part 1: ensure any new connections have registered loaders; if this isn't done, hopping
-          // workspaces and attempting to focus on a direct connection-based resource will fail with
-          // the `Unknown connection ID` error. And purge the cache of any existing loaders
-          // so they can re-fetch the latest resources, which may have just been reconfigured.
-
-          const existingDirectLoadersById: Map<ConnectionId, DirectResourceLoader> = new Map(
-            ResourceLoader.directLoaders().map((loader) => [loader.connectionId, loader]),
-          );
-
-          const existingLoaderIds: ConnectionId[] = Array.from(existingDirectLoadersById.keys());
-
-          // Either make new loaders for any connections that don't have one, or
-          // purge the cache of existing loaders to ensure they re-fetch the latest resources next time
-          // (may have been reconfigured, e.g. new kafka cluster or schema registry, or improved)
-          for (const id of connections.keys()) {
-            if (!existingDirectLoadersById.has(id)) {
-              this.initResourceLoader(id);
-            } else {
-              // Get this preexisting loader to purge its cache, so it can re-fetch the latest resources. The
-              // connection may have gained or lost kafka cluster or schema registry, or improved
-              // the spelling of which. Alas we don't know if this connection was changed at all when
-              // we get the change event, so we have to be conservative and purge the caches of any
-              // existing direct loaders.
-              const existingLoader = existingDirectLoadersById.get(id)!;
-              existingLoader.purgeCache();
-            }
-          }
-
-          // part 2: remove any direct connections not in the secret storage to prevent
-          // requests to orphaned resources/connections
-          for (const id of existingLoaderIds) {
-            if (!connections.has(id)) {
-              ResourceLoader.deregisterInstance(id);
-            }
-          }
-
-          // this is mainly to inform the Resources view to refresh its list of connections
-          directConnectionsChanged.fire();
-
-          // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
-          // reset the view(s) to prevent orphaned resources from being used for requests
-          const topicsView = getTopicViewProvider();
-          if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
-            if (!connections.has(topicsView.kafkaCluster.connectionId)) {
-              topicsView.reset();
-            }
-          }
-          const schemasView = getSchemasViewProvider();
-          if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
-            if (!connections.has(schemasView.schemaRegistry.connectionId)) {
-              await schemasView.reset();
-            }
-          }
+          await this.handleDirectConnectionsChanged();
         }
       },
     );
 
     return [connectionsListener];
+  }
+
+  /**
+   * Handle changes made to the direct connections in the SecretStorage, either from other
+   * workspaces or changes that this workspace just performed.
+   */
+  private async handleDirectConnectionsChanged(): Promise<void> {
+    const connections: DirectConnectionsById = await getResourceManager().getDirectConnections();
+    // Ensure all DirectResourceLoader instances are up to date.
+
+    // Part 1: ensure any new connections have registered loaders; if this isn't done, hopping
+    // workspaces and attempting to focus on a direct connection-based resource will fail with
+    // the `Unknown connection ID` error. And purge the cache of any existing loaders
+    // so they can re-fetch the latest resources, which may have just been reconfigured.
+
+    const existingDirectLoadersById: Map<ConnectionId, DirectResourceLoader> = new Map(
+      ResourceLoader.directLoaders().map((loader) => [loader.connectionId, loader]),
+    );
+
+    const existingLoaderIds: ConnectionId[] = Array.from(existingDirectLoadersById.keys());
+
+    // Either make new loaders for any connections that don't have one, or
+    // purge the cache of existing loaders to ensure they re-fetch the latest resources next time
+    // (may have been reconfigured, e.g. new kafka cluster or schema registry, or improved)
+    for (const id of connections.keys()) {
+      if (!existingDirectLoadersById.has(id)) {
+        this.initResourceLoader(id);
+      } else {
+        // Get this preexisting loader to purge its cache, so it can re-fetch the latest resources. The
+        // connection may have gained or lost kafka cluster or schema registry, or improved
+        // the spelling of which. Alas we don't know if this connection was changed at all when
+        // we get the change event, so we have to be conservative and purge the caches of any
+        // existing direct loaders.
+        const existingLoader = existingDirectLoadersById.get(id)!;
+        existingLoader.purgeCache();
+      }
+    }
+
+    // Part 2: remove any direct connections not in the secret storage to prevent
+    // requests to orphaned resources/connections
+    for (const id of existingLoaderIds) {
+      if (!connections.has(id)) {
+        ResourceLoader.deregisterInstance(id);
+      }
+    }
+
+    // Inform the Resources view to refresh its list of connections
+    directConnectionsChanged.fire();
+
+    // If the Topics/Schemas views were focused on a resource whose direct connection was removed,
+    // reset the view(s) to prevent orphaned resources from being used for requests
+    const topicsView = getTopicViewProvider();
+    if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
+      if (!connections.has(topicsView.kafkaCluster.connectionId)) {
+        topicsView.reset();
+      }
+    }
+
+    const schemasView = getSchemasViewProvider();
+    if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
+      if (!connections.has(schemasView.schemaRegistry.connectionId)) {
+        await schemasView.reset();
+      }
+    }
   }
 
   /**
@@ -179,19 +190,27 @@ export class DirectConnectionManager {
   }
 
   async deleteConnection(id: ConnectionId): Promise<void> {
-    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(id);
-    await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
+    const resourceManager = getResourceManager();
+    const spec: CustomConnectionSpec | null = await resourceManager.getDirectConnection(id);
+
+    if (!spec) {
+      // Wacky, shouldn't happen, but if it does, just log and return.
+      logger.warn(`Tried to delete a direct connection with ID ${id}, but it does not exist.`);
+      return;
+    }
+
+    await Promise.all([resourceManager.deleteDirectConnection(id), tryToDeleteConnection(id)]);
 
     logUsage(UserEvent.DirectConnectionAction, {
       action: "deleted",
-      type: spec?.formConnectionType,
+      type: spec.formConnectionType,
       specifiedConnectionType: spec?.specifiedConnectionType,
-      withKafka: !!spec?.kafka_cluster,
-      withSchemaRegistry: !!spec?.schema_registry,
-      kafkaAuthType: getCredentialsType(spec?.kafka_cluster?.credentials),
-      kafkaSslEnabled: spec?.kafka_cluster?.ssl?.enabled,
-      schemaRegistryAuthType: getCredentialsType(spec?.schema_registry?.credentials),
-      schemaRegistrySslEnabled: spec?.schema_registry?.ssl?.enabled,
+      withKafka: !!spec.kafka_cluster,
+      withSchemaRegistry: !!spec.schema_registry,
+      kafkaAuthType: getCredentialsType(spec.kafka_cluster?.credentials),
+      kafkaSslEnabled: spec.kafka_cluster?.ssl?.enabled,
+      schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
+      schemaRegistrySslEnabled: spec.schema_registry?.ssl?.enabled,
     });
 
     ResourceLoader.deregisterInstance(id);
@@ -221,7 +240,6 @@ export class DirectConnectionManager {
 
     // update the connection in secret storage (via full replace of the connection by its id)
     await getResourceManager().addDirectConnection(incomingSpec);
-    return;
   }
 
   /**
@@ -264,7 +282,9 @@ export class DirectConnectionManager {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      const msg = `Failed to ${update ? "update" : dryRun ? "test" : "create"} connection. ${errorMessage}`;
+      let verb: string;
+      const testOrCreate = dryRun ? "test" : "create";
+      const msg = `Failed to ${update ? "update" : testOrCreate} connection. ${errorMessage}`;
       logger.error(msg);
       if (!dryRun) window.showErrorMessage(msg);
       errorMessage = msg;
@@ -321,7 +341,7 @@ export class DirectConnectionManager {
       // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
       // kick off background checks to ensure the new connections are usable
-      connectionIdsToCheck.map((id) => waitForConnectionToBeStable(id));
+      connectionIdsToCheck.forEach((id) => void waitForConnectionToBeStable(id));
       logger.debug(
         `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );
