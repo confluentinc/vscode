@@ -282,7 +282,6 @@ export class DirectConnectionManager {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      let verb: string;
       const testOrCreate = dryRun ? "test" : "create";
       const msg = `Failed to ${update ? "update" : testOrCreate} connection. ${errorMessage}`;
       logger.error(msg);
