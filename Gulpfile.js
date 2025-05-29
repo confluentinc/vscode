@@ -734,6 +734,23 @@ export function functional(done) {
 }
 
 export function e2eRun(done) {
+  const vscodeVersion = process.env.VSCODE_VERSION ?? "stable";
+  // check for VS Code stable vs Insiders based on TERM_PROGRAM_VERSION
+  // - stable: "1.x.x"
+  // - insiders: "1.x.x-insider"
+  const runningFromVSCodeInsidersTerminal =
+    process.env.TERM_PROGRAM_VERSION?.endsWith("insider") ?? false;
+  // the only way we should allow E2E tests to run is if we're starting them from a different
+  // terminal version than the specified in the VSCODE_VERSION env var
+  const runStableFromStable = vscodeVersion !== "insiders" && !runningFromVSCodeInsidersTerminal;
+  const runInsidersFromInsiders = vscodeVersion === "insiders" && runningFromVSCodeInsidersTerminal;
+  if (runStableFromStable || runInsidersFromInsiders) {
+    console.error(
+      "If you want to run E2E tests from a VS Code terminal, you must set the VSCODE_VERSION env var to the opposite of what VS Code version you are currently using. (For example, if you are running VS Code Insiders, set VSCODE_VERSION=stable to run E2E tests.)",
+    );
+    return done(1);
+  }
+
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
