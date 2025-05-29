@@ -139,7 +139,7 @@ export async function logError(
 
   /** Light wrapper around the original error, used to update the name/message for easier debugging
    * and event tracking in Sentry. */
-  let wrappedError: Error = e;
+  let wrappedError: Error;
   /** Used to add extra/additional data to the Sentry exception */
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
   /** Used to set the `contexts.response.status_code` for the Sentry exception */
