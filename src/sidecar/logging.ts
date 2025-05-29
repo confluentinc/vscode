@@ -51,7 +51,7 @@ export function startTailingSidecarLogs(): Tail | undefined {
   // Take note of the start of exception lines in the log file, show as toast (if user has allowed via config)
   // Define a regex pattern to find "ERROR", a parenthesized thread name, and capture everything after it
 
-  // NOSONAR: This regex is intentionally written for log parsing and is safe in this context.
+  //NOSONAR: This regex is intentionally written for log parsing and is safe in this context.
   const regex = /ERROR.*\(([^)]+)\)\s*(.*)$/;
 
   logTailer.on("line", (data: any) => {
