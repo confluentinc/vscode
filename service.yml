@@ -40,3 +40,5 @@ sonarqube:
     - src/**/*.spec.ts
 make:
   enable: false
+renovatebot:
+  enable: false
