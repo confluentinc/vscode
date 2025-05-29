@@ -293,7 +293,6 @@ describe("DirectConnectionManager behavior", () => {
     });
 
     it("should handle if getDirectConnection(id) returned null", async () => {
-      // inject stub.
       const rm = getResourceManager();
       sandbox.stub(rm, "getDirectConnection").resolves(null);
 
@@ -301,7 +300,6 @@ describe("DirectConnectionManager behavior", () => {
     });
 
     it("should work if getDirectConnection(id) returned a connection", async () => {
-      // inject stub.
       const rm = getResourceManager();
       sandbox.stub(rm, "getDirectConnection").resolves(TEST_DIRECT_CONNECTION_FORM_SPEC);
       const deleteStub = sandbox.stub(rm, "deleteDirectConnection").resolves();
@@ -312,14 +310,14 @@ describe("DirectConnectionManager behavior", () => {
       const deregisterInstanceStub = sandbox.stub(ResourceLoader, "deregisterInstance");
 
       await directConnectionManager.deleteConnection(TEST_DIRECT_CONNECTION_ID);
-      assert.ok(deleteStub.calledOnce);
-      assert.ok(deleteStub.calledWith(TEST_DIRECT_CONNECTION_ID));
+      sinon.assert.calledOnce(deleteStub);
+      sinon.assert.calledWith(deleteStub, TEST_DIRECT_CONNECTION_ID);
 
-      assert.ok(tryToDeleteConnectionStub.calledOnce);
-      assert.ok(tryToDeleteConnectionStub.calledWith(TEST_DIRECT_CONNECTION_ID));
+      sinon.assert.calledOnce(tryToDeleteConnectionStub);
+      sinon.assert.calledWith(tryToDeleteConnectionStub, TEST_DIRECT_CONNECTION_ID);
 
-      assert.ok(deregisterInstanceStub.calledOnce);
-      assert.ok(deregisterInstanceStub.calledWith(TEST_DIRECT_CONNECTION_ID));
+      sinon.assert.calledOnce(deregisterInstanceStub);
+      sinon.assert.calledWith(deregisterInstanceStub, TEST_DIRECT_CONNECTION_ID);
     });
   });
 });
