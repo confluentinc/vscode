@@ -1,17 +1,19 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
-import { ConnectionType } from "../clients/sidecar";
+import {
+  TEST_DIRECT_ENVIRONMENT,
+  TEST_DIRECT_ENVIRONMENT_ID,
+  TEST_DIRECT_KAFKA_CLUSTER,
+  TEST_DIRECT_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources";
+import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connection";
 import * as directGraphQl from "../graphql/direct";
 import { DirectEnvironment } from "../models/environment";
-import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../models/resource";
-import { DirectSchemaRegistry } from "../models/schemaRegistry";
+import { EnvironmentId } from "../models/resource";
 import { DirectResourceLoader } from "./directResourceLoader";
 
 describe("DirectResourceLoader", () => {
-  const connectionId = "test-connection-id";
-
   let myEnvironment: DirectEnvironment;
 
   let sandbox: sinon.SinonSandbox;
@@ -19,35 +21,17 @@ describe("DirectResourceLoader", () => {
   let getDirectResourcesStub: sinon.SinonStub;
 
   beforeEach(() => {
-    loader = new DirectResourceLoader(connectionId as ConnectionId);
+    loader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);
 
     sandbox = sinon.createSandbox();
 
-    // The DirectEnvironment for the connectionId we're testing, initially configured
-    // with a Kafka cluster and no Schema Registry.
+    // Use the test fixture with Kafka cluster and Schema Registry configured
     myEnvironment = new DirectEnvironment({
-      id: connectionId as EnvironmentId,
-      connectionId: connectionId as ConnectionId,
-      name: "Environment 1",
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
       kafkaConfigured: true,
-      kafkaClusters: [
-        DirectKafkaCluster.create({
-          id: "kafka-cluster-1",
-          name: "Kafka Cluster 1",
-          bootstrapServers: "kafka1.example.com:9092",
-          uri: "kafka://kafka1.example.com:9092",
-          connectionId: connectionId as ConnectionId,
-          connectionType: ConnectionType.Direct,
-        }),
-      ],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
       schemaRegistryConfigured: false,
-      schemaRegistry: DirectSchemaRegistry.create({
-        connectionId: connectionId as ConnectionId,
-        connectionType: ConnectionType.Direct,
-        id: "schema-registry-1",
-        uri: "http://schema-registry1.example.com:8081",
-        environmentId: connectionId as EnvironmentId,
-      }),
     });
 
     // stub getDirectResources() to return our test environment.
@@ -91,7 +75,7 @@ describe("DirectResourceLoader", () => {
   describe("getKafkaClustersForEnvironmentId()", () => {
     it("Returns Kafka clusters for the specified environment ID", async () => {
       const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(
-        connectionId as EnvironmentId,
+        TEST_DIRECT_ENVIRONMENT_ID,
       );
       assert.deepStrictEqual(kafkaClusters, myEnvironment.kafkaClusters);
     });
@@ -121,7 +105,7 @@ describe("DirectResourceLoader", () => {
   describe("getSchemaRegistryForEnvironmentId()", () => {
     it("Returns the schema registry for the specified environment ID", async () => {
       const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
-        connectionId as EnvironmentId,
+        TEST_DIRECT_ENVIRONMENT_ID,
       );
       assert.deepStrictEqual(schemaRegistry, myEnvironment.schemaRegistry);
     });
