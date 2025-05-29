@@ -60,6 +60,31 @@ describe("DirectResourceLoader", () => {
       sinon.assert.calledTwice(getDirectResourcesStub);
       assert.deepStrictEqual(refreshedEnvironments, [myEnvironment]);
     });
+
+    it("should not cache when getDirectResources returns undefined and retry on next call", async () => {
+      // Stub getDirectResources to return undefined (simulating GraphQL query failure)
+      getDirectResourcesStub.resolves(undefined);
+
+      const environments = await loader.getEnvironments();
+      sinon.assert.calledOnce(getDirectResourcesStub);
+      assert.deepStrictEqual(environments, []);
+
+      // Call again, should call the stub again since nothing was cached
+      const secondCallEnvironments = await loader.getEnvironments();
+      sinon.assert.calledTwice(getDirectResourcesStub);
+      assert.deepStrictEqual(secondCallEnvironments, []);
+
+      // Now fix the stub to return a valid environment
+      getDirectResourcesStub.resolves(myEnvironment);
+      const thirdCallEnvironments = await loader.getEnvironments();
+      sinon.assert.calledThrice(getDirectResourcesStub);
+      assert.deepStrictEqual(thirdCallEnvironments, [myEnvironment]);
+
+      // Fourth call should use cache now
+      const fourthCallEnvironments = await loader.getEnvironments();
+      sinon.assert.calledThrice(getDirectResourcesStub); // Should still be 3 calls
+      assert.deepStrictEqual(fourthCallEnvironments, [myEnvironment]);
+    });
   });
 
   describe("purgeCache()", () => {
