@@ -90,6 +90,5 @@ export async function getDirectResources(
     formConnectionType: directSpec?.formConnectionType,
     ...connectionInfo,
   });
-  env.isLoading = true;
   return env;
 }
