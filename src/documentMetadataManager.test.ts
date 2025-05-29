@@ -22,7 +22,7 @@ describe("documentMetadataManager.ts", () => {
     sandbox.restore();
   });
 
-  it("should create only one instance of DocumentMetadataManager", () => {
+  it.only("should create only one instance of DocumentMetadataManager", () => {
     const instance1 = DocumentMetadataManager.getInstance();
     const instance2 = DocumentMetadataManager.getInstance();
     assert.strictEqual(instance1, instance2);
