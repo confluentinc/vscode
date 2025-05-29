@@ -37,13 +37,14 @@ export class DirectResourceLoader extends ResourceLoader {
     if (!this.cachedEnvironments || forceDeepRefresh) {
       // Look up the one-or-none DirectEnvironment for this connection.
       const env: DirectEnvironment | undefined = await getDirectResources(this.connectionId);
-      this.cachedEnvironments = env ? [env] : [];
+      // if we got undefined back, there was a problem with the GraphQL query so we shouldn't cache
+      // and will try again (deep refresh) next time
+      this.cachedEnvironments = env ? [env] : undefined;
       this.logger.debug("getEnvironments() deep refresh");
     } else {
       this.logger.debug("getEnvironments() cache hit");
     }
-
-    return this.cachedEnvironments;
+    return this.cachedEnvironments ?? [];
   }
 
   /**
