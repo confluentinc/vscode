@@ -1,19 +1,19 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
-import { ConnectionType } from "../clients/sidecar";
+import {
+  TEST_DIRECT_ENVIRONMENT,
+  TEST_DIRECT_ENVIRONMENT_ID,
+  TEST_DIRECT_KAFKA_CLUSTER,
+  TEST_DIRECT_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources";
+import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connection";
 import * as directGraphQl from "../graphql/direct";
 import { DirectEnvironment } from "../models/environment";
-import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../models/resource";
-import { DirectSchemaRegistry } from "../models/schemaRegistry";
+import { EnvironmentId } from "../models/resource";
 import { DirectResourceLoader } from "./directResourceLoader";
 
 describe("DirectResourceLoader", () => {
-  const connectionId = "test-connection-id";
-
-  // As if from GraphQL, describing multiple direct environments.
-  let totalEnvironments: DirectEnvironment[];
   let myEnvironment: DirectEnvironment;
 
   let sandbox: sinon.SinonSandbox;
@@ -21,68 +21,29 @@ describe("DirectResourceLoader", () => {
   let getDirectResourcesStub: sinon.SinonStub;
 
   beforeEach(() => {
-    loader = new DirectResourceLoader(connectionId as ConnectionId);
+    loader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);
 
     sandbox = sinon.createSandbox();
 
-    // The DirectEnvironment for the connectionId we're testing, initially configured
-    // with a Kafka cluster and no Schema Registry.
+    // Use the test fixture with Kafka cluster and Schema Registry configured
     myEnvironment = new DirectEnvironment({
-      id: connectionId as EnvironmentId,
-      connectionId: connectionId as ConnectionId,
-      name: "Environment 1",
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
       kafkaConfigured: true,
-      kafkaClusters: [
-        DirectKafkaCluster.create({
-          id: "kafka-cluster-1",
-          name: "Kafka Cluster 1",
-          bootstrapServers: "kafka1.example.com:9092",
-          uri: "kafka://kafka1.example.com:9092",
-          connectionId: connectionId as ConnectionId,
-          connectionType: ConnectionType.Direct,
-        }),
-      ],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
       schemaRegistryConfigured: false,
-      schemaRegistry: DirectSchemaRegistry.create({
-        connectionId: connectionId as ConnectionId,
-        connectionType: ConnectionType.Direct,
-        id: "schema-registry-1",
-        uri: "http://schema-registry1.example.com:8081",
-        environmentId: connectionId as EnvironmentId,
-      }),
     });
 
-    // All environments returned by the GraphQL query.
-    totalEnvironments = [
-      myEnvironment,
-      // Another environment that is not the one we're testing.
-      new DirectEnvironment({
-        id: "another-environment-id" as EnvironmentId,
-        connectionId: "another-connection-id" as ConnectionId,
-        name: "Environment 2",
-        kafkaConfigured: true,
-        kafkaClusters: [
-          DirectKafkaCluster.create({
-            id: "kafka-cluster-2",
-            name: "Kafka Cluster 2",
-            bootstrapServers: "kafka2.example.com:9092",
-            uri: "kafka://kafka2.example.com:9092",
-            connectionId: "another-connection-id" as ConnectionId,
-            connectionType: ConnectionType.Direct,
-          }),
-        ],
-        schemaRegistryConfigured: false,
-        schemaRegistry: undefined,
-      }),
-    ];
-
+    // stub getDirectResources() to return our test environment.
     getDirectResourcesStub = sandbox
       .stub(directGraphQl, "getDirectResources")
-      .resolves(totalEnvironments);
+      .resolves(myEnvironment);
   });
+
   afterEach(() => {
     sandbox.restore();
   });
+
   describe("getEnvironments()", () => {
     it("Deep fetches once and caches the result", async () => {
       const environments = await loader.getEnvironments();
@@ -99,6 +60,31 @@ describe("DirectResourceLoader", () => {
       sinon.assert.calledTwice(getDirectResourcesStub);
       assert.deepStrictEqual(refreshedEnvironments, [myEnvironment]);
     });
+
+    it("should not cache when getDirectResources returns undefined and retry on next call", async () => {
+      // Stub getDirectResources to return undefined (simulating GraphQL query failure)
+      getDirectResourcesStub.resolves(undefined);
+
+      const environments = await loader.getEnvironments();
+      sinon.assert.calledOnce(getDirectResourcesStub);
+      assert.deepStrictEqual(environments, []);
+
+      // Call again, should call the stub again since nothing was cached
+      const secondCallEnvironments = await loader.getEnvironments();
+      sinon.assert.calledTwice(getDirectResourcesStub);
+      assert.deepStrictEqual(secondCallEnvironments, []);
+
+      // Now fix the stub to return a valid environment
+      getDirectResourcesStub.resolves(myEnvironment);
+      const thirdCallEnvironments = await loader.getEnvironments();
+      sinon.assert.calledThrice(getDirectResourcesStub);
+      assert.deepStrictEqual(thirdCallEnvironments, [myEnvironment]);
+
+      // Fourth call should use cache now
+      const fourthCallEnvironments = await loader.getEnvironments();
+      sinon.assert.calledThrice(getDirectResourcesStub); // Should still be 3 calls
+      assert.deepStrictEqual(fourthCallEnvironments, [myEnvironment]);
+    });
   });
 
   describe("purgeCache()", () => {
@@ -114,7 +100,7 @@ describe("DirectResourceLoader", () => {
   describe("getKafkaClustersForEnvironmentId()", () => {
     it("Returns Kafka clusters for the specified environment ID", async () => {
       const kafkaClusters = await loader.getKafkaClustersForEnvironmentId(
-        connectionId as EnvironmentId,
+        TEST_DIRECT_ENVIRONMENT_ID,
       );
       assert.deepStrictEqual(kafkaClusters, myEnvironment.kafkaClusters);
     });
@@ -144,7 +130,7 @@ describe("DirectResourceLoader", () => {
   describe("getSchemaRegistryForEnvironmentId()", () => {
     it("Returns the schema registry for the specified environment ID", async () => {
       const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
-        connectionId as EnvironmentId,
+        TEST_DIRECT_ENVIRONMENT_ID,
       );
       assert.deepStrictEqual(schemaRegistry, myEnvironment.schemaRegistry);
     });

@@ -35,17 +35,16 @@ export class DirectResourceLoader extends ResourceLoader {
    */
   async getEnvironments(forceDeepRefresh: boolean = false): Promise<DirectEnvironment[]> {
     if (!this.cachedEnvironments || forceDeepRefresh) {
-      // Fetch all of them, across all direct connections, sigh.
-      const envs: DirectEnvironment[] = await getDirectResources();
-      // Filter down to just "mine." Should be an array of one single DirectEnvironment.
-      this.cachedEnvironments = envs.filter((env) => env.connectionId === this.connectionId);
-
+      // Look up the one-or-none DirectEnvironment for this connection.
+      const env: DirectEnvironment | undefined = await getDirectResources(this.connectionId);
+      // if we got undefined back, there was a problem with the GraphQL query so we shouldn't cache
+      // and will try again (deep refresh) next time
+      this.cachedEnvironments = env ? [env] : undefined;
       this.logger.debug("getEnvironments() deep refresh");
     } else {
       this.logger.debug("getEnvironments() cache hit");
     }
-
-    return this.cachedEnvironments;
+    return this.cachedEnvironments ?? [];
   }
 
   /**
