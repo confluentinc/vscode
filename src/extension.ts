@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
-import { closeSentryClient, initSentry } from "./telemetry/sentryClient";
+import { closeSentryClient, initSentry, sentryCaptureException } from "./telemetry/sentryClient";
 if (process.env.SENTRY_DSN) {
   initSentry();
 }
@@ -71,7 +71,6 @@ import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";

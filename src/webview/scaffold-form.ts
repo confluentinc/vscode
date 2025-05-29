@@ -39,7 +39,9 @@ class ScaffoldFormViewModel extends ViewModel {
 
   options = this.derive(() => {
     const allOptions = Object.entries(this.spec()?.options ?? {});
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const orderedOptions = allOptions.filter(([_, details]) => details.order !== undefined);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const unorderedOptions = allOptions.filter(([_, details]) => details.order === undefined);
     orderedOptions.sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0));
     return [...orderedOptions, ...unorderedOptions];

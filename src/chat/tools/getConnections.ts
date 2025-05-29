@@ -42,6 +42,7 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
 
   prepareInvocation(
     options: LanguageModelToolInvocationPrepareOptions<IGetConnectionsParameters>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     token: CancellationToken,
   ): ProviderResult<PreparedToolInvocation> {
     const { input } = options;
