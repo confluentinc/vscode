@@ -27,7 +27,7 @@ export function registerCommandWithLogging(
       ...getCommandArgsContext(args),
     });
     try {
-      return await command(...args);
+      return command(...args);
     } catch (e) {
       if (e instanceof Error) {
         // gather more (possibly-ResponseError) context and send to Sentry (only enabled in

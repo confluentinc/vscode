@@ -41,9 +41,7 @@ export async function handleConnectionChange(
   if (!existingConnections) {
     window.showInformationMessage(`Connection "${connection.name}" is disconnected.`);
     directConnectForm.dispose();
-    return;
   }
-  return;
 }
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {

@@ -71,7 +71,6 @@ import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
