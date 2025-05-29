@@ -14,6 +14,7 @@ export async function run() {
   const version = process.env.VSCODE_VERSION ?? "stable";
   const mocha = new Mocha({
     color: true,
+    forbidOnly: !!process.env.CI, // fail in CI if there are any .only tests
     ui: "bdd",
     timeout: process.env.CI !== null ? 30_000 : 10_000,
     reporter: "mocha-multi-reporters",
