@@ -221,7 +221,6 @@ export class FlinkStatementManager {
         const newConcurrency = workspaceConfigs.get<number>(STATEMENT_POLLING_CONCURRENCY)!;
         this.configuration.concurrency = newConcurrency;
         logger.debug(`Polling concurrency changed to ${newConcurrency}`);
-        return;
       }
     });
   }

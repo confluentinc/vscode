@@ -181,7 +181,7 @@ async function uploadSchema(
   }
 
   // Log + inform user of the successful schema registration, give them the option to view the schema in the schema registry.
-  const successMessage = schemaRegistrationMessage(subject, existingVersion, registeredVersion!);
+  const successMessage = schemaRegistrationMessage(subject, existingVersion, registeredVersion);
 
   logger.info(successMessage);
 
@@ -257,7 +257,6 @@ export function validateNewSubject(
       severity: vscode.InputBoxValidationSeverity.Warning,
     };
   }
-  return;
 }
 
 /** Given the error message from a 409 conflict when trying to upload a new schema, extract
