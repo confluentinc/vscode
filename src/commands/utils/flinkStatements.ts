@@ -156,6 +156,5 @@ export async function submitFlinkStatement(
  */
 export function localTimezoneOffset(): string {
   const nowStr = new Date().toString();
-  //NOSONAR: This regex is safe for parsing the timezone offset from a date string.
-  return nowStr.match(/([A-Z]+[+-]\d+)/)![1];
+  return nowStr.match(/([A-Z]+[+-]\d+)/)![1]; //NOSONAR: This regex is safe for parsing the timezone offset from a date string.
 }
