@@ -1,21 +1,20 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 
+import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 
 import { SidecarHandle } from "../sidecar";
-
-import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getEnvironments } from "./environments";
 
 describe("environments.ts getEnvironments()", () => {
   let sandbox: sinon.SinonSandbox;
-  let sidecar: sinon.SinonStubbedInstance<SidecarHandle>;
+  let sidecarStub: sinon.SinonStubbedInstance<SidecarHandle>;
   let showErrorNotificationStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    sidecar = getSidecarStub(sandbox);
+    sidecarStub = getSidecarStub(sandbox);
     showErrorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
   });
 
@@ -24,7 +23,7 @@ describe("environments.ts getEnvironments()", () => {
   });
 
   it("Returns empty array and shows notification if query raises an error", async () => {
-    sidecar.query.rejects(new Error("Query failed"));
+    sidecarStub.query.rejects(new Error("Query failed"));
 
     const result = await getEnvironments();
 
@@ -33,14 +32,16 @@ describe("environments.ts getEnvironments()", () => {
   });
 
   it("Returns empty array if no environments are returned", async () => {
-    sidecar.query.resolves({ ccloudConnectionById: { environments: null } });
+    sidecarStub.query.resolves({ ccloudConnectionById: { environments: null } });
+
     const result = await getEnvironments();
+
     assert.deepStrictEqual(result, []);
     sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   it("Returns empty array if no environments are found", async () => {
-    sidecar.query.resolves({ ccloudConnectionById: { environments: [] } });
+    sidecarStub.query.resolves({ ccloudConnectionById: { environments: [] } });
 
     const result = await getEnvironments();
 
@@ -49,7 +50,7 @@ describe("environments.ts getEnvironments()", () => {
   });
 
   it("Handles degenerate environments from graphql", async () => {
-    sidecar.query.resolves({ ccloudConnectionById: { environments: [null, null] } });
+    sidecarStub.query.resolves({ ccloudConnectionById: { environments: [null, null] } });
 
     const result = await getEnvironments();
 
@@ -88,8 +89,7 @@ describe("environments.ts getEnvironments()", () => {
         ],
       },
     };
-
-    sidecar.query.resolves(mockEnvironments);
+    sidecarStub.query.resolves(mockEnvironments);
 
     const result = await getEnvironments();
 
@@ -101,7 +101,6 @@ describe("environments.ts getEnvironments()", () => {
     assert.strictEqual(result[0].kafkaClusters[0].environmentId, "env1");
     assert.strictEqual(result[0].kafkaClusters[1].name, "Kafka Cluster 2");
     assert.strictEqual(result[0].kafkaClusters[0].environmentId, "env1");
-
     assert.strictEqual(result[0].schemaRegistry, undefined);
 
     sinon.assert.notCalled(showErrorNotificationStub);
@@ -135,9 +134,10 @@ describe("environments.ts getEnvironments()", () => {
         ],
       },
     };
+    sidecarStub.query.resolves(mockEnvironments);
 
-    sidecar.query.resolves(mockEnvironments);
     const result = await getEnvironments();
+
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].kafkaClusters.length, 1);
     assert.strictEqual(result[0].schemaRegistry!.environmentId, "env1");
@@ -168,9 +168,10 @@ describe("environments.ts getEnvironments()", () => {
         ],
       },
     };
+    sidecarStub.query.resolves(mockEnvironments);
 
-    sidecar.query.resolves(mockEnvironments);
     const result = await getEnvironments();
+
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].flinkComputePools.length, 1);
     assert.strictEqual(result[0].flinkComputePools[0].id, "flink1");
@@ -201,12 +202,14 @@ describe("environments.ts getEnvironments()", () => {
         ],
       },
     };
+    sidecarStub.query.resolves(mockEnvironments);
 
-    sidecar.query.resolves(mockEnvironments);
     const result = await getEnvironments();
+
     assert.strictEqual(result.length, 2);
     assert.strictEqual(result[0].name, "Environment 1");
     assert.strictEqual(result[1].name, "Environment 2");
+
     sinon.assert.notCalled(showErrorNotificationStub);
   });
 });
