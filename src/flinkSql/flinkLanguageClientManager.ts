@@ -70,8 +70,8 @@ export class FlinkLanguageClientManager implements Disposable {
 
   /** Get the document OR global/workspace settings for Flink, if any */
   public async getFlinkSqlSettings(uri: Uri): Promise<FlinkSqlSettings> {
-    let defaultComputePoolId = null;
-    let defaultDatabase = null;
+    let currentComputePoolId = null;
+    let currentDatabase = null;
     // First, does the doc have this metadata set?
     const rm = ResourceManager.getInstance();
     const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(uri);
@@ -79,14 +79,14 @@ export class FlinkLanguageClientManager implements Disposable {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
 
     // Set to whichever one wins!
-    defaultComputePoolId =
+    currentComputePoolId =
       uriMetadata?.flinkComputePoolId ?? config.get(FLINK_CONFIG_COMPUTE_POOL, null);
 
-    defaultDatabase = uriMetadata?.flinkDatabaseId ?? config.get(FLINK_CONFIG_DATABASE, null);
+    currentDatabase = uriMetadata?.flinkDatabaseId ?? config.get(FLINK_CONFIG_DATABASE, null);
 
     return {
-      database: defaultDatabase,
-      computePoolId: defaultComputePoolId,
+      database: currentDatabase,
+      computePoolId: currentComputePoolId,
     };
   }
 
