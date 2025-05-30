@@ -1,4 +1,12 @@
-import { Disposable, LogOutputChannel, Uri, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  Disposable,
+  LogOutputChannel,
+  TextEditor,
+  Uri,
+  window,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
@@ -60,6 +68,15 @@ export class FlinkLanguageClientManager implements Disposable {
       workspace.onDidOpenTextDocument(async (document) => {
         if (document.languageId === "flinksql") {
           await this.maybeStartLanguageClient(document.uri);
+        }
+      }),
+    );
+
+    // Listen for active editor changes
+    this.disposables.push(
+      window.onDidChangeActiveTextEditor(async (editor: TextEditor | undefined) => {
+        if (editor && editor.document.languageId === "flinksql") {
+          await this.maybeStartLanguageClient(editor.document.uri);
         }
       }),
     );
@@ -201,36 +218,43 @@ export class FlinkLanguageClientManager implements Disposable {
    * Ensures the language client is initialized if prerequisites are met
    * Prerequisites:
    * - User is authenticated with CCloud
-   * - User has selected a compute pool to use for websocket connection (language server route is region/provider specific)
+   * - User has a compute pool in default settings or doc metadata to use for websocket connection (language server route is region/provider specific)
    * - User has opened a Flink SQL file
-   * - User has not disabled Flink in settings
    */
   public async maybeStartLanguageClient(uri: Uri): Promise<void> {
-    if (this.languageClient) {
-      if (this.isLanguageClientConnected()) {
-        // If we already have a client and it's healthy we're cool
-        return;
-      } else {
-        logger.debug("Language client connection not active, stopping and reinitializing");
-        await this.cleanupLanguageClient();
-      }
-    }
-    // Otherwise, we need to check if the prerequisites are met
     if (!hasCCloudAuthSession()) {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;
     }
 
     const { computePoolId } = await this.getFlinkSqlSettings(uri);
+    if (!computePoolId) {
+      logger.debug("No compute pool selected, not starting language client");
+      return;
+    }
     const isPoolOk = await this.validateFlinkSettings(computePoolId);
-    if (!computePoolId || !isPoolOk) {
+    if (!isPoolOk) {
       logger.debug("No valid compute pool; not initializing language client");
       return;
+    }
+    const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+    const environmentId = poolInfo?.environmentId;
+    const environmentMatchesCompute =
+      this.lastWebSocketUrl && environmentId && this.lastWebSocketUrl.includes(environmentId);
+
+    if (this.isLanguageClientConnected() && environmentMatchesCompute) {
+      // If we already have a client, it's alive, the compute pool matches, so we're good
+      return;
+    } else {
+      logger.debug(
+        "Connection not active or doesn't match document compute pool, stopping and reinitializing",
+      );
+      await this.cleanupLanguageClient();
     }
 
     try {
       let url: string | null = null;
-      if (this.lastWebSocketUrl && this.lastWebSocketUrl.includes(computePoolId)) {
+      if (environmentMatchesCompute) {
         url = this.lastWebSocketUrl;
       } else {
         url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
