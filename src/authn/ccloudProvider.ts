@@ -6,9 +6,9 @@ import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { loadPreferencesFromWorkspaceConfig } from "../extensionSettings/sidecarSync";
 import { getLaunchDarklyClient } from "../featureFlags/client";
 import { Logger } from "../logging";
-import { loadPreferencesFromWorkspaceConfig } from "../preferences/sidecarSync";
 import {
   clearCurrentCCloudResources,
   createCCloudConnection,

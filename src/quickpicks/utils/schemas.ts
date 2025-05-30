@@ -1,10 +1,10 @@
 import { workspace, WorkspaceConfiguration } from "vscode";
+import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
 import { Schema } from "../../models/schema";
 import { SchemaRegistry } from "../../models/schemaRegistry";
 import { KafkaTopic } from "../../models/topic";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../preferences/constants";
 import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import { schemaVersionQuickPick } from "../schemas";
 import { getSubjectNameForStrategy } from "./schemaSubjects";

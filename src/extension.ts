@@ -44,6 +44,9 @@ import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStateme
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
+import { ENABLE_CHAT_PARTICIPANT } from "./extensionSettings/constants";
+import { createConfigChangeListener } from "./extensionSettings/listener";
+import { updatePreferences } from "./extensionSettings/sidecarSync";
 import {
   disposeLaunchDarklyClient,
   getLaunchDarklyClient,
@@ -58,9 +61,6 @@ import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { ENABLE_CHAT_PARTICIPANT } from "./preferences/constants";
-import { createConfigChangeListener } from "./preferences/listener";
-import { updatePreferences } from "./preferences/sidecarSync";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";

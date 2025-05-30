@@ -12,12 +12,12 @@ import {
   ContainerCreateResponse,
   ContainerInspectResponse,
 } from "../../clients/docker";
-import * as notifications from "../../notifications";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
-} from "../../preferences/constants";
+} from "../../extensionSettings/constants";
+import * as notifications from "../../notifications";
 import * as local from "../../sidecar/connections/local";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import {
