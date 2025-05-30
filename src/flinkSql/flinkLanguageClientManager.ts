@@ -379,6 +379,7 @@ export class FlinkLanguageClientManager implements Disposable {
     await this.cleanupLanguageClient();
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
+    FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
   }
 }
 
