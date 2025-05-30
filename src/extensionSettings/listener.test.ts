@@ -3,8 +3,10 @@ import sinon from "sinon";
 import { ConfigurationChangeEvent, workspace } from "vscode";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
+import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import {
   ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
@@ -107,4 +109,45 @@ describe("preferences/listener", function () {
       });
     }
   }
+
+  it(`should dispose the FlinkLanguageClientManager when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" is set to false`, async () => {
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER).returns(false),
+    });
+    const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
+      FlinkLanguageClientManager,
+    );
+    sandbox
+      .stub(FlinkLanguageClientManager, "getInstance")
+      .returns(stubbedFlinkLanguageClientManager);
+
+    const mockEvent = {
+      affectsConfiguration: (config: string) => config === ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+    } as ConfigurationChangeEvent;
+    onDidChangeConfigurationStub.yields(mockEvent);
+
+    createConfigChangeListener();
+    await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+
+    sinon.assert.called(stubbedFlinkLanguageClientManager.dispose);
+  });
+
+  it(`should call FlinkLanguageClientManager.getInstance() when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" is set to true`, async () => {
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER).returns(true),
+    });
+    const getInstanceStub = sandbox
+      .stub(FlinkLanguageClientManager, "getInstance")
+      .returns(sandbox.createStubInstance(FlinkLanguageClientManager));
+
+    const mockEvent = {
+      affectsConfiguration: (config: string) => config === ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+    } as ConfigurationChangeEvent;
+    onDidChangeConfigurationStub.yields(mockEvent);
+
+    createConfigChangeListener();
+    await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+
+    sinon.assert.called(getInstanceStub);
+  });
 });
