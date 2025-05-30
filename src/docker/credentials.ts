@@ -91,7 +91,7 @@ export async function getDockerCredentials(): Promise<string | undefined> {
     JSON.parse(credsString),
   );
   if (!credentialHeaders) {
-    logger.debug("invalid Docker credentials:", credsString);
+    logger.debug("invalid Docker credentials, not storing");
     return;
   }
   const encodedCreds: string = Buffer.from(JSON.stringify(credentialHeaders)).toString("base64");
@@ -100,9 +100,9 @@ export async function getDockerCredentials(): Promise<string | undefined> {
 }
 
 /**
- * Validate the Docker credentials object and convert it to a {@link DockerAuthHeaders} object.
+ * Validate the Docker credentials object and convert it to a {@link AuthConfig} object.
  * @param creds The JSON-parsed credentials object to validate.
- * @returns A {@link DockerAuthHeaders} object if valid, or `undefined` if invalid.
+ * @returns A {@link AuthConfig} object if valid, or `undefined` if invalid.
  * @see https://docs.docker.com/reference/cli/docker/login/#credential-helper-protocol
  */
 export function validateDockerCredentials(creds: any): AuthConfig | undefined {
