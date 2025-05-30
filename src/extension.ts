@@ -58,7 +58,11 @@ import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { ENABLE_CHAT_PARTICIPANT } from "./preferences/constants";
+import {
+  ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
+} from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/sidecarSync";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
@@ -243,12 +247,20 @@ async function _activateExtension(
     uriHandler,
     WebsocketManager.getInstance(),
     FlinkStatementManager.getInstance(),
-    initializeFlinkLanguageClientManager(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
     ...documentProviders,
   );
+
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
+  if (
+    config.get(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT)
+  ) {
+    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
+    context.subscriptions.push(flinkLanguageClientManager);
+  }
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
