@@ -44,6 +44,14 @@ export function tmpdir(): string {
   return os.tmpdir();
 }
 
+/** Wrapper for fs.readFileSync() */
+export function readFileSync(
+  path: fs.PathOrFileDescriptor,
+  options?: { encoding?: BufferEncoding; flag?: string } | BufferEncoding,
+): string {
+  return fs.readFileSync(path, options || "utf-8") as string;
+}
+
 /** Wrapper for fs.writeFileSync() */
 export function writeFileSync(
   path: fs.PathOrFileDescriptor,

@@ -1,17 +1,6 @@
-import { execSync } from "child_process";
-import { readFileSync } from "fs";
-import { homedir } from "os";
-import { join, normalize } from "path";
+import { normalize } from "path";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
-import {
-  commands,
-  env,
-  SecretStorage,
-  Uri,
-  window,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
 import { logError } from "../errors";
 import { Logger } from "../logging";
@@ -22,14 +11,13 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../preferences/constants";
-import { SecretStorageKeys } from "../storage/constants";
-import { getSecretStorage } from "../storage/utils";
 import {
   DEFAULT_KAFKA_IMAGE_REPO,
   DEFAULT_KAFKA_IMAGE_TAG,
   DEFAULT_SCHEMA_REGISTRY_REPO,
   DEFAULT_SCHEMA_REGISTRY_TAG,
 } from "./constants";
+import { getDockerCredentials } from "./credentials";
 
 const logger = new Logger("docker.configs");
 
@@ -73,62 +61,6 @@ export function getLocalSchemaRegistryImageName(): string {
 export function getLocalSchemaRegistryImageTag(): string {
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
   return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, DEFAULT_SCHEMA_REGISTRY_TAG);
-}
-
-/**
- * Look up the name of the `credsStore` from the local Docker config, if it's set.
- * @see https://docs.docker.com/reference/cli/docker/login/#credential-stores
- */
-function getDockerCredsStore(): string | undefined {
-  try {
-    const dockerConfigPath = join(homedir(), ".docker", "config.json");
-    const dockerConfig = JSON.parse(readFileSync(dockerConfigPath, "utf-8"));
-    return dockerConfig.credsStore;
-  } catch (error) {
-    logger.debug("failed to read Docker config:", error);
-  }
-}
-
-/**
- * Get the Docker credentials for the current user, provided a `credsStore` is set.
- * This function will cache the credentials in SecretStorage for future use.
- * @returns A base64-encoded string of the Docker credentials, or `undefined` if the credentials
- * could not be retrieved.
- * @see https://docs.docker.com/reference/cli/docker/login/#credential-stores
- */
-async function getDockerCredentials(): Promise<string | undefined> {
-  const secretStorage: SecretStorage = getSecretStorage();
-  const cachedDockerCreds: string | undefined = await secretStorage.get(
-    SecretStorageKeys.DOCKER_CREDS_SECRET_KEY,
-  );
-  if (cachedDockerCreds) {
-    return cachedDockerCreds;
-  }
-
-  const credsStore = getDockerCredsStore();
-  if (!credsStore) {
-    return;
-  }
-
-  try {
-    // unfortunately, there isn't a way to get the credentials directly from the store, so we have
-    // to try calling the `docker-credential-<store> get` command and parse the output
-    const creds = execSync(`docker-credential-${credsStore} get`, {
-      input: "https://index.docker.io/v1/",
-      encoding: "utf-8",
-    });
-    const { Username, Secret } = JSON.parse(creds);
-    const authConfig = {
-      username: Username,
-      password: Secret,
-      serveraddress: "https://index.docker.io/v1/",
-    };
-    const encodedCreds: string = Buffer.from(JSON.stringify(authConfig)).toString("base64");
-    await secretStorage.store(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY, encodedCreds);
-    return encodedCreds;
-  } catch (error) {
-    logger.debug("failed to load Docker credentials:", error);
-  }
 }
 
 /** Default request options for Docker API requests, to be used with service class methods from `src/clients/docker/*`. */
