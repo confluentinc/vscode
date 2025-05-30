@@ -6,6 +6,7 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
@@ -71,7 +72,10 @@ export function createConfigChangeListener(): Disposable {
 
       if (event.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER)) {
         // user toggled the "Enable Flink CCloud Language Server" preview setting
-        const enabled = configs.get(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, false);
+        const enabled: boolean = configs.get(
+          ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+          ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
+        );
         logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" config changed`, { enabled });
         if (enabled) {
           // start the Flink Language Client Manager up if it isn't already running
