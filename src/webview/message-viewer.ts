@@ -566,7 +566,7 @@ class MessageViewerViewModel extends ViewModel {
         if (!signal.aborted) result(value);
       }
       function handle(event: MessageEvent<any[]>) {
-        if (event.data[0] === "Timestamp") update();
+        if (event.data[0] === "Refresh") update();
       }
       addEventListener("message", handle, { signal });
       update();
