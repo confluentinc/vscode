@@ -4,7 +4,7 @@ import sinon from "sinon";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
 import { window, workspace } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
-import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as configs from "./configs";
 
 describe("docker/configs functions", function () {

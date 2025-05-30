@@ -8,8 +8,8 @@ import {
   FLINK_CONFIG_DATABASE,
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
-} from "../preferences/constants";
-import * as updates from "../preferences/updates";
+} from "../extensionSettings/constants";
+import * as updates from "../extensionSettings/updates";
 import * as flinkComputePoolsQuickPick from "../quickpicks/flinkComputePools";
 import * as flinkDatabaseQuickpick from "../quickpicks/kafkaClusters";
 import * as ccloudConnections from "../sidecar/connections/ccloud";

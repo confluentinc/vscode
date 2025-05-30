@@ -8,7 +8,7 @@ import {
   workspace,
   WorkspaceConfiguration,
 } from "vscode";
-import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
+import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { sanitizeFeedbackResult } from "./telemetry";
 import { TextOnlyToolResultPart } from "./tools/base";
 import { ToolCallMetadata } from "./tools/types";

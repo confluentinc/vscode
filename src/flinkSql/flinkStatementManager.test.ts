@@ -5,8 +5,6 @@ import { ConfigurationChangeEvent } from "vscode";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
-import { CCloudResourceLoader } from "../loaders";
-import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
   DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
@@ -14,7 +12,9 @@ import {
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
-} from "../preferences/constants";
+} from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders";
+import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
 import { IntervalPoller } from "../utils/timing";
 import * as workerPool from "../utils/workerPool";
 import {
