@@ -1,4 +1,5 @@
 import { commands, workspace, WorkspaceConfiguration } from "vscode";
+import { USE_TOPIC_NAME_STRATEGY } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
 import { Subject } from "../../models/schema";
 import { SchemaRegistry } from "../../models/schemaRegistry";
@@ -7,7 +8,6 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../../notifications";
-import { USE_TOPIC_NAME_STRATEGY } from "../../preferences/constants";
 import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import { schemaSubjectQuickPick, subjectNameStrategyQuickPick } from "../schemas";
 

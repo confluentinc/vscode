@@ -6,8 +6,8 @@ import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as notifications from "../notifications";
-import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 import * as quickpicks from "../quickpicks/localResources";
 import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
 

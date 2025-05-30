@@ -4,7 +4,7 @@ import {
   workspace,
   WorkspaceConfiguration,
 } from "vscode";
-import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
+import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { ToolCallMetadata } from "./tools/types";
 import { CustomChatResult } from "./types";

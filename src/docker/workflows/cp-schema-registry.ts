@@ -9,9 +9,9 @@ import {
   HostConfig,
 } from "../../clients/docker";
 import { localSchemaRegistryConnected } from "../../emitters";
+import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { getLocalResourceContainers, updateLocalConnection } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
 import {

@@ -8,11 +8,11 @@ import {
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
-import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
+import { UTM_SOURCE_VSCODE } from "../constants";
+import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import * as schemaRegistry from "./schemaRegistry";
-import { UTM_SOURCE_VSCODE } from "../constants";
 
 describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;

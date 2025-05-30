@@ -3,14 +3,14 @@ import { Agent, RequestInit as UndiciRequestInit } from "undici";
 import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
 import { logError } from "../errors";
-import { Logger } from "../logging";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
-} from "../preferences/constants";
+} from "../extensionSettings/constants";
+import { Logger } from "../logging";
 import {
   DEFAULT_KAFKA_IMAGE_REPO,
   DEFAULT_KAFKA_IMAGE_TAG,

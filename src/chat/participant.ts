@@ -20,8 +20,8 @@ import {
   workspace,
 } from "vscode";
 import { logError } from "../errors";
+import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { Logger } from "../logging";
-import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";

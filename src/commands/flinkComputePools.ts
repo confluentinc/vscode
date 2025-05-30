@@ -1,10 +1,10 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkArtifactsPoolChanged } from "../emitters";
+import { updateDefaultFlinkDatabaseId, updateDefaultFlinkPoolId } from "../extensionSettings/updates";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { updateDefaultFlinkDatabaseId, updateDefaultFlinkPoolId } from "../preferences/updates";
 import {
   flinkComputePoolQuickPick,
   flinkComputePoolQuickPickWithViewProgress,

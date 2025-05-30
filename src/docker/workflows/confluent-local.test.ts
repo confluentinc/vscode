@@ -13,8 +13,8 @@ import {
 } from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
+import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_IMAGE_TAG } from "../../extensionSettings/constants";
 import * as notifications from "../../notifications";
-import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import * as dockerContainers from "../containers";
 import * as dockerNetworks from "../networks";
