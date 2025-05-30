@@ -21,7 +21,10 @@ import {
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { initializeLanguageClient } from "./languageClient";
-import { getFlinkSQLLanguageServerOutputChannel } from "./logging";
+import {
+  clearFlinkSQLLanguageServerOutputChannel,
+  getFlinkSQLLanguageServerOutputChannel,
+} from "./logging";
 
 const logger = new Logger("flinkLanguageClientManager");
 
@@ -401,6 +404,7 @@ export class FlinkLanguageClientManager implements Disposable {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
     FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
+    clearFlinkSQLLanguageServerOutputChannel();
     logger.debug("FlinkLanguageClientManager disposed");
   }
 }
