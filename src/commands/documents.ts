@@ -7,7 +7,10 @@ import {
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
-import { updateDefaultFlinkDatabaseId, updateDefaultFlinkPoolId } from "../extensionSettings/updates";
+import {
+  updateDefaultFlinkDatabaseId,
+  updateDefaultFlinkPoolId,
+} from "../extensionSettings/updates";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";

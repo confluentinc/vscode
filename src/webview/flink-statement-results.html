@@ -163,7 +163,11 @@
             <template data-if="this.hasResults() || this.emptyFilterResult()">
               <tbody>
                 <template data-for="result of this.snapshot().results">
-                  <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())" data-testid="column-row">
+                  <tr
+                    class="grid-row"
+                    data-on-dblclick="this.previewResult(this.result())"
+                    data-testid="column-row"
+                  >
                     <template data-for="column of this.visibleColumns() by column">
                       <td
                         class="grid-cell cell-text-overflow"
