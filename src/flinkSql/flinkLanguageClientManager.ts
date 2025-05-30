@@ -95,18 +95,9 @@ export class FlinkLanguageClientManager implements Disposable {
     if (!computePoolId) {
       return false;
     }
-
-    const computeValid = await this.checkFlinkResourcesAvailability(computePoolId);
-    if (!computeValid) {
-      return false;
-    }
-    return true;
-  }
-
-  /** Does the compute pool id exist in an available ccloud environment? */
-  private async checkFlinkResourcesAvailability(computePoolId: string): Promise<boolean> {
     try {
       // Load available compute pools to verify the configured pool exists
+      // TOOD this can be done with ccloud resource loader?
       const environments = await getEnvironments();
       if (!environments || environments.length === 0) {
         logger.debug("No CCloud environments found");
@@ -285,7 +276,6 @@ export class FlinkLanguageClientManager implements Disposable {
    */
   private async restartLanguageClient(): Promise<void> {
     if (!this.lastDocUri) return; // We should never get here
-    // Dispose of the existing client if it exists
     await this.cleanupLanguageClient();
     try {
       await this.maybeStartLanguageClient(this.lastDocUri);
