@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { AuthConfig } from "../clients/docker";
 import * as fsWrappers from "../utils/fsWrappers";
 import {
-  DockerAuthHeaders,
   getDockerCredsStore,
   isValidCredsStoreName,
   validateDockerCredentials,
@@ -157,34 +157,23 @@ describe("docker/credentials.ts validateDockerCredentials()", function () {
   it("should return undefined for invalid credential formats", function () {
     assert.strictEqual(validateDockerCredentials({}), undefined);
     assert.strictEqual(validateDockerCredentials({ Username: "user" }), undefined);
-    assert.strictEqual(validateDockerCredentials({ Password: "pass" }), undefined);
-    assert.strictEqual(validateDockerCredentials({ Username: 123, Password: "pass" }), undefined);
+    assert.strictEqual(validateDockerCredentials({ Secret: "pass" }), undefined);
+    assert.strictEqual(validateDockerCredentials({ Username: 123, Secret: "pass" }), undefined);
   });
 
-  it("should return proper auth headers for valid credentials", function () {
-    const result: DockerAuthHeaders | undefined = validateDockerCredentials({
-      Username: "testuser",
-      Password: "testpass",
-      ServerURL: "https://registry.example.com",
-    });
+  for (const serverUrl of ["https://custom-registry.com/v2/", undefined]) {
+    it(`should provide a valid auth config and use default Docker Hub URL even if ServerURL is ${serverUrl}`, function () {
+      const result: AuthConfig | undefined = validateDockerCredentials({
+        Username: "testuser",
+        Secret: "testpass",
+        ServerURL: serverUrl,
+      });
 
-    assert.deepStrictEqual(result, {
-      username: "testuser",
-      password: "testpass",
-      serveraddress: "https://registry.example.com",
+      assert.deepStrictEqual(result, {
+        username: "testuser",
+        password: "testpass",
+        serveraddress: "https://index.docker.io/v1/",
+      });
     });
-  });
-
-  it("should use default Docker Hub URL when ServerURL is missing", function () {
-    const result: DockerAuthHeaders | undefined = validateDockerCredentials({
-      Username: "testuser",
-      Password: "testpass",
-    });
-
-    assert.deepStrictEqual(result, {
-      username: "testuser",
-      password: "testpass",
-      serveraddress: "https://index.docker.io/v1/",
-    });
-  });
+  }
 });

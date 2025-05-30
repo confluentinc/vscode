@@ -2,6 +2,7 @@ import { execSync } from "child_process";
 import { homedir } from "os";
 import { join } from "path";
 import { SecretStorage } from "vscode";
+import { AuthConfig } from "../clients/docker";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
@@ -86,7 +87,7 @@ export async function getDockerCredentials(): Promise<string | undefined> {
     return;
   }
 
-  const credentialHeaders: DockerAuthHeaders | undefined = validateDockerCredentials(
+  const credentialHeaders: AuthConfig | undefined = validateDockerCredentials(
     JSON.parse(credsString),
   );
   if (!credentialHeaders) {
@@ -99,30 +100,21 @@ export async function getDockerCredentials(): Promise<string | undefined> {
 }
 
 /**
- * Interface for Docker engine API authentication headers.
- * @see https://docs.docker.com/reference/api/engine/version/v1.41/#section/Authentication
- */
-export interface DockerAuthHeaders {
-  username: string;
-  password: string;
-  serveraddress: string;
-}
-
-/**
  * Validate the Docker credentials object and convert it to a {@link DockerAuthHeaders} object.
  * @param creds The JSON-parsed credentials object to validate.
  * @returns A {@link DockerAuthHeaders} object if valid, or `undefined` if invalid.
  * @see https://docs.docker.com/reference/cli/docker/login/#credential-helper-protocol
  */
-export function validateDockerCredentials(creds: any): DockerAuthHeaders | undefined {
+export function validateDockerCredentials(creds: any): AuthConfig | undefined {
   if (!creds) {
     return;
   }
-  if (typeof creds.Username === "string" && typeof creds.Password === "string") {
+  if (typeof creds.Username === "string" && typeof creds.Secret === "string") {
     return {
       username: creds.Username,
-      password: creds.Password,
-      serveraddress: creds.ServerURL ?? "https://index.docker.io/v1/",
+      password: creds.Secret,
+      // we should only support creds.ServerURL if the image(s) are not being pulled from Docker Hub
+      serveraddress: "https://index.docker.io/v1/",
     };
   }
 }
