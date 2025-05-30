@@ -77,13 +77,18 @@ export function createConfigChangeListener(): Disposable {
           ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
         );
         logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" config changed`, { enabled });
+
+        const manager = FlinkLanguageClientManager.getInstance();
         if (enabled) {
           // start the Flink Language Client Manager up if it isn't already running
-          FlinkLanguageClientManager.getInstance();
+          // (this is typically done internally based on various events, but we want to ensure
+          // it starts up when the user opts in to the feature)
+          manager["maybeStartLanguageClient"]();
         } else {
           // stop the Flink Language Client Manager if it's running
-          FlinkLanguageClientManager.getInstance().dispose();
+          manager.dispose();
         }
+
         // telemetry for how often users opt in or out of the Flink CCloud Language Server feature
         logUsage(UserEvent.ExtensionSettingsChange, {
           settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
