@@ -1,7 +1,15 @@
-import { Disposable, LogOutputChannel, Uri, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  Disposable,
+  LogOutputChannel,
+  TextEditor,
+  Uri,
+  window,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudConnected } from "../emitters";
+import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -55,11 +63,28 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private registerListeners(): void {
-    // Listen for user opening a Flink SQL file
+    // // Listen for user opening a Flink SQL file
     this.disposables.push(
-      workspace.onDidOpenTextDocument(async (document) => {
-        if (document.languageId === "flinksql") {
-          await this.maybeStartLanguageClient(document.uri);
+      uriMetadataSet.event(async (uri: Uri) => {
+        if (this.lastDocUri === uri) {
+          await this.maybeStartLanguageClient(uri);
+        }
+        // if (document.languageId === "flinksql") {
+        //   await this.maybeStartLanguageClient(uri);
+        // }
+      }),
+    );
+
+    // Listen for active editor changes
+    this.disposables.push(
+      window.onDidChangeActiveTextEditor(async (editor: TextEditor | undefined) => {
+        logger.debug("Active editor changed", {
+          languageId: editor?.document.languageId,
+          uri: editor?.document.uri.toString(),
+        });
+        if (editor && editor.document.languageId === "flinksql") {
+          logger.debug("Active editor changed to Flink SQL file, initializing language client");
+          await this.maybeStartLanguageClient(editor.document.uri);
         }
       }),
     );
@@ -201,55 +226,56 @@ export class FlinkLanguageClientManager implements Disposable {
    * Ensures the language client is initialized if prerequisites are met
    * Prerequisites:
    * - User is authenticated with CCloud
-   * - User has selected a compute pool to use for websocket connection (language server route is region/provider specific)
-   * - User has opened a Flink SQL file
-   * - User has not disabled Flink in settings
+   * - User has designated a compute pool to use (language server route is region+provider specific)
+   * - User has opened a Flink SQL file // FIXME at this point we don't check for flinksql languageId on doc metadata change
    */
   public async maybeStartLanguageClient(uri: Uri): Promise<void> {
-    if (this.languageClient) {
-      if (this.isLanguageClientConnected()) {
-        // If we already have a client and it's healthy we're cool
-        return;
-      } else {
-        logger.debug("Language client connection not active, stopping and reinitializing");
-        await this.cleanupLanguageClient();
-      }
-    }
-    // Otherwise, we need to check if the prerequisites are met
     if (!hasCCloudAuthSession()) {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;
     }
 
     const { computePoolId } = await this.getFlinkSqlSettings(uri);
+    if (!computePoolId) {
+      logger.debug("No compute pool, not starting language client");
+      return;
+    }
     const isPoolOk = await this.validateFlinkSettings(computePoolId);
-    if (!computePoolId || !isPoolOk) {
+    if (!isPoolOk) {
       logger.debug("No valid compute pool; not initializing language client");
       return;
     }
 
-    try {
-      let url: string | null = null;
-      if (this.lastWebSocketUrl && this.lastWebSocketUrl.includes(computePoolId)) {
-        url = this.lastWebSocketUrl;
-      } else {
-        url = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
-          logger.error("Failed to build WebSocket URL:", error);
-          return null;
-        });
-        this.lastWebSocketUrl = url;
-      }
-      if (!url) return;
+    let url: string | null = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
+      logger.error("Failed to build WebSocket URL:", error);
+      return null;
+    });
+    if (!url) {
+      logger.error("Failed to build WebSocket URL, cannot start language client");
+      return;
+    }
+    if (this.isLanguageClientConnected() && url === this.lastWebSocketUrl) {
+      // If we already have a client, it's alive, the compute pool matches, so we're good
+      return;
+    } else {
+      logger.debug("Stopping client and reinitializing", {
+        clientConnected: this.isLanguageClientConnected(),
+        lastWebSocketUrl: this.lastWebSocketUrl,
+        websocketUrlMatch: url === this.lastWebSocketUrl,
+      });
+      await this.cleanupLanguageClient();
+    }
 
+    try {
       // Reset reconnect counter on new initialization
       this.reconnectCounter = 0;
-
       this.languageClient = await initializeLanguageClient(url, () =>
         this.handleWebSocketDisconnect(),
       );
       if (this.languageClient) {
         this.disposables.push(this.languageClient);
-        this.lastDocUri = uri; // Store the last used URI for reconnect
+        this.lastDocUri = uri;
+        this.lastWebSocketUrl = url;
         logger.debug("Flink SQL language client successfully initialized");
         // this.notifyConfigChanged(); // FIXME Send settings right away
       }
