@@ -21,7 +21,7 @@ import {
 import * as updates from "./sidecarSync";
 import { loadPreferencesFromWorkspaceConfig } from "./sidecarSync";
 
-describe("preferences/updates", function () {
+describe("extensionSettings/sidecarSync.ts", function () {
   let sandbox: sinon.SinonSandbox;
   let mockClient: sinon.SinonStubbedInstance<PreferencesResourceApi>;
   let getConfigurationStub: sinon.SinonStub;

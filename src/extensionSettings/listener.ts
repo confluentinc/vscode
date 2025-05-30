@@ -1,8 +1,12 @@
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
+import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import { Logger } from "../logging";
+import { logUsage, UserEvent } from "../telemetry/events";
 import {
   ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
@@ -58,6 +62,38 @@ export function createConfigChangeListener(): Disposable {
         const enabled = configs.get(ENABLE_CHAT_PARTICIPANT, false);
         logger.debug(`"${ENABLE_CHAT_PARTICIPANT}" config changed`, { enabled });
         setContextValue(ContextValues.chatParticipantEnabled, enabled);
+        // telemetry for how often users opt in or out of the chat participant feature
+        logUsage(UserEvent.ExtensionSettingsChange, {
+          settingId: ENABLE_CHAT_PARTICIPANT,
+          enabled,
+        });
+        return;
+      }
+
+      if (event.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER)) {
+        // user toggled the "Enable Flink CCloud Language Server" preview setting
+        const enabled: boolean = configs.get(
+          ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+          ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
+        );
+        logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" config changed`, { enabled });
+
+        const manager = FlinkLanguageClientManager.getInstance();
+        if (enabled) {
+          // start the Flink Language Client Manager up if it isn't already running
+          // (this is typically done internally based on various events, but we want to ensure
+          // it starts up when the user opts in to the feature)
+          manager["maybeStartLanguageClient"]();
+        } else {
+          // stop the Flink Language Client Manager if it's running
+          manager.dispose();
+        }
+
+        // telemetry for how often users opt in or out of the Flink CCloud Language Server feature
+        logUsage(UserEvent.ExtensionSettingsChange, {
+          settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+          enabled,
+        });
         return;
       }
     },
