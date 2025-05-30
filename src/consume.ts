@@ -285,7 +285,7 @@ function messageViewerStartPollingCommand(
   /** Notify an active webview only after flushing the rest of updates. */
   const notifyUI = () => {
     queueMicrotask(() => {
-      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+      if (panelActive()) panel.webview.postMessage(["Refresh", "Success", null]);
     });
   };
 
