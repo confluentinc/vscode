@@ -90,7 +90,7 @@ export class FlinkLanguageClientManager implements Disposable {
       workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER)) {
           // guard against any toggling of this setting, since its behavior is handled
-          // at the `src/preferences/listener.ts` level
+          // at the `src/extensionSettings/listener.ts` level
           return;
         }
         // real default settings changes

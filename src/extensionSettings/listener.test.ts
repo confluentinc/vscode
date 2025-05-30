@@ -14,7 +14,7 @@ import {
 import { createConfigChangeListener } from "./listener";
 import * as updates from "./sidecarSync";
 
-describe("preferences/listener", function () {
+describe("extensionSettings/listener.ts", function () {
   let sandbox: sinon.SinonSandbox;
   let getConfigurationStub: sinon.SinonStub;
   let onDidChangeConfigurationStub: sinon.SinonStub;
