@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
@@ -15,7 +16,7 @@ import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import { CustomConnectionSpec, ResourceManager } from "../storage/resourceManager";
 import { getDirectResources } from "./direct";
 
@@ -45,7 +46,7 @@ const fakeDirectConnectionByIdResult = {
 describe("graphql/direct.ts getDirectResources()", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let sidecarStub: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+  let sidecarStub: sinon.SinonStubbedInstance<SidecarHandle>;
   let logErrorStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
   let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
@@ -54,8 +55,7 @@ describe("graphql/direct.ts getDirectResources()", () => {
     sandbox = sinon.createSandbox();
 
     // create the stub for the sidecar (which will automatically stub the .query method)
-    sidecarStub = sandbox.createStubInstance(sidecar.SidecarHandle);
-    sandbox.stub(sidecar, "getSidecar").resolves(sidecarStub);
+    sidecarStub = getSidecarStub(sandbox);
 
     // for stubbing the stored (test) direct connection spec
     stubbedResourceManager = sandbox.createStubInstance(ResourceManager);

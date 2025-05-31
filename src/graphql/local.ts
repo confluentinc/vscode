@@ -68,17 +68,14 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
       return;
     }
 
-    let kafkaClusters: LocalKafkaCluster[] = [];
-    if (connection.kafkaCluster) {
-      kafkaClusters.push(
-        LocalKafkaCluster.create({
-          id: connection.kafkaCluster.id,
-          name: connection.kafkaCluster.name,
-          bootstrapServers: connection.kafkaCluster.bootstrapServers,
-          uri: connection.kafkaCluster.uri,
-        }),
-      );
-    }
+    let kafkaClusters: LocalKafkaCluster[] = [
+      LocalKafkaCluster.create({
+        id: connection.kafkaCluster.id,
+        name: connection.kafkaCluster.name,
+        bootstrapServers: connection.kafkaCluster.bootstrapServers,
+        uri: connection.kafkaCluster.uri,
+      }),
+    ];
 
     let schemaRegistry: LocalSchemaRegistry | undefined;
     if (connection.schemaRegistry) {
