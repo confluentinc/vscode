@@ -82,6 +82,7 @@ export async function migrateSecretStorage(): Promise<void> {
       CODEBASE_STORAGE_VERSION,
       MigrationStorageType.SECRET,
     );
+    logger.debug(`trying to store secret storage version to "${CODEBASE_STORAGE_VERSION}"`);
     await secretStorage.store(DURABLE_STORAGE_VERSION_KEY, String(CODEBASE_STORAGE_VERSION));
     logger.debug(`secret storage version set to "${CODEBASE_STORAGE_VERSION}"`);
   } else {
