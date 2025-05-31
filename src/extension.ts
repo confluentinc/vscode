@@ -243,7 +243,7 @@ async function _activateExtension(
     uriHandler,
     WebsocketManager.getInstance(),
     FlinkStatementManager.getInstance(),
-    initializeFlinkLanguageClientManager(),
+    initializeFlinkLanguageClientManager(), // FIXME: temporarily disabled while we troubleshoot error handling from client
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
