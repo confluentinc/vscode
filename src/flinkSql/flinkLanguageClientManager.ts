@@ -62,10 +62,16 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private registerListeners(): void {
-    // Listen for user opening a Flink SQL file
+    // Listen for changes to metadata so we can update the language client
     this.disposables.push(
       uriMetadataSet.event(async (uri: Uri) => {
+        logger.debug("URI metadata set for", {
+          uri: uri.toString(),
+        });
         if (this.lastDocUri === uri) {
+          this.notifyConfigChanged();
+        } else if (uri && uri.scheme === "file") {
+          // TODO we should really check if this file is relevant to us somehow
           await this.maybeStartLanguageClient(uri);
         }
       }),
@@ -225,9 +231,14 @@ export class FlinkLanguageClientManager implements Disposable {
    * - User has designated a compute pool to use (language server route is region+provider specific)
    * - User has opened a Flink SQL file // FIXME at this point we don't check for flinksql languageId on doc metadata change
    */
-  public async maybeStartLanguageClient(uri: Uri): Promise<void> {
+  public async maybeStartLanguageClient(uri?: Uri): Promise<void> {
     if (!hasCCloudAuthSession()) {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
+      return;
+    }
+    // FIXME this is called from extensionSettings listener, so uri may not be set
+    if (!uri) {
+      logger.debug("No URI provided, cannot start language client");
       return;
     }
 
@@ -273,7 +284,7 @@ export class FlinkLanguageClientManager implements Disposable {
         this.lastDocUri = uri;
         this.lastWebSocketUrl = url;
         logger.debug("Flink SQL language client successfully initialized");
-        // this.notifyConfigChanged(); // FIXME Send settings right away
+        this.notifyConfigChanged();
       }
     } catch (error) {
       logger.error("Failed to initialize Flink SQL language client:", error);
@@ -336,36 +347,36 @@ export class FlinkLanguageClientManager implements Disposable {
   /** Verifies and sends workspace settings to the language server via
    * `workspace/didChangeConfiguration` notification
    */
-  // private async notifyConfigChanged(): Promise<void> {
-  //   // We have a lang client, send the updated settings
-  //   if (this.languageClient && this.isLanguageClientConnected()) {
-  //     const { database, computePoolId } = this.getFlinkSqlSettings();
-  //     if (!computePoolId) {
-  //       // No compute pool selected, don't send settings
-  //       return;
-  //     }
-  //     const poolInfo = await this.lookupComputePoolInfo(computePoolId);
-  //     const environmentId = poolInfo?.environmentId;
+  private async notifyConfigChanged(): Promise<void> {
+    // We have a lang client, send the updated settings
+    if (this.languageClient && this.lastDocUri && this.isLanguageClientConnected()) {
+      const settings = await this.getFlinkSqlSettings(this.lastDocUri);
+      if (!settings.computePoolId) {
+        // No compute pool selected, can't send settings
+        return;
+      }
+      const poolInfo = await this.lookupComputePoolInfo(settings.computePoolId);
+      const environmentId = poolInfo?.environmentId;
 
-  //     // Don't send with undefined settings, server will override existing settings with empty/undefined values
-  //     if (environmentId && database && computePoolId) {
-  //       this.languageClient.sendNotification("workspace/didChangeConfiguration", {
-  //         settings: {
-  //           AuthToken: "{{ ccloud.data_plane_token }}",
-  //           Catalog: environmentId,
-  //           Database: database,
-  //           ComputePoolId: computePoolId,
-  //         },
-  //       });
-  //     } else {
-  //       logger.debug("Incomplete settings, not sending configuration update", {
-  //         hasComputePool: !!computePoolId,
-  //         hasEnvironment: !!environmentId,
-  //         hasDatabase: !!database,
-  //       });
-  //     }
-  //   }
-  // }
+      // Don't send with undefined settings, server will override existing settings with empty/undefined values
+      if (environmentId && settings.database && settings.computePoolId) {
+        this.languageClient.sendNotification("workspace/didChangeConfiguration", {
+          settings: {
+            AuthToken: "{{ ccloud.data_plane_token }}",
+            Catalog: environmentId,
+            Database: settings.database,
+            ComputePoolId: settings.computePoolId,
+          },
+        });
+      } else {
+        logger.debug("Incomplete settings, not sending configuration update", {
+          hasComputePool: !!settings.computePoolId,
+          hasEnvironment: !!environmentId,
+          hasDatabase: !!settings.database,
+        });
+      }
+    }
+  }
   /**
    * Checks if the language client is currently connected and healthy
    * @returns True if the client is connected, false otherwise
