@@ -949,37 +949,32 @@
         {
           "id": "confluent-resources",
           "name": "Resources",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Resources"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-topics",
           "name": "Topics",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Topics"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-schemas",
           "name": "Schemas",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Schemas"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-flink-statements",
           "name": "Flink Statements",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Flink Statements"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-flink-artifacts",
           "name": "Flink Artifacts",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "false",
-          "contextualTitle": "Confluent: Flink Artifacts"
+          "when": "false"
         },
         {
           "id": "confluent-support",
