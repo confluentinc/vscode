@@ -90,6 +90,8 @@ export abstract class BaseViewProvider<
   /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
   parentResourceChangedContextValue?: ContextValues;
 
+  /** Optional {@link EventEmitter} to listen for when the search string is set/unset. */
+  searchChangedEmitter?: EventEmitter<string | null>;
   /** Optional context value to adjust when the search string is set/unset. */
   searchContextValue?: ContextValues;
   /** String to filter items returned by `getChildren`, if provided. */
@@ -172,6 +174,7 @@ export abstract class BaseViewProvider<
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       this.handleCCloudConnectionChange(connected);
     });
+    disposables.push(ccloudConnectedSub);
 
     const parentResourceChangedSub: Disposable | undefined =
       this.parentResourceChangedEmitter?.event(async (resource: P | null) => {
@@ -181,7 +184,15 @@ export abstract class BaseViewProvider<
       disposables.push(parentResourceChangedSub);
     }
 
-    disposables.push(ccloudConnectedSub, ...this.setCustomEventListeners());
+    const searchChangedSub: Disposable | undefined = this.searchChangedEmitter?.event(
+      (searchString: string | null) => {
+        this.setSearch(searchString);
+      },
+    );
+    if (searchChangedSub) {
+      disposables.push(searchChangedSub);
+    }
+
     return disposables;
   }
 
@@ -265,6 +276,7 @@ export abstract class BaseViewProvider<
     // clear from any previous search filter
     this.searchMatches = new Set();
     this.totalItemCount = 0;
+    void this.refresh();
   }
 
   /** Filter results from any {@link itemSearchString search string} applied to the current view. */
