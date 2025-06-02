@@ -83,17 +83,10 @@ describe("utils/privateNetworking.ts containsPrivateNetworkPattern()", () => {
       ),
       false,
     );
-    // no captialization
+    // no capitalization
     assert.strictEqual(
       containsPrivateNetworkPattern(
         `${TEST_CCLOUD_KAFKA_CLUSTER.id}.domABABAB.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
-      ),
-      false,
-    );
-    // too long
-    assert.strictEqual(
-      containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.domfoobarbaz.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
       ),
       false,
     );

@@ -7,7 +7,7 @@ import {
 
 const privateNetworkingUrlSubs: string[] = [".private.", ".accesspoint.", ".glb.", ".intranet."];
 
-const privateNetworkingIdPrefixes: RegExp[] = [/\.dom[a-z0-9]{6}\./];
+const privateNetworkingIdPrefixes: RegExp[] = [/\.dom[a-z0-9]+\./];
 
 /** Checks if a given string contains a private networking related substring/pattern. */
 export function containsPrivateNetworkPattern(url: string): boolean {
