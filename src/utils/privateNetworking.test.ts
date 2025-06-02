@@ -36,7 +36,7 @@ describe("utils/privateNetworking.ts containsPrivateNetworkPattern()", () => {
     );
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.private.confluent.cloud"`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.private.confluent.cloud`,
       ),
       true,
     );
