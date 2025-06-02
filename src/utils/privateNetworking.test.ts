@@ -14,7 +14,7 @@ import {
   showPrivateNetworkingHelpNotification,
 } from "./privateNetworking";
 
-describe("utils/privateNetworking.ts isPrivateNetworkUrl()", () => {
+describe("utils/privateNetworking.ts containsPrivateNetworkPattern()", () => {
   it("should return false for null or empty strings", () => {
     assert.strictEqual(containsPrivateNetworkPattern(""), false);
     assert.strictEqual(containsPrivateNetworkPattern(null as unknown as string), false);
