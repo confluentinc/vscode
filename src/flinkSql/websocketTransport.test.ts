@@ -223,7 +223,7 @@ describe("WebsocketTransport", () => {
       assert.ok(transport.writer, "Writer should be created");
     });
 
-    it("should dispose reader, writer and close socket on dispose", () => {
+    it("should dispose reader, writer and close socket on dispose", async () => {
       const transport = new WebsocketTransport(mockSocket);
 
       // Create spies for reader and writer dispose methods
@@ -231,7 +231,7 @@ describe("WebsocketTransport", () => {
       const writerDisposeSpy = sandbox.spy(transport.writer, "dispose");
 
       // Dispose the transport
-      transport.dispose();
+      await transport.dispose();
 
       // Verify that dispose was called on reader and writer
       sinon.assert.calledOnce(readerDisposeSpy);
