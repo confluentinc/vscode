@@ -1,8 +1,14 @@
 import { Disposable, env, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { resourceSearchSet, schemaSearchSet, topicSearchSet } from "../emitters";
+import {
+  flinkStatementSearchSet,
+  resourceSearchSet,
+  schemaSearchSet,
+  topicSearchSet,
+} from "../emitters";
 import { Logger } from "../logging";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 const logger = new Logger("commands.extra");
 
@@ -81,14 +87,14 @@ async function searchTopics() {
   if (!searchString) {
     return;
   }
-  await setContextValue(ContextValues.topicSearchApplied, true);
+  FlinkStatementsViewProvider.getInstance().setSearch(searchString);
   logger.debug("Searching topics");
   topicSearchSet.fire(searchString);
 }
 
 async function clearTopicSearch() {
   logger.debug("Clearing topic search");
-  await setContextValue(ContextValues.topicSearchApplied, false);
+  FlinkStatementsViewProvider.getInstance().setSearch(null);
   topicSearchSet.fire(null);
 }
 
@@ -111,6 +117,25 @@ async function clearSchemaSearch() {
   schemaSearchSet.fire(null);
 }
 
+async function searchFlinkStatements() {
+  const searchString = await window.showInputBox({
+    title: "Search items in the Flink Statements view",
+    ignoreFocusOut: true,
+  });
+  if (!searchString) {
+    return;
+  }
+  logger.debug("Searching Flink statements");
+  // not setting ContextValues.flinkStatementsSearchApplied here because the view provider will handle it
+  flinkStatementSearchSet.fire(searchString);
+}
+
+async function clearFlinkStatementsSearch() {
+  logger.debug("Clearing Flink statements search");
+  // not setting ContextValues.flinkStatementsSearchApplied here because the view provider will handle it
+  flinkStatementSearchSet.fire(null);
+}
+
 export function registerExtraCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
@@ -124,5 +149,10 @@ export function registerExtraCommands(): Disposable[] {
     registerCommandWithLogging("confluent.topics.search.clear", clearTopicSearch),
     registerCommandWithLogging("confluent.schemas.search", searchSchemas),
     registerCommandWithLogging("confluent.schemas.search.clear", clearSchemaSearch),
+    registerCommandWithLogging("confluent.flink.statements.search", searchFlinkStatements),
+    registerCommandWithLogging(
+      "confluent.flink.statements.search.clear",
+      clearFlinkStatementsSearch,
+    ),
   ];
 }
