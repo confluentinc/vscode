@@ -123,7 +123,7 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
 
     assert.strictEqual(
       message,
-      "Unable to connect to resource: undefined. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.",
+      "Unable to connect to resource. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.",
     );
 
     assert.ok(buttons);

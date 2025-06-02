@@ -47,8 +47,9 @@ export function showPrivateNetworkingHelpNotification(
 ) {
   const resourceInfo = options.resourceName ? ` "${options.resourceName}"` : "";
   const typeInfo = options.resourceType || "resource";
+  const urlSuffix = options.resourceUrl ? `: ${options.resourceUrl}` : "";
 
-  const message = `Unable to connect to ${typeInfo}${resourceInfo}: ${options.resourceUrl}. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.`;
+  const message = `Unable to connect to ${typeInfo}${resourceInfo}${urlSuffix}. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.`;
   const buttons = {
     ["View Docs"]: () =>
       openExternal(Uri.parse("https://docs.confluent.io/cloud/current/networking/overview.html")),
