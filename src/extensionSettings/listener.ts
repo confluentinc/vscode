@@ -84,7 +84,7 @@ export function createConfigChangeListener(): Disposable {
           // start the Flink Language Client Manager up if it isn't already running
           // (this is typically done internally based on various events, but we want to ensure
           // it starts up when the user opts in to the feature)
-          manager["maybeStartLanguageClient"]();
+          manager.maybeStartLanguageClient();
         } else {
           // stop the Flink Language Client Manager if it's running
           manager.dispose();

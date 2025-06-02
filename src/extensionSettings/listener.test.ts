@@ -151,9 +151,6 @@ describe("extensionSettings/listener.ts", function () {
     const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
       FlinkLanguageClientManager,
     );
-    // need to explicitly stub the private method since createStubInstance doesn't
-    const maybeStartLanguageClientStub = sandbox.stub().resolves();
-    stubbedFlinkLanguageClientManager["maybeStartLanguageClient"] = maybeStartLanguageClientStub;
     sandbox
       .stub(FlinkLanguageClientManager, "getInstance")
       .returns(stubbedFlinkLanguageClientManager);
@@ -166,7 +163,7 @@ describe("extensionSettings/listener.ts", function () {
     createConfigChangeListener();
     await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
 
-    sinon.assert.called(maybeStartLanguageClientStub);
+    sinon.assert.called(stubbedFlinkLanguageClientManager.maybeStartLanguageClient);
     sinon.assert.calledWith(logUsageStub, telemetryEvents.UserEvent.ExtensionSettingsChange, {
       settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
       enabled: true,

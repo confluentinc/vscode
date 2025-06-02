@@ -235,7 +235,7 @@ export class FlinkLanguageClientManager implements Disposable {
    * - User has opened a Flink SQL file
    * - User has not disabled Flink in settings
    */
-  private async maybeStartLanguageClient(): Promise<void> {
+  public async maybeStartLanguageClient(): Promise<void> {
     if (this.languageClient) {
       if (this.isLanguageClientConnected()) {
         // If we already have a client and it's healthy we're cool
