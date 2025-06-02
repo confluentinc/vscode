@@ -54,9 +54,9 @@ export async function handleReference(
       const title = uri.path.split("/").pop() || "Untitled";
       const document: TextDocument = await workspace.openTextDocument(uri);
       const content: string = document.getText(range);
-      // TODO: clean up this formatting:
+      // Clean up this formatting?
       return LanguageModelChatMessage.User(`#file:${title}:\n\n\`\`\`\n${content}\n\`\`\``, "user");
     }
-    // TODO: handle other reference types
+    // Planned expansion: handle other reference types
   }
 }

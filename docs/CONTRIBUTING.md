@@ -258,8 +258,6 @@ To install frontend-related dependencies, use NPM:
 We recommend using `npm ci` over `npm install` so you'd get reproducible state of dependencies
 defined by `package-lock.json`.
 
-<!-- TODO sidecar related stuff? -->
-
 ### Building locally
 
 Now that you have the source code and installed all the tools, you can build the project locally.
