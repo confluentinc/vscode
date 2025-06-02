@@ -61,7 +61,6 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
         });
         return [];
       }
-      // XXX todo improve this, raise a more specific error type.
       const body = await error.response.json();
 
       throw new TopicFetchError(JSON.stringify(body));
