@@ -35,7 +35,6 @@ export interface FlinkSqlSettings {
 /**
  * Singleton class that handles Flink configuration settings and language client management.
  * - Listens for CCloud authentication events, flinksql language file open, settings changes
- * - Prompts user to update Flink settings configuration (default compute pool, database)
  * - Fetches and manages Flink compute pool resources
  * - Manages Flink SQL Language Client lifecycle & settings
  */
@@ -63,15 +62,12 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private registerListeners(): void {
-    // // Listen for user opening a Flink SQL file
+    // Listen for user opening a Flink SQL file
     this.disposables.push(
       uriMetadataSet.event(async (uri: Uri) => {
         if (this.lastDocUri === uri) {
           await this.maybeStartLanguageClient(uri);
         }
-        // if (document.languageId === "flinksql") {
-        //   await this.maybeStartLanguageClient(uri);
-        // }
       }),
     );
 
@@ -377,23 +373,6 @@ export class FlinkLanguageClientManager implements Disposable {
   private isLanguageClientConnected(): boolean {
     return this.languageClient !== null && this.languageClient.isRunning() === true;
   }
-
-  /**
-   * Show notification for user to select default compute pool, database
-   */
-  // private async promptChooseDefaultComputePool(): Promise<void> {
-  //   if (!hasCCloudAuthSession()) {
-  //     return; // This method should not be called if not authenticated
-  //   }
-  //   const selection = await window.showInformationMessage(
-  //     "Choose your default Flink compute pool & database to connect to the Flink SQL language server.",
-  //     "Update Flink Settings",
-  //   );
-
-  //   if (selection === "Update Flink Settings") {
-  //     await commands.executeCommand("confluent.flink.configureFlinkDefaults");
-  //   }
-  // }
 
   public async dispose(): Promise<void> {
     await this.cleanupLanguageClient();
