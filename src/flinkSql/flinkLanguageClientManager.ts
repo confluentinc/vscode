@@ -219,6 +219,7 @@ export class FlinkLanguageClientManager implements Disposable {
   private async buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<string> {
     const poolInfo = await this.lookupComputePoolInfo(computePoolId);
     if (!poolInfo) {
+      // error caught & handled in caller
       throw new Error(`Could not find environment containing compute pool ${computePoolId}`);
     }
     const { organizationId, environmentId, region, provider } = poolInfo;
@@ -345,7 +346,7 @@ export class FlinkLanguageClientManager implements Disposable {
    */
   private async notifyConfigChanged(): Promise<void> {
     // We have a lang client, send the updated settings
-    if (this.languageClient && this.isLanguageClientConnected()) {
+    if (this.isLanguageClientConnected()) {
       const { database, computePoolId } = this.getFlinkSqlSettings();
       if (!computePoolId) {
         // No compute pool selected, don't send settings
@@ -356,7 +357,7 @@ export class FlinkLanguageClientManager implements Disposable {
 
       // Don't send with undefined settings, server will override existing settings with empty/undefined values
       if (environmentId && database && computePoolId) {
-        this.languageClient.sendNotification("workspace/didChangeConfiguration", {
+        this.languageClient?.sendNotification("workspace/didChangeConfiguration", {
           settings: {
             AuthToken: "{{ ccloud.data_plane_token }}",
             Catalog: environmentId,
@@ -378,7 +379,7 @@ export class FlinkLanguageClientManager implements Disposable {
    * @returns True if the client is connected, false otherwise
    */
   private isLanguageClientConnected(): boolean {
-    return this.languageClient !== null && this.languageClient.needsStart() === false;
+    return this.languageClient !== null && this.languageClient.isRunning() === true;
   }
 
   /**
