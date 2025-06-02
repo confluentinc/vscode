@@ -16,6 +16,8 @@ All notable changes to this extension will be documented in this file.
     - `-U`: UpdateBefore operation (previous version of updated row)
     - `+U`: UpdateAfter operation (new version of updated row)
     - `-D`: Delete operation (row removed)
+- More helpful notification in the event of private network connectivity issues when attempting to
+  list Kafka topics.
 
 ### Changed
 
