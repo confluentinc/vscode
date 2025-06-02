@@ -72,10 +72,11 @@ export function createConfigChangeListener(): Disposable {
 
       if (event.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER)) {
         // user toggled the "Enable Flink CCloud Language Server" preview setting
-        const enabled: boolean = configs.get(
-          ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
-          ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
-        );
+        const enabled: boolean =
+          configs.get(
+            ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+            ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
+          ) ?? false;
         logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" config changed`, { enabled });
 
         const manager = FlinkLanguageClientManager.getInstance();

@@ -113,31 +113,36 @@ describe("extensionSettings/listener.ts", function () {
     }
   }
 
-  it(`should dispose the FlinkLanguageClientManager when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" is set to false`, async () => {
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER).returns(false),
+  for (const configValue of [false, null, undefined]) {
+    it(`should dispose the FlinkLanguageClientManager when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" is set to ${configValue}`, async () => {
+      getConfigurationStub.returns({
+        get: sandbox
+          .stub()
+          .withArgs(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, configValue)
+          .returns(configValue),
+      });
+      const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
+        FlinkLanguageClientManager,
+      );
+      sandbox
+        .stub(FlinkLanguageClientManager, "getInstance")
+        .returns(stubbedFlinkLanguageClientManager);
+
+      const mockEvent = {
+        affectsConfiguration: (config: string) => config === ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+      } as ConfigurationChangeEvent;
+      onDidChangeConfigurationStub.yields(mockEvent);
+
+      createConfigChangeListener();
+      await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+
+      sinon.assert.called(stubbedFlinkLanguageClientManager.dispose);
+      sinon.assert.calledWith(logUsageStub, telemetryEvents.UserEvent.ExtensionSettingsChange, {
+        settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+        enabled: false,
+      });
     });
-    const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
-      FlinkLanguageClientManager,
-    );
-    sandbox
-      .stub(FlinkLanguageClientManager, "getInstance")
-      .returns(stubbedFlinkLanguageClientManager);
-
-    const mockEvent = {
-      affectsConfiguration: (config: string) => config === ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
-    } as ConfigurationChangeEvent;
-    onDidChangeConfigurationStub.yields(mockEvent);
-
-    createConfigChangeListener();
-    await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
-
-    sinon.assert.called(stubbedFlinkLanguageClientManager.dispose);
-    sinon.assert.calledWith(logUsageStub, telemetryEvents.UserEvent.ExtensionSettingsChange, {
-      settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
-      enabled: false,
-    });
-  });
+  }
 
   it(`should call maybeStartLanguageClient() when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" is set to true`, async () => {
     getConfigurationStub.returns({
