@@ -217,7 +217,7 @@ export abstract class BaseViewProvider<
     await this.setSearch(null);
     // TODO: update this to adjust associated context value for focused resource(s)
 
-    // no need to .refresh() since adjusting search will handle it
+    await this.refresh();
   }
 
   /** Callback for  */
@@ -274,8 +274,8 @@ export abstract class BaseViewProvider<
       setContextValue(this.searchContextValue, searchString !== null);
     }
     // clear from any previous search filter
-    this.searchMatches = new Set();
-    this.totalItemCount = 0;
+    this.searchMatches.clear();
+
     // Inform the view that parent resource's children have changed and should
     // call getChildren() again.
     this._onDidChangeTreeData.fire();

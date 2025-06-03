@@ -364,8 +364,8 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     await provider.setSearch(null);
 
     assert.strictEqual(provider.itemSearchString, null);
-    assert.strictEqual(provider.searchMatches.size, 0);
-    assert.strictEqual(provider.totalItemCount, 0);
+    assert.strictEqual(provider.searchMatches.size, 0, "searchMatches should be cleared");
+    assert.strictEqual(provider.totalItemCount, 3, "totalItemCount should not change");
   });
 
   for (const arg of ["First", null]) {
@@ -390,13 +390,20 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   }
 
   for (const arg of ["First", null]) {
-    it(`should refresh the tree view when search is set (arg=${arg})`, async () => {
+    it(`should repait the tree view when search is set (arg=${arg})`, async () => {
       const provider = TestViewProvider.getInstance();
-      const refreshSpy = sandbox.spy(provider, "refresh");
+      const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
 
       await provider.setSearch(arg);
+      // Would normally be called by the tree view when children are requested
+      // after setSearch() but we call it directly here to get totalItemCount assigned.
+      await provider.getChildren();
 
-      sinon.assert.calledOnce(refreshSpy);
+      assert.strictEqual(provider.itemSearchString, arg);
+      assert.strictEqual(provider.searchMatches.size, 0);
+      assert.strictEqual(provider.totalItemCount, 3);
+
+      sinon.assert.calledOnce(repaintSpy);
     });
   }
 
