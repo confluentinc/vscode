@@ -399,7 +399,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   }
 
   for (const arg of ["First", null]) {
-    it(`should repait the tree view when search is set (arg=${arg})`, async () => {
+    it(`should repaint the tree view when search is set (arg=${arg})`, async () => {
       const provider = TestViewProvider.getInstance();
       const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
 
