@@ -32,7 +32,7 @@ All notable changes to this extension will be documented in this file.
   properly. [#1823](https://github.com/confluentinc/vscode/issues/1823)
 - Improved sidecar startup diagnostics and presentation to the user in various cases.
 - Sidecar will now start to check newly created connections immediately upon creation or modification.
-  Previously erroneously waited until the next periodic check ocurred.
+  Previously erroneously waited until the next periodic check occurred.
 - Sidecar now properly handles SSL certificates encoded in PEM files.
 
 ## 1.3.0
