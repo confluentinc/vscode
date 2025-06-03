@@ -15,6 +15,7 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
+import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
@@ -360,6 +361,46 @@ describe("FlinkStatementsViewProvider", () => {
       const statement = createFlinkStatement();
       const treeItem = viewProvider.getTreeItem(statement);
       assert.strictEqual(treeItem.label, statement.name);
+    });
+
+    it("should add a search decoration when an item matches the provided search string", () => {
+      const statement = createFlinkStatement({
+        name: "test-statement-name",
+      });
+      viewProvider.itemSearchString = "test-statement";
+
+      const treeItem = viewProvider.getTreeItem(statement);
+
+      assert.ok(treeItem.resourceUri);
+      assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+      // should contain the searchable text of the statement
+      assert.ok(treeItem.resourceUri?.path.includes(statement.name.toLowerCase()));
+    });
+
+    it("should not add a search decoration when an item doesn't match the provided search string", () => {
+      // shouldn't matter since search functionality should exclude this from even being sent to
+      // getTreeItem, but just to be explicit:
+      const statement = createFlinkStatement({
+        name: "unrelated-statement",
+      });
+      viewProvider.itemSearchString = "different-search-term";
+
+      const treeItem = viewProvider.getTreeItem(statement);
+
+      // resourceUri should not be set when no match
+      assert.strictEqual(treeItem.resourceUri, undefined);
+    });
+
+    it("should not add a search decoration when no search string is set", () => {
+      const statement = createFlinkStatement({
+        name: "test-statement",
+      });
+      viewProvider.itemSearchString = null;
+
+      const treeItem = viewProvider.getTreeItem(statement);
+
+      // resourceUri should not be set when no search string
+      assert.strictEqual(treeItem.resourceUri, undefined);
     });
   });
 
