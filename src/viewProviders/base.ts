@@ -276,7 +276,9 @@ export abstract class BaseViewProvider<
     // clear from any previous search filter
     this.searchMatches = new Set();
     this.totalItemCount = 0;
-    await this.refresh();
+    // Inform the view that parent resource's children have changed and should
+    // call getChildren() again.
+    this._onDidChangeTreeData.fire();
   }
 
   /** Filter results from any {@link itemSearchString search string} applied to the current view. */
