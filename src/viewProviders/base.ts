@@ -174,7 +174,6 @@ export abstract class BaseViewProvider<
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       this.handleCCloudConnectionChange(connected);
     });
-    disposables.push(ccloudConnectedSub);
 
     const parentResourceChangedSub: Disposable | undefined =
       this.parentResourceChangedEmitter?.event(async (resource: P | null) => {
@@ -193,6 +192,7 @@ export abstract class BaseViewProvider<
       disposables.push(searchChangedSub);
     }
 
+    disposables.push(ccloudConnectedSub, ...this.setCustomEventListeners());
     return disposables;
   }
 
