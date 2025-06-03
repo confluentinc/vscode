@@ -122,7 +122,7 @@ describe("graphql/direct.ts getDirectResources()", () => {
     assert.strictEqual(schemaRegistry.connectionType, ConnectionType.Direct);
   });
 
-  it("Should return undefined when graphql query thows specific error implying tried to return null", async () => {
+  it("Should return undefined when graphql query throws specific error implying tried to return null", async () => {
     // As from https://github.com/confluentinc/vscode/issues/1980
     // Revise this test when updating sidecar to a version fixing https://github.com/confluentinc/ide-sidecar/issues/447
     const error = new Error(
