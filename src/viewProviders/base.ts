@@ -90,6 +90,8 @@ export abstract class BaseViewProvider<
   /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
   parentResourceChangedContextValue?: ContextValues;
 
+  /** Optional {@link EventEmitter} to listen for when the search string is set/unset. */
+  searchChangedEmitter?: EventEmitter<string | null>;
   /** Optional context value to adjust when the search string is set/unset. */
   searchContextValue?: ContextValues;
   /** String to filter items returned by `getChildren`, if provided. */
@@ -148,7 +150,7 @@ export abstract class BaseViewProvider<
     });
 
     if (this.resource !== resource) {
-      this.setSearch(null); // reset search when parent resource changes
+      await this.setSearch(null); // reset search when parent resource changes
     }
 
     if (resource) {
@@ -181,6 +183,15 @@ export abstract class BaseViewProvider<
       disposables.push(parentResourceChangedSub);
     }
 
+    const searchChangedSub: Disposable | undefined = this.searchChangedEmitter?.event(
+      async (searchString: string | null) => {
+        await this.setSearch(searchString);
+      },
+    );
+    if (searchChangedSub) {
+      disposables.push(searchChangedSub);
+    }
+
     disposables.push(ccloudConnectedSub, ...this.setCustomEventListeners());
     return disposables;
   }
@@ -203,7 +214,7 @@ export abstract class BaseViewProvider<
     this.treeView.description = undefined;
     this.treeView.message = undefined;
 
-    this.setSearch(null);
+    await this.setSearch(null);
     // TODO: update this to adjust associated context value for focused resource(s)
 
     await this.refresh();
@@ -255,7 +266,7 @@ export abstract class BaseViewProvider<
   }
 
   /** Update internal state when the {@link itemSearchString search string} is set or unset. */
-  setSearch(searchString: string | null): void {
+  async setSearch(searchString: string | null): Promise<void> {
     // set/unset the filter so any calls to getChildren() will filter appropriately
     this.itemSearchString = searchString;
     if (this.searchContextValue) {
@@ -263,8 +274,11 @@ export abstract class BaseViewProvider<
       setContextValue(this.searchContextValue, searchString !== null);
     }
     // clear from any previous search filter
-    this.searchMatches = new Set();
-    this.totalItemCount = 0;
+    this.searchMatches.clear();
+
+    // Inform the view that parent resource's children have changed and should
+    // call getChildren() again.
+    this._onDidChangeTreeData.fire();
   }
 
   /** Filter results from any {@link itemSearchString search string} applied to the current view. */

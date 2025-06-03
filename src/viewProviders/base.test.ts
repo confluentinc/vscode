@@ -24,6 +24,7 @@ class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement
   loggerName = "viewProviders.test";
   viewId = "confluent-test";
 
+  parentResourceChangedEmitter = new EventEmitter<FlinkComputePool | null>();
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
   readonly kind = "test";
 
@@ -322,6 +323,14 @@ describe("viewProviders/base.ts BaseViewProvider setParentResource()", () => {
     sinon.assert.calledOnce(setContextValueStub);
     sinon.assert.calledWith(setContextValueStub, provider.parentResourceChangedContextValue, true);
   });
+
+  it("Should be called when parentResourceChangedEmitter fires", async () => {
+    const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+    const setParentResourceStub = sandbox.stub(provider, "setParentResource");
+    provider.parentResourceChangedEmitter.fire(resource);
+    sinon.assert.calledOnce(setParentResourceStub);
+    sinon.assert.calledWith(setParentResourceStub, resource);
+  });
 });
 
 describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
@@ -345,35 +354,35 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     BaseViewProvider["instanceMap"].clear();
   });
 
-  it("should set internal search state when a value is passed", () => {
+  it("should set internal search state when a value is passed", async () => {
     const provider = TestViewProvider.getInstance();
 
-    provider.setSearch("First");
+    await provider.setSearch("First");
 
     assert.strictEqual(provider.itemSearchString, "First");
     assert.strictEqual(provider.searchMatches.size, 0);
     assert.strictEqual(provider.totalItemCount, 0);
   });
 
-  it("should clear internal search state when no value is passed", () => {
+  it("should clear internal search state when no value is passed", async () => {
     const provider = TestViewProvider.getInstance();
     provider.itemSearchString = "running";
     provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
     provider.totalItemCount = 3;
 
-    provider.setSearch(null);
+    await provider.setSearch(null);
 
     assert.strictEqual(provider.itemSearchString, null);
-    assert.strictEqual(provider.searchMatches.size, 0);
-    assert.strictEqual(provider.totalItemCount, 0);
+    assert.strictEqual(provider.searchMatches.size, 0, "searchMatches should be cleared");
+    assert.strictEqual(provider.totalItemCount, 3, "totalItemCount should not change");
   });
 
   for (const arg of ["First", null]) {
-    it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, () => {
+    it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, async () => {
       const provider = TestViewProvider.getInstance();
       // context value must be set for setContextValue to be called
       provider.searchContextValue = ContextValues.flinkStatementsSearchApplied;
-      provider.setSearch(arg);
+      await provider.setSearch(arg);
 
       sinon.assert.calledOnce(setContextValueStub);
       sinon.assert.calledWith(setContextValueStub, provider.searchContextValue, !!arg);
@@ -381,17 +390,35 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   }
 
   for (const arg of ["First", null]) {
-    it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, () => {
+    it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, async () => {
       const provider = TestViewProvider.getInstance();
-      provider.setSearch(arg);
+      await provider.setSearch(arg);
 
       sinon.assert.notCalled(setContextValueStub);
     });
   }
 
+  for (const arg of ["First", null]) {
+    it(`should repaint the tree view when search is set (arg=${arg})`, async () => {
+      const provider = TestViewProvider.getInstance();
+      const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
+
+      await provider.setSearch(arg);
+      // Would normally be called by the tree view when children are requested
+      // after setSearch() but we call it directly here to get totalItemCount assigned.
+      await provider.getChildren();
+
+      assert.strictEqual(provider.itemSearchString, arg);
+      assert.strictEqual(provider.searchMatches.size, 0);
+      assert.strictEqual(provider.totalItemCount, 3);
+
+      sinon.assert.calledOnce(repaintSpy);
+    });
+  }
+
   it("should filter children based on search string", async () => {
     const provider = TestViewProvider.getInstance();
-    provider.setSearch("first");
+    await provider.setSearch("first");
 
     const matchingStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
@@ -415,9 +442,9 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     assert.strictEqual(provider.totalItemCount, 2);
   });
 
-  it("should update tree view message with search results when filterChildren() is called", () => {
+  it("should update tree view message with search results when filterChildren() is called", async () => {
     const provider = TestViewProvider.getInstance();
-    provider.setSearch("running");
+    await provider.setSearch("running");
 
     const items = [
       new FlinkStatement({
@@ -439,6 +466,59 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
       provider["treeView"].message,
       `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${provider.itemSearchString}"`,
     );
+  });
+});
+
+describe("viewProviders/base.ts BaseViewProvider searchChangedEmitter behavior", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let clock: sinon.SinonFakeTimers;
+  const fakeEmitter = new EventEmitter<string | null>();
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+    BaseViewProvider["instanceMap"].clear();
+  });
+
+  it("should call setSearch and update state when searchChangedEmitter is set and fires", async () => {
+    // create fake subclass that includes a searchChangedEmitter
+    class EmitterTestProvider extends TestViewProvider {
+      searchChangedEmitter = fakeEmitter;
+    }
+    const provider = EmitterTestProvider.getInstance();
+    const setSearchSpy = sandbox.spy(provider, "setSearch");
+
+    const fakeSearch = "search-term";
+    fakeEmitter.fire(fakeSearch);
+    await clock.tickAsync(0);
+
+    sinon.assert.calledWith(setSearchSpy, fakeSearch);
+    assert.strictEqual(provider.itemSearchString, fakeSearch);
+  });
+
+  it("should not throw or fail if searchChangedEmitter is not set", async () => {
+    // create fake subclass that doesn't include a searchChangedEmitter
+    class NoEmitterTestProvider extends TestViewProvider {
+      // searchChangedEmitter is null in TestViewProvider, so no need to override
+    }
+    const provider = NoEmitterTestProvider.getInstance();
+    const setSearchSpy = sandbox.spy(provider, "setSearch");
+
+    const fakeSearch = "search-term";
+    fakeEmitter.fire(fakeSearch);
+    await clock.tickAsync(0);
+
+    sinon.assert.notCalled(setSearchSpy);
+    assert.strictEqual(provider.itemSearchString, null);
   });
 });
 
