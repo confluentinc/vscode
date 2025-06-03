@@ -44,7 +44,7 @@ export async function getDirectResources(
 
       // When a connection is deleted, the chain of events firing somewhat unfortunately
       // loses some context and we end up re-querying the connection by ID.
-      return undefined;
+      return;
     }
 
     logError(error, "direct connection resources", {
@@ -56,7 +56,7 @@ export async function getDirectResources(
 
     // Treat as if the connection does not exist. If the unexpected GQL error is transient,
     // the user can refresh the resources view to retry.
-    return undefined;
+    return;
   }
 
   const connection = response.directConnectionById;
