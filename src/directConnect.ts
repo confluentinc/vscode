@@ -36,10 +36,9 @@ export async function handleConnectionChange(
   connection: CustomConnectionSpec,
   directConnectForm: WebviewPanel,
 ): Promise<void> {
-  const existingConnections = await getResourceManager().getDirectConnection(connection.id);
+  const existingConnection = await getResourceManager().getDirectConnection(connection.id);
   // If the current connection is no longer in the list, close the form
-  if (!existingConnections) {
-    window.showInformationMessage(`Connection "${connection.name}" is disconnected.`);
+  if (!existingConnection) {
     directConnectForm.dispose();
   }
 }

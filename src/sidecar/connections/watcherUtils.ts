@@ -20,6 +20,9 @@ export function connectionEventHandler(event: ConnectionEventBody) {
   const connection = event.connection;
   const id = connection.id as ConnectionId;
 
+  const callLogger = logger.withCallpoint("connectionEventHandler");
+  callLogger.debug(`connectionEventHandler: handling connection event ${event.action} for ${id}`);
+
   // triage across the connection type, then call into
   // the appropriate very specific handler clause.
   switch (type) {
@@ -31,11 +34,14 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "CONNECTED":
           if (event.action === "CREATED") {
             // Created connections fire this event to mark them as known 'new'.
+            callLogger.debug(
+              `connectionEventHandler: direct connection ${event.action} ${connection.id} firing directConnectionCreated.`,
+            );
             directConnectionCreated.fire(id);
           }
 
           if (isDirectConnectionStable(connection)) {
-            logger.info(
+            callLogger.info(
               `connectionEventHandler: direct connection ${event.action} ${connection.id} stable side effects firing.`,
             );
             // Fire when a direct connection is 'stable', be it happy or broken. Stops the loading spinny.
@@ -43,16 +49,12 @@ export function connectionEventHandler(event: ConnectionEventBody) {
             // notify subscribers that the "environment" has changed since direct connections are treated
             // as environment-specific resources
             environmentChanged.fire({ id: environmentId, wasDeleted: false });
-          } else {
-            logger.info(
-              `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing stable side-effects.`,
-            );
           }
           break;
         case "DELETED":
         case "DISCONNECTED":
           //  James guessing here, seems appropriate.
-          logger.info(
+          callLogger.info(
             `connectionEventHandler: direct connection ${event.action} ${connection.id} disconnected/deleted side effects firing.`,
           );
           // Stop any loading spinny...
@@ -61,7 +63,9 @@ export function connectionEventHandler(event: ConnectionEventBody) {
           environmentChanged.fire({ id: environmentId, wasDeleted: true });
           break;
         default:
-          logger.warn(`connectionEventHandler: unhandled ccloud connection action ${event.action}`);
+          callLogger.warn(
+            `connectionEventHandler: unhandled ccloud connection action ${event.action}`,
+          );
           throw new Error(`Unhandled ccloud connection action ${event.action}`);
       }
       break;
@@ -72,11 +76,14 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "UPDATED":
         case "CONNECTED":
         case "DISCONNECTED":
-          logger.debug(
+          callLogger.debug(
             "connectionEventHandler: ccloud connection update received, passing to reactToCCloudAuthState()",
           );
           reactToCCloudAuthState(connection).catch((e) => {
-            logger.error(`connectionEventHandler: reactToCCloudAuthState() failed: ${e}`, e.stack);
+            callLogger.error(
+              `connectionEventHandler: reactToCCloudAuthState() failed: ${e}`,
+              e.stack,
+            );
           });
           break;
         case "DELETED":
@@ -84,21 +91,23 @@ export function connectionEventHandler(event: ConnectionEventBody) {
           // We don't want to consider it anymore, so don't call reactToCCloudAuthState.
           // (Other actions hinging off of a secret being deleted will cause us to cascade through
           // to have us go to a not-ccloud-authenticated state, so this is fine.)
-          logger.debug("connectionEventHandler: ccloud connection deleted.");
+          callLogger.debug("connectionEventHandler: ccloud connection deleted.");
           break;
         default:
-          logger.warn(`connectionEventHandler: unhandled ccloud connection action ${event.action}`);
+          callLogger.warn(
+            `connectionEventHandler: unhandled ccloud connection action ${event.action}`,
+          );
           throw new Error(`Unhandled ccloud connection action ${event.action}`);
       }
       break;
 
     case ConnectionType.Local:
-      logger.info(
+      callLogger.info(
         `connectionEventHandler: ${connection.id} connection ${event.action} side effects unhandled.`,
       );
       break;
     default:
-      logger.warn(`connectionEventHandler: unhandled connection type ${type}`);
+      callLogger.warn(`connectionEventHandler: unhandled connection type ${type}`);
       throw new Error(`Unhandled connection type ${type}`);
   }
 }
