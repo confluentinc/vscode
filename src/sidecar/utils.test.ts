@@ -324,12 +324,14 @@ describe("sidecar/utils.ts", () => {
         reason: SidecarStartupFailureReason.PORT_IN_USE,
         expectedRegex: /is in use by another process/,
       },
-
       {
         reason: SidecarStartupFailureReason.NON_SIDECAR_HTTP_SERVER,
         expectedRegex: /which seems to be a web server/,
       },
-
+      {
+        reason: SidecarStartupFailureReason.LINUX_GLIBC_NOT_FOUND,
+        expectedRegex: /Linux.*required GLIBC version/,
+      },
       {
         reason: SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
         expectedRegex: /Failed to kill old sidecar process/,
@@ -346,7 +348,6 @@ describe("sidecar/utils.ts", () => {
         reason: SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID,
         expectedRegex: /resulting PID was undefined/,
       },
-
       {
         reason: SidecarStartupFailureReason.HANDSHAKE_FAILED,
         expectedRegex: /Handshake failed/,
@@ -357,11 +358,11 @@ describe("sidecar/utils.ts", () => {
       },
       {
         reason: SidecarStartupFailureReason.UNKNOWN,
-        expectedRegex: /Please check the logs for more details/,
+        expectedRegex: /Sidecar failed to start/,
       },
     ] as TestCase[]) {
       it(`should show expected error message for ${testCase.reason}`, async () => {
-        const error = new SidecarFatalError(testCase.reason, "Test error");
+        const error = new SidecarFatalError(testCase.reason, `Test error: ${testCase.reason}`);
         await showSidecarStartupErrorMessage(error);
 
         sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
@@ -437,9 +438,8 @@ describe("sidecar/utils.ts", () => {
       await showSidecarStartupErrorMessage(error);
       sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
       const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
-      // assert that the message contains the expected regex
       assert.strictEqual(
-        message.match(/Please check the logs for more details/) !== null,
+        message.match(/Sidecar failed to start/) !== null,
         true,
         `Message: ${message}`,
       );

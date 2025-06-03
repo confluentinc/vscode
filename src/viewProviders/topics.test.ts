@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TreeItemCollapsibleState } from "vscode";
+import { TreeItemCollapsibleState, window } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -15,6 +15,7 @@ import {
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { environmentChanged, topicSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
+import { TopicFetchError } from "../loaders/loaderUtils";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -99,6 +100,15 @@ describe("TopicViewProvider search behavior", () => {
 
     assert.strictEqual(rootElements.length, 1);
     assert.deepStrictEqual(rootElements[0], TEST_CCLOUD_KAFKA_TOPIC);
+  });
+
+  it("getChildren() should showErrorMessage if loader.getTopicsForCluster() raises TopicFetchError", async () => {
+    const showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
+    getTopicsForClusterStub.rejects(new TopicFetchError("Test error"));
+
+    const shouldBeEmpty = await provider.getChildren();
+    sinon.assert.calledOnce(showErrorMessageStub);
+    assert.strictEqual(shouldBeEmpty.length, 0);
   });
 
   it("getChildren() should filter schema subject containers based on search string", async () => {

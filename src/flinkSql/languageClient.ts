@@ -12,6 +12,7 @@ import { WebSocket } from "ws";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
+import { getFlinkSQLLanguageServerOutputChannel } from "./logging";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient");
@@ -56,6 +57,7 @@ export async function initializeLanguageClient(
             { scheme: "untitled", language: "flinksql" },
             { pattern: "**/*.flink.sql" },
           ],
+          outputChannel: getFlinkSQLLanguageServerOutputChannel(),
           middleware: {
             didOpen: (document, next) => {
               return next(document);

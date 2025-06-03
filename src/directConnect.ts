@@ -15,8 +15,8 @@ import { DirectConnectionManager } from "./directConnectManager";
 import { getCredentialsType } from "./directConnections/credentials";
 import { SupportedAuthTypes } from "./directConnections/types";
 import { directConnectionsChanged } from "./emitters";
+import { DEFAULT_KRB5_CONFIG_PATH, KRB5_CONFIG_PATH } from "./extensionSettings/constants";
 import { ConnectionId } from "./models/resource";
-import { DEFAULT_KRB5_CONFIG_PATH, KRB5_CONFIG_PATH } from "./preferences/constants";
 import { CustomConnectionSpec, getResourceManager } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -41,9 +41,7 @@ export async function handleConnectionChange(
   if (!existingConnections) {
     window.showInformationMessage(`Connection "${connection.name}" is disconnected.`);
     directConnectForm.dispose();
-    return;
   }
-  return;
 }
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {

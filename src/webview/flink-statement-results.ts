@@ -443,6 +443,10 @@ export class FlinkStatementResultsViewModel extends ViewModel {
     return this.post("PreviewAllResults", { timestamp: this.timestamp() });
   }
 
+  viewStatementSource() {
+    return this.post("ViewStatementSource", { timestamp: this.timestamp() });
+  }
+
   async stopStatement() {
     this.stopButtonClicked(true);
     await this.post("StopStatement", { timestamp: this.timestamp() });

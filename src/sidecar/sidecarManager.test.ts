@@ -238,7 +238,7 @@ describe("sidecarManager.ts", () => {
         } as SidecarOutputs);
 
         sandbox
-          .stub(sidecarLogging, "divineSidecarStartupFailureReason")
+          .stub(sidecarLogging, "determineSidecarStartupFailureReason")
           .returns(SidecarStartupFailureReason.PORT_IN_USE);
 
         try {

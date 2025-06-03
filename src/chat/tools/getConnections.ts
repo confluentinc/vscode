@@ -5,6 +5,7 @@ import {
   Command,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
@@ -41,17 +42,36 @@ export class GetConnectionsTool extends BaseLanguageModelTool<IGetConnectionsPar
 
   prepareInvocation(
     options: LanguageModelToolInvocationPrepareOptions<IGetConnectionsParameters>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     token: CancellationToken,
   ): ProviderResult<PreparedToolInvocation> {
     const { input } = options;
     let invocationMessage: string;
+    let confirmationMessage: MarkdownString;
     if (input.connectionType) {
-      invocationMessage = `Preparing to retrieve connections for connectionType: ${input.connectionType}...`;
+      invocationMessage = `Get all available ${getConnectionLabel(input.connectionType)} connections`;
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## ${getConnectionLabel(input.connectionType)} Connections\n`)
+        .appendMarkdown(
+          `This tool will look up all available connections of type **${getConnectionLabel(input.connectionType)}**. Results will show the connection ID and name. Do you want to proceed?`,
+        );
     } else {
-      invocationMessage = "Preparing to retrieve all available connections...";
+      invocationMessage = "Get all available Confluent/Kafka connections";
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Confluent/Kafka Connections Lookup\n`)
+        .appendMarkdown(`This tool will look up all available connections of all types`)
+        .appendMarkdown(`\n- **Confluent Cloud**: Managed Kafka services in the cloud`)
+        .appendMarkdown(`\n- **Local**: Kafka services running on your local machine`)
+        .appendMarkdown(`\n- **Direct**: Direct connections to Kafka services`)
+        .appendMarkdown(`Results will show the connection ID and name. Do you want to proceed?`);
     }
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "Get Connections",
+      message: confirmationMessage,
+    };
     return {
       invocationMessage,
+      confirmationMessages,
     };
   }
 

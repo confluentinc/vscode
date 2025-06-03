@@ -26,6 +26,12 @@
                 <span data-testid="statement-status" data-text="this.statementMeta().status"></span>
               </div>
               <vscode-button
+                data-testid="view-statement-source-button"
+                data-on-click="this.viewStatementSource()"
+              >
+                <label>View Statement Source</label>
+              </vscode-button>
+              <vscode-button
                 appearance="primary"
                 data-testid="stop-statement-button"
                 data-on-click="this.stopStatement()"
@@ -157,7 +163,11 @@
             <template data-if="this.hasResults() || this.emptyFilterResult()">
               <tbody>
                 <template data-for="result of this.snapshot().results">
-                  <tr class="grid-row" data-on-dblclick="this.previewResult(this.result())" data-testid="column-row">
+                  <tr
+                    class="grid-row"
+                    data-on-dblclick="this.previewResult(this.result())"
+                    data-testid="column-row"
+                  >
                     <template data-for="column of this.visibleColumns() by column">
                       <td
                         class="grid-cell cell-text-overflow"

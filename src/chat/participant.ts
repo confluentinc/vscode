@@ -20,8 +20,8 @@ import {
   workspace,
 } from "vscode";
 import { logError } from "../errors";
+import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { Logger } from "../logging";
-import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../preferences/constants";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
@@ -287,7 +287,7 @@ export async function handleChatMessage(
         stream.markdown(fragment.value);
       } else if (fragment instanceof LanguageModelToolCallPart) {
         // tool call: look up the tool from the map, process its invocation result(s), and continue on
-        const toolCall: LanguageModelToolCallPart = fragment as LanguageModelToolCallPart;
+        const toolCall: LanguageModelToolCallPart = fragment;
         const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(toolCall.name);
         logUsage(UserEvent.CopilotInteraction, {
           status: "tool call received from model",

@@ -9,9 +9,9 @@ import {
   HostConfig,
 } from "../../clients/docker";
 import { localSchemaRegistryConnected } from "../../emitters";
+import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { getLocalResourceContainers, updateLocalConnection } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
 import {
@@ -121,7 +121,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     }
     // inspect the containers to get the Docker network name and boostrap server host+port combos
     const kafkaNetworks: string[] = determineKafkaDockerNetworks(kafkaContainers);
-    const kafkaBootstrapServers = await determineKafkaBootstrapServers(kafkaContainers);
+    const kafkaBootstrapServers = determineKafkaBootstrapServers(kafkaContainers);
     this.logger.debug("Kafka container(s) found", {
       count: kafkaContainers.length,
       bootstrapServers: kafkaBootstrapServers,

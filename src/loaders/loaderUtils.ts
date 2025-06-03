@@ -7,6 +7,10 @@ import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
+import {
+  containsPrivateNetworkPattern,
+  showPrivateNetworkingHelpNotification,
+} from "../utils/privateNetworking";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 
 const logger = new Logger("resourceLoader");
@@ -45,7 +49,18 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
     );
   } catch (error) {
     if (error instanceof ResponseError) {
-      // XXX todo improve this, raise a more specific error type.
+      if (
+        error.response.status === 500 &&
+        cluster.uri &&
+        containsPrivateNetworkPattern(cluster.uri)
+      ) {
+        showPrivateNetworkingHelpNotification({
+          resourceName: cluster.name,
+          resourceUrl: cluster.uri,
+          resourceType: "Kafka cluster",
+        });
+        return [];
+      }
       const body = await error.response.json();
 
       throw new TopicFetchError(JSON.stringify(body));

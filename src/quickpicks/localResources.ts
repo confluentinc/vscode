@@ -8,13 +8,13 @@ import {
   getLocalSchemaRegistryImageTag,
 } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import { Logger } from "../logging";
 import {
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
-} from "../preferences/constants";
+} from "../extensionSettings/constants";
+import { Logger } from "../logging";
 import { createEnhancedQuickPick } from "./utils/quickPickUtils";
 
 const logger = new Logger("quickpicks.localResources");

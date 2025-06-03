@@ -4,11 +4,11 @@ import { CodeLens, Position, Range, TextDocument, Uri, workspace } from "vscode"
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../preferences/constants";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";

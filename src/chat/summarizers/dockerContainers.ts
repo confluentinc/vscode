@@ -1,7 +1,7 @@
 import { MarkdownString, workspace } from "vscode";
 import { ContainerInspectResponse } from "../../clients/docker";
 import { DEFAULT_KAFKA_IMAGE_REPO, DEFAULT_SCHEMA_REGISTRY_REPO } from "../../docker/constants";
-import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../preferences/constants";
+import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
 
 function appendPortMappings(summary: MarkdownString, container: ContainerInspectResponse): void {
   const ports = container.NetworkSettings?.Ports ?? {};

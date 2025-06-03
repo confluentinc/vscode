@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { DirectConnectionManager } from "../directConnectManager";
-import { SSL_PEM_PATHS } from "../preferences/constants";
+import { SSL_PEM_PATHS } from "../extensionSettings/constants";
 import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {

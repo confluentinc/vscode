@@ -5,11 +5,11 @@ import { EXTENSION_VERSION } from "../constants";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
 import { ccloudAuthSessionInvalidated } from "../emitters";
+import { KRB5_CONFIG_PATH, SSL_PEM_PATHS } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { KRB5_CONFIG_PATH, SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import {
   CustomConnectionSpec,

@@ -42,9 +42,6 @@ export const USE_TOPIC_NAME_STRATEGY =
 export const ALLOW_OLDER_SCHEMA_VERSIONS =
   prefix + "topic.produceMessages.schemas.allowOlderVersions";
 
-export const ENABLE_FLINK = prefix + "preview.enableFlink";
-export const ENABLE_CHAT_PARTICIPANT = prefix + "experimental.enableChatParticipant";
-
 /** Default Flink compute pool ID. */
 export const FLINK_CONFIG_COMPUTE_POOL = prefix + "flink.computePoolId";
 /** Default Flink database (Kafka cluster) ID. */
@@ -93,3 +90,13 @@ export const CHAT_SEND_ERROR_DATA = prefix + "chat.telemetry.sendErrorData";
  * Also affects whether we include tool call inputs in general tool-handling telemetry events.
  */
 export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.telemetry.sendToolCallData";
+
+// --- EXPERIMENTAL / PREVIEW SETTINGS ---
+
+/** Whether or not to enable the Confluent Cloud language client+server integration for Flink SQL documents. */
+export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER =
+  prefix + "flink.enableConfluentCloudLanguageServer";
+export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT = false;
+
+/** Whether or not to enable the `@Confluent` chat participant and associated tools. */
+export const ENABLE_CHAT_PARTICIPANT = prefix + "experimental.enableChatParticipant";

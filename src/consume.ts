@@ -164,7 +164,7 @@ export function activateMessageViewer(context: ExtensionContext) {
           if (envId == null) {
             return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
           }
-          loader = DirectResourceLoader.getInstance(envId! as ConnectionId);
+          loader = DirectResourceLoader.getInstance(envId as ConnectionId);
           break;
         default:
           return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
@@ -285,7 +285,7 @@ function messageViewerStartPollingCommand(
   /** Notify an active webview only after flushing the rest of updates. */
   const notifyUI = () => {
     queueMicrotask(() => {
-      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+      if (panelActive()) panel.webview.postMessage(["Refresh", "Success", null]);
     });
   };
 

@@ -1,9 +1,9 @@
 import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 

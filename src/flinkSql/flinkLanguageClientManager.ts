@@ -1,19 +1,30 @@
-import { Disposable, WorkspaceConfiguration, commands, window, workspace } from "vscode";
+import {
+  Disposable,
+  LogOutputChannel,
+  WorkspaceConfiguration,
+  commands,
+  window,
+  workspace,
+} from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
+import {
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+} from "../extensionSettings/constants";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import {
-  ENABLE_FLINK,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../preferences/constants";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { initializeLanguageClient } from "./languageClient";
+import {
+  clearFlinkSQLLanguageServerOutputChannel,
+  getFlinkSQLLanguageServerOutputChannel,
+} from "./logging";
 
 const logger = new Logger("flinkLanguageClientManager");
 
@@ -46,6 +57,9 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private constructor() {
+    // make sure we dispose the output channel when the manager is disposed
+    const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
+    this.disposables.push(outputChannel);
     this.registerListeners();
   }
 
@@ -74,6 +88,12 @@ export class FlinkLanguageClientManager implements Disposable {
     // Monitor Flink settings changes
     this.disposables.push(
       workspace.onDidChangeConfiguration(async (e) => {
+        if (e.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER)) {
+          // guard against any toggling of this setting, since its behavior is handled
+          // at the `src/extensionSettings/listener.ts` level
+          return;
+        }
+        // real default settings changes
         if (e.affectsConfiguration("confluent.flink")) {
           if (this.languageClient) {
             await this.notifyConfigChanged();
@@ -83,27 +103,8 @@ export class FlinkLanguageClientManager implements Disposable {
         }
       }),
     );
-
-    // Monitor the Flink enabled setting
-    this.disposables.push(
-      workspace.onDidChangeConfiguration(async (e) => {
-        if (e.affectsConfiguration(ENABLE_FLINK)) {
-          if (this.getIsFlinkEnabled()) {
-            await this.maybeStartLanguageClient();
-          } else {
-            logger.debug("Flink is disabled in settings, stopping language client");
-            this.cleanupLanguageClient();
-          }
-        }
-      }),
-    );
   }
 
-  public getIsFlinkEnabled(): boolean {
-    const config: WorkspaceConfiguration = workspace.getConfiguration();
-    const isFlinkEnabled = config.get(ENABLE_FLINK, false);
-    return isFlinkEnabled;
-  }
   /** Get the global/workspace settings for Flink, if any */
   public getFlinkSqlSettings(): FlinkSqlSettings {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
@@ -117,10 +118,6 @@ export class FlinkLanguageClientManager implements Disposable {
 
   /** Verify that Flink is enabled + the compute pool id setting exists and is in an environment we know about */
   public async validateFlinkSettings(): Promise<boolean> {
-    if (!this.getIsFlinkEnabled()) {
-      logger.debug("Flink is not enabled in settings, skipping configuration prompt");
-      return false;
-    }
     const { computePoolId } = this.getFlinkSqlSettings();
     if (!computePoolId) {
       await this.promptChooseDefaultComputePool();
@@ -238,7 +235,7 @@ export class FlinkLanguageClientManager implements Disposable {
    * - User has opened a Flink SQL file
    * - User has not disabled Flink in settings
    */
-  private async maybeStartLanguageClient(): Promise<void> {
+  public async maybeStartLanguageClient(): Promise<void> {
     if (this.languageClient) {
       if (this.isLanguageClientConnected()) {
         // If we already have a client and it's healthy we're cool
@@ -249,10 +246,6 @@ export class FlinkLanguageClientManager implements Disposable {
       }
     }
     // Otherwise, we need to check if the prerequisites are met
-    if (!this.getIsFlinkEnabled()) {
-      logger.debug("Flink is not enabled, not initializing language client");
-      return;
-    }
     if (!hasCCloudAuthSession()) {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;
@@ -410,6 +403,9 @@ export class FlinkLanguageClientManager implements Disposable {
     await this.cleanupLanguageClient();
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
+    FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
+    clearFlinkSQLLanguageServerOutputChannel();
+    logger.debug("FlinkLanguageClientManager disposed");
   }
 }
 

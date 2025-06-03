@@ -47,14 +47,6 @@ type ConsumeMode = "latest" | "beginning" | "timestamp";
  * messages from the host environment that manages stream consumption.
  */
 class MessageViewerViewModel extends ViewModel {
-  /** This timestamp updates everytime the host environment wants UI to update. */
-  timestamp = this.produce(Date.now(), (ts, signal) => {
-    function handle(event: MessageEvent<any[]>) {
-      if (event.data[0] === "Timestamp") ts(Date.now());
-    }
-    addEventListener("message", handle, { signal });
-  });
-
   page = this.signal(storage.get()?.page ?? 0);
   pageSize = this.signal(100);
 
@@ -69,20 +61,12 @@ class MessageViewerViewModel extends ViewModel {
    * the stream is updated. The snapshot includes message records and list of original indices.
    */
   snapshot = this.resolve(() => {
-    return post("GetMessages", {
-      page: this.page(),
-      pageSize: this.pageSize(),
-      timestamp: this.timestamp(),
-    });
+    return post("GetMessages", { page: this.page(), pageSize: this.pageSize() });
   }, this.emptySnapshot);
 
-  histogram = this.resolve(() => {
-    return post("GetHistogram", { timestamp: this.timestamp() });
-  }, null);
-  selection = this.resolve(() => {
-    // get selection from the host when webview gets restored, otherwise use local state
-    return post("GetSelection", {});
-  }, null);
+  histogram = this.resolve(() => post("GetHistogram"), null);
+  // get selection from the host when webview gets restored, otherwise use local state
+  selection = this.resolve(() => post("GetSelection"), null);
   histogramTimer: ReturnType<typeof setTimeout> | null = null;
   async updateHistogramFilter(timestamps: [number, number] | null) {
     // throttle events slightly, since a lot of selection changes are transient
@@ -96,16 +80,12 @@ class MessageViewerViewModel extends ViewModel {
 
   /** Information about the topic's partitions. */
   partitionStats = this.resolve(() => {
-    return post("GetPartitionStats", {});
+    return post("GetPartitionStats");
   }, []);
   /** List of currently consumed partitions. `null` for all partitions. */
-  partitionsConsumed = this.resolve(() => {
-    return post("GetConsumedPartitions", { timestamp: this.timestamp() });
-  }, null);
+  partitionsConsumed = this.resolve(() => post("GetConsumedPartitions"), null);
   /** List of currently filtered partitions. `null` for all consumed partitions. */
-  partitionsFiltered = this.resolve(() => {
-    return post("GetFilteredPartitions", { timestamp: this.timestamp() });
-  }, null);
+  partitionsFiltered = this.resolve(() => post("GetFilteredPartitions"), null);
   partitionsConsumedDescription = this.derive(() => {
     const consumed = this.partitionsConsumed();
     if (consumed == null) return "All partitions";
@@ -228,10 +208,7 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   /** Total count of consumed messages, along with count of filtered ones. */
-  messageCount = this.resolve(() => post("GetMessagesCount", { timestamp: this.timestamp() }), {
-    total: 0,
-    filter: null,
-  });
+  messageCount = this.resolve(() => post("GetMessagesCount"), { total: 0, filter: null });
   /** For now, the only way to expose a loading spinner. */
   waitingForMessages = this.derive(() => this.messageCount().total === 0);
   emptyFilterResult = this.derive(
@@ -241,9 +218,7 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     return filter != null ? filter > 0 : total > 0;
   });
-  timestampExtent = this.resolve(() => {
-    return post("GetMessagesExtent", { timestamp: this.timestamp() });
-  }, null);
+  timestampExtent = this.resolve(() => post("GetMessagesExtent"), null);
   shouldShowMessagesStat = this.derive(() => {
     const count = this.messageCount();
     const extent = this.timestampExtent();
@@ -421,12 +396,9 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  search = this.resolve(() => {
-    return post("GetSearchQuery", {});
-  }, "");
+  search = this.resolve(() => post("GetSearchQuery"), "");
   searchRegexp = this.resolve(async () => {
-    const timestamp = this.timestamp();
-    const source = await post("GetSearchSource", { timestamp });
+    const source = await post("GetSearchSource");
     return source != null ? new RegExp(source, "gi") : null;
   }, null);
   searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -469,12 +441,8 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   /** Consume mode affects parameters used for consuming messages. */
-  consumeMode = this.resolve(() => {
-    return post("GetConsumeMode", { timestamp: this.timestamp() });
-  }, "beginning" as ConsumeMode);
-  consumeModeTimestamp = this.resolve(() => {
-    return post("GetConsumeModeTimestamp", { timestamp: this.timestamp() });
-  }, Date.now());
+  consumeMode = this.resolve<ConsumeMode>(() => post("GetConsumeMode"), "beginning");
+  consumeModeTimestamp = this.resolve(() => post("GetConsumeModeTimestamp"), Date.now());
 
   async handleConsumeModeChange(value: ConsumeMode) {
     const timestamp = Date.now();
@@ -497,7 +465,7 @@ class MessageViewerViewModel extends ViewModel {
 
   /** Numeric limit of messages that need to be consumed. */
   messageLimit = this.resolve(async () => {
-    const maxSize = await post("GetMaxSize", { timestamp: this.timestamp() });
+    const maxSize = await post("GetMaxSize");
     return messageLimitLabel[maxSize];
   }, "100k");
 
@@ -509,16 +477,10 @@ class MessageViewerViewModel extends ViewModel {
     this.selection(null);
   }
 
-  timer = this.resolve(() => {
-    return post("GetStreamTimer", { timestamp: this.timestamp() });
-  }, null);
+  timer = this.resolve(() => post("GetStreamTimer"), null);
   /** State of stream provided by the host: either running or paused. */
-  streamState = this.resolve(() => {
-    return post("GetStreamState", { timestamp: this.timestamp() });
-  }, "running");
-  streamError = this.resolve(() => {
-    return post("GetStreamError", { timestamp: this.timestamp() });
-  }, null);
+  streamState = this.resolve(() => post("GetStreamState"), "running");
+  streamError = this.resolve(() => post("GetStreamError"), null);
   streamStateLabel = this.derive(() => {
     switch (this.streamState()) {
       case "running":
@@ -539,9 +501,9 @@ class MessageViewerViewModel extends ViewModel {
   handleStreamToggle(state: StreamState) {
     switch (state) {
       case "running":
-        return post("StreamPause", {});
+        return post("StreamPause");
       case "paused":
-        return post("StreamResume", {});
+        return post("StreamResume");
     }
   }
 
@@ -593,44 +555,44 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   previewJSON() {
-    return post("PreviewJSON", {});
+    return post("PreviewJSON");
+  }
+
+  /** Override ViewModel's resolve to take into account the host message that triggers UI update. */
+  resolve<Result>(fn: () => Promise<Result>, init: Result) {
+    return this.produce(init, (result, signal) => {
+      async function update() {
+        const value = await fn();
+        if (!signal.aborted) result(value);
+      }
+      function handle(event: MessageEvent<any[]>) {
+        if (event.data[0] === "Refresh") update();
+      }
+      addEventListener("message", handle, { signal });
+      update();
+    });
   }
 }
 
-export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
-export function post(type: "GetStreamError", body: object): Promise<{ message: string } | null>;
-export function post(
-  type: "GetStreamTimer",
-  body: { timestamp?: number },
-): Promise<{ start: number; offset: number }>;
+export function post(type: "GetStreamState"): Promise<StreamState>;
+export function post(type: "GetStreamError"): Promise<{ message: string } | null>;
+export function post(type: "GetStreamTimer"): Promise<{ start: number; offset: number }>;
 export function post(
   type: "GetMessages",
-  body: { page: number; pageSize: number; timestamp?: number },
+  body: { page: number; pageSize: number },
 ): Promise<{ messages: PartitionConsumeRecord[]; indices: number[] }>;
-export function post(type: "GetPartitionStats", body: object): Promise<PartitionData[]>;
-export function post(
-  type: "GetHistogram",
-  body: { timestamp?: number },
-): Promise<HistogramBin[] | null>;
-export function post(
-  type: "GetSelection",
-  body: { timestamp?: number },
-): Promise<[number, number] | null>;
-export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
-export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
-export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
-export function post(
-  type: "GetMessagesExtent",
-  body: { timestamp?: number },
-): Promise<[number, number] | null>;
-export function post(
-  type: "GetMaxSize",
-  body: { timestamp?: number },
-): Promise<keyof typeof messageLimitLabel>;
-export function post(type: "GetConsumedPartitions", body: object): Promise<number[] | null>;
-export function post(type: "GetFilteredPartitions", body: object): Promise<number[] | null>;
-export function post(type: "GetConsumeMode", body: object): Promise<ConsumeMode>;
-export function post(type: "GetConsumeModeTimestamp", body: object): Promise<number | null>;
+export function post(type: "GetPartitionStats"): Promise<PartitionData[]>;
+export function post(type: "GetHistogram"): Promise<HistogramBin[] | null>;
+export function post(type: "GetSelection"): Promise<[number, number] | null>;
+export function post(type: "GetSearchSource"): Promise<string | null>;
+export function post(type: "GetSearchQuery"): Promise<string>;
+export function post(type: "GetMessagesCount"): Promise<MessageCount>;
+export function post(type: "GetMessagesExtent"): Promise<[number, number] | null>;
+export function post(type: "GetMaxSize"): Promise<keyof typeof messageLimitLabel>;
+export function post(type: "GetConsumedPartitions"): Promise<number[] | null>;
+export function post(type: "GetFilteredPartitions"): Promise<number[] | null>;
+export function post(type: "GetConsumeMode"): Promise<ConsumeMode>;
+export function post(type: "GetConsumeModeTimestamp"): Promise<number | null>;
 export function post(
   type: "PartitionConsumeChange",
   body: { partitions: number[] | null },
@@ -649,10 +611,10 @@ export function post(
 ): Promise<null>;
 export function post(type: "MessageLimitChange", body: { limit: number }): Promise<null>;
 export function post(type: "SearchMessages", body: { search: string | null }): Promise<null>;
-export function post(type: "StreamPause", body: object): Promise<null>;
-export function post(type: "StreamResume", body: object): Promise<null>;
+export function post(type: "StreamPause"): Promise<null>;
+export function post(type: "StreamResume"): Promise<null>;
 export function post(type: "PreviewMessageByIndex", body: { index: number }): Promise<null>;
-export function post(type: "PreviewJSON", body: object): Promise<null>;
-export function post(type: any, body: any): Promise<unknown> {
+export function post(type: "PreviewJSON"): Promise<null>;
+export function post(type: any, body?: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }

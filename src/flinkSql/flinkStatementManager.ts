@@ -1,17 +1,16 @@
 import { ConfigurationChangeEvent, Disposable, WorkspaceConfiguration, workspace } from "vscode";
 import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
-import { CCloudResourceLoader } from "../loaders";
-import { Logger } from "../logging";
-import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
 import {
   DEFAULT_STATEMENT_POLLING_CONCURRENCY,
   DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
   DEFAULT_STATEMENT_POLLING_LIMIT,
-  ENABLE_FLINK,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
-} from "../preferences/constants";
+} from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders";
+import { Logger } from "../logging";
+import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
 import { IntervalPoller } from "../utils/timing";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 
@@ -29,9 +28,6 @@ export type FlinkStatementManagerConfiguration = {
 
   /** The concurrency level to use when polling for updated statements. */
   concurrency: number;
-
-  /** Flink experimental setting enabled or not. */
-  flinkEnabled: boolean;
 };
 
 /**
@@ -87,7 +83,6 @@ export class FlinkStatementManager {
       concurrency,
       pollingFrequency,
       maxStatementsToPoll,
-      flinkEnabled: configs.get<boolean>(ENABLE_FLINK) ?? false,
     };
   }
 
@@ -121,9 +116,9 @@ export class FlinkStatementManager {
    */
   private disposables: Disposable[];
 
-  /** Is Flink enabled and should we possibly poll at all? */
+  /** Is polling configured at all? */
   isEnabled(): boolean {
-    return this.configuration.flinkEnabled && this.configuration.pollingFrequency > 0;
+    return this.configuration.pollingFrequency > 0;
   }
 
   /** Should we poll eventually / have a poller defined? */
@@ -207,14 +202,6 @@ export class FlinkStatementManager {
       // get the latest workspace configs after the event fired
       const workspaceConfigs: WorkspaceConfiguration = workspace.getConfiguration();
 
-      if (event.affectsConfiguration(ENABLE_FLINK)) {
-        const newEnabled = workspaceConfigs.get<boolean>(ENABLE_FLINK)!;
-        this.configuration.flinkEnabled = newEnabled;
-        logger.debug(`Flink enabled changed to ${newEnabled}`);
-        this.poller = this.resetPoller();
-        return;
-      }
-
       if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS)) {
         const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS)!;
         this.configuration.pollingFrequency = newFrequency;
@@ -234,7 +221,6 @@ export class FlinkStatementManager {
         const newConcurrency = workspaceConfigs.get<number>(STATEMENT_POLLING_CONCURRENCY)!;
         this.configuration.concurrency = newConcurrency;
         logger.debug(`Polling concurrency changed to ${newConcurrency}`);
-        return;
       }
     });
   }

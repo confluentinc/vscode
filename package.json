@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.4.0-29",
+  "version": "1.4.0-48",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -793,11 +793,10 @@
       {
         "title": "Flink SQL Defaults",
         "properties": {
-          "confluent.preview.enableFlink": {
+          "confluent.flink.enableConfluentCloudLanguageServer": {
             "type": "boolean",
             "default": false,
-            "order": 0,
-            "description": "Enable Flink-related resource loading and associated actions.",
+            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
             "tags": [
               "preview"
             ]
@@ -950,38 +949,32 @@
         {
           "id": "confluent-resources",
           "name": "Resources",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Resources"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-topics",
           "name": "Topics",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Topics"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-schemas",
           "name": "Schemas",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Schemas"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-flink-statements",
           "name": "Flink Statements",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "when": "confluent.flinkEnabled",
-          "contextualTitle": "Confluent: Flink Statements"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-flink-artifacts",
           "name": "Flink Artifacts",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "false",
-          "contextualTitle": "Confluent: Flink Artifacts"
+          "when": "false"
         },
         {
           "id": "confluent-support",
@@ -1754,7 +1747,7 @@
           {
             "id": "connect-confluent-cloud",
             "title": "Connect to Confluent Cloud",
-            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)",
+            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://www.confluent.io/get-started/?utm_source=vscode-ext)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
@@ -1839,7 +1832,7 @@
           {
             "id": "cc-flink-statements",
             "title": "Confluent Cloud for Apache Flink",
-            "description": "Author, submit, and view the result of Flink SQL statements in Confluent Cloud.\n[Enable Flink Support](command:workbench.action.openSettings?%5B%22%40id%3Aconfluent.preview.enableFlink%22%5D)",
+            "description": "Author, submit, and view the result of Flink SQL statements in Confluent Cloud.",
             "media": {
               "markdown": "resources/walkthrough/flink/statements.md"
             },

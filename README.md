@@ -5,8 +5,7 @@ Confluent technology. This extension provides a robust, delightful experience fo
 [Confluent Cloud](https://confluent.cloud/) products from within the
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
-![](resources/readme-screenshot-light.png)
-![](resources/readme-screenshot-flinklight.png)
+![](resources/readme-screenshot-light.png) ![](resources/readme-screenshot-flinklight.png)
 
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
 Confluent, and read the docs at the [Confluent documentation](https://docs.confluent.io/) site.
@@ -63,7 +62,7 @@ Confluent can make it even more useful.
 The extension uses [Sentry](https://sentry.io) to capture and analyze errors, which enables more
 robust and friendly error debugging. It is the first item initialized in `extension.ts`, so that it
 can send any uncaught exceptions globally, and it's invoked in certain catch blocks to send specific
-errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
+errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup-plugin) is used to upload source maps.
 
 ## Additional References
 

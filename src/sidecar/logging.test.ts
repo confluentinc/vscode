@@ -6,7 +6,7 @@ import { WriteableTmpDir } from "../utils/file";
 import { SIDECAR_LOGFILE_NAME } from "./constants";
 import {
   appendSidecarLogToOutputChannel,
-  divineSidecarStartupFailureReason,
+  determineSidecarStartupFailureReason,
   gatherSidecarOutputs,
   getSidecarLogfilePath,
   SIDECAR_OUTPUT_CHANNEL,
@@ -21,8 +21,20 @@ describe("sidecar/logging.ts", () => {
         logLines: [],
         stderrLines: [],
       };
-      const result = divineSidecarStartupFailureReason(outputs);
+      const result = determineSidecarStartupFailureReason(outputs);
       assert.strictEqual(result, SidecarStartupFailureReason.PORT_IN_USE);
+    });
+
+    it("should return LINUX_GLIBC_NOT_FOUND when the log contains 'GLIBC_2.*not found'", () => {
+      const outputs: SidecarOutputs = {
+        parsedLogLines: [],
+        logLines: [],
+        stderrLines: [
+          "/lib64/libc.so.6: version `GLIBC_2.33' not found (required by /home/user/.vscode-server/extensions/confluentinc.vscode-confluent-1.2.1/ide-sidecar-0.196.0-runner)",
+        ],
+      };
+      const result = determineSidecarStartupFailureReason(outputs);
+      assert.strictEqual(result, SidecarStartupFailureReason.LINUX_GLIBC_NOT_FOUND);
     });
 
     it("should return UNKNOWN when no specific error messages are found", () => {
@@ -31,7 +43,7 @@ describe("sidecar/logging.ts", () => {
         logLines: [],
         stderrLines: [],
       };
-      const result = divineSidecarStartupFailureReason(outputs);
+      const result = determineSidecarStartupFailureReason(outputs);
       assert.strictEqual(result, SidecarStartupFailureReason.UNKNOWN);
     });
   });
@@ -108,8 +120,8 @@ describe("sidecar/logging.ts", () => {
       assert.strictEqual(result.logLines.length, 0);
       assert.strictEqual(result.parsedLogLines.length, 0);
 
-      assert.strictEqual(result.stderrLines.length, 1);
-      assert.match(result.stderrLines[0], /GLIBC_2.25.*not found/);
+      assert.strictEqual(result.stderrLines.length, 3);
+      assert.match(result.stderrLines[0], /GLIBC_2.*not found/);
     });
 
     it("Handles nonexistent log and stderr files", async () => {

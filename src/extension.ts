@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
-import { closeSentryClient, initSentry } from "./telemetry/sentryClient";
+import { closeSentryClient, initSentry, sentryCaptureException } from "./telemetry/sentryClient";
 if (process.env.SENTRY_DSN) {
   initSentry();
 }
@@ -45,6 +45,13 @@ import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import {
+  ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
+} from "./extensionSettings/constants";
+import { createConfigChangeListener } from "./extensionSettings/listener";
+import { updatePreferences } from "./extensionSettings/sidecarSync";
+import {
   disposeLaunchDarklyClient,
   getLaunchDarklyClient,
   resetFlagDefaults,
@@ -58,9 +65,6 @@ import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
-import { createConfigChangeListener } from "./preferences/listener";
-import { updatePreferences } from "./preferences/sidecarSync";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -71,7 +75,6 @@ import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -244,12 +247,20 @@ async function _activateExtension(
     uriHandler,
     WebsocketManager.getInstance(),
     FlinkStatementManager.getInstance(),
-    initializeFlinkLanguageClientManager(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
     ...documentProviders,
   );
+
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
+  if (
+    config.get(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT)
+  ) {
+    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
+    context.subscriptions.push(flinkLanguageClientManager);
+  }
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
@@ -312,7 +323,6 @@ async function _activateExtension(
 async function setupContextValues() {
   // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-  const flinkEnabled = setContextValue(ContextValues.flinkEnabled, config.get(ENABLE_FLINK, false));
   const chatParticipantEnabled = setContextValue(
     ContextValues.chatParticipantEnabled,
     config.get(ENABLE_CHAT_PARTICIPANT, true),
@@ -378,7 +388,6 @@ async function setupContextValues() {
     MESSAGE_URI_SCHEME,
   ]);
   await Promise.all([
-    flinkEnabled,
     chatParticipantEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,

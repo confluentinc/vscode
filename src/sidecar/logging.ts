@@ -50,7 +50,8 @@ export function startTailingSidecarLogs(): Tail | undefined {
 
   // Take note of the start of exception lines in the log file, show as toast (if user has allowed via config)
   // Define a regex pattern to find "ERROR", a parenthesized thread name, and capture everything after it
-  const regex = /ERROR.*\(([^)]+)\)\s*(.*)$/;
+
+  const regex = /ERROR.*\(([^)]+)\)\s*(.*)$/; //NOSONAR: This regex is intentionally written for log parsing and is safe in this context.
 
   logTailer.on("line", (data: any) => {
     const line: string = data.toString();
@@ -198,7 +199,8 @@ export async function gatherSidecarOutputs(
   };
 }
 
-export function divineSidecarStartupFailureReason(
+/** Try to guess as to reason why Sidecar died very quickly after starting up through heuristics against logged lines or stderr. */
+export function determineSidecarStartupFailureReason(
   outputs: SidecarOutputs,
 ): SidecarStartupFailureReason {
   // Check for the presence of specific error messages in the logs
@@ -206,6 +208,10 @@ export function divineSidecarStartupFailureReason(
     outputs.parsedLogLines.some((log) => /seems to be in use by another process/.test(log.message))
   ) {
     return SidecarStartupFailureReason.PORT_IN_USE;
+  }
+
+  if (outputs.stderrLines.some((line) => /GLIBC.*not found/.test(line))) {
+    return SidecarStartupFailureReason.LINUX_GLIBC_NOT_FOUND;
   }
 
   // If no specific error messages are found, return UNKNOWN

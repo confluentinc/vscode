@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import * as flinkStatementsCommands from "../src/commands/flinkStatements";
 import * as messageUtils from "../src/documentProviders/message";
 import {
   FlinkStatementResultsManagerTestContext,
@@ -62,6 +63,17 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     assert.deepStrictEqual(results, { results: expectedParsedResults });
   });
 
+  it("should handle viewing the statement source", async () => {
+    const viewStatementSqlCommandStub = sandbox
+      .stub(flinkStatementsCommands, "viewStatementSqlCommand")
+      .resolves();
+
+    // Simulate hitting the button to view the statement source
+    await vm.viewStatementSource();
+    sinon.assert.calledOnce(viewStatementSqlCommandStub);
+    sinon.assert.calledWith(viewStatementSqlCommandStub, ctx.statement);
+  });
+
   it("should handle PreviewResult and PreviewAllResults", async () => {
     const showJsonPreviewMock = sandbox.stub(messageUtils, "showJsonPreview").resolves();
 
@@ -85,8 +97,6 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     assert.ok(response.filename.startsWith("flink-statement-results-"), response.filename);
     assert.ok(response.filename.endsWith(".json"));
     assert.deepStrictEqual(response.result, expectedParsedResults);
-
-    showJsonPreviewMock.restore();
   });
 
   it("should filter results based on search query", async () => {
