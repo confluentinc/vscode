@@ -5,7 +5,9 @@ import {
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
+  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
+  ProviderResult,
 } from "vscode";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
@@ -24,6 +26,26 @@ export interface IGetEnvironmentsParameters {
 
 export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsParameters> {
   readonly name = "get_environments";
+
+  prepareInvocation(
+    options: LanguageModelToolInvocationPrepareOptions<IGetEnvironmentsParameters>,
+    token: CancellationToken,
+  ): ProviderResult<{ invocationMessage: string; confirmationMessage: string }> {
+    const { input } = options;
+    let invocationMessage: string;
+    let confirmationMessage: string;
+
+    if (input.connectionId) {
+      invocationMessage = `Get all environments for connection ID: ${input.connectionId}`;
+      confirmationMessage = `This tool will look up all environments associated with connection ID **${input.connectionId}**. Results will show the environment ID and name.`;
+    } else {
+      invocationMessage = "No connection ID provided for environments lookup.";
+      confirmationMessage =
+        "No connection ID was provided. Please provide a valid connection ID from the 'get_connections' tool and try again.";
+    }
+
+    return { invocationMessage, confirmationMessage };
+  }
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetEnvironmentsParameters>,
@@ -44,7 +66,6 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     const environments: Environment[] = await loader.getEnvironments();
     if (!environments.length) {
       logger.debug("No environments found");
-      // TODO: add hinting? the user shouldn't get here if they have at least one connection
       return new LanguageModelToolResult([new LanguageModelTextPart(NO_RESULTS)]);
     }
 
@@ -69,9 +90,18 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetEnvironmentsParameters;
 
-    stream.progress(
-      `Retrieving available environments with parameters: ${JSON.stringify(parameters)}...`,
-    );
+    // Use invocationMessage and confirmationMessage from prepareInvocation
+    const { invocationMessage, confirmationMessage } = this.prepareInvocation(
+      { input: parameters },
+      token,
+    ) as {
+      invocationMessage: string;
+      confirmationMessage: string;
+    };
+
+    stream.progress(invocationMessage);
+    stream.markdown(confirmationMessage);
+
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
@@ -80,16 +110,15 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       },
       token,
     );
+
     stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
-      // cancellation
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
-    // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
-
     const contents = result.content as LanguageModelTextPart[];
+
     if (contents.length === 1 && contents[0].value === NO_RESULTS) {
       const resultsHeader = new LanguageModelTextPart("No environments found.");
       resultParts.push(resultsHeader);
@@ -97,7 +126,6 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       const resultsHeader = new LanguageModelTextPart("Here are your available environments:");
       resultParts.push(resultsHeader);
       resultParts.push(...contents);
-      // Add footer hint for follow-up tool calls
       const footerHint = new LanguageModelTextPart(
         "\nTo interact with these environments, use their IDs in follow-up tool calls, such as 'list_topics'.",
       );
