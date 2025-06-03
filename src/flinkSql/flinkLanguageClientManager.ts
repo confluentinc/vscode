@@ -13,7 +13,9 @@ import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
@@ -28,7 +30,7 @@ import {
 const logger = new Logger("flinkLanguageClientManager");
 
 export interface FlinkSqlSettings {
-  database: string | null;
+  databaseId: string | null;
   computePoolId: string | null;
 }
 
@@ -62,7 +64,8 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private registerListeners(): void {
-    // Listen for changes to metadata so we can update the language client
+    // Listen for changes to metadata
+    // Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config
     this.disposables.push(
       uriMetadataSet.event(async (uri: Uri) => {
         logger.debug("URI metadata set for", {
@@ -119,7 +122,7 @@ export class FlinkLanguageClientManager implements Disposable {
     currentDatabase = uriMetadata?.flinkDatabaseId ?? config.get(FLINK_CONFIG_DATABASE, null);
 
     return {
-      database: currentDatabase,
+      databaseId: currentDatabase,
       computePoolId: currentComputePoolId,
     };
   }
@@ -164,7 +167,6 @@ export class FlinkLanguageClientManager implements Disposable {
    * Compiles compute pool details across all known environments
    * @param computePoolId The ID of the compute pool to look up
    * @returns Object {organizationId, environmentId, region, provider} or null if not found
-   * FIXME this can be done with ccloud resource loader
    */
   private async lookupComputePoolInfo(computePoolId: string): Promise<{
     organizationId: string;
@@ -175,17 +177,18 @@ export class FlinkLanguageClientManager implements Disposable {
     try {
       // Get the current org
       const currentOrg = await getCurrentOrganization();
-      const organizationId = currentOrg?.id ?? "";
+      const organizationId: string | undefined = currentOrg?.id;
       if (!organizationId) {
         return null;
       }
 
       // Find the environment containing this compute pool
-      const environments = await getEnvironments();
+      const environments: CCloudEnvironment[] =
+        await CCloudResourceLoader.getInstance().getEnvironments();
+
       if (!environments || environments.length === 0) {
         return null;
       }
-
       for (const env of environments) {
         const foundPool = env.flinkComputePools.find(
           (pool: CCloudFlinkComputePool) => pool.id === computePoolId,
@@ -219,7 +222,7 @@ export class FlinkLanguageClientManager implements Disposable {
       logger.error(`Could not find environment containing compute pool ${computePoolId}`);
       return null;
     }
-    const { organizationId, environmentId, region, provider } = poolInfo; // TODO mke sure this never returns undefined for strings
+    const { organizationId, environmentId, region, provider } = poolInfo;
     const url = `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
     return url;
   }
@@ -229,14 +232,14 @@ export class FlinkLanguageClientManager implements Disposable {
    * Prerequisites:
    * - User is authenticated with CCloud
    * - User has designated a compute pool to use (language server route is region+provider specific)
-   * - User has opened a Flink SQL file // FIXME at this point we don't check for flinksql languageId on doc metadata change
+   * - User has opened a Flink SQL file
    */
   public async maybeStartLanguageClient(uri?: Uri): Promise<void> {
     if (!hasCCloudAuthSession()) {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;
     }
-    // FIXME this is called from extensionSettings listener, so uri may not be set
+    // TODO potential for improvement here: this is called from extensionSettings listener so uri may not be set, but we need it to start the client
     if (!uri) {
       logger.debug("No URI provided, cannot start language client");
       return;
@@ -359,12 +362,12 @@ export class FlinkLanguageClientManager implements Disposable {
       const environmentId = poolInfo?.environmentId;
 
       // Don't send with undefined settings, server will override existing settings with empty/undefined values
-      if (environmentId && settings.database && settings.computePoolId) {
+      if (environmentId && settings.databaseId && settings.computePoolId) {
         this.languageClient.sendNotification("workspace/didChangeConfiguration", {
           settings: {
             AuthToken: "{{ ccloud.data_plane_token }}",
             Catalog: environmentId,
-            Database: settings.database,
+            Database: settings.databaseId, // TODO better if we use names since it shows in diagnostics
             ComputePoolId: settings.computePoolId,
           },
         });
@@ -372,7 +375,7 @@ export class FlinkLanguageClientManager implements Disposable {
         logger.debug("Incomplete settings, not sending configuration update", {
           hasComputePool: !!settings.computePoolId,
           hasEnvironment: !!environmentId,
-          hasDatabase: !!settings.database,
+          hasDatabase: !!settings.databaseId,
         });
       }
     }
