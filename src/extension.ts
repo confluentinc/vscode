@@ -30,6 +30,7 @@ import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
+import { registerSearchCommands } from "./commands/search";
 import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
@@ -236,6 +237,7 @@ async function _activateExtension(
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
+    ...registerSearchCommands(),
   ];
   logger.info("Commands registered");
 
