@@ -217,7 +217,7 @@ export abstract class BaseViewProvider<
     await this.setSearch(null);
     // TODO: update this to adjust associated context value for focused resource(s)
 
-    await this.refresh();
+    // no need to .refresh() since adjusting search will handle it
   }
 
   /** Callback for  */
