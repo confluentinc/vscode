@@ -150,7 +150,7 @@ export abstract class BaseViewProvider<
     });
 
     if (this.resource !== resource) {
-      await this.setSearch(null); // reset search when parent resource changes
+      this.setSearch(null); // reset search when parent resource changes
     }
 
     if (resource) {
@@ -184,8 +184,8 @@ export abstract class BaseViewProvider<
     }
 
     const searchChangedSub: Disposable | undefined = this.searchChangedEmitter?.event(
-      async (searchString: string | null) => {
-        await this.setSearch(searchString);
+      (searchString: string | null) => {
+        this.setSearch(searchString);
       },
     );
     if (searchChangedSub) {
@@ -214,7 +214,7 @@ export abstract class BaseViewProvider<
     this.treeView.description = undefined;
     this.treeView.message = undefined;
 
-    await this.setSearch(null);
+    this.setSearch(null);
     // TODO: update this to adjust associated context value for focused resource(s)
 
     await this.refresh();
@@ -266,7 +266,7 @@ export abstract class BaseViewProvider<
   }
 
   /** Update internal state when the {@link itemSearchString search string} is set or unset. */
-  async setSearch(searchString: string | null): Promise<void> {
+  setSearch(searchString: string | null): void {
     // set/unset the filter so any calls to getChildren() will filter appropriately
     this.itemSearchString = searchString;
     if (this.searchContextValue) {

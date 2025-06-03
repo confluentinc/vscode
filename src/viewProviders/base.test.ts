@@ -324,7 +324,7 @@ describe("viewProviders/base.ts BaseViewProvider setParentResource()", () => {
     sinon.assert.calledWith(setContextValueStub, provider.parentResourceChangedContextValue, true);
   });
 
-  it("Should be called when parentResourceChangedEmitter fires", async () => {
+  it("Should be called when parentResourceChangedEmitter fires", () => {
     const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
     const setParentResourceStub = sandbox.stub(provider, "setParentResource");
     provider.parentResourceChangedEmitter.fire(resource);
@@ -354,23 +354,23 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     BaseViewProvider["instanceMap"].clear();
   });
 
-  it("should set internal search state when a value is passed", async () => {
+  it("should set internal search state when a value is passed", () => {
     const provider = TestViewProvider.getInstance();
 
-    await provider.setSearch("First");
+    provider.setSearch("First");
 
     assert.strictEqual(provider.itemSearchString, "First");
     assert.strictEqual(provider.searchMatches.size, 0);
     assert.strictEqual(provider.totalItemCount, 0);
   });
 
-  it("should clear internal search state when no value is passed", async () => {
+  it("should clear internal search state when no value is passed", () => {
     const provider = TestViewProvider.getInstance();
     provider.itemSearchString = "running";
     provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
     provider.totalItemCount = 3;
 
-    await provider.setSearch(null);
+    provider.setSearch(null);
 
     assert.strictEqual(provider.itemSearchString, null);
     assert.strictEqual(provider.searchMatches.size, 0, "searchMatches should be cleared");
@@ -378,11 +378,11 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   });
 
   for (const arg of ["First", null]) {
-    it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, async () => {
+    it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, () => {
       const provider = TestViewProvider.getInstance();
       // context value must be set for setContextValue to be called
       provider.searchContextValue = ContextValues.flinkStatementsSearchApplied;
-      await provider.setSearch(arg);
+      provider.setSearch(arg);
 
       sinon.assert.calledOnce(setContextValueStub);
       sinon.assert.calledWith(setContextValueStub, provider.searchContextValue, !!arg);
@@ -390,9 +390,9 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   }
 
   for (const arg of ["First", null]) {
-    it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, async () => {
+    it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, () => {
       const provider = TestViewProvider.getInstance();
-      await provider.setSearch(arg);
+      provider.setSearch(arg);
 
       sinon.assert.notCalled(setContextValueStub);
     });
@@ -403,7 +403,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
       const provider = TestViewProvider.getInstance();
       const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
 
-      await provider.setSearch(arg);
+      provider.setSearch(arg);
       // Would normally be called by the tree view when children are requested
       // after setSearch() but we call it directly here to get totalItemCount assigned.
       await provider.getChildren();
@@ -416,9 +416,9 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     });
   }
 
-  it("should filter children based on search string", async () => {
+  it("should filter children based on search string", () => {
     const provider = TestViewProvider.getInstance();
-    await provider.setSearch("first");
+    provider.setSearch("first");
 
     const matchingStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
@@ -442,9 +442,9 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     assert.strictEqual(provider.totalItemCount, 2);
   });
 
-  it("should update tree view message with search results when filterChildren() is called", async () => {
+  it("should update tree view message with search results when filterChildren() is called", () => {
     const provider = TestViewProvider.getInstance();
-    await provider.setSearch("running");
+    provider.setSearch("running");
 
     const items = [
       new FlinkStatement({
