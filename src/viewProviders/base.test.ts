@@ -345,23 +345,23 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     BaseViewProvider["instanceMap"].clear();
   });
 
-  it("should set internal search state when a value is passed", () => {
+  it("should set internal search state when a value is passed", async () => {
     const provider = TestViewProvider.getInstance();
 
-    provider.setSearch("First");
+    await provider.setSearch("First");
 
     assert.strictEqual(provider.itemSearchString, "First");
     assert.strictEqual(provider.searchMatches.size, 0);
     assert.strictEqual(provider.totalItemCount, 0);
   });
 
-  it("should clear internal search state when no value is passed", () => {
+  it("should clear internal search state when no value is passed", async () => {
     const provider = TestViewProvider.getInstance();
     provider.itemSearchString = "running";
     provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
     provider.totalItemCount = 3;
 
-    provider.setSearch(null);
+    await provider.setSearch(null);
 
     assert.strictEqual(provider.itemSearchString, null);
     assert.strictEqual(provider.searchMatches.size, 0);
@@ -369,11 +369,11 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   });
 
   for (const arg of ["First", null]) {
-    it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, () => {
+    it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, async () => {
       const provider = TestViewProvider.getInstance();
       // context value must be set for setContextValue to be called
       provider.searchContextValue = ContextValues.flinkStatementsSearchApplied;
-      provider.setSearch(arg);
+      await provider.setSearch(arg);
 
       sinon.assert.calledOnce(setContextValueStub);
       sinon.assert.calledWith(setContextValueStub, provider.searchContextValue, !!arg);
@@ -381,17 +381,28 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   }
 
   for (const arg of ["First", null]) {
-    it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, () => {
+    it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, async () => {
       const provider = TestViewProvider.getInstance();
-      provider.setSearch(arg);
+      await provider.setSearch(arg);
 
       sinon.assert.notCalled(setContextValueStub);
     });
   }
 
+  for (const arg of ["First", null]) {
+    it(`should refresh the tree view when search is set (arg=${arg})`, async () => {
+      const provider = TestViewProvider.getInstance();
+      const refreshSpy = sandbox.spy(provider, "refresh");
+
+      await provider.setSearch(arg);
+
+      sinon.assert.calledOnce(refreshSpy);
+    });
+  }
+
   it("should filter children based on search string", async () => {
     const provider = TestViewProvider.getInstance();
-    provider.setSearch("first");
+    await provider.setSearch("first");
 
     const matchingStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
@@ -415,9 +426,9 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     assert.strictEqual(provider.totalItemCount, 2);
   });
 
-  it("should update tree view message with search results when filterChildren() is called", () => {
+  it("should update tree view message with search results when filterChildren() is called", async () => {
     const provider = TestViewProvider.getInstance();
-    provider.setSearch("running");
+    await provider.setSearch("running");
 
     const items = [
       new FlinkStatement({
