@@ -295,7 +295,7 @@ export abstract class BaseViewProvider<
     // will never be called and the message won't update
     const plural = this.totalItemCount > 1 ? "s" : "";
     if (this.searchMatches.size > 0) {
-      this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${search}"`;
+      this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} statement${plural} for "${search}"`;
     } else {
       // let empty state take over
       this.treeView.message = undefined;
