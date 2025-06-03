@@ -1752,7 +1752,7 @@
           {
             "id": "connect-confluent-cloud",
             "title": "Connect to Confluent Cloud",
-            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)",
+            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://www.confluent.io/get-started/?utm_source=vscode-ext)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
