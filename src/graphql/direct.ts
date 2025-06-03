@@ -13,7 +13,7 @@ export async function getDirectResources(
   connectionId: ConnectionId,
 ): Promise<DirectEnvironment | undefined> {
   const query = graphql(`
-    query directConnections($id: String!) {
+    query directConnection($id: String!) {
       directConnectionById(connectionID: $id) {
         id
         name
@@ -32,17 +32,31 @@ export async function getDirectResources(
   `);
 
   const sidecar = await getSidecar();
-  let response;
+  let response: { directConnectionById: any | null };
   try {
     response = await sidecar.query(query, connectionId, { id: connectionId });
   } catch (error) {
+    if (error instanceof Error && /non null type/.test(error.message)) {
+      // connection was not found, query returned null against the schema
+      // Treat as if the connection does not exist. When sidecar GQL spec is updated to
+      // describe ability to return null instead of throwing, this will no longer be needed,
+      // https://github.com/confluentinc/ide-sidecar/issues/447
+
+      // When a connection is deleted, the chain of events firing somewhat unfortunately
+      // loses some context and we end up re-querying the connection by ID.
+      return undefined;
+    }
+
     logError(error, "direct connection resources", {
       extra: { functionName: "getDirectResources" },
     });
     showErrorNotificationWithButtons(
       `Failed to fetch resources for direct Kafka / Schema Registry connection(s): ${error}`,
     );
-    return;
+
+    // Treat as if the connection does not exist. If the unexpected GQL error is transient,
+    // the user can refresh the resources view to retry.
+    return undefined;
   }
 
   const connection = response.directConnectionById;
