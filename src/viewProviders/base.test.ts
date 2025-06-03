@@ -24,6 +24,7 @@ class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement
   loggerName = "viewProviders.test";
   viewId = "confluent-test";
 
+  parentResourceChangedEmitter = new EventEmitter<FlinkComputePool | null>();
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
   readonly kind = "test";
 
@@ -321,6 +322,14 @@ describe("viewProviders/base.ts BaseViewProvider setParentResource()", () => {
     sinon.assert.calledOnce(updateTreeViewDescriptionStub);
     sinon.assert.calledOnce(setContextValueStub);
     sinon.assert.calledWith(setContextValueStub, provider.parentResourceChangedContextValue, true);
+  });
+
+  it("Should be called when parentResourceChangedEmitter fires", async () => {
+    const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+    const setParentResourceStub = sandbox.stub(provider, "setParentResource");
+    provider.parentResourceChangedEmitter.fire(resource);
+    sinon.assert.calledOnce(setParentResourceStub);
+    sinon.assert.calledWith(setParentResourceStub, resource);
   });
 });
 
