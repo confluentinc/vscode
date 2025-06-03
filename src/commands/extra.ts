@@ -8,7 +8,6 @@ import {
   topicSearchSet,
 } from "../emitters";
 import { Logger } from "../logging";
-import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 const logger = new Logger("commands.extra");
 
@@ -87,14 +86,14 @@ async function searchTopics() {
   if (!searchString) {
     return;
   }
-  FlinkStatementsViewProvider.getInstance().setSearch(searchString);
+  await setContextValue(ContextValues.topicSearchApplied, true);
   logger.debug("Searching topics");
   topicSearchSet.fire(searchString);
 }
 
 async function clearTopicSearch() {
   logger.debug("Clearing topic search");
-  FlinkStatementsViewProvider.getInstance().setSearch(null);
+  await setContextValue(ContextValues.topicSearchApplied, false);
   topicSearchSet.fire(null);
 }
 
