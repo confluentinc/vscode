@@ -1,8 +1,17 @@
-import { Disposable, TreeDataProvider, TreeItem, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  Disposable,
+  EventEmitter,
+  TreeDataProvider,
+  TreeItem,
+  workspace,
+  WorkspaceConfiguration,
+  Uri,
+} from "vscode";
 import { ContextValues } from "../context/values";
 import {
   currentFlinkStatementsResourceChanged,
   flinkStatementDeleted,
+  flinkStatementSearchSet,
   flinkStatementUpdated,
 } from "../emitters";
 import {
@@ -13,6 +22,7 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { FlinkStatementManager } from "../flinkSql/flinkStatementManager";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -43,6 +53,7 @@ export class FlinkStatementsViewProvider
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
 
   searchContextValue = ContextValues.flinkStatementsSearchApplied;
+  searchChangedEmitter: EventEmitter<string | null> = flinkStatementSearchSet;
 
   // Map of resource id string -> resource currently in the tree view.
   private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
@@ -185,7 +196,18 @@ export class FlinkStatementsViewProvider
   }
 
   getTreeItem(element: FlinkStatement): TreeItem {
-    return new FlinkStatementTreeItem(element);
+    let treeItem = new FlinkStatementTreeItem(element);
+    if (this.itemSearchString) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = Uri.parse(
+          `${SEARCH_DECORATION_URI_SCHEME}:/${element.searchableText()}`,
+        );
+      }
+      // no need to handle collapsible state adjustments here
+    }
+    return treeItem;
   }
 
   get computePool(): CCloudFlinkComputePool | null {
