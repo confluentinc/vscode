@@ -154,10 +154,20 @@ export class TopicViewProvider
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded, and we can use this to load the top-level items
       if (this.kafkaCluster) {
-        children = await getTopicsForCluster(this.kafkaCluster, this.forceDeepRefresh);
-        // clear any prior request to deep refresh, allow any subsequent repaint
-        // to draw from workspace storage cache.
-        this.forceDeepRefresh = false;
+        const loader = ResourceLoader.getInstance(this.kafkaCluster.connectionId);
+        try {
+          children = await loader.getTopicsForCluster(this.kafkaCluster, this.forceDeepRefresh);
+          // clear any prior request to deep refresh, allow any subsequent repaint
+          // to draw from workspace storage cache.
+          this.forceDeepRefresh = false;
+        } catch (err) {
+          logger.error("Error fetching topics for cluster", this.kafkaCluster, err);
+          if (err instanceof TopicFetchError) {
+            vscode.window.showErrorMessage(
+              `Failed to list topics for cluster "${this.kafkaCluster.name}": ${err.message}`,
+            );
+          }
+        }
       }
     }
 
@@ -374,27 +384,4 @@ export class TopicViewProvider
 /** Get the singleton instance of the {@link TopicViewProvider} */
 export function getTopicViewProvider() {
   return TopicViewProvider.getInstance();
-}
-
-/**
- * Determine the topics offered from this cluster. If topics are already known
- * from a prior sidecar fetch, return those, otherwise deep fetch from sidecar.
- */
-export async function getTopicsForCluster(
-  cluster: KafkaCluster,
-  forceRefresh: boolean = false,
-): Promise<KafkaTopic[]> {
-  const loader = ResourceLoader.getInstance(cluster.connectionId);
-
-  try {
-    return loader.getTopicsForCluster(cluster, forceRefresh);
-  } catch (err) {
-    logger.error("Error fetching topics for cluster", cluster, err);
-    if (err instanceof TopicFetchError) {
-      vscode.window.showErrorMessage(
-        `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
-      );
-    }
-    return [];
-  }
 }
