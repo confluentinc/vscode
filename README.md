@@ -94,7 +94,7 @@ errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup
   - macOS: macOS 13 and above (built on macOS 13.5)
   - Running the extension on older operating systems may result in the sidecar process failing to
     start, which prevents the extension from establishing a successful handshake.
-- We do not yet support private networking when working with Flink resources.
+- We do not yet support private networking when working with Confluent Cloud for Apache Flink®.
 
 ## Support
 
