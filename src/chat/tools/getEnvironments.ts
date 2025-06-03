@@ -110,7 +110,6 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       },
       token,
     );
-
     stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
       return new TextOnlyToolResultPart(toolCall.callId, []);
@@ -118,7 +117,6 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
 
     const resultParts: LanguageModelTextPart[] = [];
     const contents = result.content as LanguageModelTextPart[];
-
     if (contents.length === 1 && contents[0].value === NO_RESULTS) {
       const resultsHeader = new LanguageModelTextPart("No environments found.");
       resultParts.push(resultsHeader);
