@@ -1,8 +1,16 @@
-import { Disposable, TreeDataProvider, TreeItem, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  Disposable,
+  EventEmitter,
+  TreeDataProvider,
+  TreeItem,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { ContextValues } from "../context/values";
 import {
   currentFlinkStatementsResourceChanged,
   flinkStatementDeleted,
+  flinkStatementSearchSet,
   flinkStatementUpdated,
 } from "../emitters";
 import {
@@ -43,6 +51,7 @@ export class FlinkStatementsViewProvider
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
 
   searchContextValue = ContextValues.flinkStatementsSearchApplied;
+  searchChangedEmitter: EventEmitter<string | null> = flinkStatementSearchSet;
 
   // Map of resource id string -> resource currently in the tree view.
   private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
