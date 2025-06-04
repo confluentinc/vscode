@@ -29,8 +29,8 @@ import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
-import { registerSupportCommands } from "./commands/support";
 import { registerSearchCommands } from "./commands/search";
+import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
@@ -44,6 +44,7 @@ import { DocumentMetadataManager } from "./documentMetadataManager";
 import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
+import { ccloudConnected } from "./emitters";
 import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
@@ -64,8 +65,9 @@ import {
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
-import { constructResourceLoaderSingletons } from "./loaders";
+import { CCloudResourceLoader, constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
+import { showInfoNotificationWithButtons } from "./notifications";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -317,6 +319,9 @@ async function _activateExtension(
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
 
+  // Register Flink preview notice popup when logging into CCloud.
+  context.subscriptions.push(registerFlinkPreviewNotice());
+
   // XXX: used for testing; do not remove
   return context;
 }
@@ -556,4 +561,43 @@ export function deactivate() {
     logStream.end();
   }
   console.info("Extension deactivated");
+}
+
+/**
+ * Register {@link showFlinkPreviewNotice} on ccloudConnected event.
+ **/
+export function registerFlinkPreviewNotice(): vscode.Disposable {
+  return ccloudConnected.event(showFlinkPreviewNotice);
+}
+
+let shownFlinkNotice = false;
+/**
+ * When {@link ccloudConnected} fires:
+ *  1. if the user is connected to Confluent Cloud,
+ *  2. ... and we haven't shown the notice already,
+ *  3. ... and if the user has Flink Compute Pools available,
+ * then show the user a notice about Flink being preview featureset.
+ */
+export async function showFlinkPreviewNotice(ccloudConnected: boolean): Promise<void> {
+  if (ccloudConnected && !shownFlinkNotice) {
+    const ccloudLoader = CCloudResourceLoader.getInstance();
+    if (!(await ccloudLoader.hasFlinkComputePools())) {
+      // no (current) Flink capability, so no need to show the notice.
+      return;
+    }
+
+    shownFlinkNotice = true;
+    // show a notice about Flink being in preview mode
+    void showInfoNotificationWithButtons(
+      "Confluent Cloud Flink features in the extension are still being actively developed, but are now available to all users! 🎉 Please provide feedback as we continue to iterate.",
+      {
+        "Open Flink SettingsGot !": async () => {
+          logger.info("Opening Flink settings form");
+        },
+        "Change Notification Settings": async () => {
+          logger.info("Change Notification Settings");
+        },
+      },
+    );
+  }
 }
