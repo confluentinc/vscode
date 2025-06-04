@@ -878,8 +878,8 @@ export async function apigen() {
     );
 
     // While here, also run `npx gql-tada generate output` to generate GraphQL types.
-    // (after having `cp ../ide-sidecar/src/generated/resources/schema.graphql src/graphql/sidecar.graphql`)
-    const gqlTadaResult = spawnSync("npx", ["gql.tada", "generate-output"], {
+    // (after dev has `cp ../ide-sidecar/src/generated/resources/schema.graphql src/graphql/sidecar.graphql`)
+    const gqlTadaResult = spawnSync("npx", ["gql-tada", "generate", "output"], {
       stdio: "inherit",
       shell: IS_WINDOWS,
     });
