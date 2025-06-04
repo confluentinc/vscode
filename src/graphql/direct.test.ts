@@ -122,21 +122,6 @@ describe("graphql/direct.ts getDirectResources()", () => {
     assert.strictEqual(schemaRegistry.connectionType, ConnectionType.Direct);
   });
 
-  it("Should return undefined when graphql query throws specific error implying tried to return null", async () => {
-    // As from https://github.com/confluentinc/vscode/issues/1980
-    // Revise this test when updating sidecar to a version fixing https://github.com/confluentinc/ide-sidecar/issues/447
-    const error = new Error(
-      "GraphQL query failed: The field at path '/directConnectionById' was declared as a non null type, but the code involved in retrieving data has wrongly returned a null value.",
-    );
-
-    sidecarStub.query.rejects(error);
-
-    const result: DirectEnvironment | undefined =
-      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
-    assert.strictEqual(result, undefined);
-    sinon.assert.calledOnce(sidecarStub.query);
-  });
-
   it("should return a DirectEnvironment with only a Kafka cluster when a Schema Registry is not returned", async () => {
     sidecarStub.query.resolves({
       directConnectionById: {
