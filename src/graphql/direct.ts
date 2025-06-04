@@ -1,13 +1,18 @@
 import { graphql } from "gql.tada";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectedState, ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { logError } from "../errors";
+import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
+import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import { ConnectionEventBody } from "../ws/messageTypes";
+
+const logger = new Logger("graphql.direct");
 
 export async function getDirectResources(
   connectionId: ConnectionId,
@@ -30,6 +35,30 @@ export async function getDirectResources(
       }
     }
   `);
+
+  // make sure the connection is in a stable (SUCCESS/FAILED) state
+  const watcher = ConnectionStateWatcher.getInstance();
+  const latestStatus: ConnectionStatus | undefined =
+    watcher.getLatestConnectionEvent(connectionId)?.connection.status;
+  if (
+    latestStatus?.kafka_cluster?.state === ConnectedState.Attempting ||
+    latestStatus?.schema_registry?.state === ConnectedState.Attempting
+  ) {
+    logger.debug("waiting for direct connection to be in a stable state before submitting query", {
+      connectionId,
+      kafkaClusterState: latestStatus?.kafka_cluster?.state,
+      schemaRegistryState: latestStatus?.schema_registry?.state,
+    });
+    // block actually making the GQL query if the connected state is still ATTEMPTING
+    await watcher.waitForConnectionUpdate(connectionId, (event: ConnectionEventBody) => {
+      const status = event.connection.status;
+      return (
+        status.kafka_cluster?.state !== ConnectedState.Attempting &&
+        status.schema_registry?.state !== ConnectedState.Attempting
+      );
+      // use default 15sec timeout
+    });
+  }
 
   const sidecar = await getSidecar();
   let response: { directConnectionById: any | null };
@@ -94,6 +123,12 @@ export async function getDirectResources(
   const directSpec: CustomConnectionSpec | null =
     await getResourceManager().getDirectConnection(connectionId);
 
+  logger.debug("returning direct environment", {
+    connectionId,
+    connectionName: connection.name,
+    hasKafkaCluster: !!kafkaCluster,
+    hasSchemaRegistry: !!schemaRegistry,
+  });
   const env = new DirectEnvironment({
     id: connection.id as EnvironmentId,
     name: connection.name,
