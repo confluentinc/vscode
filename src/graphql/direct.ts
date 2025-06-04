@@ -69,8 +69,8 @@ export async function getDirectResources(
           status.kafka_cluster?.state !== ConnectedState.Attempting &&
           status.schema_registry?.state !== ConnectedState.Attempting
         );
-        // use default 15sec timeout
       },
+      // use default 15sec timeout
     );
     if (!connection) {
       logger.warn("timed out waiting for direct connection to stabilize before submitting query", {
