@@ -25,7 +25,7 @@ export async function getDirectResources(
 ): Promise<DirectEnvironment | undefined> {
   const query = graphql(`
     query directConnection($id: String!) {
-      directConnectionById(connectionID: $id) {
+      directConnectionById(id: $id) {
         id
         name
         type
@@ -105,17 +105,6 @@ export async function getDirectResources(
   try {
     response = await sidecar.query(query, connectionId, { id: connectionId });
   } catch (error) {
-    if (error instanceof Error && /non null type/.test(error.message)) {
-      // connection was not found, query returned null against the schema
-      // Treat as if the connection does not exist. When sidecar GQL spec is updated to
-      // describe ability to return null instead of throwing, this will no longer be needed,
-      // https://github.com/confluentinc/ide-sidecar/issues/447
-
-      // When a connection is deleted, the chain of events firing somewhat unfortunately
-      // loses some context and we end up re-querying the connection by ID.
-      return;
-    }
-
     logError(error, "direct connection resources", {
       extra: { functionName: "getDirectResources" },
     });
@@ -130,6 +119,10 @@ export async function getDirectResources(
 
   const connection = response.directConnectionById;
   if (!connection) {
+    // Sidecar graphql query returned no connection here, i.e. it does not exist.
+    // This codepath is expected if/when we just deleted it and are reacting to the DELETED
+    // websocket event (and have unfortunately eroded away that the websocket event already told
+    // is it was gone, so we should not have done the GraphQL query in the first place.)
     return;
   }
 
