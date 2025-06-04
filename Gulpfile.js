@@ -876,6 +876,7 @@ export async function apigen() {
         shell: IS_WINDOWS,
       },
     );
+
     // apply prettier formatting to generated code
     await pipeline(
       src(join(path, "**", "*.ts")),
@@ -885,6 +886,14 @@ export async function apigen() {
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`Failed to generate client for ${spec}`);
   }
+
+  // While here, also run `npx gql-tada generate output` to generate GraphQL types.
+  // (after dev has `cp ../ide-sidecar/src/generated/resources/schema.graphql src/graphql/sidecar.graphql`)
+  const gqlTadaResult = spawnSync("npx", ["gql-tada", "generate", "output"], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
+  if (gqlTadaResult.error) throw gqlTadaResult.error;
 }
 
 format.description = "Enforce Prettier formatting for all TS/JS/MD/HTML/YAML files.";
