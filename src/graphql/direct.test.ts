@@ -186,7 +186,7 @@ describe("graphql/direct.ts getDirectResources()", () => {
     sinon.assert.notCalled(stubbedResourceManager.getDirectConnection);
   });
 
-  it("should return undefined when directConnectionById returns null", async () => {
+  it("should return undefined when graphql query's response's directConnectionById is null", async () => {
     // bogus connection ID? we shouldn't typically see this
     sidecarStub.query.resolves({
       directConnectionById: null,
