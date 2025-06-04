@@ -12,8 +12,6 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
-import { getEnvironments } from "../graphql/environments";
-import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -144,8 +142,9 @@ export class FlinkLanguageClientManager implements Disposable {
     }
     try {
       // Load available compute pools to verify the configured pool exists
-      // TOOD this can be done with ccloud resource loader?
-      const environments = await getEnvironments();
+      // Find the environment containing this compute pool
+      const loader = CCloudResourceLoader.getInstance();
+      const environments: CCloudEnvironment[] = await loader.getEnvironments();
       if (!environments || environments.length === 0) {
         logger.debug("No CCloud environments found");
         return false;
@@ -185,17 +184,16 @@ export class FlinkLanguageClientManager implements Disposable {
     provider: string;
   } | null> {
     try {
+      const loader = CCloudResourceLoader.getInstance();
       // Get the current org
-      const currentOrg = await getCurrentOrganization();
+      const currentOrg = await loader.getOrganization();
       const organizationId: string | undefined = currentOrg?.id;
       if (!organizationId) {
         return null;
       }
 
       // Find the environment containing this compute pool
-      const environments: CCloudEnvironment[] =
-        await CCloudResourceLoader.getInstance().getEnvironments();
-
+      const environments: CCloudEnvironment[] = await loader.getEnvironments();
       if (!environments || environments.length === 0) {
         return null;
       }
@@ -249,7 +247,8 @@ export class FlinkLanguageClientManager implements Disposable {
       logger.debug("User is not authenticated with CCloud, not initializing language client");
       return;
     }
-    // TODO potential for improvement here: this is called from extensionSettings listener so uri may not be set, but we need it to start the client
+    // TODO remove when Preview Flag is gone.
+    // See extension settings listener: uri may not be set, but we need it to start the client
     if (!uri) {
       logger.debug("No URI provided, cannot start language client");
       return;
@@ -278,7 +277,7 @@ export class FlinkLanguageClientManager implements Disposable {
       // If we already have a client, it's alive, the compute pool matches, so we're good
       return;
     } else {
-      logger.debug("Stopping client and reinitializing", {
+      logger.debug("Cleaning up and reinitializing", {
         clientConnected: this.isLanguageClientConnected(),
         lastWebSocketUrl: this.lastWebSocketUrl,
         websocketUrlMatch: url === this.lastWebSocketUrl,
