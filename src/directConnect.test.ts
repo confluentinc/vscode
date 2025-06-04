@@ -553,8 +553,10 @@ describe("directConnect.ts", () => {
 
       // Assert: Verify the form was disposed
       sinon.assert.calledOnce(mockDispose);
-      // w/o any annoying message.
-      sinon.assert.notCalled(mockShowInformationMessage);
+      sinon.assert.calledOnceWithExactly(
+        mockShowInformationMessage,
+        `Connection "${testConnection.name}" is disconnected.`,
+      );
     });
 
     it("should not close the form when connection still exists", async () => {
