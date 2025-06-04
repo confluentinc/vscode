@@ -9,6 +9,7 @@ import {
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { getEnvironments } from "../graphql/environments";
@@ -74,8 +75,13 @@ export class FlinkLanguageClientManager implements Disposable {
         if (this.lastDocUri === uri) {
           this.notifyConfigChanged();
         } else if (uri && uri.scheme === "file") {
-          // TODO we should really check if this file is relevant to us somehow
-          await this.maybeStartLanguageClient(uri);
+          const doc = await workspace.openTextDocument(uri);
+          if (doc.languageId === "flinksql") {
+            logger.debug("Flink SQL file opened, initializing language client");
+            await this.maybeStartLanguageClient(uri);
+          } else {
+            logger.debug("Non-Flink SQL file opened, not initializing language client");
+          }
         }
       }),
     );
@@ -87,7 +93,11 @@ export class FlinkLanguageClientManager implements Disposable {
           languageId: editor?.document.languageId,
           uri: editor?.document.uri.toString(),
         });
-        if (editor && editor.document.languageId === "flinksql") {
+        if (
+          editor &&
+          editor.document.languageId === "flinksql" &&
+          editor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME // ignore readonly statement files
+        ) {
           logger.debug("Active editor changed to Flink SQL file, initializing language client");
           await this.maybeStartLanguageClient(editor.document.uri);
         }
