@@ -982,7 +982,7 @@
         },
         {
           "id": "confluent-flink-statements",
-          "name": "Flink Statements",
+          "name": "Flink Statements (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)"
         },
