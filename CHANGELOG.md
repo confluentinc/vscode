@@ -22,7 +22,8 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - The `confluent.preview.enableFlink` setting was removed and its functionality is now enabled by
-  default, allowing users to access Flink features without needing to manually opt in.
+  default, allowing users to access Flink features without needing to manually opt in. It is
+  still considered to be incomplete and in preview, and the statements view is declared as such.
 - Less frequent/higher timeout connection checking done by sidecar, aiming to make direct connection
   use over less-than-pristeen network connections more reliable.
 
