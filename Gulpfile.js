@@ -1021,7 +1021,7 @@ export function install(done) {
   return done(result.status);
 }
 
-export async function downloadSidecar() {
+export function downloadSidecar() {
   let result;
   if (IS_WINDOWS) {
     result = spawnSync(
