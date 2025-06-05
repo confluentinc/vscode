@@ -7,7 +7,7 @@ import { showInfoNotificationWithButtons } from "../../notifications";
 import { canShowNewOrUpdatedExtensionNotifications } from "./utils";
 
 export const FLINK_PREVIEW_MESSAGE =
-  "Confluent Cloud Flink features in the extension are still being actively developed, but are now available to all users! 🎉 Please provide feedback as we continue to iterate.";
+  "Confluent Cloud for Apache Flink® features in the extension are still being actively developed, but are now available to all users! 🎉 Please provide feedback as we continue to iterate.";
 
 /** Show a notification about the new Flink features in the extension. */
 export function showFlinkPreviewNotification() {
