@@ -31,6 +31,11 @@ export enum WorkspaceStorageKeys {
   URI_METADATA = "uriMetadata",
 }
 
+export enum GlobalStorageKeys {
+  /** The extension version that most recently activated. */
+  LAST_ACTIVATED_EXTENSION_VERSION = "lastActivatedExtensionVersion",
+}
+
 /** Keys for use within UriMetadata records */
 export enum UriMetadataKeys {
   FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",
