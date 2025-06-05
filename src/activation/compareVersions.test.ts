@@ -19,7 +19,7 @@ describe("activation/compareVersions.ts", () => {
     stubbedGlobalState = getStubbedGlobalState(sandbox);
 
     handleExtensionVersionUpdateStub = sandbox.spy(updates, "handleExtensionVersionUpdate");
-    // use default EXTENSION_VERSION from constants for most tests
+    // use current/default EXTENSION_VERSION from constants for most tests
     extensionVersionStub = sandbox
       .stub(constants, "EXTENSION_VERSION")
       .value(constants.EXTENSION_VERSION);
@@ -52,7 +52,7 @@ describe("activation/compareVersions.ts", () => {
   });
 
   it("handleNewOrUpdatedExtensionInstallation() should handle version upgrades", async () => {
-    // downgrade from 1.4.0 to 1.5.0
+    // upgrade from 1.4.0 to 1.5.0
     stubbedGlobalState.get
       .withArgs(GlobalStorageKeys.LAST_ACTIVATED_EXTENSION_VERSION)
       .resolves("1.4.0");
