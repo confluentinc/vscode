@@ -18,7 +18,7 @@ export async function handleNewOrUpdatedExtensionInstallation() {
     currentVersion,
   });
 
-  // TODO: we may want to specifically check if the previous version is undefined if we only want
+  // we may want to specifically check if the previous version is undefined here if we only want
   // some actions to happen on a new installation (versus a version update)
   if (previousVersion !== currentVersion) {
     await handleExtensionVersionUpdate();
