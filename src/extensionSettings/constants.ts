@@ -97,6 +97,7 @@ export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.telemetry.sendToolCallDat
  * during extension activation.
  */
 export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = prefix + "showNewVersionNotifications";
+export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS_DEFAULT = true;
 
 // --- EXPERIMENTAL / PREVIEW SETTINGS ---
 
