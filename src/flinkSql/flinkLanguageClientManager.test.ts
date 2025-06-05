@@ -1,10 +1,13 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import {
+  TEST_CCLOUD_FLINK_COMPUTE_POOL,
+  TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+} from "../../tests/unit/testResources/flinkComputePool";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
-import * as environmentsModule from "../graphql/environments";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -17,7 +20,6 @@ describe("FlinkLanguageClientManager", () => {
   let hasCCloudAuthSessionStub: sinon.SinonStub;
   let flinkManager: FlinkLanguageClientManager;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-  let getEnvironmentsStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -29,14 +31,15 @@ describe("FlinkLanguageClientManager", () => {
     configStub.returns(configMock);
     hasCCloudAuthSessionStub = sandbox.stub(ccloud, "hasCCloudAuthSession");
     hasCCloudAuthSessionStub.returns(false);
+    ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
 
-    ccloudLoaderStub = sandbox.createStubInstance(CCloudResourceLoader);
-    sandbox.stub(CCloudResourceLoader, "getInstance").returns(ccloudLoaderStub);
-
-    getEnvironmentsStub = sandbox.stub(environmentsModule, "getEnvironments");
-
+    const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+    const envWithPool: CCloudEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      flinkComputePools: [pool],
+    });
+    ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
     flinkManager = FlinkLanguageClientManager.getInstance();
-    sandbox.stub(flinkManager, "checkFlinkResourcesAvailability" as any).resolves();
   });
 
   afterEach(() => {
@@ -66,14 +69,7 @@ describe("FlinkLanguageClientManager", () => {
       configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("invalid-pool-id");
       configStub.returns(configMock);
 
-      (flinkManager as any).checkFlinkResourcesAvailability.resolves(false);
-
       const result = await flinkManager.validateFlinkSettings("invalid-pool-id");
-
-      sinon.assert.calledOnceWithExactly(
-        (flinkManager as any).checkFlinkResourcesAvailability,
-        "invalid-pool-id",
-      );
       assert.strictEqual(result, false);
     });
 
@@ -82,16 +78,11 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("valid-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       configStub.returns(configMock);
-      (flinkManager as any).checkFlinkResourcesAvailability.resolves(true);
 
-      const result = await flinkManager.validateFlinkSettings("valid-pool-id");
+      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
 
-      sinon.assert.calledOnceWithExactly(
-        (flinkManager as any).checkFlinkResourcesAvailability,
-        "valid-pool-id",
-      );
       assert.strictEqual(result, true);
     });
 
@@ -100,74 +91,11 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("test-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       configStub.returns(configMock);
-      (flinkManager as any).checkFlinkResourcesAvailability.resolves(true);
 
-      const result = await flinkManager.validateFlinkSettings("test-pool-id");
-
-      sinon.assert.calledOnceWithExactly(
-        (flinkManager as any).checkFlinkResourcesAvailability,
-        "test-pool-id",
-      );
+      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       assert.strictEqual(result, true);
-    });
-  });
-
-  describe("checkFlinkResourcesAvailability", () => {
-    beforeEach(() => {
-      // Restore the stub to test the actual implementation
-      (flinkManager as any).checkFlinkResourcesAvailability.restore();
-
-      // Create stub for lookupComputePoolInfo
-      sandbox.stub(flinkManager as any, "lookupComputePoolInfo").resolves({
-        organizationId: "test-org",
-        environmentId: "test-env",
-        region: "us-west-1",
-        provider: "aws",
-      });
-    });
-
-    it("should return false if no environments found", async () => {
-      getEnvironmentsStub.resolves([]);
-
-      const result = await (flinkManager as any).checkFlinkResourcesAvailability("test-pool-id");
-
-      sinon.assert.calledOnce(getEnvironmentsStub);
-      assert.strictEqual(result, false);
-    });
-
-    it("should return true if compute pool is found in environments", async () => {
-      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      const envWithPool: CCloudEnvironment = new CCloudEnvironment({
-        ...TEST_CCLOUD_ENVIRONMENT,
-        flinkComputePools: [pool],
-      });
-      getEnvironmentsStub.resolves([envWithPool]);
-      const result = await (flinkManager as any).checkFlinkResourcesAvailability(
-        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-      );
-
-      sinon.assert.calledOnce(getEnvironmentsStub);
-      assert.strictEqual(result, true);
-    });
-
-    it("should return false if compute pool is not found in any environment", async () => {
-      getEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
-
-      const result = await (flinkManager as any).checkFlinkResourcesAvailability("test-pool-id");
-
-      sinon.assert.calledOnce(getEnvironmentsStub);
-      assert.strictEqual(result, false);
-    });
-
-    it("should return false if error occurs during check", async () => {
-      getEnvironmentsStub.rejects(new Error("Network error"));
-
-      const result = await (flinkManager as any).checkFlinkResourcesAvailability("test-pool-id");
-
-      sinon.assert.calledOnce(getEnvironmentsStub);
-      assert.strictEqual(result, false);
     });
   });
 });
