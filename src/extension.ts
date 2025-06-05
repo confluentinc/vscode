@@ -7,6 +7,7 @@ if (process.env.SENTRY_DSN) {
   initSentry();
 }
 
+import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
@@ -314,6 +315,8 @@ async function _activateExtension(
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
+
+  await handleNewOrUpdatedExtensionInstallation();
 
   // XXX: used for testing; do not remove
   return context;
