@@ -91,6 +91,13 @@ export const CHAT_SEND_ERROR_DATA = prefix + "chat.telemetry.sendErrorData";
  */
 export const CHAT_SEND_TOOL_CALL_DATA = prefix + "chat.telemetry.sendToolCallData";
 
+/**
+ * Whether or not to show notifications when the extension is first installed or updated to a new
+ * version. Disabling this will prevent welcome messages and update notifications from appearing
+ * during extension activation.
+ */
+export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = prefix + "showNewVersionNotifications";
+
 // --- EXPERIMENTAL / PREVIEW SETTINGS ---
 
 /** Whether or not to enable the Confluent Cloud language client+server integration for Flink SQL documents. */
