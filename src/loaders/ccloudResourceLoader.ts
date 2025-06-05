@@ -193,7 +193,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     return await getResourceManager().getCCloudEnvironments();
   }
 
-  /** Are there any Flink compute pools at all, implying the user may want to do Flink operations? */
+  /** Are there any Flink compute pools at all? */
   public async hasFlinkComputePools(): Promise<boolean> {
     await this.ensureCoarseResourcesLoaded();
     const environments = await getResourceManager().getCCloudEnvironments();
