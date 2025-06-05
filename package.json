@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.4.0-46",
+  "version": "1.4.0-54",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -721,6 +721,17 @@
         "command": "confluent.connections.setKrb5ConfigPath",
         "title": "Set Kerberos krb5.conf Path",
         "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.flink.statements.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Flink Statements View"
+      },
+      {
+        "command": "confluent.flink.statements.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Flink Statements View"
       }
     ],
     "configuration": [
@@ -793,6 +804,14 @@
       {
         "title": "Flink SQL Defaults",
         "properties": {
+          "confluent.flink.enableConfluentCloudLanguageServer": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
+            "tags": [
+              "preview"
+            ]
+          },
           "confluent.flink.computePoolId": {
             "type": "string",
             "default": "",
@@ -925,6 +944,12 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == confluent-schemas"
+      },
+      {
+        "command": "confluent.flink.statements.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-flink-statements"
       }
     ],
     "viewsContainers": {
@@ -941,37 +966,32 @@
         {
           "id": "confluent-resources",
           "name": "Resources",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Resources"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-topics",
           "name": "Topics",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Topics"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-schemas",
           "name": "Schemas",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Schemas"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-flink-statements",
           "name": "Flink Statements",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "contextualTitle": "Confluent: Flink Statements"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-flink-artifacts",
           "name": "Flink Artifacts",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "false",
-          "contextualTitle": "Confluent: Flink Artifacts"
+          "when": "false"
         },
         {
           "id": "confluent-support",
@@ -1044,7 +1064,12 @@
       {
         "view": "confluent-flink-statements",
         "contents": "No Flink statements found.",
-        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected"
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected && !confluent.flinkStatementsSearchApplied"
+      },
+      {
+        "view": "confluent-flink-statements",
+        "contents": "No Flink statements match search string. [Clear search](command:confluent.flink.statements.search.clear) or [try a new search](command:confluent.flink.statements.search).",
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected && confluent.flinkStatementsSearchApplied"
       },
       {
         "view": "confluent-flink-artifacts",
@@ -1223,6 +1248,10 @@
         {
           "command": "confluent.resources.scaffold",
           "when": "false"
+        },
+        {
+          "command": "confluent.flink.statements.search.clear",
+          "when": "confluent.flinkStatementsSearchApplied"
         }
       ],
       "editor/title": [
@@ -1289,12 +1318,12 @@
         },
         {
           "command": "confluent.schemas.search",
-          "when": "view == confluent-schemas && !confluent.schemaSearchApplied",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected && !confluent.schemaSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.schemas.search.clear",
-          "when": "view == confluent-schemas && confluent.schemaSearchApplied",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected && confluent.schemaSearchApplied",
           "group": "navigation@1"
         },
         {
@@ -1314,7 +1343,7 @@
         },
         {
           "command": "confluent.schemas.refresh",
-          "when": "view == confluent-schemas",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
           "group": "navigation@5"
         },
         {
@@ -1324,12 +1353,12 @@
         },
         {
           "command": "confluent.topics.search",
-          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected && !confluent.topicSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.topics.search.clear",
-          "when": "view == confluent-topics && confluent.topicSearchApplied",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected && confluent.topicSearchApplied",
           "group": "navigation@1"
         },
         {
@@ -1344,7 +1373,7 @@
         },
         {
           "command": "confluent.topics.refresh",
-          "when": "view == confluent-topics",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "navigation@4"
         },
         {
@@ -1363,24 +1392,34 @@
           "group": "2_copy@3"
         },
         {
+          "command": "confluent.flink.statements.search",
+          "when": "view == confluent-flink-statements && confluent.flinkStatementsPoolSelected && !confluent.flinkStatementsSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.statements.search.clear",
+          "when": "view == confluent-flink-statements && confluent.flinkStatementsPoolSelected && confluent.flinkStatementsSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.statements.refresh",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
-          "group": "navigation@4"
+          "group": "navigation@5"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
@@ -1744,7 +1783,7 @@
           {
             "id": "connect-confluent-cloud",
             "title": "Connect to Confluent Cloud",
-            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)",
+            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://www.confluent.io/get-started/?utm_source=vscode-ext)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"

@@ -16,17 +16,27 @@ All notable changes to this extension will be documented in this file.
     - `-U`: UpdateBefore operation (previous version of updated row)
     - `+U`: UpdateAfter operation (new version of updated row)
     - `-D`: Delete operation (row removed)
+- More helpful notification in the event of private network connectivity issues when attempting to
+  list Kafka topics.
 
 ### Changed
 
 - The `confluent.preview.enableFlink` setting was removed and its functionality is now enabled by
   default, allowing users to access Flink features without needing to manually opt in.
+- Less frequent/higher timeout connection checking done by sidecar, aiming to make direct connection
+  use over less-than-pristeen network connections more reliable.
 
 ### Fixed
 
 - Fixed an issue where the "File Issue" button would not work if the extension failed to activate
   properly. [#1823](https://github.com/confluentinc/vscode/issues/1823)
 - Improved sidecar startup diagnostics and presentation to the user in various cases.
+- Sidecar will now start to check newly created connections immediately upon creation or
+  modification. Previously erroneously waited until the next periodic check occurred.
+- Sidecar now properly handles SSL certificates encoded in PEM files.
+- Fixed a race condition where some "direct" connections would incorrectly show as "not connected"
+  after being created/updated and would require a manual refresh to show the correct state.
+  [[#1988](https://github.com/confluentinc/vscode/issues/1988)]
 
 ## 1.3.0
 

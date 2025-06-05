@@ -22,6 +22,13 @@ export enum UserEvent {
   FlinkStatementAction = "Flink Statement Action",
   FlinkStatementViewStatistics = "Flink Statement View Statistics",
   CopilotInteraction = "Copilot Interaction",
+  /**
+   * Used for basic settings changes like enabling/disabling a feature or changing enum/numeric
+   * values.
+   *
+   * This SHOULD NEVER be used for potentially sensitive string values like file paths, usernames, passwords, etc.
+   */
+  ExtensionSettingsChange = "Extension Settings Change",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */

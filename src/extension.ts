@@ -30,6 +30,7 @@ import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
+import { registerSearchCommands } from "./commands/search";
 import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
@@ -44,7 +45,11 @@ import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStateme
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
-import { ENABLE_CHAT_PARTICIPANT } from "./extensionSettings/constants";
+import {
+  ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
+} from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
 import { updatePreferences } from "./extensionSettings/sidecarSync";
 import {
@@ -232,6 +237,7 @@ async function _activateExtension(
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
+    ...registerSearchCommands(),
   ];
   logger.info("Commands registered");
 
@@ -243,12 +249,20 @@ async function _activateExtension(
     uriHandler,
     WebsocketManager.getInstance(),
     FlinkStatementManager.getInstance(),
-    initializeFlinkLanguageClientManager(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
     ...documentProviders,
   );
+
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
+  if (
+    config.get(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT)
+  ) {
+    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
+    context.subscriptions.push(flinkLanguageClientManager);
+  }
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);

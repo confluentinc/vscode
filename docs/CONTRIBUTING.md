@@ -443,6 +443,8 @@ root of the repository:
 npx gql-tada generate output
 ```
 
+(Or re-run `gulp apigen`.)
+
 See the
 [`gql.tada` documentation](https://gql-tada.0no.co/get-started/workflows#generating-the-output-file)
 for more details.

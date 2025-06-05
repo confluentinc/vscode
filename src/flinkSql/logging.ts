@@ -14,3 +14,12 @@ export function getFlinkSQLLanguageServerOutputChannel(): LogOutputChannel {
   }
   return languageServerOutputChannel;
 }
+
+/**
+ * Reset the Flink SQL language server output channel.
+ * This is done whenever `FlinkLanguageClientManager` is disposed to ensure a new output channel is
+ * created when the language client is restarted.
+ */
+export function clearFlinkSQLLanguageServerOutputChannel(): void {
+  languageServerOutputChannel = undefined;
+}

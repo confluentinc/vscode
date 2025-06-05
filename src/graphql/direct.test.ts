@@ -10,14 +10,17 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectedState, ConnectionType, Status } from "../clients/sidecar";
 import * as errorModule from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
 import { SidecarHandle } from "../sidecar";
+import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { CustomConnectionSpec, ResourceManager } from "../storage/resourceManager";
+import * as telemetry from "../telemetry/events";
+import { ConnectionEventAction, ConnectionEventBody } from "../ws/messageTypes";
 import { getDirectResources } from "./direct";
 
 /**
@@ -43,19 +46,55 @@ const fakeDirectConnectionByIdResult = {
   },
 };
 
+/** `CREATED` event body for a Connection with Kafka and Schema Registry statuses of `ATTEMPTING`. */
+const fakeAttemptingConnectionEvent: ConnectionEventBody = {
+  action: ConnectionEventAction.CREATED,
+  connection: {
+    ...TEST_DIRECT_CONNECTION,
+    status: {
+      kafka_cluster: { state: ConnectedState.Attempting },
+      schema_registry: { state: ConnectedState.Attempting },
+      authentication: { status: Status.NoToken },
+    },
+  },
+};
+
+/** `CONNECTED` event body for a Connection with Kafka and Schema Registry statuses of `SUCCESS`. */
+const fakeStableConnectionEvent: ConnectionEventBody = {
+  action: ConnectionEventAction.CONNECTED,
+  connection: {
+    ...TEST_DIRECT_CONNECTION,
+    status: {
+      kafka_cluster: { state: ConnectedState.Success },
+      schema_registry: { state: ConnectedState.Success },
+      authentication: { status: Status.NoToken },
+    },
+  },
+};
+
 describe("graphql/direct.ts getDirectResources()", () => {
   let sandbox: sinon.SinonSandbox;
 
   let sidecarStub: sinon.SinonStubbedInstance<SidecarHandle>;
   let logErrorStub: sinon.SinonStub;
+  let logUsageStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
+  let showWarningNotificationStub: sinon.SinonStub;
   let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+  let connectionStateWatcherStub: sinon.SinonStubbedInstance<ConnectionStateWatcher>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     // create the stub for the sidecar (which will automatically stub the .query method)
     sidecarStub = getSidecarStub(sandbox);
+
+    // stub the ConnectionStateWatcher for Connection-related websocket event handling
+    connectionStateWatcherStub = sandbox.createStubInstance(ConnectionStateWatcher);
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(fakeAttemptingConnectionEvent);
+    // simulate immediately resolving waitForConnectionUpdate and not timing out (returning null)
+    connectionStateWatcherStub.waitForConnectionUpdate.resolves(TEST_DIRECT_CONNECTION);
+    sandbox.stub(ConnectionStateWatcher, "getInstance").returns(connectionStateWatcherStub);
 
     // for stubbing the stored (test) direct connection spec
     stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
@@ -73,7 +112,11 @@ describe("graphql/direct.ts getDirectResources()", () => {
 
     // helper stubs
     logErrorStub = sandbox.stub(errorModule, "logError");
+    logUsageStub = sandbox.stub(telemetry, "logUsage");
     showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    showWarningNotificationStub = sandbox
+      .stub(notifications, "showWarningNotificationWithButtons")
+      .resolves();
   });
 
   afterEach(() => {
@@ -186,7 +229,7 @@ describe("graphql/direct.ts getDirectResources()", () => {
     sinon.assert.notCalled(stubbedResourceManager.getDirectConnection);
   });
 
-  it("should return undefined when directConnectionById returns null", async () => {
+  it("should return undefined when graphql query's response's directConnectionById is null", async () => {
     // bogus connection ID? we shouldn't typically see this
     sidecarStub.query.resolves({
       directConnectionById: null,
@@ -198,6 +241,8 @@ describe("graphql/direct.ts getDirectResources()", () => {
     assert.strictEqual(result, undefined);
     sinon.assert.calledOnce(sidecarStub.query);
     sinon.assert.notCalled(stubbedResourceManager.getDirectConnection);
+    sinon.assert.notCalled(logErrorStub);
+    sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   it("should pass connection spec and form info to the DirectEnvironment", async () => {
@@ -213,5 +258,178 @@ describe("graphql/direct.ts getDirectResources()", () => {
       result.formConnectionType,
       TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
     );
+  });
+
+  it("should call waitForConnectionUpdate when the Kafka cluster is in an ATTEMPTING state", async () => {
+    const kafkaAttemptingEvent: ConnectionEventBody = {
+      ...fakeAttemptingConnectionEvent,
+      connection: {
+        ...fakeAttemptingConnectionEvent.connection,
+        status: {
+          ...fakeAttemptingConnectionEvent.connection.status,
+          kafka_cluster: { state: ConnectedState.Attempting }, // not yet connected
+          schema_registry: { state: ConnectedState.Success },
+        },
+      },
+    };
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(kafkaAttemptingEvent);
+    // connectionStateWatcherStub.waitForConnectionUpdate resolves with a Connection by default
+    sidecarStub.query.resolves(fakeDirectConnectionByIdResult);
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.getLatestConnectionEvent);
+    sinon.assert.calledOnceWithExactly(
+      connectionStateWatcherStub.getLatestConnectionEvent,
+      TEST_DIRECT_CONNECTION_ID,
+    );
+    sinon.assert.calledOnce(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.calledOnce(sidecarStub.query);
+  });
+
+  it("should call waitForConnectionUpdate when the Schema Registry is in an ATTEMPTING state", async () => {
+    const schemaRegistryAttemptingEvent: ConnectionEventBody = {
+      ...fakeAttemptingConnectionEvent,
+      connection: {
+        ...fakeAttemptingConnectionEvent.connection,
+        status: {
+          ...fakeAttemptingConnectionEvent.connection.status,
+          kafka_cluster: { state: ConnectedState.Success },
+          schema_registry: { state: ConnectedState.Attempting }, // not yet connected
+        },
+      },
+    };
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(schemaRegistryAttemptingEvent);
+    // connectionStateWatcherStub.waitForConnectionUpdate resolves with a Connection by default
+    sidecarStub.query.resolves(fakeDirectConnectionByIdResult);
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.getLatestConnectionEvent);
+    sinon.assert.calledOnceWithExactly(
+      connectionStateWatcherStub.getLatestConnectionEvent,
+      TEST_DIRECT_CONNECTION_ID,
+    );
+    sinon.assert.calledOnce(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.calledOnce(sidecarStub.query);
+  });
+
+  it("should call waitForConnectionUpdate when the Kafka cluster and Schema Registry are in ATTEMPTING states", async () => {
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(fakeAttemptingConnectionEvent);
+    // connectionStateWatcherStub.waitForConnectionUpdate resolves with a Connection by default
+    sidecarStub.query.resolves(fakeDirectConnectionByIdResult);
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.getLatestConnectionEvent);
+    sinon.assert.calledOnce(connectionStateWatcherStub.waitForConnectionUpdate);
+  });
+
+  it("should skip calling waitForConnectionUpdate when the connection is already in stable state", async () => {
+    // reuse the stable event with CONNECTED and SUCCESS states
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(fakeStableConnectionEvent);
+    sidecarStub.query.resolves(fakeDirectConnectionByIdResult);
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.getLatestConnectionEvent);
+    // connection is already stable, no need to call waitForConnectionUpdate
+    sinon.assert.notCalled(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.calledOnce(sidecarStub.query);
+  });
+
+  it("should skip calling waitForConnectionUpdate when the connection is in a DISCONNECTED/FAILED state", async () => {
+    const failedEvent: ConnectionEventBody = {
+      ...fakeStableConnectionEvent,
+      action: ConnectionEventAction.DISCONNECTED,
+      connection: {
+        ...fakeStableConnectionEvent.connection,
+        status: {
+          kafka_cluster: { state: ConnectedState.Failed },
+          schema_registry: { state: ConnectedState.Failed },
+          authentication: { status: Status.NoToken },
+        },
+      },
+    };
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(failedEvent);
+    sidecarStub.query.resolves({
+      directConnectionById: {
+        ...fakeDirectConnectionByIdResult.directConnectionById,
+        kafkaCluster: null, // no Kafka cluster returned
+        schemaRegistry: null, // no Schema Registry returned
+      },
+    });
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.getLatestConnectionEvent);
+    // connection is already stable, no need to call waitForConnectionUpdate
+    sinon.assert.notCalled(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.calledOnce(sidecarStub.query);
+  });
+
+  it("should proceed immediately when no connection status is available", async () => {
+    // this shouldn't happen in practice, but we can test it
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(null);
+    // no idea what the GraphQL query would return in this scenario, but we'll assume the websocket
+    // side is the only part that's in a weird state and the GraphQL side is okay
+    sidecarStub.query.resolves(fakeDirectConnectionByIdResult);
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.getLatestConnectionEvent);
+    // no status to check, so no need to wait for connection update
+    sinon.assert.notCalled(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.calledOnce(sidecarStub.query);
+  });
+
+  it("should show a warning notification if the watcher times out waiting for the connection to stabilize", async () => {
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(fakeAttemptingConnectionEvent);
+    // simulate a timeout by having waitForConnectionUpdate return null
+    connectionStateWatcherStub.waitForConnectionUpdate.resolves(null);
+    sidecarStub.query.resolves({
+      directConnectionById: {
+        ...fakeDirectConnectionByIdResult.directConnectionById,
+        kafkaCluster: null, // no Kafka cluster returned
+        schemaRegistry: null, // no Schema Registry returned
+      },
+    });
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.calledOnce(showWarningNotificationStub);
+    sinon.assert.calledOnce(logUsageStub);
+    sinon.assert.calledOnce(sidecarStub.query);
+  });
+
+  it("should not show a warning notification when the watcher returns a Connection", async () => {
+    connectionStateWatcherStub.getLatestConnectionEvent.returns(fakeAttemptingConnectionEvent);
+    // no timeout, so the watcher returns a Connection
+    connectionStateWatcherStub.waitForConnectionUpdate.resolves(TEST_DIRECT_CONNECTION);
+    sidecarStub.query.resolves(fakeDirectConnectionByIdResult);
+
+    const result: DirectEnvironment | undefined =
+      await getDirectResources(TEST_DIRECT_CONNECTION_ID);
+
+    assert.ok(result);
+    sinon.assert.calledOnce(connectionStateWatcherStub.waitForConnectionUpdate);
+    sinon.assert.notCalled(showWarningNotificationStub);
+    sinon.assert.notCalled(logUsageStub);
+    sinon.assert.calledOnce(sidecarStub.query);
   });
 });
