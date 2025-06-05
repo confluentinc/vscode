@@ -36,7 +36,6 @@ describe("FlinkLanguageClientManager", () => {
     getEnvironmentsStub = sandbox.stub(environmentsModule, "getEnvironments");
 
     flinkManager = FlinkLanguageClientManager.getInstance();
-    sandbox.stub(flinkManager, "promptChooseDefaultComputePool" as any).resolves();
     sandbox.stub(flinkManager, "checkFlinkResourcesAvailability" as any).resolves();
   });
 
@@ -55,7 +54,7 @@ describe("FlinkLanguageClientManager", () => {
       configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("");
       configStub.returns(configMock);
 
-      const result = await flinkManager.validateFlinkSettings();
+      const result = await flinkManager.validateFlinkSettings(null);
       assert.strictEqual(result, false);
     });
 
@@ -69,7 +68,7 @@ describe("FlinkLanguageClientManager", () => {
 
       (flinkManager as any).checkFlinkResourcesAvailability.resolves(false);
 
-      const result = await flinkManager.validateFlinkSettings();
+      const result = await flinkManager.validateFlinkSettings("invalid-pool-id");
 
       sinon.assert.calledOnceWithExactly(
         (flinkManager as any).checkFlinkResourcesAvailability,
@@ -87,7 +86,7 @@ describe("FlinkLanguageClientManager", () => {
       configStub.returns(configMock);
       (flinkManager as any).checkFlinkResourcesAvailability.resolves(true);
 
-      const result = await flinkManager.validateFlinkSettings();
+      const result = await flinkManager.validateFlinkSettings("valid-pool-id");
 
       sinon.assert.calledOnceWithExactly(
         (flinkManager as any).checkFlinkResourcesAvailability,
@@ -105,7 +104,7 @@ describe("FlinkLanguageClientManager", () => {
       configStub.returns(configMock);
       (flinkManager as any).checkFlinkResourcesAvailability.resolves(true);
 
-      const result = await flinkManager.validateFlinkSettings();
+      const result = await flinkManager.validateFlinkSettings("test-pool-id");
 
       sinon.assert.calledOnceWithExactly(
         (flinkManager as any).checkFlinkResourcesAvailability,
