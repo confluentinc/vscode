@@ -7,7 +7,7 @@ if (process.env.SENTRY_DSN) {
   initSentry();
 }
 
-import { handleNewOrUpdatedExtensionInstallation } from "./activation/newInstallOrUpdate";
+import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
