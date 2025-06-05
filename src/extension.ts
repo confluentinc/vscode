@@ -7,6 +7,7 @@ if (process.env.SENTRY_DSN) {
   initSentry();
 }
 
+import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
@@ -29,8 +30,8 @@ import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
-import { registerSupportCommands } from "./commands/support";
 import { registerSearchCommands } from "./commands/search";
+import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
@@ -316,6 +317,8 @@ async function _activateExtension(
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
+
+  await handleNewOrUpdatedExtensionInstallation();
 
   // XXX: used for testing; do not remove
   return context;
