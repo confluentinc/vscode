@@ -36,7 +36,6 @@ describe("FlinkLanguageClientManager", () => {
     getEnvironmentsStub = sandbox.stub(environmentsModule, "getEnvironments");
 
     flinkManager = FlinkLanguageClientManager.getInstance();
-    sandbox.stub(flinkManager, "promptChooseDefaultComputePool" as any).resolves();
     sandbox.stub(flinkManager, "checkFlinkResourcesAvailability" as any).resolves();
   });
 
