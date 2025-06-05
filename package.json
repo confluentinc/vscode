@@ -443,6 +443,13 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.viewResults",
+        "icon": "$(confluent-view-messages)",
+        "title": "View Flink Statement Results",
+        "category": "Confluent: Flink Statements"
+      },
+
+      {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
         "category": "Confluent: Flink Statements"
@@ -600,12 +607,6 @@
         "icon": "$(confluent-view-messages)",
         "title": "View Messages",
         "category": "Confluent: Topic"
-      },
-      {
-        "command": "confluent.flinkStatementResults",
-        "icon": "$(confluent-view-messages)",
-        "title": "View Flink Statement Results",
-        "category": "Confluent: Flink Statements"
       },
       {
         "command": "confluent.topic.consume.duplicate",
@@ -1412,6 +1413,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "confluent.statements.viewResults",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "group": "inline@1"
+        },
+        {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@3"
@@ -1570,11 +1576,6 @@
         {
           "command": "confluent.topic.consume",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzREAD.*/",
-          "group": "inline@1"
-        },
-        {
-          "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
         },
         {
@@ -1881,7 +1882,7 @@
               "onCommand:confluent.statements.create",
               "onCommand:confluent.statements.refresh",
               "onCommand:confluent.statements.viewstatementsql",
-              "onCommand:confluent.flinkStatementResults"
+              "onCommand:confluent.statements.viewResults"
             ]
           },
           {
