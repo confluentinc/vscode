@@ -1,11 +1,8 @@
-import * as semver from "semver";
-import { commands, workspace, WorkspaceConfiguration } from "vscode";
 import { EXTENSION_VERSION } from "../constants";
-import { SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS } from "../extensionSettings/constants";
 import { Logger } from "../logging";
-import { showInfoNotificationWithButtons } from "../notifications";
 import { GlobalStorageKeys } from "../storage/constants";
 import { getGlobalState } from "../storage/utils";
+import { showFlinkPreviewNotification } from "./versions/v1_4_0";
 
 const logger = new Logger("activation.newInstallOrUpdate");
 
@@ -25,7 +22,7 @@ export async function handleNewOrUpdatedExtensionInstallation() {
   if (previousVersion === undefined) {
     await handleNewExtensionInstallation();
   } else if (previousVersion !== currentVersion) {
-    await handleUpdatedExtensionInstallation(previousVersion, currentVersion);
+    await handleUpdatedExtensionInstallation();
   } else {
     logger.debug("extension version has not changed, no action needed");
   }
@@ -43,7 +40,10 @@ export async function handleNewOrUpdatedExtensionInstallation() {
  */
 export async function handleNewExtensionInstallation() {
   logger.debug("handling new extension installation");
-  showFlinkPreviewNotification();
+
+  if (EXTENSION_VERSION.startsWith("1.4.0")) {
+    showFlinkPreviewNotification();
+  }
 }
 
 /**
@@ -51,55 +51,10 @@ export async function handleNewExtensionInstallation() {
  * This function is called when the extension is updated to a different version. (Usually a newer
  * version, but could be a downgrade to the time that this function was written.)
  */
-export async function handleUpdatedExtensionInstallation(
-  previousVersion: string,
-  currentVersion: string,
-) {
+export async function handleUpdatedExtensionInstallation() {
   logger.debug("handling updated extension installation");
-  if (semver.lt(previousVersion, currentVersion)) {
-    logger.debug("handling extension version upgrade", {
-      previousVersion,
-      currentVersion,
-    });
+
+  if (EXTENSION_VERSION.startsWith("1.4.0")) {
     showFlinkPreviewNotification();
-  } else if (semver.gt(previousVersion, currentVersion)) {
-    logger.debug("handling extension version downgrade", {
-      previousVersion,
-      currentVersion,
-    });
-  } else {
-    logger.debug("other extension version change", {
-      previousVersion,
-      currentVersion,
-    });
-  }
-}
-
-/** Check if the user has enabled notifications for new or updated extension activations. */
-export function canShowNewOrUpdatedExtensionNotifications(): boolean {
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  return config.get(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS, true) === true;
-}
-
-export function showFlinkPreviewNotification() {
-  // 1.4.0: show a notice about Flink being in preview mode
-  if (canShowNewOrUpdatedExtensionNotifications()) {
-    void showInfoNotificationWithButtons(
-      "Confluent Cloud Flink features in the extension are still being actively developed, but are now available to all users! 🎉 Please provide feedback as we continue to iterate.",
-      {
-        "Open Flink Settings": async () => {
-          commands.executeCommand(
-            "workbench.action.openSettings",
-            "@ext:confluentinc.vscode-confluent flink",
-          );
-        },
-        "Change Notification Settings": async () => {
-          commands.executeCommand(
-            "workbench.action.openSettings",
-            `@id:${SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS}`,
-          );
-        },
-      },
-    );
   }
 }
