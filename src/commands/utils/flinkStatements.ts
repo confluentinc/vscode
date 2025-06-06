@@ -101,8 +101,8 @@ export async function determineFlinkStatementName(): Promise<string> {
     .toLocaleLowerCase()
     // Strip any non-alphanumeric characters, except for hyphens.
     .replace(/[^a-z0-9-]/g, "")
-    // Strip leading numeric characters.
-    .replace(/^[0-9]+/, "");
+    // Strip leading numeric characters and hyphens.
+    .replace(/^[0-9-]+/, "");
 
   // TODO: Show the user the proposed name and let them edit it.
 
