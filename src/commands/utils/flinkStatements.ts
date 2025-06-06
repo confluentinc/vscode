@@ -100,7 +100,7 @@ export async function determineFlinkStatementName(): Promise<string> {
     // Can only be lowercase; probably to simplify the uniqueness check on the backend.
     .toLocaleLowerCase()
     // Strip any non-alphanumeric characters, except for hyphens.
-    .replace(/[^a-zA-Z0-9-]/g, "")
+    .replace(/[^a-z0-9-]/g, "")
     // Strip leading numeric characters.
     .replace(/^[0-9]+/, "");
 
