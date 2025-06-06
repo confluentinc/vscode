@@ -242,4 +242,42 @@ describe("commands/utils/flinkStatements.ts", function () {
       assert.strictEqual(findOrCreateStub.calledOnce, true, "findOrCreate should be called once");
     });
   });
+
+  it("Should remove all non-alphanumeric characters (except for hyphens) from the username", async function () {
+    getCCloudAuthSessionStub.resolves({
+      account: {
+        label: "VS_Code.Dev-Team@confluent.io",
+        id: "u-abc123",
+      },
+    });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `vscodedev-team-vscode-${expectedDatePart}`);
+  });
+
+  it("Should remove leading numeric characters from the username", async function () {
+    getCCloudAuthSessionStub.resolves({
+      account: {
+        label: "42_VS_Code.Devs-42@confluent.io",
+        id: "u-abc123",
+      },
+    });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `vscodedevs-42-vscode-${expectedDatePart}`);
+  });
+
+  it("Should remove leading hyphens from the username", async function () {
+    getCCloudAuthSessionStub.resolves({
+      account: {
+        // I don't think this is a valid email address, but we should still trim
+        // the leading hyphen from the statement name.
+        label: "-vscode-devs@confluent.io",
+        id: "u-abc123",
+      },
+    });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `vscode-devs-vscode-${expectedDatePart}`);
+  });
 });
