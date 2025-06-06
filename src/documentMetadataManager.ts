@@ -28,13 +28,21 @@ export class DocumentMetadataManager {
     return DocumentMetadataManager.instance;
   }
 
+  private isCopilotVirtualDocument(document: TextDocument): boolean {
+    return document.uri.scheme === "vscode-chat-code-block";
+  }
+
   private async handleDocumentOpen(document: TextDocument) {
+    if (this.isCopilotVirtualDocument(document)) return;
+
     logger.debug("document opened", {
       uri: document.uri.toString(),
     });
   }
 
   private async handleDocumentClose(document: TextDocument) {
+    if (this.isCopilotVirtualDocument(document)) return;
+
     logger.debug("document closed", {
       uri: document.uri.toString(),
     });
