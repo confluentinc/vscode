@@ -82,8 +82,8 @@ describe("determineFlinkStatementName()", function () {
     getCCloudAuthSessionStub.resolves({
       account: {
         label: "VS_Code.Devs@confluent.io",
-        id: "u-abc123"
-      }
+        id: "u-abc123",
+      },
     });
 
     const statementName = await determineFlinkStatementName();
@@ -94,8 +94,8 @@ describe("determineFlinkStatementName()", function () {
     getCCloudAuthSessionStub.resolves({
       account: {
         label: "42_VS_Code.Devs-42@confluent.io",
-        id: "u-abc123"
-      }
+        id: "u-abc123",
+      },
     });
 
     const statementName = await determineFlinkStatementName();

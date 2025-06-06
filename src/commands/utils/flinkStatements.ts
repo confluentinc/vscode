@@ -95,8 +95,8 @@ export async function determineFlinkStatementName(): Promise<string> {
   const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
   parts.push(dateString);
 
-  
-  const proposed = parts.join("-")
+  const proposed = parts
+    .join("-")
     // Can only be lowercase; probably to simplify the uniqueness check on the backend.
     .toLocaleLowerCase()
     // Strip any non-alphanumeric characters, except for hyphens.
