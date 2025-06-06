@@ -90,7 +90,7 @@ describe("determineFlinkStatementName()", function () {
     assert.strictEqual(statementName, `vscodedevs-vscode-${expectedDatePart}`);
   });
 
-  it("Should remove remove leading numeric characters from the username", async function () {
+  it("Should remove leading numeric characters from the username", async function () {
     getCCloudAuthSessionStub.resolves({
       account: {
         label: "42_VS_Code.Devs-42@confluent.io",
