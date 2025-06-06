@@ -1,15 +1,18 @@
+import * as vscode from "vscode";
 import { getCCloudAuthSession } from "../../authn/utils";
 import {
-  CreateSqlv1Statement201Response,
-  CreateSqlv1StatementOperationRequest,
-  CreateSqlv1StatementRequest,
-  CreateSqlv1StatementRequestApiVersionEnum,
-  CreateSqlv1StatementRequestKindEnum,
+    CreateSqlv1Statement201Response,
+    CreateSqlv1StatementOperationRequest,
+    CreateSqlv1StatementRequest,
+    CreateSqlv1StatementRequestApiVersionEnum,
+    CreateSqlv1StatementRequestKindEnum,
 } from "../../clients/flinkSql";
 import { CCloudResourceLoader } from "../../loaders";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { FlinkStatement } from "../../models/flinkStatement";
 import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
+import { Logger } from "../logging";
 
 export class FlinkSpecProperties {
   currentCatalog: string | undefined = undefined;
@@ -157,4 +160,50 @@ export async function submitFlinkStatement(
 export function localTimezoneOffset(): string {
   const nowStr = new Date().toString();
   return nowStr.match(/([A-Z]+[+-]\d+)/)![1]; //NOSONAR: This regex is safe for parsing the timezone offset from a date string.
+}
+
+const logger = new Logger("commands.flinkStatements");
+const DEFAULT_POLL_PERIOD_MS = 300;
+const MAX_WAIT_TIME_MS = 60_000;
+
+/**
+ * Wait for a Flink statement to enter results-viewable state by polling its status.
+ *
+ * @param statement The Flink statement to monitor
+ * @param progress Progress object to report status updates
+ * @param pollPeriodMs Optional polling interval in milliseconds (defaults to 300ms)
+ * @returns Promise that resolves when the statement enters RUNNING phase
+ * @throws Error if statement doesn't reach RUNNING phase within MAX_WAIT_TIME_MS seconds
+ */
+export async function waitForStatementRunning(
+  statement: FlinkStatement,
+  progress: vscode.Progress<{ message?: string }>,
+  pollPeriodMs: number = DEFAULT_POLL_PERIOD_MS,
+): Promise<void> {
+  const startTime = Date.now();
+
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  while (Date.now() - startTime < MAX_WAIT_TIME_MS) {
+    // Check if the statement is in a viewable state
+    const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
+
+    if (!refreshedStatement) {
+      // if the statement is no longer found, break to raise error
+      logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
+      break;
+    } else if (refreshedStatement.areResultsViewable) {
+      // Resolve if now in a viewable state
+      return;
+    }
+
+    progress.report({ message: refreshedStatement.status?.phase });
+
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, pollPeriodMs));
+  }
+
+  throw new Error(
+    `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
+  );
 }

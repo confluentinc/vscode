@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as authnUtils from "../../authn/utils";
-import { determineFlinkStatementName, localTimezoneOffset } from "./flinkStatements";
+import { CCloudResourceLoader } from "../../loaders";
+import { determineFlinkStatementName, localTimezoneOffset, waitForStatementRunning } from "./flinkStatements";
 
 describe("commands/utils/flinkStatements.ts localTimezoneOffset()", function () {
   let originalTimezone: string | undefined;
@@ -76,5 +77,62 @@ describe("determineFlinkStatementName()", function () {
     getCCloudAuthSessionStub.resolves(undefined);
     const statementName = await determineFlinkStatementName();
     assert.strictEqual(statementName, `unknownuser-vscode-${expectedDatePart}`);
+  });
+});
+
+describe("waitForStatementRunning()", function () {
+  let sandbox: sinon.SinonSandbox;
+  let refreshStub: sinon.SinonStub;
+  let getInstanceStub: sinon.SinonStub;
+  let clock: sinon.SinonFakeTimers;
+
+  const statement = { name: "test-statement" } as any;
+  const progress = { report: sinon.stub() };
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers();
+
+    refreshStub = sandbox.stub();
+    getInstanceStub = sandbox.stub(CCloudResourceLoader, "getInstance").returns({
+      refreshFlinkStatement: refreshStub,
+    });
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("resolves when statement becomes viewable", async function () {
+    refreshStub
+      .onFirstCall().resolves({ areResultsViewable: false, status: { phase: "INITIALIZING" } })
+      .onSecondCall().resolves({ areResultsViewable: true });
+
+    const promise = waitForStatementRunning(statement, progress, 10);
+
+    await clock.tickAsync(10);
+    await clock.tickAsync(10);
+    await promise;
+
+    assert(progress.report.calledWithMatch({ message: "INITIALIZING" }));
+    assert.strictEqual(refreshStub.callCount, 2);
+  });
+
+  it("throws if statement never becomes viewable", async function () {
+    refreshStub.resolves({ areResultsViewable: false, status: { phase: "WAITING" } });
+
+    const promise = waitForStatementRunning(statement, progress, 10);
+
+    await clock.tickAsync(60000);
+    await assert.rejects(promise, /did not reach RUNNING phase/);
+  });
+
+  it("throws if statement disappears", async function () {
+    refreshStub.resolves(undefined);
+
+    const promise = waitForStatementRunning(statement, progress, 10);
+
+    await clock.tickAsync(10);
+    await assert.rejects(promise, /not found/);
   });
 });

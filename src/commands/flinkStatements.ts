@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
-  FLINKSTATEMENT_URI_SCHEME,
-  FlinkStatementDocumentProvider,
+    FLINKSTATEMENT_URI_SCHEME,
+    FlinkStatementDocumentProvider,
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
@@ -21,11 +20,12 @@ import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import {
-  FlinkSpecProperties,
-  IFlinkStatementSubmitParameters,
-  determineFlinkStatementName,
-  localTimezoneOffset,
-  submitFlinkStatement,
+    FlinkSpecProperties,
+    IFlinkStatementSubmitParameters,
+    determineFlinkStatementName,
+    localTimezoneOffset,
+    submitFlinkStatement,
+    waitForStatementRunning,
 } from "./utils/flinkStatements";
 
 const logger = new Logger("commands.flinkStatements");
@@ -35,48 +35,6 @@ const DEFAULT_POLL_PERIOD_MS = 300;
 
 /** Max time in millis to wait until statement reaches results-viewable state */
 const MAX_WAIT_TIME_MS = 60_000;
-
-/**
- * Wait for a Flink statement to enter results-viewable state by polling its status.
- *
- * @param statement The Flink statement to monitor
- * @param progress Progress object to report status updates
- * @param pollPeriodMs Optional polling interval in milliseconds (defaults to 300ms)
- * @returns Promise that resolves when the statement enters RUNNING phase
- * @throws Error if statement doesn't reach RUNNING phase within MAX_WAIT_TIME_MS seconds
- */
-async function waitForStatementRunning(
-  statement: FlinkStatement,
-  progress: vscode.Progress<{ message?: string }>,
-  pollPeriodMs: number = DEFAULT_POLL_PERIOD_MS,
-): Promise<void> {
-  const startTime = Date.now();
-
-  const ccloudLoader = CCloudResourceLoader.getInstance();
-
-  while (Date.now() - startTime < MAX_WAIT_TIME_MS) {
-    // Check if the statement is in a viewable state
-    const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
-
-    if (!refreshedStatement) {
-      // if the statement is no longer found, break to raise error
-      logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
-      break;
-    } else if (refreshedStatement.areResultsViewable) {
-      // Resolve if now in a viewable state
-      return;
-    }
-
-    progress.report({ message: refreshedStatement.status?.phase });
-
-    // Wait before polling again
-    await new Promise((resolve) => setTimeout(resolve, pollPeriodMs));
-  }
-
-  throw new Error(
-    `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
-  );
-}
 
 /**
  * Wait for a Flink statement to enter the  phase and then display the results in a new tab.
