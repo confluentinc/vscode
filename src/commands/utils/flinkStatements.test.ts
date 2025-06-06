@@ -77,4 +77,28 @@ describe("determineFlinkStatementName()", function () {
     const statementName = await determineFlinkStatementName();
     assert.strictEqual(statementName, `unknownuser-vscode-${expectedDatePart}`);
   });
+
+  it("Should remove all non-alphanumeric characters from the username", async function () {
+    getCCloudAuthSessionStub.resolves({
+      account: {
+        label: "VS_Code.Devs@confluent.io",
+        id: "u-abc123"
+      }
+    });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `vscodedevs-vscode-${expectedDatePart}`);
+  });
+
+  it("Should remove leading numeric characters from the username", async function () {
+    getCCloudAuthSessionStub.resolves({
+      account: {
+        label: "42_VS_Code.Devs-42@confluent.io",
+        id: "u-abc123"
+      }
+    });
+
+    const statementName = await determineFlinkStatementName();
+    assert.strictEqual(statementName, `vscodedevs-42-vscode-${expectedDatePart}`);
+  });
 });
