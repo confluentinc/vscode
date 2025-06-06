@@ -592,6 +592,10 @@ export async function lint() {
 testBuild.description =
   "Build test files for running tests via `gulp testRun` or through the VS Code test runner. Use --coverage to enable coverage reporting.";
 export async function testBuild() {
+  // make sure to download the appropriate sidecar executable before building for tests
+  const result = downloadSidecar();
+  if (result.error) throw result.error;
+
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts", "tests/**/*.ts"]);
   const entryMap = Object.fromEntries(
@@ -1016,7 +1020,7 @@ export function install(done) {
   return done(result.status);
 }
 
-export async function downloadSidecar() {
+export function downloadSidecar() {
   let result;
   if (IS_WINDOWS) {
     result = spawnSync(
