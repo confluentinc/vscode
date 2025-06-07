@@ -64,7 +64,6 @@ import {
 } from "./featureFlags/evaluation";
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
-import { activateFlinkStatementResultsViewer } from "./flinkStatementResults";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
@@ -265,9 +264,8 @@ async function _activateExtension(
     context.subscriptions.push(flinkLanguageClientManager);
   }
 
-  // these are also just handling command registration and setting disposables
+  // Just handling command registration and setting disposables
   activateMessageViewer(context);
-  activateFlinkStatementResultsViewer(context);
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());

@@ -1,3 +1,4 @@
+import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
@@ -6,7 +7,7 @@ import {
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { CCloudResourceLoader } from "../loaders";
+import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
@@ -15,90 +16,24 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
+import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
+import { handleWebviewMessage } from "../webview/comms/comms";
 import {
   FlinkSpecProperties,
+  FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
   determineFlinkStatementName,
   localTimezoneOffset,
   submitFlinkStatement,
+  waitForStatementRunning,
 } from "./utils/flinkStatements";
 
 const logger = new Logger("commands.flinkStatements");
-
-/** Poll period in millis to check whether statement has reached results-viewable state */
-const DEFAULT_POLL_PERIOD_MS = 300;
-
-/** Max time in millis to wait until statement reaches results-viewable state */
-const MAX_WAIT_TIME_MS = 60_000;
-
-/**
- * Wait for a Flink statement to enter results-viewable state by polling its status.
- *
- * @param statement The Flink statement to monitor
- * @param progress Progress object to report status updates
- * @param pollPeriodMs Optional polling interval in milliseconds (defaults to 300ms)
- * @returns Promise that resolves when the statement enters RUNNING phase
- * @throws Error if statement doesn't reach RUNNING phase within MAX_WAIT_TIME_MS seconds
- */
-async function waitForStatementRunning(
-  statement: FlinkStatement,
-  progress: vscode.Progress<{ message?: string }>,
-  pollPeriodMs: number = DEFAULT_POLL_PERIOD_MS,
-): Promise<void> {
-  const startTime = Date.now();
-
-  const ccloudLoader = CCloudResourceLoader.getInstance();
-
-  while (Date.now() - startTime < MAX_WAIT_TIME_MS) {
-    // Check if the statement is in a viewable state
-    const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
-
-    if (!refreshedStatement) {
-      // if the statement is no longer found, break to raise error
-      logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
-      break;
-    } else if (refreshedStatement.areResultsViewable) {
-      // Resolve if now in a viewable state
-      return;
-    }
-
-    progress.report({ message: refreshedStatement.status?.phase });
-
-    // Wait before polling again
-    await new Promise((resolve) => setTimeout(resolve, pollPeriodMs));
-  }
-
-  throw new Error(
-    `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
-  );
-}
-
-/**
- * Wait for a Flink statement to enter the  phase and then display the results in a new tab.
- *
- * @param statement The Flink statement to monitor and display results for
- * @param computePool The compute pool the statement is running on
- * @returns Promise that resolves when the results are displayed
- */
-async function waitAndShowResults(statement: FlinkStatement): Promise<void> {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Submitting statement ${statement.name}`,
-      cancellable: false,
-    },
-    async (progress) => {
-      await waitForStatementRunning(statement, progress);
-      progress.report({ message: "Opening statement results in a new tab..." });
-      await vscode.commands.executeCommand("confluent.flinkStatementResults", statement);
-    },
-  );
-}
 
 /** View the SQL statement portion of a FlinkStatement in a read-only document. */
 export async function viewStatementSqlCommand(statement: FlinkStatement): Promise<void> {
@@ -245,7 +180,10 @@ export async function submitFlinkStatementCommand(
 
     // Will resolve when the statement is in a viewable state and
     // the results viewer is open.
-    await waitAndShowResults(newStatement);
+    await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
+      await waitForStatementRunning(newStatement);
+      await vscode.commands.executeCommand("confluent.statements.viewResults", statement);
+    });
 
     // Refresh the statements view again to show the new state of the statement.
     // (This is a whole empty + reload of view data, so have to wait until it's done.
@@ -295,9 +233,77 @@ export async function submitFlinkStatementCommand(
   }
 }
 
+/** Max number of statement results rows to display. */
+const DEFAULT_RESULT_LIMIT = 100_000;
+/** Cache of statement result webviews by env/statement name. */
+const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
+
+/**
+ * Handles the display of Flink statement results in a webview panel.
+ * Creates or finds an existing panel, sets up the results manager and message handler.
+ *
+ * @param statement - The Flink statement to display results for
+ */
+async function handleFlinkStatementResults(statement: FlinkStatement | undefined) {
+  if (!statement) return;
+
+  if (!(statement instanceof FlinkStatement)) {
+    logger.error("handleFlinkStatementResults", "statement is not an instance of FlinkStatement");
+    return;
+  }
+
+  const [panel, cached] = await statementResultsViewCache.getPanelForStatement(statement);
+  if (cached) {
+    // Existing panel for this statement found, just reveal it.
+    panel.reveal();
+    return;
+  }
+
+  const os = ObservableScope();
+
+  /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
+  const panelActive = os.produce(true, (value, signal) => {
+    const disposed = panel.onDidDispose(() => value(false));
+    const changedState = panel.onDidChangeViewState(() => value(panel.visible));
+    signal.onabort = () => (disposed.dispose(), changedState.dispose());
+  });
+
+  /** Notify an active webview only after flushing the rest of updates. */
+  const notifyUI = () => {
+    queueMicrotask(() => {
+      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+    });
+  };
+
+  const sidecar = await getSidecar();
+  const resultsManager = new FlinkStatementResultsManager(
+    os,
+    statement,
+    sidecar,
+    notifyUI,
+    DEFAULT_RESULT_LIMIT,
+  );
+
+  // Handle messages from the webview and delegate to the results manager
+  const handler = handleWebviewMessage(panel.webview, (...args) => {
+    let result;
+    // handleMessage() may end up reassigning many signals, so do
+    // so in a batch.
+    os.batch(() => (result = resultsManager.handleMessage(...args)));
+    return result;
+  });
+
+  panel.onDidDispose(() => {
+    resultsManager.dispose();
+    handler.dispose();
+    os.dispose();
+  });
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
+    registerCommandWithLogging("confluent.statements.viewResults", handleFlinkStatementResults),
   ];
 }

@@ -1,4 +1,5 @@
 import { Scope, Signal } from "inertial";
+import * as vscode from "vscode";
 import {
   FetchError,
   GetSqlv1StatementResult200Response,
@@ -7,7 +8,6 @@ import {
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
 } from "./clients/flinkSql";
-import { viewStatementSqlCommand } from "./commands/flinkStatements";
 import { showJsonPreview } from "./documentProviders/message";
 import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
@@ -417,7 +417,7 @@ export class FlinkStatementResultsManager {
 
   /** Open up a read-only view over the statement's sources SQL. */
   private async viewStatementSource(): Promise<void> {
-    await viewStatementSqlCommand(this.statement);
+    await vscode.commands.executeCommand("confluent.statements.viewstatementsql", this.statement);
   }
 
   private async _stopStatement() {
