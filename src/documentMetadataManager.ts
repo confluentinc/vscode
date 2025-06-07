@@ -5,19 +5,16 @@ import { UriMetadataMap } from "./storage/types";
 
 const logger = new Logger("documentMetadataManager");
 
+// Central list of supported URI schemes
+const SUPPORTED_URI_SCHEMES = ["file", "untitled", "confluent.flinkstatement"];
+
 /** Manager for VS Code {@link TextDocument}s that tracks metadata across document lifecycle events */
 export class DocumentMetadataManager {
   private resourceManager = getResourceManager();
-
   disposables: Disposable[] = [];
 
   private constructor() {
-    this.disposables.push(
-      workspace.onDidOpenTextDocument(this.handleDocumentOpen, this),
-      workspace.onDidSaveTextDocument(this.handleDocumentSave, this),
-      workspace.onDidCloseTextDocument(this.handleDocumentClose, this),
-      // TODO: add other listeners (rename, delete, move, etc.) as needed
-    );
+    this.registerEventListeners();
   }
 
   private static instance: DocumentMetadataManager | null = null;
@@ -28,64 +25,66 @@ export class DocumentMetadataManager {
     return DocumentMetadataManager.instance;
   }
 
+  private registerEventListeners() {
+    this.disposables.push(
+      workspace.onDidOpenTextDocument(this.handleDocumentOpen, this),
+      workspace.onDidSaveTextDocument(this.handleDocumentSave, this),
+      workspace.onDidCloseTextDocument(this.handleDocumentClose, this),
+      // TODO: Add rename/delete/move listeners as needed
+    );
+  }
+
+  /** Determines whether a document is relevant for tracking/logging */
+  private shouldLogDocumentEvent(document: TextDocument): boolean {
+    const { scheme } = document.uri;
+    const isCopilotVirtual = scheme === "vscode-chat-code-block";
+    return SUPPORTED_URI_SCHEMES.includes(scheme) && !isCopilotVirtual;
+  }
+
+  private logDocumentEvent(event: "opened" | "closed" | "saved", uri: Uri) {
+    logger.debug(`document ${event}`, { uri: uri.toString() });
+  }
+
   private async handleDocumentOpen(document: TextDocument) {
-    logger.debug("document opened", {
-      uri: document.uri.toString(),
-    });
+    if (!this.shouldLogDocumentEvent(document)) return;
+    this.logDocumentEvent("opened", document.uri);
   }
 
   private async handleDocumentClose(document: TextDocument) {
-    logger.debug("document closed", {
-      uri: document.uri.toString(),
-    });
+    if (!this.shouldLogDocumentEvent(document)) return;
+    this.logDocumentEvent("closed", document.uri);
   }
 
   /**
-   * Handler for when a document is saved. This primarily checks when a `file` document is saved
-   * and attempts to migrate any metadata from an `untitled` document to the saved document.
-   *
-   * When an `untitled` document is saved, the following happens:
-   * 1. A (new) `file` document is opened
-   * 2. The `file` document is saved with the same content as the `untitled` document
-   * 3. The `untitled` document is closed
-   *
-   * Between steps 2 and 3, both documents are briefly available and have the same content, so we
-   * can use the metadata from the `untitled` document to set the metadata for the `file` document.
+   * Handles metadata migration when an untitled document is saved to a file.
    */
   private async handleDocumentSave(document: TextDocument) {
-    logger.debug("document saved", {
-      uri: document.uri.toString(),
-    });
-    if (document.uri.scheme !== "file") {
-      return;
-    }
+    if (!this.shouldLogDocumentEvent(document)) return;
+
+    this.logDocumentEvent("saved", document.uri);
+
+    // Only attempt metadata migration if saved as a real file
+    if (document.uri.scheme !== "file") return;
 
     const allMetadata: UriMetadataMap = await this.resourceManager.getAllUriMetadata();
 
-    // check if this was previously an 'untitled' document
     for (const [uriString, metadata] of allMetadata.entries()) {
       const uri: Uri = Uri.parse(uriString);
-      if (uri.scheme !== "untitled") {
-        continue;
-      }
+      if (uri.scheme !== "untitled") continue;
 
-      const untitledDoc: TextDocument | undefined = workspace.textDocuments.find(
+      const untitledDoc = workspace.textDocuments.find(
         (doc) => doc.uri.toString() === uriString,
       );
-      if (!untitledDoc) {
-        // this likely means the 'untitled' document was closed before/without saving
-        continue;
-      }
+      if (!untitledDoc) continue;
+
       logger.debug("found untitled document with metadata", {
         uri: uri.toString(),
         untitledDoc: untitledDoc.uri.toString(),
         metadata,
       });
 
-      // try to match the previous 'untitled' document with this newly saved document
-      const untitledContent: string | undefined = await workspace
-        .openTextDocument(uri)
-        .then((doc) => doc.getText());
+      const untitledContent = await workspace.openTextDocument(uri).then((doc) => doc.getText());
+
       if (document.getText().trim() === untitledContent?.trim()) {
         logger.debug(`migrating metadata from untitled document to "${document.uri.toString()}"`);
         await this.resourceManager.setUriMetadata(document.uri, metadata);
