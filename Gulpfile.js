@@ -156,7 +156,6 @@ export function build(done) {
 
   /** @type {import("rollup").RollupOptions} */
   const webInput = {
-    // TODO I should probably convert this to array of configs so I isolate modules
     input: globSync("src/webview/*.ts", { ignore: "src/webview/*.spec.ts" }),
     plugins: [
       stylesheet({

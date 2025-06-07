@@ -48,7 +48,7 @@ export class CreateProjectTool extends BaseLanguageModelTool<ICreateProjectParam
       templateOptions = { ...extraOptions, ...templateOptions };
     }
 
-    // TODO: add support for other collections
+    // For now, we only support this specific template collection.
     const templates: ScaffoldV1Template[] = await getTemplatesList("vscode", true);
     const matchingTemplate: ScaffoldV1Template | undefined = templates.find(
       (template) => template.spec?.name === templateId,

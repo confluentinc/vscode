@@ -79,6 +79,6 @@ export const LOCAL_CONNECTION_ID = LOCAL_CONNECTION_SPEC.id! as ConnectionId;
 export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name!;
 /** The port used for the local Kafka REST proxy. Used by the extension during container creation,
  * and by the sidecar for local Kafka discovery. */
-export const LOCAL_KAFKA_REST_PORT = 8082; // TODO: make this configurable once the sidecar supports it
+export const LOCAL_KAFKA_REST_PORT = 8082;
 /** The name of the "local" {@link Environment} manageable by the extension via Docker. */
 export const LOCAL_ENVIRONMENT_NAME = "Local"; // not shown anywhere currently

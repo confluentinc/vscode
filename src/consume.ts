@@ -243,7 +243,6 @@ function messageViewerStartPollingCommand(
   /** Consume mode: are we consuming from the beginning, expecting the newest messages, or targeting a timestamp. */
   const mode = os.signal<"beginning" | "latest" | "timestamp">(config.consumeMode);
 
-  // TODO build params object from config
   /** Parameters used by Consume API. */
   const params = os.signal<SimpleConsumeMultiPartitionRequest>(
     config.consumeMode === "latest"

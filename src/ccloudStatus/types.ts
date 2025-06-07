@@ -229,7 +229,6 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
   };
 }
 
-// TODO: come up with a better name for this
 /**
  * A Statuspage summary status object.
  * @see https://status.confluent.cloud/api/v2/summary.json

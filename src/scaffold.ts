@@ -360,7 +360,6 @@ export async function applyTemplate(
 async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) {
   try {
     const { entries } = await unzip(buffer);
-    // TODO: report progress here while writing files
     for (const [name, entry] of Object.entries(entries)) {
       const entryBuffer = await entry.arrayBuffer();
       await vscode.workspace.fs.writeFile(

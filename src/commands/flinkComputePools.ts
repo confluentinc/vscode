@@ -35,7 +35,7 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
     return;
   }
 
-  // TODO: check if views are visible and pass an arg in here to prevent `focus` if not
+  // #1967 should pass argument to prevent the views from focus().
   await Promise.all([
     selectPoolForArtifactsViewCommand(pool),
     selectPoolForStatementsViewCommand(pool),

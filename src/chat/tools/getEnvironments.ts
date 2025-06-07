@@ -44,7 +44,9 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     const environments: Environment[] = await loader.getEnvironments();
     if (!environments.length) {
       logger.debug("No environments found");
-      // TODO: add hinting? the user shouldn't get here if they have at least one connection
+      // Hmm. The user won't get here if they have at least one connection, in that
+      // each connection should have at least one environment.
+      // (Remove this check with #1962)
       return new LanguageModelToolResult([new LanguageModelTextPart(NO_RESULTS)]);
     }
 

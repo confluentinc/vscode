@@ -37,7 +37,7 @@ export class GetTemplateOptionsTool extends BaseLanguageModelTool<IGetTemplateOp
       ]);
     }
 
-    // TODO: add support for other collections
+    // Along with our other template listing invocations, we only support this specific template collection for now.
     const templates: ScaffoldV1Template[] = await getTemplatesList("vscode", true);
     const matchingTemplate: ScaffoldV1Template | undefined = templates.find(
       (template) => template.spec?.name === params.templateId,
