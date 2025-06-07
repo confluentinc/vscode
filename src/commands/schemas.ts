@@ -11,8 +11,8 @@ import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema"
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
-  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
-  showErrorNotificationWithButtons,
+    DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+    showErrorNotificationWithButtons,
 } from "../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
@@ -20,9 +20,10 @@ import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 import {
-  confirmSchemaSubjectDeletion,
-  confirmSchemaVersionDeletion,
-  hardDeletionQuickPick,
+    confirmSchemaSubjectDeletion,
+    confirmSchemaVersionDeletion,
+    hardDeletionQuickPick,
+    showHardDeleteWarningModal,
 } from "./utils/schemas";
 
 const logger = new Logger("commands.schemas");
@@ -299,6 +300,13 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     return;
   }
 
+  if (hardDelete) {
+    const finalConfirm = await showHardDeleteWarningModal("schema version");
+    if (!finalConfirm) {
+      logger.debug("User canceled schema version hard deletion at warning modal.");
+      return;
+  }
+  }
   let success = true;
 
   // Drive the delete via the resource loader so will be cache consistent.
@@ -449,6 +457,14 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
   if (!confirmation) {
     logger.debug("User canceled schema subject deletion.");
     return;
+  }
+
+  if (hardDelete) {
+    const finalConfirm = await showHardDeleteWarningModal("schema subject");
+    if (!finalConfirm) {
+      logger.debug("User canceled schema subject hard deletion at warning modal.");
+      return;
+    }
   }
 
   logger.info("Deleting schema subject", subject.name);
