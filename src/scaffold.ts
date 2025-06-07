@@ -4,10 +4,10 @@ import { posix } from "path";
 import { unzip } from "unzipit";
 import { ViewColumn } from "vscode";
 import {
-  ApplyScaffoldV1TemplateOperationRequest,
-  ScaffoldV1Template,
-  ScaffoldV1TemplateSpec,
-  TemplatesScaffoldV1Api,
+    ApplyScaffoldV1TemplateOperationRequest,
+    ScaffoldV1Template,
+    ScaffoldV1TemplateSpec,
+    TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
@@ -279,25 +279,24 @@ export async function applyTemplate(
 
     const SAVE_LABEL = "Save to directory";
     const fileUris = await vscode.window.showOpenDialog({
-      openLabel: SAVE_LABEL,
-      canSelectFiles: false,
-      canSelectFolders: true,
-      canSelectMany: false,
-      // Parameter might be ignored on some OSes (e.g. macOS)
-      title: SAVE_LABEL,
+    openLabel: SAVE_LABEL,
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    // Parameter might be ignored on some OSes (e.g. macOS)
+    title: SAVE_LABEL,
     });
 
     if (!fileUris || fileUris.length !== 1) {
-      // This means the user cancelled @ save dialog. Show a message and return
-      logUsage(UserEvent.ProjectScaffoldingAction, {
+    logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "cancelled before save",
         templateCollection: pickedTemplate.spec!.template_collection?.id,
         templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
         itemType: telemetrySource,
-      });
-      vscode.window.showInformationMessage("Project generation cancelled");
-      return { success: false, message: "Project generation cancelled before save." };
+    });
+
+    return { success: false, message: "Project generation cancelled before save." };
     }
 
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
