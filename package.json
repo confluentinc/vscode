@@ -1413,11 +1413,6 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
-          "group": "inline@1"
-        },
-        {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@3"
@@ -1627,6 +1622,11 @@
           "command": "confluent.openCCloudApiKeysUrl",
           "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.flinkStatementResults",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "group": "inline@1"
         }
       ]
     },
