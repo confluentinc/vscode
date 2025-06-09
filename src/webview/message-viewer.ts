@@ -1,6 +1,7 @@
 import { ObservableScope } from "inertial";
 import { type PartitionData } from "../clients/kafkaRest";
 import { type PartitionConsumeRecord } from "../clients/sidecar";
+import { datetimeLocalToTimestamp, timestampToDatetimeLocal } from "../utils/dateUtils";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
@@ -46,7 +47,7 @@ type ConsumeMode = "latest" | "beginning" | "timestamp";
  * available for the UI. It also talks to the "backend": sends and receives
  * messages from the host environment that manages stream consumption.
  */
-class MessageViewerViewModel extends ViewModel {
+export class MessageViewerViewModel extends ViewModel {
   page = this.signal(storage.get()?.page ?? 0);
   pageSize = this.signal(100);
 
@@ -444,6 +445,12 @@ class MessageViewerViewModel extends ViewModel {
   consumeMode = this.resolve<ConsumeMode>(() => post("GetConsumeMode"), "beginning");
   consumeModeTimestamp = this.resolve(() => post("GetConsumeModeTimestamp"), Date.now());
 
+  /** Formatted timestamp for datetime-local input (YYYY-MM-DDTHH:mm:ss.sss) */
+  consumeModeTimestampFormatted = this.derive(() => {
+    const timestamp: number | null = this.consumeModeTimestamp();
+    return timestampToDatetimeLocal(timestamp ?? Date.now());
+  });
+
   async handleConsumeModeChange(value: ConsumeMode) {
     const timestamp = Date.now();
     await post("ConsumeModeChange", { mode: value, timestamp });
@@ -461,6 +468,12 @@ class MessageViewerViewModel extends ViewModel {
     this.page(0);
     this.snapshot(this.emptySnapshot);
     this.selection(null);
+  }
+
+  /** Handler to convert the webview's datetime string input to internal numeric timestamp. */
+  async handleConsumeModeTimestampFormattedChange(datetimeLocal: string) {
+    const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
+    await this.handleConsumeModeTimestampChange(timestamp);
   }
 
   /** Numeric limit of messages that need to be consumed. */
