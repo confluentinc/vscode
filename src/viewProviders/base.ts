@@ -51,9 +51,6 @@ export abstract class BaseViewProvider<
     T | undefined | void
   >();
   readonly onDidChangeTreeData: Event<T | undefined | void> = this._onDidChangeTreeData.event;
-  /** Singular and plural resource descriptions for user-facing messages. */
-  abstract readonly singularResource: readonly [string];
-  abstract readonly pluralResource: readonly [string];
 
   /**
    * Refresh the tree view with data from the current {@linkcode resource} and {@linkcode environment}.
@@ -103,6 +100,10 @@ export abstract class BaseViewProvider<
   searchMatches: Set<T> = new Set();
   /** Count of all items returned from `getChildren()`. */
   totalItemCount: number = 0;
+
+  /** Singular and plural resource descriptions for user-facing messages. */
+  abstract readonly singularResource: string;
+  abstract readonly pluralResource: string;
 
   // NOTE: this is usually private/protected with a singleton pattern, but needs to be public for
   // the subclasses to be called with .getInstance() properly
@@ -294,8 +295,7 @@ export abstract class BaseViewProvider<
     matchingChildren.forEach((child) => this.searchMatches.add(child));
 
     // update the tree view message to show how many results were found to match the search string
-    const resourceType =
-      this.totalItemCount > 1 ? this.pluralResource[0] : this.singularResource[0];
+    const resourceType = this.totalItemCount > 1 ? this.pluralResource : this.singularResource;
     if (this.searchMatches.size > 0) {
       this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} ${resourceType} for "${search}"`;
     } else {
