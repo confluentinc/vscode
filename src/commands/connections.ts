@@ -260,7 +260,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
         "Exported file may contain sensitive information like API keys, secrets, and local file paths. Use caution when saving and sharing connection files.",
     },
     { title: "Export" },
-    // { title: "Remove secrets" }, // issue #1965
+    // { title: "Remove secrets" }, // https://github.com/confluentinc/vscode/issues/1965
     { title: "Cancel", isCloseAffordance: true },
   );
   if (selection !== undefined && selection.title !== "Cancel") {

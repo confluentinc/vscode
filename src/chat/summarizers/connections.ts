@@ -88,6 +88,7 @@ export function summarizeLocalConnection(
     );
 
   // Update this if/when we migrate LOCAL connections to DIRECT
+  // https://github.com/confluentinc/vscode/issues/522
   // local_config only exists if the SR URI is set
   const config: LocalConfig | undefined = connection.spec.local_config;
   const schemaRegistryAvailable: boolean =

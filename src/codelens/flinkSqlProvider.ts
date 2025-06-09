@@ -169,7 +169,7 @@ export async function getComputePoolFromMetadata(
   }
 
   // Replace this section with dedicated loader method for looking up compute pool by ID
-  // in #1963.
+  // https://github.com/confluentinc/vscode/issues/1963
   let computePool: CCloudFlinkComputePool | undefined;
   const env: CCloudEnvironment | undefined = envs.find((e) =>
     e.flinkComputePools.some((pool) => pool.id === computePoolString),
