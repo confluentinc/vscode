@@ -106,26 +106,6 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetEnvironmentsParameters;
-
-    const preparedInvocation = this.prepareInvocation({
-      input: parameters,
-    }) as PreparedToolInvocation;
-
-    stream.progress(
-      typeof preparedInvocation.invocationMessage === "string"
-        ? preparedInvocation.invocationMessage
-        : "Retrieving environments...",
-    );
-    // If there are confirmation messages, display them
-
-    if (preparedInvocation.confirmationMessages) {
-      stream.markdown(
-        preparedInvocation.confirmationMessages.message instanceof MarkdownString
-          ? preparedInvocation.confirmationMessages.message
-          : String(preparedInvocation.confirmationMessages.message),
-      );
-    }
-
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
