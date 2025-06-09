@@ -4,8 +4,13 @@ import {
   ChatResponseStream,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
+  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
+  MarkdownString,
+  PreparedToolInvocation,
+  ProviderResult,
 } from "vscode";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
@@ -24,6 +29,40 @@ export interface IGetEnvironmentsParameters {
 
 export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsParameters> {
   readonly name = "get_environments";
+
+  prepareInvocation(
+    options: LanguageModelToolInvocationPrepareOptions<IGetEnvironmentsParameters>,
+  ): ProviderResult<PreparedToolInvocation> {
+    const { input } = options;
+    let invocationMessage: string;
+    let confirmationMessage: MarkdownString;
+
+    if (input.connectionId) {
+      invocationMessage = `Get all environments for connection ID: ${input.connectionId}`;
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Environments Lookup\n`)
+        .appendMarkdown(
+          `This tool will look up all environments associated with connection ID **${input.connectionId}**. Results will show the environment ID and name. Do you want to proceed?`,
+        );
+    } else {
+      invocationMessage = "No connection ID provided for environments lookup.";
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Missing Connection ID\n`)
+        .appendMarkdown(
+          `No connection ID was provided. Please provide a valid connection ID from the 'get_connections' tool and try again.`,
+        );
+    }
+
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "Get Environments",
+      message: confirmationMessage,
+    };
+
+    return {
+      invocationMessage,
+      confirmationMessages,
+    };
+  }
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetEnvironmentsParameters>,
@@ -82,16 +121,15 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       },
       token,
     );
+
     stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
-      // cancellation
       return new TextOnlyToolResultPart(toolCall.callId, []);
     }
 
-    // format the results before sending them back to the model
     const resultParts: LanguageModelTextPart[] = [];
-
     const contents = result.content as LanguageModelTextPart[];
+
     if (contents.length === 1 && contents[0].value === NO_RESULTS) {
       const resultsHeader = new LanguageModelTextPart("No environments found.");
       resultParts.push(resultsHeader);
@@ -99,7 +137,6 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       const resultsHeader = new LanguageModelTextPart("Here are your available environments:");
       resultParts.push(resultsHeader);
       resultParts.push(...contents);
-      // Add footer hint for follow-up tool calls
       const footerHint = new LanguageModelTextPart(
         "\nTo interact with these environments, use their IDs in follow-up tool calls, such as 'list_topics'.",
       );
