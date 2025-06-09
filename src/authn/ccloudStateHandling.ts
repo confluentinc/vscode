@@ -19,7 +19,6 @@ export const MINUTES_UNTIL_REAUTH_WARNING = 60;
  *   if we somehow still have an upcoming auth expiration */
 const REAUTH_BUFFER_MINUTES = 5;
 /** How long to delay notifications if a user clicks "Remind Me Later" on the reauth warning */
-// TODO: make this configurable?
 const REAUTH_WARNING_DELAY_MINUTES = 15;
 
 // labels for the buttons exposed by the notifications

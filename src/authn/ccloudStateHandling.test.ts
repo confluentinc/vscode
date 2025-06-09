@@ -211,7 +211,7 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
     assert.ok(nonInvalidTokenStatusFireStub.notCalled);
   });
 
-  // TODO(shoup): ccloudPolling.ts will need to be refactored to allow stubbing across the entire module
+  // shoup: ccloudPolling.ts will need to be refactored to allow stubbing across the entire module
   // it("should call checkAuthErrors() when the connection hasn't passed its requires_authentication_at time", async () => {
   //   const connection = createFakeConnection(120);
   //   getCCloudConnectionStub.resolves(connection);
