@@ -23,10 +23,31 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CannotLoadSchemasError,
+  copySchemaRegistrySubject,
   determineLatestSchema,
   diffLatestSchemasCommand,
   getLatestSchemasForTopic,
 } from "./schemas";
+
+describe("copySchemaRegistrySubject", () => {
+  let _originalClipboardContents: string | undefined;
+
+  beforeEach(async () => {
+    _originalClipboardContents = await require("vscode").env.clipboard.readText();
+  });
+
+  afterEach(async () => {
+    if (_originalClipboardContents !== undefined) {
+      await require("vscode").env.clipboard.writeText(_originalClipboardContents);
+    }
+  });
+
+  it("should copy the subject name to the clipboard", async () => {
+    await copySchemaRegistrySubject(TEST_CCLOUD_SUBJECT);
+    const writtenValue = await require("vscode").env.clipboard.readText();
+    assert.strictEqual(writtenValue, TEST_CCLOUD_SUBJECT.name);
+  });
+});
 
 describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   let sandbox: sinon.SinonSandbox;

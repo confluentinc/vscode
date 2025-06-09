@@ -43,6 +43,10 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       viewLatestLocallyCommand,
     ),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
+    registerCommandWithLogging(
+      "confluent.schemas.copySchemaRegistrySubject",
+      copySchemaRegistrySubject,
+    ),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
     registerCommandWithLogging(
       "confluent.schemas.diffMostRecentVersions",
@@ -81,6 +85,15 @@ async function copySchemaRegistryId() {
   }
   await vscode.env.clipboard.writeText(schemaRegistry.id);
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
+}
+
+export async function copySchemaRegistrySubject(subject: Subject) {
+  if (!subject || typeof subject.name !== "string") {
+    vscode.window.showErrorMessage("No subject provided to copy.");
+    return;
+  }
+  await vscode.env.clipboard.writeText(subject.name);
+  vscode.window.showInformationMessage(`Copied subject name "${subject.name}" to clipboard.`);
 }
 
 /** User has gestured to create a new schema from scratch relative to the currently selected schema registry. */
