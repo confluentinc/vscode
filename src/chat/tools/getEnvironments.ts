@@ -4,9 +4,12 @@ import {
   ChatResponseStream,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
   LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
+  MarkdownString,
+  PreparedToolInvocation,
   ProviderResult,
 } from "vscode";
 import { ResourceLoader } from "../../loaders";
@@ -29,22 +32,36 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
 
   prepareInvocation(
     options: LanguageModelToolInvocationPrepareOptions<IGetEnvironmentsParameters>,
-    token: CancellationToken,
-  ): ProviderResult<{ invocationMessage: string; confirmationMessage: string }> {
+  ): ProviderResult<PreparedToolInvocation> {
     const { input } = options;
     let invocationMessage: string;
-    let confirmationMessage: string;
+    let confirmationMessage: MarkdownString;
 
     if (input.connectionId) {
       invocationMessage = `Get all environments for connection ID: ${input.connectionId}`;
-      confirmationMessage = `This tool will look up all environments associated with connection ID **${input.connectionId}**. Results will show the environment ID and name.`;
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Environments Lookup\n`)
+        .appendMarkdown(
+          `This tool will look up all environments associated with connection ID **${input.connectionId}**. Results will show the environment ID and name. Do you want to proceed?`,
+        );
     } else {
       invocationMessage = "No connection ID provided for environments lookup.";
-      confirmationMessage =
-        "No connection ID was provided. Please provide a valid connection ID from the 'get_connections' tool and try again.";
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Missing Connection ID\n`)
+        .appendMarkdown(
+          `No connection ID was provided. Please provide a valid connection ID from the 'get_connections' tool and try again.`,
+        );
     }
 
-    return { invocationMessage, confirmationMessage };
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "Get Environments",
+      message: confirmationMessage,
+    };
+
+    return {
+      invocationMessage,
+      confirmationMessages,
+    };
   }
 
   async invoke(
@@ -90,17 +107,24 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetEnvironmentsParameters;
 
-    // Use invocationMessage and confirmationMessage from prepareInvocation
-    const { invocationMessage, confirmationMessage } = this.prepareInvocation(
-      { input: parameters },
-      token,
-    ) as {
-      invocationMessage: string;
-      confirmationMessage: string;
-    };
+    const preparedInvocation = this.prepareInvocation({
+      input: parameters,
+    }) as PreparedToolInvocation;
 
-    stream.progress(invocationMessage);
-    stream.markdown(confirmationMessage);
+    stream.progress(
+      typeof preparedInvocation.invocationMessage === "string"
+        ? preparedInvocation.invocationMessage
+        : "Retrieving environments...",
+    );
+    // If there are confirmation messages, display them
+
+    if (preparedInvocation.confirmationMessages) {
+      stream.markdown(
+        preparedInvocation.confirmationMessages.message instanceof MarkdownString
+          ? preparedInvocation.confirmationMessages.message
+          : String(preparedInvocation.confirmationMessages.message),
+      );
+    }
 
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
@@ -110,6 +134,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
       },
       token,
     );
+
     stream.progress(`Found ${result.content.length} environments.`);
     if (!result.content.length) {
       return new TextOnlyToolResultPart(toolCall.callId, []);
@@ -117,6 +142,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
 
     const resultParts: LanguageModelTextPart[] = [];
     const contents = result.content as LanguageModelTextPart[];
+
     if (contents.length === 1 && contents[0].value === NO_RESULTS) {
       const resultsHeader = new LanguageModelTextPart("No environments found.");
       resultParts.push(resultsHeader);
