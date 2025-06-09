@@ -182,7 +182,7 @@ export async function submitFlinkStatementCommand(
     // the results viewer is open.
     await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
       await waitForStatementRunning(newStatement);
-      await vscode.commands.executeCommand("confluent.statements.viewResults", statement);
+      await vscode.commands.executeCommand("confluent.flinkStatementResults", statement);
     });
 
     // Refresh the statements view again to show the new state of the statement.
@@ -304,6 +304,7 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
-    registerCommandWithLogging("confluent.statements.viewResults", handleFlinkStatementResults),
+    // Different naming scheme due to legacy telemetry reasons.
+    registerCommandWithLogging("confluent.flinkStatementResults", handleFlinkStatementResults),
   ];
 }

@@ -443,7 +443,7 @@
         "category": "Confluent: Flink Statements"
       },
       {
-        "command": "confluent.statements.viewResults",
+        "command": "confluent.flinkStatementResults",
         "icon": "$(confluent-view-messages)",
         "title": "View Flink Statement Results",
         "category": "Confluent: Flink Statements"
@@ -1413,7 +1413,7 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.statements.viewResults",
+          "command": "confluent.flinkStatementResults",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
         },
@@ -1882,7 +1882,7 @@
               "onCommand:confluent.statements.create",
               "onCommand:confluent.statements.refresh",
               "onCommand:confluent.statements.viewstatementsql",
-              "onCommand:confluent.statements.viewResults"
+              "onCommand:confluent.flinkStatementResults"
             ]
           },
           {
