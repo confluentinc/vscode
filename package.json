@@ -538,6 +538,11 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.copySchemaRegistrySubject",
+        "title": "Copy Schema Registry Subject",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.search",
         "icon": "$(search)",
         "title": "Search",
@@ -1166,6 +1171,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.copySchemaRegistrySubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolve",
           "when": "false"
         },
@@ -1352,6 +1361,11 @@
           "group": "2_copy@1"
         },
         {
+          "command": "confluent.schemas.copySchemaRegistrySubject",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
+          "group": "2_copy@1"
+        },
+        {
           "command": "confluent.topics.search",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected && !confluent.topicSearchApplied",
           "group": "navigation@1"
@@ -1520,6 +1534,11 @@
         {
           "command": "confluent.schemas.copySchemaRegistryId",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema*/",
+          "group": "4_copy@1"
+        },
+        {
+          "command": "confluent.schemas.copySchemaRegistrySubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "4_copy@1"
         },
         {
