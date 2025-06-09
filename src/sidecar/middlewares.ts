@@ -217,3 +217,13 @@ function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined)
     headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
   );
 }
+
+// Add logic to catch schema lookup errors and log them at debug level
+export function catchSchemaLookupErrors(response: Response): void {
+  try {
+    const body = response.json();
+    logger.debug("Schema lookup error details:", body);
+  } catch (error) {
+    logger.debug("Failed to parse schema lookup error response:", error);
+  }
+}

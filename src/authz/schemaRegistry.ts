@@ -84,7 +84,7 @@ export async function determineAccessFromResponseError(response: Response): Prom
     body = await response.json();
   } catch (error) {
     // maybe some HTML error, treat as if we can't access
-    logger.error("error parsing response body from schema lookup:", error);
+    logger.debug("error parsing response body from schema lookup:", error);
     return false;
   }
 
