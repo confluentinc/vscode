@@ -111,10 +111,6 @@ export async function determineFlinkStatementName(): Promise<string> {
     // Strip leading numeric characters and hyphens.
     .replace(/^[0-9-]+/, "");
 
-  // TODO: Show the user the proposed name and let them edit it.
-
-  // Be sure to only submit valid name after user edits.
-
   return proposed;
 }
 
