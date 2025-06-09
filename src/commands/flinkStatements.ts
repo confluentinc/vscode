@@ -168,7 +168,6 @@ export async function submitFlinkStatementCommand(
 
     // Refresh the statements view onto the compute pool in question,
     // which will then show the new statement.
-    // (Will wait for the refresh to complete.)
 
     // Focus the new statement in the view.
     const statementsView = FlinkStatementsViewProvider.getInstance();
@@ -176,13 +175,14 @@ export async function submitFlinkStatementCommand(
     // Cause the view to refresh on the compute pool in question,
     // and then focus the new statement. Statement will probably be in 'Pending' state.
     await statementsView.setParentResource(computePool);
+    // (Will wait for the refresh to complete.)
     await statementsView.focus(newStatement.id);
 
-    // Will resolve when the statement is in a viewable state and
-    // the results viewer is open.
+    // Wait for the statement to start running, then open the results view.
+    // Show a progress indicator over the Flink Statements view while we wait.
     await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
       await waitForStatementRunning(newStatement);
-      await vscode.commands.executeCommand("confluent.flinkStatementResults", statement);
+      await openFlinkStatementResultsView(newStatement);
     });
 
     // Refresh the statements view again to show the new state of the statement.
@@ -244,7 +244,7 @@ const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
  *
  * @param statement - The Flink statement to display results for
  */
-async function handleFlinkStatementResults(statement: FlinkStatement | undefined) {
+async function openFlinkStatementResultsView(statement: FlinkStatement | undefined) {
   if (!statement) return;
 
   if (!(statement instanceof FlinkStatement)) {
@@ -252,7 +252,7 @@ async function handleFlinkStatementResults(statement: FlinkStatement | undefined
     return;
   }
 
-  const [panel, cached] = await statementResultsViewCache.getPanelForStatement(statement);
+  const [panel, cached] = statementResultsViewCache.getPanelForStatement(statement);
   if (cached) {
     // Existing panel for this statement found, just reveal it.
     panel.reveal();
@@ -265,7 +265,10 @@ async function handleFlinkStatementResults(statement: FlinkStatement | undefined
   const panelActive = os.produce(true, (value, signal) => {
     const disposed = panel.onDidDispose(() => value(false));
     const changedState = panel.onDidChangeViewState(() => value(panel.visible));
-    signal.onabort = () => (disposed.dispose(), changedState.dispose());
+    signal.onabort = () => {
+      disposed.dispose();
+      changedState.dispose();
+    };
   });
 
   /** Notify an active webview only after flushing the rest of updates. */
@@ -305,6 +308,6 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
     // Different naming scheme due to legacy telemetry reasons.
-    registerCommandWithLogging("confluent.flinkStatementResults", handleFlinkStatementResults),
+    registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
   ];
 }
