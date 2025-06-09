@@ -1413,11 +1413,6 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
-          "group": "inline@1"
-        },
-        {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@3"
@@ -1431,6 +1426,11 @@
           "command": "confluent.statements.refresh",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@5"
+        },
+        {
+          "command": "confluent.flinkStatementResults",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "group": "inline@1"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
