@@ -17,16 +17,57 @@ import { ccloudConnected } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem, Phase } from "../models/flinkStatement";
-import { BaseViewProvider } from "./base";
+import { BaseViewProvider, ParentedBaseViewProvider } from "./base";
 
-/** Sample view provider subclass for testing {@link BaseViewProvider}. */
-class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement> {
-  loggerName = "viewProviders.test";
+/** Sample view provider subclass for testing {@link BaseViewProvider}.
+ * As if there was no `FlinkComputePool` parent resource, just random statements.
+ */
+class TestViewProvider extends BaseViewProvider<FlinkStatement> {
+  loggerName = "viewProviders.test.TestViewProvider";
+  viewId = "confluent-test-parentless-statements";
+
+  readonly kind = "test-parentless-statements";
+
+  async getChildren(element?: FlinkStatement): Promise<FlinkStatement[]> {
+    const items = [
+      TEST_CCLOUD_FLINK_STATEMENT,
+      new FlinkStatement({
+        ...TEST_CCLOUD_FLINK_STATEMENT,
+        name: "statement1",
+        status: makeStatus(Phase.PENDING),
+      }),
+    ];
+
+    return this.filterChildren(element, items);
+  }
+
+  getTreeItem(element: FlinkStatement): TreeItem {
+    return new FlinkStatementTreeItem(element);
+  }
+
+  testEventEmitter: EventEmitter<void> = new EventEmitter<void>();
+  handleCustomListenerCallback() {
+    this.logger.info("Custom event listener callback executed.");
+  }
+
+  setCustomEventListenersCalled = false;
+  protected setCustomEventListeners(): Disposable[] {
+    this.setCustomEventListenersCalled = true;
+    const customListener: Disposable = this.testEventEmitter.event(() => {
+      this.handleCustomListenerCallback();
+    });
+    return [customListener];
+  }
+}
+
+/** Sample view provider subclass for testing {@link ParentedBaseViewProvider}. */
+class TestParentedViewProvider extends ParentedBaseViewProvider<FlinkComputePool, FlinkStatement> {
+  loggerName = "viewProviders.test.TestParentedViewProvider";
   viewId = "confluent-test";
 
   parentResourceChangedEmitter = new EventEmitter<FlinkComputePool | null>();
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
-  readonly kind = "test";
+  readonly kind = "test-parented-statements";
 
   async getChildren(element?: FlinkStatement): Promise<FlinkStatement[]> {
     const items = [
@@ -48,16 +89,6 @@ class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement
 
   getTreeItem(element: FlinkStatement): TreeItem {
     return new FlinkStatementTreeItem(element);
-  }
-
-  testEventEmitter: EventEmitter<void> = new EventEmitter<void>();
-  handleCustomListenerCallback() {}
-
-  protected setCustomEventListeners(): Disposable[] {
-    const customListener: Disposable = this.testEventEmitter.event(() => {
-      this.handleCustomListenerCallback();
-    });
-    return [customListener];
   }
 }
 
@@ -127,10 +158,30 @@ describe("viewProviders/base.ts BaseViewProvider event listeners", () => {
     // one for the custom event listener, and any implemented in the base class as part of the
     // private `setEventListeners` method
     assert.ok(provider.disposables.length > 1);
+    assert.ok(provider.setCustomEventListenersCalled);
+  });
+});
+
+describe("viewProviders/base.ts TestParentedViewProvider event listeners", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    // required for all subclasses of BaseViewProvider since they deal with extension storage
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+    // reset singleton instances between tests
+    BaseViewProvider["instanceMap"].clear();
   });
 
   it("should register the default ccloudConnected event listener", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     const handleSpy = sandbox.spy(provider, "handleCCloudConnectionChange");
 
     ccloudConnected.fire(true);
@@ -140,7 +191,7 @@ describe("viewProviders/base.ts BaseViewProvider event listeners", () => {
   });
 
   it("handleCCloudConnectionChange() should call reset() when the `ccloudConnected` event fires and a CCloud resource is focused", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     const resetSpy = sandbox.spy(provider, "reset");
 
     // simulate CCloud connection state change
@@ -152,7 +203,7 @@ describe("viewProviders/base.ts BaseViewProvider event listeners", () => {
   });
 
   it("handleCCloudConnectionChange() should not call reset() when the `ccloudConnected` event fires and a non-CCloud resource is focused", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     const resetSpy = sandbox.spy(provider, "reset");
 
     // simulate a non-CCloud resource
@@ -187,7 +238,7 @@ describe("viewProviders/base.ts BaseViewProvider updateTreeViewDescription()", (
   });
 
   it("should clear the description and clear .environment when no resource is focused", async () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     provider.environment = TEST_CCLOUD_ENVIRONMENT;
     provider.resource = null;
     provider["treeView"].description = "this should go away";
@@ -205,7 +256,7 @@ describe("viewProviders/base.ts BaseViewProvider updateTreeViewDescription()", (
       getStubbedCCloudResourceLoader(sandbox);
     stubbedLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
 
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     provider.environment = TEST_CCLOUD_ENVIRONMENT;
     provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
     provider["treeView"].description = "";
@@ -239,7 +290,7 @@ describe("viewProviders/base.ts BaseViewProvider reset()", () => {
   });
 
   it("should reset focused resources and clear the tree view", async () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     provider.environment = TEST_CCLOUD_ENVIRONMENT;
     provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
     provider["treeView"].description = "this should go away";
@@ -254,7 +305,7 @@ describe("viewProviders/base.ts BaseViewProvider reset()", () => {
   });
 
   it("should call .setSearch(null) to reset internal search state", async () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     const setSearchSpy = sandbox.spy(provider, "setSearch");
     provider.searchContextValue = ContextValues.flinkStatementsSearchApplied;
     provider.itemSearchString = "running";
@@ -269,7 +320,7 @@ describe("viewProviders/base.ts BaseViewProvider reset()", () => {
   });
 
   it("should refresh the tree view after resetting", async () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     const refreshSpy = sandbox.spy(provider, "refresh");
 
     await provider.reset();
@@ -281,7 +332,7 @@ describe("viewProviders/base.ts BaseViewProvider reset()", () => {
 describe("viewProviders/base.ts BaseViewProvider setParentResource()", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let provider: TestViewProvider;
+  let provider: TestParentedViewProvider;
   let refreshStub: sinon.SinonStub;
   let setSearchStub: sinon.SinonStub;
   let setContextValueStub: sinon.SinonStub;
@@ -294,7 +345,7 @@ describe("viewProviders/base.ts BaseViewProvider setParentResource()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    provider = TestViewProvider.getInstance();
+    provider = TestParentedViewProvider.getInstance();
     refreshStub = sandbox.stub(provider, "refresh");
     setSearchStub = sandbox.stub(provider, "setSearch");
     setContextValueStub = sandbox.stub(contextValues, "setContextValue");
@@ -355,7 +406,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   });
 
   it("should set internal search state when a value is passed", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
 
     provider.setSearch("First");
 
@@ -365,7 +416,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   });
 
   it("should clear internal search state when no value is passed", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     provider.itemSearchString = "running";
     provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
     provider.totalItemCount = 3;
@@ -379,7 +430,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
 
   for (const arg of ["First", null]) {
     it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, () => {
-      const provider = TestViewProvider.getInstance();
+      const provider = TestParentedViewProvider.getInstance();
       // context value must be set for setContextValue to be called
       provider.searchContextValue = ContextValues.flinkStatementsSearchApplied;
       provider.setSearch(arg);
@@ -391,7 +442,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
 
   for (const arg of ["First", null]) {
     it(`should not update the context value (arg=${arg}) when .searchContextValue is not set`, () => {
-      const provider = TestViewProvider.getInstance();
+      const provider = TestParentedViewProvider.getInstance();
       provider.setSearch(arg);
 
       sinon.assert.notCalled(setContextValueStub);
@@ -400,7 +451,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
 
   for (const arg of ["First", null]) {
     it(`should repaint the tree view when search is set (arg=${arg})`, async () => {
-      const provider = TestViewProvider.getInstance();
+      const provider = TestParentedViewProvider.getInstance();
       const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
 
       provider.setSearch(arg);
@@ -417,7 +468,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   }
 
   it("should filter children based on search string", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     provider.setSearch("first");
 
     const matchingStatement = new FlinkStatement({
@@ -443,7 +494,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
   });
 
   it("should update tree view message with search results when filterChildren() is called", () => {
-    const provider = TestViewProvider.getInstance();
+    const provider = TestParentedViewProvider.getInstance();
     provider.setSearch("running");
 
     const items = [
@@ -491,7 +542,7 @@ describe("viewProviders/base.ts BaseViewProvider searchChangedEmitter behavior",
 
   it("should call setSearch and update state when searchChangedEmitter is set and fires", async () => {
     // create fake subclass that includes a searchChangedEmitter
-    class EmitterTestProvider extends TestViewProvider {
+    class EmitterTestProvider extends TestParentedViewProvider {
       searchChangedEmitter = fakeEmitter;
     }
     const provider = EmitterTestProvider.getInstance();
@@ -507,7 +558,7 @@ describe("viewProviders/base.ts BaseViewProvider searchChangedEmitter behavior",
 
   it("should not throw or fail if searchChangedEmitter is not set", async () => {
     // create fake subclass that doesn't include a searchChangedEmitter
-    class NoEmitterTestProvider extends TestViewProvider {
+    class NoEmitterTestProvider extends TestParentedViewProvider {
       // searchChangedEmitter is null in TestViewProvider, so no need to override
     }
     const provider = NoEmitterTestProvider.getInstance();
