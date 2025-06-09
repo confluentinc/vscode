@@ -260,7 +260,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
         "Exported file may contain sensitive information like API keys, secrets, and local file paths. Use caution when saving and sharing connection files.",
     },
     { title: "Export" },
-    // { title: "Remove secrets" }, // TODO NC future feature
+    // { title: "Remove secrets" }, // issue #1965
     { title: "Cancel", isCloseAffordance: true },
   );
   if (selection !== undefined && selection.title !== "Cancel") {
@@ -276,7 +276,6 @@ export async function exportDirectConnection(item: DirectEnvironment) {
 
     if (!folderUri || folderUri.length !== 1) {
       // User cancelled before choosing a folder, quietly exit
-      // TODO Log it maybe?
       return;
     } else {
       try {
