@@ -67,7 +67,7 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
   it("should register event listeners to .disposables", () => {
     const provider = FlinkSqlCodelensProvider.getInstance();
 
-    // TODO: figure out why stubbing the event emitters' .event methods doesn't work here
+    // Need to figure out why stubbing the event emitters' .event methods doesn't work here
     // when checking call counts after the provider is created
     assert.strictEqual(provider.disposables.length, 2);
   });
