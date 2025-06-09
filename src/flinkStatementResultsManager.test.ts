@@ -302,9 +302,9 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       ctx.manager["_pollingInterval"] = undefined;
       ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.resetHistory();
 
-      // TODO: Eventually, the idea would be to move this fake timer up to
-      //       the top-level describe's beforeEach.
-      //       See https://github.com/confluentinc/vscode/issues/1807
+      // Eventually, the idea would be to move this fake timer up to
+      // the top-level describe's beforeEach.
+      // See https://github.com/confluentinc/vscode/issues/1807
       clock = sinon.useFakeTimers({ shouldClearNativeTimers: true });
     });
 
