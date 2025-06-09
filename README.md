@@ -62,7 +62,8 @@ Confluent can make it even more useful.
 The extension uses [Sentry](https://sentry.io) to capture and analyze errors, which enables more
 robust and friendly error debugging. It is the first item initialized in `extension.ts`, so that it
 can send any uncaught exceptions globally, and it's invoked in certain catch blocks to send specific
-errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup-plugin) is used to upload source maps.
+errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup-plugin) is used to
+upload source maps.
 
 ## Additional References
 
@@ -94,6 +95,7 @@ errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup
   - macOS: macOS 13 and above (built on macOS 13.5)
   - Running the extension on older operating systems may result in the sidecar process failing to
     start, which prevents the extension from establishing a successful handshake.
+- We do not yet support private networking when working with Confluent Cloud for Apache Flink®.
 
 ## Support
 

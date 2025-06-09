@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.4.0-48",
+  "version": "1.5.0-1",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -721,6 +721,17 @@
         "command": "confluent.connections.setKrb5ConfigPath",
         "title": "Set Kerberos krb5.conf Path",
         "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.flink.statements.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Flink Statements View"
+      },
+      {
+        "command": "confluent.flink.statements.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Flink Statements View"
       }
     ],
     "configuration": [
@@ -787,6 +798,11 @@
             "type": "string",
             "default": "",
             "markdownDescription": "Path to the `krb5.conf` file to use for Kerberos authentication in direct connections. This setting is used when connecting to Kafka clusters that require Kerberos authentication. (You can also use the [\"Set Kerberos krb5.conf Path\" command](command:confluent.connections.setKrb5ConfigPath).)"
+          },
+          "confluent.showNewVersionNotifications": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
           }
         }
       },
@@ -933,6 +949,12 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == confluent-schemas"
+      },
+      {
+        "command": "confluent.flink.statements.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-flink-statements"
       }
     ],
     "viewsContainers": {
@@ -965,7 +987,7 @@
         },
         {
           "id": "confluent-flink-statements",
-          "name": "Flink Statements",
+          "name": "Flink Statements (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)"
         },
@@ -1047,7 +1069,12 @@
       {
         "view": "confluent-flink-statements",
         "contents": "No Flink statements found.",
-        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected"
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected && !confluent.flinkStatementsSearchApplied"
+      },
+      {
+        "view": "confluent-flink-statements",
+        "contents": "No Flink statements match search string. [Clear search](command:confluent.flink.statements.search.clear) or [try a new search](command:confluent.flink.statements.search).",
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected && confluent.flinkStatementsSearchApplied"
       },
       {
         "view": "confluent-flink-artifacts",
@@ -1226,6 +1253,10 @@
         {
           "command": "confluent.resources.scaffold",
           "when": "false"
+        },
+        {
+          "command": "confluent.flink.statements.search.clear",
+          "when": "confluent.flinkStatementsSearchApplied"
         }
       ],
       "editor/title": [
@@ -1292,12 +1323,12 @@
         },
         {
           "command": "confluent.schemas.search",
-          "when": "view == confluent-schemas && !confluent.schemaSearchApplied",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected && !confluent.schemaSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.schemas.search.clear",
-          "when": "view == confluent-schemas && confluent.schemaSearchApplied",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected && confluent.schemaSearchApplied",
           "group": "navigation@1"
         },
         {
@@ -1317,7 +1348,7 @@
         },
         {
           "command": "confluent.schemas.refresh",
-          "when": "view == confluent-schemas",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
           "group": "navigation@5"
         },
         {
@@ -1327,12 +1358,12 @@
         },
         {
           "command": "confluent.topics.search",
-          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected && !confluent.topicSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.topics.search.clear",
-          "when": "view == confluent-topics && confluent.topicSearchApplied",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected && confluent.topicSearchApplied",
           "group": "navigation@1"
         },
         {
@@ -1347,7 +1378,7 @@
         },
         {
           "command": "confluent.topics.refresh",
-          "when": "view == confluent-topics",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "navigation@4"
         },
         {
@@ -1366,24 +1397,34 @@
           "group": "2_copy@3"
         },
         {
+          "command": "confluent.flink.statements.search",
+          "when": "view == confluent-flink-statements && confluent.flinkStatementsPoolSelected && !confluent.flinkStatementsSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.statements.search.clear",
+          "when": "view == confluent-flink-statements && confluent.flinkStatementsPoolSelected && confluent.flinkStatementsSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.statements.create",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.statements.refresh",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
-          "group": "navigation@4"
+          "group": "navigation@5"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",

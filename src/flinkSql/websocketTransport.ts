@@ -135,11 +135,11 @@ export class WebsocketTransport implements MessageTransports {
     this.writer = new WebsocketMessageWriter(socket);
   }
 
-  public dispose(): void {
+  public async dispose(): Promise<void> {
     logger.debug("Disposing websocket transport");
     // Make sure we close the writer first to send any pending messages
     try {
-      (this.writer as WebsocketMessageWriter).end();
+      await (this.writer as WebsocketMessageWriter).end();
     } catch (err) {
       logger.error(`Error calling writer.end(): ${err}`);
     }
