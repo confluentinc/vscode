@@ -76,13 +76,13 @@
               >
                 <vscode-option value="latest">Latest</vscode-option>
                 <vscode-option value="beginning">From beginning</vscode-option>
-                <vscode-option value="timestamp">From date/time</vscode-option>
+                <vscode-option value="timestamp">From specific date/time</vscode-option>
               </vscode-dropdown>
             </div>
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container">
-                <label for="consume-mode-timestamp">Timestamp</label>
+                <label for="consume-mode-timestamp">Start date and time</label>
                 <input
                   type="datetime-local"
                   id="consume-mode-timestamp"
