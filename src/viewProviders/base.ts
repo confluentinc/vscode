@@ -103,6 +103,10 @@ export abstract class BaseViewProvider<
   /** Count of all items returned from `getChildren()`. */
   totalItemCount: number = 0;
 
+  /** Singular and plural resource descriptions for user-facing messages. */
+  abstract readonly singularResource: string;
+  abstract readonly pluralResource: string;
+
   // NOTE: this is usually private/protected with a singleton pattern, but needs to be public for
   // the subclasses to be called with .getInstance() properly
   public constructor() {
@@ -305,11 +309,9 @@ export abstract class BaseViewProvider<
     matchingChildren.forEach((child) => this.searchMatches.add(child));
 
     // update the tree view message to show how many results were found to match the search string
-    // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
-    // will never be called and the message won't update
-    const plural = this.totalItemCount > 1 ? "s" : "";
+    const resourceType = this.totalItemCount > 1 ? this.pluralResource : this.singularResource;
     if (this.searchMatches.size > 0) {
-      this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${search}"`;
+      this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} ${resourceType} for "${search}"`;
     } else {
       // let empty state take over
       this.treeView.message = undefined;
