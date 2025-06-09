@@ -83,6 +83,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     const environments: Environment[] = await loader.getEnvironments();
     if (!environments.length) {
       logger.debug("No environments found");
+      // TODO: add hinting? the user shouldn't get here if they have at least one connection
       return new LanguageModelToolResult([new LanguageModelTextPart(NO_RESULTS)]);
     }
 
@@ -106,6 +107,10 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     token: CancellationToken,
   ): Promise<TextOnlyToolResultPart> {
     const parameters = toolCall.input as IGetEnvironmentsParameters;
+
+    stream.progress(
+      `Retrieving available environments with parameters: ${JSON.stringify(parameters)}...`,
+    );
     // handle the core tool invocation
     const result: LanguageModelToolResult = await this.invoke(
       {
