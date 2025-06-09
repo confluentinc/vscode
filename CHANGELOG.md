@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+
+## 1.4.0
+
 ### Added
 
 - Added functionality to the Results Viewer to allow users to toggle between table and changelog
