@@ -821,13 +821,13 @@
             "type": "string",
             "default": "",
             "order": 2,
-            "markdownDescription": "ID for the compute pool to use as a default in Confluent Cloud for Apache Flink® SQL operations.\n\n_NOTE: Providing an incorrect or non-existent compute pool ID will result in errors when submitting Flink SQL statements._\n\nYou can also use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults) to set this value."
+            "markdownDescription": "ID for the compute pool to use as a default in Confluent Cloud for Apache Flink® SQL operations. The value must be a valid Confluent Cloud compute pool ID. \n\nTo select from the list of available compute pools use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults)."
           },
           "confluent.flink.database": {
             "type": "string",
             "order": 3,
             "default": "",
-            "markdownDescription": "Name or ID for Apache Kafka® cluster in Confluent to use as the default Confluent Cloud for Apache Flink® SQL database.\n\n_NOTE: Providing an incorrect or non-existent database (Kafka cluster) name or ID will result in errors when submitting Flink SQL statements._\n\nYou can also use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults) to set this value."
+            "markdownDescription": "Name or ID for Apache Kafka® cluster in Confluent to use as the default Confluent Cloud for Apache Flink® SQL database. The value must be a valid Confluent Cloud database (Kafka cluster) name or ID. \n\nTo select from the list of available databases use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults)."
           },
           "confluent.flink.updateComputePoolIdFromCodelens": {
             "markdownDescription": "Controls whether or not to update `#confluent.flink.computePoolId#` after selecting a compute pool from the 'Set Compute Pool' codelens.",
