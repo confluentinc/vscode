@@ -193,6 +193,13 @@ export class CCloudResourceLoader extends ResourceLoader {
     return await getResourceManager().getCCloudEnvironments();
   }
 
+  /** Are there any Flink compute pools at all? */
+  public async hasFlinkComputePools(): Promise<boolean> {
+    await this.ensureCoarseResourcesLoaded();
+    const environments = await getResourceManager().getCCloudEnvironments();
+    return environments.some((env) => env.flinkComputePools.length > 0);
+  }
+
   /**
    * Get all of the known schema registries in the accessible CCloud environments.
    *

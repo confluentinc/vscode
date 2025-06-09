@@ -156,7 +156,6 @@ export function build(done) {
 
   /** @type {import("rollup").RollupOptions} */
   const webInput = {
-    // TODO I should probably convert this to array of configs so I isolate modules
     input: globSync("src/webview/*.ts", { ignore: "src/webview/*.spec.ts" }),
     plugins: [
       stylesheet({
@@ -593,6 +592,10 @@ export async function lint() {
 testBuild.description =
   "Build test files for running tests via `gulp testRun` or through the VS Code test runner. Use --coverage to enable coverage reporting.";
 export async function testBuild() {
+  // make sure to download the appropriate sidecar executable before building for tests
+  const result = downloadSidecar();
+  if (result.error) throw result.error;
+
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts", "tests/**/*.ts"]);
   const entryMap = Object.fromEntries(
@@ -876,6 +879,7 @@ export async function apigen() {
         shell: IS_WINDOWS,
       },
     );
+
     // apply prettier formatting to generated code
     await pipeline(
       src(join(path, "**", "*.ts")),
@@ -885,6 +889,14 @@ export async function apigen() {
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`Failed to generate client for ${spec}`);
   }
+
+  // While here, also run `npx gql-tada generate output` to generate GraphQL types.
+  // (after dev has `cp ../ide-sidecar/src/generated/resources/schema.graphql src/graphql/sidecar.graphql`)
+  const gqlTadaResult = spawnSync("npx", ["gql-tada", "generate", "output"], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
+  if (gqlTadaResult.error) throw gqlTadaResult.error;
 }
 
 format.description = "Enforce Prettier formatting for all TS/JS/MD/HTML/YAML files.";
@@ -1008,7 +1020,7 @@ export function install(done) {
   return done(result.status);
 }
 
-export async function downloadSidecar() {
+export function downloadSidecar() {
   let result;
   if (IS_WINDOWS) {
     result = spawnSync(

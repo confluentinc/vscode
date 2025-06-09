@@ -91,7 +91,7 @@ export async function chatHandler(
       promptTokensUsed,
       modelInfo,
     });
-    // TODO: implement command handling and update CustomChatResult interface
+    // Planned expansion: implement command handling and update CustomChatResult interface
     return { metadata: { modelInfo } };
   }
 
@@ -214,7 +214,7 @@ export async function handleChatMessage(
 
   // limit number of iterations to prevent infinite loops
   let iterations = 0;
-  const maxIterations = 10; // TODO: make this user-configurable?
+  const maxIterations = 10; // Should we make this user-configurable?
 
   // inform the model that tools can be invoked as part of the response stream
   const registeredTools: BaseLanguageModelTool<any>[] = Array.from(getToolMap().values());
@@ -333,7 +333,7 @@ export async function handleChatMessage(
         try {
           toolResultPart = await tool.processInvocation(request, stream, toolCall, token);
 
-          // TODO(shoup): remove after debugging
+          // (shoup): remove after debugging
           const toolDebugMessages: string[] = [];
           for (const part of toolResultPart.content) {
             toolDebugMessages.push(part.value);

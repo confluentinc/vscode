@@ -72,6 +72,7 @@ export function createConfigChangeListener(): Disposable {
 
       if (event.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER)) {
         // user toggled the "Enable Flink CCloud Language Server" preview setting
+        // TODO when we remove this flag and settings listener, remove the undefined uri option in `maybeStartLanguageClient`
         const enabled: boolean =
           configs.get(
             ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
