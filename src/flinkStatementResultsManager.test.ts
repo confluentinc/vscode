@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import * as flinkStatementsCommands from "../src/commands/flinkStatements";
+import * as vscode from "vscode";
 import * as messageUtils from "../src/documentProviders/message";
 import {
   FlinkStatementResultsManagerTestContext,
@@ -64,14 +64,16 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should handle viewing the statement source", async () => {
-    const viewStatementSqlCommandStub = sandbox
-      .stub(flinkStatementsCommands, "viewStatementSqlCommand")
-      .resolves();
+    const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
 
     // Simulate hitting the button to view the statement source
     await vm.viewStatementSource();
-    sinon.assert.calledOnce(viewStatementSqlCommandStub);
-    sinon.assert.calledWith(viewStatementSqlCommandStub, ctx.statement);
+    sinon.assert.calledOnce(executeCommandStub);
+    sinon.assert.calledWith(
+      executeCommandStub,
+      "confluent.statements.viewstatementsql",
+      ctx.statement,
+    );
   });
 
   it("should handle PreviewResult and PreviewAllResults", async () => {
