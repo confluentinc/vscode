@@ -284,7 +284,7 @@ export class ResourceViewProvider
       // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
       // will never be called and the message won't update
       if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount}  for "${this.itemSearchString}"`;
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} for "${this.itemSearchString}"`;
       } else {
         // let empty state take over
         this.treeView.message = undefined;
