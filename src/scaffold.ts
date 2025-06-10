@@ -288,7 +288,6 @@ export async function applyTemplate(
     });
 
     if (!fileUris || fileUris.length !== 1) {
-      // This means the user cancelled @ save dialog. Show a message and return
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "cancelled before save",
         templateCollection: pickedTemplate.spec!.template_collection?.id,
@@ -296,7 +295,7 @@ export async function applyTemplate(
         templateName: pickedTemplate.spec!.display_name,
         itemType: telemetrySource,
       });
-      vscode.window.showInformationMessage("Project generation cancelled");
+
       return { success: false, message: "Project generation cancelled before save." };
     }
 
