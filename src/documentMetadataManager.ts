@@ -6,7 +6,7 @@ import { UriMetadataMap } from "./storage/types";
 const logger = new Logger("documentMetadataManager");
 
 // Central list of supported URI schemes
-const SUPPORTED_URI_SCHEMES = ["file", "untitled", "confluent.flinkstatement"];
+const SUPPORTED_URI_SCHEMES = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
 
 /** Manager for VS Code {@link TextDocument}s that tracks metadata across document lifecycle events */
 export class DocumentMetadataManager {
