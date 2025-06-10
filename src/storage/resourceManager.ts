@@ -307,7 +307,7 @@ export class ResourceManager {
     if (isLocal(topic)) {
       return this.getLocalKafkaCluster(topic.clusterId);
     } else if (isCCloud(topic)) {
-      return this.getCCloudKafkaCluster(topic.environmentId!, topic.clusterId);
+      return this.getCCloudKafkaCluster(topic.environmentId, topic.clusterId);
     }
     // TODO(shoup): add isDirect() check here?
     return null;
@@ -704,7 +704,7 @@ export class ResourceManager {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
       const connectionIds: DirectConnectionsById = await this.getDirectConnections();
-      connectionIds.set(spec.id! as ConnectionId, spec);
+      connectionIds.set(spec.id, spec);
       const serializedConnections = Object.fromEntries(
         Array.from(connectionIds.entries()).map(([id, spec]) => [
           id,
