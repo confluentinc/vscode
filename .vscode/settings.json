@@ -6,9 +6,5 @@
     "editor.codeActionsOnSave": {
       "source.organizeImports": "explicit"
     }
-  },
-  "sonarlint.connectedMode.project": {
-    "connectionId": "https-sonarqube-dp-confluent-io-",
-    "projectKey": "vscode"
   }
 }
