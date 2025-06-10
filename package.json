@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.5.0-3",
+  "version": "1.5.0-9",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -443,6 +443,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.flinkStatementResults",
+        "icon": "$(confluent-view-messages)",
+        "title": "View Flink Statement Results",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
         "category": "Confluent: Flink Statements"
@@ -600,12 +606,6 @@
         "icon": "$(confluent-view-messages)",
         "title": "View Messages",
         "category": "Confluent: Topic"
-      },
-      {
-        "command": "confluent.flinkStatementResults",
-        "icon": "$(confluent-view-messages)",
-        "title": "View Flink Statement Results",
-        "category": "Confluent: Flink Statements"
       },
       {
         "command": "confluent.topic.consume.duplicate",
@@ -821,13 +821,13 @@
             "type": "string",
             "default": "",
             "order": 2,
-            "description": "ID for the compute pool to use as a default in Confluent Cloud for Apache Flink® SQL operations."
+            "markdownDescription": "ID for the compute pool to use as a default in Confluent Cloud for Apache Flink® SQL operations. The value must be a valid Confluent Cloud compute pool ID. \n\nTo select from the list of available compute pools use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults)."
           },
           "confluent.flink.database": {
             "type": "string",
             "order": 3,
             "default": "",
-            "description": "Name or ID for Apache Kafka® cluster in Confluent to use as the default Confluent Cloud for Apache Flink® SQL database."
+            "markdownDescription": "Name or ID for Apache Kafka® cluster in Confluent to use as the default Confluent Cloud for Apache Flink® SQL database. The value must be a valid Confluent Cloud database (Kafka cluster) name or ID. \n\nTo select from the list of available databases use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults)."
           },
           "confluent.flink.updateComputePoolIdFromCodelens": {
             "markdownDescription": "Controls whether or not to update `#confluent.flink.computePoolId#` after selecting a compute pool from the 'Set Compute Pool' codelens.",
@@ -1573,11 +1573,6 @@
           "group": "inline@1"
         },
         {
-          "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
-          "group": "inline@1"
-        },
-        {
           "command": "confluent.topic.produce.fromDocument",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/",
           "group": "inline@2"
@@ -1626,6 +1621,11 @@
           "command": "confluent.openCCloudApiKeysUrl",
           "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.flinkStatementResults",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "group": "inline@1"
         }
       ]
     },

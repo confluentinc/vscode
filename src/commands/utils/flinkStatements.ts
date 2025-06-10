@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { getCCloudAuthSession } from "../../authn/utils";
 import {
   CreateSqlv1Statement201Response,
@@ -7,9 +8,15 @@ import {
   CreateSqlv1StatementRequestKindEnum,
 } from "../../clients/flinkSql";
 import { CCloudResourceLoader } from "../../loaders";
+import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { FlinkStatement } from "../../models/flinkStatement";
 import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
+import { WebviewPanelCache } from "../../webview-cache";
+import flinkStatementResults from "../../webview/flink-statement-results.html";
+
+const logger = new Logger("commands.utils.flinkStatements");
 
 export class FlinkSpecProperties {
   currentCatalog: string | undefined = undefined;
@@ -104,10 +111,6 @@ export async function determineFlinkStatementName(): Promise<string> {
     // Strip leading numeric characters and hyphens.
     .replace(/^[0-9-]+/, "");
 
-  // TODO: Show the user the proposed name and let them edit it.
-
-  // Be sure to only submit valid name after user edits.
-
   return proposed;
 }
 
@@ -162,4 +165,61 @@ export async function submitFlinkStatement(
 export function localTimezoneOffset(): string {
   const nowStr = new Date().toString();
   return nowStr.match(/([A-Z]+[+-]\d+)/)![1]; //NOSONAR: This regex is safe for parsing the timezone offset from a date string.
+}
+
+/** Poll period in millis to check whether statement has reached results-viewable state */
+const DEFAULT_POLL_PERIOD_MS = 300;
+
+/** Max time in millis to wait until statement reaches results-viewable state */
+export const MAX_WAIT_TIME_MS = 60_000;
+
+/**
+ * Wait for a Flink statement to enter results-viewable state by polling its status.
+ *
+ * @param statement The Flink statement to monitor
+ * @returns Promise that resolves when the statement enters RUNNING phase
+ * @throws Error if statement doesn't reach RUNNING phase within MAX_WAIT_TIME_MS seconds, or if it is not found.
+ */
+export async function waitForStatementRunning(statement: FlinkStatement): Promise<void> {
+  const startTime = Date.now();
+
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  while (Date.now() - startTime < MAX_WAIT_TIME_MS) {
+    // Check if the statement is in a viewable state
+    const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
+
+    if (!refreshedStatement) {
+      // if the statement is no longer found, break to raise error
+      logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
+      throw new Error(`Statement ${statement.name} no longer exists.`);
+    } else if (refreshedStatement.areResultsViewable) {
+      // Resolve if now in a viewable state
+      return;
+    }
+
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, DEFAULT_POLL_PERIOD_MS));
+  }
+
+  throw new Error(
+    `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
+  );
+}
+
+/** Subclass of WebviewPanelCache for managing Flink statement results panels */
+export class FlinkStatementWebviewPanelCache extends WebviewPanelCache {
+  /** Convienence driver of WebviewPanelCache.findOrCreate() tailored for Flink Statement results viewers */
+  getPanelForStatement(statement: FlinkStatement): [vscode.WebviewPanel, boolean] {
+    return this.findOrCreate(
+      {
+        id: `${statement.environmentId}/${statement.name}`,
+        template: flinkStatementResults,
+      },
+      "flink-statement-results",
+      `Statement: ${statement.name}`,
+      vscode.ViewColumn.One,
+      { enableScripts: true },
+    );
+  }
 }

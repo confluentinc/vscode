@@ -532,7 +532,7 @@ describe("ResourceViewProvider search behavior", () => {
     assert.strictEqual(provider.totalItemCount, 1);
     assert.strictEqual(
       provider["treeView"].message,
-      `Showing 1 of ${provider.totalItemCount} result for "${searchStr}"`,
+      `Showing 1 of ${provider.totalItemCount} for "${searchStr}"`,
     );
   });
 

@@ -15,29 +15,7 @@ semaphore:
   pipeline_enable: false
   triggers: ["branches", "pull_requests"]
 sonarqube:
-  languages:
-    - javascript
-    - typescript
-  enable: true
-  main_branch: main
-  coverage_reports:
-    - coverage/lcov.info
-    - coverage/lcov-functional.info
-  coverage_sources:
-    - src
-  coverage_exclusions:
-    - .vscode-test/**/*
-    - bin/**/*
-    - node_modules/**/*
-    - mk-files/**/*
-    - src/clients/**/*
-    - tests/**/*
-    - userdata/**/*
-    - Gulpfile.mjs
-    - src/testing.ts
-    - playwright.config.ts
-    - src/**/*.test.ts
-    - src/**/*.spec.ts
+  enable: false
 make:
   enable: false
 renovatebot:
