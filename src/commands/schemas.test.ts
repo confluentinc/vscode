@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { commands } from "vscode";
+import { commands, env } from "vscode";
 import {
   getStubbedCCloudResourceLoader,
   getStubbedResourceLoader,
@@ -23,28 +23,28 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CannotLoadSchemasError,
-  copySchemaRegistrySubject,
+  copySubject,
   determineLatestSchema,
   diffLatestSchemasCommand,
   getLatestSchemasForTopic,
 } from "./schemas";
 
-describe("copySchemaRegistrySubject", () => {
+describe("copySubject", () => {
   let _originalClipboardContents: string | undefined;
 
   beforeEach(async () => {
-    _originalClipboardContents = await require("vscode").env.clipboard.readText();
+    _originalClipboardContents = await env.clipboard.readText();
   });
 
   afterEach(async () => {
     if (_originalClipboardContents !== undefined) {
-      await require("vscode").env.clipboard.writeText(_originalClipboardContents);
+      await env.clipboard.writeText(_originalClipboardContents);
     }
   });
 
   it("should copy the subject name to the clipboard", async () => {
-    await copySchemaRegistrySubject(TEST_CCLOUD_SUBJECT);
-    const writtenValue = await require("vscode").env.clipboard.readText();
+    await copySubject(TEST_CCLOUD_SUBJECT);
+    const writtenValue = await env.clipboard.readText();
     assert.strictEqual(writtenValue, TEST_CCLOUD_SUBJECT.name);
   });
 });

@@ -43,10 +43,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       viewLatestLocallyCommand,
     ),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
-    registerCommandWithLogging(
-      "confluent.schemas.copySchemaRegistrySubject",
-      copySchemaRegistrySubject,
-    ),
+    registerCommandWithLogging("confluent.schemas.copySubject", copySubject),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
     registerCommandWithLogging(
       "confluent.schemas.diffMostRecentVersions",
@@ -87,9 +84,8 @@ async function copySchemaRegistryId() {
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
 }
 
-export async function copySchemaRegistrySubject(subject: Subject) {
+export async function copySubject(subject: Subject) {
   if (!subject || typeof subject.name !== "string") {
-    vscode.window.showErrorMessage("No subject provided to copy.");
     return;
   }
   await vscode.env.clipboard.writeText(subject.name);
