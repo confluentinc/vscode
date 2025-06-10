@@ -144,7 +144,7 @@ describe("TopicViewProvider search behavior", () => {
     assert.strictEqual(provider.totalItemCount, 2);
     assert.strictEqual(
       provider["treeView"].message,
-      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${searchStr}"`,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${searchStr}"`,
     );
   });
 

@@ -184,7 +184,7 @@ describe("SchemasViewProvider search behavior", () => {
     assert.strictEqual(provider.searchMatches.size, 1);
     assert.strictEqual(
       provider["treeView"].message,
-      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${TEST_CCLOUD_SCHEMA.subject}"`,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${TEST_CCLOUD_SCHEMA.subject}"`,
     );
   });
 
@@ -200,7 +200,7 @@ describe("SchemasViewProvider search behavior", () => {
     assert.strictEqual(provider.searchMatches.size, 2);
     assert.strictEqual(
       provider["treeView"].message,
-      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${searchStr}"`,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${searchStr}"`,
     );
   });
 
