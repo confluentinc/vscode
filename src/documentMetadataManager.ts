@@ -59,7 +59,7 @@ export class DocumentMetadataManager {
    * Handles metadata migration when an untitled document is saved to a file.
    */
   private async handleDocumentSave(document: TextDocument) {
-    if (!this.shouldLogDocumentEvent(document)) return;
+    if (!SUPPORTED_URI_SCHEMES.includes(document.uri.scheme)) return;
 
     this.logDocumentEvent("saved", document.uri);
 
