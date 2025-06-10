@@ -3,9 +3,9 @@ import sinon from "sinon";
 import { ResourceLoader } from "../../loaders";
 import * as notificationsModule from "../../notifications";
 import * as projectGenModule from "../../projectGeneration";
-import { resourceScaffoldProjectRequest } from "../projectGeneration";
+import { resourceScaffoldProjectRequest } from "../../projectGeneration/commands";
 
-describe("resourceScaffoldProjectRequest", function () {
+describe.only("resourceScaffoldProjectRequest", function () {
   let sandbox: sinon.SinonSandbox;
   let scaffoldProjectRequestStub: sinon.SinonStub;
   let showErrorNotificationWithButtonsStub: sinon.SinonStub;
@@ -39,11 +39,11 @@ describe("resourceScaffoldProjectRequest", function () {
 
     assert.ok(scaffoldProjectRequestStub.calledOnce);
     assert.deepStrictEqual(scaffoldProjectRequestStub.firstCall.args[0], {
-      template_collection_name: "vscode",
-      template_name: "kafka",
-      cluster_id: "cluster-123",
-      organization_id: "org-123",
-      cluster_name: "test-cluster",
+      templateCollection: "vscode",
+      templateName: "kafka",
+      clusterId: "cluster-123",
+      organizationId: "org-123",
+      clusterName: "test-cluster",
       bootstrap: "test-bootstrap:9092",
     });
   });
@@ -66,11 +66,11 @@ describe("resourceScaffoldProjectRequest", function () {
 
     assert.ok(scaffoldProjectRequestStub.calledOnce);
     assert.deepStrictEqual(scaffoldProjectRequestStub.firstCall.args[0], {
-      template_collection_name: "vscode",
-      template_name: "kafka",
-      topic_name: "test-topic",
-      cluster_id: "cluster-123",
-      organization_id: "org-123",
+      templateCollection: "vscode",
+      templateName: "kafka",
+      topicName: "test-topic",
+      clusterId: "cluster-123",
+      organizationId: "org-123",
       bootstrap: "test-bootstrap:9092",
     });
   });
@@ -90,11 +90,11 @@ describe("resourceScaffoldProjectRequest", function () {
 
     assert.ok(scaffoldProjectRequestStub.calledOnce);
     assert.deepStrictEqual(scaffoldProjectRequestStub.firstCall.args[0], {
-      template_collection_name: "vscode",
-      template_name: "flink",
-      compute_pool_id: "pool-123",
-      organization_id: "org-123",
-      compute_pool_name: "test-pool",
+      templateCollection: "vscode",
+      templateName: "flink",
+      computePoolId: "pool-123",
+      organizationId: "org-123",
+      computePoolName: "test-pool",
     });
   });
 

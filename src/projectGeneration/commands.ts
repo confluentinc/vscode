@@ -22,7 +22,7 @@ export function registerProjectGenerationCommands(context: vscode.ExtensionConte
   );
 }
 
-async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
+export async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
   if (resource instanceof KafkaCluster) {
     const clusterId = resource.id;
     const organizationId = (resource as any).parent?.id;
@@ -31,11 +31,11 @@ async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
     const bootstrapWithoutProtocol = removeProtocolPrefix(bootstrap);
 
     await scaffoldProjectRequest({
-      template_collection_name: "vscode",
-      template_name: "kafka",
-      cluster_id: String(clusterId),
-      organization_id: String(organizationId),
-      cluster_name: String(clusterName),
+      templateCollection: "vscode",
+      templateName: "kafka",
+      clusterId: String(clusterId),
+      organizationId: String(organizationId),
+      clusterName: String(clusterName),
       bootstrap: String(bootstrapWithoutProtocol),
     });
   } else if (resource instanceof KafkaTopic) {
@@ -46,11 +46,11 @@ async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
     const bootstrapWithoutProtocol = removeProtocolPrefix(bootstrap);
 
     await scaffoldProjectRequest({
-      template_collection_name: "vscode",
-      template_name: "kafka",
-      topic_name: String(topicName),
-      cluster_id: String(clusterId),
-      organization_id: String(organizationId),
+      templateCollection: "vscode",
+      templateName: "kafka",
+      topicName: String(topicName),
+      clusterId: String(clusterId),
+      organizationId: String(organizationId),
       bootstrap: String(bootstrapWithoutProtocol),
     });
   } else if (resource instanceof CCloudFlinkComputePool) {
@@ -59,11 +59,11 @@ async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
     const computePoolName = resource.name;
 
     await scaffoldProjectRequest({
-      template_collection_name: "vscode",
-      template_name: "flink",
-      compute_pool_id: String(computePoolId),
-      organization_id: String(organizationId),
-      compute_pool_name: String(computePoolName),
+      templateCollection: "vscode",
+      templateName: "flink",
+      computePoolId: String(computePoolId),
+      organizationId: String(organizationId),
+      computePoolName: String(computePoolName),
     });
   } else {
     await showErrorNotificationWithButtons("Scaffolding is not supported for this resource type", {
