@@ -544,6 +544,11 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.copySubject",
+        "title": "Copy Subject",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.search",
         "icon": "$(search)",
         "title": "Search",
@@ -1171,6 +1176,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.copySubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolve",
           "when": "false"
         },
@@ -1525,6 +1534,11 @@
         {
           "command": "confluent.schemas.copySchemaRegistryId",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema*/",
+          "group": "4_copy@1"
+        },
+        {
+          "command": "confluent.schemas.copySubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "4_copy@1"
         },
         {
