@@ -5,6 +5,7 @@ import { Logger } from "./logging";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { applyTemplate, getTemplatesList, scaffoldProjectRequest } from "./projectGeneration";
 import { registerProjectGenerationCommands as registerProjectGenerationCommandsFromModule } from "./projectGeneration/commands";
+import { filterSensitiveKeys } from "./projectGeneration/utils";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { type post } from "./webview/scaffold-form";
@@ -16,17 +17,7 @@ const logger = new Logger("scaffold");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommands = registerProjectGenerationCommandsFromModule;
-export { applyTemplate, getTemplatesList, scaffoldProjectRequest };
-
-export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(
-    Object.entries(obj)
-      .filter(
-        ([key]) => !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret"),
-      )
-      .map(([key, value]) => [key, value]),
-  );
-}
+export { applyTemplate, filterSensitiveKeys, getTemplatesList, scaffoldProjectRequest };
 
 export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV1Template {
   const spec = template.spec as ScaffoldV1TemplateSpec;
