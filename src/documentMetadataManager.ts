@@ -14,7 +14,15 @@ export class DocumentMetadataManager {
   disposables: Disposable[] = [];
 
   private constructor() {
+<<<<<<< HEAD
     this.registerEventListeners();
+=======
+    this.disposables.push(
+      workspace.onDidOpenTextDocument(this.handleDocumentOpen, this),
+      workspace.onDidSaveTextDocument(this.handleDocumentSave, this),
+      workspace.onDidCloseTextDocument(this.handleDocumentClose, this),
+    );
+>>>>>>> main
   }
 
   private static instance: DocumentMetadataManager | null = null;

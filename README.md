@@ -62,7 +62,8 @@ Confluent can make it even more useful.
 The extension uses [Sentry](https://sentry.io) to capture and analyze errors, which enables more
 robust and friendly error debugging. It is the first item initialized in `extension.ts`, so that it
 can send any uncaught exceptions globally, and it's invoked in certain catch blocks to send specific
-errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup-plugin) is used to upload source maps.
+errors. The [@sentry/rollup-plugin](https://www.npmjs.com/package/@sentry/rollup-plugin) is used to
+upload source maps.
 
 ## Additional References
 

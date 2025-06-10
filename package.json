@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.5.0-1",
+  "version": "1.5.0-4",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -443,6 +443,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.flinkStatementResults",
+        "icon": "$(confluent-view-messages)",
+        "title": "View Flink Statement Results",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
         "category": "Confluent: Flink Statements"
@@ -600,12 +606,6 @@
         "icon": "$(confluent-view-messages)",
         "title": "View Messages",
         "category": "Confluent: Topic"
-      },
-      {
-        "command": "confluent.flinkStatementResults",
-        "icon": "$(confluent-view-messages)",
-        "title": "View Flink Statement Results",
-        "category": "Confluent: Flink Statements"
       },
       {
         "command": "confluent.topic.consume.duplicate",
@@ -1573,11 +1573,6 @@
           "group": "inline@1"
         },
         {
-          "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
-          "group": "inline@1"
-        },
-        {
           "command": "confluent.topic.produce.fromDocument",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/",
           "group": "inline@2"
@@ -1626,6 +1621,11 @@
           "command": "confluent.openCCloudApiKeysUrl",
           "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.flinkStatementResults",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "group": "inline@1"
         }
       ]
     },

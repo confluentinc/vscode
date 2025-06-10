@@ -31,8 +31,6 @@ describe("commands/connections.ts", function () {
     sandbox.restore();
   });
 
-  // TODO: add tests for createConnectionCommand
-
   it("addSSLPemPath() should show open dialog and update config if valid .pem file is selected", async function () {
     const uri = { fsPath: "path/to/file.pem" } as vscode.Uri;
     showOpenDialogStub.resolves([uri]);
