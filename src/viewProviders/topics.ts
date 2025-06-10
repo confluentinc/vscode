@@ -193,9 +193,8 @@ export class TopicViewProvider
       // update the tree view message to show how many results were found to match the search string
       // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
       // will never be called and the message won't update
-      const plural = this.totalItemCount > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount}  for "${this.itemSearchString}"`;
       } else {
         // let empty state take over
         this.treeView.message = undefined;
