@@ -5,7 +5,7 @@ import * as notificationsModule from "../../notifications";
 import * as projectGenModule from "../../projectGeneration";
 import { resourceScaffoldProjectRequest } from "../../projectGeneration/commands";
 
-describe.only("resourceScaffoldProjectRequest", function () {
+describe("resourceScaffoldProjectRequest", function () {
   let sandbox: sinon.SinonSandbox;
   let scaffoldProjectRequestStub: sinon.SinonStub;
   let showErrorNotificationWithButtonsStub: sinon.SinonStub;
