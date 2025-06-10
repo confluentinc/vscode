@@ -35,7 +35,7 @@ remove-test-env:
 # Run only unit (Mocha) tests (split for CI parallelization)
 .PHONY: test-mocha
 test-mocha: setup-test-env install-test-dependencies install-dependencies
-	npx gulp ci
+	npx gulp build
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
@@ -53,7 +53,7 @@ test-mocha: setup-test-env install-test-dependencies install-dependencies
 # Run only webview (Playwright) tests (split for CI parallelization)
 .PHONY: test-playwright-webviews
 test-playwright-webviews: setup-test-env install-test-dependencies install-dependencies
-	npx gulp ci
+	npx gulp build
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
