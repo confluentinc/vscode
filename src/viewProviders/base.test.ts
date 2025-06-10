@@ -464,7 +464,7 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     assert.ok(provider["treeView"].message);
     assert.strictEqual(
       provider["treeView"].message,
-      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${provider.itemSearchString}"`,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${provider.itemSearchString}"`,
     );
   });
 });
