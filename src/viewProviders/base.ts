@@ -27,13 +27,14 @@ export interface RefreshableTreeViewProvider {
   refresh(forceDeepRefresh?: boolean): void;
 }
 
+/** Requirement interfaces for BaseViewProvider data elements */
+type BaseViewProviderData = IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId };
+
 /**
  * Base class for all tree view providers handling a primary resource type.
  * @template T The primary resource(s) that will be shown in the view.
  */
-export abstract class BaseViewProvider<
-    T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-  >
+export abstract class BaseViewProvider<T extends BaseViewProviderData>
   implements TreeDataProvider<T>, RefreshableTreeViewProvider
 {
   abstract loggerName: string;
@@ -136,7 +137,7 @@ export abstract class BaseViewProvider<
     return [];
   }
 
-  abstract getChildren(element?: T): Promise<T[]>;
+  abstract getChildren(element?: T): T[];
 
   abstract getTreeItem(element: T): TreeItem;
 
@@ -148,7 +149,6 @@ export abstract class BaseViewProvider<
     this.treeView.message = undefined;
 
     this.setSearch(null);
-    // TODO: update this to adjust associated context value for focused resource(s)
 
     await this.refresh();
   }
@@ -240,8 +240,8 @@ export abstract class BaseViewProvider<
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class ParentedBaseViewProvider<
-    P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-    T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+    P extends BaseViewProviderData,
+    T extends BaseViewProviderData,
   >
   extends BaseViewProvider<T>
   implements TreeDataProvider<T>, RefreshableTreeViewProvider
@@ -356,11 +356,11 @@ export abstract class ParentedBaseViewProvider<
     subLogger.debug(
       `called with ${focusedResource.constructor.name}, checking for environments...`,
     );
-    const loader = ResourceLoader.getInstance(focusedResource.connectionId);
-    const envs: Environment[] = await loader.getEnvironments();
-    const parentEnv: Environment | undefined = envs.find(
-      (env) => env.id === focusedResource.environmentId,
+    const parentEnv: Environment | undefined = await ResourceLoader.getEnvironment(
+      focusedResource.connectionId,
+      focusedResource.environmentId,
     );
+
     this.environment = parentEnv ?? null;
     if (parentEnv) {
       subLogger.debug("found environment, setting view description");

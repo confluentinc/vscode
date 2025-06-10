@@ -4,6 +4,7 @@ import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "./resourceLoader";
 
@@ -38,10 +39,10 @@ export class LocalResourceLoader extends ResourceLoader {
     return await getLocalResources();
   }
 
-  async getKafkaClustersForEnvironmentId(environmentId: string): Promise<LocalKafkaCluster[]> {
-    const envs: LocalEnvironment[] = await this.getEnvironments();
-    // should only ever be one, but we'll filter just in case
-    const env = envs.find((env) => env.id === environmentId);
+  async getKafkaClustersForEnvironmentId(
+    environmentId: EnvironmentId,
+  ): Promise<LocalKafkaCluster[]> {
+    const env = (await this.getEnvironment(environmentId)) as LocalEnvironment | undefined;
     if (!env) {
       throw new Error(`Unknown environmentId ${environmentId}`);
     }
