@@ -291,6 +291,8 @@ export abstract class BaseViewProvider<
     matchingChildren.forEach((child) => this.searchMatches.add(child));
 
     // update the tree view message to show how many results were found to match the search string
+    // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
+    // will never be called and the message won't update
     if (this.searchMatches.size > 0) {
       this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} for "${search}"`;
     } else {
