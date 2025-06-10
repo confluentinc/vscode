@@ -29,7 +29,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     const params = options.input;
     const inputTagsPassed: boolean = Array.isArray(params.tags) && params.tags.length > 0;
 
-    // TODO: add support for other collections
+    // along with our other template listing invocations, we only support this specific template collection for now.
     const templates: ScaffoldV1Template[] = await getTemplatesList("vscode", true);
     const templateStrings: LanguageModelTextPart[] = [];
     templates.forEach((template) => {

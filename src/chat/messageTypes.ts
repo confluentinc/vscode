@@ -23,7 +23,7 @@ export function participantMessage(message: string | LanguageModelToolCallPart[]
   return LanguageModelChatMessage.Assistant(message, PARTICIPANT_ID);
 }
 
-// TODO: update this if the `LanguageModelChatMessage` API changes and a `System` message is added
+// Update this if the `LanguageModelChatMessage` API changes and a `System` message is added
 /**
  * Prefix and tag a {@link LanguageModelChatMessage.User User message} message to treat as a
  * `System` message for providing additional context.
