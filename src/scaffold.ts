@@ -10,26 +10,20 @@ import {
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
 import { ResponseError } from "./clients/sidecar";
-import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
-import { ResourceLoader } from "./loaders";
-import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
-import { CCloudFlinkComputePool } from "./models/flinkComputePool";
-import { KafkaCluster } from "./models/kafkaCluster";
-import { CCloudOrganization } from "./models/organization";
-import { KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
+import { registerProjectGenerationCommands as registerProjectGenerationCommandsFromModule } from "./projectGeneration/commands";
 import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
 import { UserEvent, logUsage } from "./telemetry/events";
-import { removeProtocolPrefix } from "./utils/bootstrapServers";
 import { fileUriExists } from "./utils/file";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
+
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
@@ -44,62 +38,7 @@ interface PrefilledTemplateOptions {
 const logger = new Logger("scaffold");
 
 const scaffoldWebviewCache = new WebviewPanelCache();
-export function registerProjectGenerationCommands(): vscode.Disposable[] {
-  return [
-    registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
-    registerCommandWithLogging("confluent.resources.scaffold", resourceScaffoldProjectRequest),
-  ];
-}
-
-async function resourceScaffoldProjectRequest(
-  item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
-) {
-  if (item instanceof KafkaCluster) {
-    const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
-    return await scaffoldProjectRequest(
-      {
-        bootstrap_server: bootstrapServers,
-        cc_bootstrap_server: bootstrapServers,
-        templateType: "kafka",
-      },
-      "cluster",
-    );
-  } else if (item instanceof KafkaTopic) {
-    const clusters = await ResourceLoader.getInstance(
-      item.connectionId,
-    ).getKafkaClustersForEnvironmentId(item.environmentId);
-    const cluster = clusters.find((c) => c.id === item.clusterId);
-    if (!cluster) {
-      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
-      return;
-    }
-    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
-    return await scaffoldProjectRequest(
-      {
-        bootstrap_server: bootstrapServers,
-        cc_bootstrap_server: bootstrapServers,
-        cc_topic: item.name,
-        topic: item.name,
-        templateType: "kafka",
-      },
-      "topic",
-    );
-  } else if (item instanceof CCloudFlinkComputePool) {
-    const organization: CCloudOrganization | undefined =
-      await CCloudResourceLoader.getInstance().getOrganization();
-    return await scaffoldProjectRequest(
-      {
-        cc_environment_id: item.environmentId,
-        cc_organization_id: organization?.id,
-        cloud_region: item.region,
-        cloud_provider: item.provider,
-        cc_compute_pool_id: item.id,
-        templateType: "flink",
-      },
-      "compute pool",
-    );
-  }
-}
+export const registerProjectGenerationCommands = registerProjectGenerationCommandsFromModule;
 
 export const scaffoldProjectRequest = async (
   templateRequestOptions?: PrefilledTemplateOptions,
