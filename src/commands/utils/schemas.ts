@@ -72,7 +72,7 @@ export type ValidationFunction = (input: string) => vscode.InputBoxValidationMes
  */
 export function getSchemaDeletionValidatorAndPlaceholder(
   version: number,
-  hardDeletion: boolean,
+  _hardDeletion: boolean,
 ): [ValidationFunction, string] {
   const placeholder = `Enter "v${version}" to confirm, escape to cancel.`;
   const validator: ValidationFunction = (input) => {
@@ -90,8 +90,8 @@ export function getSchemaDeletionValidatorAndPlaceholder(
 
 export function getSubjectDeletionValidatorAndPlaceholder(
   subject: Subject,
-  versionCount: number,
-  hardDelete: boolean, // keep param for compatibility
+  _versionCount: number,
+  _hardDelete: boolean, // keep param for compatibility
 ): [ValidationFunction, string] {
   const placeholder = `Enter "${subject.name}" to confirm, escape to cancel.`;
   const validator: ValidationFunction = (input) => {
@@ -100,7 +100,7 @@ export function getSubjectDeletionValidatorAndPlaceholder(
     }
     return {
       message: `Enter "${subject.name}" to confirm deletion, escape to cancel.`,
-      severity: vscode.InputBoxValidationSeverity.Error,
+      severity: vscode.InputBoxValidationSeverity.Warning,
     };
   };
 

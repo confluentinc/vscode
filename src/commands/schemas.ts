@@ -11,8 +11,8 @@ import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema"
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
-    DEFAULT_ERROR_NOTIFICATION_BUTTONS,
-    showErrorNotificationWithButtons,
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  showErrorNotificationWithButtons,
 } from "../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
@@ -20,10 +20,10 @@ import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 import {
-    confirmSchemaSubjectDeletion,
-    confirmSchemaVersionDeletion,
-    hardDeletionQuickPick,
-    showHardDeleteWarningModal,
+  confirmSchemaSubjectDeletion,
+  confirmSchemaVersionDeletion,
+  hardDeletionQuickPick,
+  showHardDeleteWarningModal,
 } from "./utils/schemas";
 
 const logger = new Logger("commands.schemas");
@@ -305,7 +305,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     if (!finalConfirm) {
       logger.debug("User canceled schema version hard deletion at warning modal.");
       return;
-  }
+    }
   }
   let success = true;
 
