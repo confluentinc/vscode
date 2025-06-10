@@ -37,9 +37,8 @@ export function summarizeChatHistory(
           );
           // TextOnlyToolResultPart(LanguageModelToolResultPart):
           const textResults: LanguageModelTextPart[] = toolCall.response.content;
-          const plural = textResults.length > 1 ? "s" : "";
           summary.appendMarkdown(
-            `\n\nUSER tool call result${plural}: "${toolCall.request.name}": "${textResults.map((part) => part.value).join("\n")}"`,
+            `\n\nUSER tool call : "${toolCall.request.name}": "${textResults.map((part) => part.value).join("\n")}"`,
           );
         }
       }
