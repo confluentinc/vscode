@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "./clients/scaffoldingService";
+import { ScaffoldV1Template } from "./clients/scaffoldingService";
 import { projectScaffoldUri } from "./emitters";
 import { Logger } from "./logging";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { applyTemplate, getTemplatesList, scaffoldProjectRequest } from "./projectGeneration";
 import { registerProjectGenerationCommands as registerProjectGenerationCommandsFromModule } from "./projectGeneration/commands";
-import { filterSensitiveKeys } from "./projectGeneration/utils";
+import { filterSensitiveKeys, sanitizeTemplateOptions } from "./projectGeneration/utils";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { type post } from "./webview/scaffold-form";
@@ -17,20 +17,13 @@ const logger = new Logger("scaffold");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommands = registerProjectGenerationCommandsFromModule;
-export { applyTemplate, filterSensitiveKeys, getTemplatesList, scaffoldProjectRequest };
-
-export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV1Template {
-  const spec = template.spec as ScaffoldV1TemplateSpec;
-  const sanitizedOptions = spec?.options ? filterSensitiveKeys(spec.options) : {};
-
-  return {
-    ...template,
-    spec: {
-      ...spec,
-      options: sanitizedOptions,
-    } as ScaffoldV1TemplateSpec,
-  };
-}
+export {
+  applyTemplate,
+  filterSensitiveKeys,
+  getTemplatesList,
+  sanitizeTemplateOptions,
+  scaffoldProjectRequest,
+};
 
 export async function handleProjectScaffoldUri(
   collection: string | null,
