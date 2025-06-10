@@ -267,7 +267,7 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       assert.ok(provider["treeView"].message);
       assert.strictEqual(
         provider["treeView"].message,
-        `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${provider.itemSearchString}"`,
+        `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${provider.itemSearchString}"`,
       );
     });
   });
@@ -529,5 +529,76 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
       sinon.assert.calledOnce(setParentResourceStub);
       sinon.assert.calledWith(setParentResourceStub, resource);
     });
+  });
+
+  for (const arg of ["First", null]) {
+    it(`should repaint the tree view when search is set (arg=${arg})`, async () => {
+      const provider = TestViewProvider.getInstance();
+      const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
+
+      provider.setSearch(arg);
+      // Would normally be called by the tree view when children are requested
+      // after setSearch() but we call it directly here to get totalItemCount assigned.
+      await provider.getChildren();
+
+      assert.strictEqual(provider.itemSearchString, arg);
+      assert.strictEqual(provider.searchMatches.size, 0);
+      // totalItemCount is set to 2 because TestViewProvider.getChildren() always returns two items
+      assert.strictEqual(provider.totalItemCount, 2);
+
+      sinon.assert.calledOnce(repaintSpy);
+    });
+  }
+
+  it("should filter children based on search string", () => {
+    const provider = TestViewProvider.getInstance();
+    provider.setSearch("first");
+
+    const matchingStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      name: "first-statement",
+      status: makeStatus(Phase.STOPPED),
+    });
+    const items = [
+      matchingStatement,
+      new FlinkStatement({
+        ...TEST_CCLOUD_FLINK_STATEMENT,
+        name: "second-statement",
+        status: makeStatus(Phase.PENDING),
+      }),
+    ];
+
+    const filtered = provider.filterChildren(undefined, items);
+
+    assert.strictEqual(filtered.length, 1);
+    assert.strictEqual(filtered[0].id, matchingStatement.id);
+    assert.strictEqual(provider.searchMatches.size, 1);
+    assert.strictEqual(provider.totalItemCount, 2);
+  });
+
+  it("should update tree view message with search results when filterChildren() is called", () => {
+    const provider = TestViewProvider.getInstance();
+    provider.setSearch("running");
+
+    const items = [
+      new FlinkStatement({
+        ...TEST_CCLOUD_FLINK_STATEMENT,
+        name: "first-statement",
+        status: makeStatus(Phase.RUNNING),
+      }),
+      new FlinkStatement({
+        ...TEST_CCLOUD_FLINK_STATEMENT,
+        name: "second-statement",
+        status: makeStatus(Phase.PENDING),
+      }),
+    ];
+
+    provider.filterChildren(undefined, items);
+
+    assert.ok(provider["treeView"].message);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${provider.itemSearchString}"`,
+    );
   });
 });
