@@ -38,7 +38,6 @@ export abstract class ResourceLoader implements IResourceBase {
 
   /** Disposables belonging to all instances of ResourceLoader to be added to the extension
    * context during activation, cleaned up on extension deactivation.
-   * TODO: Reconsider when we have less-permanant direct connections also.
    */
   protected static disposables: Disposable[] = [];
 
@@ -81,6 +80,35 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   // Environment methods
+
+  /**
+   * Get this specific environment from the registered loader for this connectionId.
+   * @param connectionId The connectionId to get the environment from.
+   * @param environmentId The environmentId to get.
+   * @returns The environment, or undefined if it could not be found from the proper loader instance.
+   * @throws Error if a loader for connectionId is not registered.
+   * @see {@link ResourceLoader.getInstance}
+   */
+  public static async getEnvironment(
+    connectionId: ConnectionId,
+    environmentId: EnvironmentId,
+    forceDeepRefresh: boolean = false,
+  ): Promise<Environment | undefined> {
+    const loader = ResourceLoader.getInstance(connectionId);
+    if (!loader) {
+      throw new Error(`No loader registered for connectionId ${connectionId}`);
+    }
+    return await loader.getEnvironment(environmentId, forceDeepRefresh);
+  }
+
+  /** Find a specific environment within this loader instance by its id. */
+  public async getEnvironment(
+    environmentId: EnvironmentId,
+    forceDeepRefresh: boolean = false,
+  ): Promise<Environment | undefined> {
+    const environments = await this.getEnvironments(forceDeepRefresh);
+    return environments.find((env) => env.id === environmentId);
+  }
 
   /**
    * Get the accessible environments from the connection.

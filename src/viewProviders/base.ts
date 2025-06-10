@@ -27,16 +27,14 @@ export interface RefreshableTreeViewProvider {
   refresh(forceDeepRefresh?: boolean): void;
 }
 
+/** Requirement interfaces for BaseViewProvider data elements */
+type BaseViewProviderData = IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId };
+
 /**
  * Base class for all tree view providers handling a primary resource type.
- * @template P The type of the "parent" resource that can be "focused" in the view to determine which
- * resources will be shown. (Example: `KafkaCluster`, `SchemaRegistry`, `FlinkComputePool`)
  * @template T The primary resource(s) that will be shown in the view.
  */
-export abstract class BaseViewProvider<
-    P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-    T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-  >
+export abstract class BaseViewProvider<T extends BaseViewProviderData>
   implements TreeDataProvider<T>, RefreshableTreeViewProvider
 {
   abstract loggerName: string;
@@ -68,27 +66,6 @@ export abstract class BaseViewProvider<
    * The id of the view associated with this provider, set in `package.json` and used to register {@linkcode treeView} to the provider instance.
    */
   abstract viewId: string;
-
-  /** The parent {@link Environment} of the focused resource.  */
-  environment: Environment | null = null;
-  /**
-   * The focused resource instance associated with this provider.
-   *
-   * Examples:
-   * - Topics view: `KafkaCluster`
-   * - Schemas view: `SchemaRegistry`
-   * - Flink Statements view: `FlinkComputePool`
-   * - Flink Artifacts view: `FlinkComputePool`
-   */
-  resource: P | null = null;
-  /**
-   * Optional {@link EventEmitter} to listen for when this view provider's parent
-   * {@linkcode resource} is set/unset. This is used in order to control the tree view description,
-   * context value, and search string updates internally.
-   */
-  parentResourceChangedEmitter?: EventEmitter<P | null>;
-  /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
-  parentResourceChangedContextValue?: ContextValues;
 
   /** Optional {@link EventEmitter} to listen for when the search string is set/unset. */
   searchChangedEmitter?: EventEmitter<string | null>;
@@ -125,10 +102,10 @@ export abstract class BaseViewProvider<
   }
 
   /** Map to store instances of subclasses so they don't have to implement their own singleton patterns. */
-  private static instanceMap = new Map<string, BaseViewProvider<any, any>>();
+  private static instanceMap = new Map<string, BaseViewProvider<any>>();
 
   /** Get the singleton instance of this view provider. */
-  static getInstance<U extends BaseViewProvider<any, any>>(this: new () => U): U {
+  static getInstance<U extends BaseViewProvider<any>>(this: new () => U): U {
     const className = this.name;
     if (!BaseViewProvider.instanceMap.has(className)) {
       const instance = new this();
@@ -138,50 +115,9 @@ export abstract class BaseViewProvider<
     return BaseViewProvider.instanceMap.get(className) as U;
   }
 
-  /**
-   * Set the parent resource for this view provider. If being set to what is already set, the
-   * resource will be refreshed.
-   *
-   * @returns A promise that resolves when the resource is set and any reloads are complete.
-   */
-  async setParentResource(resource: P | null): Promise<void> {
-    this.logger.debug(`setParentResource() called, ${resource ? "refreshing" : "resetting"}.`, {
-      resource,
-    });
-
-    if (this.resource !== resource) {
-      this.setSearch(null); // reset search when parent resource changes
-    }
-
-    if (resource) {
-      if (this.parentResourceChangedContextValue) {
-        setContextValue(this.parentResourceChangedContextValue, true);
-      }
-      this.resource = resource;
-      await this.updateTreeViewDescription();
-      await this.refresh();
-    } else {
-      // edging to empty state
-      this.resource = null;
-      await this.refresh();
-    }
-  }
-
   /** Set up event listeners for this view provider. */
-  private setEventListeners(): Disposable[] {
+  protected setEventListeners(): Disposable[] {
     const disposables: Disposable[] = [];
-
-    const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
-      this.handleCCloudConnectionChange(connected);
-    });
-
-    const parentResourceChangedSub: Disposable | undefined =
-      this.parentResourceChangedEmitter?.event(async (resource: P | null) => {
-        await this.setParentResource(resource);
-      });
-    if (parentResourceChangedSub) {
-      disposables.push(parentResourceChangedSub);
-    }
 
     const searchChangedSub: Disposable | undefined = this.searchChangedEmitter?.event(
       (searchString: string | null) => {
@@ -192,7 +128,7 @@ export abstract class BaseViewProvider<
       disposables.push(searchChangedSub);
     }
 
-    disposables.push(ccloudConnectedSub, ...this.setCustomEventListeners());
+    disposables.push(...this.setCustomEventListeners());
     return disposables;
   }
 
@@ -201,68 +137,20 @@ export abstract class BaseViewProvider<
     return [];
   }
 
-  abstract getChildren(element?: T): Promise<T[]>;
+  abstract getChildren(element?: T): T[];
 
   abstract getTreeItem(element: T): TreeItem;
 
   /** Convenience method to revert this view to its original state. */
   async reset(): Promise<void> {
     this.logger.debug("reset() called, clearing tree view");
-    this.environment = null;
-    this.resource = null;
 
     this.treeView.description = undefined;
     this.treeView.message = undefined;
 
     this.setSearch(null);
-    // TODO: update this to adjust associated context value for focused resource(s)
 
     await this.refresh();
-  }
-
-  /** Callback for  */
-  handleCCloudConnectionChange(connected: boolean) {
-    if (this.resource && isCCloud(this.resource)) {
-      // any transition of CCloud connection state should reset the tree view if we're focused on
-      // a CCloud parent resource
-      this.logger.debug("ccloudConnected event fired, resetting view", { connected });
-      void this.reset();
-    }
-  }
-
-  /**
-   * Update the tree view description to show the currently-focused {@linkcode resource}'s parent
-   * {@link Environment} name and the resource ID.
-   *
-   * Reassigns {@linkcode environment} to the parent {@link Environment} of the {@linkcode resource}.
-   * */
-  async updateTreeViewDescription(): Promise<void> {
-    const subLogger = this.logger.withCallpoint("updateTreeViewDescription");
-
-    const focusedResource = this.resource;
-    if (!focusedResource) {
-      subLogger.debug("called with no focused resource, clearing view description");
-      this.treeView.description = "";
-      this.environment = null;
-      return;
-    }
-
-    subLogger.debug(
-      `called with ${focusedResource.constructor.name}, checking for environments...`,
-    );
-    const loader = ResourceLoader.getInstance(focusedResource.connectionId);
-    const envs: Environment[] = await loader.getEnvironments();
-    const parentEnv: Environment | undefined = envs.find(
-      (env) => env.id === focusedResource.environmentId,
-    );
-    this.environment = parentEnv ?? null;
-    if (parentEnv) {
-      subLogger.debug("found environment, setting view description");
-      this.treeView.description = `${parentEnv.name} | ${focusedResource.id}`;
-    } else {
-      subLogger.debug(`couldn't find parent environment for ${focusedResource.constructor.name}`);
-      this.treeView.description = "";
-    }
   }
 
   /** Update internal state when the {@link itemSearchString search string} is set or unset. */
@@ -341,5 +229,144 @@ export abstract class BaseViewProvider<
       cancellable: cancellable,
     };
     return await window.withProgress(progressOptions, task);
+  }
+}
+
+/**
+ * Base class for all tree view providers handling a primary resource type and a parent resource.
+ * @template P The type of the "parent" resource that can be "focused" in the view to determine which
+ * resources will be shown. (Example: `KafkaCluster`, `SchemaRegistry`, `FlinkComputePool`)
+ * @template T The primary resource(s) that will be shown in the view.
+ */
+export abstract class ParentedBaseViewProvider<
+    P extends BaseViewProviderData,
+    T extends BaseViewProviderData,
+  >
+  extends BaseViewProvider<T>
+  implements TreeDataProvider<T>, RefreshableTreeViewProvider
+{
+  /**
+   * The focused 'parent' resource instance associated with this provider.
+   *
+   * Examples:
+   * - Topics view: `KafkaCluster`
+   * - Schemas view: `SchemaRegistry`
+   * - Flink Statements view: `FlinkComputePool`
+   * - Flink Artifacts view: `FlinkComputePool`
+   */
+  resource: P | null = null;
+
+  /** The parent {@link Environment} of the focused resource.  */
+  environment: Environment | null = null;
+
+  /**
+   * Optional {@link EventEmitter} to listen for when this view provider's parent
+   * {@linkcode resource} is set/unset. This is used in order to control the tree view description,
+   * context value, and search string updates internally.
+   */
+  parentResourceChangedEmitter?: EventEmitter<P | null>;
+  /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
+  parentResourceChangedContextValue?: ContextValues;
+
+  /**
+   * Set the parent resource for this view provider. If being set to what is already set, the
+   * resource will be refreshed.
+   *
+   * @returns A promise that resolves when the resource is set and any reloads are complete.
+   */
+  async setParentResource(resource: P | null): Promise<void> {
+    this.logger.debug(`setParentResource() called, ${resource ? "refreshing" : "resetting"}.`, {
+      resource,
+    });
+
+    if (this.resource !== resource) {
+      this.setSearch(null); // reset search when parent resource changes
+    }
+
+    if (resource) {
+      if (this.parentResourceChangedContextValue) {
+        setContextValue(this.parentResourceChangedContextValue, true);
+      }
+      this.resource = resource;
+      await this.updateTreeViewDescription();
+      await this.refresh();
+    } else {
+      // edging to empty state
+      this.resource = null;
+      await this.refresh();
+    }
+  }
+
+  /** Set up event listeners for this view provider. */
+  protected setEventListeners(): Disposable[] {
+    const disposables: Disposable[] = super.setEventListeners();
+
+    const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
+      this.handleCCloudConnectionChange(connected);
+    });
+    disposables.push(ccloudConnectedSub);
+
+    if (this.parentResourceChangedEmitter) {
+      const parentResourceChangedSub: Disposable = this.parentResourceChangedEmitter.event(
+        async (resource: P | null) => {
+          await this.setParentResource(resource);
+        },
+      );
+      disposables.push(parentResourceChangedSub);
+    }
+
+    return disposables;
+  }
+
+  /** Callback for  */
+  handleCCloudConnectionChange(connected: boolean) {
+    if (this.resource && isCCloud(this.resource)) {
+      // any transition of CCloud connection state should reset the tree view if we're focused on
+      // a CCloud parent resource
+      this.logger.debug("ccloudConnected event fired, resetting view", { connected });
+      void this.reset();
+    }
+  }
+
+  async reset(): Promise<void> {
+    this.resource = null;
+    this.environment = null;
+
+    await super.reset();
+  }
+
+  /**
+   * Update the tree view description to show the currently-focused {@linkcode resource}'s parent
+   * {@link Environment} name and the resource ID.
+   *
+   * Reassigns {@linkcode environment} to the parent {@link Environment} of the {@linkcode resource}.
+   * */
+  async updateTreeViewDescription(): Promise<void> {
+    const subLogger = this.logger.withCallpoint("updateTreeViewDescription");
+
+    const focusedResource = this.resource;
+    if (!focusedResource) {
+      subLogger.debug("called with no focused resource, clearing view description");
+      this.treeView.description = "";
+      this.environment = null;
+      return;
+    }
+
+    subLogger.debug(
+      `called with ${focusedResource.constructor.name}, checking for environments...`,
+    );
+    const parentEnv: Environment | undefined = await ResourceLoader.getEnvironment(
+      focusedResource.connectionId,
+      focusedResource.environmentId,
+    );
+
+    this.environment = parentEnv ?? null;
+    if (parentEnv) {
+      subLogger.debug("found environment, setting view description");
+      this.treeView.description = `${parentEnv.name} | ${focusedResource.id}`;
+    } else {
+      subLogger.debug(`couldn't find parent environment for ${focusedResource.constructor.name}`);
+      this.treeView.description = "";
+    }
   }
 }

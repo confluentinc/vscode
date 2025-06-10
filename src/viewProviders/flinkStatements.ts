@@ -3,9 +3,9 @@ import {
   EventEmitter,
   TreeDataProvider,
   TreeItem,
+  Uri,
   workspace,
   WorkspaceConfiguration,
-  Uri,
 } from "vscode";
 import { ContextValues } from "../context/values";
 import {
@@ -22,14 +22,14 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { FlinkStatementManager } from "../flinkSql/flinkStatementManager";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { BaseViewProvider } from "./base";
+import { ParentedBaseViewProvider } from "./base";
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 /**
  * View controller for Flink statements. Can be assigned to track either
@@ -42,7 +42,7 @@ import { BaseViewProvider } from "./base";
  *
  * */
 export class FlinkStatementsViewProvider
-  extends BaseViewProvider<CCloudFlinkComputePool | CCloudEnvironment, FlinkStatement>
+  extends ParentedBaseViewProvider<CCloudFlinkComputePool | CCloudEnvironment, FlinkStatement>
   implements TreeDataProvider<FlinkStatement>
 {
   readonly kind = "statements";
@@ -170,7 +170,7 @@ export class FlinkStatementsViewProvider
     }
   }
 
-  async getChildren(): Promise<FlinkStatement[]> {
+  getChildren(): FlinkStatement[] {
     const children: FlinkStatement[] = Array.from(this.resourcesInTreeView.values());
 
     // Sort by statement creation time descending.
@@ -180,7 +180,7 @@ export class FlinkStatementsViewProvider
         return 0;
       }
 
-      return b.createdAt!.valueOf() - a.createdAt!.valueOf();
+      return b.createdAt.valueOf() - a.createdAt.valueOf();
     });
 
     return this.filterChildren(undefined, children);
