@@ -9,7 +9,8 @@ import {
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
-import { getTemplatesList, scaffoldProjectRequest } from "../../scaffold";
+import { scaffoldProjectRequest } from "../../projectGeneration";
+import { getTemplatesList } from "../../scaffold";
 import { PostResponse } from "../../webview/scaffold-form";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
