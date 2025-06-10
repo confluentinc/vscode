@@ -19,11 +19,6 @@ import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkCompute
 import { FlinkStatement, FlinkStatementTreeItem, Phase } from "../models/flinkStatement";
 import { BaseViewProvider, ParentedBaseViewProvider } from "./base";
 
-/** Test helper to make a SqlV1StatementStatus subcomponent of a FlinkStatement  */
-function makeStatus(phase: Phase): SqlV1StatementStatus {
-  return createFlinkStatement({ phase: phase }).status;
-}
-
 /**
  * Sample view provider subclass for testing {@link BaseViewProvider}.
  * As if there was no `FlinkComputePool` parent resource, just random statements.
@@ -53,8 +48,9 @@ class TestViewProvider extends BaseViewProvider<FlinkStatement> {
   }
 
   testEventEmitter: EventEmitter<void> = new EventEmitter<void>();
+  testEventEmitterCalled: boolean = false;
   handleCustomListenerCallback() {
-    this.logger.info("Custom event listener callback executed.");
+    this.testEventEmitterCalled = true;
   }
 
   setCustomEventListenersCalled = false;
@@ -119,6 +115,11 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       // private `setEventListeners` method
       assert.ok(provider.disposables.length > 1);
       assert.ok(provider.setCustomEventListenersCalled);
+    });
+
+    it("should call the custom event listener callback when the event fires", () => {
+      provider.testEventEmitter.fire();
+      assert.ok(provider.testEventEmitterCalled);
     });
   });
 
@@ -532,14 +533,14 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
   });
 
   for (const arg of ["First", null]) {
-    it(`should repaint the tree view when search is set (arg=${arg})`, async () => {
+    it(`should repaint the tree view when search is set (arg=${arg})`, () => {
       const provider = TestViewProvider.getInstance();
       const repaintSpy = sandbox.spy(provider["_onDidChangeTreeData"], "fire");
 
       provider.setSearch(arg);
       // Would normally be called by the tree view when children are requested
       // after setSearch() but we call it directly here to get totalItemCount assigned.
-      await provider.getChildren();
+      provider.getChildren();
 
       assert.strictEqual(provider.itemSearchString, arg);
       assert.strictEqual(provider.searchMatches.size, 0);
@@ -602,3 +603,8 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
     );
   });
 });
+
+/** Test helper to make a SqlV1StatementStatus subcomponent of a FlinkStatement  */
+function makeStatus(phase: Phase): SqlV1StatementStatus {
+  return createFlinkStatement({ phase: phase }).status;
+}
