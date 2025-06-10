@@ -16,7 +16,7 @@ import { getSecretStorage } from "../storage/utils";
 import { getFlinkSQLLanguageServerOutputChannel } from "./logging";
 import { WebsocketTransport } from "./websocketTransport";
 
-const logger = new Logger("flinkSql.languageClient");
+const logger = new Logger("flinkSql.languageClient.Client");
 
 /** Initialize the FlinkSQL language client and connect to the language server websocket
  * @returns A promise that resolves to the language client, or null if initialization failed

@@ -26,7 +26,7 @@ import {
   getFlinkSQLLanguageServerOutputChannel,
 } from "./logging";
 
-const logger = new Logger("flinkLanguageClientManager");
+const logger = new Logger("flinkSql.languageClient.ClientManager");
 
 export interface FlinkSqlSettings {
   databaseId: string | null;
@@ -222,7 +222,7 @@ export class FlinkLanguageClientManager implements Disposable {
   /**
    * Builds the WebSocket URL for the Flink SQL Language Server
    * @param computePoolId The ID of the compute pool to use
-   * @returns (string) WebSocket URL, or Error if pool info couldn't be retrieved
+   * @returns (string) WebSocket URL, or null if pool info couldn't be retrieved
    */
   private async buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<string | null> {
     const poolInfo = await this.lookupComputePoolInfo(computePoolId);

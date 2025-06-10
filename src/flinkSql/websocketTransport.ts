@@ -10,7 +10,7 @@ import {
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
 
-const logger = new Logger("websocketTransport");
+const logger = new Logger("flinkSql.languageClient.WebsocketTransport");
 
 /** Create a WebSocket that reads/writes messages in Language Server Protocol + JSON-RPC
  * Used by the FlinkSQL LanguageClient to communicate with the ccloud language server
