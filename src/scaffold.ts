@@ -3,9 +3,8 @@ import { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "./clients/scaffoldin
 import { projectScaffoldUri } from "./emitters";
 import { Logger } from "./logging";
 import { showErrorNotificationWithButtons } from "./notifications";
-import { applyTemplate, scaffoldProjectRequest } from "./projectGeneration";
+import { applyTemplate, getTemplatesList, scaffoldProjectRequest } from "./projectGeneration";
 import { registerProjectGenerationCommands as registerProjectGenerationCommandsFromModule } from "./projectGeneration/commands";
-import { getSidecar } from "./sidecar";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { type post } from "./webview/scaffold-form";
@@ -17,20 +16,7 @@ const logger = new Logger("scaffold");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommands = registerProjectGenerationCommandsFromModule;
-export { applyTemplate, scaffoldProjectRequest };
-
-export async function getTemplatesList(
-  collection?: string,
-  sanitizeOptions: boolean = false,
-): Promise<ScaffoldV1Template[]> {
-  const client = (await getSidecar()).getTemplatesApi();
-  const response = await client.listScaffoldV1Templates({
-    template_collection_name: collection ?? "vscode",
-  });
-
-  const templates = Array.from(response.data) as ScaffoldV1Template[];
-  return sanitizeOptions ? templates.map(sanitizeTemplateOptions) : templates;
-}
+export { applyTemplate, getTemplatesList, scaffoldProjectRequest };
 
 export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T> {
   return Object.fromEntries(
