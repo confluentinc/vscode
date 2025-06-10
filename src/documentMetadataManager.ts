@@ -46,7 +46,7 @@ export class DocumentMetadataManager {
   }
 
   private async handleDocumentOpen(document: TextDocument) {
-    if (!this.shouldLogDocumentEvent(document)) return;
+    if (!SUPPORTED_URI_SCHEMES.includes(document.uri.scheme)) return;
     this.logDocumentEvent("opened", document.uri);
   }
 
