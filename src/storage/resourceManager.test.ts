@@ -21,16 +21,20 @@ import {
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { Subject } from "../models/schema";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  LocalSchemaRegistry,
+  SchemaRegistry,
+} from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
-  CCloudSchemaRegistryByEnv,
   CustomConnectionSpec,
   CustomConnectionSpecFromJSON,
   CustomConnectionSpecToJSON,
@@ -333,77 +337,6 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     await clearWorkspaceState();
   });
 
-  it("CCLOUD: setCCloudSchemaRegistries() should correctly store Schema Registries", async () => {
-    const secondCloudEnvironment = {
-      ...TEST_CCLOUD_ENVIRONMENT,
-      id: "second-cloud-env-id" as EnvironmentId,
-    };
-    const secondSchemaRegistry = CCloudSchemaRegistry.create({
-      ...TEST_CCLOUD_SCHEMA_REGISTRY,
-      environmentId: secondCloudEnvironment.id,
-      id: "second-schema-registry-id",
-    });
-    const testSchemaRegistries: CCloudSchemaRegistry[] = [
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      secondSchemaRegistry,
-    ];
-
-    const rm = getResourceManager();
-    await rm.setCCloudSchemaRegistries(testSchemaRegistries);
-    // verify the Schema Registry was stored correctly
-    let storedSchemaRegistries: CCloudSchemaRegistryByEnv = await rm.getCCloudSchemaRegistries();
-    assert.ok(storedSchemaRegistries);
-    assert.ok(storedSchemaRegistries instanceof Map);
-    assert.ok(storedSchemaRegistries.has(TEST_CCLOUD_ENVIRONMENT.id));
-    assert.ok(storedSchemaRegistries.has(secondCloudEnvironment.id));
-    assert.deepStrictEqual(
-      storedSchemaRegistries.get(TEST_CCLOUD_ENVIRONMENT.id),
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-    );
-  });
-
-  it("CCLOUD: setCCloudSchemaRegistries() setting with empty array should overwrite existing Schema Registries", async () => {
-    // set the Schema Registry in extension storage before setting them again
-    const rm = getResourceManager();
-    await rm.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    // fetching now should return the stored Schema Registry
-    let storedSchemaRegistries: CCloudSchemaRegistryByEnv = await rm.getCCloudSchemaRegistries();
-    assert.ok(storedSchemaRegistries.get(TEST_CCLOUD_ENVIRONMENT.id));
-
-    // set the Schema Registries again with an empty array
-    await rm.setCCloudSchemaRegistries([]);
-    // verify the Schema Registries were overwritten correctly
-    storedSchemaRegistries = await rm.getCCloudSchemaRegistries();
-    assert.deepStrictEqual(storedSchemaRegistries, new Map());
-  });
-
-  it("CCLOUD: getCCloudSchemaRegistries() should correctly retrieve Schema Registries", async () => {
-    const resourceManager = getResourceManager();
-    // preload a Schema Registry before retrieving it
-    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    // verify the Schema Registry was stored correctly
-    const envSchemaRegistries: CCloudSchemaRegistryByEnv =
-      await resourceManager.getCCloudSchemaRegistries();
-    const retrievedSchemaRegistries = envSchemaRegistries.get(TEST_CCLOUD_ENVIRONMENT.id);
-    assert.deepStrictEqual(retrievedSchemaRegistries, TEST_CCLOUD_SCHEMA_REGISTRY);
-  });
-
-  it("CCLOUD: getCCloudSchemaRegistries() should return an empty map if no Schema Registries are found", async () => {
-    // verify no Schema Registries are found
-    const envSchemaRegistries: CCloudSchemaRegistryByEnv =
-      await getResourceManager().getCCloudSchemaRegistries();
-    assert.deepStrictEqual(envSchemaRegistries, new Map());
-  });
-
-  it("CCLOUD: getCCloudSchemaRegistry() should return null if the parent environment ID is not found", async () => {
-    // set the Schema Registry
-    await getResourceManager().setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    // verify the Schema Registry was not found because the environment ID is incorrect
-    const missingSchemaRegistry: CCloudSchemaRegistry | null =
-      await getResourceManager().getCCloudSchemaRegistry("nonexistent-env-id");
-    assert.strictEqual(missingSchemaRegistry, null);
-  });
-
   it("CCLOUD: getTopicsForCluster() should return undefined if no cached topics for this cluster", async () => {
     const manager = getResourceManager();
     await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
@@ -530,36 +463,133 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
       assert.deepStrictEqual(shouldBeUndefined, undefined);
     }
   });
+});
 
-  it("CCLOUD: getCCloudSchemaRegistryById() should correctly retrieve a Schema Registry by its ID", async () => {
-    // set the Schema Registry
-    await getResourceManager().setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    // verify the Schema Registry was retrieved correctly
-    const schemaRegistry: CCloudSchemaRegistry | null =
-      await getResourceManager().getCCloudSchemaRegistryById(TEST_CCLOUD_SCHEMA_REGISTRY.id);
+describe("ResourceManager Schema Registry methods", function () {
+  let rm: ResourceManager;
 
-    assert.deepStrictEqual(schemaRegistry, TEST_CCLOUD_SCHEMA_REGISTRY);
+  beforeEach(async () => {
+    // fresh slate for each test
+    await clearWorkspaceState();
+    rm = getResourceManager();
   });
 
-  it("CCLOUD: getCCloudSchemaRegistryById() should return null if the Schema Registry is not found", async () => {
-    // set the Schema Registry
-    await getResourceManager().setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    // verify the Schema Registry was not found
-    const missingSchemaRegistry: CCloudSchemaRegistry | null =
-      await getResourceManager().getCCloudSchemaRegistryById("nonexistent-cluster-id");
-    assert.strictEqual(missingSchemaRegistry, null);
+  afterEach(async () => {
+    // clean up after each test
+    await clearWorkspaceState();
   });
 
-  it("CCLOUD: deleteCCloudSchemaRegistries() should correctly delete Schema Registries", async () => {
-    // set the Schema Registry in extension storage before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    await resourceManager.deleteCCloudSchemaRegistries();
-    // verify the Schema Registry was deleted correctly
-    const missingClusters: CCloudSchemaRegistry[] | undefined = getWorkspaceState().get(
+  it("getSchemaRegistryKey(CCLOUD_CONNECTION_ID) should return the correct key for CCloud Schema Registry", () => {
+    assert.strictEqual(
+      rm.getSchemaRegistryKey(CCLOUD_CONNECTION_ID),
       WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
     );
-    assert.deepStrictEqual(missingClusters, undefined);
+  });
+
+  // Only support CCloud registries at this time, but soon to change!
+  for (const connId of [LOCAL_CONNECTION_ID, TEST_DIRECT_CONNECTION_ID]) {
+    it(`getSchemaRegistryKey(${connId}) should raise exception (at this time)`, () => {
+      assert.throws(
+        () => rm.getSchemaRegistryKey(connId),
+        (err) => {
+          return err instanceof Error && err.message.includes("Unsupported connectionId");
+        },
+        `Expected exception for connection ID ${connId}`,
+      );
+    });
+
+    it(`setSchemaRegistries() hates ${connId} connectionId (at this time)`, async () => {
+      const localSchemaRegistry = LocalSchemaRegistry.create(TEST_LOCAL_SCHEMA_REGISTRY);
+      await assert.rejects(
+        rm.setSchemaRegistries(connId, [localSchemaRegistry]),
+        (err) => {
+          return err instanceof Error && err.message.includes("Unsupported connectionId");
+        },
+        "Expected error when setting local schema registries",
+      );
+    });
+
+    it(`getSchemaRegistries(${connId}) hates connectionId (at this time)`, async () => {
+      await assert.rejects(
+        rm.getSchemaRegistries(connId),
+        (err) => {
+          return err instanceof Error && err.message.includes("Unsupported connectionId");
+        },
+        "Expected error when getting local schema registries",
+      );
+    });
+  }
+
+  it("setSchemaRegistries() error when given mixed connection id array", async () => {
+    const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
+    const localSchemaRegistry = LocalSchemaRegistry.create(TEST_LOCAL_SCHEMA_REGISTRY);
+    const mixedRegistries = [ccloudSchemaRegistry, localSchemaRegistry];
+
+    await assert.rejects(
+      rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, mixedRegistries),
+      (err) => {
+        return err instanceof Error && err.message.includes("Connection ID mismatch");
+      },
+      "Expected error when setting mixed connection IDs",
+    );
+  });
+
+  it("setSchemaRegistries() handles when existing storage value is undefined", async () => {
+    await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, undefined);
+    const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
+
+    await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, [ccloudSchemaRegistry]);
+    const storedRegistries: CCloudSchemaRegistry[] =
+      await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
+
+    assert.deepStrictEqual(
+      storedRegistries,
+      [ccloudSchemaRegistry],
+      "Expected stored registries to match",
+    );
+
+    // Was promoted from storage JSON to proper subclass instance.
+    assert.ok(
+      storedRegistries[0] instanceof CCloudSchemaRegistry,
+      "Expected stored registry to be CCloudSchemaRegistry instance",
+    );
+  });
+
+  it("setSchemaRegistries() reassigns", async () => {
+    await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, undefined);
+    const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
+
+    // Also test promoting from singleton to array.
+    await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, ccloudSchemaRegistry);
+
+    const storedRegistries: CCloudSchemaRegistry[] =
+      await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(
+      storedRegistries,
+      [ccloudSchemaRegistry],
+      "Expected stored registries to match",
+    );
+
+    // Now set with two registries.
+    const anotherCcloudSchemaRegistry = CCloudSchemaRegistry.create({
+      ...TEST_CCLOUD_SCHEMA_REGISTRY,
+      id: "another-ccloud-sr-id",
+      environmentId: "another-env-id" as EnvironmentId,
+    });
+
+    // set both ...
+    const both = [ccloudSchemaRegistry, anotherCcloudSchemaRegistry];
+    await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, both);
+
+    // ... and verify both are stored.
+    const storedRegistriesAfter: CCloudSchemaRegistry[] =
+      await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
+
+    assert.deepStrictEqual(
+      storedRegistriesAfter,
+      both,
+      "Expected stored registries to match after reassignment",
+    );
   });
 });
 
@@ -928,15 +958,16 @@ describe("ResourceManager general utility methods", function () {
     // set the CCloud resources before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
+    await resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
     await resourceManager.deleteCCloudResources();
 
     // verify the resources were deleted correctly
     const missingClusters = await resourceManager.getCCloudKafkaClusters();
     assert.deepStrictEqual(missingClusters, new Map());
-    const missingSchemaRegistries = await resourceManager.getCCloudSchemaRegistries();
-    assert.deepStrictEqual(missingSchemaRegistries, new Map());
+    const missingSchemaRegistries =
+      await resourceManager.getSchemaRegistries<CCloudSchemaRegistry>(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(missingSchemaRegistries, []);
   });
 });
 

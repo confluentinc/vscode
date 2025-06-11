@@ -1,30 +1,30 @@
 import * as assert from "assert";
-import sinon from "sinon";
+import sinon, { SinonStubbedInstance } from "sinon";
 import { window, workspace } from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders";
 import * as sidecar from "../sidecar";
-import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import * as schemaRegistry from "./schemaRegistry";
 
 describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;
   let mockClient: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let getConfigurationStub: sinon.SinonStub;
-  let resourceManager: ResourceManager;
+  let ccloudLoader: SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(async function () {
     // preload the schema registry in extension state
     await getTestExtensionContext();
-    resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
 
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
@@ -37,12 +37,16 @@ describe("authz.schemaRegistry", function () {
     // mock the workspace configuration until we can solve this in the test runner:
     // "Unable to write to Workspace Settings because no workspace is opened. Please open a workspace first and try again.: CodeExpectedError: Unable to write to Workspace Settings because no workspace is opened. Please open a workspace first and try again."
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+
+    ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
+    // By default, set the ccloudLoader to return the TEST_CCLOUD_SCHEMA_REGISTRY for its environmentId
+    ccloudLoader.getSchemaRegistryForEnvironmentId
+      .withArgs(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId)
+      .resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
   });
 
   afterEach(async function () {
     sandbox.restore();
-    // clear out the existing Schema Registry after each test
-    await resourceManager.deleteCCloudSchemaRegistries(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId);
   });
 
   // FIXME: canAccessSchemaForTopic() tests
@@ -75,14 +79,21 @@ describe("authz.schemaRegistry", function () {
   // });
 
   // canAccessSchemaTypeForTopic() tests
-  it("canAccessSchemaTypeForTopic() should return true if environmentId is not present", async function () {
+  it("canAccessSchemaTypeForTopic() should return true if asked about a local topic.", async function () {
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_LOCAL_KAFKA_TOPIC, "key");
     assert.strictEqual(result, true);
   });
 
+  it("canAccessSchemaTypeForTopic() should return true if asked about a direct connection topic.", async function () {
+    const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_DIRECT_KAFKA_TOPIC, "key");
+    assert.strictEqual(result, true);
+  });
+
   it("canAccessSchemaTypeForTopic() should return true if schemaRegistry is not found", async function () {
-    // clear out the existing Schema Registry before checking schema access
-    await resourceManager.deleteCCloudSchemaRegistries(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId);
+    // clear out the existing Schema Registry before checking schema access.
+    ccloudLoader.getSchemaRegistryForEnvironmentId
+      .withArgs(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId)
+      .resolves(undefined);
 
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
     assert.strictEqual(result, true);

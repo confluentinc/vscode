@@ -10,12 +10,19 @@ import {
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
+  connectionIdToType,
   EnvironmentId,
   IResourceBase,
   isCCloud,
   ISchemaRegistryResource,
   ISearchable,
+  UsedConnectionType,
 } from "./resource";
+
+type SchemaRegistrySubclass =
+  | typeof CCloudSchemaRegistry
+  | typeof DirectSchemaRegistry
+  | typeof LocalSchemaRegistry;
 
 export abstract class SchemaRegistry
   extends Data
@@ -38,6 +45,12 @@ export abstract class SchemaRegistry
   /** Our id, clarified, for ISchemaRegistryResource purposes. */
   get schemaRegistryId(): string {
     return this.id;
+  }
+
+  /** Which concrete subclass should be used to model schema registries for the corresponding connection id? */
+  static getSchemaRegistryClass(connectionId: ConnectionId): SchemaRegistrySubclass {
+    const connectionType = connectionIdToType(connectionId);
+    return schemaRegistryClassByConnectionType[connectionType];
   }
 }
 
@@ -68,6 +81,16 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionType: ConnectionType = ConnectionType.Local;
   // environmentId should map to the connectionId
 }
+
+/**
+ *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
+ *  See {@link SchemaRegistry.getSchemaRegistryClass}.
+ */
+const schemaRegistryClassByConnectionType: Record<UsedConnectionType, SchemaRegistrySubclass> = {
+  [ConnectionType.Ccloud]: CCloudSchemaRegistry,
+  [ConnectionType.Direct]: DirectSchemaRegistry,
+  [ConnectionType.Local]: LocalSchemaRegistry,
+};
 
 /** The representation of a {@link SchemaRegistry} as a {@link TreeItem} in the VS Code UI. */
 export class SchemaRegistryTreeItem extends TreeItem {
