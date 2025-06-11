@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.5.0-9",
+  "version": "1.5.0-11",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -541,6 +541,11 @@
       {
         "command": "confluent.schemas.copySchemaRegistryId",
         "title": "Copy Schema Registry ID",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.copySubject",
+        "title": "Copy Subject",
         "category": "Confluent: Schemas"
       },
       {
@@ -1171,6 +1176,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.copySubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolve",
           "when": "false"
         },
@@ -1525,6 +1534,11 @@
         {
           "command": "confluent.schemas.copySchemaRegistryId",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema*/",
+          "group": "4_copy@1"
+        },
+        {
+          "command": "confluent.schemas.copySubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "4_copy@1"
         },
         {
