@@ -113,7 +113,6 @@ export async function showHardDeleteWarningModal(noun: string): Promise<boolean>
     `WARNING: Hard deleting this ${noun} is irreversible and may cause data loss. Are you sure you want to continue?`,
     { modal: true },
     "Yes, Hard Delete",
-    "Cancel",
   );
   return choice === "Yes, Hard Delete";
 }
