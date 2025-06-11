@@ -3,7 +3,7 @@ import { getDirectResources } from "../graphql/direct";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, EnvironmentId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "./resourceLoader";
 
@@ -55,9 +55,10 @@ export class DirectResourceLoader extends ResourceLoader {
     this.cachedEnvironments = undefined;
   }
 
-  async getKafkaClustersForEnvironmentId(environmentId: string): Promise<DirectKafkaCluster[]> {
-    const envs: DirectEnvironment[] = await this.getEnvironments();
-    const env = envs.find((env) => env.id === environmentId);
+  async getKafkaClustersForEnvironmentId(
+    environmentId: EnvironmentId,
+  ): Promise<DirectKafkaCluster[]> {
+    const env = (await this.getEnvironment(environmentId)) as DirectEnvironment | undefined;
     if (!env) {
       throw new Error(`Unknown environmentId ${environmentId}`);
     }

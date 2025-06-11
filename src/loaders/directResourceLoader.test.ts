@@ -107,7 +107,7 @@ describe("DirectResourceLoader", () => {
 
     it("Throws an error for unknown environment ID", async () => {
       await assert.rejects(
-        loader.getKafkaClustersForEnvironmentId("unknown-environment-id"),
+        loader.getKafkaClustersForEnvironmentId("unknown-environment-id" as EnvironmentId),
         /Unknown environmentId unknown-environment-id/,
       );
     });

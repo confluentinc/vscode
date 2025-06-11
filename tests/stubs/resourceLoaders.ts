@@ -28,11 +28,8 @@ function configureResourceLoaderMethods(
 ): void {
   // check if `ResourceLoader.getInstance()` has already been stubbed
   let getInstanceStub: SinonStub | undefined = ResourceLoader.getInstance as SinonStub;
-  if (getInstanceStub && getInstanceStub.restore !== undefined) {
-    // if it has, we can reuse the stub
-    getInstanceStub = getInstanceStub as SinonStub;
-  } else {
-    // otherwise, create a new stub for `getInstance()`
+  if (!(getInstanceStub && getInstanceStub.restore !== undefined)) {
+    // Create a new stub for `getInstance()`
     getInstanceStub = sandbox.stub(ResourceLoader, "getInstance");
   }
   // once we have a getInstance stub, either specify the stubbed loader returned for the provided
@@ -45,11 +42,8 @@ function configureResourceLoaderMethods(
 
   // same check for `ResourceLoader.loaders()`
   let loadersStub: SinonStub | undefined = ResourceLoader.loaders as SinonStub;
-  if (loadersStub && loadersStub.restore !== undefined) {
-    // if it has, we can reuse the stub
-    loadersStub = loadersStub as SinonStub;
-  } else {
-    // otherwise, create a new stub for `loaders()`
+  if (!(loadersStub && loadersStub.restore !== undefined)) {
+    // create a new stub for `loaders()`
     loadersStub = sandbox.stub(ResourceLoader, "loaders").returns([]);
   }
   // check the return value of the loadersStub and update it if necessary

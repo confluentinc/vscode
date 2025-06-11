@@ -1,9 +1,11 @@
 import assert from "assert";
 import * as sinon from "sinon";
+import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KEY_SUBJECT,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
+  TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -18,7 +20,9 @@ import {
 } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { LOCAL_CONNECTION_ID } from "../constants";
 import * as errors from "../errors";
+import { ConnectionId } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
@@ -242,6 +246,77 @@ describe("ResourceLoader::checkedGetSubjects()", () => {
       assert.ok(isResponseErrorStub.calledOnce);
       return true;
     });
+  });
+});
+
+/** Tests over the one/two-arg instance method. */
+describe("instance ResourceLoader::getEnvironment", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+  it("Returns environment for known environmentId", async () => {
+    sandbox.stub(loaderInstance, "getEnvironments").resolves([TEST_LOCAL_ENVIRONMENT]);
+    const environment = await loaderInstance.getEnvironment(TEST_LOCAL_ENVIRONMENT_ID);
+    assert.strictEqual(environment?.id, TEST_LOCAL_ENVIRONMENT_ID);
+  });
+  it("Returns undefined for unknown environmentId", async () => {
+    sandbox.stub(loaderInstance, "getEnvironments").resolves([]);
+    const environment = await loaderInstance.getEnvironment(TEST_LOCAL_ENVIRONMENT_ID);
+    assert.strictEqual(environment, undefined);
+  });
+});
+
+/** Tests over the two/three-arg static method. */
+describe("static ResourceLoader::getEnvironment", () => {
+  let stubbedLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
+  let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    stubbedLoader = getStubbedLocalResourceLoader(sandbox);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Returns environment for known connectionId / environmentId", async () => {
+    stubbedLoader.getEnvironment.resolves(TEST_LOCAL_ENVIRONMENT);
+    const environment = await ResourceLoader.getEnvironment(
+      LOCAL_CONNECTION_ID,
+      TEST_LOCAL_ENVIRONMENT_ID,
+    );
+    assert.strictEqual(environment?.id, TEST_LOCAL_ENVIRONMENT_ID);
+  });
+
+  it("Raises error for unknown connectionId", async () => {
+    await assert.rejects(
+      ResourceLoader.getEnvironment(
+        "unknown-connection-id" as ConnectionId,
+        TEST_LOCAL_ENVIRONMENT_ID,
+      ),
+      (err) => {
+        assert.strictEqual(
+          (err as Error).message,
+          "No loader registered for connectionId unknown-connection-id",
+        );
+        return true;
+      },
+    );
   });
 });
 

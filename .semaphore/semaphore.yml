@@ -25,9 +25,33 @@ global_job_config:
       - checkout
 
 blocks:
-  # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
-  - name: "Build & Test (VS Code: linux x64)"
+  # --- Static Analysis ---
+  - name: "Static Analysis (TypeScript & ESLint)"
     dependencies: []
+    skip:
+      when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      prologue:
+        commands:
+          - npm ci --prefer-offline --include=dev
+      jobs:
+        - name: "TypeScript Check"
+          commands:
+            - npx gulp check
+        - name: "ESLint"
+          commands:
+            - npx gulp lint
+      epilogue:
+        always:
+          commands:
+            - echo "Static analysis completed"
+
+  # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
+  - name: "Linux x64 Stable: Tests"
+    dependencies: ["Static Analysis (TypeScript & ESLint)"]
     # Skip when:
     # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
     # - change in the .versions/next.txt file, signaling a release PR merge commit.
@@ -49,13 +73,16 @@ blocks:
             else
               . vault-setup
             fi
-      jobs: &build-test-jobs-stable
-        - name: "Build & Test (VS Code)"
+      jobs: &build-test-jobs
+        - name: "Mocha: Unit Tests (VS Code)"
           commands:
-            - make test
+            - make test-mocha
           env_vars:
             - name: VSCODE_VERSION
               value: stable
+        - name: "Playwright: Webview Tests (VS Code)"
+          commands:
+            - make test-playwright-webviews
       epilogue: &build-test-epilogue
         always:
           commands:
@@ -70,19 +97,19 @@ blocks:
                 emit-sonarqube-data --run_only_sonar_scan
               fi
 
-  - name: "Build & Test (VS Code: linux arm64)"
-    dependencies: []
+  - name: "Linux ARM64 Stable: Tests"
+    dependencies: ["Static Analysis (TypeScript & ESLint)"]
     skip: *build-test-skip-stable
     task:
       agent:
         machine:
           type: s1-prod-ubuntu24-04-arm64-1
       prologue: *build-test-prologue
-      jobs: *build-test-jobs-stable
+      jobs: *build-test-jobs
       epilogue: *build-test-epilogue
 
-  - name: "Build & Test (VS Code: win32 x64)"
-    dependencies: []
+  - name: "Windows x64 Stable: Tests"
+    dependencies: ["Static Analysis (TypeScript & ESLint)"]
     skip: *build-test-skip-stable
     task:
       agent:
@@ -127,12 +154,16 @@ blocks:
             $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
             Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
       jobs:
-        - name: "Build & Test (VS Code)"
+        - name: "Mocha: Unit Tests (VS Code)"
           commands:
             - npm ci --prefer-offline --include=dev
             - npx playwright install
             - npx gulp ci
             - npx gulp test
+            # Note: Functional tests (npx gulp functional) are not run on Windows due to Playwright/browser automation issues
+          env_vars:
+            - name: VSCODE_VERSION
+              value: stable
       epilogue:
         always:
           commands:
@@ -149,24 +180,51 @@ blocks:
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
 
-  - name: "Build & Test (VS Code Insiders: linux x64)"
-    dependencies: []
+  # --- Build & Test (multi-platform/-arch) for VS Code (insiders) ---
+  - name: "Linux x64 Insiders: Tests"
+    dependencies: ["Static Analysis (TypeScript & ESLint)"]
     skip: &build-test-skip-insiders
       when: "branch != 'main' AND change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
       prologue: *build-test-prologue
-      jobs: &build-test-jobs-insiders
-        - name: "Build & Test (VS Code Insiders)"
+      jobs:
+        - name: "Mocha Tests (VS Code Insiders)"
           commands:
-            - make test
+            - make test-mocha
           env_vars:
             - name: VSCODE_VERSION
               value: insiders
+        - name: "Playwright Tests (VS Code Insiders)"
+          commands:
+            - make test-playwright-webviews
+      epilogue: *build-test-epilogue
+
+  - name: "Linux ARM64 Insiders: Tests"
+    dependencies: ["Static Analysis (TypeScript & ESLint)"]
+    skip: *build-test-skip-insiders
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-arm64-1
+      prologue: *build-test-prologue
+      jobs:
+        - name: "Mocha: Unit Tests (VS Code Insiders)"
+          commands:
+            - make test-mocha
+          env_vars:
+            - name: VSCODE_VERSION
+              value: insiders
+        - name: "Playwright: Webview Tests (VS Code Insiders)"
+          commands:
+            - make test-playwright-webviews
       epilogue: *build-test-epilogue
 
   - name: "Bump microversion"
     dependencies:
-      - "Build & Test (VS Code: linux x64)"
+      - "Linux x64 Stable: Tests"
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -185,7 +243,7 @@ blocks:
 
   - name: "Set next version under development"
     dependencies:
-      - "Build & Test (VS Code: linux x64)"
+      - "Linux x64 Stable: Tests"
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:

@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { commands } from "vscode";
+import { commands, env } from "vscode";
 import {
   getStubbedCCloudResourceLoader,
   getStubbedResourceLoader,
@@ -23,10 +23,31 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CannotLoadSchemasError,
+  copySubject,
   determineLatestSchema,
   diffLatestSchemasCommand,
   getLatestSchemasForTopic,
 } from "./schemas";
+
+describe("copySubject", () => {
+  let _originalClipboardContents: string | undefined;
+
+  beforeEach(async () => {
+    _originalClipboardContents = await env.clipboard.readText();
+  });
+
+  afterEach(async () => {
+    if (_originalClipboardContents !== undefined) {
+      await env.clipboard.writeText(_originalClipboardContents);
+    }
+  });
+
+  it("should copy the subject name to the clipboard", async () => {
+    await copySubject(TEST_CCLOUD_SUBJECT);
+    const writtenValue = await env.clipboard.readText();
+    assert.strictEqual(writtenValue, TEST_CCLOUD_SUBJECT.name);
+  });
+});
 
 describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   let sandbox: sinon.SinonSandbox;

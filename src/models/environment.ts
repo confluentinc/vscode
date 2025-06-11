@@ -59,7 +59,7 @@ export abstract class Environment implements IResourceBase, ISearchable {
    * them in the tree.
    */
   kafkaClusters!: KafkaCluster[];
-  schemaRegistry?: SchemaRegistry | undefined;
+  schemaRegistry?: SchemaRegistry;
   flinkComputePools: FlinkComputePool[] = [];
 
   // updated by the ResourceViewProvider from connectionUsable events
@@ -93,7 +93,7 @@ export class CCloudEnvironment extends Environment {
   streamGovernancePackage: string;
   // set explicit CCloud* typing
   kafkaClusters: CCloudKafkaCluster[];
-  schemaRegistry?: CCloudSchemaRegistry | undefined;
+  schemaRegistry?: CCloudSchemaRegistry;
   flinkComputePools: CCloudFlinkComputePool[];
 
   constructor(
@@ -229,7 +229,7 @@ export class LocalEnvironment extends Environment {
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
-  schemaRegistry?: LocalSchemaRegistry | undefined = undefined;
+  schemaRegistry?: LocalSchemaRegistry;
 
   constructor(props: Pick<LocalEnvironment, "id" | "name" | "kafkaClusters" | "schemaRegistry">) {
     super();
