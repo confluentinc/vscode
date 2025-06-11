@@ -190,13 +190,13 @@ blocks:
           type: s1-prod-ubuntu24-04-amd64-1
       prologue: *build-test-prologue
       jobs:
-        - name: "Mocha Tests (VS Code Insiders)"
+        - name: "Mocha: Unit Tests (VS Code Insiders)"
           commands:
             - make test-mocha
           env_vars:
             - name: VSCODE_VERSION
               value: insiders
-        - name: "Playwright Tests (VS Code Insiders)"
+        - name: "Playwright: Webview Tests (VS Code Insiders)"
           commands:
             - make test-playwright-webviews
       epilogue: *build-test-epilogue
