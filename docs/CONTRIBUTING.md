@@ -85,7 +85,7 @@ needed for development. These steps are outlined below.
 
 - [ ] Install the required tools and dependencies (see [Tools and Prerequisites](#tools-and-prerequisites)).
 - [ ] [Clone your fork](#clone-your-fork) of the repository.
-- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and format locally (see [Sync your repo with ours](#sync-your-repo-with-oours)).
+- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and format locally (see [Sync your repo with ours](#sync-your-repo-with-ours)).
 
 ### Tools and Prerequisites
 
