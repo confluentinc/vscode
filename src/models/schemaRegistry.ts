@@ -16,6 +16,7 @@ import {
   isCCloud,
   ISchemaRegistryResource,
   ISearchable,
+  UsedConnectionType,
 } from "./resource";
 
 type SchemaRegistrySubclass =
@@ -46,7 +47,7 @@ export abstract class SchemaRegistry
     return this.id;
   }
 
-  /** Which subclass should be used to model schema registries for the corresponding connection id? */
+  /** Which concrete subclass should be used to model schema registries for the corresponding connection id? */
   static getSchemaRegistryClass(connectionId: ConnectionId): SchemaRegistrySubclass {
     const connectionType = connectionIdToType(connectionId);
     return schemaRegistryClassByConnectionType[connectionType];
@@ -81,11 +82,13 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   // environmentId should map to the connectionId
 }
 
-/** Mapping of connection type -> SchemaRegistry subclass. */
-export const schemaRegistryClassByConnectionType: Record<ConnectionType, SchemaRegistrySubclass> = {
+/**
+ *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
+ *  See {@link SchemaRegistry.getSchemaRegistryClass}.
+ */
+const schemaRegistryClassByConnectionType: Record<UsedConnectionType, SchemaRegistrySubclass> = {
   [ConnectionType.Ccloud]: CCloudSchemaRegistry,
   [ConnectionType.Direct]: DirectSchemaRegistry,
-  [ConnectionType.Platform]: DirectSchemaRegistry, // we don't really use Platform at all, but must cover.
   [ConnectionType.Local]: LocalSchemaRegistry,
 };
 

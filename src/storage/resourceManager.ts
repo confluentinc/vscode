@@ -68,9 +68,9 @@ export class ResourceManager {
   /** Mutexes for each workspace/secret storage key to prevent conflicting concurrent writes */
   private mutexes: Map<WorkspaceStorageKeys | SecretStorageKeys, Mutex> = new Map();
 
-  private globalState: GlobalState;
-  private workspaceState: WorkspaceState;
-  private secrets: SecretStorage;
+  private readonly globalState: GlobalState;
+  private readonly workspaceState: WorkspaceState;
+  private readonly secrets: SecretStorage;
 
   private constructor() {
     if (!getExtensionContext()) {
@@ -89,13 +89,11 @@ export class ResourceManager {
     }
   }
 
-  static instance: ResourceManager | null = null;
+  static instance: ResourceManager | null = null; // NOSONAR
+
   static getInstance(): ResourceManager {
-    if (!ResourceManager.instance) {
-      // will throw an ExtensionContextNotSetError if the context isn't set during activation
-      ResourceManager.instance = new ResourceManager();
-    }
-    return ResourceManager.instance;
+    // Will throw an ExtensionContextNotSetError if the context isn't set during activation
+    return (ResourceManager.instance ??= new ResourceManager());
   }
 
   /**
@@ -310,7 +308,6 @@ export class ResourceManager {
     } else if (isCCloud(topic)) {
       return this.getCCloudKafkaCluster(topic.environmentId, topic.clusterId);
     }
-    // TODO(shoup): add isDirect() check here?
     return null;
   }
 

@@ -541,10 +541,17 @@ describe("ResourceManager Schema Registry methods", function () {
     await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, [ccloudSchemaRegistry]);
     const storedRegistries: CCloudSchemaRegistry[] =
       await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
+
     assert.deepStrictEqual(
       storedRegistries,
       [ccloudSchemaRegistry],
       "Expected stored registries to match",
+    );
+
+    // Was promoted from storage JSON to proper subclass instance.
+    assert.ok(
+      storedRegistries[0] instanceof CCloudSchemaRegistry,
+      "Expected stored registry to be CCloudSchemaRegistry instance",
     );
   });
 
