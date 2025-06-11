@@ -4,20 +4,16 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
 import { logError } from "../errors";
-import { Logger } from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { WebviewPanelCache } from "../webview-cache";
-import { PostResponse, type post } from "../webview/scaffold-form";
+import { PostResponse } from "../webview/scaffold-form";
 import scaffoldFormTemplate from "../webview/scaffold-form.html";
 import { getScaffoldingService, getTemplatesList, pickTemplate } from "./template.js";
 import { PrefilledTemplateOptions, TemplateOptionValues } from "./types";
 import { parseErrorMessage } from "./utils";
 
-type MessageSender = OverloadUnion<typeof post>;
-
-const logger = new Logger("scaffold");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const scaffoldProjectRequest = async (
@@ -211,8 +207,3 @@ async function getNonConflictingDirPath(
   await vscode.workspace.fs.createDirectory(finalPath);
   return finalPath;
 }
-
-export * from "./commands";
-export { getScaffoldingService, getTemplatesList, pickTemplate } from "./template.js";
-export * from "./types";
-export * from "./utils";
