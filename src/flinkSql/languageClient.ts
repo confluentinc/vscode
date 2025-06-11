@@ -18,11 +18,12 @@ import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient.Client");
 
-/** Initialize the FlinkSQL language client and connect to the language server websocket
+/** Initialize the FlinkSQL language client and connect to the language server websocket.
+ * Creates a WebSocket (ws), then on ws.onopen makes the WebsocketTransport class for server, and then creates the Client.
+ * Provides middleware for completions and diagnostics in ClientOptions
+ * @param url The URL of the language server websocket
+ * @param onWebSocketDisconnect Callback for WebSocket disconnection events
  * @returns A promise that resolves to the language client, or null if initialization failed
- * Prerequisites:
- * - User is authenticated with CCloud
- * - User has selected a compute pool
  */
 export async function initializeLanguageClient(
   url: string,
