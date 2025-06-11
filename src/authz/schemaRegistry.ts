@@ -1,11 +1,11 @@
 import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { isCCloud } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("authz.schemaRegistry");
 
@@ -30,18 +30,18 @@ export async function canAccessSchemaTypeForTopic(
   topic: KafkaTopic,
   type: "key" | "value",
 ): Promise<boolean> {
-  if (!topic.environmentId) {
-    // no way of checking local topic schemas currently
+  if (!isCCloud(topic)) {
+    // no (current) way of checking DIRECT or LOCAL schema access, so assume true.
     return true;
   }
 
-  const environmentId: string = topic.environmentId;
-  const schemaRegistry: CCloudSchemaRegistry | null =
-    await getResourceManager().getCCloudSchemaRegistry(environmentId);
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  const schemaRegistry = await ccloudLoader.getSchemaRegistryForEnvironmentId(topic.environmentId);
   if (!schemaRegistry) {
     logger.debug(
       "no Schema Registry in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",
-      { environmentId },
+      { environmentId: topic.environmentId, topic: topic.name },
     );
     // if we had schemas, we would have a schema registry
     return true;

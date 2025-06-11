@@ -17,6 +17,7 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import * as graphqlEnvs from "../graphql/environments";
 import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
@@ -291,7 +292,11 @@ describe("CCloudResourceLoader", () => {
       assert.strictEqual(loader["organization"], null);
       sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, []);
       sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudKafkaClusters, []);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSchemaRegistries, []);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setSchemaRegistries,
+        CCLOUD_CONNECTION_ID,
+        [],
+      );
     });
 
     it("should set CCloud resources when available", async () => {
@@ -311,7 +316,8 @@ describe("CCloudResourceLoader", () => {
         TEST_CCLOUD_ENVIRONMENT.kafkaClusters, // empty array by default
       );
       sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setCCloudSchemaRegistries,
+        stubbedResourceManager.setSchemaRegistries,
+        CCLOUD_CONNECTION_ID,
         TEST_CCLOUD_ENVIRONMENT.schemaRegistry ? [TEST_CCLOUD_ENVIRONMENT.schemaRegistry] : [],
       );
     });
