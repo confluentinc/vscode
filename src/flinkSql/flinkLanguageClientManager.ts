@@ -36,8 +36,8 @@ export interface FlinkSqlSettings {
 /**
  * Singleton class that handles Flink configuration settings and language client management.
  * - Listens for CCloud authentication events, flinksql language file open, settings changes
- * - Fetches and manages Flink compute pool resources
- * - Manages Flink SQL Language Client lifecycle & settings
+ * - Fetches and manages information about the active Editor's Flink compute pool resources
+ * - Manages Flink SQL Language Client lifecycle & related settings
  */
 export class FlinkLanguageClientManager implements Disposable {
   private static instance: FlinkLanguageClientManager | null = null;
@@ -275,6 +275,7 @@ export class FlinkLanguageClientManager implements Disposable {
     }
     if (this.isLanguageClientConnected() && url === this.lastWebSocketUrl) {
       // If we already have a client, it's alive, the compute pool matches, so we're good
+      logger.debug("Language client already connected to correct url, no need to reinitialize");
       return;
     } else {
       logger.debug("Cleaning up and reinitializing", {
