@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as utils from "./utils";
 
-describe.only("filterSensitiveKeys", () => {
+describe("filterSensitiveKeys", () => {
   it("filters out keys containing 'key' or 'secret'", () => {
     const input = {
       // minimal valid ScaffoldV1Template shape
