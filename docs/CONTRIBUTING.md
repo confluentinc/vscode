@@ -39,7 +39,7 @@ flowchart TD
     src --> clients["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src/clients'>Generated API clients</a>"]
     src --> graphql["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src/graphql'>GraphQL definitions</a>"]
     src --> extension["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/src/extension.ts'>Extension entry point</a>"]
-    vscode --> package.json["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/package.json'>Automated tasks</a>"]
+    vscode --> package.json["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/package.json'>package.json</a>"]
 ```
 
 ### Issues
