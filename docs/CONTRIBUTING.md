@@ -1,4 +1,4 @@
-# Confluent For VSCode Contributing Guide 📖
+# Confluent For VS Code Contributing Guide 📖
 
 We are grateful for your interest in contributing to the Confluent VSCode extension. This guide includes information on: 
 - [getting started for the first time](#getting-started-for-the-first-time)
