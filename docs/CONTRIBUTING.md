@@ -1,3 +1,4 @@
+hello2
 # Welcome to the Confluent for VS Code contributing guide
 
 Thanks for your interest in contributing to this project! Our goal for the
