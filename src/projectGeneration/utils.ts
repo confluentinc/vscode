@@ -1,22 +1,5 @@
 import { ScaffoldV1Template, ScaffoldV1TemplateOption } from "../clients/scaffoldingService";
 
-export function filterSensitiveKeys(obj: Record<string, unknown>): Record<string, unknown> {
-  const sensitiveKeys = ["password", "secret", "token", "key"];
-  const result: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(obj)) {
-    if (sensitiveKeys.some((sensitiveKey) => key.toLowerCase().includes(sensitiveKey))) {
-      result[key] = "********";
-    } else if (typeof value === "object" && value !== null) {
-      result[key] = filterSensitiveKeys(value as Record<string, unknown>);
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
-}
-
 function filterSensitiveTemplateOptions(options: { [key: string]: ScaffoldV1TemplateOption }): {
   [key: string]: ScaffoldV1TemplateOption;
 } {

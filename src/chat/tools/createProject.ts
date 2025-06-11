@@ -9,9 +9,10 @@ import {
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
-import { getTemplatesList, scaffoldProjectRequest } from "../../projectGeneration";
+import { scaffoldProjectRequest } from "../../projectGeneration";
 import { PostResponse } from "../../webview/scaffold-form";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
+import { getTemplatesList } from "../../projectGeneration/template";
 
 const logger = new Logger("chat.tools.getTemplateOptions");
 

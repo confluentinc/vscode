@@ -1,29 +1,10 @@
 import * as vscode from "vscode";
 import { ScaffoldV1Template } from "./clients/scaffoldingService";
 import { projectScaffoldUri } from "./emitters";
-import { Logger } from "./logging";
+
 import { showErrorNotificationWithButtons } from "./notifications";
-import { applyTemplate, getTemplatesList, scaffoldProjectRequest } from "./projectGeneration";
-import { registerProjectGenerationCommands as registerProjectGenerationCommandsFromModule } from "./projectGeneration/commands";
-import { filterSensitiveKeys, sanitizeTemplateOptions } from "./projectGeneration/utils";
+import { applyTemplate, scaffoldProjectRequest } from "./projectGeneration";
 import { UserEvent, logUsage } from "./telemetry/events";
-import { WebviewPanelCache } from "./webview-cache";
-import { type post } from "./webview/scaffold-form";
-
-type MessageSender = OverloadUnion<typeof post>;
-
-const logger = new Logger("scaffold");
-
-const scaffoldWebviewCache = new WebviewPanelCache();
-
-export const registerProjectGenerationCommands = registerProjectGenerationCommandsFromModule;
-export {
-  applyTemplate,
-  filterSensitiveKeys,
-  getTemplatesList,
-  sanitizeTemplateOptions,
-  scaffoldProjectRequest,
-};
 
 export async function handleProjectScaffoldUri(
   collection: string | null,
