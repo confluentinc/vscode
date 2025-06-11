@@ -368,6 +368,8 @@ describe.only('Extension manifest tests', () => {
 });
 ```
 
+Remember to remove `.only` after running the test and before making a PR! 
+
 #### Functional tests
 
 Functional tests are written for the content the extension display in Web views. These tests run
