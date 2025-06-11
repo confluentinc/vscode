@@ -1,45 +1,65 @@
-# Welcome to the Confluent for VS Code contributing guide
+# Confluent For VS Code Contributing Guide 📖
 
-Thanks for your interest in contributing to this project! Our goal for the
-[Confluent for VS Code project](https://github.com/confluentinc/vscode) is to help make it very easy
-for developers to build stream processing applications using Confluent.
+We are grateful for your interest in contributing to the Confluent VSCode extension. This guide includes information on: 
+- [getting started for the first time](#getting-started-for-the-first-time)
+- as well as a [quick reference](#reference-for-contributors) for contributors who need refreshers on the process
 
-Anyone can contribute, and here are some ways to do so:
+The best developers are those who are familiar with the user experience of the software they create, so we ask that you review the project's [official documentation](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html) before diving in.
 
-- [report problems](https://github.com/confluentinc/vscode/issues)
-- reviewing and verifying [pull requests](https://github.com/confluentinc/vscode/pulls)
-- creating [pull requests](https://github.com/confluentinc/vscode/pulls) with code changes to fix
-  bugs, improve documentation, add/improve tests, and/or implement new features.
+There are three main ways to contribute:
 
-This document outlines the basic steps required to work with and contribute to this project.
+1. **File an Issue**
+    - You can report bugs, request features, or ask questions by filing an issue in our [GitHub repository](https://github.com/confluentinc/vscode/issues).
+2. **Submit or Review Pull Requests (PR)**
+    - In this case, we ask that you read the rest of this guide to understand the process and requirements for contributing code.
+3. **Ask A Question Or Contribute to a Discussion**
+   - Use our [GitHub Discussions](https://github.com/confluentinc/vscode/discussions/) page to participate in the conversation around the extension's development. As always, we ask that you follow our [Code of Conduct](https://github.com/confluentinc/vscode/blob/cc4f9e149bca18776bd9dfdbcf241de332495dfc/CODE_OF_CONDUCT.md#L4).
 
-Use the Table of contents icon in the top left corner of this document to get to a specific section
-of this guide quickly.
+## Getting Started For the First Time
 
-## New contributor guide
+Quicklinks:
 
-To get an overview of the project, read the [README](./README.md) file. Here are some resources to
-help you get started with open source contributions:
+- [Project Overview](#project-overview)
+- [Codebase Overview](#codebase-overview)
+- [Issues](#issues)
+- [Tools and Prerequisites](#tools-and-prerequisites)
+- [One Time Setup and Pull Requests](#one-time-setup-and-pull-requests)
+- [Testing](#testing)
 
-- [Finding ways to contribute to open source on GitHub](https://docs.github.com/en/get-started/exploring-projects-on-github/finding-ways-to-contribute-to-open-source-on-github)
-- [Set up Git](https://docs.github.com/en/get-started/getting-started-with-git/set-up-git)
-- [GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow)
-- [Collaborating with pull requests](https://docs.github.com/en/github/collaborating-with-pull-requests)
+### Project Overview
 
-## Issues
+Our README contains a project overview, including a description of the extension's features and functionality. You can find it [on the main page of the repository](https://github.com/confluentinc/vscode?tab=readme-ov-file#confluent-for-vs-code). Again, you can also find the official documentation for the extension [on the Confluent website](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html).
+
+### Codebase Overview
+
+```mermaid
+flowchart TD
+    vscode --> public["<a href='../resources'>Public resources</a>"]
+    vscode --> resources["<a href='../resources'>Static resources</a>"]
+    vscode --> src["<a href='../src'>Source code</a>"]
+    src --> clients["<a href='../src/clients'>Generated API clients</a>"]
+    src --> graphql["<a href='../src/graphql'>GraphQL definitions</a>"]
+    src --> extension["<a href='../src/extension.ts'>Extension entry point</a>"]
+    vscode --> Gulpfile["<a href='../Gulpfile.js'>Automated tasks</a>"]
+    vscode --> prettier["<a href='../.prettierrc'>Code formatting config</a>"]
+    vscode --> eslint["<a href='../eslint.config.mjs'>Linter config</a>"]
+    vscode --> playwright["<a href='../playwright.config.ts'>Functional testing config</a>"]
+```
+
+### Issues
 
 You can [report problems or comment on issues](https://github.com/confluentinc/vscode/issues)
 without installing the tools, getting the code, or building the code. All you need is a GitHub
 account.
 
-### Create a new issue
+#### Create a new issue
 
 If you spot a problem with the app, code, or docs
 [search if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments).
 If a related issue doesn't exist, you can open a new issue using a relevant
 [issue form](https://github.com/confluentinc/vscode/issues/new/choose).
 
-### Solve an issue
+#### Solve an issue
 
 Scan through our [existing issues](https://github.com/github/confluentinc/vscode/issues) to find one
 that interests you. You can narrow down the search using `labels` as filters. See
@@ -49,10 +69,29 @@ is already assigned to someone else, or someone else has added a comment that th
 it. Currently unassigned issues can be found using
 [this filter](https://github.com/confluentinc/vscode/issues?q=is%3Aissue%20state%3Aopen%20no%3Aassignee%20-label%3Arelease%20).
 
-## Install the tools
+### One Time Setup and Pull Requests
+
+All changes are made through [pull requests (PRs)](https://github.com/confluentinc/vscode/pulls).
+Every PR's [Semaphore CI/CD build](https://semaphoreci.com/) must pass. The Confluent team will
+review PRs and provide feedback; once the changes in the PR are acceptable, the team will merge the
+PR onto the appropriate branch. 
+
+> Note that while a [SonarQube report](https://docs.sonarsource.com/sonarqube-server/10.8/analyzing-source-code/ci-integration/overview/) of less than 80% code coverage will not block a PR, we do expect that the code coverage will improve with each PR. A member of the Confluent team will need to comment "/sem-approve" on the PR to approve external PRs for merging.
+
+To create a PR, you must create a fork of this repository and set up your machine with the tools
+needed for development. These steps are outlined below.
+
+#### Checklist:
+
+- [ ] Install the required tools and dependencies (see [Tools and Prerequisites](#tools-and-prerequisites)).
+- [ ] [Clone your fork](#clone-your-fork) of the repository.
+- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and format locally (see [Sync your repo with ours](#sync-your-repo-with-oours)).
+
+### Tools and Prerequisites
+
 
 If you want to work with this project's codebase and maybe contribute to it, you will need to have
-some development tools. This project uses the following software that you may already have:
+some development tools. We use GitHub, so [consult the GitHub docs](https://docs.github.com/en/get-started/using-github/github-flow) if you are unfamiliar with the GitHub flow. This project uses the following software that you may already have:
 
 - [Git](https://git-scm.com) — version 2.40.0 or later
 - [Node.js](https://nodejs.org/en) — version 18.12.0 or later. It usually installs
@@ -62,15 +101,21 @@ some development tools. This project uses the following software that you may al
 See the links above for installation instructions on your platform. You can verify the versions you
 have installed and that they are working.
 
+```bash
     git --version
+```
 
 should be at least `2.40.0` or later,
 
+```bash
     node --version
+```
 
 should be `18.12.0` or later, and
 
+```bash
     code --version
+```
 
 should be `1.87.0` or later. See
 [VS Code Command Line Interface Guide](https://code.visualstudio.com/docs/editor/command-line) for
@@ -82,9 +127,11 @@ The project also uses these tools:
 - [Gulp](https://gulpjs.com) — task automation tool. It is installed along with other Node.js
   dependencies, but you may want to install a global CLI package as well:
 
+```bash
       npm install -g gulp
+```
 
-## Other services
+#### Other services
 
 The project also uses several services:
 
@@ -93,73 +140,7 @@ The project also uses several services:
 - [Semaphore CI/CD](https://semaphoreci.com/) — continuous integration and deployment service. You
   should not need an account.
 
-## General development process
-
-Bugs, feature requests, and suggested changes are tracked through the project's
-[GitHub issues](https://github.com/confluentinc/vscode/issues).
-
-All changes are made through [pull requests (PRs)](https://github.com/confluentinc/vscode/pulls).
-Every PR's [Semaphore CI/CD build](https://semaphoreci.com/) must pass and code coverage (reported
-as comments on the PR) should either improve or not appreciably change. The Confluent team will
-review PRs and provide feedback; once the changes in the PR are acceptable, the team will merge the
-PR onto the appropriate branch.
-
-To create a PR, you must create a fork of this repository and set up your machine with the tools
-needed for development. These steps are outlined below.
-
-Most development occurs on the `main` branch. Therefore, most PRs will target the `main` branch, and
-be merged to the `main` branch. We use [semantic versioning](https://semver.org/), so our version
-numbers are of the form `v.MAJOR.MINOR.PATCH`, such as `v1.2.0`. We will release all major and minor
-releases from the `main` branch.
-
-If we need to patch a previously-released major or minor release, we will create a `v.MAJOR.MINOR.x`
-branch (e.g., `v1.2.x`), and we create PRs against this branch for all fixes and changes. When the
-patch is ready, we'll release the first `v.MAJOR.MINOR.1` patch version (e.g., `v1.2.1`). If we need
-to make additional fixes, we'll continue to do so against this same branch and release subsequent
-patch versions (e.g., `v1.2.2`, `v1.2.3`, etc).
-
-This project's releases will be published to https://github.com/confluentinc/vscode/releases.
-
-## Our codebase
-
-    vscode/
-    |- public/                   (Directory with public resources such as marketplace introduction page)
-    |- resources/                (Directory with static resources for UI: images, icons, icon fonts)
-    |- src/
-    |  |- clients/               (Generated API clients based on OpenAPI specs)
-    |  |- graphql/
-    |  |  |- sidecar.graphql     (GraphQL definitions taken from ide-sidecar)
-    |  |...
-    |  |- extension.ts           (The extension's entry point)
-    |- Gulpfile.js               (Automated tasks and workflows. Use `gulp --tasks` for brief help)
-    |- .prettierrc               (Code formatting config, used by Prettier)
-    |- eslint.config.js          (Linter config, used by ESLint)
-    |- playwright.config.ts      (Functional testing config, used by Playwright Test)
-    |- LICENSE.txt               (The license information for this repository)
-    |- README.md                 (The readme file for this repository)
-    |- package.json              (The extension's manifest & Node.js dependencies list)
-    |- tsconfig.json             (TypeScript configuration file)
-
-There are other top-level directories and files:
-
-    vscode/
-    |- .github/                  (Directory containing workflows, issue templates, pull request templates, and other files)
-    |- .semaphore/               (Directory containing files used by Semaphore CI/CD)
-    |- .versions/                (Directory containing files used by the build)
-    |- .vscode/                  (Directory containing VS Code specific configurations for running the extension)
-    |- mk-files/                 (Directory containing makefile include files)
-    |- .gitignore                (File that defines the files and directories that are not be added to this repository)
-    |- Makefile                  (The makefile for the project)
-    |- service.yml               (File with the configuration for automated Confluent tooling for managing repositories)
-    |- sonar-project.properties  (File with the configuration for code quality automation)
-    |...
-
-## Working with the codebase
-
-This section outlines the one-time setup and installation of some tools. It then shows the basics of
-building and testing the code
-
-### One time setup
+### Clone your fork
 
 #### Fork this repository
 
@@ -170,24 +151,30 @@ which you will upload your proposed changes and create pull requests. See the
 [GitHub documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo)
 for details.
 
-#### Clone your fork
 
 To work locally on the code, you need to pull the code onto your machine. At a terminal, go to the
 directory in which you want to place a local clone of this repository, and run the following
 commands to use SSH authentication (recommended):
 
+```bash
     git clone git@github.com:YOUR-USERNAME/vscode.git
+```
 
 or with HTTPS:
 
+```bash
     git clone https://github.com/YOUR-USERNAME/vscode.git
+```
 
 This will create a `vscode` directory and pull the contents of your forked repository. Change into
 that directory:
 
+```bash
     cd vscode
+```
 
-#### Sync your repository with ours
+### Sync your repo with ours
+
 
 If you intend to propose changes to our upstream repository, you should next configure your local
 repository to be able to pull code from the project's _remote_ repository, called the _upstream_
@@ -195,37 +182,51 @@ repository.
 
 Use the following command to see the current remotes for your fork:
 
+```bash
     git remote -v
+```
 
 which will output something like:
 
+```bash
     origin  git@github.com:YOUR-USERNAME/vscode.git (fetch)
     origin  git@github.com:YOUR-USERNAME/vscode.git (push)
+```
 
 or if you used HTTPS:
 
+```bash
     origin  https://github.com/YOUR-USERNAME/vscode.git (fetch)
     origin  https://github.com/YOUR-USERNAME/vscode.git (push)
+```
 
 Then run the following command to add the project's repository as a remote called `upstream`:
 
+```bash
     git remote add upstream git@github.com:confluentinc/vscode.git
+```
 
 or if you've used HTTPS:
 
+```bash
     git remote add upstream https://github.com/confluentinc/vscode.git
+```
 
 To verify the new upstream repository you have specified for your fork, run this command again:
 
+```bash
     git remote -v
+```
 
 You should see the URL for your fork as `origin`, and the URL for the project's upstream repository
 as `upstream`. If you used SSH, this will look something like:
 
+```bash
     origin  git@github.com:YOUR-USERNAME/vscode.git (fetch)
     origin  git@github.com:YOUR-USERNAME/vscode.git (push)
     upstream  git@github.com:confluentinc/vscode.git (fetch)
     upstream  git@github.com:confluentinc/vscode.git (push)
+```
 
 #### Get the latest upstream code
 
@@ -233,9 +234,11 @@ Once setup, you can periodically sync your fork with the upstream repository, us
 commands. The most common way is to keep your local `main` branch always in sync with the _upstream_
 repository's `main` branch:
 
+```bash
     git checkout main
     git fetch upstream
     git pull upstream main
+```
 
 You can create local branches from `main` and do your development there.
 
@@ -253,25 +256,33 @@ in GitHub's documentation.
 
 To install frontend-related dependencies, use NPM:
 
+```bash
     npm ci
+```
 
 We recommend using `npm ci` over `npm install` so you'd get reproducible state of dependencies
 defined by `package-lock.json`.
 
-### Building locally
+#### Building locally
 
 Now that you have the source code and installed all the tools, you can build the project locally.
 First check out the `main` branch:
 
+```bash
     git checkout main
+```
 
 and pull the latest changes from the _project's repository_:
 
+```bash
     git pull upstream main
+```
 
 Now you can compile the extension code:
 
+```bash
     gulp build
+```
 
 When using VS Code, you can run the extension using Run and Debug tab. The project includes
 necessary configs in `.vscode` folder to define what needs to be done for the extension to run in
@@ -279,27 +290,35 @@ debug mode.
 
 To check the code against style conventions and potential bugs:
 
+```bash
     gulp lint
     gulp check
+```
 
 To get a brief overview of existing automated tasks:
 
+```bash
     gulp --tasks
+``` 
 
-### Cleaning
+#### Cleaning
 
 The build will create a lot of local files. You can clean up these generated files with:
 
+```bash
     gulp clean
+```
 
 Cleaning is often useful to ensure that all generated files, JARs and executables are removed,
 before rerunning the build and tests.
 
-### Formatting
+#### Formatting
 
 We use [Prettier](https://prettier.io/) for code formatting. To format the code, run:
 
+```bash
     gulp format
+``` 
 
 You can also install the
 [Prettier extension for VS Code](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
@@ -315,16 +334,41 @@ This project uses unit tests and integration tests to verify functionality and i
 Unit tests usually located next to modules they cover. Look for `xxx.test.ts` pattern of files in
 `src` folder. We use [Mocha](https://mochajs.org) for writing unit tests. To run the existing tests:
 
+```bash
     gulp test
+``` 
 
 You can also specify a pattern (either for `describe` label or `it` labels) to lookup to run
 specific tests:
 
+```bash
     gulp test -t 'should register all commands'
     gulp test -t 'Extension manifest tests'
+``` 
 
 Unit tests should test small, isolated classes and functionality, and should not be unnecessarily
 complex.
+
+#### Running a single unit test
+
+You can run individual unit tests by using the following syntax:
+
+```bash
+    gulp test -t 'should register all commands'
+    gulp test -t 'Extension manifest tests'
+```
+
+Or by adding `.only` after a `describe` or `it` block in the test file:
+
+```typescript
+describe.only('Extension manifest tests', () => {
+  it('should register all commands', () => {
+    // test code
+  });
+});
+```
+
+Remember to remove `.only` after running the test and before making a PR! 
 
 #### Functional tests
 
@@ -333,7 +377,9 @@ using [Playwright Test](https://playwright.dev) framework. The tests cover UI be
 views content from perspective of the user interacting with them. To run the tests, use respective
 task:
 
+```bash
     gulp functional
+```
 
 #### E2E tests
 
@@ -347,17 +393,41 @@ information on running, debugging and writing E2E tests.
 
 In short, to run the E2E tests, use the following command:
 
+```bash
     gulp e2e
+```
 
 #### Running the tests
 
 To run unit tests:
 
+```bash
     gulp test
+```
 
 To run functional tests:
 
+```bash
     gulp functional
+```
+
+
+## Reference for Contributors
+
+### Release Process
+
+Most development occurs on the `main` branch. Therefore, most PRs will target the `main` branch, and
+be merged to the `main` branch. We use [semantic versioning](https://semver.org/), so our version
+numbers are of the form `v.MAJOR.MINOR.PATCH`, such as `v1.2.0`. We will release all major and minor
+releases from the `main` branch.
+
+If we need to patch a previously-released major or minor release, we will create a `v.MAJOR.MINOR.x`
+branch (e.g., `v1.2.x`), and we create PRs against this branch for all fixes and changes. When the
+patch is ready, we'll release the first `v.MAJOR.MINOR.1` patch version (e.g., `v1.2.1`). If we need
+to make additional fixes, we'll continue to do so against this same branch and release subsequent
+patch versions (e.g., `v1.2.2`, `v1.2.3`, etc).
+
+This project's releases will be published to [GitHub releases](https://github.com/confluentinc/vscode/releases).
 
 ### Updating OpenAPI clients
 
@@ -372,7 +442,9 @@ without needing to manually write the request/response structures, middlewares, 
 
 To generate the client code, run the `apigen` task:
 
+```bash
     gulp apigen
+```
 
 This task generates the client code for all OpenAPI specs in the `src/clients` directory.
 
