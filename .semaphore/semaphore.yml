@@ -58,9 +58,6 @@ blocks:
     skip: &build-test-skip-stable
       when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
-      env_vars:
-        - name: RUN_SONARQUBE_SCAN
-          value: "true"
       agent:
         machine:
           type: s1-prod-ubuntu24-04-amd64-1
@@ -80,6 +77,8 @@ blocks:
           env_vars:
             - name: VSCODE_VERSION
               value: stable
+            - name: RUN_SONARQUBE_SCAN
+              value: "true"
         - name: "Playwright: Webview Tests (VS Code)"
           commands:
             - make test-playwright-webviews
@@ -191,13 +190,13 @@ blocks:
           type: s1-prod-ubuntu24-04-amd64-1
       prologue: *build-test-prologue
       jobs:
-        - name: "Mocha Tests (VS Code Insiders)"
+        - name: "Mocha: Unit Tests (VS Code Insiders)"
           commands:
             - make test-mocha
           env_vars:
             - name: VSCODE_VERSION
               value: insiders
-        - name: "Playwright Tests (VS Code Insiders)"
+        - name: "Playwright: Webview Tests (VS Code Insiders)"
           commands:
             - make test-playwright-webviews
       epilogue: *build-test-epilogue
