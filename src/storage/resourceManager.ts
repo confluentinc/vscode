@@ -271,7 +271,7 @@ export class ResourceManager {
    */
   async getKafkaClustersForEnvironmentId<T extends KafkaCluster>(
     connectionId: ConnectionId,
-    environmentId: string,
+    environmentId: EnvironmentId,
   ): Promise<T[]> {
     const clusters: T[] = await this.getKafkaClusters(connectionId);
     return clusters.filter((cluster) => cluster.environmentId === environmentId);
@@ -315,7 +315,7 @@ export class ResourceManager {
         await this.workspaceState.get(storageKey);
       const registriesByConnection: Map<ConnectionId, T[]> = registriesByConnectionString
         ? stringToMap(registriesByConnectionString)
-        : new Map<string, T[]>();
+        : new Map<ConnectionId, T[]>();
 
       // Set the new registries for this connection.
       registriesByConnection.set(connectionId, registries);
@@ -349,7 +349,7 @@ export class ResourceManager {
     );
 
     const schemaRegistryClass = getSchemaRegistryClass(connectionId);
-    // Promoteeach from-json vanilla object member to be the proper instance of SchemaRegistry sub-type, return.
+    // Promote each from-json vanilla object member to be the proper instance of SchemaRegistry sub-type, return.
     return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry) as T);
   }
 
