@@ -167,7 +167,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       });
       await Promise.all([
         resourceManager.setCCloudKafkaClusters(kafkaClusters),
-        resourceManager.setCCloudSchemaRegistries(schemaRegistries),
+        resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, schemaRegistries),
       ]);
 
       // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.
@@ -210,10 +210,7 @@ export class CCloudResourceLoader extends ResourceLoader {
    **/
   public async getSchemaRegistries(): Promise<CCloudSchemaRegistry[]> {
     await this.ensureCoarseResourcesLoaded(false);
-    // TODO: redapt this resource manager API to just return the array directly.
-    const registryByEnvId = await getResourceManager().getCCloudSchemaRegistries();
-
-    return Array.from(registryByEnvId.values());
+    return await getResourceManager().getSchemaRegistries(CCLOUD_CONNECTION_ID);
   }
 
   /**

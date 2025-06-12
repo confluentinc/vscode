@@ -88,7 +88,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
     it("deletion validator", function () {
       const version = 3;
 
-      const [validator, prompt] = getSchemaDeletionValidatorAndPlaceholder(version, true); // hardDeletion ignored
+      const [validator, prompt] = getSchemaDeletionValidatorAndPlaceholder(version);
       assert.strictEqual(prompt, `Enter "v${version}" to confirm, escape to cancel.`);
       assert.strictEqual(validator(`v${version}`), undefined);
 
@@ -109,13 +109,8 @@ describe("commands/schemas/utils/schemas.ts", function () {
   describe("getSubjectDeletionValidatorAndPlaceholder()", function () {
     it("deletion validator", function () {
       const subject = TEST_CCLOUD_SUBJECT;
-      const versionCount = 5;
 
-      const [validator, prompt] = getSubjectDeletionValidatorAndPlaceholder(
-        subject,
-        versionCount,
-        true, // hardDelete ignored
-      );
+      const [validator, prompt] = getSubjectDeletionValidatorAndPlaceholder(subject);
 
       assert.strictEqual(prompt, `Enter "${subject.name}" to confirm, escape to cancel.`);
       assert.strictEqual(validator(`${subject.name}`), undefined);

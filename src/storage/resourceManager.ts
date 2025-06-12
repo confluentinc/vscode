@@ -8,6 +8,7 @@ import {
   ConnectionType,
   Status,
 } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
@@ -16,7 +17,11 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, isCCloud, ISchemaRegistryResource, isLocal } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  getSchemaRegistryClass,
+  SchemaRegistry,
+} from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
@@ -67,9 +72,9 @@ export class ResourceManager {
   /** Mutexes for each workspace/secret storage key to prevent conflicting concurrent writes */
   private mutexes: Map<WorkspaceStorageKeys | SecretStorageKeys, Mutex> = new Map();
 
-  private globalState: GlobalState;
-  private workspaceState: WorkspaceState;
-  private secrets: SecretStorage;
+  private readonly globalState: GlobalState;
+  private readonly workspaceState: WorkspaceState;
+  private readonly secrets: SecretStorage;
 
   private constructor() {
     if (!getExtensionContext()) {
@@ -88,10 +93,11 @@ export class ResourceManager {
     }
   }
 
-  static instance: ResourceManager | null = null;
+  static instance: ResourceManager | null = null; // NOSONAR
+
   static getInstance(): ResourceManager {
     if (!ResourceManager.instance) {
-      // will throw an ExtensionContextNotSetError if the context isn't set during activation
+      // Will throw an ExtensionContextNotSetError if the context isn't set during activation
       ResourceManager.instance = new ResourceManager();
     }
     return ResourceManager.instance;
@@ -107,7 +113,7 @@ export class ResourceManager {
     await Promise.all([
       this.deleteCCloudEnvironments(),
       this.deleteCCloudKafkaClusters(),
-      this.deleteCCloudSchemaRegistries(),
+      this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []), // clear CCloud schema registries
       this.deleteCCloudTopics(),
       this.deleteCCloudSubjects(),
     ]);
@@ -309,69 +315,83 @@ export class ResourceManager {
     } else if (isCCloud(topic)) {
       return this.getCCloudKafkaCluster(topic.environmentId, topic.clusterId);
     }
-    // TODO(shoup): add isDirect() check here?
     return null;
   }
 
   // SCHEMA REGISTRY
 
-  /** Cache all of the CCloud schema registries at once. */
-  async setCCloudSchemaRegistries(clusters: CCloudSchemaRegistry[]): Promise<void> {
-    const clustersByEnv: CCloudSchemaRegistryByEnv = new Map();
-    clusters.forEach((cluster) => {
-      clustersByEnv.set(cluster.environmentId, cluster);
+  getSchemaRegistryKey(connectionId: ConnectionId): WorkspaceStorageKeys {
+    if (connectionId === CCLOUD_CONNECTION_ID) {
+      return WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES;
+    }
+    // Only CCLoud support to start with, but can easily expand in future.
+    throw new Error(`Unsupported connectionId ${connectionId} for schema registry key`);
+  }
+
+  /** Cache this connection's schema registry/ies. Generic over SchemaRegistry subclass T. */
+  async setSchemaRegistries<T extends SchemaRegistry>(
+    connectionId: ConnectionId,
+    registries: T[],
+  ): Promise<void> {
+    /*
+     * Store into one of three toplevel storage keys (key in workspace storage based on connection type),
+     * where the interior value is a map keyed by connectionId -> an array of SchemaRegistry.
+     * (The interior map is useful for when caching Direct connection schema registries,
+     *  but is degenerate only single-key for CCloud and Local connections.)
+     */
+    const storageKey = this.getSchemaRegistryKey(connectionId);
+
+    if (registries.some((registry) => registry.connectionId !== connectionId)) {
+      logger.error(
+        `Connection ID mismatch in registries: expected ${connectionId}, found ${registries.map(
+          (r) => r.connectionId,
+        )}`,
+      );
+      throw new Error("Connection ID mismatch in registries");
+    }
+
+    await this.runWithMutex(storageKey, async () => {
+      // Get the JSON-stringified map from storage
+      const registriesByConnectionString: string | undefined =
+        await this.workspaceState.get(storageKey);
+      const registriesByConnection: Map<string, object[]> = registriesByConnectionString
+        ? stringToMap(registriesByConnectionString)
+        : new Map<string, object[]>();
+
+      // Set the new registries for this connection.
+      registriesByConnection.set(connectionId, registries);
+
+      // Now save the updated map of connection id -> schema registry list into workspace storage
+      await this.workspaceState.update(storageKey, mapToString(registriesByConnection));
     });
-    await this.workspaceState.update(
-      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
-      mapToString(clustersByEnv),
-    );
   }
 
-  /**
-   * Get the available {@link CCloudSchemaRegistry}s from extension state.
-   * @returns The map of <environmentId (string), {@link CCloudSchemaRegistry}>
-   */
-  async getCCloudSchemaRegistries(): Promise<CCloudSchemaRegistryByEnv> {
+  /** Get the properly subtyped schema registries for this connection id from storage. If none are found, will return empty array. */
+  async getSchemaRegistries<T extends SchemaRegistry>(connectionId: ConnectionId): Promise<T[]> {
+    const storageKey = this.getSchemaRegistryKey(connectionId);
+
     // Get the JSON-stringified map from storage
-    const registriesByEnvString: string | undefined = this.workspaceState.get(
-      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
-    );
-    const registriesByEnv: Map<string, object> = registriesByEnvString
-      ? stringToMap(registriesByEnvString)
-      : new Map<string, object>();
-    // cast any values back to CCloudSchemaRegistry instances
-    return new Map(
-      Array.from(registriesByEnv).map(([envId, registry]) => [
-        envId,
-        CCloudSchemaRegistry.create(registry as CCloudSchemaRegistry),
-      ]),
-    );
-  }
+    const registriesByConnectionString: string | undefined =
+      await this.workspaceState.get(storageKey);
 
-  /**
-   * Get a specific Schema Registry from extension state.
-   * @param environmentId The ID of the {@link CCloudEnvironment} from which to get the Schema Registry
-   * @returns The associated {@link CCloudSchemaRegistry}, or `null` (if the environment is not found or has no Schema Registry)
-   */
-  async getCCloudSchemaRegistry(environmentId: string): Promise<CCloudSchemaRegistry | null> {
-    const schemaRegistries: CCloudSchemaRegistryByEnv = await this.getCCloudSchemaRegistries();
-    const schemaRegistryForEnv: CCloudSchemaRegistry | null =
-      schemaRegistries.get(environmentId) ?? null;
-    if (!schemaRegistryForEnv) {
-      logger.warn(`No Schema Registry found for environment ${environmentId}`);
-    }
-    return schemaRegistryForEnv;
-  }
+    const registriesByConnection: Map<string, object[]> = registriesByConnectionString
+      ? stringToMap(registriesByConnectionString)
+      : new Map<string, object[]>();
 
-  /** Get a specific Schema Registry by its id */
-  async getCCloudSchemaRegistryById(id: string): Promise<CCloudSchemaRegistry | null> {
-    const clusters = await this.getCCloudSchemaRegistries();
-    for (const cluster of clusters.values()) {
-      if (cluster.id === id) {
-        return cluster;
-      }
+    // Will either be undefined or an array of plain objects since just deserialized from storage.
+    const vanillaJSONRegistries: object[] | undefined = registriesByConnection.get(connectionId);
+
+    if (!vanillaJSONRegistries) {
+      return [];
     }
-    return null;
+
+    logger.debug(
+      `Found ${vanillaJSONRegistries.length} schema registries for connection ${connectionId}`,
+    );
+
+    const schemaRegistryClass = getSchemaRegistryClass(connectionId);
+    // Promote each object member to be the proper instance of SchemaRegistry sub-type, return.
+    return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry as T) as T);
   }
 
   /**
@@ -379,23 +399,6 @@ export class ResourceManager {
    */
   async deleteLocalKafkaClusters(): Promise<void> {
     await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, undefined);
-  }
-
-  /**
-   * Delete the list of available Schema Registries from extension state.
-   * @param environment Optional: the ID of the environment for which to delete Schema Registries;
-   * if not provided, all <environmentId, {@link CCloudSchemaRegistry}> pairs will be deleted
-   */
-  async deleteCCloudSchemaRegistries(environment?: string): Promise<void> {
-    const storageKey = WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES;
-    await this.runWithMutex(storageKey, async () => {
-      if (!environment) {
-        return await this.workspaceState.update(storageKey, undefined);
-      }
-      const schemaRegistriesByEnv = await this.getCCloudSchemaRegistries();
-      schemaRegistriesByEnv.delete(environment);
-      await this.workspaceState.update(storageKey, mapToString(schemaRegistriesByEnv));
-    });
   }
 
   /**
