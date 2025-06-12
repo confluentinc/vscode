@@ -107,7 +107,7 @@ describe(
 );
 
 describe(
-  "commands/schemas.ts getLatestSchemasForTopic vs CCLoud registry tests",
+  "commands/schemas.ts getLatestSchemasForTopic vs CCloud registry tests",
   generateGetLatestSchemasForTopicTests(
     CCloudResourceLoader,
     TEST_CCLOUD_KAFKA_TOPIC,
