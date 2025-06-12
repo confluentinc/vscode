@@ -559,8 +559,7 @@ describe("ResourceManager Schema Registry methods", function () {
     await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, undefined);
     const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
 
-    // Also test promoting from singleton to array.
-    await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, ccloudSchemaRegistry);
+    await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, [ccloudSchemaRegistry]);
 
     const storedRegistries: CCloudSchemaRegistry[] =
       await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);

@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import sinon, { SinonStubbedInstance } from "sinon";
+import * as sinon from "sinon";
 import { window, workspace } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
@@ -20,7 +20,7 @@ describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;
   let mockClient: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let getConfigurationStub: sinon.SinonStub;
-  let ccloudLoader: SinonStubbedInstance<CCloudResourceLoader>;
+  let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(async function () {
     // preload the schema registry in extension state

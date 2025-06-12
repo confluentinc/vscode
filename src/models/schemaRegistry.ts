@@ -46,12 +46,6 @@ export abstract class SchemaRegistry
   get schemaRegistryId(): string {
     return this.id;
   }
-
-  /** Which concrete subclass should be used to model schema registries for the corresponding connection id? */
-  static getSchemaRegistryClass(connectionId: ConnectionId): SchemaRegistrySubclass {
-    const connectionType = connectionIdToType(connectionId);
-    return schemaRegistryClassByConnectionType[connectionType];
-  }
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
@@ -84,13 +78,19 @@ export class LocalSchemaRegistry extends SchemaRegistry {
 
 /**
  *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
- *  See {@link SchemaRegistry.getSchemaRegistryClass}.
+ *  See {@link getSchemaRegistryClass}.
  */
 const schemaRegistryClassByConnectionType: Record<UsedConnectionType, SchemaRegistrySubclass> = {
   [ConnectionType.Ccloud]: CCloudSchemaRegistry,
   [ConnectionType.Direct]: DirectSchemaRegistry,
   [ConnectionType.Local]: LocalSchemaRegistry,
 };
+
+/** Which concrete subclass should be used to model schema registries for the corresponding connection id? */
+export function getSchemaRegistryClass(connectionId: ConnectionId): SchemaRegistrySubclass {
+  const connectionType = connectionIdToType(connectionId);
+  return schemaRegistryClassByConnectionType[connectionType];
+}
 
 /** The representation of a {@link SchemaRegistry} as a {@link TreeItem} in the VS Code UI. */
 export class SchemaRegistryTreeItem extends TreeItem {

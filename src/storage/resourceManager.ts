@@ -17,7 +17,11 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, isCCloud, ISchemaRegistryResource, isLocal } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  getSchemaRegistryClass,
+  SchemaRegistry,
+} from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
@@ -327,7 +331,7 @@ export class ResourceManager {
   /** Cache this connection's schema registry/ies. Generic over SchemaRegistry subclass T. */
   async setSchemaRegistries<T extends SchemaRegistry>(
     connectionId: ConnectionId,
-    registries: T | T[],
+    registries: T[],
   ): Promise<void> {
     /*
      * Store into one of three toplevel storage keys (key in workspace storage based on connection type),
@@ -337,12 +341,9 @@ export class ResourceManager {
      */
     const storageKey = this.getSchemaRegistryKey(connectionId);
 
-    // If a single registry is provided, promote it to array.
-    const registriesArray: T[] = Array.isArray(registries) ? registries : [registries];
-
-    if (registriesArray.some((registry) => registry.connectionId !== connectionId)) {
+    if (registries.some((registry) => registry.connectionId !== connectionId)) {
       logger.error(
-        `Connection ID mismatch in registries: expected ${connectionId}, found ${registriesArray.map(
+        `Connection ID mismatch in registries: expected ${connectionId}, found ${registries.map(
           (r) => r.connectionId,
         )}`,
       );
@@ -358,7 +359,7 @@ export class ResourceManager {
         : new Map<string, object[]>();
 
       // Set the new registries for this connection.
-      registriesByConnection.set(connectionId, registriesArray);
+      registriesByConnection.set(connectionId, registries);
 
       // Now save the updated map of connection id -> schema registry list into workspace storage
       await this.workspaceState.update(storageKey, mapToString(registriesByConnection));
@@ -369,10 +370,9 @@ export class ResourceManager {
   async getSchemaRegistries<T extends SchemaRegistry>(connectionId: ConnectionId): Promise<T[]> {
     const storageKey = this.getSchemaRegistryKey(connectionId);
 
-    let registriesByConnectionString: string | undefined;
-
     // Get the JSON-stringified map from storage
-    registriesByConnectionString = await this.workspaceState.get(storageKey);
+    const registriesByConnectionString: string | undefined =
+      await this.workspaceState.get(storageKey);
 
     const registriesByConnection: Map<string, object[]> = registriesByConnectionString
       ? stringToMap(registriesByConnectionString)
@@ -389,7 +389,7 @@ export class ResourceManager {
       `Found ${vanillaJSONRegistries.length} schema registries for connection ${connectionId}`,
     );
 
-    const schemaRegistryClass = SchemaRegistry.getSchemaRegistryClass(connectionId);
+    const schemaRegistryClass = getSchemaRegistryClass(connectionId);
     // Promote each object member to be the proper instance of SchemaRegistry sub-type, return.
     return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry as T) as T);
   }
