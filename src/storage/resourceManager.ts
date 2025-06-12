@@ -14,8 +14,13 @@ import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, isCCloud, ISchemaRegistryResource, isLocal } from "../models/resource";
+import {
+  CCloudKafkaCluster,
+  getKafkaClusterClass,
+  KafkaCluster,
+  KafkaClusterSubclass,
+} from "../models/kafkaCluster";
+import { ConnectionId, EnvironmentId, ISchemaRegistryResource } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import {
   CCloudSchemaRegistry,
@@ -29,8 +34,8 @@ import { getGlobalState, getSecretStorage, getWorkspaceState } from "./utils";
 
 const logger = new Logger("storage.resourceManager");
 
-/** Type for storing {@link CCloudKafkaCluster}s in extension state, where the parent {@link CCloudEnvironment} ID is the key. */
-export type CCloudKafkaClustersByEnv = Map<string, CCloudKafkaCluster[]>;
+/** Typesafe mapping of EnvironmentID -> KafkaCluster subclass[] . */
+export type KafkaClustersByEnv<T extends KafkaClusterSubclass> = Map<EnvironmentId, T[]>;
 
 /**
  * Type for storing {@link SchemaRegistry}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
@@ -112,7 +117,7 @@ export class ResourceManager {
   async deleteCCloudResources(): Promise<void> {
     await Promise.all([
       this.deleteCCloudEnvironments(),
-      this.deleteCCloudKafkaClusters(),
+      this.setKafkaClusters(CCLOUD_CONNECTION_ID, []),
       this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []), // clear CCloud schema registries
       this.deleteCCloudTopics(),
       this.deleteCCloudSubjects(),
@@ -181,141 +186,95 @@ export class ResourceManager {
 
   // KAFKA CLUSTERS
 
+  getKafkaClusterKey(connectionId: ConnectionId): WorkspaceStorageKeys {
+    if (connectionId === CCLOUD_CONNECTION_ID) {
+      return WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS;
+    }
+
+    // we do not support Local or Direct connections for Kafka clusters (yet, but soon!)
+    throw new Error(`Unsupported connectionId ${connectionId}`);
+  }
+
   /**
-   * Convert an array of available (CCloud) Kafka clusters and store as a {@link CCloudKafkaClustersByEnv}
-   * in extension state.
-   * @param clusters The array of {@link CCloudKafkaCluster}s to store
+   * Store this array of KafkaCluster associated with this connection id
+   * in extension workspace state. Replaces any previously stored array.
+   * @param clusters The array of {@link KafkaCluster}s to store.
    */
-  async setCCloudKafkaClusters(clusters: CCloudKafkaCluster[]): Promise<void> {
-    const storageKey = WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS;
+  async setKafkaClusters<T extends KafkaCluster>(
+    connectionId: ConnectionId,
+    clusters: T[],
+  ): Promise<void> {
+    const storageKey = this.getKafkaClusterKey(connectionId);
+
+    if (clusters.some((cluster) => cluster.connectionId !== connectionId)) {
+      logger.error(
+        `Connection ID mismatch in clusters: expected ${connectionId}, found ${clusters.map(
+          (r) => r.connectionId,
+        )}`,
+      );
+      throw new Error("Connection ID mismatch in clusters");
+    }
+
     await this.runWithMutex(storageKey, async () => {
-      // get any existing map of <environmentId, CCloudKafkaCluster[]>
-      const existingEnvClusters: CCloudKafkaClustersByEnv =
-        (await this.getCCloudKafkaClusters()) ?? new Map();
-      // create a map of <environmentId, CCloudKafkaCluster[]> for the new clusters
-      const newClustersByEnv: CCloudKafkaClustersByEnv = new Map();
-      clusters.forEach((cluster) => {
-        if (!newClustersByEnv.has(cluster.environmentId)) {
-          newClustersByEnv.set(cluster.environmentId, []);
-        }
-        newClustersByEnv.get(cluster.environmentId)?.push(cluster);
-      });
-      // merge the new clusters into the existing map
-      for (const [envId, newClusters] of newClustersByEnv) {
-        // replace any existing clusters for the environment with the new clusters
-        existingEnvClusters.set(envId, newClusters);
-      }
-      await this.workspaceState.update(storageKey, mapToString(existingEnvClusters));
+      // Get the JSON-stringified map from storage
+      const clustersByConnectionString: string | undefined =
+        await this.workspaceState.get(storageKey);
+      const clustersByConnection: Map<ConnectionId, T[]> = clustersByConnectionString
+        ? stringToMap(clustersByConnectionString)
+        : new Map<string, T[]>();
+
+      // Set the new cluster[] for this connection.
+      clustersByConnection.set(connectionId, clusters);
+
+      // Now save the updated map of connection id -> kafka cluster list into workspace storage
+      // for this connection-type-derived storageKey.
+      await this.workspaceState.update(storageKey, mapToString(clustersByConnection));
     });
   }
 
   /**
-   * Get the available {@link CCloudKafkaCluster}s from extension state.
-   * @returns The map of <environmentId (string), {@link CCloudKafkaCluster}[]>
+   * Get the cached {@link KafkaCluster}s for this connection from extension state.
+   * @returns connectionType-related {@link KafkaCluster} subclass []>
    */
-  async getCCloudKafkaClusters(): Promise<CCloudKafkaClustersByEnv> {
+  async getKafkaClusters<T extends KafkaCluster>(connectionId: ConnectionId): Promise<T[]> {
+    const storageKey = this.getKafkaClusterKey(connectionId);
+
     // Get the JSON-stringified map from storage
-    const clustersByEnvString: string | undefined = this.workspaceState.get(
-      WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
+    const clustersByConnectionString: string | undefined =
+      await this.workspaceState.get(storageKey);
+
+    const clustersByConnection: Map<ConnectionId, T[]> = clustersByConnectionString
+      ? stringToMap(clustersByConnectionString)
+      : new Map<ConnectionId, T[]>();
+
+    // Will either be undefined or an array of plain objects since just deserialized from storage.
+    const vanillaJSONclusters: T[] | undefined = clustersByConnection.get(connectionId);
+
+    if (!vanillaJSONclusters) {
+      return [];
+    }
+
+    logger.debug(
+      `Found ${vanillaJSONclusters.length} kafka clusters for connection ${connectionId}`,
     );
-    const clustersByEnv: Map<string, object[]> = clustersByEnvString
-      ? stringToMap(clustersByEnvString)
-      : new Map<string, object[]>();
-    // cast any values back to CCloudKafkaCluster instances
-    return new Map(
-      Array.from(clustersByEnv).map(([envId, clusters]) => [
-        envId,
-        clusters.map((cluster) => CCloudKafkaCluster.create(cluster as CCloudKafkaCluster)),
-      ]),
-    );
+
+    // Promote each from-json vanilla object member to be the proper instance of KafkaCluster sub-type, return.
+    const kafkaClusterClass = getKafkaClusterClass(connectionId);
+    return vanillaJSONclusters.map((cluster) => kafkaClusterClass.create(cluster) as T);
   }
 
   /**
-   * Get a specific CCloud Kafka cluster from extension state.
-   * @param environmentId The ID of the {@link CCloudEnvironment} from which to get the Kafka cluster
-   * @param clusterId The ID of the {@link CCloudKafkaCluster} to get
-   * @returns The {@link CCloudKafkaCluster}, or `null` (if the environment or cluster are not found)
+   * Get the list of cached Kafka clusters for a specific connection ID + environment from extension state.
+   * @param connectionId The ID of the connection for which to get Kafka clusters.
+   * @param environmentId The ID of the {@link Environment} for which to get Kafka clusters
+   * @returns The list of {@link KafkaCluster}s for the specified environment. If no clusters are found, an empty array is returned.
    */
-  async getCCloudKafkaCluster(
+  async getKafkaClustersForEnvironmentId<T extends KafkaCluster>(
+    connectionId: ConnectionId,
     environmentId: string,
-    clusterId: string,
-  ): Promise<CCloudKafkaCluster | null> {
-    const clusters: CCloudKafkaClustersByEnv = await this.getCCloudKafkaClusters();
-    const clustersForEnv = clusters.get(environmentId);
-    if (!clustersForEnv) {
-      logger.warn(`No Kafka clusters found for environment ${environmentId}`);
-      return null;
-    }
-    return clustersForEnv.find((cluster) => cluster.id === clusterId) ?? null;
-  }
-
-  /**
-   * Get the list of available CCloud Kafka clusters for a specific environment from extension state.
-   * @param environmentId The ID of the {@link CCloudEnvironment} for which to get Kafka clusters
-   * @returns The list of {@link CCloudKafkaCluster}s for the specified environment. If no clusters are found, an empty array is returned.
-   */
-  async getCCloudKafkaClustersForEnvironment(environmentId: string): Promise<CCloudKafkaCluster[]> {
-    const clusters: CCloudKafkaClustersByEnv = await this.getCCloudKafkaClusters();
-    return clusters.get(environmentId) ?? [];
-  }
-
-  /**
-   * Delete the list of available Kafka clusters from extension state.
-   * @param environment Optional: the ID of the environment for which to delete Kafka clusters;
-   * if not provided, all <environmentId, {@link CCloudKafkaCluster}> pairs will be deleted
-   */
-  async deleteCCloudKafkaClusters(environment?: string): Promise<void> {
-    const storageKey = WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS;
-    await this.runWithMutex(storageKey, async () => {
-      if (!environment) {
-        return await this.workspaceState.update(storageKey, undefined);
-      }
-      const clusters = await this.getCCloudKafkaClusters();
-      clusters.delete(environment);
-      await this.workspaceState.update(storageKey, mapToString(clusters));
-    });
-  }
-
-  /**
-   * Set the list of available local Kafka clusters in extension state.
-   * @param clusters The list of local Kafka clusters to set
-   */
-  async setLocalKafkaClusters(clusters: LocalKafkaCluster[]): Promise<void> {
-    await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, clusters);
-  }
-
-  /**
-   * Get the list of available local Kafka clusters from extension state.
-   * @returns The list of local Kafka clusters
-   */
-  async getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
-    const plainJsonLocalClusters: LocalKafkaCluster[] = this.workspaceState.get(
-      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
-      [],
-    );
-
-    // Promote each member to be an instance of LocalKafkaCluster, return.
-    return plainJsonLocalClusters.map((cluster) => LocalKafkaCluster.create(cluster));
-  }
-
-  /**
-   * Get a specific local Kafka cluster from extension state.
-   * @param clusterId The ID of the cluster to get
-   * @returns The local Kafka cluster, or null if the cluster is not found
-   */
-  async getLocalKafkaCluster(clusterId: string): Promise<LocalKafkaCluster | null> {
-    const clusters: LocalKafkaCluster[] = await this.getLocalKafkaClusters();
-    return clusters.find((cluster) => cluster.id === clusterId) ?? null;
-  }
-
-  /** Get the cluster for this topic. May return either a ccloud or local cluster */
-  async getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | null> {
-    if (isLocal(topic)) {
-      return this.getLocalKafkaCluster(topic.clusterId);
-    } else if (isCCloud(topic)) {
-      return this.getCCloudKafkaCluster(topic.environmentId, topic.clusterId);
-    }
-    return null;
+  ): Promise<T[]> {
+    const clusters: T[] = await this.getKafkaClusters(connectionId);
+    return clusters.filter((cluster) => cluster.environmentId === environmentId);
   }
 
   // SCHEMA REGISTRY
@@ -354,9 +313,9 @@ export class ResourceManager {
       // Get the JSON-stringified map from storage
       const registriesByConnectionString: string | undefined =
         await this.workspaceState.get(storageKey);
-      const registriesByConnection: Map<string, object[]> = registriesByConnectionString
+      const registriesByConnection: Map<ConnectionId, T[]> = registriesByConnectionString
         ? stringToMap(registriesByConnectionString)
-        : new Map<string, object[]>();
+        : new Map<string, T[]>();
 
       // Set the new registries for this connection.
       registriesByConnection.set(connectionId, registries);
@@ -374,12 +333,12 @@ export class ResourceManager {
     const registriesByConnectionString: string | undefined =
       await this.workspaceState.get(storageKey);
 
-    const registriesByConnection: Map<string, object[]> = registriesByConnectionString
+    const registriesByConnection: Map<string, T[]> = registriesByConnectionString
       ? stringToMap(registriesByConnectionString)
-      : new Map<string, object[]>();
+      : new Map<ConnectionId, T[]>();
 
     // Will either be undefined or an array of plain objects since just deserialized from storage.
-    const vanillaJSONRegistries: object[] | undefined = registriesByConnection.get(connectionId);
+    const vanillaJSONRegistries: T[] | undefined = registriesByConnection.get(connectionId);
 
     if (!vanillaJSONRegistries) {
       return [];
@@ -390,15 +349,8 @@ export class ResourceManager {
     );
 
     const schemaRegistryClass = getSchemaRegistryClass(connectionId);
-    // Promote each object member to be the proper instance of SchemaRegistry sub-type, return.
-    return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry as T) as T);
-  }
-
-  /**
-   * Delete the list of available local Kafka clusters from extension state.
-   */
-  async deleteLocalKafkaClusters(): Promise<void> {
-    await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, undefined);
+    // Promoteeach from-json vanilla object member to be the proper instance of SchemaRegistry sub-type, return.
+    return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry) as T);
   }
 
   /**

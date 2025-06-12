@@ -71,7 +71,7 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   // environmentId should map to the connectionId
 }
 
-/** The concrete subclasses. Excludes the abstract base class which lacks a constructor. */
+/** Types of the concrete subclasses. Excludes the abstract base class which lacks a constructor. */
 type SchemaRegistrySubclass =
   | typeof CCloudSchemaRegistry
   | typeof DirectSchemaRegistry

@@ -13,7 +13,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
-import { IFlinkQueryable, isCCloud } from "../models/resource";
+import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar, SidecarHandle } from "../sidecar";
@@ -166,7 +166,7 @@ export class CCloudResourceLoader extends ResourceLoader {
         if (env.schemaRegistry) schemaRegistries.push(env.schemaRegistry);
       });
       await Promise.all([
-        resourceManager.setCCloudKafkaClusters(kafkaClusters),
+        resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, kafkaClusters),
         resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, schemaRegistries),
       ]);
 
@@ -217,14 +217,19 @@ export class CCloudResourceLoader extends ResourceLoader {
    * Get the CCloud kafka clusters in the given environment ID.
    */
   public async getKafkaClustersForEnvironmentId(
-    environmentId: string,
+    environmentId: EnvironmentId,
     forceDeepRefresh?: boolean,
   ): Promise<CCloudKafkaCluster[]> {
     if (environmentId === undefined) {
-      throw new Error(`Cannot fetch clusters w/o an environmentId.`);
+      throw new Error("Cannot fetch clusters w/o an environmentId.");
     }
+
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-    return await getResourceManager().getCCloudKafkaClustersForEnvironment(environmentId);
+
+    return await getResourceManager().getKafkaClustersForEnvironmentId(
+      CCLOUD_CONNECTION_ID,
+      environmentId,
+    );
   }
 
   /**
