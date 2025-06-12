@@ -324,7 +324,7 @@ export class ResourceManager {
     if (connectionId === CCLOUD_CONNECTION_ID) {
       return WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES;
     }
-    // Only CCLoud support to start with, but can easily expand in future.
+    // Only CCloud support to start with, but can easily expand in future.
     throw new Error(`Unsupported connectionId ${connectionId} for schema registry key`);
   }
 

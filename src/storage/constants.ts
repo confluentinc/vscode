@@ -4,7 +4,7 @@ export enum WorkspaceStorageKeys {
   /** Environments found in ccloud */
   CCLOUD_ENVIRONMENTS = "ccloudEnvironments",
 
-  /** Kafka clusters found in CCLoud */
+  /** Kafka clusters found in CCloud */
   CCLOUD_KAFKA_CLUSTERS = "ccloudKafkaClusters",
   /** Kafka clusters found from local, should be removed in #637 */
   LOCAL_KAFKA_CLUSTERS = "localKafkaClusters",

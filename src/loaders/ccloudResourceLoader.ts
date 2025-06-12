@@ -25,7 +25,7 @@ import { ResourceLoader } from "./resourceLoader";
 const logger = new Logger("storage.ccloudResourceLoader");
 
 /**
- * Singleton class responsible for loading / caching CCLoud resources into the resource manager.
+ * Singleton class responsible for loading / caching CCloud resources into the resource manager.
  * View providers and/or other consumers of resources stored in the resource manager should
  * call {@link ensureCoarseResourcesLoaded} to ensure that the resources are cached before attempting to
  * access them from the resource manager.
@@ -214,7 +214,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   }
 
   /**
-   * Get the CCLoud kafka clusters in the given environment ID.
+   * Get the CCloud kafka clusters in the given environment ID.
    */
   public async getKafkaClustersForEnvironmentId(
     environmentId: string,
