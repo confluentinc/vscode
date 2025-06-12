@@ -19,11 +19,6 @@ import {
   UsedConnectionType,
 } from "./resource";
 
-type SchemaRegistrySubclass =
-  | typeof CCloudSchemaRegistry
-  | typeof DirectSchemaRegistry
-  | typeof LocalSchemaRegistry;
-
 export abstract class SchemaRegistry
   extends Data
   implements IResourceBase, ISearchable, ISchemaRegistryResource
@@ -75,6 +70,12 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionType: ConnectionType = ConnectionType.Local;
   // environmentId should map to the connectionId
 }
+
+/** The concrete subclasses. Excludes the abstract base class which lacks a constructor. */
+type SchemaRegistrySubclass =
+  | typeof CCloudSchemaRegistry
+  | typeof DirectSchemaRegistry
+  | typeof LocalSchemaRegistry;
 
 /**
  *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
