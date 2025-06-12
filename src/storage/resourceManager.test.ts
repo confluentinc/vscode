@@ -23,7 +23,7 @@ import {
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { Subject } from "../models/schema";
 import {
@@ -34,7 +34,6 @@ import {
 import { KafkaTopic } from "../models/topic";
 import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
-  CCloudKafkaClustersByEnv,
   CustomConnectionSpec,
   CustomConnectionSpecFromJSON,
   CustomConnectionSpecToJSON,
@@ -121,25 +120,33 @@ describe("ResourceManager (CCloud) environment methods", function () {
   });
 });
 
-describe("ResourceManager Kafka cluster methods", function () {
-  let ccloudClusters: CCloudKafkaCluster[];
-  let localClusters: LocalKafkaCluster[];
+describe("ResourceManager kafka cluster methods", function () {
+  // Both in the same environment.
+  const mainEnvironmentId = TEST_CCLOUD_KAFKA_CLUSTER.environmentId;
+  const ccloudClusters = [
+    CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "test-cluster-id-1" }),
+    CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "test-cluster-id-2" }),
+  ];
+
+  const otherEnvironmentId = "other-env-id" as EnvironmentId;
+  const otherEnvironmentCCloudClusters = [
+    CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "other-cluster-id-1",
+      environmentId: otherEnvironmentId,
+    }),
+    CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "other-cluster-id-2",
+      environmentId: otherEnvironmentId,
+    }),
+  ];
+  let rm: ResourceManager;
 
   before(async () => {
     // extension needs to be activated before any storage management can be done
     await getTestExtensionContext();
-    ccloudClusters = [
-      CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "test-cluster-id-1" }),
-      CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "test-cluster-id-2" }),
-    ];
-    localClusters = [
-      LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "test-cluster-id-1" }),
-    ];
-  });
-
-  beforeEach(async () => {
-    // fresh slate for each test
-    await clearWorkspaceState();
+    rm = getResourceManager();
   });
 
   afterEach(async () => {
@@ -147,177 +154,118 @@ describe("ResourceManager Kafka cluster methods", function () {
     await clearWorkspaceState();
   });
 
-  it("CCLOUD: setCCloudKafkaClusters() should correctly store Kafka clusters", async () => {
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
-    // verify the clusters were stored correctly
-    let storedClustersByEnv: CCloudKafkaClustersByEnv =
-      await resourceManager.getCCloudKafkaClusters();
-
-    assert.ok(storedClustersByEnv);
-    assert.ok(storedClustersByEnv instanceof Map);
-    assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
-    assert.deepStrictEqual(storedClustersByEnv.get(TEST_CCLOUD_ENVIRONMENT.id), ccloudClusters);
+  it("getKafkaClusterKey() works for CCLOUD_CONNECTION_ID", () => {
+    const key = rm.getKafkaClusterKey(CCLOUD_CONNECTION_ID);
+    assert.strictEqual(key, WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
   });
 
-  it("CCLOUD: setCCloudKafkaClusters() should add new environment keys if they don't exist", async () => {
-    const resourceManager = getResourceManager();
-    // set the first batch of clusters from the first environment
-    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
-    // create and set the second batch of clusters for the new environment
-    const newEnvironmentId = "new-environment-id" as EnvironmentId;
-    const newClusters: CCloudKafkaCluster[] = [
-      CCloudKafkaCluster.create({
-        ...TEST_CCLOUD_KAFKA_CLUSTER,
-        id: "new-cluster-id-1",
-        environmentId: newEnvironmentId,
-      }),
-      CCloudKafkaCluster.create({
-        ...TEST_CCLOUD_KAFKA_CLUSTER,
-        id: "new-cluster-id-2",
-        environmentId: newEnvironmentId,
-      }),
-    ];
-    await resourceManager.setCCloudKafkaClusters(newClusters);
-    // verify the clusters were stored correctly
-    let storedClustersByEnv: CCloudKafkaClustersByEnv =
-      await resourceManager.getCCloudKafkaClusters();
-    assert.ok(storedClustersByEnv);
-    // make sure both environments exist and the first wasn't overwritten
-    assert.deepStrictEqual(storedClustersByEnv.get(newEnvironmentId), newClusters);
-    assert.deepStrictEqual(storedClustersByEnv.get(TEST_CCLOUD_ENVIRONMENT.id), ccloudClusters);
-  });
+  for (const connId of [LOCAL_CONNECTION_ID, TEST_DIRECT_CONNECTION_ID]) {
+    it(`getKafkaClusterKey() throws for unsupported connection ID ${connId}`, () => {
+      assert.throws(
+        () => rm.getKafkaClusterKey(connId),
+        (err) => {
+          return err instanceof Error && err.message.includes("Unsupported connectionId");
+        },
+        `Expected error for connection ID ${connId}`,
+      );
+    });
+  }
 
-  it("CCLOUD: setCCloudKafkaClusters() shouldn't duplicate clusters when setting clusters that already exist", async () => {
-    const resourceManager = getResourceManager();
-    // set the clusters in extension storage before setting them again
-    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
-    // set the clusters again
-    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
-    // verify the clusters were not duplicated
-    let storedClustersByEnv: CCloudKafkaClustersByEnv =
-      await resourceManager.getCCloudKafkaClusters();
-    assert.ok(storedClustersByEnv);
-    assert.ok(storedClustersByEnv instanceof Map);
-    assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
-    assert.deepStrictEqual(storedClustersByEnv.get(TEST_CCLOUD_ENVIRONMENT.id), ccloudClusters);
-  });
-
-  it("CCLOUD: getCCloudKafkaClusters() should correctly retrieve Kafka clusters", async () => {
-    const resourceManager = getResourceManager();
-    // preload some clusters before retrieving them
-    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
-    // verify the clusters were stored correctly
-    const envClusters: CCloudKafkaClustersByEnv = await resourceManager.getCCloudKafkaClusters();
-    const retrievedClusters = envClusters.get(TEST_CCLOUD_ENVIRONMENT.id);
-    assert.deepStrictEqual(retrievedClusters, ccloudClusters);
-  });
-
-  it("CCLOUD: getCCloudKafkaClusters() should return an empty array if no clusters are found", async () => {
-    // verify no clusters are found
-    const envClusters: CCloudKafkaClustersByEnv =
-      await getResourceManager().getCCloudKafkaClusters();
-    assert.deepStrictEqual(envClusters, new Map());
-  });
-
-  it("CCLOUD: getCCloudKafkaCluster() should correctly retrieve a Kafka cluster", async () => {
-    // set the clusters
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
-    // verify the cluster was retrieved correctly
-    const cluster: KafkaCluster | null = await getResourceManager().getCCloudKafkaCluster(
-      TEST_CCLOUD_ENVIRONMENT.id,
-      ccloudClusters[0].id,
-    );
-    assert.deepStrictEqual(cluster, ccloudClusters[0]);
-  });
-
-  it("CCLOUD: getCCloudKafkaCluster() should return null if the parent environment ID is not found", async () => {
-    // set the clusters
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
-    // verify the cluster was not found because the environment ID is incorrect
-    const missingCluster: KafkaCluster | null = await getResourceManager().getCCloudKafkaCluster(
-      "nonexistent-env-id",
-      ccloudClusters[0].id,
-    );
-    assert.strictEqual(missingCluster, null);
-  });
-
-  it("CCLOUD: getCCloudKafkaCluster() should return null if the cluster is not found", async () => {
-    // set the clusters
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
-    // verify the cluster was not found
-    const missingCluster: KafkaCluster | null = await getResourceManager().getCCloudKafkaCluster(
-      TEST_CCLOUD_ENVIRONMENT.id,
-      "nonexistent-cluster-id",
-    );
-    assert.strictEqual(missingCluster, null);
-  });
-
-  it("CCLOUD: getCCloudKafkaClustersForEnvironment should return the correct clusters for an environment", async () => {
-    const rm = getResourceManager();
-    // set the kafka clusters for TEST_CCLOUD_ENVIRONMENT.
-    await rm.setCCloudKafkaClusters(ccloudClusters);
-    // verify the clusters were retrieved correctly.
-    const clusters: CCloudKafkaCluster[] = await rm.getCCloudKafkaClustersForEnvironment(
-      TEST_CCLOUD_ENVIRONMENT.id,
-    );
-    assert.deepStrictEqual(clusters, ccloudClusters);
-  });
-
-  it("CCLOUD: getCCloudKafkaClustersForEnvironment should return an empty array if no clusters are found", async () => {
-    const rm = getResourceManager();
-    // verify no clusters are found for TEST_CCLOUD_ENVIRONMENT.
-    const clusters: CCloudKafkaCluster[] = await rm.getCCloudKafkaClustersForEnvironment(
-      TEST_CCLOUD_ENVIRONMENT.id,
-    );
-    assert.deepStrictEqual(clusters, []);
-  });
-
-  it("CCLOUD: deleteCCloudKafkaClusters() should correctly delete Kafka clusters", async () => {
-    // set the clusters in extension storage before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
-    await resourceManager.deleteCCloudKafkaClusters();
-    // verify the clusters were deleted correctly
-    const missingClusters: CCloudKafkaCluster[] | undefined = getWorkspaceState().get(
-      WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
-    );
-    assert.deepStrictEqual(missingClusters, undefined);
-  });
-
-  it("LOCAL: getLocalKafkaClusters() should correctly retrieve Kafka clusters", async () => {
-    const resourceManager = getResourceManager();
+  it("setKafkaClusters() / getKafkaClusters() should correctly store CCloud Kafka clusters", async () => {
     // set the clusters in extension storage before retrieving them
-    await resourceManager.setLocalKafkaClusters(localClusters);
-    // verify the clusters were retrieved correctly
-    const retrievedClusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
-    assert.deepStrictEqual(retrievedClusters, localClusters);
+    await rm.setKafkaClusters(CCLOUD_CONNECTION_ID, ccloudClusters);
+    // verify the clusters were stored correctly
+    const storedClusters: CCloudKafkaCluster[] = await rm.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.ok(storedClusters);
+    assert.deepStrictEqual(storedClusters, ccloudClusters);
+    for (const cluster of storedClusters) {
+      assert.ok(
+        cluster instanceof CCloudKafkaCluster,
+        "Expected stored cluster to be CCloudKafkaCluster",
+      );
+    }
   });
 
-  it("LOCAL: getLocalKafkaClusters() should return an empty array if no clusters are found", async () => {
-    const resourceManager = getResourceManager();
-    // verify no clusters are found
-    const clusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
-    assert.deepStrictEqual(clusters, []);
+  it("setKafkaClusters() should overwrite existing clusters", async () => {
+    // set the clusters in extension storage before retrieving them
+    await rm.setKafkaClusters(CCLOUD_CONNECTION_ID, ccloudClusters);
+    // verify the clusters were stored correctly
+    let storedClusters: CCloudKafkaCluster[] = await rm.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.ok(storedClusters);
+    assert.deepStrictEqual(storedClusters, ccloudClusters);
+
+    // now overwrite with new clusters
+    const newCCloudClusters = [
+      CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "new-cluster-id-1" }),
+      CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "new-cluster-id-2" }),
+    ];
+    await rm.setKafkaClusters(CCLOUD_CONNECTION_ID, newCCloudClusters);
+
+    // verify the clusters were overwritten correctly
+    storedClusters = await rm.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.ok(storedClusters);
+    assert.deepStrictEqual(storedClusters, newCCloudClusters);
   });
 
-  it("LOCAL: getLocalKafkaCluster() should correctly retrieve a Kafka cluster", async () => {
-    // set the clusters
-    await getResourceManager().setLocalKafkaClusters(localClusters);
-    // verify the cluster was retrieved correctly
-    const cluster: LocalKafkaCluster | null = await getResourceManager().getLocalKafkaCluster(
-      localClusters[0].id,
+  it("setKafkaClusters() with empty array should clear existing clusters", async () => {
+    // set the clusters in extension storage before retrieving them
+    await rm.setKafkaClusters(CCLOUD_CONNECTION_ID, ccloudClusters);
+    // verify the clusters were stored correctly
+    let storedClusters: CCloudKafkaCluster[] = await rm.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.ok(storedClusters);
+    assert.deepStrictEqual(storedClusters, ccloudClusters);
+
+    // now clear the clusters
+    await rm.setKafkaClusters(CCLOUD_CONNECTION_ID, []);
+    storedClusters = await rm.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(storedClusters, []);
+  });
+
+  it("setKafkaClusters() with mixed connection IDs should raise an error", async () => {
+    const mixedClusters = [...ccloudClusters, TEST_LOCAL_KAFKA_CLUSTER];
+
+    await assert.rejects(
+      rm.setKafkaClusters(CCLOUD_CONNECTION_ID, mixedClusters),
+      (err) => {
+        return err instanceof Error && err.message.includes("Connection ID mismatch");
+      },
+      "Expected error when setting mixed connection IDs",
     );
-    assert.deepStrictEqual(cluster, localClusters[0]);
   });
 
-  it("LOCAL: getLocalKafkaCluster() should return null if the cluster is not found", async () => {
-    // set the clusters
-    await getResourceManager().setLocalKafkaClusters(localClusters);
-    // verify the cluster was not found
-    const missingCluster: LocalKafkaCluster | null =
-      await getResourceManager().getLocalKafkaCluster("nonexistent-cluster-id");
-    assert.strictEqual(missingCluster, null);
+  it("getKafkaClusters() should return an empty array if no clusters are found", async () => {
+    // no preloading, the workspace store should return undefined.
+    const storedClusters: CCloudKafkaCluster[] = await rm.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(storedClusters, []);
+  });
+
+  it("getKafkaClustersForEnvironmentId() should return clusters for a specific environment ID", async () => {
+    const allClusters = [...ccloudClusters, ...otherEnvironmentCCloudClusters];
+    // set the clusters in extension storage before retrieving them
+    await rm.setKafkaClusters(CCLOUD_CONNECTION_ID, allClusters);
+
+    // fetch clusters for the main environment
+    const clustersForMainEnv: CCloudKafkaCluster[] = await rm.getKafkaClustersForEnvironmentId(
+      CCLOUD_CONNECTION_ID,
+      mainEnvironmentId,
+    );
+
+    assert.deepStrictEqual(
+      clustersForMainEnv,
+      ccloudClusters,
+      "Expected clusters for main environment",
+    );
+
+    // fetch clusters for the other environment
+    const clustersForOtherEnv: CCloudKafkaCluster[] = await rm.getKafkaClustersForEnvironmentId(
+      CCLOUD_CONNECTION_ID,
+      otherEnvironmentId,
+    );
+    assert.deepStrictEqual(
+      clustersForOtherEnv,
+      otherEnvironmentCCloudClusters,
+      "Expected clusters for other environment",
+    );
   });
 });
 
@@ -339,7 +287,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 
   it("CCLOUD: getTopicsForCluster() should return undefined if no cached topics for this cluster", async () => {
     const manager = getResourceManager();
-    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setKafkaClusters(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_KAFKA_CLUSTER]);
 
     const topics = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
     assert.deepStrictEqual(topics, undefined);
@@ -347,7 +295,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 
   it("CCLOUD: getTopicsForCluster() should return empty array of topics if empty array is set", async () => {
     const manager = getResourceManager();
-    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setKafkaClusters(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_KAFKA_CLUSTER]);
 
     await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, []);
     const topics = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
@@ -362,7 +310,10 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
       id: "other-cluster-id",
     });
 
-    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+    await manager.setKafkaClusters(CCLOUD_CONNECTION_ID, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      otherCcloudCluster,
+    ]);
 
     const ccloudTopics = [
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
@@ -379,7 +330,10 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 
     await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
 
-    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+    await manager.setKafkaClusters(CCLOUD_CONNECTION_ID, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      otherCcloudCluster,
+    ]);
 
     await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
 
@@ -431,7 +385,10 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
       ...TEST_CCLOUD_KAFKA_CLUSTER,
       id: "other-cluster-id",
     });
-    await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+    await resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      otherCcloudCluster,
+    ]);
     const ccloudTopics = [
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
@@ -588,60 +545,6 @@ describe("ResourceManager Schema Registry methods", function () {
       storedRegistriesAfter,
       both,
       "Expected stored registries to match after reassignment",
-    );
-  });
-});
-
-describe("ResourceManager Kafka topic methods", function () {
-  let ccloudTopics: KafkaTopic[];
-
-  before(async () => {
-    // extension needs to be activated before any storage management can be done
-    await getTestExtensionContext();
-    ccloudTopics = [
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
-    ];
-  });
-
-  beforeEach(async () => {
-    // fresh slate for each test
-    await clearWorkspaceState();
-  });
-
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
-  });
-
-  it("getClusterForTopic() should return the correct cloud or local cluster accordingly", async () => {
-    // (Is really a cluster-related test, not topic, but this suite has topic sample data)
-
-    // Set up the cloud cluster and topics.
-    const manager = getResourceManager();
-
-    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-    await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
-
-    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
-
-    const ccloudTopic = ccloudTopics[0];
-    const ccloudCluster = await manager.getClusterForTopic(ccloudTopic);
-    assert.equal(ccloudCluster != null, true, "Expected a cloud cluster to be returned");
-    assert.equal(
-      ccloudCluster!.id,
-      ccloudTopic.clusterId,
-      "Expected the cloud cluster to be the same as the cloud topic's cluster",
-    );
-  });
-
-  it("topicKeyForCluster() tests", () => {
-    const manager = getResourceManager();
-
-    assert.equal(
-      manager.topicKeyForCluster(TEST_CCLOUD_KAFKA_CLUSTER),
-      WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS,
-      "Expected cloud cluster to map to StateKafkaTopics.CCLOUD",
     );
   });
 });
@@ -956,14 +859,15 @@ describe("ResourceManager general utility methods", function () {
   it("CCLOUD: deleteCCloudResources() should correctly delete all CCloud resources", async () => {
     // set the CCloud resources before deleting them
     const resourceManager = getResourceManager();
-    await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_KAFKA_CLUSTER]);
     await resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+
     await resourceManager.deleteCCloudResources();
 
     // verify the resources were deleted correctly
-    const missingClusters = await resourceManager.getCCloudKafkaClusters();
-    assert.deepStrictEqual(missingClusters, new Map());
+    const missingClusters = await resourceManager.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(missingClusters, []);
     const missingSchemaRegistries =
       await resourceManager.getSchemaRegistries<CCloudSchemaRegistry>(CCLOUD_CONNECTION_ID);
     assert.deepStrictEqual(missingSchemaRegistries, []);
