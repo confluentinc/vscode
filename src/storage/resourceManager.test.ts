@@ -97,6 +97,7 @@ describe("ResourceManager getEnvironments() / setEnvironments() / getEnvironment
   it("getEnvironments() should return an empty array if no environments are found", async () => {
     // no preloading, the workspace store should return undefined.
     const storedEnvironments: CCloudEnvironment[] = await rm.getEnvironments(CCLOUD_CONNECTION_ID);
+    // ... which then gets promoted to an empty array.
     assert.deepStrictEqual(storedEnvironments, []);
   });
 
@@ -937,7 +938,7 @@ describe("ResourceManager general utility methods", function () {
 
     await resourceManager.deleteCCloudResources();
 
-    // verify all the ccloudy resources were deleted.
+    // verify all the CCloud resources were deleted.
 
     const missingEnvironments =
       await resourceManager.getEnvironments<CCloudEnvironment>(CCLOUD_CONNECTION_ID);
@@ -951,7 +952,7 @@ describe("ResourceManager general utility methods", function () {
       await resourceManager.getSchemaRegistries<CCloudSchemaRegistry>(CCLOUD_CONNECTION_ID);
     assert.deepStrictEqual(missingSchemaRegistries, []);
 
-    // For reasons, these two represent emptyness with undefined, not empty arrays. Ah, consistency!
+    // For reasons, these two represent emptiness with undefined, not empty arrays. Ah, consistency!
     const missingTopics = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
     assert.deepStrictEqual(missingTopics, undefined);
 

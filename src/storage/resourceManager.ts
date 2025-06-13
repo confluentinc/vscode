@@ -204,7 +204,7 @@ export class ResourceManager {
     }
 
     logger.debug(
-      `Found ${vanillaJSONenvironments.length} kafka environments for connection ${connectionId}`,
+      `Found ${vanillaJSONenvironments.length} environments for connection ${connectionId}`,
     );
 
     // Promote each from-json vanilla object member to be the proper instance of Environment sub-type, return.
