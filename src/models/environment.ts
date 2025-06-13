@@ -246,11 +246,12 @@ export class LocalEnvironment extends Environment {
  * Type of the concrete Environment subclasses.
  * Excludes the abstract base class which lacks a constructor.
  */
-type EnvironmentSubclass =
+export type EnvironmentSubclass =
   | typeof CCloudEnvironment
   | typeof DirectEnvironment
   | typeof LocalEnvironment;
 
+export type ConcreteEnvironment = CCloudEnvironment | DirectEnvironment | LocalEnvironment;
 /**
  * Mapping of connection types to their corresponding Environment subclass.
  * @see getEnvironmentClass
