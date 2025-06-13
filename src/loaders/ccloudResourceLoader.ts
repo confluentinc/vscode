@@ -155,7 +155,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
       // Store the environments, clusters, schema registries in the resource manager
       const environments: CCloudEnvironment[] = gqlResults[0];
-      await resourceManager.setCCloudEnvironments(environments);
+      await resourceManager.setEnvironments(CCLOUD_CONNECTION_ID, environments);
 
       // Collect all of the CCloudKafkaCluster and CCloudSchemaRegistries into individual arrays
       // before storing them via the resource manager.
@@ -190,13 +190,13 @@ export class CCloudResourceLoader extends ResourceLoader {
    */
   public async getEnvironments(forceDeepRefresh: boolean = false): Promise<CCloudEnvironment[]> {
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-    return await getResourceManager().getCCloudEnvironments();
+    return await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
   }
 
   /** Are there any Flink compute pools at all? */
   public async hasFlinkComputePools(): Promise<boolean> {
     await this.ensureCoarseResourcesLoaded();
-    const environments = await getResourceManager().getCCloudEnvironments();
+    const environments = await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
     return environments.some((env) => env.flinkComputePools.length > 0);
   }
 

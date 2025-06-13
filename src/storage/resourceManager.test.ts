@@ -6,8 +6,12 @@ import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
+  TEST_DIRECT_ENVIRONMENT,
+  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import {
@@ -18,13 +22,14 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResource
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ConnectionSpec,
+  ConnectionType,
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../models/resource";
+import { ConnectionId, EnvironmentId, ISchemaRegistryResource } from "../models/resource";
 import { Subject } from "../models/schema";
 import {
   CCloudSchemaRegistry,
@@ -46,21 +51,13 @@ import {
 import { UriMetadata, UriMetadataMap } from "./types";
 import { clearWorkspaceState, getWorkspaceState } from "./utils";
 
-describe("ResourceManager (CCloud) environment methods", function () {
-  let environments: CCloudEnvironment[];
+describe("ResourceManager getEnvironments() / setEnvironments() / getEnvironmentKey()", function () {
+  let rm: ResourceManager;
 
   before(async () => {
     // extension needs to be activated before any storage management can be done
     await getTestExtensionContext();
-    environments = [
-      new CCloudEnvironment({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-1" as EnvironmentId }),
-      new CCloudEnvironment({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-2" as EnvironmentId }),
-    ];
-  });
-
-  beforeEach(async () => {
-    // fresh slate for each test
-    await clearWorkspaceState();
+    rm = getResourceManager();
   });
 
   afterEach(async () => {
@@ -68,55 +65,74 @@ describe("ResourceManager (CCloud) environment methods", function () {
     await clearWorkspaceState();
   });
 
-  it("setCCloudEnvironments() should correctly store Environments", async () => {
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudEnvironments(environments);
-    // verify the environments were stored correctly
-    let storedEnvironments: CCloudEnvironment[] = await resourceManager.getCCloudEnvironments();
+  it("getEnvironmentKey() works for CCLOUD_CONNECTION_ID", () => {
+    const key = rm.getEnvironmentKey(CCLOUD_CONNECTION_ID);
+    assert.strictEqual(key, WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
+  });
+
+  for (const connId of [LOCAL_CONNECTION_ID, TEST_DIRECT_CONNECTION_ID]) {
+    it(`getEnvironmentKey() throws for unsupported connection ID ${connId}`, () => {
+      assert.throws(
+        () => rm.getEnvironmentKey(connId),
+        (err) => {
+          return err instanceof Error && err.message.includes("Unsupported connectionId");
+        },
+        `Expected error for connection ID ${connId}`,
+      );
+    });
+  }
+
+  it("setEnvironments() should throw an error if given mixed connection IDs", async () => {
+    const mixedEnvironments = [TEST_CCLOUD_ENVIRONMENT, TEST_DIRECT_ENVIRONMENT];
+
+    await assert.rejects(
+      rm.setEnvironments(CCLOUD_CONNECTION_ID, mixedEnvironments),
+      (err) => {
+        return err instanceof Error && err.message.includes("Connection ID mismatch");
+      },
+      "Expected error when setting mixed connection IDs",
+    );
+  });
+
+  it("getEnvironments() should return an empty array if no environments are found", async () => {
+    // no preloading, the workspace store should return undefined.
+    const storedEnvironments: CCloudEnvironment[] = await rm.getEnvironments(CCLOUD_CONNECTION_ID);
+    // ... which then gets promoted to an empty array.
+    assert.deepStrictEqual(storedEnvironments, []);
+  });
+
+  it("setEnvironments() / getEnvironments() should correctly store CCloud environments", async () => {
+    // set the environment in extension storage before retrieving it
+    await rm.setEnvironments(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_ENVIRONMENT]);
+    // verify the environment was stored correctly
+    const storedEnvironments: CCloudEnvironment[] = await rm.getEnvironments(CCLOUD_CONNECTION_ID);
     assert.ok(storedEnvironments);
-    assert.deepStrictEqual(storedEnvironments, environments);
-  });
-
-  it("getCCloudEnvironments() should correctly retrieve Environments", async () => {
-    const resourceManager = getResourceManager();
-    // set the environments in extension storage before retrieving them
-    await resourceManager.setCCloudEnvironments(environments);
-    // verify the environments were retrieved correctly
-    const retrievedEnvironments: CCloudEnvironment[] =
-      await resourceManager.getCCloudEnvironments();
-    assert.deepStrictEqual(retrievedEnvironments, environments);
-  });
-
-  it("getCCloudEnvironment() should correctly retrieve an Environment", async () => {
-    // set the environments in extension storage before retrieving one
-    await getResourceManager().setCCloudEnvironments(environments);
-    // verify the environment was retrieved correctly
-    const environment: CCloudEnvironment | null = await getResourceManager().getCCloudEnvironment(
-      environments[0].id,
+    assert.deepStrictEqual(storedEnvironments, [TEST_CCLOUD_ENVIRONMENT]);
+    assert.ok(
+      storedEnvironments[0] instanceof CCloudEnvironment,
+      "Expected stored environment to be CCloudEnvironment",
     );
-    assert.deepStrictEqual(environment, environments[0]);
   });
 
-  it("getCCloudEnvironment() should return null if the environment is not found", async () => {
-    const resourceManager = getResourceManager();
-    // set the environments in extension storage before retrieving one
-    await resourceManager.setCCloudEnvironments(environments);
-    // verify the environment was not found
-    const missingEnvironment: CCloudEnvironment | null =
-      await resourceManager.getCCloudEnvironment("nonexistent-env-id");
-    assert.strictEqual(missingEnvironment, null);
-  });
+  it("setEnvironments() should overwrite existing environments", async () => {
+    // set the environment in extension storage before retrieving it
+    await rm.setEnvironments(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_ENVIRONMENT]);
+    // verify the environment was stored correctly
+    let storedEnvironments: CCloudEnvironment[] = await rm.getEnvironments(CCLOUD_CONNECTION_ID);
+    assert.ok(storedEnvironments);
+    assert.deepStrictEqual(storedEnvironments, [TEST_CCLOUD_ENVIRONMENT]);
 
-  it("deleteCCloudEnvironments() should correctly delete Environments", async () => {
-    // set the environments in extension storage before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudEnvironments(environments);
-    await resourceManager.deleteCCloudEnvironments();
-    // verify the environments were deleted correctly
-    const missingEnvironments: CCloudEnvironment[] | undefined = await getWorkspaceState().get(
-      WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS,
-    );
-    assert.deepStrictEqual(missingEnvironments, undefined);
+    // now overwrite with a new environment
+    const newEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: `new-env-id-${randomUUID()}` as EnvironmentId,
+      name: `New Environment ${randomUUID()}`,
+    });
+    await rm.setEnvironments(CCLOUD_CONNECTION_ID, [newEnvironment]);
+    // verify the environment was overwritten correctly
+    storedEnvironments = await rm.getEnvironments(CCLOUD_CONNECTION_ID);
+    assert.ok(storedEnvironments);
+    assert.deepStrictEqual(storedEnvironments, [newEnvironment]);
   });
 });
 
@@ -269,7 +285,7 @@ describe("ResourceManager kafka cluster methods", function () {
   });
 });
 
-describe("ResourceManager (CCloud) Schema Registry methods", function () {
+describe("ResourceManager setTopicsForCluster() / getTopicsForCluster() / topicKeyForCluster()", function () {
   before(async () => {
     // extension needs to be activated before any storage management can be done
     await getTestExtensionContext();
@@ -283,6 +299,36 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   afterEach(async () => {
     // clean up after each test
     await clearWorkspaceState();
+  });
+
+  it("topicKeyForCluster() works for CCloud clusters", () => {
+    const key = getResourceManager().topicKeyForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.strictEqual(key, WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS);
+  });
+
+  for (const unsupportedKafkaCluster of [TEST_LOCAL_KAFKA_CLUSTER, TEST_DIRECT_KAFKA_CLUSTER]) {
+    it(`topicKeyForCluster() throws for unsupported cluster ${unsupportedKafkaCluster.id}`, () => {
+      assert.throws(
+        () => getResourceManager().topicKeyForCluster(unsupportedKafkaCluster),
+        (err) => {
+          return err instanceof Error && err.message.includes("Unknown cluster type");
+        },
+        `Expected error for cluster ${unsupportedKafkaCluster.id}`,
+      );
+    });
+  }
+
+  it("setTopicsForCluster() should throw an error if given mixed connection IDs", async () => {
+    // from mixed kafka clusters (and even connections!)
+    const mixedTopics = [TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC];
+
+    await assert.rejects(
+      getResourceManager().setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, mixedTopics),
+      (err) => {
+        return err instanceof Error && err.message.includes("Cluster ID mismatch in topics");
+      },
+      "Expected error when setting mixed connection IDs",
+    );
   });
 
   it("CCLOUD: getTopicsForCluster() should return undefined if no cached topics for this cluster", async () => {
@@ -476,6 +522,14 @@ describe("ResourceManager Schema Registry methods", function () {
       );
     });
   }
+
+  it("getSchemaRegistries() returns empty array if no connection id key is found in map", async () => {
+    await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, "{}");
+
+    const storedRegistries: CCloudSchemaRegistry[] =
+      await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(storedRegistries, []);
+  });
 
   it("setSchemaRegistries() error when given mixed connection id array", async () => {
     const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
@@ -703,6 +757,23 @@ describe("ResourceManager SR subject methods", function () {
     });
   }
 
+  it("subjectKeyForSchemaRegistry() should throw for unsupported connection IDs", () => {
+    const wonkySchemaRegistry: ISchemaRegistryResource = {
+      connectionId: "wonky-connection-id" as ConnectionId,
+      connectionType: ConnectionType.Platform, // unsupported connection type
+      environmentId: "wonky-env-id" as EnvironmentId,
+      schemaRegistryId: "wonky",
+    };
+
+    assert.throws(
+      () => resourceManager.subjectKeyForSchemaRegistry(wonkySchemaRegistry),
+      (err) => {
+        return err instanceof Error && err.message === "Unknown schema registry connection type";
+      },
+      "Expected error for unsupported connection ID",
+    );
+  });
+
   it("getSubjects() should return undefined if no cached subjects for this schema registry", async () => {
     for (const sr of [
       TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -859,18 +930,34 @@ describe("ResourceManager general utility methods", function () {
   it("CCLOUD: deleteCCloudResources() should correctly delete all CCloud resources", async () => {
     // set the CCloud resources before deleting them
     const resourceManager = getResourceManager();
+    await resourceManager.setEnvironments(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_ENVIRONMENT]);
     await resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_KAFKA_CLUSTER]);
     await resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, [TEST_CCLOUD_SUBJECT]);
 
     await resourceManager.deleteCCloudResources();
 
-    // verify the resources were deleted correctly
-    const missingClusters = await resourceManager.getKafkaClusters(CCLOUD_CONNECTION_ID);
+    // verify all the CCloud resources were deleted.
+
+    const missingEnvironments =
+      await resourceManager.getEnvironments<CCloudEnvironment>(CCLOUD_CONNECTION_ID);
+    assert.deepStrictEqual(missingEnvironments, []);
+
+    const missingClusters =
+      await resourceManager.getKafkaClusters<CCloudKafkaCluster>(CCLOUD_CONNECTION_ID);
     assert.deepStrictEqual(missingClusters, []);
+
     const missingSchemaRegistries =
       await resourceManager.getSchemaRegistries<CCloudSchemaRegistry>(CCLOUD_CONNECTION_ID);
     assert.deepStrictEqual(missingSchemaRegistries, []);
+
+    // For reasons, these two represent emptiness with undefined, not empty arrays. Ah, consistency!
+    const missingTopics = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepStrictEqual(missingTopics, undefined);
+
+    const missingSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(missingSubjects, undefined);
   });
 });
 
@@ -1102,5 +1189,17 @@ describe("ResourceManager utility functions", function () {
     assert.strictEqual(result.size, 2);
     assert.strictEqual(result.get("key1"), "value1");
     assert.strictEqual(result.get("key2"), "value2");
+  });
+});
+
+describe("ResourceManager.runWithMutex()", function () {
+  it("raises if cannot find mutex for key", async () => {
+    const resourceManager = getResourceManager();
+    await assert.rejects(
+      () => resourceManager["runWithMutex"]("nonexistent" as WorkspaceStorageKeys, async () => {}),
+      (err) => {
+        return err instanceof Error && err.message === "No mutex found for key: nonexistent";
+      },
+    );
   });
 });
