@@ -13,7 +13,7 @@ import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import { Environment, getEnvironmentClass } from "../models/environment";
 import {
   CCloudKafkaCluster,
   getKafkaClusterClass,
@@ -116,9 +116,9 @@ export class ResourceManager {
    */
   async deleteCCloudResources(): Promise<void> {
     await Promise.all([
-      this.deleteCCloudEnvironments(),
+      this.setEnvironments(CCLOUD_CONNECTION_ID, []),
       this.setKafkaClusters(CCLOUD_CONNECTION_ID, []),
-      this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []), // clear CCloud schema registries
+      this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []),
       this.deleteCCloudTopics(),
       this.deleteCCloudSubjects(),
     ]);
@@ -147,41 +147,69 @@ export class ResourceManager {
 
   // ENVIRONMENTS
 
-  /**
-   * Set the list of available CCloud environments in extension state.
-   */
-  async setCCloudEnvironments(environments: CCloudEnvironment[]): Promise<void> {
-    await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS, environments);
+  getEnvironmentKey(connectionId: ConnectionId): WorkspaceStorageKeys {
+    if (connectionId === CCLOUD_CONNECTION_ID) {
+      return WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS;
+    }
+    // we do not support Local or Direct connections for environments (yet, but soon!)
+    throw new Error(`Unsupported connectionId ${connectionId} for environment key`);
   }
 
-  /**
-   * Get the list of available CCloud environments from extension state.
-   * @returns The list of CCloud environments
-   */
-  async getCCloudEnvironments(): Promise<CCloudEnvironment[]> {
-    // Will be deserialized plain JSON objects, not instances of CCloudEnvironment.
-    const plain_json_environments: CCloudEnvironment[] =
-      this.workspaceState.get(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS) ?? [];
+  async setEnvironments<T extends Environment>(
+    connectionId: ConnectionId,
+    environments: T[],
+  ): Promise<void> {
+    const storageKey = this.getEnvironmentKey(connectionId);
 
-    // Promote each member to be an instance of CCloudEnvironment
-    return plain_json_environments.map((env) => new CCloudEnvironment(env));
+    if (environments.some((env) => env.connectionId !== connectionId)) {
+      logger.error(
+        `Connection ID mismatch in environments: expected ${connectionId}, found ${environments.map(
+          (r) => r.connectionId,
+        )}`,
+      );
+      throw new Error("Connection ID mismatch in environments");
+    }
+
+    await this.runWithMutex(storageKey, async () => {
+      // Get the JSON-stringified map from storage
+      const envsByConnectionString: string | undefined = await this.workspaceState.get(storageKey);
+      const envsByConnection: Map<ConnectionId, T[]> = envsByConnectionString
+        ? stringToMap(envsByConnectionString)
+        : new Map<EnvironmentId, T[]>();
+
+      // Set the new environment[] for this connection.
+      envsByConnection.set(connectionId, environments);
+
+      // Now save the updated map of connection id -> environment list into workspace storage
+      await this.workspaceState.update(storageKey, mapToString(envsByConnection));
+    });
   }
 
-  /**
-   * Get a specific CCloud environment from extension state.
-   * @param environmentId The ID of the environment to get
-   * @returns The CCloud environment, or null if the environment is not found
-   */
-  async getCCloudEnvironment(environmentId: string): Promise<CCloudEnvironment | null> {
-    const environments: CCloudEnvironment[] = await this.getCCloudEnvironments();
-    return environments.find((env) => env.id === environmentId) ?? null;
-  }
+  async getEnvironments<T extends Environment>(connectionId: ConnectionId): Promise<T[]> {
+    const storageKey = this.getEnvironmentKey(connectionId);
 
-  /**
-   * Delete the list of available CCloud environments from extension state
-   */
-  async deleteCCloudEnvironments(): Promise<void> {
-    await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS, undefined);
+    // Get the JSON-stringified map from storage
+    const environmentsByConnectionString: string | undefined =
+      await this.workspaceState.get(storageKey);
+
+    const environmentsByConnection: Map<ConnectionId, T[]> = environmentsByConnectionString
+      ? stringToMap(environmentsByConnectionString)
+      : new Map<ConnectionId, T[]>();
+
+    // Will either be undefined or an array of plain objects since just deserialized from storage.
+    const vanillaJSONenvironments: T[] | undefined = environmentsByConnection.get(connectionId);
+
+    if (!vanillaJSONenvironments) {
+      return [];
+    }
+
+    logger.debug(
+      `Found ${vanillaJSONenvironments.length} kafka environments for connection ${connectionId}`,
+    );
+
+    // Promote each from-json vanilla object member to be the proper instance of Environment sub-type, return.
+    const environmentClass = getEnvironmentClass(connectionId);
+    return vanillaJSONenvironments.map((env) => new environmentClass(env as any) as T);
   }
 
   // KAFKA CLUSTERS
@@ -490,6 +518,10 @@ export class ResourceManager {
   subjectKeyForSchemaRegistry(
     schemaRegistryKeyable: ISchemaRegistryResource,
   ): WorkspaceStorageKeys {
+    // Alas that ConnectionType includes values that we'll never use,
+    // like ConnectionType.Platform, so we have to check for the known ones.
+    // Switching over to UsedConnectionType (or renaming things)
+    // would be better, but that would require a lot of refactoring.
     switch (schemaRegistryKeyable.connectionType) {
       case ConnectionType.Ccloud:
         return WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS;

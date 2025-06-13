@@ -283,7 +283,7 @@ describe("CCloudResourceLoader", () => {
     });
 
     function setGetEnvironmentsResult(results: CCloudEnvironment[]) {
-      stubbedResourceManager.getCCloudEnvironments.resolves(results);
+      stubbedResourceManager.getEnvironments.resolves(results);
     }
 
     it("should return true if there are Flink compute pools", async () => {
@@ -322,7 +322,11 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getEnvironmentsStub);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       assert.strictEqual(loader["organization"], null);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, []);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setEnvironments,
+        CCLOUD_CONNECTION_ID,
+        [],
+      );
       sinon.assert.calledOnceWithExactly(
         stubbedResourceManager.setKafkaClusters,
         CCLOUD_CONNECTION_ID,
@@ -344,9 +348,11 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getEnvironmentsStub);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       assert.strictEqual(loader["organization"], TEST_CCLOUD_ORGANIZATION);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, [
-        TEST_CCLOUD_ENVIRONMENT,
-      ]);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setEnvironments,
+        CCLOUD_CONNECTION_ID,
+        [TEST_CCLOUD_ENVIRONMENT],
+      );
       sinon.assert.calledOnceWithExactly(
         stubbedResourceManager.setKafkaClusters,
         CCLOUD_CONNECTION_ID,
