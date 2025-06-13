@@ -13,44 +13,22 @@ import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { Environment, getEnvironmentClass } from "../models/environment";
+import { ConcreteEnvironment, getEnvironmentClass } from "../models/environment";
+import { ConcreteKafkaCluster, getKafkaClusterClass } from "../models/kafkaCluster";
 import {
-  CCloudKafkaCluster,
-  getKafkaClusterClass,
-  KafkaCluster,
-  KafkaClusterSubclass,
-} from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId, ISchemaRegistryResource } from "../models/resource";
-import { Schema, Subject } from "../models/schema";
-import {
-  CCloudSchemaRegistry,
-  getSchemaRegistryClass,
-  SchemaRegistry,
-} from "../models/schemaRegistry";
+  ConnectionId,
+  EnvironmentId,
+  IResourceBase,
+  ISchemaRegistryResource,
+} from "../models/resource";
+import { Subject } from "../models/schema";
+import { ConcreteSchemaRegistry, getSchemaRegistryClass } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
 import { getGlobalState, getSecretStorage, getWorkspaceState } from "./utils";
 
 const logger = new Logger("storage.resourceManager");
-
-/** Typesafe mapping of EnvironmentID -> KafkaCluster subclass[] . */
-export type KafkaClustersByEnv<T extends KafkaClusterSubclass> = Map<EnvironmentId, T[]>;
-
-/**
- * Type for storing {@link SchemaRegistry}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
- * @remarks If we ever have to deal with situations where multiple Schema Registries are
- * available under a single parent resource, this type will either need to be updated or a new type
- * will need to be created. For now, we're leaning into the fact that CCloud environments only have
- * one Schema Registry apiece.
- */
-export type CCloudSchemaRegistryByEnv = Map<string, CCloudSchemaRegistry>;
-
-/** Type for storing {@link KafkaTopic}s in extension state, where the parent {@link KafkaCluster} ID is the key. */
-export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
-
-/** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
-export type CCloudSchemaBySchemaRegistry = Map<string, Schema[]>;
 
 export interface CustomConnectionSpec extends ConnectionSpec {
   // enforce `ConnectionId` type over `string`
@@ -69,6 +47,9 @@ export type DirectConnectionsById = Map<ConnectionId, CustomConnectionSpec>;
  * for the interior cache map of registry id -> {cached subject array} | {nothing cached yet}.
  */
 type SubjectStringCache = Map<string, string[] | undefined>;
+
+/** All possible concrete coarse resource instance types */
+type ConcreteCoarseResource = ConcreteKafkaCluster | ConcreteSchemaRegistry | ConcreteEnvironment;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
@@ -145,7 +126,70 @@ export class ResourceManager {
     return await mutex.runExclusive(callback);
   }
 
-  // ENVIRONMENTS
+  // Coarse resources
+
+  private storeCoarseResources(
+    connectionId: ConnectionId,
+    storageKey: WorkspaceStorageKeys,
+    resources: IResourceBase[],
+  ): Promise<void> {
+    // Validate that all resources are of the expected type based on the connection type
+    // and have the expected connection ID.
+    for (const resource of resources) {
+      if (resource.connectionId !== connectionId) {
+        throw new Error(
+          `Connection ID mismatch: expected ${connectionId}, found ${resource.connectionId}`,
+        );
+      }
+    }
+
+    return this.runWithMutex(storageKey, async () => {
+      // Get the JSON-stringified map from storage
+      const resourcesByConnectionString: string | undefined =
+        await this.workspaceState.get(storageKey);
+
+      const resourcesByConnection: Map<ConnectionId, IResourceBase[]> = resourcesByConnectionString
+        ? stringToMap(resourcesByConnectionString)
+        : new Map<ConnectionId, IResourceBase[]>();
+
+      // Set the new resources for this connection.
+      resourcesByConnection.set(connectionId, resources);
+
+      // Now save the updated map of connection id -> resource list into workspace storage
+      await this.workspaceState.update(storageKey, mapToString(resourcesByConnection));
+    });
+  }
+
+  private async loadCoarseResources<T extends ConcreteCoarseResource>(
+    connectionId: ConnectionId,
+    storageKey: WorkspaceStorageKeys,
+    resourceNoun: string,
+    resourceCreator: (fromJson: T) => T,
+  ): Promise<T[]> {
+    // Get the JSON-stringified map from storage
+    const resourcesByConnectionString: string | undefined =
+      await this.workspaceState.get(storageKey);
+
+    const resourcesByConnection: Map<string, T[]> = resourcesByConnectionString
+      ? stringToMap(resourcesByConnectionString)
+      : new Map<ConnectionId, T[]>();
+
+    // Will either be undefined or an array of plain objects since just deserialized from storage.
+    const vanillaJSONResources: T[] | undefined = resourcesByConnection.get(connectionId);
+
+    if (!vanillaJSONResources) {
+      return [];
+    }
+
+    logger.debug(
+      `Found ${vanillaJSONResources.length} ${resourceNoun} for connection ${connectionId}`,
+    );
+
+    // Promote each from-json vanilla object member to be the proper instance of T; return array.
+    return vanillaJSONResources.map((resource) => resourceCreator(resource));
+  }
+
+  // ENVIRONMENTS (coarse resource)
 
   getEnvironmentKey(connectionId: ConnectionId): WorkspaceStorageKeys {
     if (connectionId === CCLOUD_CONNECTION_ID) {
@@ -155,64 +199,29 @@ export class ResourceManager {
     throw new Error(`Unsupported connectionId ${connectionId} for environment key`);
   }
 
-  async setEnvironments<T extends Environment>(
+  async setEnvironments<T extends ConcreteEnvironment>(
     connectionId: ConnectionId,
     environments: T[],
   ): Promise<void> {
     const storageKey = this.getEnvironmentKey(connectionId);
 
-    if (environments.some((env) => env.connectionId !== connectionId)) {
-      logger.error(
-        `Connection ID mismatch in environments: expected ${connectionId}, found ${environments.map(
-          (r) => r.connectionId,
-        )}`,
-      );
-      throw new Error("Connection ID mismatch in environments");
-    }
-
-    await this.runWithMutex(storageKey, async () => {
-      // Get the JSON-stringified map from storage
-      const envsByConnectionString: string | undefined = await this.workspaceState.get(storageKey);
-      const envsByConnection: Map<ConnectionId, T[]> = envsByConnectionString
-        ? stringToMap(envsByConnectionString)
-        : new Map<EnvironmentId, T[]>();
-
-      // Set the new environment[] for this connection.
-      envsByConnection.set(connectionId, environments);
-
-      // Now save the updated map of connection id -> environment list into workspace storage
-      await this.workspaceState.update(storageKey, mapToString(envsByConnection));
-    });
+    await this.storeCoarseResources(connectionId, storageKey, environments);
   }
 
-  async getEnvironments<T extends Environment>(connectionId: ConnectionId): Promise<T[]> {
+  async getEnvironments<T extends ConcreteEnvironment>(connectionId: ConnectionId): Promise<T[]> {
     const storageKey = this.getEnvironmentKey(connectionId);
 
-    // Get the JSON-stringified map from storage
-    const environmentsByConnectionString: string | undefined =
-      await this.workspaceState.get(storageKey);
-
-    const environmentsByConnection: Map<ConnectionId, T[]> = environmentsByConnectionString
-      ? stringToMap(environmentsByConnectionString)
-      : new Map<ConnectionId, T[]>();
-
-    // Will either be undefined or an array of plain objects since just deserialized from storage.
-    const vanillaJSONenvironments: T[] | undefined = environmentsByConnection.get(connectionId);
-
-    if (!vanillaJSONenvironments) {
-      return [];
-    }
-
-    logger.debug(
-      `Found ${vanillaJSONenvironments.length} environments for connection ${connectionId}`,
-    );
-
-    // Promote each from-json vanilla object member to be the proper instance of Environment sub-type, return.
     const environmentClass = getEnvironmentClass(connectionId);
-    return vanillaJSONenvironments.map((env) => new environmentClass(env as any) as T);
+    const environmentCreator = (fromJson: T): T => new environmentClass(fromJson as any) as T;
+    return this.loadCoarseResources<T>(
+      connectionId,
+      storageKey,
+      "environments",
+      environmentCreator,
+    );
   }
 
-  // KAFKA CLUSTERS
+  // KAFKA CLUSTERS (coarse resource)
 
   getKafkaClusterKey(connectionId: ConnectionId): WorkspaceStorageKeys {
     if (connectionId === CCLOUD_CONNECTION_ID) {
@@ -228,67 +237,32 @@ export class ResourceManager {
    * in extension workspace state. Replaces any previously stored array.
    * @param clusters The array of {@link KafkaCluster}s to store.
    */
-  async setKafkaClusters<T extends KafkaCluster>(
+  async setKafkaClusters<T extends ConcreteKafkaCluster>(
     connectionId: ConnectionId,
     clusters: T[],
   ): Promise<void> {
     const storageKey = this.getKafkaClusterKey(connectionId);
 
-    if (clusters.some((cluster) => cluster.connectionId !== connectionId)) {
-      logger.error(
-        `Connection ID mismatch in clusters: expected ${connectionId}, found ${clusters.map(
-          (r) => r.connectionId,
-        )}`,
-      );
-      throw new Error("Connection ID mismatch in clusters");
-    }
-
-    await this.runWithMutex(storageKey, async () => {
-      // Get the JSON-stringified map from storage
-      const clustersByConnectionString: string | undefined =
-        await this.workspaceState.get(storageKey);
-      const clustersByConnection: Map<ConnectionId, T[]> = clustersByConnectionString
-        ? stringToMap(clustersByConnectionString)
-        : new Map<string, T[]>();
-
-      // Set the new cluster[] for this connection.
-      clustersByConnection.set(connectionId, clusters);
-
-      // Now save the updated map of connection id -> kafka cluster list into workspace storage
-      // for this connection-type-derived storageKey.
-      await this.workspaceState.update(storageKey, mapToString(clustersByConnection));
-    });
+    await this.storeCoarseResources(connectionId, storageKey, clusters);
   }
 
   /**
    * Get the cached {@link KafkaCluster}s for this connection from extension state.
    * @returns connectionType-related {@link KafkaCluster} subclass []>
    */
-  async getKafkaClusters<T extends KafkaCluster>(connectionId: ConnectionId): Promise<T[]> {
+  async getKafkaClusters<T extends ConcreteKafkaCluster>(connectionId: ConnectionId): Promise<T[]> {
     const storageKey = this.getKafkaClusterKey(connectionId);
 
-    // Get the JSON-stringified map from storage
-    const clustersByConnectionString: string | undefined =
-      await this.workspaceState.get(storageKey);
-
-    const clustersByConnection: Map<ConnectionId, T[]> = clustersByConnectionString
-      ? stringToMap(clustersByConnectionString)
-      : new Map<ConnectionId, T[]>();
-
-    // Will either be undefined or an array of plain objects since just deserialized from storage.
-    const vanillaJSONclusters: T[] | undefined = clustersByConnection.get(connectionId);
-
-    if (!vanillaJSONclusters) {
-      return [];
-    }
-
-    logger.debug(
-      `Found ${vanillaJSONclusters.length} kafka clusters for connection ${connectionId}`,
-    );
-
-    // Promote each from-json vanilla object member to be the proper instance of KafkaCluster sub-type, return.
     const kafkaClusterClass = getKafkaClusterClass(connectionId);
-    return vanillaJSONclusters.map((cluster) => kafkaClusterClass.create(cluster) as T);
+
+    const kafkaClusterCreator = (fromJson: T): T => kafkaClusterClass.create(fromJson as any) as T;
+
+    return this.loadCoarseResources<T>(
+      connectionId,
+      storageKey,
+      "Kafka clusters",
+      kafkaClusterCreator,
+    );
   }
 
   /**
@@ -297,11 +271,11 @@ export class ResourceManager {
    * @param environmentId The ID of the {@link Environment} for which to get Kafka clusters
    * @returns The list of {@link KafkaCluster}s for the specified environment. If no clusters are found, an empty array is returned.
    */
-  async getKafkaClustersForEnvironmentId<T extends KafkaCluster>(
+  async getKafkaClustersForEnvironmentId<T extends ConcreteKafkaCluster>(
     connectionId: ConnectionId,
     environmentId: EnvironmentId,
   ): Promise<T[]> {
-    const clusters: T[] = await this.getKafkaClusters(connectionId);
+    const clusters: T[] = await this.getKafkaClusters<T>(connectionId);
     return clusters.filter((cluster) => cluster.environmentId === environmentId);
   }
 
@@ -316,69 +290,30 @@ export class ResourceManager {
   }
 
   /** Cache this connection's schema registry/ies. Generic over SchemaRegistry subclass T. */
-  async setSchemaRegistries<T extends SchemaRegistry>(
+  async setSchemaRegistries<T extends ConcreteSchemaRegistry>(
     connectionId: ConnectionId,
     registries: T[],
   ): Promise<void> {
-    /*
-     * Store into one of three toplevel storage keys (key in workspace storage based on connection type),
-     * where the interior value is a map keyed by connectionId -> an array of SchemaRegistry.
-     * (The interior map is useful for when caching Direct connection schema registries,
-     *  but is degenerate only single-key for CCloud and Local connections.)
-     */
     const storageKey = this.getSchemaRegistryKey(connectionId);
 
-    if (registries.some((registry) => registry.connectionId !== connectionId)) {
-      logger.error(
-        `Connection ID mismatch in registries: expected ${connectionId}, found ${registries.map(
-          (r) => r.connectionId,
-        )}`,
-      );
-      throw new Error("Connection ID mismatch in registries");
-    }
-
-    await this.runWithMutex(storageKey, async () => {
-      // Get the JSON-stringified map from storage
-      const registriesByConnectionString: string | undefined =
-        await this.workspaceState.get(storageKey);
-      const registriesByConnection: Map<ConnectionId, T[]> = registriesByConnectionString
-        ? stringToMap(registriesByConnectionString)
-        : new Map<ConnectionId, T[]>();
-
-      // Set the new registries for this connection.
-      registriesByConnection.set(connectionId, registries);
-
-      // Now save the updated map of connection id -> schema registry list into workspace storage
-      await this.workspaceState.update(storageKey, mapToString(registriesByConnection));
-    });
+    await this.storeCoarseResources(connectionId, storageKey, registries);
   }
 
   /** Get the properly subtyped schema registries for this connection id from storage. If none are found, will return empty array. */
-  async getSchemaRegistries<T extends SchemaRegistry>(connectionId: ConnectionId): Promise<T[]> {
+  async getSchemaRegistries<T extends ConcreteSchemaRegistry>(
+    connectionId: ConnectionId,
+  ): Promise<T[]> {
     const storageKey = this.getSchemaRegistryKey(connectionId);
 
-    // Get the JSON-stringified map from storage
-    const registriesByConnectionString: string | undefined =
-      await this.workspaceState.get(storageKey);
-
-    const registriesByConnection: Map<string, T[]> = registriesByConnectionString
-      ? stringToMap(registriesByConnectionString)
-      : new Map<ConnectionId, T[]>();
-
-    // Will either be undefined or an array of plain objects since just deserialized from storage.
-    const vanillaJSONRegistries: T[] | undefined = registriesByConnection.get(connectionId);
-
-    if (!vanillaJSONRegistries) {
-      return [];
-    }
-
-    logger.debug(
-      `Found ${vanillaJSONRegistries.length} schema registries for connection ${connectionId}`,
-    );
-
     const schemaRegistryClass = getSchemaRegistryClass(connectionId);
-    // Promote each from-json vanilla object member to be the proper instance of SchemaRegistry sub-type, return.
-    return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry) as T);
+    const schemaRegistryCreator = (fromJson: T): T => schemaRegistryClass.create(fromJson) as T;
+
+    return this.loadCoarseResources<T>(
+      connectionId,
+      storageKey,
+      "schema registries",
+      schemaRegistryCreator,
+    );
   }
 
   /**
@@ -545,7 +480,7 @@ export class ResourceManager {
    *
    *  Raises an error if the cluster ID of any topic does not match the given cluster's ID.
    */
-  async setTopicsForCluster(cluster: KafkaCluster, topics: KafkaTopic[]): Promise<void> {
+  async setTopicsForCluster(cluster: ConcreteKafkaCluster, topics: KafkaTopic[]): Promise<void> {
     // Ensure that all topics have the correct cluster ID.
     if (topics.some((topic) => topic.clusterId !== cluster.id)) {
       logger.warn("Cluster ID mismatch in topics", cluster, topics);
@@ -575,7 +510,7 @@ export class ResourceManager {
    * @returns KafkaTopic[] (possibly empty) if known, else undefined
    * indicating nothing at all known about this cluster (and should be deep probed).
    */
-  async getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[] | undefined> {
+  async getTopicsForCluster(cluster: ConcreteKafkaCluster): Promise<KafkaTopic[] | undefined> {
     const key = this.topicKeyForCluster(cluster);
 
     // Get the JSON-stringified map from storage
@@ -609,8 +544,8 @@ export class ResourceManager {
    *
    * (not private only for testing)
    */
-  topicKeyForCluster(cluster: KafkaCluster): WorkspaceStorageKeys {
-    if (cluster instanceof CCloudKafkaCluster) {
+  topicKeyForCluster(cluster: ConcreteKafkaCluster): WorkspaceStorageKeys {
+    if (cluster.connectionId === CCLOUD_CONNECTION_ID) {
       return WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS;
     } else {
       logger.warn("Unknown cluster type", cluster);
