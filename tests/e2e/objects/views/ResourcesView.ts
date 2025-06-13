@@ -1,0 +1,123 @@
+import { Page } from "@playwright/test";
+import { View } from "./View";
+import { CCloudEnvironmentItem } from "./viewItems/CCloudEnvironmentItem";
+import { CCloudItem } from "./viewItems/CCloudItem";
+import { KafkaClusterItem } from "./viewItems/KafkaClusterItem";
+import { LocalItem } from "./viewItems/LocalItem";
+import { ViewItem } from "./viewItems/ViewItem";
+
+/**
+ * Object representing the "Resources"
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
+ */
+export class ResourcesView extends View {
+  // private to use `ResourcesView.from(page)` instead of `new ResourcesView(page)` since we aren't
+  // creating a "new" Resources view object, just accessing it from the existing page
+  private constructor(page: Page) {
+    super(page, "Resources Section");
+  }
+
+  /** Get the Resources view for the given {@link Page page} */
+  static from(page: Page): ResourcesView {
+    return new ResourcesView(page);
+  }
+
+  /** Click the "Search" nav action in the view title area. */
+  async clickSearch(): Promise<void> {
+    await this.locator.getByLabel("Search").click();
+  }
+
+  /** Click the "Add New Connection" nav action in the view title area. */
+  async clickAddNewConnection(): Promise<void> {
+    await this.locator.getByLabel("Add New Connection").click();
+  }
+
+  /** Click the "Refresh" nav action in the view title area. */
+  async clickRefresh(): Promise<void> {
+    await this.locator.getByLabel("Refresh").click();
+  }
+
+  /**
+   * Get the static "Confluent Cloud" {@link CCloudItem tree item} used for signing in/out and
+   * changing CCloud organizations.
+   */
+  async getConfluentCloudItem(): Promise<CCloudItem> {
+    const items: ViewItem[] = await this.getItems({ text: "Confluent Cloud" });
+    if (items.length === 0) {
+      throw new Error("Confluent Cloud item not found in Resources view");
+    }
+    return new CCloudItem(this.page, items[0].locator);
+  }
+
+  /**
+   * Get the static "Local" {@link LocalItem tree item} used for the resources managed by the
+   * extension through the Docker engine API (Kafka cluster, Schema Registry, etc.).
+   */
+  async getLocalItem(): Promise<ViewItem> {
+    const items: ViewItem[] = await this.getItems({ text: "Local" });
+    if (items.length === 0) {
+      throw new Error("Local item not found in Resources view");
+    }
+    return new LocalItem(this.page, items[0].locator);
+  }
+
+  /**
+   * Get all (CCloud) environment {@link CCloudEnvironmentItem tree items}.
+   * (These are only available after completing the CCloud sign-in flow and the "Confluent Cloud"
+   * tree item is expanded. Local and direct connections do not have "environment" tree items.)
+   */
+  async getCCloudEnvironmentItems(): Promise<CCloudEnvironmentItem[]> {
+    const items: ViewItem[] = await this.getItems({
+      iconId: "confluent-environment",
+      waitForItems: true,
+    });
+    return items.map((item) => new CCloudEnvironmentItem(this.page, item.locator));
+  }
+
+  /**
+   * Get all Kafka cluster {@link KafkaClusterItem tree items}.
+   * - If the user completed the CCloud sign-in flow and an environment tree item is expanded, this
+   * will return CCloud Kafka cluster tree items first, with varying labels.
+   * - If the user is running the `confluent-local` Docker container, this will include a **local**
+   * Kafka cluster tree item with the **"confluent-local"** label.
+   * - If the user has a direct connection with a successfully-connected Kafka cluster config, and
+   * that direct connection/"environment" tree item is expanded, this will include a Kafka cluster
+   * tree item with the **"Kafka cluster"** label.
+   */
+  async getKafkaClusterItems(options?: {
+    ccloud?: boolean;
+    local?: boolean;
+    direct?: boolean;
+  }): Promise<KafkaClusterItem[]> {
+    const items: ViewItem[] = await this.getItems({
+      iconId: "confluent-kafka-cluster",
+      waitForItems: true,
+    });
+    const kafkaClusterItems: KafkaClusterItem[] = items.map(
+      (item) => new KafkaClusterItem(this.page, item.locator),
+    );
+    // return all items if no filter options are provided
+    if (!options || (!options.ccloud && !options.local && !options.direct)) {
+      return kafkaClusterItems;
+    }
+
+    // check labels to determine which items to include based on the options
+    const filteredItems: KafkaClusterItem[] = [];
+    for (const item of kafkaClusterItems) {
+      const [isLocal, isDirect, isCCloud] = await Promise.all([
+        item.isLocal(),
+        item.isDirect(),
+        item.isCCloud(),
+      ]);
+      const shouldInclude: boolean =
+        (options.local === true && isLocal) ||
+        (options.direct === true && isDirect) ||
+        (options.ccloud === true && isCCloud);
+      if (shouldInclude) {
+        filteredItems.push(item);
+      }
+    }
+    return filteredItems;
+  }
+}
