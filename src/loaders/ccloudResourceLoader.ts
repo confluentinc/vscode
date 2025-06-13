@@ -83,7 +83,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   }
 
   protected deleteCoarseResources(): void {
-    getResourceManager().deleteCCloudResources();
+    getResourceManager().deleteResources(CCLOUD_CONNECTION_ID);
     this.organization = null;
   }
 

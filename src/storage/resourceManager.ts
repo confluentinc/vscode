@@ -20,7 +20,13 @@ import {
   KafkaCluster,
   KafkaClusterSubclass,
 } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId, ISchemaRegistryResource } from "../models/resource";
+import {
+  ConnectionId,
+  connectionIdToType,
+  EnvironmentId,
+  ISchemaRegistryResource,
+  UsedConnectionType,
+} from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import {
   CCloudSchemaRegistry,
@@ -109,18 +115,15 @@ export class ResourceManager {
   }
 
   /**
-   * Delete all Confluent Cloud-related resources from extension state.
-   * @remarks This is primarily used during any CCloud connection changes where we need to "reset".
-   * As the scope of stored CCloud resources grows, this method may need to be updated to handle
-   * new resource types / storage keys.
+   * Delete all resources from extension state for this connection ID.
    */
-  async deleteCCloudResources(): Promise<void> {
+  async deleteResources(connectionId: ConnectionId): Promise<void> {
     await Promise.all([
-      this.setEnvironments(CCLOUD_CONNECTION_ID, []),
-      this.setKafkaClusters(CCLOUD_CONNECTION_ID, []),
-      this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []),
-      this.deleteCCloudTopics(),
-      this.deleteCCloudSubjects(),
+      this.setEnvironments(connectionId, []),
+      this.setKafkaClusters(connectionId, []),
+      this.setSchemaRegistries(connectionId, []),
+      this.deleteTopics(connectionId),
+      this.deleteSubjects(connectionId),
     ]);
   }
 
@@ -381,6 +384,29 @@ export class ResourceManager {
     return vanillaJSONRegistries.map((registry) => schemaRegistryClass.create(registry) as T);
   }
 
+  /** Immutable mapping of connection type -> toplevel storage key for storing schema subjects. */
+  private readonly connectionTypeToSubjectsStorageKey: Record<
+    UsedConnectionType,
+    WorkspaceStorageKeys
+  > = {
+    [ConnectionType.Ccloud]: WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS,
+    [ConnectionType.Local]: WorkspaceStorageKeys.LOCAL_SR_SUBJECTS,
+    [ConnectionType.Direct]: WorkspaceStorageKeys.DIRECT_SR_SUBJECTS,
+  } as const;
+
+  /**
+   * Determine what workspace storage key should be used for subject storage for this schema registry
+   * based on its connection type.
+   *   - {@link WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS} for ccloud-based schema registries.
+   *   - {@link WorkspaceStorageKeys.LOCAL_SR_SUBJECTS} for local-based schema registries.
+   *   - {@link WorkspaceStorageKeys.DIRECT_SR_SUBJECTS} for direct-based schema registries.
+   */
+  getSubjectKey(connectionId: ConnectionId): WorkspaceStorageKeys {
+    const connectionType = connectionIdToType(connectionId);
+
+    return this.connectionTypeToSubjectsStorageKey[connectionType];
+  }
+
   /**
    * Cache subjects for a schema registry in workspace state.
    *
@@ -404,7 +430,7 @@ export class ResourceManager {
     schemaRegistryKeyable: ISchemaRegistryResource,
     subjects: Subject[] | undefined,
   ): Promise<void> {
-    const workspaceStorageKey = this.subjectKeyForSchemaRegistry(schemaRegistryKeyable);
+    const workspaceStorageKey = this.getSubjectKey(schemaRegistryKeyable.connectionId);
 
     logger.debug(
       `Setting ${subjects?.length !== undefined ? subjects.length : "undefined"} subjects for schema registry ${schemaRegistryKeyable.schemaRegistryId} (${workspaceStorageKey})`,
@@ -435,6 +461,12 @@ export class ResourceManager {
         mapToString(subjectsStringsByRegistryID),
       );
     });
+  }
+
+  async deleteSubjects(connectionId: ConnectionId): Promise<void> {
+    // Delete all subjects for this connection ID, which will clear the workspace storage key.
+    const storageKey = this.getSubjectKey(connectionId);
+    await this.workspaceState.update(storageKey, undefined);
   }
 
   /**
@@ -509,32 +541,6 @@ export class ResourceManager {
    */
   async deleteLocalSubjects(): Promise<void> {
     return await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS, undefined);
-  }
-
-  /**
-   * Determine what workspace storage key should be used for subject storage for this schema registry
-   * based on its connection type.
-   */
-  subjectKeyForSchemaRegistry(
-    schemaRegistryKeyable: ISchemaRegistryResource,
-  ): WorkspaceStorageKeys {
-    // Alas that ConnectionType includes values that we'll never use,
-    // like ConnectionType.Platform, so we have to check for the known ones.
-    // Switching over to UsedConnectionType (or renaming things)
-    // would be better, but that would require a lot of refactoring.
-    switch (schemaRegistryKeyable.connectionType) {
-      case ConnectionType.Ccloud:
-        return WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS;
-      case ConnectionType.Local:
-        return WorkspaceStorageKeys.LOCAL_SR_SUBJECTS;
-      case ConnectionType.Direct:
-        return WorkspaceStorageKeys.DIRECT_SR_SUBJECTS;
-      default:
-        logger.warn("Unknown schema registry connection type", {
-          sr: JSON.stringify(schemaRegistryKeyable, null, 2),
-        });
-        throw new Error("Unknown schema registry connection type");
-    }
   }
 
   // TOPICS
