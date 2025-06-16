@@ -72,11 +72,12 @@ export class LocalSchemaRegistry extends SchemaRegistry {
 }
 
 /** Types of the concrete subclasses. Excludes the abstract base class which lacks a constructor. */
-type SchemaRegistrySubclass =
+export type SchemaRegistrySubclass =
   | typeof CCloudSchemaRegistry
   | typeof DirectSchemaRegistry
   | typeof LocalSchemaRegistry;
 
+export type SchemaRegistryType = CCloudSchemaRegistry | DirectSchemaRegistry | LocalSchemaRegistry;
 /**
  *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
  *  See {@link getSchemaRegistryClass}.
