@@ -463,7 +463,7 @@ describe("ResourceManager Schema Registry methods", function () {
     );
   });
 
-  it("setSchemaRegistries() reassigns", async () => {
+  it("setSchemaRegistries() overwrites prior stored info", async () => {
     await getWorkspaceState().update(
       rm.generateWorkspaceStorageKey(CCLOUD_CONNECTION_ID, CoarseResourceKind.SCHEMA_REGISTRIES),
       undefined,
