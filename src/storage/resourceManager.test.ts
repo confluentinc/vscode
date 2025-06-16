@@ -26,7 +26,7 @@ import {
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, ISchemaRegistryResource } from "../models/resource";
@@ -39,6 +39,7 @@ import {
 import { KafkaTopic } from "../models/topic";
 import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
+  CoarseResourceKind,
   CustomConnectionSpec,
   CustomConnectionSpecFromJSON,
   CustomConnectionSpecToJSON,
@@ -64,23 +65,6 @@ describe("ResourceManager getEnvironments() / setEnvironments() / getEnvironment
     // clean up after each test
     await clearWorkspaceState();
   });
-
-  it("getEnvironmentKey() works for CCLOUD_CONNECTION_ID", () => {
-    const key = rm.getEnvironmentKey(CCLOUD_CONNECTION_ID);
-    assert.strictEqual(key, WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
-  });
-
-  for (const connId of [LOCAL_CONNECTION_ID, TEST_DIRECT_CONNECTION_ID]) {
-    it(`getEnvironmentKey() throws for unsupported connection ID ${connId}`, () => {
-      assert.throws(
-        () => rm.getEnvironmentKey(connId),
-        (err) => {
-          return err instanceof Error && err.message.includes("Unsupported connectionId");
-        },
-        `Expected error for connection ID ${connId}`,
-      );
-    });
-  }
 
   it("setEnvironments() should throw an error if given mixed connection IDs", async () => {
     const mixedEnvironments = [TEST_CCLOUD_ENVIRONMENT, TEST_DIRECT_ENVIRONMENT];
@@ -169,23 +153,6 @@ describe("ResourceManager kafka cluster methods", function () {
     // clean up after each test
     await clearWorkspaceState();
   });
-
-  it("getKafkaClusterKey() works for CCLOUD_CONNECTION_ID", () => {
-    const key = rm.getKafkaClusterKey(CCLOUD_CONNECTION_ID);
-    assert.strictEqual(key, WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
-  });
-
-  for (const connId of [LOCAL_CONNECTION_ID, TEST_DIRECT_CONNECTION_ID]) {
-    it(`getKafkaClusterKey() throws for unsupported connection ID ${connId}`, () => {
-      assert.throws(
-        () => rm.getKafkaClusterKey(connId),
-        (err) => {
-          return err instanceof Error && err.message.includes("Unsupported connectionId");
-        },
-        `Expected error for connection ID ${connId}`,
-      );
-    });
-  }
 
   it("setKafkaClusters() / getKafkaClusters() should correctly store CCloud Kafka clusters", async () => {
     // set the clusters in extension storage before retrieving them
@@ -482,55 +449,6 @@ describe("ResourceManager Schema Registry methods", function () {
     await clearWorkspaceState();
   });
 
-  it("getSchemaRegistryKey(CCLOUD_CONNECTION_ID) should return the correct key for CCloud Schema Registry", () => {
-    assert.strictEqual(
-      rm.getSchemaRegistryKey(CCLOUD_CONNECTION_ID),
-      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
-    );
-  });
-
-  // Only support CCloud registries at this time, but soon to change!
-  for (const connId of [LOCAL_CONNECTION_ID, TEST_DIRECT_CONNECTION_ID]) {
-    it(`getSchemaRegistryKey(${connId}) should raise exception (at this time)`, () => {
-      assert.throws(
-        () => rm.getSchemaRegistryKey(connId),
-        (err) => {
-          return err instanceof Error && err.message.includes("Unsupported connectionId");
-        },
-        `Expected exception for connection ID ${connId}`,
-      );
-    });
-
-    it(`setSchemaRegistries() hates ${connId} connectionId (at this time)`, async () => {
-      const localSchemaRegistry = LocalSchemaRegistry.create(TEST_LOCAL_SCHEMA_REGISTRY);
-      await assert.rejects(
-        rm.setSchemaRegistries(connId, [localSchemaRegistry]),
-        (err) => {
-          return err instanceof Error && err.message.includes("Unsupported connectionId");
-        },
-        "Expected error when setting local schema registries",
-      );
-    });
-
-    it(`getSchemaRegistries(${connId}) hates connectionId (at this time)`, async () => {
-      await assert.rejects(
-        rm.getSchemaRegistries(connId),
-        (err) => {
-          return err instanceof Error && err.message.includes("Unsupported connectionId");
-        },
-        "Expected error when getting local schema registries",
-      );
-    });
-  }
-
-  it("getSchemaRegistries() returns empty array if no connection id key is found in map", async () => {
-    await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, "{}");
-
-    const storedRegistries: CCloudSchemaRegistry[] =
-      await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
-    assert.deepStrictEqual(storedRegistries, []);
-  });
-
   it("setSchemaRegistries() error when given mixed connection id array", async () => {
     const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
     const localSchemaRegistry = LocalSchemaRegistry.create(TEST_LOCAL_SCHEMA_REGISTRY);
@@ -545,35 +463,18 @@ describe("ResourceManager Schema Registry methods", function () {
     );
   });
 
-  it("setSchemaRegistries() handles when existing storage value is undefined", async () => {
-    await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, undefined);
-    const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
-
-    await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, [ccloudSchemaRegistry]);
-    const storedRegistries: CCloudSchemaRegistry[] =
-      await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
-
-    assert.deepStrictEqual(
-      storedRegistries,
-      [ccloudSchemaRegistry],
-      "Expected stored registries to match",
+  it("setSchemaRegistries() overwrites prior stored info", async () => {
+    await getWorkspaceState().update(
+      rm.generateWorkspaceStorageKey(CCLOUD_CONNECTION_ID, CoarseResourceKind.SCHEMA_REGISTRIES),
+      undefined,
     );
 
-    // Was promoted from storage JSON to proper subclass instance.
-    assert.ok(
-      storedRegistries[0] instanceof CCloudSchemaRegistry,
-      "Expected stored registry to be CCloudSchemaRegistry instance",
-    );
-  });
-
-  it("setSchemaRegistries() reassigns", async () => {
-    await getWorkspaceState().update(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES, undefined);
     const ccloudSchemaRegistry = CCloudSchemaRegistry.create(TEST_CCLOUD_SCHEMA_REGISTRY);
-
     await rm.setSchemaRegistries(CCLOUD_CONNECTION_ID, [ccloudSchemaRegistry]);
 
     const storedRegistries: CCloudSchemaRegistry[] =
       await rm.getSchemaRegistries(CCLOUD_CONNECTION_ID);
+
     assert.deepStrictEqual(
       storedRegistries,
       [ccloudSchemaRegistry],

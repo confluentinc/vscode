@@ -52,6 +52,23 @@ type SubjectStringCache = Map<string, string[] | undefined>;
 type CoarseResourceType = KafkaClusterType | SchemaRegistryType | EnvironmentType;
 
 /**
+ * Enumeration of strings describing coarse resource kinds, used to generate workspace storage keys.
+ * See {@link ResourceManager.generateWorkspaceStorageKey}, and, say,
+ * {@link ResourceManager.getEnvironments} / {@link ResourceManager.setEnvironments}.
+ */
+export enum CoarseResourceKind {
+  ENVIRONMENTS = "environments",
+  KAFKA_CLUSTERS = "kafkaClusters",
+  SCHEMA_REGISTRIES = "schemaRegistries",
+}
+
+/**
+ * Type describing per-connection+resource type generated workspace storage keys.
+ * See {@link ResourceManager.generateWorkspaceStorageKey} and callers.
+ *  */
+type GeneratedWorkspaceKey = string & { readonly __generatedWorkspaceKey: unique symbol };
+
+/**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
@@ -128,11 +145,13 @@ export class ResourceManager {
 
   // Coarse resources
 
-  private storeCoarseResources(
+  private async storeCoarseResources(
     connectionId: ConnectionId,
-    storageKey: WorkspaceStorageKeys,
+    resourceKind: CoarseResourceKind,
     resources: IResourceBase[],
   ): Promise<void> {
+    const storageKey = this.generateWorkspaceStorageKey(connectionId, resourceKind);
+
     // Validate that all resources are of the expected type based on the connection type
     // and have the expected connection ID.
     for (const resource of resources) {
@@ -143,46 +162,34 @@ export class ResourceManager {
       }
     }
 
-    return this.runWithMutex(storageKey, async () => {
-      // Get the JSON-stringified map from storage
-      const resourcesByConnectionString: string | undefined =
-        await this.workspaceState.get(storageKey);
+    // Reassign this connection's resources in workspace storage.
+    await this.workspaceState.update(storageKey, JSON.stringify(resources));
 
-      const resourcesByConnection: Map<ConnectionId, IResourceBase[]> = resourcesByConnectionString
-        ? stringToMap(resourcesByConnectionString)
-        : new Map<ConnectionId, IResourceBase[]>();
-
-      // Set the new resources for this connection.
-      resourcesByConnection.set(connectionId, resources);
-
-      // Now save the updated map of connection id -> resource list into workspace storage
-      await this.workspaceState.update(storageKey, mapToString(resourcesByConnection));
-    });
+    logger.debug(
+      `Stored ${resources.length} resources for connection ${connectionId} in storage key ${storageKey}`,
+    );
   }
 
   private async loadCoarseResources<T extends CoarseResourceType>(
     connectionId: ConnectionId,
-    storageKey: WorkspaceStorageKeys,
-    resourceNoun: string,
+    resourceKind: CoarseResourceKind,
     resourceCreator: (fromJson: T) => T,
   ): Promise<T[]> {
-    // Get the JSON-stringified map from storage
-    const resourcesByConnectionString: string | undefined =
+    const storageKey = this.generateWorkspaceStorageKey(connectionId, resourceKind);
+
+    // Get the JSON-stringified array from storage
+    const resourcesForConnectionString: string | undefined =
       await this.workspaceState.get(storageKey);
 
-    const resourcesByConnection: Map<string, T[]> = resourcesByConnectionString
-      ? stringToMap(resourcesByConnectionString)
-      : new Map<ConnectionId, T[]>();
-
-    // Will either be undefined or an array of plain objects since just deserialized from storage.
-    const vanillaJSONResources: T[] | undefined = resourcesByConnection.get(connectionId);
-
-    if (!vanillaJSONResources) {
+    if (!resourcesForConnectionString) {
       return [];
     }
 
+    // Will either be undefined or an array of plain objects since just deserialized from storage.
+    const vanillaJSONResources: T[] = JSON.parse(resourcesForConnectionString);
+
     logger.debug(
-      `Found ${vanillaJSONResources.length} ${resourceNoun} for connection ${connectionId}`,
+      `Found ${vanillaJSONResources.length} ${resourceKind} for connection ${connectionId}`,
     );
 
     // Promote each from-json vanilla object member to be the proper instance of T; return array.
@@ -191,46 +198,25 @@ export class ResourceManager {
 
   // ENVIRONMENTS (coarse resource)
 
-  getEnvironmentKey(connectionId: ConnectionId): WorkspaceStorageKeys {
-    if (connectionId === CCLOUD_CONNECTION_ID) {
-      return WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS;
-    }
-    // we do not support Local or Direct connections for environments (yet, but soon!)
-    throw new Error(`Unsupported connectionId ${connectionId} for environment key`);
-  }
-
   async setEnvironments<T extends EnvironmentType>(
     connectionId: ConnectionId,
     environments: T[],
   ): Promise<void> {
-    const storageKey = this.getEnvironmentKey(connectionId);
-
-    await this.storeCoarseResources(connectionId, storageKey, environments);
+    await this.storeCoarseResources(connectionId, CoarseResourceKind.ENVIRONMENTS, environments);
   }
 
   async getEnvironments<T extends EnvironmentType>(connectionId: ConnectionId): Promise<T[]> {
-    const storageKey = this.getEnvironmentKey(connectionId);
-
     const environmentClass = getEnvironmentClass(connectionId);
     const environmentCreator = (fromJson: T): T => new environmentClass(fromJson as any) as T;
+
     return this.loadCoarseResources<T>(
       connectionId,
-      storageKey,
-      "environments",
+      CoarseResourceKind.ENVIRONMENTS,
       environmentCreator,
     );
   }
 
   // KAFKA CLUSTERS (coarse resource)
-
-  getKafkaClusterKey(connectionId: ConnectionId): WorkspaceStorageKeys {
-    if (connectionId === CCLOUD_CONNECTION_ID) {
-      return WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS;
-    }
-
-    // we do not support Local or Direct connections for Kafka clusters (yet, but soon!)
-    throw new Error(`Unsupported connectionId ${connectionId}`);
-  }
 
   /**
    * Store this array of KafkaCluster associated with this connection id
@@ -241,9 +227,7 @@ export class ResourceManager {
     connectionId: ConnectionId,
     clusters: T[],
   ): Promise<void> {
-    const storageKey = this.getKafkaClusterKey(connectionId);
-
-    await this.storeCoarseResources(connectionId, storageKey, clusters);
+    await this.storeCoarseResources(connectionId, CoarseResourceKind.KAFKA_CLUSTERS, clusters);
   }
 
   /**
@@ -251,16 +235,12 @@ export class ResourceManager {
    * @returns connectionType-related {@link KafkaCluster} subclass []>
    */
   async getKafkaClusters<T extends KafkaClusterType>(connectionId: ConnectionId): Promise<T[]> {
-    const storageKey = this.getKafkaClusterKey(connectionId);
-
     const kafkaClusterClass = getKafkaClusterClass(connectionId);
-
     const kafkaClusterCreator = (fromJson: T): T => kafkaClusterClass.create(fromJson as any) as T;
 
     return this.loadCoarseResources<T>(
       connectionId,
-      storageKey,
-      "Kafka clusters",
+      CoarseResourceKind.KAFKA_CLUSTERS,
       kafkaClusterCreator,
     );
   }
@@ -281,37 +261,24 @@ export class ResourceManager {
 
   // SCHEMA REGISTRY
 
-  getSchemaRegistryKey(connectionId: ConnectionId): WorkspaceStorageKeys {
-    if (connectionId === CCLOUD_CONNECTION_ID) {
-      return WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES;
-    }
-    // Only CCloud support to start with, but can easily expand in future.
-    throw new Error(`Unsupported connectionId ${connectionId} for schema registry key`);
-  }
-
   /** Cache this connection's schema registry/ies. Generic over SchemaRegistry subclass T. */
   async setSchemaRegistries<T extends SchemaRegistryType>(
     connectionId: ConnectionId,
     registries: T[],
   ): Promise<void> {
-    const storageKey = this.getSchemaRegistryKey(connectionId);
-
-    await this.storeCoarseResources(connectionId, storageKey, registries);
+    await this.storeCoarseResources(connectionId, CoarseResourceKind.SCHEMA_REGISTRIES, registries);
   }
 
   /** Get the properly subtyped schema registries for this connection id from storage. If none are found, will return empty array. */
   async getSchemaRegistries<T extends SchemaRegistryType>(
     connectionId: ConnectionId,
   ): Promise<T[]> {
-    const storageKey = this.getSchemaRegistryKey(connectionId);
-
     const schemaRegistryClass = getSchemaRegistryClass(connectionId);
     const schemaRegistryCreator = (fromJson: T): T => schemaRegistryClass.create(fromJson) as T;
 
     return this.loadCoarseResources<T>(
       connectionId,
-      storageKey,
-      "schema registries",
+      CoarseResourceKind.SCHEMA_REGISTRIES,
       schemaRegistryCreator,
     );
   }
@@ -729,6 +696,13 @@ export class ResourceManager {
     const metadataMap: UriMetadataMap = await this.getAllUriMetadata();
     const metadata: Record<string, any> | undefined = metadataMap.get(uri.toString());
     return metadata ? metadata[metadataKey] : undefined;
+  }
+
+  generateWorkspaceStorageKey(
+    connectionId: ConnectionId,
+    resourceType: CoarseResourceKind,
+  ): GeneratedWorkspaceKey {
+    return `${connectionId}-${resourceType}` as GeneratedWorkspaceKey;
   }
 }
 
