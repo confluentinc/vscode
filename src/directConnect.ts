@@ -109,14 +109,11 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     } else {
       result.success = true;
       // save and close the form
-      await showInfoNotificationWithButtons(
-        `New Connection Created`,
-        {
-          "Edit Connection": () => {
-            commands.executeCommand("confluent.connections.direct.edit", newConnection.id);
-          },
+      await showInfoNotificationWithButtons(`New Connection Created`, {
+        "Edit Connection": () => {
+          commands.executeCommand("confluent.connections.direct.edit", newConnection.id);
         },
-      );
+      });
       directConnectForm.dispose();
     }
     return result;
