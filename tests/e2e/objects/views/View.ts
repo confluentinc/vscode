@@ -9,12 +9,15 @@ import { ViewItem } from "./viewItems/ViewItem";
 export class View {
   protected readonly page: Page;
   readonly locator: Locator;
+  /** {@link https://code.visualstudio.com/api/ux-guidelines/views#welcome-views Welcome view} locator. */
+  readonly viewsWelcome: Locator;
 
   // private to use `View.from(page)` instead of `new View(page)` since we aren't
   // creating a "new" view object, just accessing it from the existing page
   protected constructor(page: Page, label: string | RegExp) {
     this.page = page;
     this.locator = page.getByLabel(label);
+    this.viewsWelcome = this.page.locator(".welcome-view-content");
   }
 
   /** Get the view for the given {@link Page page} based on its `label`. */
@@ -46,6 +49,11 @@ export class View {
 
   async collapse(): Promise<void> {
     await collapse(this.locator);
+  }
+
+  /** Click a nav action in the view title area by its `label`. */
+  async clickNavAction(label: string): Promise<void> {
+    this.locator.getByLabel(label).click();
   }
 
   /**
