@@ -77,10 +77,7 @@ export type SchemaRegistrySubclass =
   | typeof DirectSchemaRegistry
   | typeof LocalSchemaRegistry;
 
-export type ConcreteSchemaRegistry =
-  | CCloudSchemaRegistry
-  | DirectSchemaRegistry
-  | LocalSchemaRegistry;
+export type SchemaRegistryType = CCloudSchemaRegistry | DirectSchemaRegistry | LocalSchemaRegistry;
 /**
  *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
  *  See {@link getSchemaRegistryClass}.

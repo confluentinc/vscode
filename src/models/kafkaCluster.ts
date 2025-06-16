@@ -89,7 +89,7 @@ export type KafkaClusterSubclass =
   | typeof DirectKafkaCluster
   | typeof LocalKafkaCluster;
 
-export type ConcreteKafkaCluster = CCloudKafkaCluster | DirectKafkaCluster | LocalKafkaCluster;
+export type KafkaClusterType = CCloudKafkaCluster | DirectKafkaCluster | LocalKafkaCluster;
 
 /** Mapping of connection type to corresponding KafkaCluster subclass */
 const kafkaClusterClassByConnectionType: Record<UsedConnectionType, KafkaClusterSubclass> = {

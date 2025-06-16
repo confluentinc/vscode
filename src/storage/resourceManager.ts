@@ -13,8 +13,8 @@ import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { ConcreteEnvironment, getEnvironmentClass } from "../models/environment";
-import { ConcreteKafkaCluster, getKafkaClusterClass } from "../models/kafkaCluster";
+import { EnvironmentType, getEnvironmentClass } from "../models/environment";
+import { KafkaClusterType, getKafkaClusterClass } from "../models/kafkaCluster";
 import {
   ConnectionId,
   EnvironmentId,
@@ -22,7 +22,7 @@ import {
   ISchemaRegistryResource,
 } from "../models/resource";
 import { Subject } from "../models/schema";
-import { ConcreteSchemaRegistry, getSchemaRegistryClass } from "../models/schemaRegistry";
+import { SchemaRegistryType, getSchemaRegistryClass } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import { GlobalState, UriMetadata, UriMetadataMap, WorkspaceState } from "./types";
@@ -49,7 +49,7 @@ export type DirectConnectionsById = Map<ConnectionId, CustomConnectionSpec>;
 type SubjectStringCache = Map<string, string[] | undefined>;
 
 /** All possible concrete coarse resource instance types */
-type ConcreteCoarseResource = ConcreteKafkaCluster | ConcreteSchemaRegistry | ConcreteEnvironment;
+type CoarseResourceType = KafkaClusterType | SchemaRegistryType | EnvironmentType;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
@@ -160,7 +160,7 @@ export class ResourceManager {
     });
   }
 
-  private async loadCoarseResources<T extends ConcreteCoarseResource>(
+  private async loadCoarseResources<T extends CoarseResourceType>(
     connectionId: ConnectionId,
     storageKey: WorkspaceStorageKeys,
     resourceNoun: string,
@@ -199,7 +199,7 @@ export class ResourceManager {
     throw new Error(`Unsupported connectionId ${connectionId} for environment key`);
   }
 
-  async setEnvironments<T extends ConcreteEnvironment>(
+  async setEnvironments<T extends EnvironmentType>(
     connectionId: ConnectionId,
     environments: T[],
   ): Promise<void> {
@@ -208,7 +208,7 @@ export class ResourceManager {
     await this.storeCoarseResources(connectionId, storageKey, environments);
   }
 
-  async getEnvironments<T extends ConcreteEnvironment>(connectionId: ConnectionId): Promise<T[]> {
+  async getEnvironments<T extends EnvironmentType>(connectionId: ConnectionId): Promise<T[]> {
     const storageKey = this.getEnvironmentKey(connectionId);
 
     const environmentClass = getEnvironmentClass(connectionId);
@@ -237,7 +237,7 @@ export class ResourceManager {
    * in extension workspace state. Replaces any previously stored array.
    * @param clusters The array of {@link KafkaCluster}s to store.
    */
-  async setKafkaClusters<T extends ConcreteKafkaCluster>(
+  async setKafkaClusters<T extends KafkaClusterType>(
     connectionId: ConnectionId,
     clusters: T[],
   ): Promise<void> {
@@ -250,7 +250,7 @@ export class ResourceManager {
    * Get the cached {@link KafkaCluster}s for this connection from extension state.
    * @returns connectionType-related {@link KafkaCluster} subclass []>
    */
-  async getKafkaClusters<T extends ConcreteKafkaCluster>(connectionId: ConnectionId): Promise<T[]> {
+  async getKafkaClusters<T extends KafkaClusterType>(connectionId: ConnectionId): Promise<T[]> {
     const storageKey = this.getKafkaClusterKey(connectionId);
 
     const kafkaClusterClass = getKafkaClusterClass(connectionId);
@@ -271,7 +271,7 @@ export class ResourceManager {
    * @param environmentId The ID of the {@link Environment} for which to get Kafka clusters
    * @returns The list of {@link KafkaCluster}s for the specified environment. If no clusters are found, an empty array is returned.
    */
-  async getKafkaClustersForEnvironmentId<T extends ConcreteKafkaCluster>(
+  async getKafkaClustersForEnvironmentId<T extends KafkaClusterType>(
     connectionId: ConnectionId,
     environmentId: EnvironmentId,
   ): Promise<T[]> {
@@ -290,7 +290,7 @@ export class ResourceManager {
   }
 
   /** Cache this connection's schema registry/ies. Generic over SchemaRegistry subclass T. */
-  async setSchemaRegistries<T extends ConcreteSchemaRegistry>(
+  async setSchemaRegistries<T extends SchemaRegistryType>(
     connectionId: ConnectionId,
     registries: T[],
   ): Promise<void> {
@@ -300,7 +300,7 @@ export class ResourceManager {
   }
 
   /** Get the properly subtyped schema registries for this connection id from storage. If none are found, will return empty array. */
-  async getSchemaRegistries<T extends ConcreteSchemaRegistry>(
+  async getSchemaRegistries<T extends SchemaRegistryType>(
     connectionId: ConnectionId,
   ): Promise<T[]> {
     const storageKey = this.getSchemaRegistryKey(connectionId);
@@ -480,7 +480,7 @@ export class ResourceManager {
    *
    *  Raises an error if the cluster ID of any topic does not match the given cluster's ID.
    */
-  async setTopicsForCluster(cluster: ConcreteKafkaCluster, topics: KafkaTopic[]): Promise<void> {
+  async setTopicsForCluster(cluster: KafkaClusterType, topics: KafkaTopic[]): Promise<void> {
     // Ensure that all topics have the correct cluster ID.
     if (topics.some((topic) => topic.clusterId !== cluster.id)) {
       logger.warn("Cluster ID mismatch in topics", cluster, topics);
@@ -510,7 +510,7 @@ export class ResourceManager {
    * @returns KafkaTopic[] (possibly empty) if known, else undefined
    * indicating nothing at all known about this cluster (and should be deep probed).
    */
-  async getTopicsForCluster(cluster: ConcreteKafkaCluster): Promise<KafkaTopic[] | undefined> {
+  async getTopicsForCluster(cluster: KafkaClusterType): Promise<KafkaTopic[] | undefined> {
     const key = this.topicKeyForCluster(cluster);
 
     // Get the JSON-stringified map from storage
@@ -544,7 +544,7 @@ export class ResourceManager {
    *
    * (not private only for testing)
    */
-  topicKeyForCluster(cluster: ConcreteKafkaCluster): WorkspaceStorageKeys {
+  topicKeyForCluster(cluster: KafkaClusterType): WorkspaceStorageKeys {
     if (cluster.connectionId === CCLOUD_CONNECTION_ID) {
       return WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS;
     } else {

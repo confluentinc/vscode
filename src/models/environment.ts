@@ -251,7 +251,7 @@ export type EnvironmentSubclass =
   | typeof DirectEnvironment
   | typeof LocalEnvironment;
 
-export type ConcreteEnvironment = CCloudEnvironment | DirectEnvironment | LocalEnvironment;
+export type EnvironmentType = CCloudEnvironment | DirectEnvironment | LocalEnvironment;
 /**
  * Mapping of connection types to their corresponding Environment subclass.
  * @see getEnvironmentClass
