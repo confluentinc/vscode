@@ -6,9 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- Simplified subject and/or schema version hard deletion flow to include a warning dialog
-  instead of requiring the word `hard` to be typed.
-
+- Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
+  requiring the word `hard` to be typed.
 
 ## 1.4.0
 
