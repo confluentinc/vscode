@@ -10,7 +10,7 @@ configDotenv({
   path: path.join(__dirname, "..", "..", ".env"),
 });
 
-const vscodeVersion = process.env.VSCODE_VERSION ?? "stable";
+const vscodeVersion = process.env.VSCODE_VERSION || "stable";
 
 export default defineConfig({
   testDir: path.join(__dirname, "specs"),
@@ -23,6 +23,7 @@ export default defineConfig({
   },
   reporter: "html",
   use: {
+    // headless: process.env.CI ? true : false,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
