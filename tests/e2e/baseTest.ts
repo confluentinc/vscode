@@ -34,7 +34,8 @@ export const test = testBase.extend<VSCodeFixture>({
     // locate the VS Code executable path based on the platform
     let executablePath: string;
     if (process.platform === "darwin") {
-      executablePath = path.join(vscodeInstallPath, "Contents", "MacOS", "Electron");
+      // on macOS, the install path is already the full path to the executable
+      executablePath = vscodeInstallPath;
     } else if (process.platform === "win32") {
       executablePath = path.join(
         vscodeInstallPath,
@@ -71,6 +72,7 @@ export const test = testBase.extend<VSCodeFixture>({
       executablePath,
       args: [
         "--no-sandbox",
+        "--disable-extensions",
         "--disable-gpu-sandbox",
         "--disable-dev-shm-usage",
         "--disable-updates",
@@ -109,6 +111,7 @@ export const test = testBase.extend<VSCodeFixture>({
 
     const page = await electronApp.firstWindow();
     if (!page) {
+      // usually this means the launch args were incorrect and/or the app didn't start correctly
       throw new Error("Failed to get first window from VS Code");
     }
 
