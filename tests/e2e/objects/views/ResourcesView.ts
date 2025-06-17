@@ -15,6 +15,8 @@ export class ResourcesView extends View {
   // private to use `ResourcesView.from(page)` instead of `new ResourcesView(page)` since we aren't
   // creating a "new" Resources view object, just accessing it from the existing page
   private constructor(page: Page) {
+    // we don't need a regex pattern here because we don't update the tree view title/description
+    // (unlike the Topics/Schemas/Flink views that show the currently-selected env & focused resource)
     super(page, "Resources Section");
   }
 
