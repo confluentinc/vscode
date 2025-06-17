@@ -84,37 +84,6 @@ export abstract class ResourceLoader implements IResourceBase {
   /** Reset the loader's state, forgetting anything learned. */
   public abstract reset(): Promise<void>;
 
-  protected abstract getEnvironmentsFromGraphQL(): Promise<Environment[]>;
-
-  /**
-   * Fetch the environments accessible from this connection.
-   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
-   * @returns
-   */
-  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
-
-  /**
-   * Get all of the known schema registries in the accessible CCloud environments.
-   *
-   * Ensures that the coarse resources are loaded before returning the schema registries from
-   * the resource manager cache.
-   *
-   * If there is no CCloud auth session, returns an empty array.
-   **/
-  public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
-
-  /**
-   * Get the CCloud kafka clusters in the given environment ID.
-   */
-  public abstract getKafkaClustersForEnvironmentId(
-    environmentId: EnvironmentId,
-    forceDeepRefresh?: boolean,
-  ): Promise<KafkaCluster[]>;
-
-  public abstract getSchemaRegistryForEnvironmentId(
-    environmentId: EnvironmentId,
-  ): Promise<SchemaRegistry | undefined>;
-
   // Environment methods
 
   /**
@@ -137,6 +106,16 @@ export abstract class ResourceLoader implements IResourceBase {
     return await loader.getEnvironment(environmentId, forceDeepRefresh);
   }
 
+  /** Fetch the Environment-subclass array from sidecar GraphQL. */
+  protected abstract getEnvironmentsFromGraphQL(): Promise<Environment[]>;
+
+  /**
+   * Fetch the environments accessible from this connection.
+   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
+   * @returns
+   */
+  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
+
   /** Find a specific environment within this loader instance by its id. */
   public async getEnvironment(
     environmentId: EnvironmentId,
@@ -146,25 +125,40 @@ export abstract class ResourceLoader implements IResourceBase {
     return environments.find((env) => env.id === environmentId);
   }
 
+  // Kafka cluster methods.
+
+  /**
+   * Get the kafka clusters in the given environment ID. If none,
+   * returns an empty array.
+   */
+  public abstract getKafkaClustersForEnvironmentId(
+    environmentId: EnvironmentId,
+    forceDeepRefresh?: boolean,
+  ): Promise<KafkaCluster[]>;
+
   /**
    * Return the topics present in the cluster, annotated with whether or not
    * they have a corresponding schema subject.
    *
    * This implementation will perform a deep fetch every call.
    */
-  public async getTopicsForCluster(
+  public abstract getTopicsForCluster(
     cluster: KafkaCluster,
-    forceRefresh: boolean = false,
-  ): Promise<KafkaTopic[]> {
-    // Deep fetch the topics and schema registry subject names concurrently.
-    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
-      this.checkedGetSubjects(cluster.environmentId!, forceRefresh),
-      fetchTopics(cluster),
-    ]);
+    forceRefresh?: boolean,
+  ): Promise<KafkaTopic[]>;
 
-    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
-  }
+  // Schema registry methods.
 
+  /**
+   * Get all of the known schema registries from the environments from this connection.
+   **/
+  public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
+
+  public abstract getSchemaRegistryForEnvironmentId(
+    environmentId: EnvironmentId,
+  ): Promise<SchemaRegistry | undefined>;
+
+  // Subjects and schemas methods.
   /**
    * Get the subjects from the schema registry for the given environment or schema registry.
    * If any route errors are encountered, a UI element is raised, and empty array is returned.
@@ -671,8 +665,7 @@ export abstract class CachingResourceLoader<
    * Return the topics present in the Kafka cluster. Will also correlate with schemas
    * in the schema registry for the cluster, if any.
    *
-   * Overrides the implementation in base class ResourceLoader by handling caching
-   * within the resource manager.
+   * Caches the correlated w/schemas topics for the cluster in the resource manager.
    */
   public async getTopicsForCluster(
     cluster: KCT,
@@ -694,8 +687,15 @@ export abstract class CachingResourceLoader<
       return cachedTopics;
     }
 
-    // Do a deep fetch and schema subject correlation via the base implementation.
-    const topics: KafkaTopic[] = await super.getTopicsForCluster(cluster);
+    // Do a deep fetch and schema subject correlation.
+
+    // Deep fetch the topics and schema registry subject names concurrently.
+    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
+      this.checkedGetSubjects(cluster.environmentId, forceDeepRefresh),
+      fetchTopics(cluster),
+    ]);
+
+    const topics = correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
 
     // Cache the correlated topics for this cluster.
     await resourceManager.setTopicsForCluster(cluster, topics);
