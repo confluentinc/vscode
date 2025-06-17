@@ -10,11 +10,8 @@ import {
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
 
-const logger = new Logger("websocketTransport");
+const logger = new Logger("flinkSql.languageClient.WebsocketTransport");
 
-/** Create a WebSocket that reads/writes messages in Language Server Protocol + JSON-RPC
- * Used by the FlinkSQL LanguageClient to communicate with the ccloud language server
- */
 class WebsocketMessageReader implements MessageReader {
   private socket: WebSocket;
   private messageEmitter = new EventEmitter<Message>();
@@ -124,6 +121,12 @@ class WebsocketMessageWriter implements MessageWriter {
   }
 }
 
+/** Wraps & exposes a websocket as the `MessageTransports` type
+ * Creates a reader and writer to emit messages, errors, close events in LSP-required JSON-RPC
+ * @param socket - The WebSocket connection to use for communication with the language server
+ * @returns An object implementing the `MessageTransports` interface with a reader and writer
+ * @see LanguageClient.ts
+ */
 export class WebsocketTransport implements MessageTransports {
   public reader: MessageReader;
   public writer: MessageWriter;
