@@ -332,7 +332,6 @@ export class FlinkLanguageClientManager implements Disposable {
    */
   private async restartLanguageClient(): Promise<void> {
     if (!this.lastDocUri) return; // We should never get here
-    await this.cleanupLanguageClient();
     try {
       await this.maybeStartLanguageClient(this.lastDocUri);
       // Reset counter on successful reconnection
