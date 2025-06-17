@@ -21,6 +21,5 @@ export function getFlinkSQLLanguageServerOutputChannel(): LogOutputChannel {
  * created when the language client is restarted.
  */
 export function clearFlinkSQLLanguageServerOutputChannel(): void {
-  languageServerOutputChannel?.dispose();
   languageServerOutputChannel = undefined;
 }
