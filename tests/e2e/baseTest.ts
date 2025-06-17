@@ -71,24 +71,22 @@ export const test = testBase.extend<VSCodeFixture>({
     const electronApp = await electron.launch({
       executablePath,
       args: [
+        // same as the Mocha test args in Gulpfile.js:
         "--no-sandbox",
-        "--disable-extensions",
-        "--disable-gpu-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-updates",
-        "--skip-welcome",
+        "--profile-temp",
         "--skip-release-notes",
+        "--skip-welcome",
+        "--disable-gpu",
+        "--disable-updates",
         "--disable-workspace-trust",
+        "--disable-extensions",
+        // additional args needed for the Electron launch:
         `--user-data-dir=${tempDir}`,
         `--extensionDevelopmentPath=${extensionPath}`,
         `--install-extension=${vsixPath}`,
         "--new-window",
         workspacePath,
       ],
-      env: {
-        ...process.env,
-        NODE_ENV: "test",
-      },
     });
 
     if (!electronApp) {
