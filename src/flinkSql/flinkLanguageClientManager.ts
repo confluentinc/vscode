@@ -320,6 +320,9 @@ export class FlinkLanguageClientManager implements Disposable {
       return;
     }
 
+    logger.debug(
+      `Attempting to reconnect websocket. (${this.reconnectCounter + 1}/${this.MAX_RECONNECT_ATTEMPTS})`,
+    );
     this.reconnectCounter++;
     this.restartLanguageClient();
   }
