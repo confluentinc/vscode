@@ -13,7 +13,7 @@ import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { EnvironmentType, getEnvironmentClass } from "../models/environment";
+import { Environment, EnvironmentType, getEnvironmentClass } from "../models/environment";
 import { KafkaClusterType, getKafkaClusterClass } from "../models/kafkaCluster";
 import {
   ConnectionId,
@@ -107,6 +107,17 @@ export class ResourceManager {
   }
 
   /**
+   * Purge all the cached coarse resources for a given connection ID.
+   */
+  async purgeCoarseResources(connectionId: ConnectionId): Promise<void> {
+    await Promise.all([
+      this.setEnvironments(connectionId, []),
+      this.setKafkaClusters(connectionId, []),
+      this.setSchemaRegistries(connectionId, []),
+    ]);
+  }
+
+  /**
    * Delete all Confluent Cloud-related resources from extension state.
    * @remarks This is primarily used during any CCloud connection changes where we need to "reset".
    * As the scope of stored CCloud resources grows, this method may need to be updated to handle
@@ -114,9 +125,7 @@ export class ResourceManager {
    */
   async deleteCCloudResources(): Promise<void> {
     await Promise.all([
-      this.setEnvironments(CCLOUD_CONNECTION_ID, []),
-      this.setKafkaClusters(CCLOUD_CONNECTION_ID, []),
-      this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []),
+      this.purgeCoarseResources(CCLOUD_CONNECTION_ID),
       this.deleteCCloudTopics(),
       this.deleteCCloudSubjects(),
     ]);
@@ -198,10 +207,7 @@ export class ResourceManager {
 
   // ENVIRONMENTS (coarse resource)
 
-  async setEnvironments<T extends EnvironmentType>(
-    connectionId: ConnectionId,
-    environments: T[],
-  ): Promise<void> {
+  async setEnvironments(connectionId: ConnectionId, environments: Environment[]): Promise<void> {
     await this.storeCoarseResources(connectionId, CoarseResourceKind.ENVIRONMENTS, environments);
   }
 
