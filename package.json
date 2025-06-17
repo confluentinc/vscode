@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.5.0-20",
+  "version": "1.5.0-21",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -1988,8 +1988,7 @@
     "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
-    "typescript-eslint": "^8.25.0",
-    "vscode-test-playwright": "^0.0.1-beta"
+    "typescript-eslint": "^8.25.0"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",

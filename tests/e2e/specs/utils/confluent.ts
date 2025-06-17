@@ -17,11 +17,4 @@ export async function openConfluentExtension(page: Page): Promise<void> {
     state: "visible",
     timeout: 30_000,
   });
-
-  // Close any notifications that pop up on load. These make it impossible to
-  // interact with UI elements hidden behind them.
-  const clearableNotifications = await page.getByLabel(/Clear Notification/).all();
-  for (const notification of clearableNotifications) {
-    await notification.click();
-  }
 }
