@@ -6,7 +6,6 @@ import {
   LanguageClient,
   LanguageClientOptions,
   Message,
-  RevealOutputChannelOn,
   Trace,
 } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
@@ -63,7 +62,6 @@ export async function initializeLanguageClient(
           synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher("**/*.flink.sql"),
           },
-          revealOutputChannelOn: RevealOutputChannelOn.Info,
           progressOnInitialization: true,
           middleware: {
             provideCompletionItem: async (document, position, context, token, next) => {
