@@ -6,6 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
+- Updated sidecar to version 0.215.0
+- Added more logs in Flink language client lifecycle & changed level from debug to trace.
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
 
