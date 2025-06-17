@@ -27,6 +27,7 @@ import { Schema, Subject } from "../models/schema";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
+import { clearWorkspaceState } from "../storage/utils";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -374,7 +375,10 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // clear cached workspace state
+    await clearWorkspaceState();
+
     sandbox.restore();
   });
 

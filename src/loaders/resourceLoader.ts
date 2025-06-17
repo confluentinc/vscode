@@ -81,7 +81,7 @@ export abstract class ResourceLoader implements IResourceBase {
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
 
-  /** Reset the loader's state, forgetting anything learned. */
+  /** Reset the loader's state, forgetting anything learned about the connection. */
   public abstract reset(): Promise<void>;
 
   // Environment methods
@@ -511,12 +511,13 @@ export abstract class CachingResourceLoader<
    */
   protected abstract getEnvironmentsFromGraphQL(): Promise<ET[]>;
 
-  /** Reset to original state. */
+  /** Reset to original state, clearing all cached data for this connection. */
   public async reset(): Promise<void> {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
 
-    await getResourceManager().purgeCoarseResources(this.connectionId);
+    const rm = getResourceManager();
+    await rm.purgeConnectionResources(this.connectionId);
   }
 
   /**

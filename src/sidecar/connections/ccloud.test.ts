@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -7,7 +8,6 @@ import {
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ContextValues, setContextValue } from "../../context/values";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../../emitters";
-import { getResourceManager } from "../../storage/resourceManager";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
 import { TopicViewProvider } from "../../viewProviders/topics";
 import { clearCurrentCCloudResources, hasCCloudAuthSession } from "./ccloud";
@@ -27,8 +27,8 @@ describe("sidecar/connections/ccloud.ts", () => {
     // just needed for this test, otherwise we'd put this in the before() block
     await getTestExtensionContext();
 
-    const resourceManager = getResourceManager();
-    const deleteCCloudResourcesStub = sandbox.stub(resourceManager, "deleteCCloudResources");
+    const mockedCCLoudLoader = getStubbedCCloudResourceLoader(sandbox);
+
     const currentKafkaClusterChangedFireStub = sandbox.stub(currentKafkaClusterChanged, "fire");
     const currentSchemaRegistryChangedFireStub = sandbox.stub(currentSchemaRegistryChanged, "fire");
 
@@ -40,12 +40,12 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     await clearCurrentCCloudResources();
 
-    assert.ok(deleteCCloudResourcesStub.calledOnce);
+    assert.ok(mockedCCLoudLoader.reset.calledOnce);
     assert.ok(currentKafkaClusterChangedFireStub.calledOnceWith(null));
     assert.ok(currentSchemaRegistryChangedFireStub.calledOnceWith(null));
 
     // Reset the stubs
-    deleteCCloudResourcesStub.resetHistory();
+    mockedCCLoudLoader.reset.resetHistory();
     currentKafkaClusterChangedFireStub.resetHistory();
     currentSchemaRegistryChangedFireStub.resetHistory();
 
@@ -56,7 +56,7 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     await clearCurrentCCloudResources();
 
-    assert.ok(deleteCCloudResourcesStub.calledOnce);
+    assert.ok(mockedCCLoudLoader.reset.calledOnce);
     assert.ok(currentKafkaClusterChangedFireStub.notCalled);
     assert.ok(currentSchemaRegistryChangedFireStub.notCalled);
   });

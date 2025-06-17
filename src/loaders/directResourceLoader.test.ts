@@ -8,6 +8,7 @@ import {
   TEST_DIRECT_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connection";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as directGraphQl from "../graphql/direct";
 import { DirectEnvironment } from "../models/environment";
 import { EnvironmentId } from "../models/resource";
@@ -20,7 +21,11 @@ describe("DirectResourceLoader", () => {
   let loader: DirectResourceLoader;
   let getDirectResourcesStub: sinon.SinonStub;
 
-  beforeEach(() => {
+  before(() => {
+    getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
     loader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);
 
     sandbox = sinon.createSandbox();
@@ -38,6 +43,9 @@ describe("DirectResourceLoader", () => {
     getDirectResourcesStub = sandbox
       .stub(directGraphQl, "getDirectResources")
       .resolves(myEnvironment);
+
+    // Ensure workspace storage cached data for this connection id is cleared before each test.
+    await loader.reset();
   });
 
   afterEach(() => {
@@ -48,17 +56,17 @@ describe("DirectResourceLoader", () => {
     it("Deep fetches once and caches the result", async () => {
       const environments = await loader.getEnvironments();
       sinon.assert.calledOnce(getDirectResourcesStub);
-      assert.deepStrictEqual(environments, [myEnvironment]);
+      assert.deepStrictEqual(environments, [myEnvironment], "first fetch");
 
       // Call again, should not call the stub again.
       const cachedEnvironments = await loader.getEnvironments();
       sinon.assert.calledOnce(getDirectResourcesStub);
-      assert.deepStrictEqual(cachedEnvironments, [myEnvironment]);
+      assert.deepStrictEqual(cachedEnvironments, [myEnvironment], "secton fetch");
 
       // Call with forceDeepRefresh, should call the stub again.
       const refreshedEnvironments = await loader.getEnvironments(true);
       sinon.assert.calledTwice(getDirectResourcesStub);
-      assert.deepStrictEqual(refreshedEnvironments, [myEnvironment]);
+      assert.deepStrictEqual(refreshedEnvironments, [myEnvironment], "third fetch");
     });
 
     it("should not cache when getDirectResources returns undefined and retry on next call", async () => {

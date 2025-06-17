@@ -3,8 +3,8 @@ import { Connection } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../../constants";
 import { ContextValues, getContextValue } from "../../context/values";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../../emitters";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
-import { getResourceManager } from "../../storage/resourceManager";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
 import { TopicViewProvider } from "../../viewProviders/topics";
 
@@ -31,7 +31,8 @@ export async function clearCurrentCCloudResources() {
   // - delete the extension state references to make sure they can't be used
   // - fire events to update things like the Topics view, Schemas view, etc.
   logger.warn("clearing current CCloud resources from extension state");
-  await getResourceManager().deleteCCloudResources();
+  const loader = CCloudResourceLoader.getInstance();
+  await loader.reset();
 
   // If we are looking at a CCloud cluster in the Topics view, we need to clear the current cluster.
   const topicViewProvider = TopicViewProvider.getInstance();
