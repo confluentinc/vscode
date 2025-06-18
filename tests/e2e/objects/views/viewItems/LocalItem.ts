@@ -19,11 +19,15 @@ export class LocalItem extends ViewItem {
 
   /** Check if local resources can be started. */
   async canStartLocalResources(): Promise<boolean> {
-    return await this.startLocalResourcesButton.isVisible();
+    await this.locator.hover();
+    return await this.startLocalResourcesButton.isVisible({ timeout: 500 });
   }
 
   /** Click the "Start Local Resources" action on the Local item. */
   async clickStartLocalResources(): Promise<void> {
+    if (!(await this.canStartLocalResources())) {
+      throw new Error("Cannot start local resources: action is not visible.");
+    }
     await this.startLocalResourcesButton.click();
   }
 
@@ -33,11 +37,15 @@ export class LocalItem extends ViewItem {
 
   /** Check if local resources are currently running (Stop Local Resources button is available). */
   async canStopLocalResources(): Promise<boolean> {
-    return await this.stopLocalResourcesButton.isVisible();
+    await this.locator.hover();
+    return await this.stopLocalResourcesButton.isVisible({ timeout: 500 });
   }
 
   /** Click the "Stop Local Resources" action on the Local item. */
   async clickStopLocalResources(): Promise<void> {
+    if (!(await this.canStopLocalResources())) {
+      throw new Error("Cannot stop local resources: action is not visible.");
+    }
     await this.stopLocalResourcesButton.click();
   }
 }
