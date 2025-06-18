@@ -113,8 +113,19 @@ export class CCloudEnvironment extends Environment {
     this.id = props.id;
     this.name = props.name;
     this.streamGovernancePackage = props.streamGovernancePackage;
-    this.kafkaClusters = props.kafkaClusters;
-    this.schemaRegistry = props.schemaRegistry;
+    // Promote each kafka cluster to a CCloudKafkaCluster instance if needed.
+    this.kafkaClusters = props.kafkaClusters.map((cluster) =>
+      cluster instanceof CCloudKafkaCluster ? cluster : CCloudKafkaCluster.create(cluster),
+    );
+    // Promote the schema registry to a CCloudSchemaRegistry instance if needed.
+    if (props.schemaRegistry) {
+      this.schemaRegistry =
+        props.schemaRegistry instanceof CCloudSchemaRegistry
+          ? props.schemaRegistry
+          : CCloudSchemaRegistry.create(props.schemaRegistry);
+    } else {
+      this.schemaRegistry = undefined;
+    }
     this.flinkComputePools = props.flinkComputePools;
   }
 
@@ -180,10 +191,22 @@ export class DirectEnvironment extends Environment {
     this.id = props.id;
     this.name = props.name;
 
-    this.kafkaClusters = props.kafkaClusters;
+    // Promote each kafka cluster to a DirectKafkaCluster instance if needed.
+    this.kafkaClusters = props.kafkaClusters.map((cluster) =>
+      cluster instanceof DirectKafkaCluster ? cluster : DirectKafkaCluster.create(cluster),
+    );
     this.kafkaConfigured = props.kafkaConfigured;
 
-    this.schemaRegistry = props.schemaRegistry;
+    // Promote the schema registry to a DirectSchemaRegistry instance if needed.
+    // If no schema registry was provided, set it to undefined.
+    if (!props.schemaRegistry) {
+      this.schemaRegistry = undefined;
+    } else {
+      this.schemaRegistry =
+        props.schemaRegistry instanceof DirectSchemaRegistry
+          ? props.schemaRegistry
+          : DirectSchemaRegistry.create(props.schemaRegistry);
+    }
     this.schemaRegistryConfigured = props.schemaRegistryConfigured;
 
     if (props.formConnectionType) this.formConnectionType = props.formConnectionType;
@@ -237,7 +260,19 @@ export class LocalEnvironment extends Environment {
     super();
     this.id = props.id;
     this.name = props.name;
-    this.kafkaClusters = props.kafkaClusters;
+    this.kafkaClusters = props.kafkaClusters.map((cluster) =>
+      cluster instanceof LocalKafkaCluster ? cluster : LocalKafkaCluster.create(cluster),
+    );
+    // Promote the schema registry to a LocalSchemaRegistry instance if needed.
+    // If no schema registry was provided, set it to undefined.
+    if (!props.schemaRegistry) {
+      this.schemaRegistry = undefined;
+    } else {
+      this.schemaRegistry =
+        props.schemaRegistry instanceof LocalSchemaRegistry
+          ? props.schemaRegistry
+          : LocalSchemaRegistry.create(props.schemaRegistry);
+    }
     this.schemaRegistry = props.schemaRegistry;
   }
 }
