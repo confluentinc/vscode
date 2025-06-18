@@ -1,12 +1,19 @@
 import { accessSync, writeFileSync } from "fs";
 import { join } from "path";
+import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { Tail } from "tail";
 import { commands, LogOutputChannel, Uri, window, workspace } from "vscode";
-import { Logger, OUTPUT_CHANNEL } from "../logging";
+import {
+  LOGFILE_ROTATION_INTERVAL,
+  Logger,
+  MAX_LOGFILE_SIZE,
+  MAX_LOGFILES,
+  OUTPUT_CHANNEL,
+} from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { WriteableTmpDir } from "../utils/file";
 import { readFile } from "../utils/fsWrappers";
-import { SIDECAR_LOGFILE_NAME } from "./constants";
+import { SIDECAR_FORMATTED_LOGFILE_NAME, SIDECAR_LOGFILE_NAME } from "./constants";
 import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
 
 const logger = new Logger("sidecar/logging.ts");
@@ -22,8 +29,80 @@ export function getSidecarLogfilePath(): string {
   return join(WriteableTmpDir.getInstance().get(), SIDECAR_LOGFILE_NAME);
 }
 
+/** Construct the full pathname to the formatted sidecar log file. */
+export function getSidecarFormattedLogfilePath(): string {
+  return join(WriteableTmpDir.getInstance().get(), SIDECAR_FORMATTED_LOGFILE_NAME);
+}
+
+/** Try to parse a raw (JSON) sidecar log line into a {@link SidecarLogFormat}. */
+export function parseSidecarLogLine(rawLogLine: string): SidecarLogFormat | null {
+  try {
+    const log = JSON.parse(rawLogLine.trim()) as SidecarLogFormat;
+    // basic validation for required fields
+    if (!(log.level && log.loggerName && log.message)) {
+      return null;
+    }
+    return log;
+  } catch {
+    // JSON parsing failed
+    return null;
+  }
+}
+
+/** Format a {@link SidecarLogFormat} log object into more human-readable string. */
+export function formatSidecarLogLine(log: SidecarLogFormat): string {
+  const timestamp = log.timestamp || new Date().toISOString();
+  const level = log.level?.padEnd(5) || "INFO ";
+  const loggerName = log.loggerName || "unknown";
+  const message = log.message || "";
+
+  let formattedLine = `${timestamp} ${level} [${loggerName}] ${message}`;
+  // add MDC data if present
+  if (log.mdc && Object.keys(log.mdc).length > 0) {
+    const mdcString = JSON.stringify(log.mdc);
+    formattedLine += ` ${mdcString}`;
+  }
+  return formattedLine;
+}
+
+let formattedSidecarLogStream: RotatingFileStream | undefined;
+/** Get or create the rotating file stream for formatted sidecar logs. */
+function getFormattedSidecarLogStream(): RotatingFileStream {
+  if (!formattedSidecarLogStream) {
+    const logDir = WriteableTmpDir.getInstance().get();
+    formattedSidecarLogStream = createStream(SIDECAR_FORMATTED_LOGFILE_NAME, {
+      size: MAX_LOGFILE_SIZE,
+      maxFiles: MAX_LOGFILES,
+      interval: LOGFILE_ROTATION_INTERVAL,
+      path: logDir,
+    });
+  }
+  return formattedSidecarLogStream;
+}
+
+let _logTailer: Tail | undefined;
 /** Set up tailing the sidecar log file into the "Confluent (Sidecar)" output channel. **/
-export function startTailingSidecarLogs(): Tail | undefined {
+export function getSidecarLogTail(): Tail | undefined {
+  if (_logTailer) {
+    return _logTailer;
+  }
+  _logTailer = createLogTailer();
+  return _logTailer;
+}
+
+/** Stop tailing the sidecar logs and clean up the tailer. */
+export function disposeSidecarLogTail(): void {
+  if (_logTailer) {
+    try {
+      _logTailer.unwatch();
+    } catch (e) {
+      logger.warn("Error unwatching log tailer during stop:", e);
+    }
+    _logTailer = undefined;
+  }
+}
+
+function createLogTailer(): Tail | undefined {
   // Create sidecar's log file if it doesn't exist so that we can
   // start tailing it right away before the sidecar process may exist.
 
@@ -36,7 +115,12 @@ export function startTailingSidecarLogs(): Tail | undefined {
 
   let logTailer: Tail;
   try {
-    logTailer = new Tail(sidecarLogfilePath);
+    // https://github.com/lucagrulla/node-tail/blob/master/README.md#constructor-parameters
+    logTailer = new Tail(sidecarLogfilePath, {
+      useWatchFile: true,
+      follow: true, // default is true, but explicitly set for clarity
+      fromBeginning: false, // default is false, also explicitly set for clarity
+    });
   } catch (e) {
     SIDECAR_OUTPUT_CHANNEL.appendLine(
       `Failed to tail sidecar log file "${sidecarLogfilePath}": ${e}`,
@@ -86,24 +170,23 @@ export function startTailingSidecarLogs(): Tail | undefined {
 
 /**
  * Parse and append a sidecar log line to the {@link SIDECAR_OUTPUT_CHANNEL output channel} based on
- * its `level`.
+ * its `level`. Also writes a formatted version to the formatted log file for easier download.
  */
 export function appendSidecarLogToOutputChannel(line: string) {
   // DEBUGGING: uncomment to see raw log lines in the output channel
   // SIDECAR_OUTPUT_CHANNEL.trace(line);
 
-  let log: SidecarLogFormat;
-  try {
-    log = JSON.parse(line) as SidecarLogFormat;
-  } catch (e) {
-    if (e instanceof Error) {
-      OUTPUT_CHANNEL.error(`Failed to parse sidecar log line: ${e.message}\n\t${line}`);
-    }
-    return;
-  }
-  if (!(log.level && log.loggerName && log.message)) {
-    // log the raw object at `info` level:
+  const log: SidecarLogFormat | null = parseSidecarLogLine(line);
+  if (!log) {
+    // failed to parse JSON, or missing required fields; pass the raw line to the output channel
+    OUTPUT_CHANNEL.error(`Failed to parse sidecar log line: ${line}`);
     SIDECAR_OUTPUT_CHANNEL.appendLine(line);
+    try {
+      const formattedLogStream = getFormattedSidecarLogStream();
+      formattedLogStream.write(`${line}\n`);
+    } catch (e) {
+      OUTPUT_CHANNEL.warn(`Failed to write raw line to formatted sidecar log: ${e}`);
+    }
     return;
   }
 
@@ -112,6 +195,15 @@ export function appendSidecarLogToOutputChannel(line: string) {
   const logArgs = [];
   if (log.mdc && Object.keys(log.mdc).length > 0) {
     logArgs.push(log.mdc);
+  }
+
+  try {
+    const formattedLine = formatSidecarLogLine(log);
+    const formattedLogStream = getFormattedSidecarLogStream();
+    formattedLogStream.write(`${formattedLine}\n`);
+  } catch (e) {
+    // don't let any potential log file write errors break the main logging functionality
+    OUTPUT_CHANNEL.warn(`Failed to write formatted line to sidecar log: ${e}`);
   }
 
   switch (log.level) {
@@ -162,18 +254,15 @@ export async function gatherSidecarOutputs(
   }
 
   for (const rawLogLine of rawLogs) {
-    try {
-      const parsed = JSON.parse(rawLogLine.trim()) as SidecarLogFormat;
-      if (!parsed || !parsed.timestamp || !parsed.level || !parsed.loggerName || !parsed.message) {
-        throw new Error("Corrupted log line");
-      }
+    const parsed: SidecarLogFormat | null = parseSidecarLogLine(rawLogLine);
+    if (parsed && parsed.timestamp) {
       parsedLines.push(parsed);
 
       const formatted = `\t> ${parsed.timestamp} ${parsed.level} [${parsed.loggerName}] ${parsed.message}`;
       reformattedLogLines.push(formatted);
-    } catch {
-      // JSON parsing or post-JSON structure issue. Only append the raw line to logLines (if nonempty).
-      if (rawLogLine !== "") {
+    } else {
+      // JSON parsing failed or the line is missing required fields. Only append the raw line if nonempty.
+      if (rawLogLine.trim() !== "") {
         reformattedLogLines.push(rawLogLine);
       }
     }
@@ -216,4 +305,16 @@ export function determineSidecarStartupFailureReason(
 
   // If no specific error messages are found, return UNKNOWN
   return SidecarStartupFailureReason.UNKNOWN;
+}
+
+/** Clean up the formatted sidecar log stream, called from extension.ts `deactivate()`. */
+export function closeFormattedSidecarLogStream(): void {
+  if (formattedSidecarLogStream) {
+    try {
+      formattedSidecarLogStream.end();
+      formattedSidecarLogStream = undefined;
+    } catch (e) {
+      OUTPUT_CHANNEL.warn(`Error closing formatted sidecar log stream: ${e}`);
+    }
+  }
 }
