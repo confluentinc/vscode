@@ -85,87 +85,47 @@ describe("commands/schemas/utils/schemas.ts", function () {
   });
 
   describe("getSchemaDeletionValidatorAndPlaceholder()", function () {
-    it("hard deletion validator", function () {
+    it("deletion validator", function () {
       const version = 3;
-      const hardDeletion = true;
-      const [validator, prompt] = getSchemaDeletionValidatorAndPlaceholder(version, hardDeletion);
 
-      assert.strictEqual(prompt, `Enter "hard v${version}" to confirm, escape to cancel.`);
-      assert.strictEqual(validator(`hard v${version}`), undefined);
-      assert.strictEqual(
-        validator(`hard v${version + 1}`)!.message,
-        `Enter "hard v${version}" to confirm hard deletion, escape to cancel.`,
-      );
-      assert.strictEqual(
-        validator("")!.message,
-        `Enter "hard v${version}" to confirm hard deletion, escape to cancel.`,
-      );
-    });
-
-    it("soft deletion validator", function () {
-      const version = 3;
-      const hardDeletion = false;
-      const [validator, prompt] = getSchemaDeletionValidatorAndPlaceholder(version, hardDeletion);
-
+      const [validator, prompt] = getSchemaDeletionValidatorAndPlaceholder(version);
       assert.strictEqual(prompt, `Enter "v${version}" to confirm, escape to cancel.`);
       assert.strictEqual(validator(`v${version}`), undefined);
-      assert.strictEqual(
-        validator(`v${version + 1}`)!.message,
-        `Enter "v${version}" to confirm, escape to cancel.`,
-      );
-      assert.strictEqual(
-        validator("")!.message,
-        `Enter "v${version}" to confirm, escape to cancel.`,
-      );
+
+      const invalid = validator(`v${version + 1}`)!;
+      assert.deepStrictEqual(invalid, {
+        message: `Enter "v${version}" to confirm deletion, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Error,
+      });
+
+      const empty = validator("")!;
+      assert.deepStrictEqual(empty, {
+        message: `Enter "v${version}" to confirm deletion, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Error,
+      });
     });
   });
 
   describe("getSubjectDeletionValidatorAndPlaceholder()", function () {
-    it("hard deletion validator", function () {
+    it("deletion validator", function () {
       const subject = TEST_CCLOUD_SUBJECT;
-      const versionCount = 5;
-      const hardDeletion = true;
-      const [validator, prompt] = getSubjectDeletionValidatorAndPlaceholder(
-        subject,
-        versionCount,
-        hardDeletion,
-      );
 
-      assert.strictEqual(
-        prompt,
-        `Enter "hard ${subject.name} ${versionCount}" to confirm, escape to cancel.`,
-      );
-      assert.strictEqual(validator(`hard ${subject.name} ${versionCount}`), undefined);
-      assert.strictEqual(
-        validator(`hard ${subject.name} ${versionCount + 1}`)!.message,
-        `Enter "hard ${subject.name} ${versionCount}" to confirm hard deletion, escape to cancel.`,
-      );
-      assert.strictEqual(
-        validator("")!.message,
-        `Enter "hard ${subject.name} ${versionCount}" to confirm hard deletion, escape to cancel.`,
-      );
-    });
-
-    it("soft deletion validator", function () {
-      const subject = TEST_CCLOUD_SUBJECT;
-      const versionCount = 5;
-      const hardDeletion = false;
-      const [validator, prompt] = getSubjectDeletionValidatorAndPlaceholder(
-        subject,
-        versionCount,
-        hardDeletion,
-      );
+      const [validator, prompt] = getSubjectDeletionValidatorAndPlaceholder(subject);
 
       assert.strictEqual(prompt, `Enter "${subject.name}" to confirm, escape to cancel.`);
       assert.strictEqual(validator(`${subject.name}`), undefined);
-      assert.strictEqual(
-        validator(`${subject.name}Extra`)!.message,
-        `Enter "${subject.name}" to confirm, escape to cancel.`,
-      );
-      assert.strictEqual(
-        validator("")!.message,
-        `Enter "${subject.name}" to confirm, escape to cancel.`,
-      );
+
+      const invalid = validator(`${subject.name}Extra`)!;
+      assert.deepStrictEqual(invalid, {
+        message: `Enter "${subject.name}" to confirm deletion, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Warning,
+      });
+
+      const empty = validator("")!;
+      assert.deepStrictEqual(empty, {
+        message: `Enter "${subject.name}" to confirm deletion, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Warning,
+      });
     });
   });
 

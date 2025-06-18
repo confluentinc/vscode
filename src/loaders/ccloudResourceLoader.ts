@@ -13,7 +13,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
-import { IFlinkQueryable, isCCloud } from "../models/resource";
+import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar, SidecarHandle } from "../sidecar";
@@ -25,7 +25,7 @@ import { ResourceLoader } from "./resourceLoader";
 const logger = new Logger("storage.ccloudResourceLoader");
 
 /**
- * Singleton class responsible for loading / caching CCLoud resources into the resource manager.
+ * Singleton class responsible for loading / caching CCloud resources into the resource manager.
  * View providers and/or other consumers of resources stored in the resource manager should
  * call {@link ensureCoarseResourcesLoaded} to ensure that the resources are cached before attempting to
  * access them from the resource manager.
@@ -155,7 +155,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
       // Store the environments, clusters, schema registries in the resource manager
       const environments: CCloudEnvironment[] = gqlResults[0];
-      await resourceManager.setCCloudEnvironments(environments);
+      await resourceManager.setEnvironments(CCLOUD_CONNECTION_ID, environments);
 
       // Collect all of the CCloudKafkaCluster and CCloudSchemaRegistries into individual arrays
       // before storing them via the resource manager.
@@ -166,8 +166,8 @@ export class CCloudResourceLoader extends ResourceLoader {
         if (env.schemaRegistry) schemaRegistries.push(env.schemaRegistry);
       });
       await Promise.all([
-        resourceManager.setCCloudKafkaClusters(kafkaClusters),
-        resourceManager.setCCloudSchemaRegistries(schemaRegistries),
+        resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, kafkaClusters),
+        resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, schemaRegistries),
       ]);
 
       // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.
@@ -190,13 +190,13 @@ export class CCloudResourceLoader extends ResourceLoader {
    */
   public async getEnvironments(forceDeepRefresh: boolean = false): Promise<CCloudEnvironment[]> {
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-    return await getResourceManager().getCCloudEnvironments();
+    return await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
   }
 
   /** Are there any Flink compute pools at all? */
   public async hasFlinkComputePools(): Promise<boolean> {
     await this.ensureCoarseResourcesLoaded();
-    const environments = await getResourceManager().getCCloudEnvironments();
+    const environments = await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
     return environments.some((env) => env.flinkComputePools.length > 0);
   }
 
@@ -210,24 +210,26 @@ export class CCloudResourceLoader extends ResourceLoader {
    **/
   public async getSchemaRegistries(): Promise<CCloudSchemaRegistry[]> {
     await this.ensureCoarseResourcesLoaded(false);
-    // TODO: redapt this resource manager API to just return the array directly.
-    const registryByEnvId = await getResourceManager().getCCloudSchemaRegistries();
-
-    return Array.from(registryByEnvId.values());
+    return await getResourceManager().getSchemaRegistries(CCLOUD_CONNECTION_ID);
   }
 
   /**
-   * Get the CCLoud kafka clusters in the given environment ID.
+   * Get the CCloud kafka clusters in the given environment ID.
    */
   public async getKafkaClustersForEnvironmentId(
-    environmentId: string,
+    environmentId: EnvironmentId,
     forceDeepRefresh?: boolean,
   ): Promise<CCloudKafkaCluster[]> {
     if (environmentId === undefined) {
-      throw new Error(`Cannot fetch clusters w/o an environmentId.`);
+      throw new Error("Cannot fetch clusters w/o an environmentId.");
     }
+
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-    return await getResourceManager().getCCloudKafkaClustersForEnvironment(environmentId);
+
+    return await getResourceManager().getKafkaClustersForEnvironmentId(
+      CCLOUD_CONNECTION_ID,
+      environmentId,
+    );
   }
 
   /**

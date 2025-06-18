@@ -1,10 +1,10 @@
-# Confluent For VSCode Contributing Guide 📖
+# Confluent For VS Code Contributing Guide 📖
 
 We are grateful for your interest in contributing to the Confluent VSCode extension. This guide includes information on: 
 - [getting started for the first time](#getting-started-for-the-first-time)
 - as well as a [quick reference](#reference-for-contributors) for contributors who need refreshers on the process
 
-The best developers are those who are familiar with the user experience of the software they create, so we ask that you review the project's [official documentation](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html) before diving in.
+The best developers are those who are familiar with the user experience of the software they create, so we ask that you review the project's [official documentation](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html) before diving in. We also recommend the VS Code extension development [documentation](https://code.visualstudio.com/api) to familiarize yourself with the VS Code extension development process.
 
 There are three main ways to contribute:
 
@@ -34,16 +34,12 @@ Our README contains a project overview, including a description of the extension
 
 ```mermaid
 flowchart TD
-    vscode --> public["<a href='../resources'>Public resources</a>"]
-    vscode --> resources["<a href='../resources'>Static resources</a>"]
-    vscode --> src["<a href='../src'>Source code</a>"]
-    src --> clients["<a href='../src/clients'>Generated API clients</a>"]
-    src --> graphql["<a href='../src/graphql'>GraphQL definitions</a>"]
-    src --> extension["<a href='../src/extension.ts'>Extension entry point</a>"]
-    vscode --> Gulpfile["<a href='../Gulpfile.js'>Automated tasks</a>"]
-    vscode --> prettier["<a href='../.prettierrc'>Code formatting config</a>"]
-    vscode --> eslint["<a href='../eslint.config.mjs'>Linter config</a>"]
-    vscode --> playwright["<a href='../playwright.config.ts'>Functional testing config</a>"]
+    vscode --> resources["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/resources'>Static resources</a>"]
+    vscode --> src["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src'>Source code</a>"]
+    src --> clients["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src/clients'>Generated API clients</a>"]
+    src --> graphql["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src/graphql'>GraphQL definitions</a>"]
+    src --> extension["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/src/extension.ts'>Extension entry point</a>"]
+    vscode --> package.json["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/package.json'>package.json</a>"]
 ```
 
 ### Issues
@@ -85,7 +81,7 @@ needed for development. These steps are outlined below.
 
 - [ ] Install the required tools and dependencies (see [Tools and Prerequisites](#tools-and-prerequisites)).
 - [ ] [Clone your fork](#clone-your-fork) of the repository.
-- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and format locally (see [Sync your repo with ours](#sync-your-repo-with-oours)).
+- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and format locally (see [Sync your repo with ours](#sync-your-repo-with-ours)).
 
 ### Tools and Prerequisites
 
@@ -367,6 +363,27 @@ describe.only('Extension manifest tests', () => {
   });
 });
 ```
+
+#### Running a single unit test
+
+You can run individual unit tests by using the following syntax:
+
+```bash
+    gulp test -t 'should register all commands'
+    gulp test -t 'Extension manifest tests'
+```
+
+Or by adding `.only` after a `describe` or `it` block in the test file:
+
+```typescript
+describe.only('Extension manifest tests', () => {
+  it('should register all commands', () => {
+    // test code
+  });
+});
+```
+
+Remember to remove `.only` after running the test and before making a PR! 
 
 #### Functional tests
 

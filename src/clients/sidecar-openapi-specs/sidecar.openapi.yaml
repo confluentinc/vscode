@@ -1,454 +1,5 @@
 ---
 openapi: 3.0.3
-info:
-  title: Confluent ide-sidecar API
-  description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
-  termsOfService: Your terms here
-  contact:
-    name: Confluent for VS Code Support
-    url: https://confluent.io/contact
-    email: vscode@confluent.io
-  version: 0.211.0
-servers:
-- url: http://127.0.0.1:26636
-  description: Auto generated value
-paths:
-  /:
-    get:
-      tags:
-      - Password Reset Callback Resource
-      parameters:
-      - name: email
-        in: query
-        schema:
-          type: string
-      - name: message
-        in: query
-        schema:
-          type: string
-      - name: success
-        in: query
-        schema:
-          type: boolean
-      responses:
-        "200":
-          description: OK
-          content:
-            text/html:
-              schema:
-                type: string
-  /api/login/realm:
-    get:
-      tags:
-      - Login Realm Resource
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json: {}
-  /gateway/v1/callback-vscode-docs:
-    get:
-      tags:
-      - O Auth Callback Resource
-      parameters:
-      - name: code
-        in: query
-        schema:
-          type: string
-      - name: state
-        in: query
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            text/html:
-              schema:
-                type: string
-  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/partitions/-/consume:
-    post:
-      tags:
-      - Kafka Consume Resource
-      parameters:
-      - name: cluster_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: topic_name
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: x-connection-id
-        in: header
-        description: Connection ID
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SimpleConsumeMultiPartitionRequest"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SimpleConsumeMultiPartitionResponse"
-  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records:
-    post:
-      tags:
-      - Confluent Cloud Produce Records Resource
-      parameters:
-      - name: cluster_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: topic_name
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: dry_run
-        in: query
-        schema:
-          default: false
-          type: boolean
-      - name: x-connection-id
-        in: header
-        description: Connection ID
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ProduceRequest"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProduceResponse"
-  /gateway/v1/connections:
-    get:
-      tags:
-      - Connections Resource
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConnectionsList"
-    post:
-      tags:
-      - Connections Resource
-      parameters:
-      - name: dry_run
-        in: query
-        schema:
-          description: Whether to validate the connection spec and determine the connection
-            status without creating the connection
-          default: false
-          type: boolean
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectionSpec"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Connection"
-  /gateway/v1/connections/{id}:
-    get:
-      tags:
-      - Connections Resource
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Connection"
-    put:
-      tags:
-      - Connections Resource
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectionSpec"
-      responses:
-        "200":
-          description: Connection updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Connection"
-        "404":
-          description: Connection not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "401":
-          description: Could not authenticate
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-    delete:
-      tags:
-      - Connections Resource
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: No Content
-    patch:
-      tags:
-      - Connections Resource
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JsonMergePatch"
-      responses:
-        "200":
-          description: Connection updated with PATCH
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Connection"
-        "404":
-          description: Connection not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "401":
-          description: Could not authenticate
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-  /gateway/v1/handshake:
-    get:
-      tags:
-      - Handshake Resource
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SidecarAccessToken"
-  /gateway/v1/preferences:
-    get:
-      tags:
-      - Preferences Resource
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Preferences"
-    put:
-      tags:
-      - Preferences Resource
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Preferences"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Preferences"
-        "400":
-          description: Provided preferences are not valid
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Failure"
-  /gateway/v1/version:
-    get:
-      tags:
-      - Version Resource
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SidecarVersionResponse"
-  /gateway/v1/health:
-    summary: MicroProfile Health provides a way for your application to distribute
-      information about its healthiness state to state whether or not it is able to
-      function properly
-    description: MicroProfile Health Endpoint
-    get:
-      tags:
-      - MicroProfile Health
-      summary: "An aggregated view of the Liveness, Readiness and Startup of this\
-        \ application"
-      description: Check the health of the application
-      operationId: microprofile_health_root
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "503":
-          description: Service Unavailable
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-  /gateway/v1/health/live:
-    summary: Liveness checks are utilized to tell whether the application should be
-      restarted
-    description: MicroProfile Health - Liveness Endpoint
-    get:
-      tags:
-      - MicroProfile Health
-      summary: The Liveness check of this application
-      description: Check the liveness of the application
-      operationId: microprofile_health_liveness
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "503":
-          description: Service Unavailable
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-  /gateway/v1/health/ready:
-    summary: Readiness checks are used to tell whether the application is able to
-      process requests
-    description: MicroProfile Health - Readiness Endpoint
-    get:
-      tags:
-      - MicroProfile Health
-      summary: The Readiness check of this application
-      description: Check the readiness of the application
-      operationId: microprofile_health_readiness
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "503":
-          description: Service Unavailable
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-  /gateway/v1/health/started:
-    summary: Startup checks are an used to tell when the application has started
-    description: MicroProfile Health - Startup Endpoint
-    get:
-      tags:
-      - MicroProfile Health
-      summary: The Startup check of this application
-      description: Check the startup of the application
-      operationId: microprofile_health_startup
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "503":
-          description: Service Unavailable
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
 components:
   schemas:
     ApiKeyAndSecret:
@@ -840,7 +391,6 @@ components:
           - $ref: "#/components/schemas/OAuthCredentials"
           - $ref: "#/components/schemas/ScramCredentials"
           - $ref: "#/components/schemas/KerberosCredentials"
-          nullable: true
         ssl:
           description: "The SSL configuration for connecting to the Kafka cluster.\
             \ To disable, set `enabled` to false. To use the default SSL settings,\
@@ -1198,7 +748,6 @@ components:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
           - $ref: "#/components/schemas/OAuthCredentials"
-          nullable: true
         ssl:
           description: "The SSL configuration for connecting to Schema Registry. If\
             \ null, the connection will use SSL with the default settings. To disable,\
@@ -1416,13 +965,489 @@ components:
     HealthCheck:
       type: object
       properties:
-        data:
-          type: object
-          nullable: true
         status:
           enum:
           - UP
           - DOWN
           type: string
+        data:
+          type: object
+          nullable: true
         name:
           type: string
+paths:
+  /:
+    get:
+      parameters:
+      - name: email
+        in: query
+        schema:
+          type: string
+      - name: message
+        in: query
+        schema:
+          type: string
+      - name: success
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            text/html:
+              schema:
+                type: string
+      summary: Password Reset Callback
+      tags:
+      - Password Reset Callback Resource
+  /api/login/realm:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json: {}
+      summary: Proxy Login Realm Request
+      tags:
+      - Login Realm Resource
+  /gateway/v1/callback-vscode-docs:
+    get:
+      parameters:
+      - name: code
+        in: query
+        schema:
+          type: string
+      - name: state
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            text/html:
+              schema:
+                type: string
+      summary: Callback
+      tags:
+      - O Auth Callback Resource
+  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/partitions/-/consume:
+    post:
+      parameters:
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: topic_name
+        in: path
+        required: true
+        schema:
+          type: string
+      - description: Connection ID
+        in: header
+        name: x-connection-id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimpleConsumeMultiPartitionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimpleConsumeMultiPartitionResponse"
+        "400":
+          description: Bad Request
+      summary: Message Viewer
+      tags:
+      - Kafka Consume Resource
+  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records:
+    post:
+      parameters:
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: topic_name
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dry_run
+        in: query
+        schema:
+          default: false
+          type: boolean
+      - description: Connection ID
+        in: header
+        name: x-connection-id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProduceRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProduceResponse"
+        "400":
+          description: Bad Request
+      summary: Produce Record
+      tags:
+      - Confluent Cloud Produce Records Resource
+  /gateway/v1/connections:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionsList"
+      summary: List Connections
+      tags:
+      - Connections Resource
+    post:
+      parameters:
+      - name: dry_run
+        in: query
+        schema:
+          description: Whether to validate the connection spec and determine the connection
+            status without creating the connection
+          default: false
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionSpec"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        "400":
+          description: Bad Request
+      summary: Create Connection
+      tags:
+      - Connections Resource
+  /gateway/v1/connections/{id}:
+    put:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionSpec"
+        required: true
+      responses:
+        "200":
+          description: Connection updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        "404":
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "401":
+          description: Could not authenticate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+      summary: Update Connection
+      tags:
+      - Connections Resource
+    patch:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JsonMergePatch"
+        required: true
+      responses:
+        "200":
+          description: Connection updated with PATCH
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        "404":
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "401":
+          description: Could not authenticate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+      summary: Patch Connection
+      tags:
+      - Connections Resource
+    get:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+      summary: Get Connection
+      tags:
+      - Connections Resource
+    delete:
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Delete Connection
+      tags:
+      - Connections Resource
+  /gateway/v1/handshake:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SidecarAccessToken"
+      summary: Handshake
+      tags:
+      - Handshake Resource
+  /gateway/v1/preferences:
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Preferences"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+        "400":
+          description: Provided preferences are not valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+      summary: Update Preferences
+      tags:
+      - Preferences Resource
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+      summary: Get Preferences
+      tags:
+      - Preferences Resource
+  /gateway/v1/version:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SidecarVersionResponse"
+      summary: Version
+      tags:
+      - Version Resource
+  /gateway/v1/health:
+    description: MicroProfile Health Endpoint
+    summary: MicroProfile Health provides a way for your application to distribute
+      information about its healthiness state to state whether or not it is able to
+      function properly
+    get:
+      operationId: microprofile_health_root
+      description: Check the health of the application
+      tags:
+      - MicroProfile Health
+      summary: "An aggregated view of the Liveness, Readiness and Startup of this\
+        \ application"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /gateway/v1/health/live:
+    description: MicroProfile Health - Liveness Endpoint
+    summary: Liveness checks are utilized to tell whether the application should be
+      restarted
+    get:
+      operationId: microprofile_health_liveness
+      description: Check the liveness of the application
+      tags:
+      - MicroProfile Health
+      summary: The Liveness check of this application
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /gateway/v1/health/ready:
+    description: MicroProfile Health - Readiness Endpoint
+    summary: Readiness checks are used to tell whether the application is able to
+      process requests
+    get:
+      operationId: microprofile_health_readiness
+      description: Check the readiness of the application
+      tags:
+      - MicroProfile Health
+      summary: The Readiness check of this application
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /gateway/v1/health/started:
+    description: MicroProfile Health - Startup Endpoint
+    summary: Startup checks are an used to tell when the application has started
+    get:
+      operationId: microprofile_health_startup
+      description: Check the startup of the application
+      tags:
+      - MicroProfile Health
+      summary: The Startup check of this application
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+info:
+  title: Confluent ide-sidecar API
+  version: 0.216.0
+  description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
+  termsOfService: Your terms here
+  contact:
+    name: Confluent for VS Code Support
+    email: vscode@confluent.io
+    url: https://confluent.io/contact
+servers:
+- url: http://127.0.0.1:26636
+  description: Auto generated value

@@ -8,7 +8,15 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
+import {
+  ConnectionId,
+  connectionIdToType,
+  EnvironmentId,
+  IResourceBase,
+  isCCloud,
+  ISearchable,
+  UsedConnectionType,
+} from "./resource";
 
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
@@ -16,8 +24,9 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.KAFKA_CLUSTER;
 
-  abstract name: string;
-  abstract environmentId: EnvironmentId | undefined;
+  abstract environmentId: EnvironmentId;
+
+  name!: Enforced<string>;
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
@@ -33,7 +42,6 @@ export class CCloudKafkaCluster extends KafkaCluster {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
-  name!: Enforced<string>;
   provider!: Enforced<string>;
   region!: Enforced<string>;
 
@@ -58,8 +66,6 @@ export class DirectKafkaCluster extends KafkaCluster {
   readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
-  name!: Enforced<string>;
-
   // we only support one Kafka cluster and one Schema Registry per connection, so we can treat the
   // connection ID as the environment ID
   get environmentId(): EnvironmentId {
@@ -72,11 +78,30 @@ export class LocalKafkaCluster extends KafkaCluster {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Local;
 
-  name!: Enforced<string>;
-
   get environmentId(): EnvironmentId {
     return this.connectionId as unknown as EnvironmentId;
   }
+}
+
+/** The concrete subclasses. Excludes the abstract base class which lacks a constructor. */
+export type KafkaClusterSubclass =
+  | typeof CCloudKafkaCluster
+  | typeof DirectKafkaCluster
+  | typeof LocalKafkaCluster;
+
+export type KafkaClusterType = CCloudKafkaCluster | DirectKafkaCluster | LocalKafkaCluster;
+
+/** Mapping of connection type to corresponding KafkaCluster subclass */
+const kafkaClusterClassByConnectionType: Record<UsedConnectionType, KafkaClusterSubclass> = {
+  [ConnectionType.Ccloud]: CCloudKafkaCluster,
+  [ConnectionType.Direct]: DirectKafkaCluster,
+  [ConnectionType.Local]: LocalKafkaCluster,
+};
+
+/** Returns the appropriate KafkaCluster subclass based on the connection type. */
+export function getKafkaClusterClass(connectionId: ConnectionId): KafkaClusterSubclass {
+  const connectionType = connectionIdToType(connectionId);
+  return kafkaClusterClassByConnectionType[connectionType];
 }
 
 /** The representation of a {@link KafkaCluster} as a {@link TreeItem} in the VS Code UI. */

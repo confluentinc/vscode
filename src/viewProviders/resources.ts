@@ -22,7 +22,6 @@ import {
 import { ExtensionContextNotSetError, logError } from "../errors";
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
-import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import {
@@ -45,6 +44,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
+import { CCloudOrganization } from "../models/organization";
 import { ConnectionId, ConnectionLabel, isDirect, ISearchable } from "../models/resource";
 import {
   CCloudSchemaRegistry,
@@ -578,19 +578,19 @@ export async function loadCCloudResources(
 
   if (hasCCloudAuthSession()) {
     const loader = CCloudResourceLoader.getInstance();
-    // TODO: have this cached in the resource manager via the loader
-    const currentOrg = await getCurrentOrganization();
+    let currentOrg: CCloudOrganization | undefined = undefined;
 
     const ccloudEnvironments: CCloudEnvironment[] = [];
     try {
+      currentOrg = await loader.getOrganization();
       const ccloudEnvs = await loader.getEnvironments(forceDeepRefresh);
       logger.debug(`got ${ccloudEnvs.length} CCloud environment(s) from loader`);
       ccloudEnvironments.push(...ccloudEnvs);
     } catch (e) {
-      // if we fail to load CCloud environments, we need to get as much information as possible as to
+      // if we fail to load CCloud environments or organization, we need to get as much information as possible as to
       // what went wrong since the user is effectively locked out of the CCloud resources for this org
-      const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
-      logError(e, "loading CCloud environments", {
+      const msg = `Failed to load Confluent Cloud information for the "${currentOrg?.name}" organization.`;
+      logError(e, "loading CCloud environments or organization", {
         extra: { functionName: "loadCCloudResources" },
       });
       showErrorNotificationWithButtons(msg);
@@ -667,9 +667,6 @@ export async function loadLocalResources(): Promise<
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
-    // TODO: this should be handled in the loader once it (and ResourceManager) start handling
-    // local resources
-    getResourceManager().setLocalKafkaClusters(localKafkaClusters);
     localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
   }
 

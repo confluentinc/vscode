@@ -6,6 +6,7 @@ import {
   ViewColumn,
   WebviewPanel,
   WorkspaceConfiguration,
+  commands,
   env,
   window,
   workspace,
@@ -22,6 +23,7 @@ import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
+import { showInfoNotificationWithButtons } from "./notifications";
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
@@ -107,9 +109,10 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     } else {
       result.success = true;
       // save and close the form
-      await window.showInformationMessage("New Connection Created", {
-        modal: true,
-        detail: `View and interact with it in the Resources sidebar`,
+      await showInfoNotificationWithButtons(`New Connection Created`, {
+        "Edit Connection": () => {
+          commands.executeCommand("confluent.connections.direct.edit", newConnection.id);
+        },
       });
       directConnectForm.dispose();
     }
