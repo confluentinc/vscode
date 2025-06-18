@@ -24,9 +24,10 @@ import { getSecretStorage } from "../storage/utils";
 import { NoSidecarRunningError, SidecarFatalError, WrongAuthSecretError } from "./errors";
 import {
   determineSidecarStartupFailureReason,
+  disposeSidecarLogTail,
   gatherSidecarOutputs,
   getSidecarLogfilePath,
-  startTailingSidecarLogs,
+  getSidecarLogTail,
 } from "./logging";
 import { SidecarStartupFailureReason } from "./types";
 import {
@@ -117,7 +118,7 @@ export class SidecarManager {
     let accessToken: string | undefined = await this.getAuthTokenFromSecretStore();
 
     if (this.logTailer == null) {
-      this.logTailer = startTailingSidecarLogs();
+      this.logTailer = getSidecarLogTail();
     }
 
     try {
@@ -624,8 +625,8 @@ export class SidecarManager {
   }
 
   dispose() {
+    disposeSidecarLogTail(); // handles the .unwatch() for the tailer
     if (this.logTailer) {
-      this.logTailer.unwatch();
       this.logTailer = undefined;
     }
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
