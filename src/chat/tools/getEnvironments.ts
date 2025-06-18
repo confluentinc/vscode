@@ -80,7 +80,7 @@ export class GetEnvironmentsTool extends BaseLanguageModelTool<IGetEnvironmentsP
     }
 
     const loader = ResourceLoader.getInstance(params.connectionId);
-    const environments: Environment[] = await loader.getEnvironments(false);
+    const environments: Environment[] = await loader.getEnvironments();
     if (!environments.length) {
       logger.debug("No environments found");
       // Hmm. The user won't get here if they have at least one connection, in that
