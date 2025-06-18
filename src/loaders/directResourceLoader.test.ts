@@ -95,7 +95,7 @@ describe("DirectResourceLoader", () => {
     });
   });
 
-  describe("purgeCache()", () => {
+  describe("reset()", () => {
     it("Clears the cached environments", async () => {
       await loader.getEnvironments(); // Load and cache first.
       sinon.assert.calledOnce(getDirectResourcesStub);
