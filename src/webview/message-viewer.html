@@ -76,20 +76,21 @@
               >
                 <vscode-option value="latest">Latest</vscode-option>
                 <vscode-option value="beginning">From beginning</vscode-option>
-                <vscode-option value="timestamp">From timestamp</vscode-option>
+                <vscode-option value="timestamp">From date/time</vscode-option>
               </vscode-dropdown>
             </div>
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container">
                 <label for="consume-mode-timestamp">Timestamp</label>
-                <vscode-text-field
+                <input
+                  type="datetime-local"
                   id="consume-mode-timestamp"
-                  data-prop-value="this.consumeModeTimestamp()"
-                  data-on-change="this.handleConsumeModeTimestampChange(event.target.value)"
-                  placeholder="Timestamp"
-                >
-                </vscode-text-field>
+                  class="datetime-input"
+                  data-prop-value="this.consumeModeTimestampFormatted()"
+                  data-on-change="this.handleConsumeModeTimestampFormattedChange(event.target.value)"
+                  step="1"
+                />
               </div>
             </template>
 
@@ -641,6 +642,32 @@
       }
       .timer.paused {
         opacity: 0.5;
+      }
+
+      .datetime-input {
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: calc(var(--corner-radius-round) * 1px);
+        color: var(--vscode-input-foreground);
+        font-family: var(--font-family);
+        font-size: var(--type-ramp-base-font-size);
+        height: calc(var(--input-height) * 1px);
+        padding: 2px 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .datetime-input:focus {
+        outline: none;
+      }
+      .datetime-input:hover {
+        border-color: var(--vscode-input-border);
+      }
+      /* Override the default validation coloring for datetime-local input */
+      .datetime-input:user-invalid,
+      .datetime-input:invalid,
+      .datetime-input:valid {
+        border-color: var(--vscode-input-border);
+        box-shadow: none;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
