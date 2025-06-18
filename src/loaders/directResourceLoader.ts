@@ -29,14 +29,14 @@ export class DirectResourceLoader extends CachingResourceLoader<
     this.logger = new Logger(`DirectResourceLoader ${id}`);
   }
 
-  protected async getEnvironmentsFromGraphQL(): Promise<DirectEnvironment[]> {
+  protected async getEnvironmentsFromGraphQL(): Promise<DirectEnvironment[] | undefined> {
     // Drive the GQL query. Wil return a single DirectEnvironment.
     const environment = await getDirectResources(this.connectionId);
-    if (environment === undefined) {
-      this.logger.warn("No Direct resources found for connection", {
+    if (!environment) {
+      this.logger.warn("No environment found for direct connection", {
         connectionId: this.connectionId,
       });
-      return [];
+      return undefined;
     }
     return [environment];
   }

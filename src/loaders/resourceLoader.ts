@@ -107,7 +107,7 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   /** Fetch the Environment-subclass array from sidecar GraphQL. */
-  protected abstract getEnvironmentsFromGraphQL(): Promise<Environment[]>;
+  protected abstract getEnvironmentsFromGraphQL(): Promise<Environment[] | undefined>;
 
   /**
    * Fetch the environments accessible from this connection.
@@ -509,7 +509,7 @@ export abstract class CachingResourceLoader<
    * Subclasses must implement this method to return the environments
    * from the GraphQL API for the given connection type.
    */
-  protected abstract getEnvironmentsFromGraphQL(): Promise<ET[]>;
+  protected abstract getEnvironmentsFromGraphQL(): Promise<ET[] | undefined>;
 
   /** Reset to original state, clearing all cached data for this connection. */
   public async reset(): Promise<void> {
@@ -580,8 +580,16 @@ export abstract class CachingResourceLoader<
       const resourceManager = getResourceManager();
 
       // Do the GraphQL fetches concurrently.
-      // (this.getOrganization() internally caches its result, so we don't need to worry about)
       const environments = await this.getEnvironmentsFromGraphQL();
+
+      if (!environments) {
+        // GraphQL returned undefined, which can happen for Direct connections in rare cases.
+        // Already was logged. Short circuit here w/o storing anything in the resource manager.
+        // Do _not_ set this.coarseLoadingComplete so that the next call to ensureResourcesLoaded()
+        // will re-fetch the coarse resources for this connection.
+        logger.warn(`No environments found for connectionId ${this.connectionId}`);
+        return;
+      }
 
       // Store the environments, clusters, schema registries in the resource manager ...
       const kafkaClusters: KafkaCluster[] = [];
