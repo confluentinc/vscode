@@ -68,7 +68,7 @@ export abstract class ResourceLoader implements IResourceBase {
   static directLoaders(): DirectResourceLoader[] {
     return ResourceLoader.loaders().filter(
       (loader) => loader.connectionType === ConnectionType.Direct,
-    ) as unknown as DirectResourceLoader[];
+    ) as DirectResourceLoader[];
   }
 
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
