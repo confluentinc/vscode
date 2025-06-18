@@ -131,7 +131,7 @@ async function saveSidecarLogFile() {
       {
         label: "Human-readable format",
         description: "Formatted logs easier to read",
-        detail: "Same format as shown in the Sidecar output channel",
+        detail: "Same format as shown in the 'Confluent (Sidecar)' output channel",
         id: "formatted",
       },
       {
@@ -143,7 +143,7 @@ async function saveSidecarLogFile() {
     ],
     {
       title: "Choose sidecar log format",
-      placeHolder: "Select the format for the downloaded sidecar logs",
+      placeHolder: "Select the format for the saved sidecar logs",
     },
   );
 
