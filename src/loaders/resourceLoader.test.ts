@@ -3,6 +3,7 @@ import * as sinon from "sinon";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_KEY_SUBJECT,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
@@ -21,7 +22,7 @@ import {
 } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
-import { LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as errors from "../errors";
 import { ConnectionId } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
@@ -29,6 +30,7 @@ import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
+import { CCloudResourceLoader } from "./ccloudResourceLoader";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -540,6 +542,13 @@ describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
     getSubjectsStub.resolves(Array.from(uniqueSubjects));
   }
 
+  it("Hates schema registry from wrong environment", async () => {
+    // loader is LocalResourceLoader, so it will not accept a schema registry from a different environment.
+    assert.rejects(loaderInstance.getTopicSubjectGroups(TEST_CCLOUD_KAFKA_TOPIC), (err) => {
+      return (err as Error).message.startsWith("Mismatched connectionId");
+    });
+  });
+
   it("Returns related subjects+schemas for a topic", async () => {
     populateSubjects(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas!);
     getSchemasForSubjectStub.resolves(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
@@ -732,4 +741,31 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
       assert.ok(clearCacheStub.calledOnce);
     });
   }
+});
+
+describe("ResourceLoader::getInstance()", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("Returns LocalResourceLoader instance for LOCAL_CONNECTION_ID", () => {
+    const loader = ResourceLoader.getInstance(LOCAL_CONNECTION_ID);
+    assert.ok(loader instanceof LocalResourceLoader);
+    assert.strictEqual(loader.connectionId, LOCAL_CONNECTION_ID);
+  });
+
+  it("Returns CCloudResourceLoader instance for CCloud connectionId", () => {
+    const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
+    assert.ok(loader instanceof CCloudResourceLoader);
+    assert.strictEqual(loader.connectionId, CCLOUD_CONNECTION_ID);
+  });
+
+  it("Raises error if called with unknown connectionId", () => {
+    assert.throws(
+      () => ResourceLoader.getInstance("unknown-connection-id" as ConnectionId),
+      (err) => {
+        return (err as Error).message.startsWith("Unknown connectionId");
+      },
+    );
+  });
 });

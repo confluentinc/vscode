@@ -1,6 +1,7 @@
 import { toKafkaTopicOperations } from "../authz/types";
-import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { isResponseError } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/schema";
@@ -48,7 +49,7 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
       `fetched ${topicsResp.data.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
     );
   } catch (error) {
-    if (error instanceof ResponseError) {
+    if (isResponseError(error)) {
       if (
         error.response.status === 500 &&
         cluster.uri &&

@@ -8,8 +8,6 @@ import { CachingResourceLoader } from "./resourceLoader";
 
 /**
  * ResourceLoader implementation atop the LOCAL "cluster".
- * Does no caching at all. Directly fetches from the local sidecar API
- * each time a resource is requested.
  */
 export class LocalResourceLoader extends CachingResourceLoader<
   LocalEnvironment,
