@@ -6,6 +6,7 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
+- Updated ide-sidecar version to v0.216.0
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
 
