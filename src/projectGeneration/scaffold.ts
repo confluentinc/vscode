@@ -10,9 +10,7 @@ import { KafkaTopic } from "../models/topic";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { removeProtocolPrefix } from "../utils/bootstrapServers";
 
-export function registerProjectGenerationCommands(
-  context: vscode.ExtensionContext,
-): vscode.Disposable[] {
+export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("ccloud.scaffoldProject", async () => {
       await scaffoldProjectRequest();
