@@ -16,7 +16,6 @@ import { CCloudOrganization } from "../models/organization";
 import { IFlinkQueryable } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar, SidecarHandle } from "../sidecar";
-import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader, ResourceLoader } from "./resourceLoader";
@@ -120,13 +119,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       return this.organization;
     }
     logger.withCallpoint("getOrganization()").error("No current organization found.");
-  }
-
-  /** Are there any Flink compute pools at all? */
-  public async hasFlinkComputePools(): Promise<boolean> {
-    await this.ensureCoarseResourcesLoaded();
-    const environments = await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
-    return environments.some((env) => env.flinkComputePools.length > 0);
   }
 
   /**

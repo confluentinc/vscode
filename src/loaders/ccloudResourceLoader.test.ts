@@ -20,7 +20,6 @@ import {
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import * as graphqlEnvs from "../graphql/environments";
 import * as graphqlOrgs from "../graphql/organizations";
-import { CCloudEnvironment } from "../models/environment";
 import { restFlinkStatementToModel } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
@@ -272,35 +271,6 @@ describe("CCloudResourceLoader", () => {
           message: "Cannot fetch clusters w/o an environmentId.",
         },
       );
-    });
-  });
-
-  describe("hasFlinkComputePools", () => {
-    beforeEach(() => {
-      // Make ensureCoarseResourcesLoaded seem completed already
-      // (private method)
-      sandbox.stub(loader as any, "ensureCoarseResourcesLoaded").resolves();
-    });
-
-    function setGetEnvironmentsResult(results: CCloudEnvironment[]) {
-      stubbedResourceManager.getEnvironments.resolves(results);
-    }
-
-    it("should return true if there are Flink compute pools", async () => {
-      setGetEnvironmentsResult([
-        new CCloudEnvironment({
-          ...TEST_CCLOUD_ENVIRONMENT,
-          flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-        }),
-      ]);
-      const hasPools = await loader.hasFlinkComputePools();
-      assert.strictEqual(hasPools, true);
-    });
-
-    it("should return false if there are no Flink compute pools", async () => {
-      setGetEnvironmentsResult([TEST_CCLOUD_ENVIRONMENT]);
-      const hasPools = await loader.hasFlinkComputePools();
-      assert.strictEqual(hasPools, false);
     });
   });
 
