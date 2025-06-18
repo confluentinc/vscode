@@ -23,6 +23,10 @@ export const ENABLE_REQUEST_RESPONSE_LOGGING: boolean =
 /** Header name for the sidecar's PID in the response headers. */
 export const SIDECAR_PROCESS_ID_HEADER = "x-sidecar-pid";
 
+/** File name for the raw JSON version of the sidecar logs. */
 export const SIDECAR_LOGFILE_NAME = "vscode-confluent-sidecar.log";
+
+/** File name for the human-readable formatted version of the sidecar logs. */
+export const SIDECAR_FORMATTED_LOGFILE_NAME = "vscode-confluent-sidecar-formatted.log";
 
 export const MOMENTARY_PAUSE_MS = 500; // half a second.
