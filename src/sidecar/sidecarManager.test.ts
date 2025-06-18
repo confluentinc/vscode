@@ -259,19 +259,28 @@ describe("sidecarManager.ts", () => {
     });
 
     describe("dispose()", () => {
-      it("w/o logTailer", () => {
-        manager["logTailer"] = undefined;
-        // should do nothing.
-        manager.dispose();
+      let disposeStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        disposeStub = sandbox.stub(sidecarLogging, "disposeSidecarLogTail");
       });
 
-      it("w/ logTailer", () => {
-        const unwatchStub = sandbox.stub();
-        manager["logTailer"] = {
-          unwatch: unwatchStub,
-        } as unknown as Tail;
+      it("should not call disposeSidecarLogTail and leave private logTailer undefined when no logTailer is set", () => {
+        manager["logTailer"] = undefined;
+
         manager.dispose();
-        sinon.assert.calledOnce(unwatchStub);
+
+        // should do nothing.
+        assert.strictEqual(manager["logTailer"], undefined);
+        sinon.assert.notCalled(disposeStub);
+      });
+
+      it("should call disposeSidecarLogTail and clear logTailer when logTailer is set", () => {
+        manager["logTailer"] = {} as unknown as Tail;
+
+        manager.dispose();
+
+        sinon.assert.calledOnce(disposeStub);
         // and should be dereferenced.
         assert.strictEqual(manager["logTailer"], undefined);
       });

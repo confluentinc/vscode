@@ -154,7 +154,7 @@ export const ROTATED_LOGFILE_NAMES: string[] = [];
 
 /** Max size of any log file written to disk.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
-const MAX_LOGFILE_SIZE = "10M"; // 10MB max file size
+export const MAX_LOGFILE_SIZE = "10M"; // 10MB max file size
 
 /** Number of log files to keep.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#maxfiles */
@@ -162,7 +162,7 @@ export const MAX_LOGFILES = 3; // only keep 3 **rotated** log files at a time fo
 
 /** How often log files should rotate if they don't exceed {@link MAX_LOGFILE_SIZE}.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#interval */
-const LOGFILE_ROTATION_INTERVAL = "1d"; // rotate log files daily
+export const LOGFILE_ROTATION_INTERVAL = "1d"; // rotate log files daily
 
 /** Single stream to allow rotating-file-stream to keep track of file sizes and rotation timing. */
 let logFileStream: RotatingFileStream | undefined;
