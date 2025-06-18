@@ -1,4 +1,7 @@
 import { Page } from "@playwright/test";
+import { Quickpick } from "../quickInputs/Quickpick";
+import { QuickpickItem } from "../quickInputs/QuickpickItem";
+import { DirectConnectionForm } from "../webviews/DirectConnectionForm";
 import { View } from "./View";
 import { CCloudEnvironmentItem } from "./viewItems/CCloudEnvironmentItem";
 import { CCloudItem } from "./viewItems/CCloudItem";
@@ -31,6 +34,25 @@ export class ResourcesView extends View {
   /** Click the "Refresh" nav action in the view title area. */
   async clickRefresh(): Promise<void> {
     await this.clickNavAction("Refresh");
+  }
+
+  /**
+   * Open the Direct Connection form by clicking "Add New Connection" -> "Enter manually".
+   * @returns A DirectConnectionForm instance for interacting with the form
+   */
+  async openDirectConnectionForm(): Promise<DirectConnectionForm> {
+    await this.clickAddNewConnection();
+
+    const quickpick = new Quickpick(this.page);
+    // choices will be either "Enter manually" or "Import from file"
+    const enterManuallyItem: QuickpickItem | null =
+      await quickpick.findItemByLabel("Enter manually");
+    if (!enterManuallyItem) {
+      throw new Error("'Enter manually' option not found in 'Add New Connection' quickpick");
+    }
+
+    await enterManuallyItem.click();
+    return new DirectConnectionForm(this.page);
   }
 
   /**
