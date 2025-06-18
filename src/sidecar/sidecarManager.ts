@@ -625,8 +625,8 @@ export class SidecarManager {
   }
 
   dispose() {
-    disposeSidecarLogTail(); // handles the .unwatch() for the tailer
     if (this.logTailer) {
+      disposeSidecarLogTail(); // handles the .unwatch() for the tailer
       this.logTailer = undefined;
     }
     // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
