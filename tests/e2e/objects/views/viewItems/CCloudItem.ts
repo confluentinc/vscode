@@ -1,11 +1,6 @@
 import { Locator, Page } from "@playwright/test";
 import { ViewItem } from "./ViewItem";
 
-interface SignedInState {
-  hasNotConnectedText: boolean;
-  expandable: boolean;
-}
-
 /**
  * Object representing the "Confluent Cloud" item in the Resources {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}.
  * This provides the following inline actions:
@@ -17,40 +12,19 @@ export class CCloudItem extends ViewItem {
     super(page, locator);
   }
 
-  async getSignedInState(): Promise<SignedInState> {
-    const [hasNotConnectedText, expandable]: boolean[] = await Promise.all([
-      this.locator.getByText("(Not Connected)").isVisible(),
-      this.isExpandable(),
-    ]);
-    return { hasNotConnectedText, expandable };
-  }
-
-  /**
-   * Check if the item description doesn't show "(Not Connected)" and is expandable, indicating that
-   * the user is signed in to Confluent Cloud.
-   */
-  async showsSignedInState(): Promise<boolean> {
-    const { hasNotConnectedText, expandable } = await this.getSignedInState();
-    return !hasNotConnectedText && expandable;
-  }
-
-  /**
-   * Check if the item description shows "(Not Connected)" and is not collapsible/expandable,
-   * indicating that the user is signed out of Confluent Cloud.
-   */
-  async showsSignedOutState(): Promise<boolean> {
-    const { hasNotConnectedText, expandable } = await this.getSignedInState();
-    return hasNotConnectedText && !expandable;
+  /** The "(Not Connected)" description that appears when the user isn't signed in to CCloud. */
+  get notConnectedText(): Locator {
+    return this.locator.getByText("(Not Connected)");
   }
 
   /** Click the "Sign In" inline action on this item. */
   async clickSignIn(): Promise<void> {
-    await this.locator.getByRole("button", { name: "Sign In" }).click();
+    await this.clickInlineAction("Sign In");
   }
 
   /** Click the "Sign Out" inline action on this item. */
   async clickSignOut(): Promise<void> {
-    await this.locator.getByRole("button", { name: "Sign Out" }).click();
+    await this.clickInlineAction("Sign Out");
   }
 
   /**
@@ -59,7 +33,7 @@ export class CCloudItem extends ViewItem {
    * other reason.
    */
   async getOrganizationName(): Promise<string | null> {
-    if (await this.showsSignedOutState()) {
+    if (await this.notConnectedText.isVisible()) {
       return null;
     }
 
@@ -74,6 +48,6 @@ export class CCloudItem extends ViewItem {
 
   /** Click the "Change Organization" action in the CCloud item. */
   async clickChangeOrganization(): Promise<void> {
-    await this.locator.getByRole("button", { name: "Change Organization" }).click();
+    await this.clickInlineAction("Change Organization");
   }
 }
