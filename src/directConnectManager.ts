@@ -115,7 +115,7 @@ export class DirectConnectionManager {
         // we get the change event, so we have to be conservative and purge the caches of any
         // existing direct loaders.
         const existingLoader = existingDirectLoadersById.get(id)!;
-        existingLoader.purgeCache();
+        await existingLoader.reset();
       }
     }
 
