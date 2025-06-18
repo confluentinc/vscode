@@ -21,8 +21,8 @@ describe("DirectResourceLoader", () => {
   let loader: DirectResourceLoader;
   let getDirectResourcesStub: sinon.SinonStub;
 
-  before(() => {
-    getTestExtensionContext();
+  before(async () => {
+    await getTestExtensionContext();
   });
 
   beforeEach(async () => {
@@ -113,11 +113,11 @@ describe("DirectResourceLoader", () => {
       assert.deepStrictEqual(kafkaClusters, myEnvironment.kafkaClusters);
     });
 
-    it("Throws an error for unknown environment ID", async () => {
-      await assert.rejects(
-        loader.getKafkaClustersForEnvironmentId("unknown-environment-id" as EnvironmentId),
-        /Unknown environmentId unknown-environment-id/,
+    it("Returns empty array for unknown environment ID", async () => {
+      const empty = await loader.getKafkaClustersForEnvironmentId(
+        "unknown-environment-id" as EnvironmentId,
       );
+      assert.deepStrictEqual([], empty);
     });
   });
 

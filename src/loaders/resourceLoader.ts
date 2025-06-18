@@ -579,7 +579,7 @@ export abstract class CachingResourceLoader<
     try {
       const resourceManager = getResourceManager();
 
-      // Do the GraphQL fetches concurrently.
+      // Perform the GraphQL fetch(es)
       const environments = await this.getEnvironmentsFromGraphQL();
 
       if (!environments) {
