@@ -680,7 +680,7 @@ describe("ResourceManager SR subject methods", function () {
     assert.deepStrictEqual(otherSubjects, otherCCloudSRSubjects);
   });
 
-  it("deleteLocalSubjects() should correctly delete only local SR subjects", async () => {
+  it("purgeConnectionResources(LOCAL_CONNECTION_ID) should correctly delete only local SR subjects", async () => {
     // set the subjects in extension storage before deleting them
     await resourceManager.setSubjects(
       TEST_CCLOUD_SCHEMA_REGISTRY,
