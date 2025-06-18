@@ -234,7 +234,7 @@ async function _activateExtension(
     ...registerDiffCommands(),
     ...registerExtraCommands(),
     ...registerDockerCommands(),
-    ...registerProjectGenerationCommands(context),
+    ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
