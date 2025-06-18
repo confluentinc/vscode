@@ -12,13 +12,13 @@ import { removeProtocolPrefix } from "../utils/bootstrapServers";
 
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
-    registerCommandWithLogging("ccloud.scaffoldProject", async () => {
-      await scaffoldProjectRequest();
-    }),
-    registerCommandWithLogging("ccloud.scaffoldResource", async (resource: ResourceLoader) => {
-      await resourceScaffoldProjectRequest(resource);
-    }),
+    registerCommandWithLogging("confluent.resources.scaffold", scaffoldProjectCommand),
+    registerCommandWithLogging("confluent.scaffold", scaffoldProjectCommand),
   ];
+}
+
+async function scaffoldProjectCommand(...args: any[]) {
+  await scaffoldProjectRequest(...args);
 }
 
 export async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
