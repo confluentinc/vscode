@@ -8,6 +8,8 @@ All notable changes to this extension will be documented in this file.
 
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
+- Downloading the sidecar logs will now prompt the user to save either the raw (JSON) logs or the
+  formatted logs (same format as the "Confluent (Sidecar)" output channel).
 
 ## 1.4.0
 
