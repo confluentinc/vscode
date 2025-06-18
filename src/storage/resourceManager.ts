@@ -5,15 +5,13 @@ import {
   ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionSpecToJSON,
-  ConnectionType,
   Status,
 } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { EnvironmentType, getEnvironmentClass } from "../models/environment";
+import { Environment, EnvironmentType, getEnvironmentClass } from "../models/environment";
 import { KafkaClusterType, getKafkaClusterClass } from "../models/kafkaCluster";
 import {
   ConnectionId,
@@ -52,28 +50,33 @@ type SubjectStringCache = Map<string, string[] | undefined>;
 type CoarseResourceType = KafkaClusterType | SchemaRegistryType | EnvironmentType;
 
 /**
- * Enumeration of strings describing coarse resource kinds, used to generate workspace storage keys.
+ * Enumeration of strings describing resource kinds we generate
+ * per-connection-id storage keys for.
+ *
  * See {@link ResourceManager.generateWorkspaceStorageKey}, and, say,
  * {@link ResourceManager.getEnvironments} / {@link ResourceManager.setEnvironments}.
  */
-export enum CoarseResourceKind {
+export enum GeneratedKeyResourceType {
   ENVIRONMENTS = "environments",
   KAFKA_CLUSTERS = "kafkaClusters",
   SCHEMA_REGISTRIES = "schemaRegistries",
+  TOPICS = "topics",
+  SUBJECTS = "subjects",
 }
 
 /**
  * Type describing per-connection+resource type generated workspace storage keys.
  * See {@link ResourceManager.generateWorkspaceStorageKey} and callers.
- *  */
-type GeneratedWorkspaceKey = string & { readonly __generatedWorkspaceKey: unique symbol };
+ **/
+export type GeneratedWorkspaceKey = string & { readonly __generatedWorkspaceKey: unique symbol };
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
   /** Mutexes for each workspace/secret storage key to prevent conflicting concurrent writes */
-  private mutexes: Map<WorkspaceStorageKeys | SecretStorageKeys, Mutex> = new Map();
+  private mutexes: Map<WorkspaceStorageKeys | SecretStorageKeys | GeneratedWorkspaceKey, Mutex> =
+    new Map();
 
   private readonly globalState: GlobalState;
   private readonly workspaceState: WorkspaceState;
@@ -87,13 +90,14 @@ export class ResourceManager {
     this.workspaceState = getWorkspaceState();
     this.secrets = getSecretStorage();
 
-    // Initialize mutexes for each workspace/secret storage key
+    // Initialize mutexes for each pre-known workspace/secret storage key
     for (const key of [
       ...Object.values(WorkspaceStorageKeys),
       ...Object.values(SecretStorageKeys),
     ]) {
       this.mutexes.set(key, new Mutex());
     }
+    // GeneratedWorkspaceKey mutexes are created on-the-fly, so no need to pre-populate them.
   }
 
   static instance: ResourceManager | null = null; // NOSONAR
@@ -107,22 +111,6 @@ export class ResourceManager {
   }
 
   /**
-   * Delete all Confluent Cloud-related resources from extension state.
-   * @remarks This is primarily used during any CCloud connection changes where we need to "reset".
-   * As the scope of stored CCloud resources grows, this method may need to be updated to handle
-   * new resource types / storage keys.
-   */
-  async deleteCCloudResources(): Promise<void> {
-    await Promise.all([
-      this.setEnvironments(CCLOUD_CONNECTION_ID, []),
-      this.setKafkaClusters(CCLOUD_CONNECTION_ID, []),
-      this.setSchemaRegistries(CCLOUD_CONNECTION_ID, []),
-      this.deleteCCloudTopics(),
-      this.deleteCCloudSubjects(),
-    ]);
-  }
-
-  /**
    * Run an async callback which will both read and later mutate workspace
    * or secret storage with exclusive access to the elements guarded by that
    * workspace or secret storage key.
@@ -132,22 +120,44 @@ export class ResourceManager {
    * read and write to the same workspace storage key, namely mutating actions to keys that hold arrays or maps.
    */
   private async runWithMutex<T>(
-    key: WorkspaceStorageKeys | SecretStorageKeys,
+    key: WorkspaceStorageKeys | SecretStorageKeys | GeneratedWorkspaceKey,
     callback: () => Promise<T>,
   ): Promise<T> {
-    const mutex = this.mutexes.get(key);
+    let mutex = this.mutexes.get(key);
     if (!mutex) {
-      throw new Error(`No mutex found for key: ${key}`);
+      // Generated keys are not pre-populated, so we create a new mutex for them upon demand.
+      logger.debug(`Creating new mutex for key: ${key}`);
+      mutex = new Mutex();
+      this.mutexes.set(key, mutex);
     }
 
     return await mutex.runExclusive(callback);
+  }
+
+  /**
+   * Purge all the cached resources for a given connection ID.
+   */
+  async purgeConnectionResources(connectionId: ConnectionId): Promise<void> {
+    // Collect array of all of the generated workspace storage keys for this connection ID
+    const allConnectionIdStorageKeys = Object.values(GeneratedKeyResourceType).map((resourceType) =>
+      this.generateWorkspaceStorageKey(connectionId, resourceType),
+    );
+
+    // Promote to promises over calls to clear the workspace storage
+    // values for each of the generated keys.
+    const updatePromises = allConnectionIdStorageKeys.map((key) =>
+      this.workspaceState.update(key, undefined),
+    );
+
+    // Run the promises; clearing all cached data for this connection ID.
+    await Promise.all(updatePromises);
   }
 
   // Coarse resources
 
   private async storeCoarseResources(
     connectionId: ConnectionId,
-    resourceKind: CoarseResourceKind,
+    resourceKind: GeneratedKeyResourceType,
     resources: IResourceBase[],
   ): Promise<void> {
     const storageKey = this.generateWorkspaceStorageKey(connectionId, resourceKind);
@@ -172,7 +182,7 @@ export class ResourceManager {
 
   private async loadCoarseResources<T extends CoarseResourceType>(
     connectionId: ConnectionId,
-    resourceKind: CoarseResourceKind,
+    resourceKind: GeneratedKeyResourceType,
     resourceCreator: (fromJson: T) => T,
   ): Promise<T[]> {
     const storageKey = this.generateWorkspaceStorageKey(connectionId, resourceKind);
@@ -198,11 +208,12 @@ export class ResourceManager {
 
   // ENVIRONMENTS (coarse resource)
 
-  async setEnvironments<T extends EnvironmentType>(
-    connectionId: ConnectionId,
-    environments: T[],
-  ): Promise<void> {
-    await this.storeCoarseResources(connectionId, CoarseResourceKind.ENVIRONMENTS, environments);
+  async setEnvironments(connectionId: ConnectionId, environments: Environment[]): Promise<void> {
+    await this.storeCoarseResources(
+      connectionId,
+      GeneratedKeyResourceType.ENVIRONMENTS,
+      environments,
+    );
   }
 
   async getEnvironments<T extends EnvironmentType>(connectionId: ConnectionId): Promise<T[]> {
@@ -211,7 +222,7 @@ export class ResourceManager {
 
     return this.loadCoarseResources<T>(
       connectionId,
-      CoarseResourceKind.ENVIRONMENTS,
+      GeneratedKeyResourceType.ENVIRONMENTS,
       environmentCreator,
     );
   }
@@ -227,7 +238,11 @@ export class ResourceManager {
     connectionId: ConnectionId,
     clusters: T[],
   ): Promise<void> {
-    await this.storeCoarseResources(connectionId, CoarseResourceKind.KAFKA_CLUSTERS, clusters);
+    await this.storeCoarseResources(
+      connectionId,
+      GeneratedKeyResourceType.KAFKA_CLUSTERS,
+      clusters,
+    );
   }
 
   /**
@@ -240,7 +255,7 @@ export class ResourceManager {
 
     return this.loadCoarseResources<T>(
       connectionId,
-      CoarseResourceKind.KAFKA_CLUSTERS,
+      GeneratedKeyResourceType.KAFKA_CLUSTERS,
       kafkaClusterCreator,
     );
   }
@@ -266,7 +281,11 @@ export class ResourceManager {
     connectionId: ConnectionId,
     registries: T[],
   ): Promise<void> {
-    await this.storeCoarseResources(connectionId, CoarseResourceKind.SCHEMA_REGISTRIES, registries);
+    await this.storeCoarseResources(
+      connectionId,
+      GeneratedKeyResourceType.SCHEMA_REGISTRIES,
+      registries,
+    );
   }
 
   /** Get the properly subtyped schema registries for this connection id from storage. If none are found, will return empty array. */
@@ -278,7 +297,7 @@ export class ResourceManager {
 
     return this.loadCoarseResources<T>(
       connectionId,
-      CoarseResourceKind.SCHEMA_REGISTRIES,
+      GeneratedKeyResourceType.SCHEMA_REGISTRIES,
       schemaRegistryCreator,
     );
   }
@@ -306,7 +325,10 @@ export class ResourceManager {
     schemaRegistryKeyable: ISchemaRegistryResource,
     subjects: Subject[] | undefined,
   ): Promise<void> {
-    const workspaceStorageKey = this.subjectKeyForSchemaRegistry(schemaRegistryKeyable);
+    const workspaceStorageKey = this.generateWorkspaceStorageKey(
+      schemaRegistryKeyable.connectionId,
+      GeneratedKeyResourceType.SUBJECTS,
+    );
 
     logger.debug(
       `Setting ${subjects?.length !== undefined ? subjects.length : "undefined"} subjects for schema registry ${schemaRegistryKeyable.schemaRegistryId} (${workspaceStorageKey})`,
@@ -351,7 +373,10 @@ export class ResourceManager {
   async getSubjects(
     schemaRegistryKeyable: ISchemaRegistryResource,
   ): Promise<Subject[] | undefined> {
-    const key = this.subjectKeyForSchemaRegistry(schemaRegistryKeyable);
+    const key = this.generateWorkspaceStorageKey(
+      schemaRegistryKeyable.connectionId,
+      GeneratedKeyResourceType.SUBJECTS,
+    );
 
     let subjectsByRegistryIDString: string | undefined;
 
@@ -396,49 +421,6 @@ export class ResourceManager {
     );
   }
 
-  /**
-   * Delete all ccloud schema registry subjects.
-   */
-  async deleteCCloudSubjects(): Promise<void> {
-    return await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS, undefined);
-  }
-
-  /**
-   * Delete all local schema registry subjects.
-   *
-   * Currently not called, but should probably be. Likewise for any direct connection assets.
-   * @see {@link deleteCCloudResources}, probably need equivalents for both.
-   */
-  async deleteLocalSubjects(): Promise<void> {
-    return await this.workspaceState.update(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS, undefined);
-  }
-
-  /**
-   * Determine what workspace storage key should be used for subject storage for this schema registry
-   * based on its connection type.
-   */
-  subjectKeyForSchemaRegistry(
-    schemaRegistryKeyable: ISchemaRegistryResource,
-  ): WorkspaceStorageKeys {
-    // Alas that ConnectionType includes values that we'll never use,
-    // like ConnectionType.Platform, so we have to check for the known ones.
-    // Switching over to UsedConnectionType (or renaming things)
-    // would be better, but that would require a lot of refactoring.
-    switch (schemaRegistryKeyable.connectionType) {
-      case ConnectionType.Ccloud:
-        return WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS;
-      case ConnectionType.Local:
-        return WorkspaceStorageKeys.LOCAL_SR_SUBJECTS;
-      case ConnectionType.Direct:
-        return WorkspaceStorageKeys.DIRECT_SR_SUBJECTS;
-      default:
-        logger.warn("Unknown schema registry connection type", {
-          sr: JSON.stringify(schemaRegistryKeyable, null, 2),
-        });
-        throw new Error("Unknown schema registry connection type");
-    }
-  }
-
   // TOPICS
 
   /**
@@ -454,7 +436,11 @@ export class ResourceManager {
       throw new Error("Cluster ID mismatch in topics");
     }
 
-    const key = this.topicKeyForCluster(cluster);
+    // Will be a per-connection-id key for storing topics by cluster ID.
+    const key = this.generateWorkspaceStorageKey(
+      cluster.connectionId,
+      GeneratedKeyResourceType.TOPICS,
+    );
 
     await this.runWithMutex(key, async () => {
       // Get the JSON-stringified map from storage
@@ -478,7 +464,10 @@ export class ResourceManager {
    * indicating nothing at all known about this cluster (and should be deep probed).
    */
   async getTopicsForCluster(cluster: KafkaClusterType): Promise<KafkaTopic[] | undefined> {
-    const key = this.topicKeyForCluster(cluster);
+    const key = this.generateWorkspaceStorageKey(
+      cluster.connectionId,
+      GeneratedKeyResourceType.TOPICS,
+    );
 
     // Get the JSON-stringified map from storage
     const topicsByClusterString: string | undefined = this.workspaceState.get(key);
@@ -497,27 +486,6 @@ export class ResourceManager {
     // (Empty list will be returned as is, indicating that we know there are
     //  no topics in this cluster.)
     return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic as KafkaTopic));
-  }
-
-  /**
-   * Delete all ccloud topics from workspace state, such as when user logs out from ccloud.
-   */
-  async deleteCCloudTopics(): Promise<void> {
-    return await this.workspaceState.update(WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS, undefined);
-  }
-
-  /**
-   * Return the use-with-storage StateKafkaTopics key for this type of cluster.
-   *
-   * (not private only for testing)
-   */
-  topicKeyForCluster(cluster: KafkaClusterType): WorkspaceStorageKeys {
-    if (cluster.connectionId === CCLOUD_CONNECTION_ID) {
-      return WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS;
-    } else {
-      logger.warn("Unknown cluster type", cluster);
-      throw new Error("Unknown cluster type");
-    }
   }
 
   // AUTH PROVIDER
@@ -700,7 +668,7 @@ export class ResourceManager {
 
   generateWorkspaceStorageKey(
     connectionId: ConnectionId,
-    resourceType: CoarseResourceKind,
+    resourceType: GeneratedKeyResourceType,
   ): GeneratedWorkspaceKey {
     return `${connectionId}-${resourceType}` as GeneratedWorkspaceKey;
   }

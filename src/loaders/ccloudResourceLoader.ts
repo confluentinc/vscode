@@ -13,14 +13,13 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
-import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
+import { IFlinkQueryable } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
 import { getSidecar, SidecarHandle } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
-import { ResourceLoader } from "./resourceLoader";
+import { CachingResourceLoader, ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
@@ -35,7 +34,11 @@ const logger = new Logger("storage.ccloudResourceLoader");
  *  - CCloud Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
  *
  */
-export class CCloudResourceLoader extends ResourceLoader {
+export class CCloudResourceLoader extends CachingResourceLoader<
+  CCloudEnvironment,
+  CCloudKafkaCluster,
+  CCloudSchemaRegistry
+> {
   connectionId = CCLOUD_CONNECTION_ID;
   connectionType = ConnectionType.Ccloud;
 
@@ -47,12 +50,6 @@ export class CCloudResourceLoader extends ResourceLoader {
     }
     return CCloudResourceLoader.instance;
   }
-
-  /** Have the course resources been cached already? */
-  private coarseLoadingComplete: boolean = false;
-
-  /** If in progress of loading the coarse resources, the promise doing so. */
-  private currentlyCoarseLoadingPromise: Promise<void> | null = null;
 
   /** The user's current ccloud organization. Determined along with coarse resources. */
   private organization: CCloudOrganization | null = null;
@@ -71,7 +68,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   private registerEventListeners(): void {
     // When the ccloud connection state changes, reset the loader's state.
     const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
-      this.reset();
+      await this.reset();
 
       if (connected) {
         // Start the coarse preloading process if we think we have a ccloud connection.
@@ -82,200 +79,27 @@ export class CCloudResourceLoader extends ResourceLoader {
     ResourceLoader.disposables.push(ccloudConnectedSub);
   }
 
-  protected deleteCoarseResources(): void {
-    getResourceManager().deleteCCloudResources();
+  /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */
+  protected async getEnvironmentsFromGraphQL(): Promise<CCloudEnvironment[]> {
+    // Drive the GQL query. Sigh, poorly named function, since is ccloud-specific.
+    return await getEnvironments();
+  }
+
+  /** Fulfill ResourceLoader::reset(), taking care of clearing in-memory cached organization. */
+  public async reset(): Promise<void> {
+    // Upcall, then also forget the organization (in memory only).
+    await super.reset();
+    // cached in memory only.
     this.organization = null;
   }
 
   /**
-   * Promise ensuring that the "coarse" ccloud resources are cached into the resource manager.
-   *
-   * Fired off when the connection edges to connected, and/or when any view controller needs to get at
-   * any of the following resources stored in ResourceManager. Is safe to call multiple times
-   * in a connected session, as it will only fetch the resources once. Concurrent calls while the resources
-   * are being fetched will await the same promise. Subsequent calls after completion will return
-   * immediately.
-   *
-   * Currently, when the connection / authentication session is closed/ended, the resources
-   * are left in the resource manager, however the loader will reset its state to not having fetched
-   * the resources, so that the next call to ensureResourcesLoaded() will re-fetch the resources.
-   *
-   * Coarse resources are:
-   *   - Environments
-   *   - Kafka Clusters
-   *   - Schema Registries
-   *
-   * They do not include topics within a cluster or schemas within a schema registry, which are fetched
-   * and cached more closely to when they are needed.
-   */
-  private async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
-    // If caller requested a deep refresh, reset the loader's state so that we fall through to
-    // re-fetching the coarse resources.
-    if (forceDeepRefresh) {
-      logger.debug(`Deep refreshing ${this.connectionType} resources.`);
-      this.reset();
-      this.deleteCoarseResources();
-    }
-
-    // If the resources are already loaded, nothing to wait on.
-    if (this.coarseLoadingComplete) {
-      return;
-    }
-
-    // If in progress of loading, have the caller await the promise that is currently loading the resources.
-    if (this.currentlyCoarseLoadingPromise) {
-      return this.currentlyCoarseLoadingPromise;
-    }
-
-    // This caller is the first to request the preload, so do the work in the foreground,
-    // but also store the promise so that any other concurrent callers can await it.
-    this.currentlyCoarseLoadingPromise = this.doLoadCoarseResources();
-    await this.currentlyCoarseLoadingPromise;
-  }
-
-  /**
-   * Load the {@link CCloudEnvironment}s and their direct children (Kafka clusters, schema registry) into
-   * the resource manager.
-   *
-   * Worker function that does the actual loading of the coarse resources:
-   *   - Environments (ResourceManager.getCCloudEnvironments())
-   *   - Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
-   *   - Schema Registries (ResourceManager.getCCloudSchemaRegistries())
+   * Refine CoarseCachingResourceLoader:: doLoadCoarseResources() to
+   * also concurrently load the organization (cached in memory).
    */
   protected async doLoadCoarseResources(): Promise<void> {
-    // Start loading the ccloud-related resources from sidecar API into the resource manager for local caching.
-    // If the loading fails at any time (including, say, the user logs out of CCloud while in progress), then
-    // an exception will be thrown and the loadingComplete flag will remain false.
-    try {
-      const resourceManager = getResourceManager();
-
-      // Do the GraphQL fetches concurrently.
-      // (this.getOrganization() internally caches its result, so we don't need to worry about)
-      const gqlResults = await Promise.all([getEnvironments(), this.getOrganization()]);
-
-      // Store the environments, clusters, schema registries in the resource manager
-      const environments: CCloudEnvironment[] = gqlResults[0];
-      await resourceManager.setEnvironments(CCLOUD_CONNECTION_ID, environments);
-
-      // Collect all of the CCloudKafkaCluster and CCloudSchemaRegistries into individual arrays
-      // before storing them via the resource manager.
-      const kafkaClusters: CCloudKafkaCluster[] = [];
-      const schemaRegistries: CCloudSchemaRegistry[] = [];
-      environments.forEach((env: CCloudEnvironment) => {
-        kafkaClusters.push(...env.kafkaClusters);
-        if (env.schemaRegistry) schemaRegistries.push(env.schemaRegistry);
-      });
-      await Promise.all([
-        resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, kafkaClusters),
-        resourceManager.setSchemaRegistries(CCLOUD_CONNECTION_ID, schemaRegistries),
-      ]);
-
-      // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.
-      this.coarseLoadingComplete = true;
-    } catch (error) {
-      // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
-      logger.error("Error while preloading CCloud resources", { error });
-      throw error;
-    } finally {
-      // Regardless of success or failure, clear the currently loading promise so that the next call to
-      // ensureResourcesLoaded() can start again from scratch if needed.
-      this.currentlyCoarseLoadingPromise = null;
-    }
-  }
-
-  /**
-   * Fetch the CCloud environments accessible from the current CCloud auth session.
-   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
-   * @returns
-   */
-  public async getEnvironments(forceDeepRefresh: boolean = false): Promise<CCloudEnvironment[]> {
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-    return await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
-  }
-
-  /** Are there any Flink compute pools at all? */
-  public async hasFlinkComputePools(): Promise<boolean> {
-    await this.ensureCoarseResourcesLoaded();
-    const environments = await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
-    return environments.some((env) => env.flinkComputePools.length > 0);
-  }
-
-  /**
-   * Get all of the known schema registries in the accessible CCloud environments.
-   *
-   * Ensures that the coarse resources are loaded before returning the schema registries from
-   * the resource manager cache.
-   *
-   * If there is no CCloud auth session, returns an empty array.
-   **/
-  public async getSchemaRegistries(): Promise<CCloudSchemaRegistry[]> {
-    await this.ensureCoarseResourcesLoaded(false);
-    return await getResourceManager().getSchemaRegistries(CCLOUD_CONNECTION_ID);
-  }
-
-  /**
-   * Get the CCloud kafka clusters in the given environment ID.
-   */
-  public async getKafkaClustersForEnvironmentId(
-    environmentId: EnvironmentId,
-    forceDeepRefresh?: boolean,
-  ): Promise<CCloudKafkaCluster[]> {
-    if (environmentId === undefined) {
-      throw new Error("Cannot fetch clusters w/o an environmentId.");
-    }
-
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-
-    return await getResourceManager().getKafkaClustersForEnvironmentId(
-      CCLOUD_CONNECTION_ID,
-      environmentId,
-    );
-  }
-
-  /**
-   * Return the topics present in the {@link CCloudKafkaCluster}. Will also correlate with schemas
-   * in the schema registry for the cluster, if any.
-   *
-   * Augments the implementation in base class ResourceLoader by handling caching
-   * within the resource manager.
-   */
-  public async getTopicsForCluster(
-    cluster: CCloudKafkaCluster,
-    forceDeepRefresh: boolean = false,
-  ): Promise<KafkaTopic[]> {
-    if (!isCCloud(cluster)) {
-      // Programming error.
-      throw new Error(`Cluster ${cluster.id} is not a CCloud cluster.`);
-    }
-
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-
-    const resourceManager = getResourceManager();
-    let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
-    if (cachedTopics !== undefined && !forceDeepRefresh) {
-      // Cache hit.
-      logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
-      return cachedTopics;
-    }
-
-    // Do a deep fetch and schema subject correlation via the base implementation.
-    const topics: KafkaTopic[] = await super.getTopicsForCluster(cluster);
-
-    // Cache the correlated topics for this cluster.
-    await resourceManager.setTopicsForCluster(cluster, topics);
-
-    return topics;
-  }
-
-  public async getSchemaRegistryForEnvironmentId(
-    environmentId: string,
-  ): Promise<CCloudSchemaRegistry | undefined> {
-    await this.ensureCoarseResourcesLoaded();
-
-    const schemaRegistries = await this.getSchemaRegistries();
-    return schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
-    );
+    // Load our organization concurrenty with the base class coarse resources.
+    await Promise.all([super.doLoadCoarseResources(), this.getOrganization()]);
   }
 
   /**
@@ -296,6 +120,13 @@ export class CCloudResourceLoader extends ResourceLoader {
       return this.organization;
     }
     logger.withCallpoint("getOrganization()").error("No current organization found.");
+  }
+
+  /** Are there any Flink compute pools at all? */
+  public async hasFlinkComputePools(): Promise<boolean> {
+    await this.ensureCoarseResourcesLoaded();
+    const environments = await getResourceManager().getEnvironments(CCLOUD_CONNECTION_ID);
+    return environments.some((env) => env.flinkComputePools.length > 0);
   }
 
   /**
@@ -412,12 +243,6 @@ export class CCloudResourceLoader extends ResourceLoader {
         throw error;
       }
     }
-  }
-
-  /** Go back to initial state, not having cached anything. */
-  private reset(): void {
-    this.coarseLoadingComplete = false;
-    this.currentlyCoarseLoadingPromise = null;
   }
 }
 

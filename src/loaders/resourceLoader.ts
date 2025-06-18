@@ -4,11 +4,11 @@ import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/sch
 import { ConnectionType } from "../clients/sidecar";
 import { isResponseError, logError } from "../errors";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
-import { KafkaCluster } from "../models/kafkaCluster";
+import { Environment, EnvironmentType } from "../models/environment";
+import { KafkaCluster, KafkaClusterType } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import { SchemaRegistry, SchemaRegistryType } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
@@ -29,6 +29,8 @@ const logger = new Logger("resourceLoader");
  * or quickpicks or other consumers of resources should go through this
  * API to make things simple and consistent across CCloud, local, or direct
  * connection clusters.
+ *
+ * Generic class over the concrete {@link EnvironmentType}
  */
 export abstract class ResourceLoader implements IResourceBase {
   /** The connectionId for this resource loader. */
@@ -66,7 +68,7 @@ export abstract class ResourceLoader implements IResourceBase {
   static directLoaders(): DirectResourceLoader[] {
     return ResourceLoader.loaders().filter(
       (loader) => loader.connectionType === ConnectionType.Direct,
-    ) as DirectResourceLoader[];
+    ) as unknown as DirectResourceLoader[];
   }
 
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
@@ -78,6 +80,9 @@ export abstract class ResourceLoader implements IResourceBase {
 
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
+
+  /** Reset the loader's state, forgetting anything learned about the connection. */
+  public abstract reset(): Promise<void>;
 
   // Environment methods
 
@@ -101,6 +106,16 @@ export abstract class ResourceLoader implements IResourceBase {
     return await loader.getEnvironment(environmentId, forceDeepRefresh);
   }
 
+  /** Fetch the Environment-subclass array from sidecar GraphQL. */
+  protected abstract getEnvironmentsFromGraphQL(): Promise<Environment[] | undefined>;
+
+  /**
+   * Fetch the environments accessible from this connection.
+   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
+   * @returns
+   */
+  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
+
   /** Find a specific environment within this loader instance by its id. */
   public async getEnvironment(
     environmentId: EnvironmentId,
@@ -110,56 +125,40 @@ export abstract class ResourceLoader implements IResourceBase {
     return environments.find((env) => env.id === environmentId);
   }
 
-  /**
-   * Get the accessible environments from the connection.
-   * @param forceDeepRefresh Ignore any previously cached resources and fetch anew?
-   */
-  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
-
-  // Kafka cluster methods
+  // Kafka cluster methods.
 
   /**
-   * Get the kafka clusters in the given environment.
+   * Get the kafka clusters in the given environment ID. If none,
+   * returns an empty array.
    */
   public abstract getKafkaClustersForEnvironmentId(
-    environmentId: string,
+    environmentId: EnvironmentId,
     forceDeepRefresh?: boolean,
   ): Promise<KafkaCluster[]>;
 
   /**
    * Return the topics present in the cluster, annotated with whether or not
    * they have a corresponding schema subject.
+   *
+   * This implementation will perform a deep fetch every call.
    */
-  public async getTopicsForCluster(
+  public abstract getTopicsForCluster(
     cluster: KafkaCluster,
-    forceRefresh: boolean = false,
-  ): Promise<KafkaTopic[]> {
-    // Deep fetch the topics and schema registry subject names concurrently.
-    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
-      this.checkedGetSubjects(cluster.environmentId!, forceRefresh),
-      fetchTopics(cluster),
-    ]);
+    forceRefresh?: boolean,
+  ): Promise<KafkaTopic[]>;
 
-    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
-  }
-
-  // Schema registry methods
+  // Schema registry methods.
 
   /**
-   * Get all schema registries known to the connection. Optionally accepts an existing SidecarHandle
-   * to use if need be if provided.
-   */
+   * Get all of the known schema registries from the environments from this connection.
+   **/
   public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
 
-  /**
-   * Return the appropriate schema registry to use, if any, for the given object's environment.
-   * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry for.
-   * @returns The {@link SchemaRegistry} for the resource's environment, if any.
-   */
   public abstract getSchemaRegistryForEnvironmentId(
-    environmentId: string | undefined,
+    environmentId: EnvironmentId,
   ): Promise<SchemaRegistry | undefined>;
 
+  // Subjects and schemas methods.
   /**
    * Get the subjects from the schema registry for the given environment or schema registry.
    * If any route errors are encountered, a UI element is raised, and empty array is returned.
@@ -491,5 +490,225 @@ export abstract class ResourceLoader implements IResourceBase {
     }
 
     return schemaRegistry;
+  }
+}
+
+export abstract class CachingResourceLoader<
+  ET extends EnvironmentType,
+  KCT extends KafkaClusterType,
+  SRT extends SchemaRegistryType,
+> extends ResourceLoader {
+  /** Have the course resources been cached already? */
+  private coarseLoadingComplete: boolean = false;
+
+  /** If in progress of loading the coarse resources, the promise doing so. */
+  private currentlyCoarseLoadingPromise: Promise<void> | null = null;
+
+  /**
+   * Drive the GraphQL query to return all environments for this connection type.
+   * Subclasses must implement this method to return the environments
+   * from the GraphQL API for the given connection type.
+   */
+  protected abstract getEnvironmentsFromGraphQL(): Promise<ET[] | undefined>;
+
+  /** Reset to original state, clearing all cached data for this connection. */
+  public async reset(): Promise<void> {
+    this.coarseLoadingComplete = false;
+    this.currentlyCoarseLoadingPromise = null;
+
+    const rm = getResourceManager();
+    await rm.purgeConnectionResources(this.connectionId);
+  }
+
+  /**
+   * Promise ensuring that the "coarse" ccloud resources are cached into the resource manager.
+   *
+   * Fired off when the connection edges to connected, and/or when any view controller needs to get at
+   * any of the following resources stored in ResourceManager. Is safe to call multiple times
+   * in a connected session, as it will only fetch the resources once. Concurrent calls while the resources
+   * are being fetched will await the same promise. Subsequent calls after completion will return
+   * immediately.
+   *
+   * Currently, when the connection / authentication session is closed/ended, the resources
+   * are left in the resource manager, however the loader will reset its state to not having fetched
+   * the resources, so that the next call to ensureResourcesLoaded() will re-fetch the resources.
+   *
+   * Coarse resources are:
+   *   - Environments
+   *   - Kafka Clusters
+   *   - Schema Registries
+   *
+   * They do not include topics within a cluster or schemas within a schema registry, which are fetched
+   * and cached more closely to when they are needed.
+   */
+  protected async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
+    if (forceDeepRefresh) {
+      // If caller requested a deep refresh, reset the loader's state so that we fall through to
+      // re-fetching the coarse resources.
+      logger.debug(`Deep refreshing ${this.connectionType} resources.`);
+      this.reset();
+    } else if (this.coarseLoadingComplete) {
+      // If the resources are already loaded, nothing to wait on.
+      return;
+    }
+
+    // If in progress of loading, have the caller await the promise that is currently loading the resources.
+    if (this.currentlyCoarseLoadingPromise) {
+      return this.currentlyCoarseLoadingPromise;
+    }
+
+    // This caller is the first to request the preload, so do the work in the foreground,
+    // but also store the promise so that any other concurrent callers can await it.
+    this.currentlyCoarseLoadingPromise = this.doLoadCoarseResources();
+    await this.currentlyCoarseLoadingPromise;
+  }
+
+  /**
+   * Load the {@link Environment}s and their direct children (Kafka clusters, schema registry) into
+   * the resource manager.
+   *
+   * Worker function that does the actual loading of the coarse resources:
+   *   - Environments (ResourceManager.getEnvironments())
+   *   - Kafka Clusters (ResourceManager.getKafkaClusters())
+   *   - Schema Registries (ResourceManager.getSchemaRegistries())
+   */
+  protected async doLoadCoarseResources(): Promise<void> {
+    // Start loading the resources for this connection idfrom sidecar API into the resource manager for local caching.
+    // If the loading fails at any time (including, say, the user logs out of CCloud while in progress), then
+    // an exception will be thrown and the loadingComplete flag will remain false.
+    try {
+      const resourceManager = getResourceManager();
+
+      // Perform the GraphQL fetch(es)
+      const environments = await this.getEnvironmentsFromGraphQL();
+
+      if (!environments) {
+        // GraphQL returned undefined, which can happen for Direct connections in rare cases.
+        // Already was logged. Short circuit here w/o storing anything in the resource manager.
+        // Do _not_ set this.coarseLoadingComplete so that the next call to ensureResourcesLoaded()
+        // will re-fetch the coarse resources for this connection.
+        logger.warn(`No environments found for connectionId ${this.connectionId}`);
+        return;
+      }
+
+      // Store the environments, clusters, schema registries in the resource manager ...
+      const kafkaClusters: KafkaCluster[] = [];
+      const schemaRegistries: SchemaRegistry[] = [];
+
+      environments.forEach((env: Environment) => {
+        kafkaClusters.push(...env.kafkaClusters);
+        if (env.schemaRegistry) schemaRegistries.push(env.schemaRegistry);
+      });
+
+      await Promise.all([
+        resourceManager.setEnvironments(this.connectionId, environments),
+        resourceManager.setKafkaClusters(this.connectionId, kafkaClusters),
+        resourceManager.setSchemaRegistries(this.connectionId, schemaRegistries),
+      ]);
+
+      // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.
+      this.coarseLoadingComplete = true;
+    } catch (error) {
+      // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
+      logger.error(`Error while preloading ${this.connectionId} resources`, { error });
+      throw error;
+    } finally {
+      // Regardless of success or failure, clear the currently loading promise so that the next call to
+      // ensureResourcesLoaded() can start again from scratch if needed.
+      this.currentlyCoarseLoadingPromise = null;
+    }
+  }
+
+  /**
+   * Fetch the environments accessible from this connection.
+   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
+   * @returns
+   */
+  public async getEnvironments(forceDeepRefresh: boolean = false): Promise<ET[]> {
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+    return await getResourceManager().getEnvironments<ET>(this.connectionId);
+  }
+
+  /**
+   * Get all of the known schema registries in the accessible environments.
+   *
+   * Ensures that the coarse resources are loaded before returning the schema registries from
+   * the resource manager cache.
+   **/
+  public async getSchemaRegistries(): Promise<SRT[]> {
+    await this.ensureCoarseResourcesLoaded(false);
+    return await getResourceManager().getSchemaRegistries<SRT>(this.connectionId);
+  }
+
+  /**
+   * Get the kafka clusters in the given environment ID.
+   */
+  public async getKafkaClustersForEnvironmentId(
+    environmentId: EnvironmentId,
+    forceDeepRefresh?: boolean,
+  ): Promise<KCT[]> {
+    if (environmentId === undefined) {
+      throw new Error("Cannot fetch clusters w/o an environmentId.");
+    }
+
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+
+    return await getResourceManager().getKafkaClustersForEnvironmentId<KCT>(
+      this.connectionId,
+      environmentId,
+    );
+  }
+
+  public async getSchemaRegistryForEnvironmentId(
+    environmentId: EnvironmentId,
+  ): Promise<SRT | undefined> {
+    await this.ensureCoarseResourcesLoaded();
+
+    const schemaRegistries = await this.getSchemaRegistries();
+    return schemaRegistries.find(
+      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
+    );
+  }
+
+  /**
+   * Return the topics present in the Kafka cluster. Will also correlate with schemas
+   * in the schema registry for the cluster, if any.
+   *
+   * Caches the correlated w/schemas topics for the cluster in the resource manager.
+   */
+  public async getTopicsForCluster(
+    cluster: KCT,
+    forceDeepRefresh: boolean = false,
+  ): Promise<KafkaTopic[]> {
+    if (cluster.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for cluster ${JSON.stringify(cluster, null, 2)}`,
+      );
+    }
+
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+
+    const resourceManager = getResourceManager();
+    let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
+    if (cachedTopics !== undefined && !forceDeepRefresh) {
+      // Cache hit.
+      logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
+      return cachedTopics;
+    }
+
+    // Do a deep fetch and schema subject correlation.
+
+    // Deep fetch the topics and schema registry subject names concurrently.
+    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
+      this.checkedGetSubjects(cluster.environmentId, forceDeepRefresh),
+      fetchTopics(cluster),
+    ]);
+
+    const topics = correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
+
+    // Cache the correlated topics for this cluster.
+    await resourceManager.setTopicsForCluster(cluster, topics);
+
+    return topics;
   }
 }

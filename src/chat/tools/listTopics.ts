@@ -10,7 +10,7 @@ import {
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { KafkaCluster } from "../../models/kafkaCluster";
-import { ConnectionId } from "../../models/resource";
+import { ConnectionId, EnvironmentId } from "../../models/resource";
 import { KafkaTopic } from "../../models/topic";
 import { summarizeTopic } from "../summarizers/topics";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
@@ -37,7 +37,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       return new LanguageModelToolResult([new LanguageModelTextPart("No connection ID provided.")]);
     }
 
-    let environmentId = params.environmentId;
+    let environmentId = params.environmentId as EnvironmentId;
     if (!environmentId) {
       return new LanguageModelToolResult([
         new LanguageModelTextPart("No environment ID provided."),

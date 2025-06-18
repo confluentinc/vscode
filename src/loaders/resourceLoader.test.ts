@@ -2,6 +2,8 @@ import assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_KEY_SUBJECT,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
@@ -20,13 +22,15 @@ import {
 } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import { SubjectsV1Api } from "../clients/schemaRegistryRest";
-import { LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import * as errors from "../errors";
 import { ConnectionId } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
+import { clearWorkspaceState } from "../storage/utils";
+import { CCloudResourceLoader } from "./ccloudResourceLoader";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -374,8 +378,35 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // clear cached workspace state
+    await clearWorkspaceState();
+
     sandbox.restore();
+  });
+
+  it("Raises error for mismatched connectionId in givent cluster", async () => {
+    await assert.rejects(loaderInstance.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER), (err) => {
+      return (err as Error).message.startsWith(
+        `Mismatched connectionId ${TEST_LOCAL_ENVIRONMENT_ID}`,
+      );
+    });
+  });
+
+  it("Returns cached data if available", async () => {
+    const cachedTopics = [TEST_LOCAL_KAFKA_TOPIC];
+    // Set up the resource manager to return cached topics.
+    const rmGetTopicsStub = sandbox.stub(getResourceManager(), "getTopicsForCluster");
+    rmGetTopicsStub.resolves(cachedTopics);
+
+    // Call the method under test.
+    const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+    assert.deepStrictEqual(topics, cachedTopics);
+    // Should not have called fetchTopics() or getSubjects() since cache hit.
+    assert.ok(fetchTopicsStub.notCalled);
+    assert.ok(getSubjectsStub.notCalled);
+    // Should have called getTopicsForCluster() on the resource manager.
+    assert.ok(rmGetTopicsStub.calledOnce);
   });
 
   it("Returns correlated topics with schema subjects", async () => {
@@ -450,7 +481,35 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
   });
 });
 
-describe("ResourceLoader::getSchemasForSubject() tests", () => {
+describe("ResourceLoader::getSchemasForSubject()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let fetchSchemasForSubjectStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+
+    fetchSchemasForSubjectStub = sandbox.stub(loaderUtils, "fetchSchemasForSubject");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Returns schemas for a subject", async () => {
+    fetchSchemasForSubjectStub.resolves(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
+
+    const schemas = await loaderInstance.getSchemasForSubject(
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SUBJECT_WITH_SCHEMAS.name,
+    );
+    assert.deepStrictEqual(schemas, TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
+    assert.ok(fetchSchemasForSubjectStub.calledOnce);
+  });
+});
+
+describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
   let loaderInstance: ResourceLoader;
 
   let sandbox: sinon.SinonSandbox;
@@ -482,6 +541,13 @@ describe("ResourceLoader::getSchemasForSubject() tests", () => {
 
     getSubjectsStub.resolves(Array.from(uniqueSubjects));
   }
+
+  it("Hates schema registry from wrong environment", async () => {
+    // loader is LocalResourceLoader, so it will not accept a schema registry from a different environment.
+    assert.rejects(loaderInstance.getTopicSubjectGroups(TEST_CCLOUD_KAFKA_TOPIC), (err) => {
+      return (err as Error).message.startsWith("Mismatched connectionId");
+    });
+  });
 
   it("Returns related subjects+schemas for a topic", async () => {
     populateSubjects(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas!);
@@ -675,4 +741,31 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
       assert.ok(clearCacheStub.calledOnce);
     });
   }
+});
+
+describe("ResourceLoader::getInstance()", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("Returns LocalResourceLoader instance for LOCAL_CONNECTION_ID", () => {
+    const loader = ResourceLoader.getInstance(LOCAL_CONNECTION_ID);
+    assert.ok(loader instanceof LocalResourceLoader);
+    assert.strictEqual(loader.connectionId, LOCAL_CONNECTION_ID);
+  });
+
+  it("Returns CCloudResourceLoader instance for CCloud connectionId", () => {
+    const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
+    assert.ok(loader instanceof CCloudResourceLoader);
+    assert.strictEqual(loader.connectionId, CCLOUD_CONNECTION_ID);
+  });
+
+  it("Raises error if called with unknown connectionId", () => {
+    assert.throws(
+      () => ResourceLoader.getInstance("unknown-connection-id" as ConnectionId),
+      (err) => {
+        return (err as Error).message.startsWith("Unknown connectionId");
+      },
+    );
+  });
 });
