@@ -521,17 +521,13 @@ export abstract class CachingResourceLoader<
   }
 
   /**
-   * Promise ensuring that the "coarse" ccloud resources are cached into the resource manager.
+   * Promise ensuring that the "coarse" resources are cached into the resource manager.
    *
    * Fired off when the connection edges to connected, and/or when any view controller needs to get at
    * any of the following resources stored in ResourceManager. Is safe to call multiple times
    * in a connected session, as it will only fetch the resources once. Concurrent calls while the resources
    * are being fetched will await the same promise. Subsequent calls after completion will return
    * immediately.
-   *
-   * Currently, when the connection / authentication session is closed/ended, the resources
-   * are left in the resource manager, however the loader will reset its state to not having fetched
-   * the resources, so that the next call to ensureResourcesLoaded() will re-fetch the resources.
    *
    * Coarse resources are:
    *   - Environments
@@ -546,7 +542,7 @@ export abstract class CachingResourceLoader<
       // If caller requested a deep refresh, reset the loader's state so that we fall through to
       // re-fetching the coarse resources.
       logger.debug(`Deep refreshing ${this.connectionType} resources.`);
-      this.reset();
+      await this.reset();
     } else if (this.coarseLoadingComplete) {
       // If the resources are already loaded, nothing to wait on.
       return;
