@@ -12,32 +12,25 @@ import { ViewItem } from "./viewItems/ViewItem";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
  */
 export class ResourcesView extends View {
-  // private to use `ResourcesView.from(page)` instead of `new ResourcesView(page)` since we aren't
-  // creating a "new" Resources view object, just accessing it from the existing page
-  private constructor(page: Page) {
+  constructor(page: Page) {
     // we don't need a regex pattern here because we don't update the tree view title/description
     // (unlike the Topics/Schemas/Flink views that show the currently-selected env & focused resource)
     super(page, "Resources Section");
   }
 
-  /** Get the Resources view for the given {@link Page page} */
-  static from(page: Page): ResourcesView {
-    return new ResourcesView(page);
-  }
-
   /** Click the "Search" nav action in the view title area. */
   async clickSearch(): Promise<void> {
-    await this.locator.getByLabel("Search").click();
+    await this.clickNavAction("Search");
   }
 
   /** Click the "Add New Connection" nav action in the view title area. */
   async clickAddNewConnection(): Promise<void> {
-    await this.locator.getByLabel("Add New Connection").click();
+    await this.clickNavAction("Add New Connection");
   }
 
   /** Click the "Refresh" nav action in the view title area. */
   async clickRefresh(): Promise<void> {
-    await this.locator.getByLabel("Refresh").click();
+    await this.clickNavAction("Refresh");
   }
 
   /**

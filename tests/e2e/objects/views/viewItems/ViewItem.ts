@@ -1,47 +1,15 @@
 import { Locator, Page } from "@playwright/test";
-import { collapse, expand, isExpandable, isExpanded } from "../../../utils/expansion";
 
 /** Object representing a tree item in a {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}. */
 export class ViewItem {
-  protected readonly page: Page;
-  readonly locator: Locator;
-
-  constructor(page: Page, locator: Locator) {
-    this.page = page;
-    this.locator = locator;
-  }
-
-  async isVisible(): Promise<boolean> {
-    return await this.locator.isVisible();
-  }
-
-  async isExpandable(): Promise<boolean> {
-    return isExpandable(this.locator);
-  }
-
-  async isExpanded(): Promise<boolean> {
-    return isExpanded(this.locator);
-  }
-
-  async expand(): Promise<void> {
-    await expand(this.locator);
-  }
-
-  async collapse(): Promise<void> {
-    await collapse(this.locator);
-  }
-
-  async hover(): Promise<void> {
-    await this.locator.hover();
-  }
-
-  async click(): Promise<void> {
-    await this.locator.click();
-  }
+  constructor(
+    public readonly page: Page,
+    public readonly locator: Locator,
+  ) {}
 
   /** Click an inline {@link https://code.visualstudio.com/api/extension-guides/tree-view#view-actions action} for this item. */
   async clickInlineAction(actionName: string): Promise<void> {
-    await this.hover();
+    await this.locator.hover();
     const actionButton: Locator = this.locator.getByRole("button", { name: actionName });
     if (!(await actionButton.isVisible())) {
       throw new Error(`Inline action button "${actionName}" not found for view item`);
