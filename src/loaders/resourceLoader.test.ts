@@ -2,6 +2,7 @@ import assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KEY_SUBJECT,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
@@ -382,6 +383,30 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     sandbox.restore();
   });
 
+  it("Raises error for mismatched connectionId in givent cluster", async () => {
+    await assert.rejects(loaderInstance.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER), (err) => {
+      return (err as Error).message.startsWith(
+        `Mismatched connectionId ${TEST_LOCAL_ENVIRONMENT_ID}`,
+      );
+    });
+  });
+
+  it("Returns cached data if available", async () => {
+    const cachedTopics = [TEST_LOCAL_KAFKA_TOPIC];
+    // Set up the resource manager to return cached topics.
+    const rmGetTopicsStub = sandbox.stub(getResourceManager(), "getTopicsForCluster");
+    rmGetTopicsStub.resolves(cachedTopics);
+
+    // Call the method under test.
+    const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+    assert.deepStrictEqual(topics, cachedTopics);
+    // Should not have called fetchTopics() or getSubjects() since cache hit.
+    assert.ok(fetchTopicsStub.notCalled);
+    assert.ok(getSubjectsStub.notCalled);
+    // Should have called getTopicsForCluster() on the resource manager.
+    assert.ok(rmGetTopicsStub.calledOnce);
+  });
+
   it("Returns correlated topics with schema subjects", async () => {
     const topicsResponseData: TopicData[] = [
       createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"]),
@@ -454,7 +479,35 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
   });
 });
 
-describe("ResourceLoader::getSchemasForSubject() tests", () => {
+describe("ResourceLoader::getSchemasForSubject()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let fetchSchemasForSubjectStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+
+    fetchSchemasForSubjectStub = sandbox.stub(loaderUtils, "fetchSchemasForSubject");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Returns schemas for a subject", async () => {
+    fetchSchemasForSubjectStub.resolves(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
+
+    const schemas = await loaderInstance.getSchemasForSubject(
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SUBJECT_WITH_SCHEMAS.name,
+    );
+    assert.deepStrictEqual(schemas, TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
+    assert.ok(fetchSchemasForSubjectStub.calledOnce);
+  });
+});
+
+describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
   let loaderInstance: ResourceLoader;
 
   let sandbox: sinon.SinonSandbox;
