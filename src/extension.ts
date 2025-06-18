@@ -66,7 +66,8 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
+import { registerProjectGenerationCommands } from "./projectGeneration/scaffold";
+import { setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -233,7 +234,7 @@ async function _activateExtension(
     ...registerDiffCommands(),
     ...registerExtraCommands(),
     ...registerDockerCommands(),
-    ...registerProjectGenerationCommands(),
+    ...registerProjectGenerationCommands(context),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
