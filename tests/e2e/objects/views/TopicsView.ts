@@ -5,15 +5,8 @@ import { ViewItem } from "./viewItems/ViewItem";
 
 /** Object representing the "Topics" {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent" {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}. */
 export class TopicsView extends View {
-  // private to use `TopicsView.from(page)` instead of `new TopicsView(page)` since we aren't
-  // creating a "new" topics view object, just accessing it from the existing page
-  private constructor(page: Page) {
+  constructor(page: Page) {
     super(page, /Topics.*Section/);
-  }
-
-  /** Get the Topics view for the given {@link Page page} */
-  static from(page: Page): TopicsView {
-    return new TopicsView(page);
   }
 
   /** Click the "Search" nav action in the view title area. */
@@ -70,16 +63,5 @@ export class TopicsView extends View {
     }
     const items: ViewItem[] = (await Promise.all(topicPromises)).flat();
     return items.map((item) => new TopicItem(this.page, item.locator));
-  }
-
-  /**
-   * Get all (schema) subject {@link ViewItem tree items}.
-   * (This requires at least one Kafka topic tree item to be expanded.)
-   */
-  async getSubjectItems(): Promise<ViewItem[]> {
-    return await this.getItems({
-      iconId: "confluent-subject",
-      waitForItems: true,
-    });
   }
 }

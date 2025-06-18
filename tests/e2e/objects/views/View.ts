@@ -1,5 +1,5 @@
 import { Locator, Page } from "@playwright/test";
-import { collapse, expand, isExpanded } from "../../utils/expansion";
+import { expand } from "../../utils/expansion";
 import { ViewItem } from "./viewItems/ViewItem";
 
 /**
@@ -7,48 +7,28 @@ import { ViewItem } from "./viewItems/ViewItem";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}.
  */
 export class View {
-  protected readonly page: Page;
-  readonly locator: Locator;
+  constructor(
+    public page: Page,
+    private label: string | RegExp,
+  ) {}
+
+  get locator(): Locator {
+    return this.page.getByLabel(this.label);
+  }
+
   /** {@link https://code.visualstudio.com/api/ux-guidelines/views#welcome-views Welcome view} locator. */
-  readonly viewsWelcome: Locator;
-
-  // private to use `View.from(page)` instead of `new View(page)` since we aren't
-  // creating a "new" view object, just accessing it from the existing page
-  protected constructor(page: Page, label: string | RegExp) {
-    this.page = page;
-    this.locator = page.getByLabel(label);
-    this.viewsWelcome = this.page.locator(".welcome-view-content");
+  get viewsWelcome(): Locator {
+    return this.page.locator(".welcome-view-content");
   }
 
-  /** Get the view for the given {@link Page page} based on its `label`. */
-  static from(page: Page, label: string | RegExp): View {
-    return new View(page, label);
-  }
-
+  /**
+   * The equivalent of the built-in `<view id>.focus` command in VS Code, which locates the view,
+   * expands it if necessary, and focuses it.
+   */
   async focus(): Promise<void> {
-    await this.waitToBeVisible();
+    await this.locator.waitFor({ state: "visible", timeout: 500 });
     await expand(this.locator);
     await this.locator.focus();
-  }
-
-  async isVisible(): Promise<boolean> {
-    return await this.locator.isVisible({ timeout: 500 });
-  }
-
-  async waitToBeVisible(): Promise<void> {
-    await this.locator.waitFor({ state: "visible" });
-  }
-
-  async isExpanded(): Promise<boolean> {
-    return isExpanded(this.locator);
-  }
-
-  async expand(): Promise<void> {
-    await expand(this.locator);
-  }
-
-  async collapse(): Promise<void> {
-    await collapse(this.locator);
   }
 
   /** Click a nav action in the view title area by its `label`. */
