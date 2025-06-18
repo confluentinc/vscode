@@ -20,13 +20,14 @@ export class QuickpickItem {
   /**
    * Parse the codicon class name for the icon element.
    * For example, if the class is `codicon-account`, this will return `account`.
+   * For multi-part icons like `codicon-confluent-kafka-cluster`, this will return `confluent-kafka-cluster`.
    */
   async iconId(): Promise<string> {
     const className: string | null = await this.icon.getAttribute("class");
     if (!className) {
       return "";
     }
-    const match: RegExpMatchArray | null = className.match(/codicon-(\w+)/);
+    const match: RegExpMatchArray | null = className.match(/codicon-([\w-]+)/);
     return match ? match[1] : "";
   }
 
