@@ -46,8 +46,10 @@ for (const connectionType of ["CCLOUD"]) {
 
         const ccloudItem: CCloudItem = await resourcesView.getConfluentCloudItem();
         // signed-in state: should not show "(Not Connected)" text and should be expandable
-        expect(ccloudItem.notConnectedText.isVisible()).toBe(false);
-        expect(await isExpandable(ccloudItem.locator)).toBe(true);
+        await expect(ccloudItem.notConnectedText).toBeHidden({ timeout: 500 });
+        await expect
+          .poll(async () => await isExpandable(ccloudItem.locator), { timeout: 1_000 })
+          .toBe(true);
       } else if (connectionType === "DIRECT") {
         // shoup: set up direct connection here
       }
@@ -86,20 +88,8 @@ for (const connectionType of ["CCLOUD"]) {
 
       // the message viewer webview should now be visible in the editor area
       const messageViewer = new MessageViewerWebview(page);
-      await messageViewer.waitForLoad();
-      await expect(messageViewer.locator).toBeVisible({ timeout: 10_000 });
-
-      // it should also show some of the top-level controls and be in a loading, error,
-      // or got-some-messages state
-      await expect(messageViewer.consumeModeDropdown).toBeVisible();
-      await expect(messageViewer.messagesLimitDropdown).toBeVisible();
-      await expect(messageViewer.messageSearchField).toBeVisible();
-      const [isLoading, hasMessages, hasError] = await Promise.all([
-        messageViewer.isLoadingMessages(),
-        messageViewer.hasMessages(),
-        messageViewer.hasError(),
-      ]);
-      expect(isLoading || hasMessages || hasError).toBe(true);
+      await messageViewer.waitForLoadAndValidateState();
+      await expect(messageViewer.locator).toBeVisible();
     });
 
     test(`${connectionType}: should select a Kafka cluster from the Topics view nav action, list topics, and open message viewer`, async ({
@@ -136,20 +126,8 @@ for (const connectionType of ["CCLOUD"]) {
 
       // the message viewer webview should now be visible in the editor area
       const messageViewer = new MessageViewerWebview(page);
-      await messageViewer.waitForLoad();
-      await expect(messageViewer.locator).toBeVisible({ timeout: 10_000 });
-
-      // it should also show some of the top-level controls and be in a loading, error,
-      // or got-some-messages state
-      await expect(messageViewer.consumeModeDropdown).toBeVisible();
-      await expect(messageViewer.messagesLimitDropdown).toBeVisible();
-      await expect(messageViewer.messageSearchField).toBeVisible();
-      const [isLoading, hasMessages, hasError] = await Promise.all([
-        messageViewer.isLoadingMessages(),
-        messageViewer.hasMessages(),
-        messageViewer.hasError(),
-      ]);
-      expect(isLoading || hasMessages || hasError).toBe(true);
+      await messageViewer.waitForLoadAndValidateState();
+      await expect(messageViewer.locator).toBeVisible();
     });
   });
 }
