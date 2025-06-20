@@ -5,7 +5,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { isResponseErrorWithStatus } from "../errors";
-import { getEnvironments } from "../graphql/environments";
+import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -81,7 +81,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */
   protected async getEnvironmentsFromGraphQL(): Promise<CCloudEnvironment[]> {
     // Drive the GQL query. Sigh, poorly named function, since is ccloud-specific.
-    return await getEnvironments();
+    return await getCCloudResources();
   }
 
   /** Fulfill ResourceLoader::reset(), taking care of clearing in-memory cached organization. */
