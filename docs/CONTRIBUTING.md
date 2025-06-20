@@ -364,6 +364,25 @@ describe.only('Extension manifest tests', () => {
 });
 ```
 
+#### Running a single unit test
+
+You can run individual unit tests by using the following syntax:
+
+```bash
+    gulp test -t 'should register all commands'
+    gulp test -t 'Extension manifest tests'
+```
+
+Or by adding `.only` after a `describe` or `it` block in the test file:
+
+```typescript
+describe.only('Extension manifest tests', () => {
+  it('should register all commands', () => {
+    // test code
+  });
+});
+```
+
 Remember to remove `.only` after running the test and before making a PR! 
 
 #### Functional tests
