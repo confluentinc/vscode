@@ -5,7 +5,7 @@ import { ScaffoldV1Template } from "../clients/scaffoldingService";
 import * as sidecarModule from "../sidecar";
 import { getTemplatesList, pickTemplate } from "./templates";
 
-describe.only("templates.ts", () => {
+describe("templates.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {

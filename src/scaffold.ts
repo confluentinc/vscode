@@ -21,7 +21,7 @@ import { KafkaCluster } from "./models/kafkaCluster";
 import { CCloudOrganization } from "./models/organization";
 import { KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
-import { pickTemplate } from "./projectGeneration/templates";
+import { getTemplatesList, pickTemplate } from "./projectGeneration/templates";
 import { getSidecar } from "./sidecar";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { removeProtocolPrefix } from "./utils/bootstrapServers";
