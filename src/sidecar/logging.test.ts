@@ -7,12 +7,18 @@ import { SIDECAR_LOGFILE_NAME } from "./constants";
 import {
   appendSidecarLogToOutputChannel,
   determineSidecarStartupFailureReason,
+  formatSidecarLogLine,
   gatherSidecarOutputs,
   getSidecarLogfilePath,
   parseSidecarLogLine,
   SIDECAR_OUTPUT_CHANNEL,
 } from "./logging";
-import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
+import {
+  SidecarLogExceptionFormat,
+  SidecarLogFormat,
+  SidecarOutputs,
+  SidecarStartupFailureReason,
+} from "./types";
 
 const fakeLogObj = {
   timestamp: "2025-01-01T10:30:00.000Z",
@@ -29,6 +35,25 @@ const fakeLogObj = {
   processName: "ide-sidecar",
   processId: 12345,
 } satisfies SidecarLogFormat;
+
+const fakeMdcData = { foo: "bar", baz: "123" };
+
+const fakeException = {
+  exceptionType: "java.lang.NullPointerException",
+  message: "Cannot invoke method on null object",
+  frames: [
+    {
+      class: "com.example.Service",
+      method: "processData",
+      line: 42,
+    },
+    {
+      class: "com.example.Controller",
+      method: "handleRequest",
+      line: 123,
+    },
+  ],
+} satisfies SidecarLogExceptionFormat;
 
 describe("sidecar/logging.ts", () => {
   describe("divineSidecarStartupFailureReason()", () => {
@@ -477,6 +502,232 @@ describe("sidecar/logging.ts", () => {
       const result = parseSidecarLogLine(JSON.stringify(emptyValues));
 
       assert.strictEqual(result, null);
+    });
+  });
+
+  describe("formatSidecarLogLine()", () => {
+    it("should format a log object with all options enabled by default", () => {
+      const result: string = formatSidecarLogLine(fakeLogObj);
+
+      assert.strictEqual(
+        result,
+        `${fakeLogObj.timestamp} [${fakeLogObj.level.padEnd(5)}] [${fakeLogObj.loggerName}] ${fakeLogObj.message}`,
+      );
+    });
+
+    it("should format a log object without `timestamp` when disabled", () => {
+      const result: string = formatSidecarLogLine(fakeLogObj, {
+        withTimestamp: false,
+        withLevel: true,
+        withMdc: true,
+      });
+
+      assert.strictEqual(
+        result,
+        `[${fakeLogObj.level.padEnd(5)}] [${fakeLogObj.loggerName}] ${fakeLogObj.message}`,
+      );
+    });
+
+    it("should format a log object without `level` when disabled", () => {
+      const result: string = formatSidecarLogLine(fakeLogObj, {
+        withTimestamp: true,
+        withLevel: false,
+        withMdc: true,
+      });
+
+      assert.strictEqual(
+        result,
+        `${fakeLogObj.timestamp} [${fakeLogObj.loggerName}] ${fakeLogObj.message}`,
+      );
+    });
+
+    it("should format a log object with only `message` and `logger` when both `withTimestamp` and `withLevel` are disabled", () => {
+      const result: string = formatSidecarLogLine(fakeLogObj, {
+        withTimestamp: false,
+        withLevel: false,
+        withMdc: true,
+      });
+
+      assert.strictEqual(result, `[${fakeLogObj.loggerName}] ${fakeLogObj.message}`);
+    });
+
+    it("should pad `level` to 5 characters", () => {
+      const debugLog = { ...fakeLogObj, level: "DEBUG" };
+      const result: string = formatSidecarLogLine(debugLog);
+
+      assert.strictEqual(
+        result,
+        `${debugLog.timestamp} [${debugLog.level.padEnd(5)}] [${debugLog.loggerName}] ${debugLog.message}`,
+      );
+    });
+
+    it("should handle long `level` values by padding", () => {
+      const customLog = { ...fakeLogObj, level: "THISLOGLEVELDOESNOTEXIST" };
+      const result: string = formatSidecarLogLine(customLog);
+
+      assert.strictEqual(
+        result,
+        `${customLog.timestamp} [${customLog.level.padEnd(5)}] [${customLog.loggerName}] ${customLog.message}`,
+      );
+    });
+
+    it("should use default timestamp/level/message values when missing", () => {
+      // hopefully shouldn't happen, but just in case
+      const incompleteLog = {
+        level: undefined,
+        loggerName: undefined,
+        message: undefined,
+        timestamp: undefined,
+      } as any;
+
+      const result: string = formatSidecarLogLine(incompleteLog);
+
+      // regex match since it falls back to new Date().toISOString()
+      assert.match(result, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \[INFO \] \[unknown\] $/);
+    });
+
+    it("should format log with MDC data when enabled", () => {
+      const logWithMdc = { ...fakeLogObj, mdc: fakeMdcData };
+
+      const result: string = formatSidecarLogLine(logWithMdc);
+
+      assert.strictEqual(
+        result,
+        `${logWithMdc.timestamp} [${logWithMdc.level.padEnd(5)}] [${logWithMdc.loggerName}] ${logWithMdc.message} ${JSON.stringify(fakeMdcData)}`,
+      );
+    });
+
+    it("should not include MDC data when disabled", () => {
+      const logWithMdc = { ...fakeLogObj, mdc: fakeMdcData };
+
+      const result: string = formatSidecarLogLine(logWithMdc, {
+        withTimestamp: true,
+        withLevel: true,
+        withMdc: false,
+      });
+
+      assert.strictEqual(
+        result,
+        `${logWithMdc.timestamp} [${logWithMdc.level.padEnd(5)}] [${logWithMdc.loggerName}] ${logWithMdc.message}`,
+      );
+    });
+
+    it("should not include empty `mdc` data", () => {
+      const logWithEmptyMdc = { ...fakeLogObj, mdc: {} };
+
+      const result: string = formatSidecarLogLine(logWithEmptyMdc);
+
+      assert.strictEqual(
+        result,
+        `${logWithEmptyMdc.timestamp} [${logWithEmptyMdc.level.padEnd(5)}] [${logWithEmptyMdc.loggerName}] ${logWithEmptyMdc.message}`,
+      );
+    });
+
+    it("should format a log object with `exception` details", () => {
+      const logWithException = {
+        ...fakeLogObj,
+        level: "ERROR",
+        message: "Operation failed",
+        exception: fakeException,
+      };
+
+      const result: string = formatSidecarLogLine(logWithException);
+
+      const expectedResult: string = [
+        `${logWithException.timestamp} [${logWithException.level.padEnd(5)}] [${logWithException.loggerName}] ${logWithException.message} [Exception: ${fakeException.exceptionType} - ${fakeException.message}]`,
+        `    at ${fakeException.frames[0].class}.${fakeException.frames[0].method} (${fakeException.frames[0].class}:${fakeException.frames[0].line})`,
+        `    at ${fakeException.frames[1].class}.${fakeException.frames[1].method} (${fakeException.frames[1].class}:${fakeException.frames[1].line})`,
+      ].join("\n");
+
+      assert.strictEqual(result, expectedResult);
+    });
+
+    it("should handle `exception` with missing `exceptionType`", () => {
+      const logWithIncompleteException = {
+        ...fakeLogObj,
+        level: "ERROR",
+        exception: {
+          exceptionType: "", // will default to "UnknownException"
+          message: "Something went wrong",
+          frames: [],
+        },
+      };
+
+      const result: string = formatSidecarLogLine(logWithIncompleteException);
+
+      assert.strictEqual(
+        result,
+        `${logWithIncompleteException.timestamp} [${logWithIncompleteException.level.padEnd(5)}] [${logWithIncompleteException.loggerName}] ${logWithIncompleteException.message} [Exception: UnknownException - ${logWithIncompleteException.exception.message}]`,
+      );
+    });
+
+    it("should handle `exception` with empty `frames` array", () => {
+      const logWithEmptyFrames = {
+        ...fakeLogObj,
+        level: "ERROR",
+        exception: {
+          exceptionType: "CustomException",
+          message: "Something went wrong",
+          frames: [],
+        },
+      };
+
+      const result: string = formatSidecarLogLine(logWithEmptyFrames);
+
+      assert.strictEqual(
+        result,
+        `${logWithEmptyFrames.timestamp} [${logWithEmptyFrames.level.padEnd(5)}] [${logWithEmptyFrames.loggerName}] ${logWithEmptyFrames.message} [Exception: ${logWithEmptyFrames.exception.exceptionType} - ${logWithEmptyFrames.exception.message}]`,
+      );
+    });
+
+    it("should format a log object with `mdc` and `exception`", () => {
+      const complexLog = {
+        ...fakeLogObj,
+        level: "ERROR",
+        message: "Request processing failed",
+        mdc: fakeMdcData,
+        exception: fakeException,
+      };
+
+      const result = formatSidecarLogLine(complexLog);
+
+      const expectedResult: string = [
+        `${complexLog.timestamp} [${complexLog.level.padEnd(5)}] [${complexLog.loggerName}] ${complexLog.message} ${JSON.stringify(complexLog.mdc)} [Exception: ${fakeException.exceptionType} - ${fakeException.message}]`,
+        `    at ${fakeException.frames[0].class}.${fakeException.frames[0].method} (${fakeException.frames[0].class}:${fakeException.frames[0].line})`,
+        `    at ${fakeException.frames[1].class}.${fakeException.frames[1].method} (${fakeException.frames[1].class}:${fakeException.frames[1].line})`,
+      ].join("\n");
+
+      assert.strictEqual(result, expectedResult);
+    });
+
+    for (const exceptionValue of [null, undefined]) {
+      it(`should handle a log object where \`exception\` is ${exceptionValue}`, () => {
+        const logWithNullException = {
+          ...fakeLogObj,
+          exception: exceptionValue,
+        } as any;
+
+        const result: string = formatSidecarLogLine(logWithNullException);
+
+        assert.strictEqual(
+          result,
+          `${logWithNullException.timestamp} [${logWithNullException.level.padEnd(5)}] [${logWithNullException.loggerName}] ${logWithNullException.message}`,
+        );
+      });
+    }
+
+    it("should handle undefined `mdc`", () => {
+      const logWithUndefinedMdc = {
+        ...fakeLogObj,
+        mdc: undefined,
+      } as any;
+
+      const result: string = formatSidecarLogLine(logWithUndefinedMdc);
+
+      assert.strictEqual(
+        result,
+        `${logWithUndefinedMdc.timestamp} [${logWithUndefinedMdc.level.padEnd(5)}] [${logWithUndefinedMdc.loggerName}] ${logWithUndefinedMdc.message}`,
+      );
     });
   });
 });
