@@ -89,19 +89,14 @@ export function formatSidecarLogLine(
   }
 
   // always add exception details if present
-  if (
-    log.exception !== undefined &&
-    log.exception !== null &&
-    (log.exception.exceptionType ||
-      log.exception.message ||
-      (Array.isArray(log.exception.frames) && log.exception.frames.length > 0))
-  ) {
+  if (log.exception && (log.exception.exceptionType || log.exception.message)) {
     const exceptionType = log.exception.exceptionType || "UnknownException";
     const exceptionMessage = log.exception.message || "";
     formattedLine += ` [Exception: ${exceptionType} - ${exceptionMessage}]`;
-    for (const frame of log.exception.frames) {
-      formattedLine += `\n    at ${frame.class}.${frame.method} (${frame.class}:${frame.line})`;
-    }
+    if (Array.isArray(log.exception.frames) && log.exception.frames.length > 0)
+      for (const frame of log.exception.frames) {
+        formattedLine += `\n    at ${frame.class}.${frame.method} (${frame.class}:${frame.line})`;
+      }
   }
   return formattedLine;
 }
