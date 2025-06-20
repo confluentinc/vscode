@@ -13,7 +13,7 @@ import { getSidecar } from "../sidecar";
  * Fetches {@link CCloudEnvironment}s based on a connection ID, sorted by `name`.
  * @remarks Nested `kafkaClusters` are also sorted by name.
  */
-export async function getEnvironments(): Promise<CCloudEnvironment[]> {
+export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
   let envs: CCloudEnvironment[] = [];
 
   const query = graphql(`

@@ -5,7 +5,7 @@ import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notif
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 
 import { SidecarHandle } from "../sidecar";
-import { getEnvironments } from "./environments";
+import { getCCloudResources } from "./ccloud";
 
 describe("environments.ts getEnvironments()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -25,7 +25,7 @@ describe("environments.ts getEnvironments()", () => {
   it("Returns empty array and shows notification if query raises an error", async () => {
     sidecarStub.query.rejects(new Error("Query failed"));
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.deepStrictEqual(result, []);
     sinon.assert.calledOnce(showErrorNotificationStub);
@@ -34,7 +34,7 @@ describe("environments.ts getEnvironments()", () => {
   it("Returns empty array if no environments are returned", async () => {
     sidecarStub.query.resolves({ ccloudConnectionById: { environments: null } });
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.deepStrictEqual(result, []);
     sinon.assert.notCalled(showErrorNotificationStub);
@@ -43,7 +43,7 @@ describe("environments.ts getEnvironments()", () => {
   it("Returns empty array if no environments are found", async () => {
     sidecarStub.query.resolves({ ccloudConnectionById: { environments: [] } });
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.deepStrictEqual(result, []);
     sinon.assert.notCalled(showErrorNotificationStub);
@@ -52,7 +52,7 @@ describe("environments.ts getEnvironments()", () => {
   it("Handles degenerate environments from graphql", async () => {
     sidecarStub.query.resolves({ ccloudConnectionById: { environments: [null, null] } });
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.deepStrictEqual(result, []);
     sinon.assert.notCalled(showErrorNotificationStub);
@@ -91,7 +91,7 @@ describe("environments.ts getEnvironments()", () => {
     };
     sidecarStub.query.resolves(mockEnvironments);
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].id, "env1");
@@ -136,7 +136,7 @@ describe("environments.ts getEnvironments()", () => {
     };
     sidecarStub.query.resolves(mockEnvironments);
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].kafkaClusters.length, 1);
@@ -170,7 +170,7 @@ describe("environments.ts getEnvironments()", () => {
     };
     sidecarStub.query.resolves(mockEnvironments);
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].flinkComputePools.length, 1);
@@ -204,7 +204,7 @@ describe("environments.ts getEnvironments()", () => {
     };
     sidecarStub.query.resolves(mockEnvironments);
 
-    const result = await getEnvironments();
+    const result = await getCCloudResources();
 
     assert.strictEqual(result.length, 2);
     assert.strictEqual(result[0].name, "Environment 1");
