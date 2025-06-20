@@ -25,7 +25,7 @@ describe("templates.ts", () => {
       const fakeApi = {
         listScaffoldV1Templates: sandbox.stub().resolves({ data: fakeTemplates }),
       };
-      // Use a stubbed SidecarHandle instance, matching the rest of the codebase
+
       const fakeSidecarHandle = { getTemplatesApi: () => fakeApi };
       sandbox.stub(sidecarModule, "getSidecar").resolves(fakeSidecarHandle as any);
 
