@@ -13,6 +13,17 @@ export interface SidecarLogFormat {
   hostName: string;
   processName: string;
   processId: number;
+  exception?: SidecarLogExceptionFormat;
+}
+
+export interface SidecarLogExceptionFormat {
+  exceptionType: string;
+  message: string;
+  frames: {
+    class: string;
+    method: string;
+    line: number;
+  }[];
 }
 
 export interface SidecarOutputs {

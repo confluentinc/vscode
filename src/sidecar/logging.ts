@@ -49,18 +49,54 @@ export function parseSidecarLogLine(rawLogLine: string): SidecarLogFormat | null
   }
 }
 
-/** Format a {@link SidecarLogFormat} log object into more human-readable string. */
-export function formatSidecarLogLine(log: SidecarLogFormat): string {
+/**
+ * Format a log object into more human-readable string.
+ * @param log The {@link SidecarLogFormat} log object to format.
+ * @param options Formatting options:
+ * - `withTimestamp`: Whether to include the `timestamp` in the formatted string (default: `true`).
+ * - `withLevel`: Whether to include the log `level` in the formatted string (default: `true`).
+ * - `withMdc`: Whether to include the `mdc` (Mapped Diagnostic Context) data in the formatted string (default: `true`).
+ */
+export function formatSidecarLogLine(
+  log: SidecarLogFormat,
+  options?: {
+    withTimestamp: boolean;
+    withLevel: boolean;
+    withMdc: boolean;
+  },
+): string {
+  const withTimestamp: boolean = options?.withTimestamp ?? true;
+  const withLevel: boolean = options?.withLevel ?? true;
+  const withMdc: boolean = options?.withMdc ?? true;
+
   const timestamp = log.timestamp || new Date().toISOString();
   const level = log.level?.padEnd(5) || "INFO ";
   const loggerName = log.loggerName || "unknown";
   const message = log.message || "";
 
-  let formattedLine = `${timestamp} ${level} [${loggerName}] ${message}`;
+  let formattedLine = `[${loggerName}] ${message}`;
+  if (withLevel) {
+    formattedLine = `[${level}] ${formattedLine}`;
+  }
+  if (withTimestamp) {
+    formattedLine = `${timestamp} ${formattedLine}`;
+  }
+
   // add MDC data if present
-  if (log.mdc && Object.keys(log.mdc).length > 0) {
+  if (withMdc && log.mdc && Object.keys(log.mdc).length > 0) {
     const mdcString = JSON.stringify(log.mdc);
-    formattedLine += ` ${mdcString}`;
+    formattedLine = `${formattedLine} ${mdcString}`;
+  }
+
+  // always add exception details if present
+  if (log.exception && (log.exception.exceptionType || log.exception.message)) {
+    const exceptionType = log.exception.exceptionType || "UnknownException";
+    const exceptionMessage = log.exception.message || "";
+    formattedLine += ` [Exception: ${exceptionType} - ${exceptionMessage}]`;
+    if (Array.isArray(log.exception.frames) && log.exception.frames.length > 0)
+      for (const frame of log.exception.frames) {
+        formattedLine += `\n    at ${frame.class}.${frame.method} (${frame.class}:${frame.line})`;
+      }
   }
   return formattedLine;
 }
@@ -190,15 +226,24 @@ export function appendSidecarLogToOutputChannel(line: string) {
     return;
   }
 
-  let logMsg = `[${log.loggerName}] ${log.message}`;
-
+  // minimal formatting since the log output channel already has a timestamp and we'll pass any
+  // MDC data as args. (any exception details will be formatted into the log message string)
+  let logMsg = formatSidecarLogLine(log, {
+    withTimestamp: false,
+    withLevel: false,
+    withMdc: false,
+  });
   const logArgs = [];
   if (log.mdc && Object.keys(log.mdc).length > 0) {
     logArgs.push(log.mdc);
   }
 
   try {
-    const formattedLine = formatSidecarLogLine(log);
+    const formattedLine = formatSidecarLogLine(log, {
+      withTimestamp: true,
+      withLevel: true,
+      withMdc: true,
+    });
     const formattedLogStream = getFormattedSidecarLogStream();
     formattedLogStream.write(`${formattedLine}\n`);
   } catch (e) {
