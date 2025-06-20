@@ -2,11 +2,9 @@ import * as vscode from "vscode";
 import {
   ScaffoldV1Template,
   ScaffoldV1TemplateFromJSON,
-  TemplatesScaffoldV1Api,
+  getScaffoldingService,
 } from "../clients/scaffoldingService";
-import { Configuration } from "../clients/scaffoldingService/runtime";
 import { QuickPickItemWithValue } from "../quickpicks/types";
-import { getSidecar } from "../sidecar";
 import { sanitizeTemplateOptions } from "./utils";
 
 export async function getTemplatesList(
@@ -35,13 +33,4 @@ export async function pickTemplate(
   });
 
   return selected?.value;
-}
-
-export async function getScaffoldingService() {
-  const sidecar = await getSidecar();
-  const config = new Configuration({
-    basePath: sidecar.defaultClientConfigParams.basePath,
-    headers: sidecar.defaultClientConfigParams.headers,
-  });
-  return new TemplatesScaffoldV1Api(config);
 }
