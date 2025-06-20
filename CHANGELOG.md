@@ -4,6 +4,16 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Updated ide-sidecar version to v0.216.0
+- Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
+  requiring the word `hard` to be typed.
+- Saving the sidecar logs will now prompt the user to save either the raw (JSON) logs or the
+  formatted logs (same format as the "Confluent (Sidecar)" output channel).
+- Saving the support .zip will now also include the formatted sidecar logs, in addition to the raw
+  logs.
+
 ## 1.4.0
 
 ### Added

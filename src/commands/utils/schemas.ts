@@ -72,71 +72,46 @@ export type ValidationFunction = (input: string) => vscode.InputBoxValidationMes
  */
 export function getSchemaDeletionValidatorAndPlaceholder(
   version: number,
-  hardDeletion: boolean,
 ): [ValidationFunction, string] {
-  let validator: ValidationFunction;
-  let prompt: string;
-
-  if (hardDeletion) {
-    prompt = `Enter "hard v${version}" to confirm, escape to cancel.`;
-    validator = (input: string) => {
-      if (input === `hard v${version}`) {
-        return;
-      }
-      return {
-        message: `Enter "hard v${version}" to confirm hard deletion, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Error,
-      };
+  const placeholder = `Enter "v${version}" to confirm, escape to cancel.`;
+  const validator: ValidationFunction = (input) => {
+    if (input === `v${version}`) {
+      return undefined; // valid
+    }
+    return {
+      message: `Enter "v${version}" to confirm deletion, escape to cancel.`,
+      severity: vscode.InputBoxValidationSeverity.Error,
     };
-  } else {
-    prompt = `Enter "v${version}" to confirm, escape to cancel.`;
-    validator = (input: string) => {
-      if (input === `v${version}`) {
-        return;
-      }
-      return {
-        message: `Enter "v${version}" to confirm, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Error,
-      };
-    };
-  }
+  };
 
-  return [validator, prompt];
+  return [validator, placeholder];
 }
 
 export function getSubjectDeletionValidatorAndPlaceholder(
   subject: Subject,
-  versionCount: number,
-  hardDelete: boolean,
 ): [ValidationFunction, string] {
-  let validator: ValidationFunction;
-  let prompt: string;
-
-  if (hardDelete) {
-    prompt = `Enter "hard ${subject.name} ${versionCount}" to confirm, escape to cancel.`;
-    validator = (input: string) => {
-      if (input === `hard ${subject.name} ${versionCount}`) {
-        return;
-      }
-      return {
-        message: `Enter "hard ${subject.name} ${versionCount}" to confirm hard deletion, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Error,
-      };
+  const placeholder = `Enter "${subject.name}" to confirm, escape to cancel.`;
+  const validator: ValidationFunction = (input) => {
+    if (input === subject.name) {
+      return undefined;
+    }
+    return {
+      message: `Enter "${subject.name}" to confirm deletion, escape to cancel.`,
+      severity: vscode.InputBoxValidationSeverity.Warning,
     };
-  } else {
-    prompt = `Enter "${subject.name}" to confirm, escape to cancel.`;
-    validator = (input: string) => {
-      if (input === `${subject.name}`) {
-        return;
-      }
-      return {
-        message: `Enter "${subject.name}" to confirm, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Error,
-      };
-    };
-  }
+  };
 
-  return [validator, prompt];
+  return [validator, placeholder];
+}
+
+// helper function for the final warning modal on hard deletes
+export async function showHardDeleteWarningModal(noun: string): Promise<boolean> {
+  const choice = await vscode.window.showWarningMessage(
+    `WARNING: Hard deleting this ${noun} is irreversible and may cause data loss. Are you sure you want to continue?`,
+    { modal: true },
+    "Yes, Hard Delete",
+  );
+  return choice === "Yes, Hard Delete";
 }
 
 /**
@@ -177,11 +152,7 @@ export async function confirmSchemaSubjectDeletion(
   subject: Subject,
   schemaGroup: Schema[],
 ): Promise<true | undefined> {
-  const [validator, placeholder] = getSubjectDeletionValidatorAndPlaceholder(
-    subject,
-    schemaGroup.length,
-    hardDelete,
-  );
+  const [validator, placeholder] = getSubjectDeletionValidatorAndPlaceholder(subject);
   const confirmationTitle = `${hardDelete ? "HARD " : ""}Delete Subject ${subject.name} and all of its schema versions?`;
   const confirmation = await vscode.window.showInputBox({
     title: confirmationTitle,
@@ -208,10 +179,7 @@ export async function confirmSchemaVersionDeletion(
   schema: Schema,
   schemaGroup: Schema[],
 ): Promise<true | undefined> {
-  const [validator, placeholder] = getSchemaDeletionValidatorAndPlaceholder(
-    schema.version,
-    hardDeletion,
-  );
+  const [validator, placeholder] = getSchemaDeletionValidatorAndPlaceholder(schema.version);
 
   const confirmationTitle = `${hardDeletion ? "HARD " : ""}Delete Schema Version ${schema.version}?`;
 

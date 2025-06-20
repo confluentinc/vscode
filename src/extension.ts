@@ -71,7 +71,7 @@ import { setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
-import { SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
+import { closeFormattedSidecarLogStream, SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { SecretStorageKeys } from "./storage/constants";
@@ -550,6 +550,9 @@ export function deactivate() {
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
+
+  // close the sidecar log file stream, if it exists
+  closeFormattedSidecarLogStream();
 
   // close the file stream used with OUTPUT_CHANNEL -- needs to be done last to avoid any other
   // cleanup logging attempting to write to the file stream

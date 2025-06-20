@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-6-10
+Date generated: 2025-6-17
 
-Revision ID: 2b926874e37680f5e1533be29cd4ad7895d9148e
+Revision ID: bc4f3e03a229634d4da80a2110589830eecbe33e
 
 ================================================================================
 ================================================================================
@@ -170,7 +170,7 @@ No licenses found
 - @volar/source-map (2.4.0-alpha.18) [MIT]
 - @vscode/codicons (0.0.36) [CC-BY-4.0, MIT, CC-BY-SA-4.0]
 - @vscode/l10n (0.0.18) [MIT]
-- @vscode/webview-ui-toolkit (1.4.0) [MIT, CC0-1.0, 0BSD, bsd-2-clause-views]
+- @vscode/webview-ui-toolkit (1.4.0) [MIT, bsd-2-clause-views, CC0-1.0, 0BSD]
 - @vue/compiler-core (3.4.34) [MIT]
 - @vue/compiler-dom (3.4.34) [MIT]
 - @vue/compiler-vue2 (2.7.16) [MIT, 0BSD]
@@ -13817,6 +13817,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 MIT License
 
@@ -14507,7 +14511,39 @@ SOFTWARE.
 
 
 * Other Licenses *
-CC0-1.0, 0BSD, bsd-2-clause-views
+bsd-2-clause-views, CC0-1.0, 0BSD
+
+* bsd-2-clause-views *
+--------------------------------------------------------------------------------
+File matches:
+NOTICES
+--------------------------------------------------------------------------------
+
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list
+of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those
+of the authors and should not be interpreted as representing official policies,
+either expressed or implied, of the FreeBSD Project.
 
 * CC0-1.0 *
 --------------------------------------------------------------------------------
@@ -14548,38 +14584,6 @@ dist/toolkit.js
 Copyright (C) 2006 by Rob Landley <rob@landley.net>
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-* bsd-2-clause-views *
---------------------------------------------------------------------------------
-File matches:
-NOTICES
---------------------------------------------------------------------------------
-
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-
-Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-The views and conclusions contained in the software and documentation are those
-of the authors and should not be interpreted as representing official policies,
-either expressed or implied, of the FreeBSD Project.
 
 
 --------------------------------------------------------------------------------
@@ -39479,4 +39483,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-6-10
+Report Generated by FOSSA on 2025-6-17

@@ -2,7 +2,7 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import { loadFixture } from "../../tests/fixtures/utils";
-import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
@@ -17,6 +17,7 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import * as graphqlEnvs from "../graphql/environments";
 import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
@@ -242,6 +243,38 @@ describe("CCloudResourceLoader", () => {
     });
   }); // refreshFlinkStatement
 
+  describe("getKafkaClustersForEnvironmentId", () => {
+    beforeEach(() => {
+      // Make ensureCoarseResourcesLoaded seem completed already
+      // (private method)
+      sandbox.stub(loader as any, "ensureCoarseResourcesLoaded").resolves();
+    });
+
+    it("should downcall to resource manager", async () => {
+      stubbedResourceManager.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+
+      const clusters = await loader.getKafkaClustersForEnvironmentId(TEST_CCLOUD_ENVIRONMENT.id);
+      assert.deepStrictEqual(clusters, [TEST_CCLOUD_KAFKA_CLUSTER]);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.getKafkaClustersForEnvironmentId,
+        CCLOUD_CONNECTION_ID,
+        TEST_CCLOUD_ENVIRONMENT.id,
+      );
+    });
+
+    it("should raise if no environmentId is provided", async () => {
+      await assert.rejects(
+        async () => {
+          await loader.getKafkaClustersForEnvironmentId(undefined as any);
+        },
+        {
+          name: "Error",
+          message: "Cannot fetch clusters w/o an environmentId.",
+        },
+      );
+    });
+  });
+
   describe("hasFlinkComputePools", () => {
     beforeEach(() => {
       // Make ensureCoarseResourcesLoaded seem completed already
@@ -250,7 +283,7 @@ describe("CCloudResourceLoader", () => {
     });
 
     function setGetEnvironmentsResult(results: CCloudEnvironment[]) {
-      stubbedResourceManager.getCCloudEnvironments.resolves(results);
+      stubbedResourceManager.getEnvironments.resolves(results);
     }
 
     it("should return true if there are Flink compute pools", async () => {
@@ -289,9 +322,21 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getEnvironmentsStub);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       assert.strictEqual(loader["organization"], null);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, []);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudKafkaClusters, []);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudSchemaRegistries, []);
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setEnvironments,
+        CCLOUD_CONNECTION_ID,
+        [],
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setKafkaClusters,
+        CCLOUD_CONNECTION_ID,
+        [],
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setSchemaRegistries,
+        CCLOUD_CONNECTION_ID,
+        [],
+      );
     });
 
     it("should set CCloud resources when available", async () => {
@@ -303,15 +348,19 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getEnvironmentsStub);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
       assert.strictEqual(loader["organization"], TEST_CCLOUD_ORGANIZATION);
-      sinon.assert.calledOnceWithExactly(stubbedResourceManager.setCCloudEnvironments, [
-        TEST_CCLOUD_ENVIRONMENT,
-      ]);
       sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setCCloudKafkaClusters,
+        stubbedResourceManager.setEnvironments,
+        CCLOUD_CONNECTION_ID,
+        [TEST_CCLOUD_ENVIRONMENT],
+      );
+      sinon.assert.calledOnceWithExactly(
+        stubbedResourceManager.setKafkaClusters,
+        CCLOUD_CONNECTION_ID,
         TEST_CCLOUD_ENVIRONMENT.kafkaClusters, // empty array by default
       );
       sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setCCloudSchemaRegistries,
+        stubbedResourceManager.setSchemaRegistries,
+        CCLOUD_CONNECTION_ID,
         TEST_CCLOUD_ENVIRONMENT.schemaRegistry ? [TEST_CCLOUD_ENVIRONMENT.schemaRegistry] : [],
       );
     });

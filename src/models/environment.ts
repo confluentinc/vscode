@@ -25,11 +25,13 @@ import {
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
+  connectionIdToType,
   EnvironmentId,
   IResourceBase,
   isCCloud,
   isDirect,
   ISearchable,
+  UsedConnectionType,
 } from "./resource";
 import {
   CCloudSchemaRegistry,
@@ -59,7 +61,7 @@ export abstract class Environment implements IResourceBase, ISearchable {
    * them in the tree.
    */
   kafkaClusters!: KafkaCluster[];
-  schemaRegistry?: SchemaRegistry | undefined;
+  schemaRegistry?: SchemaRegistry;
   flinkComputePools: FlinkComputePool[] = [];
 
   // updated by the ResourceViewProvider from connectionUsable events
@@ -93,7 +95,7 @@ export class CCloudEnvironment extends Environment {
   streamGovernancePackage: string;
   // set explicit CCloud* typing
   kafkaClusters: CCloudKafkaCluster[];
-  schemaRegistry?: CCloudSchemaRegistry | undefined;
+  schemaRegistry?: CCloudSchemaRegistry;
   flinkComputePools: CCloudFlinkComputePool[];
 
   constructor(
@@ -229,7 +231,7 @@ export class LocalEnvironment extends Environment {
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
-  schemaRegistry?: LocalSchemaRegistry | undefined = undefined;
+  schemaRegistry?: LocalSchemaRegistry;
 
   constructor(props: Pick<LocalEnvironment, "id" | "name" | "kafkaClusters" | "schemaRegistry">) {
     super();
@@ -238,6 +240,33 @@ export class LocalEnvironment extends Environment {
     this.kafkaClusters = props.kafkaClusters;
     this.schemaRegistry = props.schemaRegistry;
   }
+}
+
+/**
+ * Type of the concrete Environment subclasses.
+ * Excludes the abstract base class which lacks a constructor.
+ */
+export type EnvironmentSubclass =
+  | typeof CCloudEnvironment
+  | typeof DirectEnvironment
+  | typeof LocalEnvironment;
+
+export type EnvironmentType = CCloudEnvironment | DirectEnvironment | LocalEnvironment;
+/**
+ * Mapping of connection types to their corresponding Environment subclass.
+ * @see getEnvironmentClass
+ */
+const environmentClassByConnectionType: Record<UsedConnectionType, EnvironmentSubclass> = {
+  [ConnectionType.Ccloud]: CCloudEnvironment,
+  [ConnectionType.Direct]: DirectEnvironment,
+  [ConnectionType.Local]: LocalEnvironment,
+};
+
+/**
+ * Returns the appropriate Environment subclass for the given connection ID.
+ */
+export function getEnvironmentClass(connectionId: ConnectionId): EnvironmentSubclass {
+  return environmentClassByConnectionType[connectionIdToType(connectionId)];
 }
 
 /** The representation of an {@link Environment} as a {@link TreeItem} in the VS Code UI. */

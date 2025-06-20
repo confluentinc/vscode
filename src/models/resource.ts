@@ -9,9 +9,12 @@ export type EnvironmentId = string & { readonly brand: unique symbol };
 
 export type OrganizationId = string & { readonly brand: unique symbol };
 
+/** Subtype of ConnectionType excluding ConnectionType.Platform, which we don't ever use here in extension-land. */
+export type UsedConnectionType = Exclude<ConnectionType, ConnectionType.Platform>;
+
 // Function to convert a ConnectionId to a ConnectionType, because we can always
 // go from one to the other.
-export function connectionIdToType(id: ConnectionId): ConnectionType {
+export function connectionIdToType(id: ConnectionId): UsedConnectionType {
   if (id === LOCAL_CONNECTION_ID) {
     return ConnectionType.Local;
   } else if (id === CCLOUD_CONNECTION_ID) {
@@ -21,8 +24,6 @@ export function connectionIdToType(id: ConnectionId): ConnectionType {
     return ConnectionType.Direct;
   }
 }
-
-// TODO: use other branded resource ID types here
 
 export interface IResourceBase {
   connectionId: ConnectionId;
@@ -64,7 +65,7 @@ export function isDirect(resource: IResourceBase): boolean {
 export enum ConnectionLabel {
   LOCAL = "Local",
   CCLOUD = "Confluent Cloud",
-  DIRECT = "Other", // TODO: update based on feedback from product+design
+  DIRECT = "Other",
 }
 
 /** Get the human-readable label for the given connection type. */
