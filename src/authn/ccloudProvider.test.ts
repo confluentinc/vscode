@@ -9,7 +9,7 @@ import {
   TEST_CCLOUD_USER,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { Connection } from "../clients/sidecar";
+import { ConnectedState, Connection } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { getSidecar } from "../sidecar";
@@ -122,7 +122,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
 
     sinon.assert.calledWith(
       setCCloudAuthStatusStub,
-      TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
+      TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.state,
     );
   });
 
@@ -459,8 +459,8 @@ describe("CCloud auth flow", () => {
       "No connections found; make sure to manually log in with the test username/password, because the 'Authorize App: Confluent VS Code Extension is requesting access to your Confluent account' (https://login.confluent.io/u/consent?...) page may be blocking the auth flow for this test. If that doesn't work, try running the test with `{ headless: false }` (in testAuthFlow()) to see what's happening.",
     );
     assert.ok(connection);
-    assert.notEqual(connection.status.authentication.status, "NO_TOKEN");
-    assert.equal(connection.status.authentication.user?.username, process.env.E2E_USERNAME);
+    assert.notEqual(connection.status.ccloud?.state, ConnectedState.None);
+    assert.equal(connection.status.ccloud?.user?.username, process.env.E2E_USERNAME);
   });
 });
 
