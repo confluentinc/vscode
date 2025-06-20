@@ -12,7 +12,7 @@ import { KafkaTopic } from "../models/topic";
 import * as notifications from "../notifications";
 import { registerProjectGenerationCommands, resourceScaffoldProjectRequest } from "./scaffold";
 
-describe.only("projectGeneration/scaffold", () => {
+describe("projectGeneration/scaffold", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
