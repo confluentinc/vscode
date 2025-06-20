@@ -18,7 +18,7 @@ import {
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import * as graphqlEnvs from "../graphql/ccloud";
+import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
 import { restFlinkStatementToModel } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
@@ -279,7 +279,7 @@ describe("CCloudResourceLoader", () => {
     let getCurrentOrganizationStub: sinon.SinonStub;
 
     beforeEach(() => {
-      getEnvironmentsStub = sandbox.stub(graphqlEnvs, "getEnvironments");
+      getEnvironmentsStub = sandbox.stub(graphqlCCloud, "getCCloudResources");
       getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
     });
 
