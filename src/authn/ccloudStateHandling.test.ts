@@ -4,9 +4,10 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { Connection, Status } from "../clients/sidecar";
-import { nonInvalidTokenStatus } from "../emitters";
-import { ResourceManager } from "../storage/resourceManager";
+import { ConnectedState, Connection } from "../clients/sidecar";
+import { observabilityContext } from "../context/observability";
+import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
+import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import {
   AuthPromptTracker,
   checkAuthExpiration,
@@ -184,31 +185,79 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
   });
 
   afterEach(() => {
+    // reset observabilityContext to ensure no state leaks between tests
+    observabilityContext.ccloudAuthLastSeenState = ConnectedState.None;
     sandbox.restore();
   });
 
-  const nonTransientStatuses: Status[] = [Status.Failed, Status.NoToken, Status.ValidToken];
-  nonTransientStatuses.forEach((status) => {
-    it(`should fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${status}`, async () => {
+  const nonTransientStatuses: ConnectedState[] = [
+    ConnectedState.Failed,
+    ConnectedState.None,
+    ConnectedState.Success,
+  ];
+  nonTransientStatuses.forEach((state) => {
+    it(`should fire the nonInvalidTokenStatus event emitter when the CCloud connected state is ${state}`, async () => {
       const connection = createFakeConnection(120);
-      connection.status.authentication.status = status;
+      connection.status.ccloud!.state = state;
 
       await reactToCCloudAuthState(connection);
 
-      assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(status));
+      assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(state));
       assert.ok(nonInvalidTokenStatusFireStub.called);
     });
   });
 
   it("should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
-    const status = Status.InvalidToken;
+    const state = ConnectedState.Attempting;
     const connection = createFakeConnection(120);
-    connection.status.authentication.status = status;
+    connection.status.ccloud!.state = state;
 
     await reactToCCloudAuthState(connection);
 
-    assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(status));
+    assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(state));
     assert.ok(nonInvalidTokenStatusFireStub.notCalled);
+  });
+
+  it("should detect session expiration when transitioning from SUCCESS to NONE", async () => {
+    // set the last seen state to SUCCESS to simulate a valid session
+    await getResourceManager().setCCloudAuthStatus(ConnectedState.Success);
+
+    // stub the ccloudAuthSessionInvalidated emitter and showErrorMessage
+    const ccloudAuthSessionInvalidatedStub = sandbox.stub();
+    sandbox.stub(ccloudAuthSessionInvalidated, "fire").callsFake(ccloudAuthSessionInvalidatedStub);
+    const showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
+
+    // simulate expiration by creating a connection with NONE state
+    const connection = createFakeConnection(undefined);
+    connection.status.ccloud!.state = ConnectedState.None;
+
+    await reactToCCloudAuthState(connection);
+
+    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedStub);
+    sinon.assert.calledOnce(showErrorMessageStub);
+    assert.ok(
+      showErrorMessageStub.firstCall.args[0].includes("expired"),
+      "error message should mention expiration",
+    );
+  });
+
+  it("should NOT detect session expiration when status was already NONE", async () => {
+    // set the last seen state to NONE to simulate a session that was already invalid
+    await getResourceManager().setCCloudAuthStatus(ConnectedState.None);
+
+    // stub the ccloudAuthSessionInvalidated emitter and showErrorMessage
+    const ccloudAuthSessionInvalidatedStub = sandbox.stub();
+    sandbox.stub(ccloudAuthSessionInvalidated, "fire").callsFake(ccloudAuthSessionInvalidatedStub);
+    const showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
+
+    // create a connection with NONE status (but not a transition)
+    const connection = createFakeConnection(undefined);
+    connection.status.ccloud!.state = ConnectedState.None;
+
+    await reactToCCloudAuthState(connection);
+
+    sinon.assert.notCalled(ccloudAuthSessionInvalidatedStub);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   // shoup: ccloudPolling.ts will need to be refactored to allow stubbing across the entire module

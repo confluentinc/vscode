@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Connection } from "../clients/sidecar";
+import { CCloudStatus, ConnectedState, Connection, UserInfo } from "../clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
@@ -33,13 +33,13 @@ const logger = new Logger("authn.ccloudProvider");
  * sidecar.
  *
  * Main responsibilities:
- * - {@linkcode createSession()}: Create a CCloud {@link Connection} with the sidecar if one doesn't
+ * - {@linkcode ConfluentCloudAuthProvider.createSession() createSession()}: Create a CCloud {@link Connection} with the sidecar if one doesn't
  *  already exist, then start the browser-based authentication flow. For connections that exist
  *  already, we reuse the `sign_in_uri` from the {@link Connection}'s `metadata`.
- * - {@linkcode getSessions()}: Whenever `vscode.authentication.getSession()` is called with our
+ * - {@linkcode ConfluentCloudAuthProvider.getSessions() getSessions()}: Whenever `vscode.authentication.getSession()` is called with our
  *  `AUTH_PROVIDER_ID`, this method will be called to get the current session. We don't use `scopes`
  *  at all here, since the sidecar manages all connection->access token and scope information.
- * - {@linkcode removeSession()}: Deletes the connection from the sidecar and update the provider's
+ * - {@linkcode ConfluentCloudAuthProvider.removeSession() removeSession()}: Deletes the connection from the sidecar and update the provider's
  *  internal state. This is only called after a user chooses to "Sign out" from the Accounts menu
  *  and continues past the confirmation dialog that appears.
  *
@@ -120,7 +120,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     } else {
       connection = existingConnection;
       logger.debug("createSession() using existing connection for sign-in flow", {
-        status: connection.status.authentication.status,
+        state: connection.status.ccloud?.state,
       });
     }
 
@@ -162,40 +162,45 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     });
 
     // sign-in completed, wait for the connection to become usable
-    const authenticatedConnection = await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
+    const authenticatedConnection: Connection | null =
+      await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
       throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
+    const ccloudStatus: CCloudStatus | undefined = authenticatedConnection.status.ccloud;
+    if (!ccloudStatus) {
+      logger.error(
+        "createSession() authenticated connection has no CCloud status, which should never happen",
+      );
+      throw new Error("Authenticated connection has no CCloud status.");
+    }
+
     // User signed in successfully so we send an identify event to Segment and LaunchDarkly
-    if (authenticatedConnection.status.authentication.user) {
+    const userInfo: UserInfo | undefined = ccloudStatus.user;
+    if (userInfo) {
       sendTelemetryIdentifyEvent({
         eventName: UserEvent.CCloudAuthentication,
-        userInfo: authenticatedConnection.status.authentication.user,
+        userInfo,
         session: undefined,
       });
-      (await getLaunchDarklyClient())?.identify({
-        key: authenticatedConnection.status.authentication.user.id,
-      });
+      (await getLaunchDarklyClient())?.identify({ key: userInfo.id });
     }
     // we want to continue regardless of whether or not the user dismisses the notification,
     // so we aren't awaiting this:
     vscode.window.showInformationMessage(
-      `Successfully signed in to Confluent Cloud as ${authenticatedConnection.status.authentication.user?.username}`,
+      `Successfully signed in to Confluent Cloud as ${ccloudStatus.user?.username}`,
     );
     logger.debug("createSession() successfully authenticated with Confluent Cloud");
     // update the auth status in the secret store so other workspaces can be notified of the change
     // and the middleware doesn't get an outdated status before the poller can update it
-    await getResourceManager().setCCloudAuthStatus(
-      authenticatedConnection.status.authentication.status,
-    );
+    await getResourceManager().setCCloudAuthStatus(ccloudStatus.state);
     const session = convertToAuthSession(authenticatedConnection);
     await this.handleSessionCreated(session, true);
     ccloudConnected.fire(true);
 
     observabilityContext.ccloudAuthCompleted = true;
-    observabilityContext.ccloudAuthExpiration =
-      authenticatedConnection.status.authentication.requires_authentication_at;
+    observabilityContext.ccloudAuthExpiration = ccloudStatus.requires_authentication_at;
     observabilityContext.ccloudSignInCount++;
 
     return session;
@@ -223,11 +228,15 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       secretStorage.get(SecretStorageKeys.AUTH_COMPLETED),
     ]);
 
-    if (connection && ["NO_TOKEN", "FAILED"].includes(connection.status.authentication.status)) {
+    if (
+      connection &&
+      connection.status.ccloud?.state &&
+      [ConnectedState.None, ConnectedState.Failed].includes(connection.status.ccloud.state)
+    ) {
       // the connection is unusable, so the auth provider needs to act like there isn't actually a
       // connection and the user needs to sign in
-      logger.debug("getSessions() found connection with unusable status", {
-        status: connection.status.authentication.status,
+      logger.debug("getSessions() found connection with unusable state", {
+        state: connection.status.ccloud.state,
       });
       connection = null;
     }
@@ -616,16 +625,21 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
 /** Converts a {@link Connection} to a {@link vscode.AuthenticationSession}. */
 function convertToAuthSession(connection: Connection): vscode.AuthenticationSession {
-  logger.debug("convertToAuthSession()", connection.status.authentication.status);
+  logger.debug("convertToAuthSession()", connection.status.ccloud?.state);
   // NOTE: accessToken is just the connection ID; the sidecar manages the actual access token.
   // we don't want to store the token status or anything that might change, because we may end up
   // seeing "Grant ____ permissions" in the Accounts action, which would be confusing to the user
+  const ccloudUser: UserInfo | undefined = connection.status.ccloud?.user;
+  if (!ccloudUser) {
+    logger.error("convertToAuthSession() connection has no CCloud user, which should never happen");
+    throw new Error("Connection has no CCloud user.");
+  }
   const session: vscode.AuthenticationSession = {
     id: CCLOUD_CONNECTION_ID,
     accessToken: CCLOUD_CONNECTION_ID,
     account: {
-      id: connection.status.authentication.user?.id ?? "unk user id",
-      label: connection.status.authentication.user?.username ?? "unk username",
+      id: ccloudUser.id ?? "unk user id",
+      label: ccloudUser.username ?? "unk username",
     },
     scopes: [],
   };
