@@ -12,13 +12,9 @@ import { removeProtocolPrefix } from "../utils/bootstrapServers";
 
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
-    registerCommandWithLogging("confluent.resources.scaffold", scaffoldProjectCommand),
-    registerCommandWithLogging("confluent.scaffold", scaffoldProjectCommand),
+    registerCommandWithLogging("confluent.resources.scaffold", scaffoldProjectRequest),
+    registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
   ];
-}
-
-async function scaffoldProjectCommand(...args: any[]) {
-  await scaffoldProjectRequest(...args);
 }
 
 export async function resourceScaffoldProjectRequest(resource: ResourceLoader) {
