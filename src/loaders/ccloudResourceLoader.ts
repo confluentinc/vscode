@@ -80,7 +80,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */
   protected async getEnvironmentsFromGraphQL(): Promise<CCloudEnvironment[]> {
-    // Drive the GQL query. Sigh, poorly named function, since is ccloud-specific.
+    // Drive the GQL query.
     return await getCCloudResources();
   }
 
