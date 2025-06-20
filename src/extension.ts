@@ -510,10 +510,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
       userInfo: undefined,
       session: cloudSession,
     });
-    (await getLaunchDarklyClient())?.identify({
-      key: cloudSession.account.id,
-      email: cloudSession.account.label,
-    });
+    (await getLaunchDarklyClient())?.identify({ key: cloudSession.account.id });
   }
 
   logger.info("Confluent Cloud auth provider registered");
