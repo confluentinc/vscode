@@ -93,10 +93,11 @@ export function formatSidecarLogLine(
     const exceptionType = log.exception.exceptionType || "UnknownException";
     const exceptionMessage = log.exception.message || "";
     formattedLine += ` [Exception: ${exceptionType} - ${exceptionMessage}]`;
-    if (Array.isArray(log.exception.frames) && log.exception.frames.length > 0)
+    if (Array.isArray(log.exception.frames) && log.exception.frames.length > 0) {
       for (const frame of log.exception.frames) {
         formattedLine += `\n    at ${frame.class}.${frame.method} (${frame.class}:${frame.line})`;
       }
+    }
   }
   return formattedLine;
 }
