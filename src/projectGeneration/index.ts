@@ -2,15 +2,19 @@ import { posix } from "path";
 import { unzip } from "unzipit";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import {
+  getScaffoldingService,
+  ScaffoldV1Template,
+  ScaffoldV1TemplateSpec,
+} from "../clients/scaffoldingService";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { UserEvent, logUsage } from "../telemetry/events";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { WebviewPanelCache } from "../webview-cache";
 import { PostResponse } from "../webview/scaffold-form";
 import scaffoldFormTemplate from "../webview/scaffold-form.html";
-import { getScaffoldingService, getTemplatesList, pickTemplate } from "./template.js";
+import { getTemplatesList, pickTemplate } from "./template.js";
 import { PrefilledTemplateOptions, TemplateOptionValues } from "./types";
 import { parseErrorMessage } from "./utils";
 
