@@ -7,7 +7,7 @@ import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { SidecarHandle } from "../sidecar";
 import { getCCloudResources } from "./ccloud";
 
-describe("environments.ts getEnvironments()", () => {
+describe("graphql/ccloud.ts getCCloudResources()", () => {
   let sandbox: sinon.SinonSandbox;
   let sidecarStub: sinon.SinonStubbedInstance<SidecarHandle>;
   let showErrorNotificationStub: sinon.SinonStub;
