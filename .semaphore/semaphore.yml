@@ -89,12 +89,12 @@ blocks:
             # Upload coverage artifacts for SonarQube promotion
             - |
               if [ -f "coverage/lcov.info" ]; then
-                artifact push workflow coverage/lcov.info
+                artifact push workflow coverage/lcov.info --force
                 echo "Uploaded Mocha coverage artifacts"
               fi
             - |
               if [ -f "coverage/lcov-functional.info" ]; then
-                artifact push workflow coverage/lcov-functional.info
+                artifact push workflow coverage/lcov-functional.info --force
                 echo "Uploaded Playwright coverage artifacts"
               fi
 
