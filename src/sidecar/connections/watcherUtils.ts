@@ -74,6 +74,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "DISCONNECTED":
           logger.debug(
             "connectionEventHandler: ccloud connection update received, passing to reactToCCloudAuthState()",
+            JSON.stringify(event, null, 2),
           );
           reactToCCloudAuthState(connection).catch((e) => {
             logger.error(`connectionEventHandler: reactToCCloudAuthState() failed: ${e}`, e.stack);
