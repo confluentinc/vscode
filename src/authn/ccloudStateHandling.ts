@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { AuthErrors, Connection, Status } from "../clients/sidecar";
+import { AuthErrors, CCloudStatus, ConnectedState, Connection } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
+import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
@@ -52,23 +52,48 @@ export class AuthPromptTracker {
  * Called whenever sidecar pushes an update to the ccloud connection via websocket event to us.
  */
 export async function reactToCCloudAuthState(connection: Connection): Promise<void> {
+  const authStatus: CCloudStatus | undefined = connection.status.ccloud;
+  if (!authStatus) {
+    logger.warn("no ccloud status found in connection, skipping auth state handling");
+    return;
+  }
+
+  const status = authStatus as CCloudStatus;
   logger.debug("received update to CCloud connection", {
-    status: connection.status.authentication.status,
-    expiration: connection.status.authentication.requires_authentication_at,
-    errors: connection.status.authentication.errors,
+    state: status.state,
+    expiration: status.requires_authentication_at,
+    errors: status.errors,
   });
 
-  const authStatus: Status = connection.status.authentication.status;
-  observabilityContext.ccloudAuthLastSeenStatus = authStatus;
+  observabilityContext.ccloudAuthLastSeenState = status.state;
 
-  await getResourceManager().setCCloudAuthStatus(authStatus);
-  if (authStatus === "INVALID_TOKEN") {
+  const rm = getResourceManager();
+  const lastAuthState: ConnectedState | undefined = await rm.getCCloudState();
+  await getResourceManager().setCCloudState(authStatus.state);
+
+  const authState: ConnectedState = status.state;
+  // check if the connected state transitioned from SUCCESS to NONE/FAILED
+  const sessionJustExpired: boolean =
+    lastAuthState === ConnectedState.Success &&
+    (authState === ConnectedState.None || authState === ConnectedState.Failed);
+  if (sessionJustExpired) {
+    logger.error(
+      `CCloud session expired: transitioned from ${ConnectedState.Success} to ${authState}`,
+    );
+    // either we got a reauth date, or we're reacting to an expiration that already happened
+    await handleExpiredAuth(
+      new Date(status.requires_authentication_at ?? Date.now()).toLocaleString(),
+    );
+    return;
+  }
+
+  if (authState === ConnectedState.Attempting) {
     // Don't bother checking for expiration or errors until we get another status back
     return;
-  } else {
-    // ensure any open progress notifications are closed even if no requests are going through the middleware
-    nonInvalidTokenStatus.fire();
   }
+
+  // ensure any open progress notifications are closed even if no requests are going through the middleware
+  stableCCloudConnectedState.fire();
 
   // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
   // warn the user to reauth; also handle if the session has already expired
@@ -79,7 +104,7 @@ export async function reactToCCloudAuthState(connection: Connection): Promise<vo
     return;
   }
 
-  // if we get any kind of `.status.authentication.errors`, throw an error notification so the user
+  // if we get any kind of `.status.ccloud.errors`, show an error notification so the user
   // can try to reauthenticate
   checkAuthErrors(connection);
 }
@@ -92,10 +117,11 @@ export async function reactToCCloudAuthState(connection: Connection): Promise<vo
  * @returns `true` if the auth session has already expired, `false` otherwise
  */
 export async function checkAuthExpiration(connection: Connection): Promise<boolean> {
-  const expiration: Date | undefined = connection.status.authentication.requires_authentication_at;
+  const expiration: Date =
+    connection.status.ccloud?.requires_authentication_at ?? new Date(Date.now());
   const tracker = AuthPromptTracker.getInstance();
   if (!expiration) {
-    // the user hasn't authenticated yet (or the auth status may be INVALID_TOKEN) and we may not
+    // the user hasn't authenticated yet (or the connected state may be ATTEMPTING) and we may not
     // have an expiration date yet, so we can't check if it's about to expire
     tracker.reauthWarningPromptOpen = false;
     return false;
@@ -109,12 +135,17 @@ export async function checkAuthExpiration(connection: Connection): Promise<boole
   const authExpiresSoon = minutesUntilExpiration < MINUTES_UNTIL_REAUTH_WARNING;
   const logBody = {
     connectionId: CCLOUD_CONNECTION_ID,
-    authStatus: connection.status.authentication.status,
+    authState: connection.status.ccloud?.state,
     expiration,
     minutesUntilExpiration,
     authExpiresSoon,
     tracker,
   };
+  logger.debug(
+    "checking CCloud auth expiration",
+    logBody,
+    observabilityContext.ccloudAuthLastSeenState,
+  );
   if (!authExpiresSoon) {
     // Reset our reauth warning prompt state so we can re-prompt if we fall into another
     // reauth warning window later
@@ -208,7 +239,7 @@ function handleUpcomingAuthExpiration(
   ignored it entirely. Throw up one final (error) notification to the user to reauthenticate
   before the errors start piling up.
  * @param signInUri The URL to open in the user's browser to reauthenticate
- * @param expirationString The date and time when the user's authentication will expire
+ * @param expirationString The date and time when the user's authentication expired
  */
 async function handleExpiredAuth(expirationString: string) {
   // inform the auth provider that the session has expired (which will also delete the CCloud
@@ -232,7 +263,7 @@ async function handleExpiredAuth(expirationString: string) {
 
 /** Check the {@link Connection} for any auth-related errors and prompt the user to reauthenticate. */
 export function checkAuthErrors(connection: Connection) {
-  const errors: AuthErrors | undefined = connection.status.authentication.errors;
+  const errors: AuthErrors | undefined = connection.status.ccloud?.errors;
   if (!errors) {
     return;
   }

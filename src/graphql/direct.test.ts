@@ -10,7 +10,7 @@ import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
-import { ConnectedState, ConnectionType, Status } from "../clients/sidecar";
+import { ConnectedState, ConnectionType } from "../clients/sidecar";
 import * as errorModule from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
@@ -54,7 +54,6 @@ const fakeAttemptingConnectionEvent: ConnectionEventBody = {
     status: {
       kafka_cluster: { state: ConnectedState.Attempting },
       schema_registry: { state: ConnectedState.Attempting },
-      authentication: { status: Status.NoToken },
     },
   },
 };
@@ -67,7 +66,6 @@ const fakeStableConnectionEvent: ConnectionEventBody = {
     status: {
       kafka_cluster: { state: ConnectedState.Success },
       schema_registry: { state: ConnectedState.Success },
-      authentication: { status: Status.NoToken },
     },
   },
 };
@@ -355,7 +353,6 @@ describe("graphql/direct.ts getDirectResources()", () => {
         status: {
           kafka_cluster: { state: ConnectedState.Failed },
           schema_registry: { state: ConnectedState.Failed },
-          authentication: { status: Status.NoToken },
         },
       },
     };
