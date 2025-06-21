@@ -1,0 +1,50 @@
+version: v1.0
+name: sonarqube-analysis
+
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+
+blocks:
+  - name: "SonarQube Analysis"
+    task:
+      prologue:
+        commands:
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
+      jobs:
+        - name: "Download coverage artifacts and run SonarQube scan"
+          commands:
+            # Download coverage artifacts from the main pipeline
+            - |
+              if artifact pull workflow coverage/lcov.info; then
+                echo "Downloaded Mocha coverage artifacts"
+                mkdir -p coverage
+                mv lcov.info coverage/
+              else
+                echo "Warning: Mocha coverage artifacts not found"
+              fi
+            - |
+              if artifact pull workflow coverage/lcov-functional.info; then
+                echo "Downloaded Playwright coverage artifacts"
+                mkdir -p coverage
+                mv lcov-functional.info coverage/
+              else
+                echo "Warning: Playwright coverage artifacts not found"
+              fi
+            # Verify coverage files exist
+            - |
+              echo "Coverage files found:"
+              ls -la coverage/ || echo "No coverage directory found"
+            # Run SonarQube scan with all available coverage data
+            - sem-version java 21
+            - emit-sonarqube-data --run_only_sonar_scan
