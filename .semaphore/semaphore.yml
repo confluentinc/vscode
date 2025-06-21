@@ -77,8 +77,6 @@ blocks:
           env_vars:
             - name: VSCODE_VERSION
               value: stable
-            - name: RUN_SONARQUBE_SCAN
-              value: "true"
         - name: "Playwright: Webview Tests (VS Code)"
           commands:
             - make test-playwright-webviews
@@ -88,12 +86,16 @@ blocks:
             - make remove-test-env
             - make ci-bin-sem-cache-store
             - make store-test-results-to-semaphore
-            # Ensures that we run the SonarQube scan only in this block, and not in the other blocks
-            # where this epilogue is referenced.
+            # Upload coverage artifacts for SonarQube promotion
             - |
-              if [[ "${RUN_SONARQUBE_SCAN}" == "true" ]]; then 
-                sem-version java 21
-                emit-sonarqube-data --run_only_sonar_scan
+              if [ -f "coverage/lcov.info" ]; then
+                artifact push workflow coverage/lcov.info
+                echo "Uploaded Mocha coverage artifacts"
+              fi
+            - |
+              if [ -f "coverage/lcov-functional.info" ]; then
+                artifact push workflow coverage/lcov-functional.info
+                echo "Uploaded Playwright coverage artifacts"
               fi
 
   - name: "Linux ARM64 Stable: Tests"
@@ -293,6 +295,10 @@ after_pipeline:
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
 
 promotions:
+  - name: SonarQube Analysis
+    pipeline_file: sonarqube.yml
+    auto_promote:
+      when: "(branch =~ '.*' or pull_request =~ '.*') and change_in(['src/**/*', 'tests/**/*'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
   - name: Multi-Arch VSIX Packaging and Upload
     pipeline_file: multi-arch-packaging.yml
     auto_promote:
