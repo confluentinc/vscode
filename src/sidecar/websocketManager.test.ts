@@ -36,17 +36,17 @@ describe("WebsocketManager peerWorkspaceCount tests", () => {
 });
 
 describe("WebsocketManager disconnected tests", () => {
+  let sandbox: sinon.SinonSandbox;
   const websocketManager = WebsocketManager.getInstance();
-  let websocketStub: sinon.SinonStub;
 
   before(() => {
+    sandbox = sinon.createSandbox();
     // ensure websocket smells not connected at this point
-    websocketStub = sinon.stub(websocketManager as any, "websocket").value(null);
+    sandbox.stub(websocketManager as any, "websocket").value(null);
   });
 
   after(() => {
-    // restore the original websocket
-    websocketStub.restore();
+    sandbox.restore();
   });
 
   it("Should not smell connected when websocket is null", () => {
@@ -213,8 +213,8 @@ describe("WebsocketManager.parseMessage tests", () => {
 });
 
 describe("WebsocketManager message recepit + callback routing tests (messageRouter interactions)", () => {
+  let sandbox: sinon.SinonSandbox;
   const manager = WebsocketManager.getInstance();
-  let messageRouterStub: sinon.SinonStub;
 
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
@@ -228,13 +228,14 @@ describe("WebsocketManager message recepit + callback routing tests (messageRout
   };
 
   beforeEach(() => {
+    sandbox = sinon.createSandbox();
     // overlay the messageRouter member with an empty event emitter.
-    messageRouterStub = sinon.stub(manager as any, "messageRouter").value(constructMessageRouter());
+    sandbox.stub(manager as any, "messageRouter").value(constructMessageRouter());
   });
 
   afterEach(() => {
     // Restore the stashed event emitter.
-    messageRouterStub.restore();
+    sandbox.restore();
   });
 
   // test subscribe, deliver lifecycle.
