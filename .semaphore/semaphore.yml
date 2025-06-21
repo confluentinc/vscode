@@ -181,6 +181,52 @@ blocks:
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
 
+  # --- SonarQube Analysis ---
+  - name: "SonarQube Analysis"
+    dependencies: ["Linux x64 Stable: Tests"]
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      prologue:
+        commands:
+          - make ci-bin-sem-cache-restore
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
+      jobs:
+        - name: "Run SonarQube scan with coverage data"
+          commands:
+            # Download coverage artifacts from the Linux x64 Stable tests
+            - |
+              if artifact pull workflow coverage/lcov.info; then
+                echo "Downloaded Mocha coverage artifacts"
+                mkdir -p coverage
+                mv lcov.info coverage/
+              else
+                echo "Warning: Mocha coverage artifacts not found"
+              fi
+            - |
+              if artifact pull workflow coverage/lcov-functional.info; then
+                echo "Downloaded Playwright coverage artifacts"
+                mkdir -p coverage
+                mv lcov-functional.info coverage/
+              else
+                echo "Warning: Playwright coverage artifacts not found"
+              fi
+            # Verify coverage files exist
+            - |
+              echo "Coverage files found:"
+              ls -la coverage/ || echo "No coverage directory found"
+            # Run SonarQube scan with all available coverage data
+            - sem-version java 21
+            - emit-sonarqube-data --run_only_sonar_scan
+
+  # --- End SonarQube Analysis ---
+
   # --- Build & Test (multi-platform/-arch) for VS Code (insiders) ---
   - name: "Linux x64 Insiders: Tests"
     dependencies: ["Static Analysis (TypeScript & ESLint)"]
