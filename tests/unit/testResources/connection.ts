@@ -29,7 +29,7 @@ export const TEST_CCLOUD_USER: UserInfo = {
 };
 const TEST_AUTH_EXPIRATION = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
-/** A basic CCloud {@link Connection} with `NO_TOKEN` auth status. */
+/** A basic CCloud {@link Connection} with `NONE` connected state. */
 export const TEST_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   api_version: "gateway/v1",
   kind: "Connection",
@@ -53,7 +53,7 @@ export const TEST_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   },
 } satisfies Connection);
 
-/** A CCloud {@link Connection} with `VALID_TOKEN` auth status and user info. */
+/** A CCloud {@link Connection} with `SUCCESS` state and user info. */
 export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   ...TEST_CCLOUD_CONNECTION,
   status: {
