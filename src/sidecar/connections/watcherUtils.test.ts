@@ -58,17 +58,8 @@ describe("connectionEventHandler", () => {
       connectionEventHandler(testConnectionEvent);
 
       // Assert
-      assert.strictEqual(
-        handleUpdatedConnectionStub.calledOnce,
-        true,
-        "handleUpdatedConnection called",
-      );
-
-      assert.ok(
-        handleUpdatedConnectionStub.calledWith(TEST_CCLOUD_CONNECTION),
-        `handleUpdatedConnection called with ${handleUpdatedConnectionStub.getCall(0).args[0]}`,
-      );
-
+      sinon.assert.calledOnce(handleUpdatedConnectionStub);
+      sinon.assert.calledOnceWithExactly(handleUpdatedConnectionStub, TEST_CCLOUD_CONNECTION);
       // ccloud events should never fire directConnectionCreatedStub
       sinon.assert.notCalled(directConnectionCreatedStub);
     });
@@ -89,7 +80,7 @@ describe("connectionEventHandler", () => {
     connectionEventHandler(testConnectionEvent);
 
     // Assert
-    assert.strictEqual(handleUpdatedConnectionStub.notCalled, true);
+    sinon.assert.notCalled(handleUpdatedConnectionStub);
   });
 
   for (const action of [
@@ -110,21 +101,15 @@ describe("connectionEventHandler", () => {
       connectionEventHandler(testConnectionEvent);
 
       // Assert
-      assert.strictEqual(connectionStableFireStub.calledOnce, true);
+      sinon.assert.calledOnce(connectionStableFireStub);
       // called with the connection id
-      assert.strictEqual(connectionStableFireStub.calledWith(TEST_DIRECT_CONNECTION.id), true);
-
-      assert.strictEqual(environmentChangedFireStub.calledOnce, true);
-
-      assert.strictEqual(
-        environmentChangedFireStub.calledWith({
-          id: TEST_DIRECT_CONNECTION.id,
-          wasDeleted:
-            action === ConnectionEventAction.DELETED ||
-            action === ConnectionEventAction.DISCONNECTED,
-        }),
-        true,
-      );
+      sinon.assert.calledOnceWithExactly(connectionStableFireStub, TEST_DIRECT_CONNECTION.id);
+      sinon.assert.calledOnce(environmentChangedFireStub);
+      sinon.assert.calledOnceWithExactly(environmentChangedFireStub, {
+        id: TEST_DIRECT_CONNECTION.id,
+        wasDeleted:
+          action === ConnectionEventAction.DELETED || action === ConnectionEventAction.DISCONNECTED,
+      });
 
       // directConnectionCreatedStub should be called only for CREATED events
       if (action === ConnectionEventAction.CREATED) {
@@ -153,8 +138,8 @@ describe("connectionEventHandler", () => {
     connectionEventHandler(testConnectionEvent);
 
     // Assert
-    assert.strictEqual(connectionStableFireStub.notCalled, true);
-    assert.strictEqual(environmentChangedFireStub.notCalled, true);
+    sinon.assert.notCalled(connectionStableFireStub);
+    sinon.assert.notCalled(environmentChangedFireStub);
   });
 });
 
