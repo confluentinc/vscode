@@ -64,7 +64,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should handle viewing the statement source", async () => {
-    const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
+    const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 
     // Simulate hitting the button to view the statement source
     await vm.viewStatementSource();
