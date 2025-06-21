@@ -53,8 +53,8 @@ export enum SecretStorageKeys {
    * ever set to "true" or deleted. */
   AUTH_SESSION_EXISTS = "authSessionExists",
 
-  /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
-  CCLOUD_AUTH_STATUS = "ccloudAuthStatus",
+  /** Store the latest CCloud {@link ConnectedState} from the sidecar. */
+  CCLOUD_STATE = "ccloudState",
 
   /** A map of connection id:ConnectionSpec */
   DIRECT_CONNECTIONS = "directConnections",

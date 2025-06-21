@@ -1,6 +1,7 @@
 import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { logError } from "../errors";
+import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -8,6 +9,8 @@ import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
+
+const logger = new Logger("graphql.ccloud");
 
 /**
  * Fetches {@link CCloudEnvironment}s based on a connection ID, sorted by `name`.
@@ -119,6 +122,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
     );
   });
 
+  logger.debug(`returning ${envs.length} CCloud environments`);
   envs.sort((a, b) => a.name.localeCompare(b.name));
   return envs;
 }
