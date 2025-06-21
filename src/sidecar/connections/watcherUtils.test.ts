@@ -10,7 +10,7 @@ import {
 
 import sinon from "sinon";
 import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
-import { ConnectedState, Status } from "../../clients/sidecar/models";
+import { ConnectedState } from "../../clients/sidecar/models";
 import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
@@ -145,7 +145,6 @@ describe("connectionEventHandler", () => {
           // either one of these being in Attempting state should prevent firing.
           kafka_cluster: { state: ConnectedState.Attempting },
           schema_registry: { state: ConnectedState.Success },
-          authentication: { status: Status.NoToken },
         },
       },
     };
@@ -160,8 +159,6 @@ describe("connectionEventHandler", () => {
 });
 
 describe("isConnectionStable", () => {
-  const testAuthStatus = { authentication: { status: Status.NoToken } };
-
   it("ccloud connection tests", () => {
     type CCloudConnectionStateAndResult = [ConnectedState, boolean];
 
@@ -181,7 +178,6 @@ describe("isConnectionStable", () => {
           ...TEST_CCLOUD_CONNECTION,
           status: {
             ccloud: { state: connectedState },
-            ...testAuthStatus,
           },
         },
       };
@@ -213,7 +209,6 @@ describe("isConnectionStable", () => {
           status: {
             kafka_cluster: { state: kafkaState },
             schema_registry: { state: schemaRegistryState },
-            ...testAuthStatus,
           },
         },
       };

@@ -112,7 +112,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
 
   it("createSession() should update the auth status secret on successful authentication", async () => {
     const setCCloudAuthStatusStub = sandbox
-      .stub(ResourceManager.getInstance(), "setCCloudAuthStatus")
+      .stub(ResourceManager.getInstance(), "setCCloudState")
       .resolves();
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication completes successfully
@@ -169,7 +169,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     sinon.assert.notCalled(showErrorMessageStub);
   });
 
-  it("getSessions() should treat connections with a NO_TOKEN/FAILED auth status as nonexistent", async () => {
+  it(`getSessions() should treat connections with a ${ConnectedState.None}/${ConnectedState.Failed} state as nonexistent`, async () => {
     getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
 
     const sessions = await authProvider.getSessions();
@@ -203,7 +203,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     await authProvider.removeSession("sessionId");
 
     assert.ok(deleteConnectionStub.called);
-    assert.ok(stubbedSecretStorage.delete.calledWith(SecretStorageKeys.CCLOUD_AUTH_STATUS));
+    assert.ok(stubbedSecretStorage.delete.calledWith(SecretStorageKeys.CCLOUD_STATE));
     assert.ok(handleSessionRemovedStub.calledWith(true));
   });
 
@@ -422,7 +422,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
 
     sinon.assert.calledWith(setAuthFlowCompletedStub, { success: false, resetPassword: true });
     sinon.assert.calledOnce(deleteConnectionStub);
-    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_AUTH_STATUS);
+    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_STATE);
     sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
     sinon.assert.calledOnce(showResetPasswordNotificationStub);
   });
