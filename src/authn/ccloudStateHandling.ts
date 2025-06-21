@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { AuthErrors, CCloudStatus, ConnectedState, Connection } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
+import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
@@ -68,12 +68,12 @@ export async function reactToCCloudAuthState(connection: Connection): Promise<vo
   observabilityContext.ccloudAuthLastSeenState = status.state;
 
   const rm = getResourceManager();
-  const lastAuthState: string | undefined = await rm.getCCloudAuthStatus();
-  await getResourceManager().setCCloudAuthStatus(authStatus);
+  const lastAuthState: ConnectedState | undefined = await rm.getCCloudState();
+  await getResourceManager().setCCloudState(authStatus.state);
 
   const authState: ConnectedState = status.state;
   // check if the connected state transitioned from SUCCESS to NONE/FAILED
-  const sessionJustExpired =
+  const sessionJustExpired: boolean =
     lastAuthState === ConnectedState.Success &&
     (authState === ConnectedState.None || authState === ConnectedState.Failed);
   if (sessionJustExpired) {
@@ -93,7 +93,7 @@ export async function reactToCCloudAuthState(connection: Connection): Promise<vo
   }
 
   // ensure any open progress notifications are closed even if no requests are going through the middleware
-  nonInvalidTokenStatus.fire();
+  stableCCloudConnectedState.fire();
 
   // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
   // warn the user to reauth; also handle if the session has already expired
