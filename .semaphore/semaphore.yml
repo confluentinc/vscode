@@ -202,7 +202,7 @@ blocks:
           commands:
             # Download coverage artifacts from the Linux x64 Stable tests
             - |
-              if artifact pull workflow coverage/lcov.info; then
+              if artifact pull workflow lcov.info; then
                 echo "Downloaded Mocha coverage artifacts"
                 mkdir -p coverage
                 mv lcov.info coverage/
@@ -210,7 +210,7 @@ blocks:
                 echo "Warning: Mocha coverage artifacts not found"
               fi
             - |
-              if artifact pull workflow coverage/lcov-functional.info; then
+              if artifact pull workflow lcov-functional.info; then
                 echo "Downloaded Playwright coverage artifacts"
                 mkdir -p coverage
                 mv lcov-functional.info coverage/
