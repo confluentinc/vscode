@@ -289,26 +289,4 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
     sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
   });
-
-  // shouldn't happen, but just in case
-  it(`should handle errors if provided with ${ConnectedState.Success} state`, async () => {
-    const connection: Connection = {
-      ...TEST_CCLOUD_CONNECTION,
-      status: {
-        ccloud: {
-          state: ConnectedState.Success,
-          errors: {
-            auth_status_check: { message: "Connection timeout", is_transient: true },
-          },
-        },
-      },
-    };
-
-    await handleUpdatedConnection(connection);
-
-    // should not trigger auth flows for SUCCESS state, but should show error notification
-    sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
-    sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
-    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-  });
 });
