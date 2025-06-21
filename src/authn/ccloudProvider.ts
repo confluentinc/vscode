@@ -137,14 +137,14 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     if (authCallback === undefined) {
       // user cancelled the operation
       logger.debug("createSession() user cancelled the operation");
-      return Promise.reject(new Error("User cancelled the authentication flow."));
+      throw new Error("User cancelled the authentication flow.");
     }
 
     if (authCallback.resetPassword) {
       // user reset their password, so we need to notify them to reauthenticate
       logger.debug("createSession() user reset their password");
       this.showResetPasswordNotification();
-      return Promise.reject(new Error("User reset their password."));
+      throw new Error("User reset their password.");
     }
 
     if (!authCallback.success) {
@@ -153,7 +153,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       logUsage(UserEvent.CCloudAuthentication, {
         status: "authentication failed",
       });
-      return Promise.reject(new Error(authFailedMsg));
+      throw new Error(authFailedMsg);
     }
 
     logUsage(UserEvent.CCloudAuthentication, {
@@ -177,17 +177,23 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // User signed in successfully so we send an identify event to Segment and LaunchDarkly
     const userInfo: UserInfo | undefined = ccloudStatus.user;
-    if (userInfo) {
-      sendTelemetryIdentifyEvent({
-        eventName: UserEvent.CCloudAuthentication,
-        userInfo,
-        session: undefined,
-      });
-      (await getLaunchDarklyClient())?.identify({ key: userInfo.id });
+    if (!userInfo) {
+      logger.error(
+        "createSession() authenticated connection has no CCloud user, which should never happen",
+      );
+      throw new Error("Authenticated connection has no CCloud user.");
     }
+
+    sendTelemetryIdentifyEvent({
+      eventName: UserEvent.CCloudAuthentication,
+      userInfo,
+      session: undefined,
+    });
+    (await getLaunchDarklyClient())?.identify({ key: userInfo.id });
+
     // we want to continue regardless of whether or not the user dismisses the notification,
     // so we aren't awaiting this:
-    vscode.window.showInformationMessage(
+    void vscode.window.showInformationMessage(
       `Successfully signed in to Confluent Cloud as ${ccloudStatus.user?.username}`,
     );
     logger.debug("createSession() successfully authenticated with Confluent Cloud");
