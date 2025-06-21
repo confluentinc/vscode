@@ -86,7 +86,7 @@ blocks:
             - make remove-test-env
             - make ci-bin-sem-cache-store
             - make store-test-results-to-semaphore
-            # Upload coverage artifacts for SonarQube promotion
+            # Upload coverage artifacts for the SonarQube analysis block
             - |
               if [ -f "coverage/lcov.info" ]; then
                 artifact push workflow coverage/lcov.info --force
@@ -295,10 +295,6 @@ after_pipeline:
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
 
 promotions:
-  - name: SonarQube Analysis
-    pipeline_file: sonarqube.yml
-    auto_promote:
-      when: "(branch =~ '.*' or pull_request =~ '.*') and change_in(['src/**/*', 'tests/**/*'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
   - name: Multi-Arch VSIX Packaging and Upload
     pipeline_file: multi-arch-packaging.yml
     auto_promote:
