@@ -22,7 +22,6 @@ import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
-import { openExternal } from "./ccloudStateHandling";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { AuthCallbackEvent } from "./types";
 
@@ -439,7 +438,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         cancellable: true,
       },
       async (_, token): Promise<AuthCallbackEvent | undefined> => {
-        await openExternal(vscode.Uri.parse(uri));
+        await vscode.env.openExternal(vscode.Uri.parse(uri));
         // keep progress notification open until one of two things happens:
         // - we handle the auth completion event and resolve with the callback query params
         // - user clicks the "Cancel" button from the notification
