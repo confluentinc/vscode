@@ -104,7 +104,12 @@ blocks:
         machine:
           type: s1-prod-ubuntu24-04-arm64-1
       prologue: *build-test-prologue
-      jobs: *build-test-jobs
+      jobs:
+        <<: *build-test-jobs
+        env_vars:
+          - name: VSCODE_VERSION
+            value: stable
+            # Don't set RUN_SONARQUBE_SCAN here, since we'll only run on the linux x64 stable block
       epilogue: *build-test-epilogue
 
   - name: "Windows x64 Stable: Tests"
