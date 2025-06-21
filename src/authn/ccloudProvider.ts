@@ -54,11 +54,11 @@ const logger = new Logger("authn.ccloudProvider");
  *
  * In general, once a user successfully authenticates for the first time, we will continue to reuse
  * that connection until they sign out. This is to avoid inconsistencies in `sign_in_uri` usage, so
- * after the initial transition from `NO_TOKEN` to `VALID_TOKEN`, any time the user may need to
+ * after the initial transition from `NONE` to `SUCCESS`, any time the user may need to
  * reauthenticate will be with the same connection (and thus the same `sign_in_uri`). (E.g. after
  * token expiration or any other errors with the existing session that the sidecar cannot recover
- * from.) These will be transitions between `VALID_TOKEN` and `FAILED`/`INVALID_TOKEN` states. The
- * only way we get back to `NO_TOKEN` is by deleting the connection entirely and recreating a new one
+ * from.) These will be transitions between `SUCCESS` and `FAILED`/`ATTEMPTING` states. The
+ * only way we get back to `NONE` is by deleting the connection entirely and recreating a new one
  * (with a new `sign_in_uri`), which should only be done by the user signing out.
  */
 export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
@@ -192,9 +192,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       `Successfully signed in to Confluent Cloud as ${ccloudStatus.user?.username}`,
     );
     logger.debug("createSession() successfully authenticated with Confluent Cloud");
-    // update the auth status in the secret store so other workspaces can be notified of the change
-    // and the middleware doesn't get an outdated status before the poller can update it
-    await getResourceManager().setCCloudAuthStatus(ccloudStatus.state);
+    // update the connected state in the secret store so other workspaces can be notified of the
+    // change and the middleware doesn't get an outdated state before the handler can update it
+    await getResourceManager().setCCloudState(ccloudStatus.state);
     const session = convertToAuthSession(authenticatedConnection);
     await this.handleSessionCreated(session, true);
     ccloudConnected.fire(true);
@@ -257,7 +257,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         // don't check this in the if block above since it changes with AUTH_COMPLETED
         secretStorage.delete(SecretStorageKeys.AUTH_PASSWORD_RESET),
         // we don't need to check for this up above, just clear it out if we don't have a connection
-        secretStorage.delete(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+        secretStorage.delete(SecretStorageKeys.CCLOUD_STATE),
       ]);
     } else if (!sessionSecretExists && connectionExists) {
       // NOTE: this should never happen, because in order for the connection to be made with the
@@ -341,7 +341,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // to prevent any last-minute requests from passing through the middleware
     await Promise.all([
       deleteCCloudConnection(),
-      getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+      getSecretStorage().delete(SecretStorageKeys.CCLOUD_STATE),
     ]);
     await this.handleSessionRemoved(true);
     ccloudConnected.fire(false);
@@ -358,7 +358,17 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // NOTE: the onDidChangeSessions event does not appear cross-workspace, so this needs to stay
     const secretsOnDidChangeSub: vscode.Disposable = context.secrets.onDidChange(
       async ({ key }: vscode.SecretStorageChangeEvent) => {
-        logger.debug("authProvider: secrets.onDidChange event", { key });
+        if (
+          [
+            SecretStorageKeys.AUTH_SESSION_EXISTS,
+            SecretStorageKeys.AUTH_COMPLETED,
+            SecretStorageKeys.AUTH_PASSWORD_RESET,
+            SecretStorageKeys.CCLOUD_STATE,
+          ].includes(key as SecretStorageKeys)
+        ) {
+          logger.debug(`storage change detected for key: ${key}`);
+        }
+
         switch (key) {
           case SecretStorageKeys.AUTH_SESSION_EXISTS: {
             // another workspace noticed a change in the auth status, so we need to update our internal
@@ -398,7 +408,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     );
 
     // if any other part of the extension notices that our current CCloud connection transitions from
-    // VALID_TOKEN to FAILED/NO_TOKEN, we need to remove the session and stop polling
+    // SUCCESS to FAILED/NONE, we need to remove the session and stop polling
     const ccloudAuthSessionInvalidatedSub: vscode.Disposable = ccloudAuthSessionInvalidated.event(
       async () => {
         logger.debug("ccloudAuthSessionInvalidated event fired");
@@ -599,7 +609,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         // clear any existing auth session so the user can sign in again with their new password
         await Promise.all([
           deleteCCloudConnection(),
-          getSecretStorage().delete(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+          getSecretStorage().delete(SecretStorageKeys.CCLOUD_STATE),
         ]);
         ccloudAuthSessionInvalidated.fire();
         this.showResetPasswordNotification();
