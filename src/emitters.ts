@@ -19,7 +19,7 @@ import { SchemaRegistry } from "./models/schemaRegistry";
  * transition from "freshly activated, no CCloud auth session" to "found active CCloud auth session".
  */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
-/** Fires whenever we see a non-`ATTEMPTING` authentication status from the sidecar for the
+/** Fires whenever we see a non-`ATTEMPTING` connected state from the sidecar for the
  * current CCloud connection, and is only used to resolve any open progress notification(s). */
 export const stableCCloudConnectedState = new vscode.EventEmitter<void>();
 /** Signal to the auth provider that we no longer have a valid auth status for the current CCloud connection. */
