@@ -298,7 +298,7 @@ promotions:
   - name: SonarQube Analysis
     pipeline_file: sonarqube.yml
     auto_promote:
-      when: "(branch =~ '.*' or pull_request) and change_in(['src/**/*', 'tests/**/*'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+      when: "(branch =~ '.*' or pull_request =~ '.*') and change_in(['src/**/*', 'tests/**/*'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
   - name: Multi-Arch VSIX Packaging and Upload
     pipeline_file: multi-arch-packaging.yml
     auto_promote:
