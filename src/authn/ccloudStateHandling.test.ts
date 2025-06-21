@@ -6,7 +6,7 @@ import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connectio
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectedState, Connection } from "../clients/sidecar";
 import { observabilityContext } from "../context/observability";
-import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
+import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import {
   AuthPromptTracker,
@@ -26,8 +26,8 @@ function createFakeConnection(expiresInMinutes: number | undefined): Connection 
   // Make a deep clone of TEST_CCLOUD_CONNECTION, then mutate its authentication portion
   // to either expire in `expiresInMinutes` minutes or not at all.
   // (Mutating the original object may cause test flakiness)
-  const connection = JSON.parse(JSON.stringify(TEST_CCLOUD_CONNECTION));
-  connection.status.authentication.requires_authentication_at = expiresInMinutes
+  const connection: Connection = JSON.parse(JSON.stringify(TEST_CCLOUD_CONNECTION));
+  connection.status.ccloud!.requires_authentication_at = expiresInMinutes
     ? new Date(Date.now() + expiresInMinutes * 60 * 1000)
     : undefined;
   return connection;
@@ -165,7 +165,7 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
   });
 });
 
-describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
+describe("authn/ccloudStateHandling.ts reactToCCloudAuthState()", () => {
   let sandbox: sinon.SinonSandbox;
 
   let nonInvalidTokenStatusFireStub: sinon.SinonStub;
@@ -178,7 +178,7 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    nonInvalidTokenStatusFireStub = sandbox.stub(nonInvalidTokenStatus, "fire");
+    nonInvalidTokenStatusFireStub = sandbox.stub(stableCCloudConnectedState, "fire");
 
     stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
@@ -202,25 +202,25 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
 
       await reactToCCloudAuthState(connection);
 
-      assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(state));
+      assert.ok(stubResourceManager.setCCloudState.calledOnceWith(state));
       assert.ok(nonInvalidTokenStatusFireStub.called);
     });
   });
 
-  it("should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
+  it(`should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${ConnectedState.Attempting}`, async () => {
     const state = ConnectedState.Attempting;
     const connection = createFakeConnection(120);
     connection.status.ccloud!.state = state;
 
     await reactToCCloudAuthState(connection);
 
-    assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(state));
+    assert.ok(stubResourceManager.setCCloudState.calledOnceWith(state));
     assert.ok(nonInvalidTokenStatusFireStub.notCalled);
   });
 
-  it("should detect session expiration when transitioning from SUCCESS to NONE", async () => {
+  it(`should detect session expiration when transitioning from ${ConnectedState.Success} to ${ConnectedState.None}`, async () => {
     // set the last seen state to SUCCESS to simulate a valid session
-    await getResourceManager().setCCloudAuthStatus(ConnectedState.Success);
+    await getResourceManager().setCCloudState(ConnectedState.Success);
 
     // stub the ccloudAuthSessionInvalidated emitter and showErrorMessage
     const ccloudAuthSessionInvalidatedStub = sandbox.stub();
@@ -241,9 +241,9 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
     );
   });
 
-  it("should NOT detect session expiration when status was already NONE", async () => {
+  it(`should NOT detect session expiration when status was already ${ConnectedState.None}`, async () => {
     // set the last seen state to NONE to simulate a session that was already invalid
-    await getResourceManager().setCCloudAuthStatus(ConnectedState.None);
+    await getResourceManager().setCCloudState(ConnectedState.None);
 
     // stub the ccloudAuthSessionInvalidated emitter and showErrorMessage
     const ccloudAuthSessionInvalidatedStub = sandbox.stub();
