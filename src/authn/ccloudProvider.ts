@@ -175,7 +175,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("Authenticated connection has no CCloud status.");
     }
 
-    // User signed in successfully so we send an identify event to Segment and LaunchDarkly
     const userInfo: UserInfo | undefined = ccloudStatus.user;
     if (!userInfo) {
       logger.error(
@@ -184,6 +183,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("Authenticated connection has no CCloud user.");
     }
 
+    // User signed in successfully so we send an identify event to Segment and LaunchDarkly
     sendTelemetryIdentifyEvent({
       eventName: UserEvent.CCloudAuthentication,
       userInfo,
