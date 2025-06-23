@@ -139,8 +139,6 @@ export abstract class ResourceLoader implements IResourceBase {
   /**
    * Return the topics present in the cluster, annotated with whether or not
    * they have a corresponding schema subject.
-   *
-   * This implementation will perform a deep fetch every call.
    */
   public abstract getTopicsForCluster(
     cluster: KafkaCluster,
@@ -493,6 +491,14 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 }
 
+/**
+ * Intermediate abstract subclass of ResourceLoader which encapsulates caching of environments,
+ * their direct children (Kafka clusters, schema registries), and also kafka topics.
+ *
+ * This is done outside of the ResourceLoader class itself so that the generic types are
+ * encapsulated right at this level, known only to the three concrete subclasses,
+ * and not at every mention of ResourceLoader.
+ **/
 export abstract class CachingResourceLoader<
   ET extends EnvironmentType,
   KCT extends KafkaClusterType,
