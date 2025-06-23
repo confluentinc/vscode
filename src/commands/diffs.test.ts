@@ -23,7 +23,7 @@ describe("commands/diffs.ts", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
+    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
     setContextValueStub = sandbox.stub(contextValues, "setContextValue");
   });
 
