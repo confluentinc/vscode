@@ -176,7 +176,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       });
       (await getLaunchDarklyClient())?.identify({
         key: authenticatedConnection.status.authentication.user.id,
-        email: authenticatedConnection.status.authentication.user.username,
       });
     }
     // we want to continue regardless of whether or not the user dismisses the notification,
