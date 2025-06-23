@@ -4,6 +4,14 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.4.1
+
+### Changed
+ - Removed CCloud email from LaunchDarkly client identify calls
+
+### Fixed
+ - Removed unneeded Flink language client cleanup call
+
 
 ## 1.4.0
 
