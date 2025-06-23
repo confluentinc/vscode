@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Any sidecar error logs will now include exception data in the "Confluent (Sidecar)" output
+  channel, as well as the file saved from the "Save Sidecar Logs" or "Save Support File (.zip)"
+  commands.
+
 ### Changed
 
 - Updated ide-sidecar version to v0.216.0
