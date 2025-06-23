@@ -1,5 +1,4 @@
 import { Disposable } from "vscode";
-import { TopicData } from "../clients/kafkaRest";
 import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { isResponseError, logError } from "../errors";
@@ -14,12 +13,7 @@ import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { DirectResourceLoader } from "./directResourceLoader";
-import {
-  correlateTopicsWithSchemaSubjects,
-  fetchSchemasForSubject,
-  fetchSubjects,
-  fetchTopics,
-} from "./loaderUtils";
+import { fetchSchemasForSubject, fetchSubjects } from "./loaderUtils";
 
 const logger = new Logger("resourceLoader");
 
@@ -29,6 +23,8 @@ const logger = new Logger("resourceLoader");
  * or quickpicks or other consumers of resources should go through this
  * API to make things simple and consistent across CCloud, local, or direct
  * connection clusters.
+ *
+ * Generic class over the concrete {@link EnvironmentType}
  */
 export abstract class ResourceLoader implements IResourceBase {
   /** The connectionId for this resource loader. */
@@ -79,6 +75,9 @@ export abstract class ResourceLoader implements IResourceBase {
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
 
+  /** Reset the loader's state, forgetting anything learned about the connection. */
+  public abstract reset(): Promise<void>;
+
   // Environment methods
 
   /**
@@ -101,6 +100,16 @@ export abstract class ResourceLoader implements IResourceBase {
     return await loader.getEnvironment(environmentId, forceDeepRefresh);
   }
 
+  /** Fetch the Environment-subclass array from sidecar GraphQL. */
+  protected abstract getEnvironmentsFromGraphQL(): Promise<Environment[] | undefined>;
+
+  /**
+   * Fetch the environments accessible from this connection.
+   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
+   * @returns
+   */
+  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
+
   /** Find a specific environment within this loader instance by its id. */
   public async getEnvironment(
     environmentId: EnvironmentId,
@@ -110,19 +119,14 @@ export abstract class ResourceLoader implements IResourceBase {
     return environments.find((env) => env.id === environmentId);
   }
 
-  /**
-   * Get the accessible environments from the connection.
-   * @param forceDeepRefresh Ignore any previously cached resources and fetch anew?
-   */
-  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
-
-  // Kafka cluster methods
+  // Kafka cluster methods.
 
   /**
-   * Get the kafka clusters in the given environment.
+   * Get the kafka clusters in the given environment ID. If none,
+   * returns an empty array.
    */
   public abstract getKafkaClustersForEnvironmentId(
-    environmentId: string,
+    environmentId: EnvironmentId,
     forceDeepRefresh?: boolean,
   ): Promise<KafkaCluster[]>;
 
@@ -130,36 +134,23 @@ export abstract class ResourceLoader implements IResourceBase {
    * Return the topics present in the cluster, annotated with whether or not
    * they have a corresponding schema subject.
    */
-  public async getTopicsForCluster(
+  public abstract getTopicsForCluster(
     cluster: KafkaCluster,
-    forceRefresh: boolean = false,
-  ): Promise<KafkaTopic[]> {
-    // Deep fetch the topics and schema registry subject names concurrently.
-    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
-      this.checkedGetSubjects(cluster.environmentId!, forceRefresh),
-      fetchTopics(cluster),
-    ]);
+    forceRefresh?: boolean,
+  ): Promise<KafkaTopic[]>;
 
-    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
-  }
-
-  // Schema registry methods
+  // Schema registry methods.
 
   /**
-   * Get all schema registries known to the connection. Optionally accepts an existing SidecarHandle
-   * to use if need be if provided.
-   */
+   * Get all of the known schema registries from the environments from this connection.
+   **/
   public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
 
-  /**
-   * Return the appropriate schema registry to use, if any, for the given object's environment.
-   * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry for.
-   * @returns The {@link SchemaRegistry} for the resource's environment, if any.
-   */
   public abstract getSchemaRegistryForEnvironmentId(
-    environmentId: string | undefined,
+    environmentId: EnvironmentId,
   ): Promise<SchemaRegistry | undefined>;
 
+  // Subjects and schemas methods.
   /**
    * Get the subjects from the schema registry for the given environment or schema registry.
    * If any route errors are encountered, a UI element is raised, and empty array is returned.
