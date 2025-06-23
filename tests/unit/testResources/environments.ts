@@ -16,7 +16,9 @@ export const TEST_CCLOUD_ENVIRONMENT: CCloudEnvironment = new CCloudEnvironment(
   flinkComputePools: [],
 });
 
-export const TEST_DIRECT_ENVIRONMENT_ID = "test-direct-connection" as EnvironmentId;
+// Codebase expects a direct connection environment ID to be the same string as the connection ID, just type rebranded.
+// (See DirectKafkaCluster::environmentId getter.)
+export const TEST_DIRECT_ENVIRONMENT_ID = TEST_DIRECT_CONNECTION_ID as unknown as EnvironmentId;
 export const TEST_DIRECT_ENVIRONMENT: DirectEnvironment = new DirectEnvironment({
   connectionId: TEST_DIRECT_CONNECTION_ID,
   id: TEST_DIRECT_ENVIRONMENT_ID,

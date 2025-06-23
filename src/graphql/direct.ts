@@ -101,7 +101,7 @@ export async function getDirectResources(
   }
 
   const sidecar = await getSidecar();
-  let response: { directConnectionById: any | null };
+  let response: { directConnectionById: any };
   try {
     response = await sidecar.query(query, connectionId, { id: connectionId });
   } catch (error) {
