@@ -28,7 +28,7 @@ export interface RefreshableTreeViewProvider {
 }
 
 /** Requirement interfaces for BaseViewProvider data elements */
-type BaseViewProviderData = IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId };
+type BaseViewProviderData = IResourceBase & IdItem & ISearchable;
 
 /**
  * Base class for all tree view providers handling a primary resource type.
@@ -102,7 +102,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
   }
 
   /** Map to store instances of subclasses so they don't have to implement their own singleton patterns. */
-  private static instanceMap = new Map<string, BaseViewProvider<any>>();
+  private static readonly instanceMap = new Map<string, BaseViewProvider<any>>();
 
   /** Get the singleton instance of this view provider. */
   static getInstance<U extends BaseViewProvider<any>>(this: new () => U): U {
@@ -233,13 +233,21 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
 }
 
 /**
+ * Type describing 'focused parent' types for ParentedBaseViewProvider,
+ * namely things which either are or come from a single Environment.
+ */
+type EnvironmentedBaseViewProviderData = BaseViewProviderData & {
+  environmentId: EnvironmentId;
+};
+
+/**
  * Base class for all tree view providers handling a primary resource type and a parent resource.
  * @template P The type of the "parent" resource that can be "focused" in the view to determine which
  * resources will be shown. (Example: `KafkaCluster`, `SchemaRegistry`, `FlinkComputePool`)
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class ParentedBaseViewProvider<
-    P extends BaseViewProviderData,
+    P extends EnvironmentedBaseViewProviderData,
     T extends BaseViewProviderData,
   >
   extends BaseViewProvider<T>

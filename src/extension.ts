@@ -83,6 +83,7 @@ import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/base";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
@@ -187,6 +188,8 @@ async function _activateExtension(
 
   // set up the different view providers
   const resourceViewProvider = ResourceViewProvider.getInstance();
+  const newResourceViewProvider = NewResourceViewProvider.getInstance();
+
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
@@ -194,6 +197,7 @@ async function _activateExtension(
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     ...resourceViewProvider.disposables,
+    ...newResourceViewProvider.disposables,
     ...topicViewProvider.disposables,
     ...schemasViewProvider.disposables,
     ...supportViewProvider.disposables,
@@ -347,6 +351,7 @@ async function setupContextValues() {
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
     "confluent-resources",
+    "new-confluent-resources",
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",

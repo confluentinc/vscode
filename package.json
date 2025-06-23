@@ -979,6 +979,11 @@
           "icon": "$(confluent-logo)"
         },
         {
+          "id": "new-confluent-resources",
+          "name": "New Resources",
+          "icon": "$(confluent-logo)"
+        },
+        {
           "id": "confluent-topics",
           "name": "Topics",
           "visibility": "collapsed",
@@ -1017,7 +1022,17 @@
         "when": "!confluent.resourceSearchApplied"
       },
       {
+        "view": "new-confluent-resources",
+        "contents": "No resources found.",
+        "when": "!confluent.resourceSearchApplied"
+      },
+      {
         "view": "confluent-resources",
+        "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
+        "when": "confluent.resourceSearchApplied"
+      },
+      {
+        "view": "new-confluent-resources",
         "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
         "when": "confluent.resourceSearchApplied"
       },

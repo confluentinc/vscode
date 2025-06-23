@@ -68,6 +68,10 @@ export abstract class Environment implements IResourceBase, ISearchable {
   // (DirectEnvironment instances are constructed with isLoading = true)
   isLoading: boolean = false;
 
+  get environmentId(): EnvironmentId {
+    return this.id;
+  }
+
   get hasClusters(): boolean {
     return (
       this.kafkaClusters.length > 0 || !!this.schemaRegistry || this.flinkComputePools.length > 0
@@ -131,10 +135,6 @@ export class CCloudEnvironment extends Environment {
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
-  }
-
-  get environmentId(): EnvironmentId {
-    return this.id;
   }
 
   get children(): ISearchable[] {
