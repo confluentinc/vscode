@@ -2,10 +2,11 @@ import { Mutex } from "async-mutex";
 import { SecretStorage, Uri } from "vscode";
 import { AuthCallbackEvent } from "../authn/types";
 import {
+  ConnectedState,
   ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionSpecToJSON,
-  Status,
+  ConnectionType,
 } from "../clients/sidecar";
 import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
@@ -518,14 +519,26 @@ export class ResourceManager {
     return reset === "true";
   }
 
-  /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
-  async setCCloudAuthStatus(status: Status): Promise<void> {
-    await this.secrets.store(SecretStorageKeys.CCLOUD_AUTH_STATUS, String(status));
+  /** Store the latest CCloud {@link ConnectedState} from the sidecar. */
+  async setCCloudState(state: ConnectedState): Promise<void> {
+    // no additional stringification needed since this is just a string enum value
+    await this.secrets.store(SecretStorageKeys.CCLOUD_STATE, state);
   }
 
-  /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
-  async getCCloudAuthStatus(): Promise<string | undefined> {
-    return await this.secrets.get(SecretStorageKeys.CCLOUD_AUTH_STATUS);
+  /** Get the last stored CCloud {@link ConnectedState} we received from the sidecar. */
+  async getCCloudState(): Promise<ConnectedState> {
+    const storedState: string | undefined = await this.secrets.get(SecretStorageKeys.CCLOUD_STATE);
+    if (!storedState) {
+      return ConnectedState.None;
+    }
+
+    if (!Object.values(ConnectedState).includes(storedState as ConnectedState)) {
+      logger.warn(
+        `Invalid CCloud state found in storage: ${storedState}. Defaulting to ${ConnectedState.None}.`,
+      );
+      return ConnectedState.None;
+    }
+    return storedState as ConnectedState;
   }
 
   // DIRECT CONNECTIONS - entirely handled through SecretStorage

@@ -10,7 +10,7 @@ import {
 
 import sinon from "sinon";
 import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
-import { ConnectedState, Status } from "../../clients/sidecar/models";
+import { ConnectedState } from "../../clients/sidecar/models";
 import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
@@ -40,13 +40,13 @@ describe("connectionEventHandler", () => {
     ConnectionEventAction.CONNECTED,
     ConnectionEventAction.DISCONNECTED,
   ]) {
-    it(`CCloud connection update should cascade through to call ccloudStateHandling.reactToCCloudAuthState on ${action}`, () => {
-      // connectionEventHandler() should call through to ccloudStateHandling.reactToCCloudAuthState()
+    it(`CCloud connection update should cascade through to call ccloudStateHandling.handleUpdatedConnection on ${action}`, () => {
+      // connectionEventHandler() should call through to ccloudStateHandling.handleUpdatedConnection()
       // upon reciept of a connection event for the CCloud connection.
 
       // Arrange
-      const reactToCCloudAuthStateStub = sandbox
-        .stub(ccloudStateHandling, "reactToCCloudAuthState")
+      const handleUpdatedConnectionStub = sandbox
+        .stub(ccloudStateHandling, "handleUpdatedConnection")
         .resolves();
 
       const testConnectionEvent: ConnectionEventBody = {
@@ -58,26 +58,17 @@ describe("connectionEventHandler", () => {
       connectionEventHandler(testConnectionEvent);
 
       // Assert
-      assert.strictEqual(
-        reactToCCloudAuthStateStub.calledOnce,
-        true,
-        "reactToCCloudAuthState called",
-      );
-
-      assert.ok(
-        reactToCCloudAuthStateStub.calledWith(TEST_CCLOUD_CONNECTION),
-        `reactToCCloudAuthState called with ${reactToCCloudAuthStateStub.getCall(0).args[0]}`,
-      );
-
+      sinon.assert.calledOnce(handleUpdatedConnectionStub);
+      sinon.assert.calledOnceWithExactly(handleUpdatedConnectionStub, TEST_CCLOUD_CONNECTION);
       // ccloud events should never fire directConnectionCreatedStub
       sinon.assert.notCalled(directConnectionCreatedStub);
     });
   }
 
-  it("CCloud connection DELETED event should not call ccloudStateHandling.reactToCCloudAuthState", () => {
+  it("CCloud connection DELETED event should not call ccloudStateHandling.handleUpdatedConnection", () => {
     // Arrange
-    const reactToCCloudAuthStateStub = sandbox
-      .stub(ccloudStateHandling, "reactToCCloudAuthState")
+    const handleUpdatedConnectionStub = sandbox
+      .stub(ccloudStateHandling, "handleUpdatedConnection")
       .resolves();
 
     const testConnectionEvent: ConnectionEventBody = {
@@ -89,7 +80,7 @@ describe("connectionEventHandler", () => {
     connectionEventHandler(testConnectionEvent);
 
     // Assert
-    assert.strictEqual(reactToCCloudAuthStateStub.notCalled, true);
+    sinon.assert.notCalled(handleUpdatedConnectionStub);
   });
 
   for (const action of [
@@ -110,21 +101,15 @@ describe("connectionEventHandler", () => {
       connectionEventHandler(testConnectionEvent);
 
       // Assert
-      assert.strictEqual(connectionStableFireStub.calledOnce, true);
+      sinon.assert.calledOnce(connectionStableFireStub);
       // called with the connection id
-      assert.strictEqual(connectionStableFireStub.calledWith(TEST_DIRECT_CONNECTION.id), true);
-
-      assert.strictEqual(environmentChangedFireStub.calledOnce, true);
-
-      assert.strictEqual(
-        environmentChangedFireStub.calledWith({
-          id: TEST_DIRECT_CONNECTION.id,
-          wasDeleted:
-            action === ConnectionEventAction.DELETED ||
-            action === ConnectionEventAction.DISCONNECTED,
-        }),
-        true,
-      );
+      sinon.assert.calledOnceWithExactly(connectionStableFireStub, TEST_DIRECT_CONNECTION.id);
+      sinon.assert.calledOnce(environmentChangedFireStub);
+      sinon.assert.calledOnceWithExactly(environmentChangedFireStub, {
+        id: TEST_DIRECT_CONNECTION.id,
+        wasDeleted:
+          action === ConnectionEventAction.DELETED || action === ConnectionEventAction.DISCONNECTED,
+      });
 
       // directConnectionCreatedStub should be called only for CREATED events
       if (action === ConnectionEventAction.CREATED) {
@@ -145,7 +130,6 @@ describe("connectionEventHandler", () => {
           // either one of these being in Attempting state should prevent firing.
           kafka_cluster: { state: ConnectedState.Attempting },
           schema_registry: { state: ConnectedState.Success },
-          authentication: { status: Status.NoToken },
         },
       },
     };
@@ -154,14 +138,12 @@ describe("connectionEventHandler", () => {
     connectionEventHandler(testConnectionEvent);
 
     // Assert
-    assert.strictEqual(connectionStableFireStub.notCalled, true);
-    assert.strictEqual(environmentChangedFireStub.notCalled, true);
+    sinon.assert.notCalled(connectionStableFireStub);
+    sinon.assert.notCalled(environmentChangedFireStub);
   });
 });
 
 describe("isConnectionStable", () => {
-  const testAuthStatus = { authentication: { status: Status.NoToken } };
-
   it("ccloud connection tests", () => {
     type CCloudConnectionStateAndResult = [ConnectedState, boolean];
 
@@ -181,7 +163,6 @@ describe("isConnectionStable", () => {
           ...TEST_CCLOUD_CONNECTION,
           status: {
             ccloud: { state: connectedState },
-            ...testAuthStatus,
           },
         },
       };
@@ -213,7 +194,6 @@ describe("isConnectionStable", () => {
           status: {
             kafka_cluster: { state: kafkaState },
             schema_registry: { state: schemaRegistryState },
-            ...testAuthStatus,
           },
         },
       };
