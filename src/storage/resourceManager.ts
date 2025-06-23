@@ -521,20 +521,24 @@ export class ResourceManager {
 
   /** Store the latest CCloud {@link ConnectedState} from the sidecar. */
   async setCCloudState(state: ConnectedState): Promise<void> {
-    await this.secrets.store(SecretStorageKeys.CCLOUD_STATE, JSON.stringify(state));
+    // no additional stringification needed since this is just a string enum value
+    await this.secrets.store(SecretStorageKeys.CCLOUD_STATE, state);
   }
 
-  /** Get the latest CCloud {@link ConnectedState} from the sidecar. */
+  /** Get the last stored CCloud {@link ConnectedState} we received from the sidecar. */
   async getCCloudState(): Promise<ConnectedState> {
-    let state: string | undefined =
-      (await this.secrets.get(SecretStorageKeys.CCLOUD_STATE)) ?? ConnectedState.None;
-    if (!Object.values(ConnectedState).includes(state as ConnectedState)) {
-      logger.warn(
-        `Invalid CCloud state found in storage: ${state}. Defaulting to ${ConnectedState.None}.`,
-      );
-      state = ConnectedState.None;
+    const storedState: string | undefined = await this.secrets.get(SecretStorageKeys.CCLOUD_STATE);
+    if (!storedState) {
+      return ConnectedState.None;
     }
-    return state as ConnectedState;
+
+    if (!Object.values(ConnectedState).includes(storedState as ConnectedState)) {
+      logger.warn(
+        `Invalid CCloud state found in storage: ${storedState}. Defaulting to ${ConnectedState.None}.`,
+      );
+      return ConnectedState.None;
+    }
+    return storedState as ConnectedState;
   }
 
   // DIRECT CONNECTIONS - entirely handled through SecretStorage
