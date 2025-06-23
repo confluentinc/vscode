@@ -5,6 +5,7 @@ import { ConnectedState, Connection } from "../clients/sidecar";
 import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import * as notifications from "../notifications";
+import { SecretStorageKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { handleUpdatedConnection, REAUTH_BUTTON_TEXT } from "./ccloudStateHandling";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
@@ -17,13 +18,14 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
   let ccloudAuthSessionInvalidatedFireStub: sinon.SinonStub;
   let showErrorNotificationWithButtonsStub: sinon.SinonStub;
   let showInfoNotificationWithButtonsStub: sinon.SinonStub;
-  let getCCloudAuthSessionStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     // stub resource manager
     stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
+    // simulate no connected state by default
+    stubbedResourceManager.getCCloudState.resolves(ConnectedState.None);
     sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
 
     // stub emitters
@@ -37,7 +39,7 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     showInfoNotificationWithButtonsStub = sandbox
       .stub(notifications, "showInfoNotificationWithButtons")
       .resolves();
-    getCCloudAuthSessionStub = sandbox.stub(utils, "getCCloudAuthSession").resolves();
+    sandbox.stub(utils, "getCCloudAuthSession").resolves();
   });
 
   afterEach(() => {
@@ -57,7 +59,8 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
   });
 
-  it("should set observability context and resource manager state for all valid states", async () => {
+  it(`should update ${SecretStorageKeys.CCLOUD_STATE} in storage when the connected state changes`, async () => {
+    // state is ConnectedState.None by default, no need to set previous state here
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
@@ -77,22 +80,48 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     );
   });
 
-  it("should fire stable connection state event for Success state", async () => {
+  it(`should not update "${SecretStorageKeys.CCLOUD_STATE}" in storage when the connection state hasn't changed`, async () => {
+    // state is ConnectedState.None by default, no need to set previous state here
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: {
-          state: ConnectedState.Success,
+          state: ConnectedState.None,
         },
       },
     };
 
     await handleUpdatedConnection(connection);
 
-    sinon.assert.calledOnce(stableCCloudConnectedStateFireStub);
+    assert.strictEqual(observabilityContext.ccloudAuthLastSeenState, ConnectedState.Success);
+    sinon.assert.notCalled(stubbedResourceManager.setCCloudState);
   });
 
-  it("should not fire stable connection state event for Attempting state", async () => {
+  for (const currentState of [
+    ConnectedState.Success,
+    ConnectedState.Failed,
+    ConnectedState.None,
+    ConnectedState.Expired,
+  ]) {
+    it(`should fire a stableCCloudConnectedState event when the connected state is stable (${currentState})`, async () => {
+      // previous connected state doesn't matter for this test
+      const connection: Connection = {
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          ccloud: {
+            state: currentState,
+          },
+        },
+      };
+
+      await handleUpdatedConnection(connection);
+
+      sinon.assert.calledOnce(stableCCloudConnectedStateFireStub);
+    });
+  }
+
+  it(`should not fire a stableCCloudConnectedState event when the connected state is not stable (${ConnectedState.Attempting})`, async () => {
+    // previous connected state doesn't matter for this test
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
@@ -107,104 +136,14 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     sinon.assert.notCalled(stableCCloudConnectedStateFireStub);
   });
 
-  it("should fire stable connection state event for Failed state", async () => {
-    const connection: Connection = {
-      ...TEST_CCLOUD_CONNECTION,
-      status: {
-        ccloud: {
-          state: ConnectedState.Failed,
-        },
-      },
-    };
-
-    await handleUpdatedConnection(connection);
-
-    sinon.assert.calledOnce(stableCCloudConnectedStateFireStub);
-  });
-
-  for (const state of [ConnectedState.Success, ConnectedState.Attempting]) {
-    it(`should return early when the connected state is ${state}`, async () => {
+  for (const currentState of [ConnectedState.None, ConnectedState.Failed]) {
+    it(`should fire ccloudAuthSessionInvalidated when the connected state is ${currentState}`, async () => {
+      // previous connected state doesn't matter for this test
       const connection: Connection = {
         ...TEST_CCLOUD_CONNECTION,
         status: {
           ccloud: {
-            state,
-          },
-        },
-      };
-
-      await handleUpdatedConnection(connection);
-
-      sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
-      sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
-      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
-    });
-  }
-
-  it(`should fire ccloudAuthSessionInvalidated when the connected state is ${ConnectedState.Expired}`, async () => {
-    const connection: Connection = {
-      ...TEST_CCLOUD_CONNECTION,
-      status: {
-        ccloud: {
-          state: ConnectedState.Expired,
-        },
-      },
-    };
-
-    await handleUpdatedConnection(connection);
-
-    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
-  });
-
-  it(`should show an info notification with reauthenticate button when the connected state is ${ConnectedState.Expired}`, async () => {
-    const connection: Connection = {
-      ...TEST_CCLOUD_CONNECTION,
-      status: {
-        ccloud: {
-          state: ConnectedState.Expired,
-        },
-      },
-    };
-
-    await handleUpdatedConnection(connection);
-
-    sinon.assert.calledOnceWithExactly(
-      showInfoNotificationWithButtonsStub,
-      "Confluent Cloud authentication expired.",
-      {
-        [REAUTH_BUTTON_TEXT]: sinon.match.func,
-      },
-    );
-  });
-
-  it(`should call getCCloudAuthSession when "${REAUTH_BUTTON_TEXT}" is clicked and the connected state is ${ConnectedState.Expired} state`, async () => {
-    const connection: Connection = {
-      ...TEST_CCLOUD_CONNECTION,
-      status: {
-        ccloud: {
-          state: ConnectedState.Expired,
-        },
-      },
-    };
-
-    await handleUpdatedConnection(connection);
-
-    // simulate clicking the notification button to reauthenticate
-    const notificationCall = showInfoNotificationWithButtonsStub.getCall(0);
-    const buttons = notificationCall.args[1];
-    const reauthCallback = buttons[REAUTH_BUTTON_TEXT];
-    await reauthCallback();
-
-    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
-  });
-
-  for (const state of [ConnectedState.None, ConnectedState.Failed]) {
-    it(`should fire ccloudAuthSessionInvalidated when the connected state is ${state}`, async () => {
-      const connection: Connection = {
-        ...TEST_CCLOUD_CONNECTION,
-        status: {
-          ccloud: {
-            state: ConnectedState.Failed,
+            state: currentState,
           },
         },
       };
@@ -215,21 +154,117 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     });
   }
 
-  it("should show an error notification when `errors` data is present", async () => {
+  it(`should not fire ccloudAuthSessionInvalidated when the connected state is ${ConnectedState.Expired}`, async () => {
+    // previous connected state doesn't matter for this test
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: {
-          state: ConnectedState.Failed,
-          errors: {
-            sign_in: { message: "Invalid credentials" },
-          },
+          state: ConnectedState.Expired,
         },
       },
     };
 
     await handleUpdatedConnection(connection);
 
+    sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
+  });
+
+  for (const currentState of [
+    ConnectedState.Success,
+    ConnectedState.Attempting,
+    ConnectedState.Expired,
+  ]) {
+    it(`should not show any notifications when the connected state is ${currentState}`, async () => {
+      // previous connected state doesn't matter for this test
+      const connection: Connection = {
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          ccloud: {
+            state: currentState,
+          },
+        },
+      };
+
+      await handleUpdatedConnection(connection);
+
+      sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+  }
+
+  for (const previousState of [ConnectedState.Success, ConnectedState.Expired]) {
+    it(`should show an info notification for session expiration when transitioning from ${previousState} to ${ConnectedState.None}`, async () => {
+      stubbedResourceManager.getCCloudState.resolves(previousState);
+
+      const connection: Connection = {
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          ccloud: {
+            state: ConnectedState.None,
+          },
+        },
+      };
+
+      await handleUpdatedConnection(connection);
+
+      sinon.assert.calledOnceWithExactly(
+        showInfoNotificationWithButtonsStub,
+        "Your Confluent Cloud session has expired. Please sign in again to continue.",
+        {
+          [REAUTH_BUTTON_TEXT]: sinon.match.func,
+        },
+      );
+    });
+  }
+
+  it(`should not show an info notification for a ${ConnectedState.None} connected state`, async () => {
+    stubbedResourceManager.getCCloudState.resolves(ConnectedState.None);
+
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: {
+          state: ConnectedState.None,
+        },
+      },
+    };
+
+    await handleUpdatedConnection(connection);
+
+    sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
+  });
+
+  it(`should not show an info notification when transitioning from ${ConnectedState.Attempting} to ${ConnectedState.None}`, async () => {
+    stubbedResourceManager.getCCloudState.resolves(ConnectedState.Attempting);
+
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: {
+          state: ConnectedState.None,
+        },
+      },
+    };
+
+    await handleUpdatedConnection(connection);
+
+    sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
+  });
+
+  it(`should show an error notification with a "${CCLOUD_SIGN_IN_BUTTON_LABEL}" button when the connected state is ${ConnectedState.Failed}`, async () => {
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: {
+          state: ConnectedState.Failed,
+        },
+      },
+    };
+
+    await handleUpdatedConnection(connection);
+
+    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
     sinon.assert.calledOnceWithExactly(
       showErrorNotificationWithButtonsStub,
       "Error authenticating with Confluent Cloud. Please try again.",
@@ -239,27 +274,69 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     );
   });
 
-  it("should not show an error notification when `errors` data isn't present", async () => {
-    const connection: Connection = {
-      ...TEST_CCLOUD_CONNECTION,
-      status: {
-        ccloud: {
-          state: ConnectedState.Failed,
+  for (const errorKey of ["auth_status_check", "sign_in", "token_refresh"]) {
+    it(`should show an error notification for non-transient '${errorKey}' errors`, async () => {
+      // connected state doesn't really matter here since we'll look at the errors
+      // no matter what the state is
+      stubbedResourceManager.getCCloudState.resolves(ConnectedState.Success);
+      const connection: Connection = {
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          ccloud: {
+            state: ConnectedState.Success,
+            errors: {
+              [errorKey]: { message: "Uh oh", is_transient: false },
+            },
+          },
         },
-      },
-    };
+      };
 
-    await handleUpdatedConnection(connection);
+      await handleUpdatedConnection(connection);
 
-    sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
-  });
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      sinon.assert.calledOnceWithMatch(
+        showErrorNotificationWithButtonsStub,
+        "Error authenticating with Confluent Cloud. Please try again.",
+        {
+          [CCLOUD_SIGN_IN_BUTTON_LABEL]: sinon.match.func,
+        },
+      );
+      sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
+    });
+  }
 
-  it("should not show an error notification when `errors` object is empty", async () => {
+  for (const errorKey of ["auth_status_check", "sign_in", "token_refresh"]) {
+    it(`should not show an error notification for transient '${errorKey} errors`, async () => {
+      stubbedResourceManager.getCCloudState.resolves(ConnectedState.Success);
+
+      const connection: Connection = {
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          ccloud: {
+            state: ConnectedState.Success,
+            errors: {
+              [errorKey]: { message: "Smaller uh oh", is_transient: true },
+            },
+          },
+        },
+      };
+
+      await handleUpdatedConnection(connection);
+
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+      sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
+    });
+  }
+
+  it("should not show an error notification when `errors` is an empty object", async () => {
+    // connected state doesn't really matter here since we'll look at the errors
+    // no matter what the state is
+    stubbedResourceManager.getCCloudState.resolves(ConnectedState.Success);
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: {
-          state: ConnectedState.Failed,
+          state: ConnectedState.Success,
           errors: {},
         },
       },
@@ -270,23 +347,21 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
   });
 
-  it(`should show both an info notification and error notification when the connected state is ${ConnectedState.Expired} and \`errors\` data is present`, async () => {
+  it("should not show an error notification when no `errors` are present", async () => {
+    // connected state doesn't really matter here since we'll look at the errors
+    // no matter what the state is
+    stubbedResourceManager.getCCloudState.resolves(ConnectedState.Success);
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: {
-          state: ConnectedState.Expired,
-          errors: {
-            auth_status_check: { message: "Connection timeout", is_transient: true },
-          },
+          state: ConnectedState.Success,
         },
       },
     };
 
     await handleUpdatedConnection(connection);
 
-    sinon.assert.calledOnce(showInfoNotificationWithButtonsStub);
-    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
+    sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
   });
 });
