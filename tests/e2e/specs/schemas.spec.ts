@@ -151,7 +151,7 @@ test.describe("Schema related functionality", () => {
     ).toBeVisible();
   }
 
-  test.describe("using Confluent Cloud connection", async () => {
+  test.describe("using Confluent Cloud connection", () => {
     test.beforeEach(async ({ page, electronApp }) => {
       await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
     });
@@ -159,7 +159,7 @@ test.describe("Schema related functionality", () => {
     test("create a new subject and evolve it", testSchemaEvolution);
   });
 
-  test.describe("using direct connection to Confluent Cloud Schema Registry using SR API Key", async () => {
+  test.describe("using direct connection to Confluent Cloud Schema Registry using SR API Key", () => {
     test.beforeEach(async ({ page, electronApp }) => {
       // Stub the dialog that tells you the connection was created
       await stubMultipleDialogs(electronApp, [
