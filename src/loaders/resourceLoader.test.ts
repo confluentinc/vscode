@@ -31,6 +31,7 @@ import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
+import { DirectResourceLoader } from "./directResourceLoader";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -744,8 +745,23 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
 });
 
 describe("ResourceLoader::getInstance()", () => {
+  const directConnectionId = "direct-connection-id" as ConnectionId;
+
   before(async () => {
     await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    // Register a DirectResourceLoader instance for the directConnectionId test.
+    ResourceLoader.registerInstance(
+      directConnectionId,
+      new DirectResourceLoader(directConnectionId),
+    );
+  });
+
+  afterEach(() => {
+    // Clean up the registered instance after each test.
+    ResourceLoader.deregisterInstance(directConnectionId);
   });
 
   it("Returns LocalResourceLoader instance for LOCAL_CONNECTION_ID", () => {
@@ -758,6 +774,12 @@ describe("ResourceLoader::getInstance()", () => {
     const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
     assert.ok(loader instanceof CCloudResourceLoader);
     assert.strictEqual(loader.connectionId, CCLOUD_CONNECTION_ID);
+  });
+
+  it("Returns DirectResourceLoader instance for Direct connectionId", () => {
+    const loader = ResourceLoader.getInstance(directConnectionId);
+    assert.ok(loader instanceof ResourceLoader);
+    assert.strictEqual(loader.connectionId, directConnectionId);
   });
 
   it("Raises error if called with unknown connectionId", () => {
