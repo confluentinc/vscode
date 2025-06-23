@@ -5,7 +5,7 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
-import { ConnectedState, Status } from "./clients/sidecar";
+import { ConnectedState } from "./clients/sidecar";
 import {
   deepMerge,
   getConnectionSpecFromFormData,
@@ -359,7 +359,6 @@ describe("directConnect.ts", () => {
         status: {
           kafka_cluster: { state: "FAILED" as ConnectedState },
           schema_registry: { state: "CONNECTED" as ConnectedState },
-          authentication: { status: "NO_TOKEN" as Status },
         },
       });
       assert.strictEqual(result.success, false);
@@ -372,7 +371,6 @@ describe("directConnect.ts", () => {
         status: {
           kafka_cluster: { state: "CONNECTED" as ConnectedState },
           schema_registry: { state: "CONNECTED" as ConnectedState },
-          authentication: { status: "NO_TOKEN" as Status },
         },
       };
 
@@ -392,7 +390,6 @@ describe("directConnect.ts", () => {
             },
           },
           schema_registry: { state: "CONNECTED" as ConnectedState },
-          authentication: { status: "NO_TOKEN" as Status },
         },
       };
 
@@ -416,7 +413,6 @@ describe("directConnect.ts", () => {
               token_refresh: { message: "Token refresh failed" },
             },
           },
-          authentication: { status: "NO_TOKEN" as Status },
         },
       };
 
@@ -448,7 +444,6 @@ describe("directConnect.ts", () => {
               token_refresh: undefined,
             },
           },
-          authentication: { status: "NO_TOKEN" as Status },
         },
       };
 
