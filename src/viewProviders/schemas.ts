@@ -540,7 +540,7 @@ export class SchemasViewProvider
 
       const loader = ResourceLoader.getInstance(schemaToShow.connectionId);
       const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
-        schemaToShow.environmentId,
+        schemaToShow.environmentId!,
       );
 
       if (!schemaRegistry) {

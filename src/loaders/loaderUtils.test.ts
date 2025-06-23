@@ -1,10 +1,13 @@
 import assert from "assert";
 import * as sinon from "sinon";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { createTestTopicData } from "../../tests/unit/testUtils";
+import { createResponseError, createTestTopicData } from "../../tests/unit/testUtils";
+import { TopicV3Api } from "../clients/kafkaRest";
 import { TopicData } from "../clients/kafkaRest/models";
 import {
   GetSchemaByVersionRequest,
@@ -14,6 +17,7 @@ import {
 import * as loaderUtils from "../loaders/loaderUtils";
 import { Schema, SchemaType, Subject } from "../models/schema";
 import * as sidecar from "../sidecar";
+import * as privateNetworking from "../utils/privateNetworking";
 
 // as from fetchTopics() result.
 export const topicsResponseData: TopicData[] = [
@@ -164,5 +168,96 @@ describe("loaderUtils fetchSubjects() and fetchSchemasForSubject() tests", () =>
       loaderUtils.fetchSchemasForSubject(TEST_LOCAL_SCHEMA_REGISTRY, subject),
       new Error("Failed to fetch schema"),
     );
+  });
+});
+
+describe("loaderUtils fetchTopics()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+  let mockClient: sinon.SinonStubbedInstance<TopicV3Api>;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    mockSidecar = getSidecarStub(sandbox);
+    mockClient = sandbox.createStubInstance(TopicV3Api);
+    mockSidecar.getTopicV3Api.returns(mockClient);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("fetchTopics should return sorted topics", async () => {
+    // Not sorted route result.
+    const topicsResponseData: TopicData[] = [
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"]),
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic4", ["READ", "WRITE"]),
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"]),
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic2", ["READ", "WRITE"]),
+    ];
+
+    mockClient.listKafkaTopics.resolves({
+      kind: "kind",
+      metadata: {} as any,
+      data: topicsResponseData,
+    });
+
+    const topics = await loaderUtils.fetchTopics(TEST_LOCAL_KAFKA_CLUSTER);
+
+    // Check that the topics are sorted by name.
+    const topicNames = topics.map((t) => t.topic_name);
+    assert.deepStrictEqual(topicNames, ["topic1", "topic2", "topic3", "topic4"]);
+  });
+
+  describe("fetchTopics error handling", () => {
+    let containsPrivateNetworkPatternStub: sinon.SinonStub;
+    let showPrivateNetworkingHelpNotificationStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      containsPrivateNetworkPatternStub = sandbox.stub(
+        privateNetworking,
+        "containsPrivateNetworkPattern",
+      );
+
+      showPrivateNetworkingHelpNotificationStub = sandbox.stub(
+        privateNetworking,
+        "showPrivateNetworkingHelpNotification",
+      );
+
+      const errorResponse = createResponseError(500, "error message", "{}");
+      mockClient.listKafkaTopics.rejects(errorResponse);
+    });
+
+    it("fetchTopics should show private networking help notification when notices private networking symptom", async () => {
+      containsPrivateNetworkPatternStub.returns(true);
+
+      const results = await loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER);
+      assert.deepStrictEqual(results, []);
+
+      assert.ok(showPrivateNetworkingHelpNotificationStub.calledOnce);
+    });
+
+    it("fetchTopics should throw TopicFetchError when not private networking symptom ResponseError", async () => {
+      containsPrivateNetworkPatternStub.returns(false);
+
+      await assert.rejects(
+        loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
+        loaderUtils.TopicFetchError,
+      );
+
+      assert.ok(showPrivateNetworkingHelpNotificationStub.notCalled);
+    });
+
+    it("fetchTopics should throw TopicFetchError when not a ResponseError", async () => {
+      mockClient.listKafkaTopics.rejects(new Error("Some other error"));
+
+      await assert.rejects(
+        loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER),
+        loaderUtils.TopicFetchError,
+      );
+
+      assert.ok(showPrivateNetworkingHelpNotificationStub.notCalled);
+    });
   });
 });

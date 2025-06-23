@@ -8,7 +8,6 @@ import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
   TEST_DIRECT_ENVIRONMENT,
-  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -22,14 +21,13 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResource
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ConnectionSpec,
-  ConnectionType,
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId, ISchemaRegistryResource } from "../models/resource";
+import { ConnectionId, EnvironmentId } from "../models/resource";
 import { Subject } from "../models/schema";
 import {
   CCloudSchemaRegistry,
@@ -37,13 +35,14 @@ import {
   SchemaRegistry,
 } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
+import { UriMetadataKeys } from "./constants";
 import {
-  CoarseResourceKind,
   CustomConnectionSpec,
   CustomConnectionSpecFromJSON,
   CustomConnectionSpecToJSON,
   DirectConnectionsById,
+  GeneratedKeyResourceType,
+  GeneratedWorkspaceKey,
   getResourceManager,
   mapToString,
   ResourceManager,
@@ -268,23 +267,6 @@ describe("ResourceManager setTopicsForCluster() / getTopicsForCluster() / topicK
     await clearWorkspaceState();
   });
 
-  it("topicKeyForCluster() works for CCloud clusters", () => {
-    const key = getResourceManager().topicKeyForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
-    assert.strictEqual(key, WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS);
-  });
-
-  for (const unsupportedKafkaCluster of [TEST_LOCAL_KAFKA_CLUSTER, TEST_DIRECT_KAFKA_CLUSTER]) {
-    it(`topicKeyForCluster() throws for unsupported cluster ${unsupportedKafkaCluster.id}`, () => {
-      assert.throws(
-        () => getResourceManager().topicKeyForCluster(unsupportedKafkaCluster),
-        (err) => {
-          return err instanceof Error && err.message.includes("Unknown cluster type");
-        },
-        `Expected error for cluster ${unsupportedKafkaCluster.id}`,
-      );
-    });
-  }
-
   it("setTopicsForCluster() should throw an error if given mixed connection IDs", async () => {
     // from mixed kafka clusters (and even connections!)
     const mixedTopics = [TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC];
@@ -390,49 +372,6 @@ describe("ResourceManager setTopicsForCluster() / getTopicsForCluster() / topicK
       );
     }
   });
-
-  it("CCLOUD: deleteCCloudTopics() should correctly delete all ccloud Kafka topics", async () => {
-    // set the topics in extension storage before deleting them
-    const resourceManager = getResourceManager();
-    const otherCcloudCluster = CCloudKafkaCluster.create({
-      ...TEST_CCLOUD_KAFKA_CLUSTER,
-      id: "other-cluster-id",
-    });
-    await resourceManager.setKafkaClusters(CCLOUD_CONNECTION_ID, [
-      TEST_CCLOUD_KAFKA_CLUSTER,
-      otherCcloudCluster,
-    ]);
-    const ccloudTopics = [
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
-      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
-    ];
-    await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
-    // Define otherCcloudClusterTopics for this test scope
-    const otherCcloudClusterTopics = [
-      KafkaTopic.create({
-        ...TEST_CCLOUD_KAFKA_TOPIC,
-        name: "test-ccloud-topic-3",
-        clusterId: otherCcloudCluster.id,
-      }),
-    ];
-    await resourceManager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
-
-    // Verify topics were set
-    let topicsForMainCluster = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
-    assert.deepStrictEqual(topicsForMainCluster, ccloudTopics);
-
-    let topicsForOtherCluster = await resourceManager.getTopicsForCluster(otherCcloudCluster);
-    assert.deepStrictEqual(topicsForOtherCluster, otherCcloudClusterTopics);
-
-    // Delete cloud topics
-    await resourceManager.deleteCCloudTopics();
-
-    // verify the ccloud topics were deleted correctly
-    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]) {
-      const shouldBeUndefined = await resourceManager.getTopicsForCluster(cluster);
-      assert.deepStrictEqual(shouldBeUndefined, undefined);
-    }
-  });
 });
 
 describe("ResourceManager Schema Registry methods", function () {
@@ -465,7 +404,10 @@ describe("ResourceManager Schema Registry methods", function () {
 
   it("setSchemaRegistries() overwrites prior stored info", async () => {
     await getWorkspaceState().update(
-      rm.generateWorkspaceStorageKey(CCLOUD_CONNECTION_ID, CoarseResourceKind.SCHEMA_REGISTRIES),
+      rm.generateWorkspaceStorageKey(
+        CCLOUD_CONNECTION_ID,
+        GeneratedKeyResourceType.SCHEMA_REGISTRIES,
+      ),
       undefined,
     );
 
@@ -647,34 +589,6 @@ describe("ResourceManager SR subject methods", function () {
     return subjects;
   }
 
-  for (const [srCluster, expectedKey] of [
-    [TEST_CCLOUD_SCHEMA_REGISTRY, WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS],
-    [TEST_LOCAL_SCHEMA_REGISTRY, WorkspaceStorageKeys.LOCAL_SR_SUBJECTS],
-    [TEST_DIRECT_SCHEMA_REGISTRY, WorkspaceStorageKeys.DIRECT_SR_SUBJECTS],
-  ] as [SchemaRegistry, WorkspaceStorageKeys][]) {
-    it(`subjectKeyForSchemaRegistry() should return the correct key for ${srCluster.id}`, () => {
-      const key = resourceManager.subjectKeyForSchemaRegistry(srCluster);
-      assert.equal(key, expectedKey, `Expected ${srCluster.id} to map to ${expectedKey}`);
-    });
-  }
-
-  it("subjectKeyForSchemaRegistry() should throw for unsupported connection IDs", () => {
-    const wonkySchemaRegistry: ISchemaRegistryResource = {
-      connectionId: "wonky-connection-id" as ConnectionId,
-      connectionType: ConnectionType.Platform, // unsupported connection type
-      environmentId: "wonky-env-id" as EnvironmentId,
-      schemaRegistryId: "wonky",
-    };
-
-    assert.throws(
-      () => resourceManager.subjectKeyForSchemaRegistry(wonkySchemaRegistry),
-      (err) => {
-        return err instanceof Error && err.message === "Unknown schema registry connection type";
-      },
-      "Expected error for unsupported connection ID",
-    );
-  });
-
   it("getSubjects() should return undefined if no cached subjects for this schema registry", async () => {
     for (const sr of [
       TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -766,26 +680,7 @@ describe("ResourceManager SR subject methods", function () {
     assert.deepStrictEqual(otherSubjects, otherCCloudSRSubjects);
   });
 
-  it("deleteCCloudResources() + deleteCCloudSubjects() should correctly delete only ccloud SR subjects", async () => {
-    // set the subjects in extension storage before deleting them
-    await resourceManager.setSubjects(
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
-    );
-    const localSubjects = createTestSubjects(TEST_LOCAL_SCHEMA_REGISTRY, 2);
-    await resourceManager.setSubjects(TEST_LOCAL_SCHEMA_REGISTRY, localSubjects);
-
-    // clear all ccloud resources
-    await resourceManager.deleteCCloudResources();
-    // verify the ccloud topics were deleted correctly.
-    const missingSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(missingSubjects, undefined);
-    // verify the local topics were not deleted.
-    const fetchedLocalSubjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(fetchedLocalSubjects, localSubjects);
-  });
-
-  it("deleteLocalSubjects() should correctly delete only local SR subjects", async () => {
+  it("purgeConnectionResources(LOCAL_CONNECTION_ID) should correctly delete only local SR subjects", async () => {
     // set the subjects in extension storage before deleting them
     await resourceManager.setSubjects(
       TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -795,10 +690,12 @@ describe("ResourceManager SR subject methods", function () {
     await resourceManager.setSubjects(TEST_LOCAL_SCHEMA_REGISTRY, localSubjects);
 
     // clear all local resources
-    await resourceManager.deleteLocalSubjects();
+    await resourceManager.purgeConnectionResources(LOCAL_CONNECTION_ID);
+
     // verify the local topics were deleted correctly.
     const missingLocalSubjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
     assert.deepStrictEqual(missingLocalSubjects, undefined);
+
     // verify the ccloud topics were not deleted.
     const fetchedCCloudSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
     assert.ok(fetchedCCloudSubjects);
@@ -828,7 +725,7 @@ describe("ResourceManager general utility methods", function () {
     await clearWorkspaceState();
   });
 
-  it("CCLOUD: deleteCCloudResources() should correctly delete all CCloud resources", async () => {
+  it("CCLOUD: purgeConnectionResources() should correctly delete all CCloud resources", async () => {
     // set the CCloud resources before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setEnvironments(CCLOUD_CONNECTION_ID, [TEST_CCLOUD_ENVIRONMENT]);
@@ -837,7 +734,7 @@ describe("ResourceManager general utility methods", function () {
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
     await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, [TEST_CCLOUD_SUBJECT]);
 
-    await resourceManager.deleteCCloudResources();
+    await resourceManager.purgeConnectionResources(CCLOUD_CONNECTION_ID);
 
     // verify all the CCloud resources were deleted.
 
@@ -1094,13 +991,14 @@ describe("ResourceManager utility functions", function () {
 });
 
 describe("ResourceManager.runWithMutex()", function () {
-  it("raises if cannot find mutex for key", async () => {
+  it("makes new mutexes on demand", async () => {
     const resourceManager = getResourceManager();
-    await assert.rejects(
-      () => resourceManager["runWithMutex"]("nonexistent" as WorkspaceStorageKeys, async () => {}),
-      (err) => {
-        return err instanceof Error && err.message === "No mutex found for key: nonexistent";
-      },
-    );
+    const mutexKey = "test-mutex-key" as GeneratedWorkspaceKey;
+    let happy: boolean = false;
+    await resourceManager["runWithMutex"](mutexKey, async () => {
+      happy = true;
+    });
+
+    assert.strictEqual(happy, true, "Expected the mutex to run the function successfully");
   });
 });

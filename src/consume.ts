@@ -25,7 +25,7 @@ import {
   ResourceLoader,
 } from "./loaders";
 import { Logger } from "./logging";
-import { ConnectionId } from "./models/resource";
+import { ConnectionId, EnvironmentId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
@@ -146,7 +146,7 @@ export function activateMessageViewer(context: ExtensionContext) {
       }
       if (origin === "local" && !envId) {
         // backwards compatibility for old URIs before we started using local env IDs
-        envId = LOCAL_CONNECTION_ID;
+        envId = LOCAL_CONNECTION_ID as any as EnvironmentId;
       }
 
       // we need to look up which ResourceLoader is responsible for the resources, whether they were
@@ -173,7 +173,7 @@ export function activateMessageViewer(context: ExtensionContext) {
       if (envId == null) {
         return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
       }
-      const cluster = (await loader.getKafkaClustersForEnvironmentId(envId)).find(
+      const cluster = (await loader.getKafkaClustersForEnvironmentId(envId as EnvironmentId)).find(
         (cluster) => cluster.id === clusterId,
       );
       if (cluster == null) {
