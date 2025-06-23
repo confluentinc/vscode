@@ -649,12 +649,18 @@ function convertToAuthSession(connection: Connection): vscode.AuthenticationSess
     logger.error("convertToAuthSession() connection has no CCloud user, which should never happen");
     throw new Error("Connection has no CCloud user.");
   }
+  if (!ccloudUser.id || !ccloudUser.username) {
+    logger.error(
+      "convertToAuthSession() connection has CCloud user with no id or username, which should never happen",
+    );
+    throw new Error("Connection has CCloud user with no id or username.");
+  }
   const session: vscode.AuthenticationSession = {
     id: CCLOUD_CONNECTION_ID,
     accessToken: CCLOUD_CONNECTION_ID,
     account: {
-      id: ccloudUser.id ?? "unk user id",
-      label: ccloudUser.username ?? "unk username",
+      id: ccloudUser.id,
+      label: ccloudUser.username,
     },
     scopes: [],
   };
