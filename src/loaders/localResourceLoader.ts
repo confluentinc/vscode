@@ -4,7 +4,7 @@ import { getLocalResources } from "../graphql/local";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
-import { CachingResourceLoader } from "./resourceLoader";
+import { CachingResourceLoader } from "./cachingResourceLoader";
 
 /**
  * ResourceLoader implementation atop the LOCAL "cluster".

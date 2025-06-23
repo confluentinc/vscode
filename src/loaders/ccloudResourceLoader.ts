@@ -18,7 +18,8 @@ import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar, SidecarHandle } from "../sidecar";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
-import { CachingResourceLoader, ResourceLoader } from "./resourceLoader";
+import { CachingResourceLoader } from "./cachingResourceLoader";
+import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 

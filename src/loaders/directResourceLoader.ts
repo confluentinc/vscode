@@ -5,7 +5,7 @@ import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
-import { CachingResourceLoader } from "./resourceLoader";
+import { CachingResourceLoader } from "./cachingResourceLoader";
 
 /**
  * {@link ResourceLoader} implementation for direct connections.
