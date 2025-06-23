@@ -6,7 +6,6 @@ import {
   ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionSpecToJSON,
-  ConnectionType,
 } from "../clients/sidecar";
 import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
@@ -32,7 +31,7 @@ const logger = new Logger("storage.resourceManager");
 export interface CustomConnectionSpec extends ConnectionSpec {
   // enforce `ConnectionId` type over `string`
   id: ConnectionId;
-  /** The option chosen by the user to describe this connection. Similar to {@link ConnectionType} */
+  /** The option chosen by the user to describe this connection. Similar to `ConnectionType` */
   formConnectionType: FormConnectionType;
   /** If the formConnectionType is "Other" we prompt users to specify the type */
   specifiedConnectionType?: string;
