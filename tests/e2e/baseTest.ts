@@ -53,8 +53,8 @@ export const test = testBase.extend<VSCodeFixture>({
     }
 
     const extensionPath: string = path.resolve(__dirname, "..", "..");
-    const workspacePath: string = path.resolve(extensionPath, "out");
-    const vsixFiles: string[] = globSync(path.resolve(workspacePath, "*.vsix"));
+    const outPath: string = path.resolve(extensionPath, "out");
+    const vsixFiles: string[] = globSync(path.resolve(outPath, "*.vsix"));
     const vsixPath = vsixFiles[0];
     if (!vsixPath) {
       // shouldn't happen during normal `gulp e2e`
@@ -82,9 +82,8 @@ export const test = testBase.extend<VSCodeFixture>({
         "--disable-extensions",
         // additional args needed for the Electron launch:
         `--user-data-dir=${tempDir}`,
-        `--extensionDevelopmentPath=${workspacePath}`,
+        `--extensionDevelopmentPath=${outPath}`,
         "--new-window",
-        workspacePath,
       ],
     });
 
