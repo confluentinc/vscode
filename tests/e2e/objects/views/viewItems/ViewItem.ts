@@ -30,9 +30,15 @@ export class ViewItem {
 
   /** Get the icon `id` for this item. */
   async getIconId(): Promise<string> {
-    const iconElement: Locator = this.locator.locator("[id]").first();
-    const iconId: string | null = await iconElement.getAttribute("id");
-    return iconId?.trim() ?? "";
+    const iconElement: Locator = this.locator.locator(".codicon[class*='codicon-']").first();
+    const className: string | null = await iconElement.getAttribute("class");
+    if (className) {
+      const iconMatch = className.match(/codicon-([^\s]+)/);
+      if (iconMatch) {
+        return iconMatch[1];
+      }
+    }
+    return "";
   }
 
   /**
