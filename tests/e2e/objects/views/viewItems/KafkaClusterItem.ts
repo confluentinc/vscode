@@ -37,7 +37,7 @@ export class KafkaClusterItem extends ViewItem {
       this.getLevel(),
     ]);
     // the direct Kafka cluster item is always below a direct connection root level item (level 2)
-    return level === 2 && text.includes("Kafka cluster");
+    return level === 2 && text.includes("Kafka Cluster");
   }
 
   /** Whether or not this represents a Kafka cluster under a CCloud environment tree item. */
