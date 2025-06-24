@@ -30,4 +30,10 @@ export class TopicItem extends ViewItem {
   async clickSendMessages(): Promise<void> {
     await this.clickInlineAction("Send Message(s) to Topic");
   }
+
+  /** Whether or not this topic item is associated with a schema subject. */
+  async hasSchema(): Promise<boolean> {
+    const iconId: string = await this.getIconId();
+    return !iconId.includes("without-schema");
+  }
 }
