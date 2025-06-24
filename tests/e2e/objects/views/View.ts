@@ -13,12 +13,30 @@ export class View {
   ) {}
 
   get locator(): Locator {
-    return this.page.getByLabel(this.label);
+    // find the split-view-view that contains a pane-header button with our label as aria-label
+    return this.page
+      .locator(".split-view-view")
+      .filter({ has: this.page.getByRole("button", { name: this.label }) })
+      .locator(".pane")
+      .first();
+  }
+
+  /**
+   * Get the header section of this view containing the title (optionally the description) and
+   * any contributed nav/ungrouped action buttons.
+   */
+  get header(): Locator {
+    return this.locator.locator(".pane-header");
+  }
+
+  /** Get the body section of this view containing the tree items and content. */
+  get body(): Locator {
+    return this.locator.locator(".pane-body");
   }
 
   /** {@link https://code.visualstudio.com/api/ux-guidelines/views#welcome-views Welcome view} locator. */
   get viewsWelcome(): Locator {
-    return this.page.locator(".welcome-view-content");
+    return this.body.locator(".welcome-view-content");
   }
 
   /**
@@ -26,14 +44,15 @@ export class View {
    * expands it if necessary, and focuses it.
    */
   async focus(): Promise<void> {
-    await this.locator.waitFor({ state: "visible", timeout: 500 });
-    await expand(this.locator);
+    await this.header.waitFor({ state: "visible", timeout: 500 });
+    await expand(this.header);
     await this.locator.focus();
   }
 
   /** Click a nav action in the view title area by its `label`. */
   async clickNavAction(label: string): Promise<void> {
-    this.locator.getByLabel(label).click();
+    await this.header.hover();
+    this.header.getByLabel(label).click();
   }
 
   /**
