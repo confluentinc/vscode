@@ -45,13 +45,15 @@ export class ResourcesView extends View {
 
     const quickpick = new Quickpick(this.page);
     // choices will be either "Enter manually" or "Import from file"
-    const enterManuallyItem: QuickpickItem | null =
-      await quickpick.findItemByLabel("Enter manually");
-    if (!enterManuallyItem) {
+    const items: QuickpickItem[] = await quickpick.getItems({
+      text: /Enter manually/,
+      waitForItems: true,
+    });
+    if (items.length === 0) {
       throw new Error("'Enter manually' option not found in 'Add New Connection' quickpick");
     }
 
-    await enterManuallyItem.locator.click();
+    await items[0].locator.click();
     return new DirectConnectionForm(this.page);
   }
 
