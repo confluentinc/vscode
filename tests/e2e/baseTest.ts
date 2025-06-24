@@ -20,7 +20,7 @@ export interface VSCodeFixture {
 }
 
 export const test = testBase.extend<VSCodeFixture>({
-  electronApp: async ({}, use) => {
+  electronApp: async ({ trace }, use, testInfo) => {
     // create a temporary directory for this test run
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
@@ -92,6 +92,17 @@ export const test = testBase.extend<VSCodeFixture>({
       throw new Error("Failed to launch VS Code electron app");
     }
 
+    // on*, retain-on*
+    if (trace.toString().includes("on")) {
+      console.log("Starting trace capture for test:", testInfo.title);
+      await electronApp.context().tracing.start({
+        screenshots: true,
+        snapshots: true,
+        sources: true,
+        title: testInfo.title,
+      });
+    }
+
     await use(electronApp);
 
     try {
@@ -118,5 +129,3 @@ export const test = testBase.extend<VSCodeFixture>({
     await use(page);
   },
 });
-
-export { expect } from "@playwright/test";
