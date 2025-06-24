@@ -20,6 +20,15 @@ All notable changes to this extension will be documented in this file.
 - Saving the support .zip will now also include the formatted sidecar logs, in addition to the raw
   logs.
 
+## 1.4.1
+
+### Changed
+ - Removed CCloud email from LaunchDarkly client identify calls
+
+### Fixed
+ - Removed unneeded Flink language client cleanup call
+
+
 ## 1.4.0
 
 ### Added
