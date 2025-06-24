@@ -51,7 +51,7 @@ export class ResourcesView extends View {
       throw new Error("'Enter manually' option not found in 'Add New Connection' quickpick");
     }
 
-    await enterManuallyItem.click();
+    await enterManuallyItem.locator.click();
     return new DirectConnectionForm(this.page);
   }
 
@@ -77,6 +77,24 @@ export class ResourcesView extends View {
       throw new Error("Local item not found in Resources view");
     }
     return new LocalItem(this.page, items[0].locator);
+  }
+
+  /** Get all root-level direct connection {@link ViewItem tree items}. */
+  async getDirectConnectionItems(): Promise<ViewItem[]> {
+    // filter by level=1 to get the root level items,
+    // then filter by the accessibilityInfo used in the EnvironmentTreeItem
+    const items: ViewItem[] = await this.getItems({
+      level: 1,
+      waitForItems: true,
+    });
+    const directItems: ViewItem[] = [];
+    for (const item of items) {
+      const ariaLabel: string | null = await item.locator.getAttribute("aria-label");
+      if (ariaLabel?.startsWith("Direct connection: ")) {
+        directItems.push(item);
+      }
+    }
+    return directItems;
   }
 
   /**
