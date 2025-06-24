@@ -124,7 +124,7 @@ export const test = testBase.extend<VSCodeFixture>({
 
     // wait for VS Code to be ready
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForSelector(".monaco-workbench", { timeout: 30000 });
+    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
     await use(page);
   },
 });
