@@ -103,7 +103,7 @@ export class View {
     if (options?.text) {
       locator = locator.filter({ hasText: options.text });
     }
-    if (options?.iconId && typeof options.iconId === "string") {
+    if (options?.iconId) {
       // we're already filtering the view body for tree items (maybe with a level), so
       // we just need to look for the ones that have the specified icon
       locator = locator.filter({ has: this.page.locator(`.codicon-${options.iconId}`) });
@@ -111,9 +111,7 @@ export class View {
     return locator;
   }
 
-  /**
-   * Wait for filtered items to appear, with incremental checks for better diagnostics.
-   */
+  /** Wait for filtered items to appear, with incremental checks for easier debugging. */
   private async waitForFilteredItems(
     locator: Locator,
     waitConfig: { timeout?: number; minCount?: number } | boolean,
