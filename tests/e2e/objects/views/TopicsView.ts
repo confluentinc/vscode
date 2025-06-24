@@ -50,18 +50,27 @@ export class TopicsView extends View {
     withSchemas?: boolean;
     withoutSchemas?: boolean;
   }): Promise<TopicItem[]> {
-    const topicPromises: Promise<ViewItem[]>[] = [];
-    if (options?.withSchemas !== false) {
-      // gather all topics with schemas unless explicitly disabled
-      topicPromises.push(this.getItems({ iconId: "confluent-topic", waitForItems: true }));
+    // topics are at the root level, then subjects, then schema versions
+    const topics: ViewItem[] = await this.getItems({ level: 1, waitForItems: true });
+
+    const withSchemas: boolean = options?.withSchemas ?? true;
+    const withoutSchemas: boolean = options?.withoutSchemas ?? true;
+    if (!withSchemas && !withoutSchemas) {
+      throw new Error("At least one of 'withSchemas' or 'withoutSchemas' must be true.");
     }
-    if (options?.withoutSchemas !== false) {
-      // gather all topics without schemas unless explicitly disabled
-      topicPromises.push(
-        this.getItems({ iconId: "confluent-topic-without-schema", waitForItems: true }),
-      );
+    if (withSchemas && withoutSchemas) {
+      // return all topics if no filtering is applied
+      return topics.map((item) => new TopicItem(this.page, item.locator));
     }
-    const items: ViewItem[] = (await Promise.all(topicPromises)).flat();
-    return items.map((item) => new TopicItem(this.page, item.locator));
+
+    const filteredTopics: TopicItem[] = [];
+    for (const item of topics) {
+      const topicItem = new TopicItem(this.page, item.locator);
+      const hasSchema: boolean = await topicItem.hasSchema();
+      if ((withSchemas && hasSchema) || (withoutSchemas && !hasSchema)) {
+        filteredTopics.push(topicItem);
+      }
+    }
+    return filteredTopics;
   }
 }
