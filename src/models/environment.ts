@@ -330,6 +330,9 @@ export class EnvironmentTreeItem extends TreeItem {
     contextParts.push(`${this.resource.connectionType.toLowerCase()}-environment`);
     // "ccloud-environment", "direct-environment", "local-environment"
     this.contextValue = contextParts.join("-");
+    if (isDirect(resource)) {
+      this.accessibilityInformation = { label: `Direct connection: "${resource.name}"` };
+    }
 
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;
