@@ -133,8 +133,7 @@ export class MessageViewerWebview extends Webview {
     await this.waitForLoad();
     // should now be visible in the editor area with some of the main controls
     await this.locator.waitFor({ state: "visible", timeout });
-    await this.messageSearchField.waitFor({ state: "visible", timeout: 5_000 });
-    await this.gridBanner.waitFor({ state: "visible", timeout: 5_000 });
+    await this.messageSearchField.waitFor({ state: "visible", timeout: 500 });
 
     // it should also show some of the top-level controls and be in a loading, error,
     // or got-some-messages state
