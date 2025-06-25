@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
 import { ConnectedState, Connection } from "../clients/sidecar";
 import { observabilityContext } from "../context/observability";
@@ -39,7 +40,8 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     showInfoNotificationWithButtonsStub = sandbox
       .stub(notifications, "showInfoNotificationWithButtons")
       .resolves();
-    sandbox.stub(utils, "getCCloudAuthSession").resolves();
+    // assume we have a valid CCloud auth session from VS Code's perspective for these tests
+    sandbox.stub(utils, "getCCloudAuthSession").resolves(TEST_CCLOUD_AUTH_SESSION);
   });
 
   afterEach(() => {
