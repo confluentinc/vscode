@@ -28,7 +28,7 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
     );
 
     // vscode stubs
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
   });
 
   afterEach(() => {
