@@ -11,7 +11,7 @@ import { CCloudItem } from "../objects/views/viewItems/CCloudItem";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
-import { DirectConnectionForm } from "../objects/webviews/DirectConnectionForm";
+import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { expand, isExpandable, isExpanded } from "../utils/expansion";
 import { openConfluentExtension } from "./utils/confluent";
