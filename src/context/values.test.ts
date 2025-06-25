@@ -9,7 +9,7 @@ describe("ContextValue functions", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
   });
 
   afterEach(() => {
