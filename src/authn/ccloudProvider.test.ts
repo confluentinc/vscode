@@ -9,7 +9,7 @@ import {
   TEST_CCLOUD_USER,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { Connection } from "../clients/sidecar";
+import { ConnectedState, Connection } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { getSidecar } from "../sidecar";
@@ -112,7 +112,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
 
   it("createSession() should update the auth status secret on successful authentication", async () => {
     const setCCloudAuthStatusStub = sandbox
-      .stub(ResourceManager.getInstance(), "setCCloudAuthStatus")
+      .stub(ResourceManager.getInstance(), "setCCloudState")
       .resolves();
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication completes successfully
@@ -122,7 +122,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
 
     sinon.assert.calledWith(
       setCCloudAuthStatusStub,
-      TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
+      TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.ccloud!.state,
     );
   });
 
@@ -169,7 +169,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     sinon.assert.notCalled(showErrorMessageStub);
   });
 
-  it("getSessions() should treat connections with a NO_TOKEN/FAILED auth status as nonexistent", async () => {
+  it(`getSessions() should treat connections with a ${ConnectedState.None}/${ConnectedState.Failed} state as nonexistent`, async () => {
     getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
 
     const sessions = await authProvider.getSessions();
@@ -203,7 +203,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     await authProvider.removeSession("sessionId");
 
     assert.ok(deleteConnectionStub.called);
-    assert.ok(stubbedSecretStorage.delete.calledWith(SecretStorageKeys.CCLOUD_AUTH_STATUS));
+    assert.ok(stubbedSecretStorage.delete.calledWith(SecretStorageKeys.CCLOUD_STATE));
     assert.ok(handleSessionRemovedStub.calledWith(true));
   });
 
@@ -422,7 +422,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
 
     sinon.assert.calledWith(setAuthFlowCompletedStub, { success: false, resetPassword: true });
     sinon.assert.calledOnce(deleteConnectionStub);
-    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_AUTH_STATUS);
+    sinon.assert.calledWith(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_STATE);
     sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
     sinon.assert.calledOnce(showResetPasswordNotificationStub);
   });
@@ -459,8 +459,8 @@ describe("CCloud auth flow", () => {
       "No connections found; make sure to manually log in with the test username/password, because the 'Authorize App: Confluent VS Code Extension is requesting access to your Confluent account' (https://login.confluent.io/u/consent?...) page may be blocking the auth flow for this test. If that doesn't work, try running the test with `{ headless: false }` (in testAuthFlow()) to see what's happening.",
     );
     assert.ok(connection);
-    assert.notEqual(connection.status.authentication.status, "NO_TOKEN");
-    assert.equal(connection.status.authentication.user?.username, process.env.E2E_USERNAME);
+    assert.notEqual(connection.status.ccloud?.state, ConnectedState.None);
+    assert.equal(connection.status.ccloud?.user?.username, process.env.E2E_USERNAME);
   });
 });
 
