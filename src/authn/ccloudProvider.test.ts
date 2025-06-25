@@ -3,10 +3,10 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
+import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import {
   TEST_AUTHENTICATED_CCLOUD_CONNECTION,
   TEST_CCLOUD_CONNECTION,
-  TEST_CCLOUD_USER,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectedState, Connection } from "../clients/sidecar";
@@ -22,16 +22,6 @@ import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { AuthCallbackEvent } from "./types";
-
-const TEST_CCLOUD_AUTH_SESSION: vscode.AuthenticationSession = {
-  id: TEST_CCLOUD_CONNECTION.id!,
-  accessToken: TEST_CCLOUD_CONNECTION.id!,
-  account: {
-    id: TEST_CCLOUD_USER.id!,
-    label: TEST_CCLOUD_USER.username!,
-  },
-  scopes: [],
-};
 
 describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   let authProvider: ConfluentCloudAuthProvider;
