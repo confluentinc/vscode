@@ -112,7 +112,6 @@ export async function initializeLanguageClient(
                       items.forEach((element: vscode.CompletionItem) => {
                         // 3. to show correct completion position, translate result back to multi-line
                         if (element.textEdit) {
-                          logger.trace("item has textEdit, manipulating range");
                           let newRange = convertToMultiLineRange(document, element.textEdit.range);
                           element.textEdit.range = newRange;
                         }
