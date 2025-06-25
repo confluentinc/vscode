@@ -120,7 +120,7 @@ export class ResourcesView extends View {
    * Kafka cluster tree item with the **"confluent-local"** label.
    * - If the user has a direct connection with a successfully-connected Kafka cluster config, and
    * that direct connection/"environment" tree item is expanded, this will include a Kafka cluster
-   * tree item with the **"Kafka cluster"** label.
+   * tree item with the **"Kafka Cluster"** label.
    */
   async getKafkaClusterItems(options?: {
     ccloud?: boolean;
