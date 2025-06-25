@@ -1,7 +1,7 @@
 import { Page } from "@playwright/test";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { QuickpickItem } from "../quickInputs/QuickpickItem";
-import { DirectConnectionForm } from "../webviews/DirectConnectionForm";
+import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
 import { View } from "./View";
 import { CCloudEnvironmentItem } from "./viewItems/CCloudEnvironmentItem";
 import { CCloudItem } from "./viewItems/CCloudItem";
