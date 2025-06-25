@@ -27,6 +27,7 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
     // simulate no connected state by default
     stubbedResourceManager.getCCloudState.resolves(ConnectedState.None);
+    observabilityContext.ccloudAuthLastSeenState = ConnectedState.None;
     sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
 
     // stub emitters
@@ -95,7 +96,8 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
 
     await handleUpdatedConnection(connection);
 
-    assert.strictEqual(observabilityContext.ccloudAuthLastSeenState, ConnectedState.Success);
+    // observability context should not be updated when state doesn't change
+    assert.strictEqual(observabilityContext.ccloudAuthLastSeenState, ConnectedState.None);
     sinon.assert.notCalled(stubbedResourceManager.setCCloudState);
   });
 
