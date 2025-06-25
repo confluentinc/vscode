@@ -42,6 +42,20 @@ components:
           $ref: "#/components/schemas/AuthError"
         token_refresh:
           $ref: "#/components/schemas/AuthError"
+    Authentication:
+      description: The authentication-related status (deprecated).
+      required:
+      - status
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        requires_authentication_at:
+          $ref: "#/components/schemas/Instant"
+        user:
+          $ref: "#/components/schemas/UserInfo"
+        errors:
+          $ref: "#/components/schemas/AuthErrors"
     BasicCredentials:
       description: Basic authentication credentials
       required:
@@ -204,6 +218,8 @@ components:
           $ref: "#/components/schemas/KafkaClusterStatus"
         schema_registry:
           $ref: "#/components/schemas/SchemaRegistryStatus"
+        authentication:
+          $ref: "#/components/schemas/Authentication"
     ConnectionType:
       enum:
       - LOCAL
@@ -844,6 +860,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PartitionConsumeData"
+    Status:
+      enum:
+      - NO_TOKEN
+      - VALID_TOKEN
+      - INVALID_TOKEN
+      - FAILED
+      type: string
     StoreType:
       enum:
       - JKS
