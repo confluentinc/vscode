@@ -64,28 +64,6 @@ export async function initializeLanguageClient(
           },
           progressOnInitialization: true,
           middleware: {
-            provideCompletionItem: async (document, position, context, token, next) => {
-              const result: any = await next(document, position, context, token);
-              if (result) {
-                const items: any = result.items;
-                items.forEach((element: vscode.CompletionItem) => {
-                  // The server sends backticks in the filterText for all Resource completions, but vscode languageclient
-                  // will filter out these items if the completion range doesn't start with a backtick, so we remove them
-                  if (
-                    element.filterText &&
-                    element.filterText.startsWith("`") &&
-                    element.filterText.endsWith("`")
-                  ) {
-                    element.filterText = element.filterText.substring(
-                      1,
-                      element.filterText.length - 1,
-                    );
-                  }
-                });
-                return result;
-              }
-              return [];
-            },
             sendRequest: async (type, params, token, next) => {
               // CCloud Flink SQL Server does not support multiline completions atm, so we need to convert ranges to single-line & back
               if (
@@ -114,6 +92,19 @@ export async function initializeLanguageClient(
                         if (element.textEdit) {
                           let newRange = convertToMultiLineRange(document, element.textEdit.range);
                           element.textEdit.range = newRange;
+                        }
+                        // CCloud Flink SQL Server adds backticks for all Resource completions even if not typed in the editor doc
+                        // To align with vscode's expectations we remove the filterText if the editor's range does not already begin or end with backtick
+                        // ...causing it to fall back on the label for filtering
+                        if (element.textEdit) {
+                          const editorRangeText = document.getText(element.textEdit.range);
+                          const filter = element.filterText;
+                          const filterTicks = filter?.startsWith("`") && filter?.endsWith("`");
+                          const editTicks =
+                            editorRangeText.startsWith("`") && editorRangeText.endsWith("`");
+                          if (filterTicks && !editTicks) {
+                            element.filterText = undefined;
+                          }
                         }
                       });
                     }
