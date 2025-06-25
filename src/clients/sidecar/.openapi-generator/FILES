@@ -13,6 +13,7 @@ index.ts
 models/ApiKeyAndSecret.ts
 models/AuthError.ts
 models/AuthErrors.ts
+models/Authentication.ts
 models/BasicCredentials.ts
 models/CCloudConfig.ts
 models/CCloudStatus.ts
@@ -62,6 +63,7 @@ models/SidecarError.ts
 models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts
 models/SimpleConsumeMultiPartitionResponse.ts
+models/Status.ts
 models/StoreType.ts
 models/TLSConfig.ts
 models/TimestampType.ts
