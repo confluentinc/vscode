@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { test } from "../baseTest";
+import { NotificationToast } from "../objects/notifications/NotificationToast";
 import { NotificationToasts } from "../objects/notifications/NotificationToasts";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { QuickpickItem } from "../objects/quickInputs/QuickpickItem";
@@ -155,19 +156,11 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
 
     // wait for the progress notification to disappear before continuing
     const notificationToasts = new NotificationToasts(page);
-    const progressToasts = await notificationToasts.getProgressNotifications();
-    const expectedMessage = `Waiting for "${connectionName}" to be usable...`;
-    let found = false;
-    for (const toast of progressToasts) {
-      const msg = await toast.getMessageText();
-      if (msg === expectedMessage) {
-        found = true;
-        break;
-      }
-    }
-    if (found) {
-      await notificationToasts.waitForProgressNotificationToComplete(expectedMessage);
-    }
+    // only wait on the progress notification to resolve if it's visible at all
+    const progressNotification: NotificationToast | null = await notificationToasts.findByMessage(
+      `Waiting for "${connectionName}" to be usable...`,
+    );
+    await progressNotification?.waitForProgressCompletion();
     // wait for the Resources view to refresh and show the new direct connection
     await expect
       .poll(async () => (await resourcesView.getDirectConnectionItems()).length, {
