@@ -36,7 +36,7 @@ describe("featureFlags/evaluation.ts", function () {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
 
     // stub LD_CLIENT_ID instead of process.env
