@@ -8,6 +8,7 @@ import {
   WorkspaceConfiguration,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
+import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
@@ -29,8 +30,9 @@ import {
 const logger = new Logger("flinkSql.languageClient.ClientManager");
 
 export interface FlinkSqlSettings {
-  databaseId: string | null;
   computePoolId: string | null;
+  databaseName: string | null;
+  catalogName: string | null;
 }
 
 /**
@@ -115,23 +117,40 @@ export class FlinkLanguageClientManager implements Disposable {
 
   /** Get the document OR global/workspace settings for Flink, if any */
   public async getFlinkSqlSettings(uri: Uri): Promise<FlinkSqlSettings> {
-    let currentComputePoolId = null;
-    let currentDatabase = null;
+    let computePoolId: string | null = null;
+    let currentDatabaseId: string | null = null;
+    let catalogName: string | null = null;
+    let databaseName: string | null = null;
+
     // First, does the doc have this metadata set?
     const rm = ResourceManager.getInstance();
     const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(uri);
     // If not, does the workspace have a default set?
     const config: WorkspaceConfiguration = workspace.getConfiguration();
-
     // Set to whichever one wins!
-    currentComputePoolId =
-      uriMetadata?.flinkComputePoolId ?? config.get(FLINK_CONFIG_COMPUTE_POOL, null);
+    computePoolId = uriMetadata?.flinkComputePoolId ?? config.get(FLINK_CONFIG_COMPUTE_POOL, null);
+    currentDatabaseId = uriMetadata?.flinkDatabaseId ?? config.get(FLINK_CONFIG_DATABASE, null);
 
-    currentDatabase = uriMetadata?.flinkDatabaseId ?? config.get(FLINK_CONFIG_DATABASE, null);
+    // Look up the cluster & db name if we have a database id
+    if (currentDatabaseId) {
+      try {
+        const loader = CCloudResourceLoader.getInstance();
+        // Get all clusters from all environments since we don't know which environment the cluster belongs to
+        const environments = await loader.getEnvironments();
+        const settings = await getCatalogDatabaseFromMetadata(uriMetadata, environments);
+        if (settings) {
+          catalogName = settings.catalog?.name || null;
+          databaseName = settings.database?.name || null;
+        }
+      } catch (error) {
+        logger.error("Error looking up Kafka cluster name", error);
+      }
+    }
 
     return {
-      databaseId: currentDatabase,
-      computePoolId: currentComputePoolId,
+      computePoolId,
+      databaseName,
+      catalogName,
     };
   }
 
@@ -370,24 +389,22 @@ export class FlinkLanguageClientManager implements Disposable {
         // No compute pool selected, can't send settings
         return;
       }
-      const poolInfo = await this.lookupComputePoolInfo(settings.computePoolId);
-      const environmentId = poolInfo?.environmentId;
 
       // Don't send with undefined settings, server will override existing settings with empty/undefined values
-      if (environmentId && settings.databaseId && settings.computePoolId) {
+      if (settings.databaseName && settings.computePoolId && settings.catalogName) {
         this.languageClient.sendNotification("workspace/didChangeConfiguration", {
           settings: {
             AuthToken: "{{ ccloud.data_plane_token }}",
-            Catalog: environmentId,
-            Database: settings.databaseId, // TODO better if we use names since it shows in diagnostics
+            Catalog: settings.catalogName,
+            Database: settings.databaseName,
             ComputePoolId: settings.computePoolId,
           },
         });
       } else {
         logger.trace("Incomplete settings, not sending configuration update", {
           hasComputePool: !!settings.computePoolId,
-          hasEnvironment: !!environmentId,
-          hasDatabase: !!settings.databaseId,
+          hasCatalog: !!settings.catalogName,
+          hasDatabase: !!settings.databaseName,
         });
       }
     }
