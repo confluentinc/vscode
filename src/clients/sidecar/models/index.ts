@@ -3,6 +3,7 @@
 export * from "./ApiKeyAndSecret";
 export * from "./AuthError";
 export * from "./AuthErrors";
+export * from "./Authentication";
 export * from "./BasicCredentials";
 export * from "./CCloudConfig";
 export * from "./CCloudStatus";
@@ -52,6 +53,7 @@ export * from "./SidecarError";
 export * from "./SidecarVersionResponse";
 export * from "./SimpleConsumeMultiPartitionRequest";
 export * from "./SimpleConsumeMultiPartitionResponse";
+export * from "./Status";
 export * from "./StoreType";
 export * from "./TLSConfig";
 export * from "./TimestampType";
