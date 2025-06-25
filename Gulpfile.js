@@ -597,7 +597,7 @@ export async function testBuild() {
   const result = downloadSidecar();
   if (result.error) throw result.error;
 
-  const reportCoverage = process.argv.indexOf("--coverage", 2) >= 0;
+  const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts", "tests/**/*.ts"]);
   const entryMap = Object.fromEntries(
     testFiles.map((filename) => [filename.slice(0, -extname(filename).length), filename]),
