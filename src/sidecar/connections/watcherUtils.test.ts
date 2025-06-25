@@ -21,6 +21,7 @@ describe("connectionEventHandler", () => {
   let connectionStableFireStub: sinon.SinonStub;
   let environmentChangedFireStub: sinon.SinonStub;
   let directConnectionCreatedStub: sinon.SinonStub;
+  let handleUpdatedConnectionStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -28,6 +29,9 @@ describe("connectionEventHandler", () => {
     connectionStableFireStub = sandbox.stub(connectionStable, "fire");
     environmentChangedFireStub = sandbox.stub(environmentChanged, "fire");
     directConnectionCreatedStub = sandbox.stub(directConnectionCreated, "fire");
+    handleUpdatedConnectionStub = sandbox
+      .stub(ccloudStateHandling, "handleUpdatedConnection")
+      .resolves();
   });
 
   afterEach(() => {
@@ -45,10 +49,6 @@ describe("connectionEventHandler", () => {
       // upon reciept of a connection event for the CCloud connection.
 
       // Arrange
-      const handleUpdatedConnectionStub = sandbox
-        .stub(ccloudStateHandling, "handleUpdatedConnection")
-        .resolves();
-
       const testConnectionEvent: ConnectionEventBody = {
         action: action,
         connection: TEST_CCLOUD_CONNECTION,
@@ -67,10 +67,6 @@ describe("connectionEventHandler", () => {
 
   it("CCloud connection DELETED event should not call ccloudStateHandling.handleUpdatedConnection", () => {
     // Arrange
-    const handleUpdatedConnectionStub = sandbox
-      .stub(ccloudStateHandling, "handleUpdatedConnection")
-      .resolves();
-
     const testConnectionEvent: ConnectionEventBody = {
       action: ConnectionEventAction.DELETED,
       connection: TEST_CCLOUD_CONNECTION,
