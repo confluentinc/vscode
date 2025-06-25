@@ -26,7 +26,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
 
     // vscode stubs
     showErrorNotificationStub = sandbox.stub(window, "showErrorMessage");
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
 
     // quickpick stubs
     schemaSubjectQuickPickStub = sandbox.stub(schemaQuickPicks, "schemaSubjectQuickPick");
