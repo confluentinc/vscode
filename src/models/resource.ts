@@ -28,7 +28,6 @@ export function connectionIdToType(id: ConnectionId): UsedConnectionType {
 export interface IResourceBase {
   connectionId: ConnectionId;
   connectionType: ConnectionType;
-
   /** How this resource should be represented as a {@link TreeItem} or {@link QuickPickItem}. */
   iconName?: IconNames;
 }
