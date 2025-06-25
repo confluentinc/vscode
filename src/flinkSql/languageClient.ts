@@ -90,19 +90,21 @@ export async function initializeLanguageClient(
                       items.forEach((element: vscode.CompletionItem) => {
                         // 3. to show correct completion position, translate result back to multi-line
                         if (element.textEdit) {
-                          logger.trace("item has textEdit, manipulating range");
                           let newRange = convertToMultiLineRange(document, element.textEdit.range);
                           element.textEdit.range = newRange;
                         }
-                        // ALSO, the server adds backticks for all Resource completions even if not typed in the editor
-                        // To align with vscode's sort/filter we remove these params, causing it to fall back on the label for filter/insert
-                        if (
-                          element.filterText &&
-                          element.filterText.startsWith("`") &&
-                          element.filterText.endsWith("`")
-                        ) {
-                          element.filterText = undefined;
-                          element.insertText = undefined;
+                        // CCloud Flink SQL Server adds backticks for all Resource completions even if not typed in the editor doc
+                        // To align with vscode's expectations we remove the filterText if the editor's range does not already begin or end with backtick
+                        // ...causing it to fall back on the label for filtering
+                        if (element.textEdit) {
+                          const editorRangeText = document.getText(element.textEdit.range);
+                          const filter = element.filterText;
+                          const filterTicks = filter?.startsWith("`") && filter?.endsWith("`");
+                          const editTicks =
+                            editorRangeText.startsWith("`") && editorRangeText.endsWith("`");
+                          if (filterTicks && !editTicks) {
+                            element.filterText = undefined;
+                          }
                         }
                       });
                     }
