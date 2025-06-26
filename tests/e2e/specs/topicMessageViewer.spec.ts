@@ -103,7 +103,7 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
 
     // the Kafka cluster quickpick should open
     const kafkaClusterQuickpick = new Quickpick(page);
-    await expect(kafkaClusterQuickpick.locator).toBeVisible({ timeout: 5_000 });
+    await expect(kafkaClusterQuickpick.locator).toBeVisible();
 
     // select the first Kafka cluster from the quickpick
     const clusters: QuickpickItem[] = await kafkaClusterQuickpick.getItems({
@@ -219,7 +219,7 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
 
     // the Kafka cluster quickpick should open
     const kafkaClusterQuickpick = new Quickpick(page);
-    await expect(kafkaClusterQuickpick.locator).toBeVisible({ timeout: 5_000 });
+    await expect(kafkaClusterQuickpick.locator).toBeVisible();
 
     // select the first Kafka cluster from the quickpick
     const clusters: QuickpickItem[] = await kafkaClusterQuickpick.getItems({
