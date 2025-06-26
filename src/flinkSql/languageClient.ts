@@ -83,8 +83,8 @@ export async function initializeLanguageClient(
               }
               return [];
             },
-            sendRequest: (type, params, token, next) => {
-              // Server does not accept line positions > 0 for completions, so we need to convert them to single-line
+            sendRequest: async (type, params, token, next) => {
+              // CCloud Flink SQL Server does not support multiline completions atm, so we need to convert ranges to single-line & back
               if (
                 typeof type === "object" &&
                 type.method &&
@@ -97,10 +97,24 @@ export async function initializeLanguageClient(
                   );
                   if (document) {
                     const originalPosition = (params as any).position;
+                    // 1. on the way out, convert position to {line: 0}
                     (params as any).position = convertToSingleLinePosition(
                       document,
                       new vscode.Position(originalPosition.line, originalPosition.character),
                     );
+                    // 2. get the completion items
+                    const result: any = await next(type, params, token);
+                    if (result) {
+                      const items: any = result.items;
+                      items.forEach((element: vscode.CompletionItem) => {
+                        // 3. to show correct completion position, translate result back to multi-line
+                        if (element.textEdit) {
+                          let newRange = convertToMultiLineRange(document, element.textEdit.range);
+                          element.textEdit.range = newRange;
+                        }
+                      });
+                    }
+                    return result;
                   }
                 }
               }
@@ -158,7 +172,7 @@ export async function initializeLanguageClient(
 
 /** Helper to convert vscode.Position to always have {line: 0...},
  * since CCloud Flink Language Server does not support multi-line completions at this time */
-function convertToSingleLinePosition(
+export function convertToSingleLinePosition(
   document: vscode.TextDocument,
   position: vscode.Position,
 ): vscode.Position {
@@ -171,4 +185,35 @@ function convertToSingleLinePosition(
   }
   singleLinePosition += position.character;
   return new vscode.Position(0, singleLinePosition);
+}
+
+/**
+ * Helper to convert a single-line range (line: 0, character: X) back to a multi-line range.
+ * Reverses the effect of convertToSingleLinePosition.
+ */
+export function convertToMultiLineRange(
+  document: vscode.TextDocument,
+  singleLineRange: vscode.Range,
+): vscode.Range {
+  const text = document.getText();
+  const lines = text.split("\n");
+
+  function offsetToPosition(offset: number): vscode.Position {
+    let runningOffset = 0;
+    for (let line = 0; line < lines.length; line++) {
+      const lineLength = lines[line].length + 1; // +1 for newline
+      if (offset < runningOffset + lineLength) {
+        return new vscode.Position(line, offset - runningOffset);
+      }
+      runningOffset += lineLength;
+    }
+    // Fallback = last position
+    return new vscode.Position(lines.length - 1, lines[lines.length - 1].length);
+  }
+
+  const startOffset = singleLineRange.start.character;
+  const endOffset = singleLineRange.end.character;
+  const start = offsetToPosition(startOffset);
+  const end = offsetToPosition(endOffset);
+  return new vscode.Range(start, end);
 }
