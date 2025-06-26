@@ -27,25 +27,6 @@ export class CCloudItem extends ViewItem {
     await this.clickInlineAction("Sign Out");
   }
 
-  /**
-   * Get the (CCloud) organization name from the CCloud item text (tree item `description`).
-   * Returns `null` if the user is signed out or if organization name can't be parsed for some
-   * other reason.
-   */
-  async getOrganizationName(): Promise<string | null> {
-    if (await this.notConnectedText.isVisible()) {
-      return null;
-    }
-
-    // parse the organization name from the aria-label, which should be like "Confluent Cloud <org-name>"
-    const ariaLabel: string | null = await this.locator.getAttribute("aria-label");
-    if (!ariaLabel) {
-      return null;
-    }
-    const match: RegExpMatchArray | null = ariaLabel.match(/Confluent Cloud (.+)/);
-    return match ? match[1] : null;
-  }
-
   /** Click the "Change Organization" action in the CCloud item. */
   async clickChangeOrganization(): Promise<void> {
     await this.clickInlineAction("Change Organization");
