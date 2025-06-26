@@ -104,6 +104,23 @@ export class FlinkLanguageClientManager implements Disposable {
       }),
     );
 
+    // Active editor should cover documents opening,
+    // but we still listen for open event since it's also called when the language id changes
+    this.disposables.push(
+      workspace.onDidOpenTextDocument(async (doc) => {
+        if (doc.languageId === "flinksql") {
+          const activeEditor = window.activeTextEditor;
+          // No-op if the document is not the active editor (let the active editor listener handle it)
+          if (activeEditor && activeEditor.document.uri.toString() !== doc.uri.toString()) {
+            return;
+          } else {
+            logger.trace("Initializing language client for changed active Flink SQL document");
+            await this.maybeStartLanguageClient(doc.uri);
+          }
+        }
+      }),
+    );
+
     // Listen for CCloud authentication
     this.disposables.push(
       ccloudConnected.event(async (connected) => {
