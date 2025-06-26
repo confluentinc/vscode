@@ -1,9 +1,11 @@
-import { Page } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
 import { View } from "./View";
-import { TopicItem } from "./viewItems/TopicItem";
-import { ViewItem } from "./viewItems/ViewItem";
 
-/** Object representing the "Topics" {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent" {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}. */
+/**
+ * Object representing the "Topics"
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container}.
+ */
 export class TopicsView extends View {
   constructor(page: Page) {
     super(page, /Topics.*Section/);
@@ -32,45 +34,38 @@ export class TopicsView extends View {
     await this.clickNavAction("Refresh");
   }
 
-  /**
-   * Click the "More Actions..." nav action in the view title area, which will open a right-click
-   * context menu.
-   */
-  async clickMoreActions(): Promise<void> {
-    await this.clickNavAction("More Actions...");
+  /** Get all (root-level) topic items in the view. */
+  get topics(): Locator {
+    return this.body.locator("[role='treeitem'][aria-level='1']");
+  }
+
+  /** Get all {@link topics topic items} with schemas in the view. */
+  get topicsWithSchemas(): Locator {
+    return this.topics.filter({ has: this.page.locator(".codicon-confluent-topic") });
+  }
+
+  /** Get all {@link topics topic items} without schemas in the view. */
+  get topicsWithoutSchemas(): Locator {
+    return this.topics.filter({
+      has: this.page.locator(".codicon-confluent-topic-without-schema"),
+    });
   }
 
   /**
-   * Get all Kafka topic {@link TopicItem tree items}, optionally filtering to include/exclude
-   * topics with and/or without schemas.
-   * - `withSchemas`: include topics with schemas (default: `true`)
-   * - `withoutSchemas`: include topics without schemas (default: `true`)
+   * Get all subject items in the view.
+   * (One level below {@link topicsWithSchemas topic items with schemas}.)
    */
-  async getTopicItems(options?: {
-    withSchemas?: boolean;
-    withoutSchemas?: boolean;
-  }): Promise<TopicItem[]> {
-    // topics are at the root level, then subjects, then schema versions
-    const topics: ViewItem[] = await this.getItems({ level: 1, waitForItems: true });
+  get subjects(): Locator {
+    // we don't use `this.topicsWithSchemas` because these are sibling elements to topics in the DOM
+    return this.body.locator("[role='treeitem'][aria-level='2']");
+  }
 
-    const withSchemas: boolean = options?.withSchemas ?? true;
-    const withoutSchemas: boolean = options?.withoutSchemas ?? true;
-    if (!withSchemas && !withoutSchemas) {
-      throw new Error("At least one of 'withSchemas' or 'withoutSchemas' must be true.");
-    }
-    if (withSchemas && withoutSchemas) {
-      // return all topics if no filtering is applied
-      return topics.map((item) => new TopicItem(this.page, item.locator));
-    }
-
-    const filteredTopics: TopicItem[] = [];
-    for (const item of topics) {
-      const topicItem = new TopicItem(this.page, item.locator);
-      const hasSchema: boolean = await topicItem.hasSchema();
-      if ((withSchemas && hasSchema) || (withoutSchemas && !hasSchema)) {
-        filteredTopics.push(topicItem);
-      }
-    }
-    return filteredTopics;
+  /**
+   * Get all schema version items in the view.
+   * (One level below {@link subjects subject items}.)
+   */
+  get schemaVersions(): Locator {
+    // we don't use `this.subjects` because these are sibling elements to subjects in the DOM
+    return this.body.locator("[role='treeitem'][aria-level='3']");
   }
 }
