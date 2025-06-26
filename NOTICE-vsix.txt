@@ -750,7 +750,7 @@ Other developers who have contributed code are:
 ## Copyright
 
 Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
-============ com.fasterxml.jackson.core.jackson-annotations-2.17.2 ============
+============ com.fasterxml.jackson.core.jackson-annotations-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -774,7 +774,7 @@ A list of contributors may be found from CREDITS(-2.x) file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.core.jackson-core-2.17.2 ============
+============ com.fasterxml.jackson.core.jackson-core-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -809,7 +809,7 @@ Copyright © 2023 Werner Randelshofer, Switzerland. MIT License.
 See FastDoubleParser-NOTICE for details of other source code included in FastDoubleParser
 and the licenses and copyrights that apply to that code.
 
-============ com.fasterxml.jackson.core.jackson-databind-2.17.2 ============
+============ com.fasterxml.jackson.core.jackson-databind-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -857,7 +857,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.dataformat.jackson-dataformat-csv-2.17.2 ============
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-csv-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -881,7 +881,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.dataformat.jackson-dataformat-yaml-2.17.2 ============
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-yaml-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -905,7 +905,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.datatype.jackson-datatype-jdk8-2.17.2 ============
+============ com.fasterxml.jackson.datatype.jackson-datatype-jdk8-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -925,7 +925,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.datatype.jackson-datatype-jsr310-2.17.2 ============
+============ com.fasterxml.jackson.datatype.jackson-datatype-jsr310-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -945,7 +945,7 @@ A list of contributors may be found from CREDITS file, which is included
 in some artifacts (usually source distributions); but is always available
 from the source code management (SCM) system project uses.
 
-============ com.fasterxml.jackson.module.jackson-module-parameter-names-2.17.2 ============
+============ com.fasterxml.jackson.module.jackson-module-parameter-names-2.18.2 ============
 
 # Jackson JSON processor
 
@@ -989,7 +989,7 @@ Copyright 2001-2010 The Apache Software Foundation
 This product includes software developed by
 The Apache Software Foundation (http://www.apache.org/).
 
-============ commons-io.commons-io-2.16.1 ============
+============ commons-io.commons-io-2.18.0 ============
 
 Apache Commons IO
 Copyright 2002-2024 The Apache Software Foundation
@@ -1796,7 +1796,7 @@ please check the country's laws, regulations and policies concerning the import,
 possession, or use, and re-export of encryption software, to see if this is
 permitted.
 
-============ joda-time.joda-time-2.12.7 ============
+============ joda-time.joda-time-2.13.1 ============
 
 =============================================================================
 = NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
@@ -1813,7 +1813,7 @@ Copyright 2009-2024 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 
-============ org.apache.commons.commons-compress-1.27.0 ============
+============ org.apache.commons.commons-compress-1.27.1 ============
 
 Apache Commons Compress
 Copyright 2002-2024 The Apache Software Foundation
@@ -1821,10 +1821,10 @@ Copyright 2002-2024 The Apache Software Foundation
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 
-============ org.apache.commons.commons-lang3-3.14.0 ============
+============ org.apache.commons.commons-lang3-3.17.0 ============
 
 Apache Commons Lang
-Copyright 2001-2023 The Apache Software Foundation
+Copyright 2001-2024 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
@@ -1925,7 +1925,7 @@ Werner Keil werner@catmedia.us,
 Jan Martiska jmartisk@redhat.com
 </text>
 
-============ org.eclipse.microprofile.openapi.microprofile-openapi-api-3.1.1 ============
+============ org.eclipse.microprofile.openapi.microprofile-openapi-api-4.0.2 ============
 
 =========================================================================
 ==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
