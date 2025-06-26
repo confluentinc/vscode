@@ -16,6 +16,7 @@ import {
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
@@ -482,6 +483,37 @@ async function produceMessages(
   }
 }
 
+/** Open a new tab set to Flink SQL type with placeholder Flink query of the selected topic */
+async function queryTopicWithFlink(topic: KafkaTopic) {
+  if (!topic || !(topic instanceof KafkaTopic)) {
+    return;
+  }
+
+  // Get the environment and cluster for the topic to generate a fully qualified table name
+  const topicViewProvider = getTopicViewProvider();
+  const cluster = topicViewProvider.kafkaCluster;
+  const environment = topicViewProvider.environment;
+
+  if (!environment || !cluster) {
+    return;
+  }
+
+  const fullyQualifiedTopicName = `\`${environment?.name}\`.\`${cluster.name}\`.\`${topic.name}\``;
+  const placeholderQuery = `-- Query topic "${topic.name}" with Flink SQL
+-- Replace this with your actual Flink SQL query
+
+SELECT *
+FROM ${fullyQualifiedTopicName}
+LIMIT 10;`;
+
+  const document = await vscode.workspace.openTextDocument({
+    language: FLINK_SQL_LANGUAGE_ID,
+    content: placeholderQuery,
+  });
+
+  await vscode.window.showTextDocument(document, { preview: false });
+}
+
 /**
  * Aggregates counts of error messages and returns a summary string.
  * - If a single error is provided, it returns the error message.
@@ -696,6 +728,7 @@ export function registerTopicCommands(): vscode.Disposable[] {
       copyKafkaClusterBootstrapUrl,
     ),
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
+    registerCommandWithLogging("confluent.topics.query", queryTopicWithFlink),
     registerCommandWithLogging("confluent.topic.produce.fromDocument", produceMessagesFromDocument),
   ];
 }
