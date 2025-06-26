@@ -1,7 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { convertToMultiLineRange, convertToSingleLinePosition } from "./languageClient";
+import {
+  adaptCompletionItems,
+  convertToMultiLineRange,
+  convertToSingleLinePosition,
+} from "./languageClient";
 
 describe("flinkSql/languageClient.ts position conversion functions", () => {
   let sandbox: sinon.SinonSandbox;
@@ -220,5 +224,65 @@ describe("flinkSql/languageClient.ts position conversion functions", () => {
         `Failed for position ${originalPosition.line}:${originalPosition.character}`,
       );
     }
+  });
+});
+
+describe("adaptCompletionItems", () => {
+  it("should remove filterText if the completion does not have backticks", () => {
+    const document = {
+      getText: (range?: vscode.Range) => {
+        if (range) {
+          return "";
+        }
+        return "SELECT * FROM my_table";
+      },
+    } as vscode.TextDocument;
+
+    const result = {
+      items: [
+        {
+          label: "my_table",
+          textEdit: {
+            range: new vscode.Range(0, 14, 0, 22),
+            newText: "my_table",
+          },
+          filterText: "`my_table`",
+        },
+      ],
+    };
+
+    const adaptedResult = adaptCompletionItems(result, document);
+    const adaptedItem = adaptedResult.items[0];
+
+    assert.strictEqual(adaptedItem.filterText, undefined, "filterText should be undefined");
+  });
+
+  it("should not change filterText if backticks are present", () => {
+    const document = {
+      getText: (range?: vscode.Range) => {
+        if (range) {
+          return "`my_table`";
+        }
+        return "SELECT * FROM `my_table`";
+      },
+    } as vscode.TextDocument;
+
+    const result = {
+      items: [
+        {
+          label: "my_table",
+          textEdit: {
+            range: new vscode.Range(0, 14, 0, 24),
+            newText: "`my_table`",
+          },
+          filterText: "`my_table`",
+        },
+      ],
+    };
+
+    const adaptedResult = adaptCompletionItems(result, document);
+    const adaptedItem = adaptedResult.items[0];
+
+    assert.strictEqual(adaptedItem.filterText, "`my_table`", "filterText should not be changed");
   });
 });

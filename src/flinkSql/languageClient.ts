@@ -64,28 +64,6 @@ export async function initializeLanguageClient(
           },
           progressOnInitialization: true,
           middleware: {
-            provideCompletionItem: async (document, position, context, token, next) => {
-              const result: any = await next(document, position, context, token);
-              if (result) {
-                const items: any = result.items;
-                items.forEach((element: vscode.CompletionItem) => {
-                  // The server sends backticks in the filterText for all Resource completions, but vscode languageclient
-                  // will filter out these items if the completion range doesn't start with a backtick, so we remove them
-                  if (
-                    element.filterText &&
-                    element.filterText.startsWith("`") &&
-                    element.filterText.endsWith("`")
-                  ) {
-                    element.filterText = element.filterText.substring(
-                      1,
-                      element.filterText.length - 1,
-                    );
-                  }
-                });
-                return result;
-              }
-              return [];
-            },
             sendRequest: async (type, params, token, next) => {
               // CCloud Flink SQL Server does not support multiline completions atm, so we need to convert ranges to single-line & back
               if (
@@ -105,19 +83,9 @@ export async function initializeLanguageClient(
                       document,
                       new vscode.Position(originalPosition.line, originalPosition.character),
                     );
-                    // 2. get the completion items
+                    // 2. grab the completion items so we can adapt them
                     const result: any = await next(type, params, token);
-                    if (result) {
-                      const items: any = result.items;
-                      items.forEach((element: vscode.CompletionItem) => {
-                        // 3. to show correct completion position, translate result back to multi-line
-                        if (element.textEdit) {
-                          let newRange = convertToMultiLineRange(document, element.textEdit.range);
-                          element.textEdit.range = newRange;
-                        }
-                      });
-                    }
-                    return result;
+                    return adaptCompletionItems(result, document);
                   }
                 }
               }
@@ -219,4 +187,39 @@ export function convertToMultiLineRange(
   const start = offsetToPosition(startOffset);
   const end = offsetToPosition(endOffset);
   return new vscode.Range(start, end);
+}
+
+/**
+ * Manipulates completion items returned from the Flink SQL language server to align with VS Code's expectations.
+ * 1. Converts single-line ranges from the server back to multi-line ranges for correct display in the editor.
+ * 2. Removes backticks from `filterText` for resource completions if the editor text does not contain them.
+ *
+ * @param result The completion list from the language server response.
+ * @param document The text document for which the completions were requested.
+ * @returns The updated completion list.
+ */
+export function adaptCompletionItems(result: any, document: vscode.TextDocument): any {
+  if (result) {
+    const items: any = result.items;
+    items.forEach((element: vscode.CompletionItem) => {
+      // To show correct completion position, translate result back to multi-line
+      if (element.textEdit) {
+        let newRange = convertToMultiLineRange(document, element.textEdit.range);
+        element.textEdit.range = newRange;
+      }
+      // CCloud Flink SQL Server adds backticks for all Resource completions even if not typed in the editor doc
+      // To align with vscode's expectations we remove the filterText if the editor's range does not already begin or end with backtick
+      // ...causing it to fall back on the label for filtering
+      if (element.textEdit) {
+        const editorRangeText = document.getText(element.textEdit.range);
+        const filter = element.filterText;
+        const filterTicks = filter?.startsWith("`") && filter?.endsWith("`");
+        const editTicks = editorRangeText.startsWith("`") && editorRangeText.endsWith("`");
+        if (filterTicks && !editTicks) {
+          element.filterText = undefined;
+        }
+      }
+    });
+  }
+  return result;
 }
