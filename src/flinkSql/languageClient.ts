@@ -59,9 +59,6 @@ export async function initializeLanguageClient(
             { pattern: "**/*.flink.sql" },
           ],
           outputChannel: getFlinkSQLLanguageServerOutputChannel(),
-          synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher("**/*.flink.sql"),
-          },
           progressOnInitialization: true,
           middleware: {
             provideCompletionItem: async (document, position, context, token, next) => {
