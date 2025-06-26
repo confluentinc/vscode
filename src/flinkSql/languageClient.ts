@@ -175,7 +175,7 @@ export async function initializeLanguageClient(
 
 /** Helper to convert vscode.Position to always have {line: 0...},
  * since CCloud Flink Language Server does not support multi-line completions at this time */
-function convertToSingleLinePosition(
+export function convertToSingleLinePosition(
   document: vscode.TextDocument,
   position: vscode.Position,
 ): vscode.Position {
@@ -194,7 +194,7 @@ function convertToSingleLinePosition(
  * Helper to convert a single-line range (line: 0, character: X) back to a multi-line range.
  * Reverses the effect of convertToSingleLinePosition.
  */
-function convertToMultiLineRange(
+export function convertToMultiLineRange(
   document: vscode.TextDocument,
   singleLineRange: vscode.Range,
 ): vscode.Range {
