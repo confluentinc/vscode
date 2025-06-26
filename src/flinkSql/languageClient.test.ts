@@ -178,12 +178,54 @@ describe("flinkSql/languageClient.ts position conversion functions", () => {
       // "line1\n".length + 3 = 6 + 3 = 9
       assert.strictEqual(singleLinePosition.character, 9);
 
-      const singleLineRange = new vscode.Range(singleLinePosition, singleLinePosition);
+      const singleLineRange = new vscode.Range(
+        singleLinePosition,
+        singleLinePosition.translate(0, 2), // end position is 2 characters after start to simulate a longer completion
+      );
       const multiLineRange = convertToMultiLineRange(mockDocument, singleLineRange);
 
       // Verify we got back our original position
       assert.strictEqual(multiLineRange.start.line, 1);
       assert.strictEqual(multiLineRange.start.character, 3);
+    });
+
+    it("should correctly handle document with trailing newline", () => {
+      const documentWithTrailingNewline = {
+        getText: sandbox.stub().returns("line1\nline2\nline3\nline4\n"),
+      } as unknown as vscode.TextDocument;
+
+      // A. Position at the end of line4 before the trailing newline
+      const originalPosition = new vscode.Position(3, 5);
+      const singleLinePosition = convertToSingleLinePosition(
+        documentWithTrailingNewline,
+        originalPosition,
+      );
+      assert.strictEqual(singleLinePosition.line, 0);
+      // "line1\n".length + "line2\n".length + "line3\n".length + 5 = 6 + 6 + 6 + 5 = 23
+      assert.strictEqual(singleLinePosition.character, 23);
+
+      const singleLineRange = new vscode.Range(singleLinePosition, singleLinePosition);
+      const multiLineRange = convertToMultiLineRange(documentWithTrailingNewline, singleLineRange);
+      assert.strictEqual(multiLineRange.start.line, 3);
+      assert.strictEqual(multiLineRange.start.character, 5);
+
+      // B. Position at the very end of the document after the trailing newline
+      const endPosition = new vscode.Position(4, 0);
+      const endSingleLinePos = convertToSingleLinePosition(
+        documentWithTrailingNewline,
+        endPosition,
+      );
+      assert.strictEqual(endSingleLinePos.line, 0);
+      // "line1\n".length + "line2\n".length + "line3\n".length + "line4\n".length = 6 + 6 + 6 + 6 = 24
+      assert.strictEqual(endSingleLinePos.character, 24);
+
+      const endSingleLineRange = new vscode.Range(endSingleLinePos, endSingleLinePos);
+      const endMultiLineRange = convertToMultiLineRange(
+        documentWithTrailingNewline,
+        endSingleLineRange,
+      );
+      assert.strictEqual(endMultiLineRange.start.line, 4);
+      assert.strictEqual(endMultiLineRange.start.character, 0);
     });
   });
 
