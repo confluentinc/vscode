@@ -87,8 +87,9 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
-    await messageViewer.waitForLoadAndValidateState();
-    await expect(messageViewer.locator).toBeVisible();
+    await expect(messageViewer.messageViewerSettings).toBeVisible();
+    await expect(messageViewer.content).toBeVisible();
+    await expect(messageViewer.paginationControls).toBeVisible();
   });
 
   test("should select a Kafka cluster from the Topics view nav action, list topics, and open message viewer", async ({
@@ -125,8 +126,9 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
-    await messageViewer.waitForLoadAndValidateState();
-    await expect(messageViewer.locator).toBeVisible();
+    await expect(messageViewer.messageViewerSettings).toBeVisible();
+    await expect(messageViewer.content).toBeVisible();
+    await expect(messageViewer.paginationControls).toBeVisible();
   });
 });
 
@@ -203,8 +205,9 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
-    await messageViewer.waitForLoadAndValidateState();
-    await expect(messageViewer.locator).toBeVisible();
+    await expect(messageViewer.messageViewerSettings).toBeVisible();
+    await expect(messageViewer.content).toBeVisible();
+    await expect(messageViewer.paginationControls).toBeVisible();
   });
 
   test("should select a Kafka cluster from the Topics view nav action, list topics, and open message viewer", async ({
@@ -241,7 +244,8 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
-    await messageViewer.waitForLoadAndValidateState();
-    await expect(messageViewer.locator).toBeVisible();
+    await expect(messageViewer.messageViewerSettings).toBeVisible();
+    await expect(messageViewer.content).toBeVisible();
+    await expect(messageViewer.paginationControls).toBeVisible();
   });
 });
