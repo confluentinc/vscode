@@ -22,14 +22,16 @@ import { login } from "./utils/confluentCloud";
  * {@see https://github.com/confluentinc/vscode/issues/1703}
  *
  * Test flow:
- * 1. Log in to Confluent Cloud from the sidebar auth flow
+ * 1. Set up connection:
+ *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
+ *    b. DIRECT: Fill out the Add New Connection form and submit with Kafka connection details
  * 2. Select a Kafka cluster with topics
  *    a. Pick from the Resources view, or
  *    b. Pick from the Topics view nav action
  * 3. Topics view should have at least one topic item listed
  * 4. Click on the `confluent-new-message` icon (envelope with magnifying glass) to open the topic
  *    message viewer
- * 5. View should open with basic form components, even if messages aren't (yet) available
+ * 5. View should open with basic webview components, even if messages aren't (yet) available
  */
 
 test.describe("Topic Message Viewer: CCLOUD connection", () => {
