@@ -166,7 +166,7 @@ export class CCloudEnvironment extends Environment {
     return children;
   }
 
-  update(other: CCloudEnvironment): void {
+  override update(other: CCloudEnvironment): void {
     super.update(other);
     // Copy over the possibly changing CCloud-centric properties.
     this.streamGovernancePackage = other.streamGovernancePackage;
@@ -267,7 +267,7 @@ export class DirectEnvironment extends Environment {
     return this.name;
   }
 
-  update(other: DirectEnvironment): void {
+  override update(other: DirectEnvironment): void {
     super.update(other);
 
     // Copy over the possibly changing DirectEnvironment-centric properties.
