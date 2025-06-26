@@ -1,6 +1,7 @@
 import {
   Disposable,
   LogOutputChannel,
+  TextDocument,
   TextEditor,
   Uri,
   window,
@@ -62,6 +63,30 @@ export class FlinkLanguageClientManager implements Disposable {
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
     this.registerListeners();
+    // This is true here when a user opens a new workspace after authenticating with CCloud in another one
+    if (hasCCloudAuthSession()) {
+      let flinkDoc: TextDocument | undefined = undefined;
+      const activeEditor = window.activeTextEditor;
+      // Check the active editor first
+      if (activeEditor && activeEditor.document.languageId === "flinksql") {
+        flinkDoc = activeEditor.document;
+      } else {
+        // If not active, scan all visible editors
+        const flinkSqlEditor = window.visibleTextEditors.find(
+          (editor) => editor.document.languageId === "flinksql",
+        );
+        if (flinkSqlEditor) {
+          flinkDoc = flinkSqlEditor.document;
+        }
+      }
+
+      if (flinkDoc) {
+        logger.trace(
+          "CCloud session already exists + found open Flink SQL document, initializing language client",
+        );
+        this.maybeStartLanguageClient(flinkDoc.uri);
+      }
+    }
   }
 
   private registerListeners(): void {
