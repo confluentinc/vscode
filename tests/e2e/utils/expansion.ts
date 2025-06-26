@@ -1,4 +1,4 @@
-import { Locator } from "@playwright/test";
+import { expect, Locator } from "@playwright/test";
 
 export const EXPANDABLE_ATTRIBUTE = "aria-expanded";
 
@@ -23,10 +23,8 @@ export async function isExpanded(locator: Locator): Promise<boolean> {
 export async function expand(locator: Locator): Promise<void> {
   if (!(await isExpanded(locator))) {
     await locator.click();
-    // make sure the element is expanded after clicking
-    if (!(await isExpanded(locator))) {
-      throw new Error(`Element "${await locator.textContent()}" could not be expanded.`);
-    }
+    // wait for the element to be expanded after clicking
+    await expect(locator).toHaveAttribute(EXPANDABLE_ATTRIBUTE, "true");
   }
 }
 
@@ -34,9 +32,7 @@ export async function expand(locator: Locator): Promise<void> {
 export async function collapse(locator: Locator): Promise<void> {
   if (await isExpanded(locator)) {
     await locator.click();
-    // make sure the element is collapsed after clicking
-    if (await isExpanded(locator)) {
-      throw new Error(`Element "${await locator.textContent()}" could not be collapsed.`);
-    }
+    // wait for the element to be collapsed after clicking
+    await expect(locator).toHaveAttribute(EXPANDABLE_ATTRIBUTE, "false");
   }
 }
