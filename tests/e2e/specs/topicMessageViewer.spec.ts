@@ -13,7 +13,7 @@ import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
-import { expand, isExpandable, isExpanded } from "../utils/expansion";
+import { CollapsibleState, expand, getCollapsibleState } from "../utils/expansion";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
@@ -45,11 +45,9 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
     // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
     // "(Not Connected)" description
     const ccloudItem: CCloudItem = await resourcesView.getConfluentCloudItem();
-    // signed-in state: should not show "(Not Connected)" text and should be expandable
-    await expect(ccloudItem.notConnectedText).toBeHidden({ timeout: 500 });
-    await expect
-      .poll(async () => await isExpandable(ccloudItem.locator), { timeout: 1_000 })
-      .toBe(true);
+    // signed-in state: should not show "(Not Connected)" text and should be expanded
+    await expect(ccloudItem.notConnectedText).toBeHidden();
+    expect(await getCollapsibleState(ccloudItem.locator)).toBe(CollapsibleState.Expanded);
   });
 
   test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
@@ -62,9 +60,7 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
     expect(environments.length).toBeGreaterThan(0);
     const firstEnvironment: CCloudEnvironmentItem = environments[0];
     await expand(firstEnvironment.locator);
-    await expect
-      .poll(async () => await isExpanded(firstEnvironment.locator), { timeout: 1_000 })
-      .toBe(true);
+    expect(await getCollapsibleState(firstEnvironment.locator)).toBe(CollapsibleState.Expanded);
 
     // then click on the first (CCloud) Kafka cluster to select it
     const clusters: KafkaClusterItem[] = await resourcesView.getKafkaClusterItems({
@@ -180,9 +176,7 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     expect(directConnections.length).toBeGreaterThan(0);
     const firstConnection: ViewItem = directConnections[0];
     await expand(firstConnection.locator);
-    await expect
-      .poll(async () => await isExpanded(firstConnection.locator), { timeout: 1_000 })
-      .toBe(true);
+    expect(await getCollapsibleState(firstConnection.locator)).toBe(CollapsibleState.Expanded);
 
     // then click on the first (direct) Kafka cluster to select it
     const clusters: KafkaClusterItem[] = await resourcesView.getKafkaClusterItems({
