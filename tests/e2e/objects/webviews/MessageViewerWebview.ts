@@ -11,145 +11,116 @@ export class MessageViewerWebview extends Webview {
     super(page);
   }
 
+  /** The top-level wrapper element containing the header/content/footer sections. */
+  get wrapper(): Locator {
+    return this.webview.locator("main.wrapper");
+  }
+
+  /** The header section containing all the message viewer settings and controls. */
+  get messageViewerSettings(): Locator {
+    return this.wrapper.locator("header.message-viewer-settings");
+  }
+
+  /** The consume settings section within the header (Working View Settings). */
+  get consumeSettingsSection(): Locator {
+    return this.messageViewerSettings.locator("section.consume-settings");
+  }
+
+  /** The message search section within the header (Message Quick Search). */
+  get messageSearchSection(): Locator {
+    return this.messageViewerSettings.getByTestId("message-quick-search");
+  }
+
+  /** The main content area containing the histogram, message grid, and banner. */
+  get content(): Locator {
+    return this.wrapper.locator("section.content");
+  }
+
+  /** The footer section containing pagination controls. */
+  get paginationControls(): Locator {
+    return this.wrapper.locator("footer.message-viewer-pagination");
+  }
+
   // "Working View Settings" / Consume Controls area
 
   get partitionsButton(): Locator {
-    return this.webview.locator('button[popovertarget="partitionConsumeControl"]');
+    return this.consumeSettingsSection.locator('button[popovertarget="partitionConsumeControl"]');
   }
   get partitionsPopover(): Locator {
-    return this.webview.locator("#partitionConsumeControl");
+    return this.consumeSettingsSection.locator("#partitionConsumeControl");
   }
   get consumeModeDropdown(): Locator {
-    return this.webview.locator("#consume-mode");
+    return this.consumeSettingsSection.locator("#consume-mode");
   }
   /** Timestamp input, only visible/present when {@linkcode consumeModeDropdown} is set to "timestamp". */
   get consumeModeTimestampField(): Locator {
-    return this.webview.locator("#consume-mode-timestamp");
+    return this.consumeSettingsSection.locator("#consume-mode-timestamp");
   }
   get maxResultsDropdown(): Locator {
-    return this.webview.locator("#messages-limit");
+    return this.consumeSettingsSection.locator("#messages-limit");
   }
   /** The primary "Pause"/"Resume" button. */
   get streamToggleButton(): Locator {
-    return this.webview.locator("#stream-toggle");
+    return this.consumeSettingsSection.locator("#stream-toggle");
   }
   /** The button that appears when any kind of response error is encountered while consuming messages. */
   get errorButton(): Locator {
-    return this.webview.locator('button[popovertarget="errorLog"]');
+    return this.consumeSettingsSection.locator('button[popovertarget="errorLog"]');
   }
   get errorPopover(): Locator {
-    return this.webview.locator("#errorLog");
+    return this.consumeSettingsSection.locator("#errorLog");
   }
   get timeElapsedTimer(): Locator {
-    return this.webview.locator("consume-timer");
-  }
-  /** Main locators for the "Working View Settings" area. */
-  get workingViewSettingsControls(): Locator[] {
-    return [
-      this.partitionsButton,
-      this.consumeModeDropdown,
-      this.maxResultsDropdown,
-      this.streamToggleButton,
-      this.timeElapsedTimer,
-    ];
+    return this.consumeSettingsSection.locator("consume-timer");
   }
 
   // "Message Quick Search" area
   get messageSearchField(): Locator {
-    return this.webview.locator("#message-search");
+    return this.messageSearchSection.locator("#message-search");
   }
   get partitionsFilterButton(): Locator {
-    return this.webview.locator('button[popovertarget="partitionFilterControl"]');
+    return this.messageSearchSection.locator('button[popovertarget="partitionFilterControl"]');
   }
   get partitionsFilterPopover(): Locator {
-    return this.webview.locator("#partitionFilterControl");
-  }
-  /** Main locators for the "Message Quick Search" area. */
-  get messageQuickSearchControls(): Locator[] {
-    return [this.messageSearchField, this.partitionsFilterButton];
-  }
-  /**
-   * All main header control locators from {@linkcode workingViewSettingsControls} and
-   * {@linkcode messageQuickSearchControls}.
-   */
-  get headerControls(): Locator[] {
-    return [...this.workingViewSettingsControls, ...this.messageQuickSearchControls];
+    return this.messageSearchSection.locator("#partitionFilterControl");
   }
 
   // Histogram+Table area
 
   /** "X messages streamed since YYYY-MM-DDTHH:mm:ssZ (UTC)" */
   get messageCountSinceTimestamp(): Locator {
-    return this.webview.locator(".histogram-label").first();
+    return this.wrapper.locator(".histogram-label").first();
   }
   get messagesHistogram(): Locator {
-    return this.webview.locator("messages-histogram");
+    return this.wrapper.locator("messages-histogram");
   }
-  /** The central status indicator for {@linkcode isL} */
+  /** The central status indicator for various states (loading, error, paused, etc.). */
   get gridBanner(): Locator {
-    return this.webview.locator(".grid-banner");
+    return this.content.locator(".grid-banner");
   }
   /** The main table that displays the consumed messages. */
   get messagesGrid(): Locator {
-    return this.webview.locator("table.grid");
+    return this.content.locator("table.grid");
   }
   get columnSettingsButton(): Locator {
-    return this.webview.locator('th[popovertarget="columnSettings"]');
+    return this.content.locator('th[popovertarget="columnSettings"]');
   }
   get columnSettingsPopover(): Locator {
-    return this.webview.locator("#columnSettings");
+    return this.content.locator("#columnSettings");
   }
 
   // footer / pagination area
   get previousPageButton(): Locator {
-    return this.webview.locator("#prevPage");
+    return this.paginationControls.locator("#prevPage");
   }
   get nextPageButton(): Locator {
-    return this.webview.locator("#nextPage");
+    return this.paginationControls.locator("#nextPage");
   }
   get pageStatsButton(): Locator {
-    return this.webview.locator("#pageOutput");
+    return this.paginationControls.locator("#pageOutput");
   }
   get jsonExportButton(): Locator {
-    return this.webview.locator('button[title="Open consumed messages as JSON"]');
-  }
-  get paginationSection(): Locator {
-    return this.webview.locator("footer.message-viewer-pagination");
-  }
-
-  async waitForLoad(): Promise<void> {
-    // the top-level <main class="wrapper"> from `src/webviews/message-viewer.html`
-    await this.webview.locator("main.wrapper").waitFor({ state: "visible", timeout: 10_000 });
-  }
-
-  /**
-   * Waits for the message viewer to load and verifies it's in a valid operational state.
-   * This is a utility method that combines waiting for load with basic state validation,
-   * useful for test setup where you just need to ensure the message viewer is ready for use.
-   *
-   * @param timeout - Optional timeout for waiting operations (default: 10000ms)
-   */
-  async waitForLoadAndValidateState(timeout: number = 10_000): Promise<void> {
-    await this.waitForLoad();
-    // should now be visible in the editor area with some of the main controls
-    await this.locator.waitFor({ state: "visible", timeout });
-    await this.messageSearchField.waitFor({ state: "visible", timeout: 500 });
-
-    // it should also show some of the top-level controls and be in a loading, error,
-    // or got-some-messages state
-    const [isLoading, hasMessages, hasLoadError, isPaused, hasEmptyFilter] = await Promise.all([
-      this.isWaitingForMessages(),
-      this.hasMessages(),
-      this.hasLoadError(),
-      this.isPaused(),
-      this.hasEmptyFilterResult(),
-    ]);
-    const isInValidState = isLoading || hasMessages || hasLoadError || isPaused || hasEmptyFilter;
-    if (!isInValidState) {
-      throw new Error(
-        "Message viewer is not in a recognizable state. Expected one of: loading, has messages, has error, paused, or empty filter result.",
-      );
-    }
+    return this.paginationControls.locator('button[title="Open consumed messages as JSON"]');
   }
 
   /**
@@ -171,41 +142,5 @@ export class MessageViewerWebview extends Webview {
    */
   async doubleClickMessageRow(rowIndex: number): Promise<void> {
     await this.messagesGrid.locator("tbody tr").nth(rowIndex).dblclick();
-  }
-
-  /** Checks if the "Waiting for messages..." state is displayed (stream is running). */
-  async isWaitingForMessages(): Promise<boolean> {
-    return await this.gridBanner
-      .filter({ has: this.webview.locator("vscode-progress-ring") })
-      .filter({ hasText: "Waiting for messages…" })
-      .isVisible({ timeout: 500 });
-  }
-
-  /** Checks if the "Paused" state is displayed (stream is paused). */
-  async isPaused(): Promise<boolean> {
-    return await this.gridBanner
-      .filter({ has: this.webview.locator(".codicon-debug-pause") })
-      .filter({ hasText: "Paused" })
-      .isVisible({ timeout: 500 });
-  }
-
-  /** Checks if the "Failed to load messages" error state is displayed. */
-  async hasLoadError(): Promise<boolean> {
-    return await this.gridBanner
-      .filter({ has: this.webview.locator(".codicon-error") })
-      .filter({ hasText: "Failed to load messages." })
-      .isVisible({ timeout: 500 });
-  }
-
-  /** Checks if the "Unable to find messages for currently set filters" state is displayed. */
-  async hasEmptyFilterResult(): Promise<boolean> {
-    return await this.gridBanner
-      .filter({ hasText: "Unable to find messages for currently set filters" })
-      .isVisible({ timeout: 500 });
-  }
-
-  /** Checks if messages are currently displayed in the table. */
-  async hasMessages(): Promise<boolean> {
-    return await this.messagesGrid.isVisible({ timeout: 500 });
   }
 }
