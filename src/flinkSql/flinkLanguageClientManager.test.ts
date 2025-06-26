@@ -98,4 +98,24 @@ describe("FlinkLanguageClientManager", () => {
       assert.strictEqual(result, true);
     });
   });
+
+  describe("constructor behavior", () => {
+    it("should initialize language client when has auth session & active flinksql document", async () => {
+      hasCCloudAuthSessionStub.returns(true);
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
+      sandbox.stub(vscode.window, "activeTextEditor").value(fakeEditor);
+      const maybeStartStub = sandbox
+        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
+        .resolves();
+
+      // Re-initialize the singleton so the constructor runs
+      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager.getInstance();
+
+      sinon.assert.calledOnce(maybeStartStub);
+      sinon.assert.calledWith(maybeStartStub, fakeUri);
+    });
+  });
 });
