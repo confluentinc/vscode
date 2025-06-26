@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, Locator } from "@playwright/test";
 import { test } from "../baseTest";
 import { NotificationToast } from "../objects/notifications/NotificationToast";
 import { NotificationToasts } from "../objects/notifications/NotificationToasts";
@@ -6,11 +6,7 @@ import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { QuickpickItem } from "../objects/quickInputs/QuickpickItem";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { TopicsView } from "../objects/views/TopicsView";
-import { CCloudEnvironmentItem } from "../objects/views/viewItems/CCloudEnvironmentItem";
-import { CCloudItem } from "../objects/views/viewItems/CCloudItem";
-import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import { ViewItem } from "../objects/views/viewItems/ViewItem";
+import { ViewItem } from "../objects/views/ViewItem";
 import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { CollapsibleState, expand, getCollapsibleState } from "../utils/expansion";
@@ -46,10 +42,10 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
     // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
     // "(Not Connected)" description
-    const ccloudItem: CCloudItem = await resourcesView.getConfluentCloudItem();
-    // signed-in state: should not show "(Not Connected)" text and should be expanded
-    await expect(ccloudItem.notConnectedText).toBeHidden();
-    expect(await getCollapsibleState(ccloudItem.locator)).toBe(CollapsibleState.Expanded);
+    const ccloudItem: Locator = resourcesView.confluentCloudItem;
+    await expect(ccloudItem).toBeVisible();
+    await expect(ccloudItem).not.toHaveText("(Not Connected)");
+    expect(await getCollapsibleState(ccloudItem)).toBe(CollapsibleState.Expanded);
   });
 
   test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
@@ -58,30 +54,22 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
   }) => {
     // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
     // Flink compute pools
-    const environments: CCloudEnvironmentItem[] = await resourcesView.getCCloudEnvironmentItems();
-    expect(environments.length).toBeGreaterThan(0);
-    const firstEnvironment: CCloudEnvironmentItem = environments[0];
-    await expand(firstEnvironment.locator);
-    expect(await getCollapsibleState(firstEnvironment.locator)).toBe(CollapsibleState.Expanded);
+    await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+    const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
+    await expand(firstEnvironment);
+    expect(await getCollapsibleState(firstEnvironment)).toBe(CollapsibleState.Expanded);
 
     // then click on the first (CCloud) Kafka cluster to select it
-    const clusters: KafkaClusterItem[] = await resourcesView.getKafkaClusterItems({
-      ccloud: true,
-      local: false,
-      direct: false,
-    });
-    expect(clusters.length).toBeGreaterThan(0);
-    const firstKafkaCluster: KafkaClusterItem = clusters[0];
-    await firstKafkaCluster.locator.click();
-    expect(await firstKafkaCluster.isSelected()).toBe(true);
+    await expect(resourcesView.ccloudKafkaClusters).not.toHaveCount(0);
+    const firstKafkaCluster: Locator = resourcesView.ccloudKafkaClusters.first();
+    await firstKafkaCluster.click();
 
     // now the Topics view should be expanded and show at least one topic item
     const topicsView = new TopicsView(page);
     await topicsView.focus();
-    const topics: TopicItem[] = await topicsView.getTopicItems();
-    expect(topics.length).toBeGreaterThan(0);
-    const firstTopic: TopicItem = topics[0];
-    await firstTopic.clickViewMessages();
+    await expect(topicsView.topics).not.toHaveCount(0);
+    const firstTopic = new ViewItem(page, topicsView.topics.first());
+    await firstTopic.clickInlineAction("View Messages");
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
@@ -117,10 +105,9 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
     await firstCluster.locator.click();
 
     // now the Topics view should show at least one topic item
-    const topics: TopicItem[] = await topicsView.getTopicItems();
-    expect(topics.length).toBeGreaterThan(0);
-    const firstTopic: TopicItem = topics[0];
-    await firstTopic.clickViewMessages();
+    await expect(topicsView.topics).not.toHaveCount(0);
+    const firstTopic = new ViewItem(page, topicsView.topics.first());
+    await firstTopic.clickInlineAction("View Messages");
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
@@ -162,11 +149,8 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     );
     await progressNotification?.waitForProgressCompletion();
     // wait for the Resources view to refresh and show the new direct connection
-    await expect
-      .poll(async () => (await resourcesView.getDirectConnectionItems()).length, {
-        timeout: 5_000,
-      })
-      .toBeGreaterThan(0);
+    await expect(resourcesView.directConnections).not.toHaveCount(0);
+    await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
   });
 
   test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
@@ -174,30 +158,23 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     electronApp,
   }) => {
     // expand the first direct connection to show its Kafka cluster and Schema Registry
-    const directConnections: ViewItem[] = await resourcesView.getDirectConnectionItems();
-    expect(directConnections.length).toBeGreaterThan(0);
-    const firstConnection: ViewItem = directConnections[0];
-    await expand(firstConnection.locator);
-    expect(await getCollapsibleState(firstConnection.locator)).toBe(CollapsibleState.Expanded);
+    await expect(resourcesView.directConnections).not.toHaveCount(0);
+    const firstConnection = resourcesView.directConnections.first();
+    await expand(firstConnection);
+    expect(await getCollapsibleState(firstConnection)).toBe(CollapsibleState.Expanded);
 
     // then click on the first (direct) Kafka cluster to select it
-    const clusters: KafkaClusterItem[] = await resourcesView.getKafkaClusterItems({
-      ccloud: false,
-      local: false,
-      direct: true,
-    });
-    expect(clusters.length).toBeGreaterThan(0);
-    const firstKafkaCluster: KafkaClusterItem = clusters[0];
-    await firstKafkaCluster.locator.click();
-    expect(await firstKafkaCluster.isSelected()).toBe(true);
+    const directKafkaClusters: Locator = resourcesView.directKafkaClusters;
+    await expect(directKafkaClusters).not.toHaveCount(0);
+    const firstKafkaCluster = directKafkaClusters.first();
+    await firstKafkaCluster.click();
 
     // now the Topics view should be expanded and show at least one topic item
     const topicsView = new TopicsView(page);
     await topicsView.focus();
-    const topics: TopicItem[] = await topicsView.getTopicItems();
-    expect(topics.length).toBeGreaterThan(0);
-    const firstTopic: TopicItem = topics[0];
-    await firstTopic.clickViewMessages();
+    await expect(topicsView.topics).not.toHaveCount(0);
+    const firstTopic = new ViewItem(page, topicsView.topics.first());
+    await firstTopic.clickInlineAction("View Messages");
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
@@ -233,10 +210,9 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     await firstCluster.locator.click();
 
     // now the Topics view should show at least one topic item
-    const topics: TopicItem[] = await topicsView.getTopicItems();
-    expect(topics.length).toBeGreaterThan(0);
-    const firstTopic: TopicItem = topics[0];
-    await firstTopic.clickViewMessages();
+    await expect(topicsView.topics).not.toHaveCount(0);
+    const firstTopic = new ViewItem(page, topicsView.topics.first());
+    await firstTopic.clickInlineAction("View Messages");
 
     // the message viewer webview should now be visible in the editor area
     const messageViewer = new MessageViewerWebview(page);
