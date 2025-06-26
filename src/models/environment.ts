@@ -68,6 +68,10 @@ export abstract class Environment implements IResourceBase, ISearchable {
   // (DirectEnvironment instances are constructed with isLoading = true)
   isLoading: boolean = false;
 
+  get environmentId(): EnvironmentId {
+    return this.id;
+  }
+
   get hasClusters(): boolean {
     return (
       this.kafkaClusters.length > 0 || !!this.schemaRegistry || this.flinkComputePools.length > 0
@@ -78,6 +82,25 @@ export abstract class Environment implements IResourceBase, ISearchable {
     const children: ISearchable[] = [...this.kafkaClusters, ...this.flinkComputePools];
     if (this.schemaRegistry) children.push(this.schemaRegistry);
     return children;
+  }
+
+  /** In-place update this Environment with an updated-from-GraphQL instance of the same type. */
+  update(other: Environment): void {
+    if (this.id !== other.id) {
+      throw new Error(`Cannot update Environment with different ID: ${this.id} !== ${other.id}.`);
+    }
+
+    // Copy over the possibly changing properties. Singular items ...
+    this.name = other.name;
+    this.isLoading = other.isLoading;
+
+    this.schemaRegistry = other.schemaRegistry;
+
+    this.kafkaClusters.length = 0; // clear the array
+    this.kafkaClusters.push(...other.kafkaClusters); // copy over the new clusters
+
+    this.flinkComputePools.length = 0; // clear the array
+    this.flinkComputePools.push(...other.flinkComputePools); // copy over the new pools
   }
 
   searchableText(): string {
@@ -133,10 +156,6 @@ export class CCloudEnvironment extends Environment {
     return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
-  get environmentId(): EnvironmentId {
-    return this.id;
-  }
-
   get children(): ISearchable[] {
     const children: ISearchable[] = [];
     children.push(...this.kafkaClusters.map((cluster) => CCloudKafkaCluster.create(cluster)));
@@ -145,6 +164,12 @@ export class CCloudEnvironment extends Environment {
     );
     children.push(...this.flinkComputePools.map((pool) => new CCloudFlinkComputePool(pool)));
     return children;
+  }
+
+  update(other: CCloudEnvironment): void {
+    super.update(other);
+    // Copy over the possibly changing CCloud-centric properties.
+    this.streamGovernancePackage = other.streamGovernancePackage;
   }
 }
 
@@ -241,6 +266,17 @@ export class DirectEnvironment extends Environment {
     // same as Environment, but `id` isn't used since it isn't visible in the UI
     return this.name;
   }
+
+  update(other: DirectEnvironment): void {
+    super.update(other);
+
+    // Copy over the possibly changing DirectEnvironment-centric properties.
+    this.kafkaConfigured = other.kafkaConfigured;
+    this.schemaRegistryConfigured = other.schemaRegistryConfigured;
+    this.formConnectionType = other.formConnectionType;
+    this.kafkaConnectionFailed = other.kafkaConnectionFailed;
+    this.schemaRegistryConnectionFailed = other.schemaRegistryConnectionFailed;
+  }
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -250,16 +286,15 @@ export class LocalEnvironment extends Environment {
 
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 
-  name: string = LOCAL_ENVIRONMENT_NAME;
+  readonly name: string = LOCAL_ENVIRONMENT_NAME;
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
   schemaRegistry?: LocalSchemaRegistry;
 
-  constructor(props: Pick<LocalEnvironment, "id" | "name" | "kafkaClusters" | "schemaRegistry">) {
+  constructor(props: Pick<LocalEnvironment, "id" | "kafkaClusters" | "schemaRegistry">) {
     super();
     this.id = props.id;
-    this.name = props.name;
     this.kafkaClusters = props.kafkaClusters.map((cluster) =>
       cluster instanceof LocalKafkaCluster ? cluster : LocalKafkaCluster.create(cluster),
     );
