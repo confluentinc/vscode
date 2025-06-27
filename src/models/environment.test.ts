@@ -12,12 +12,14 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { LOCAL_ENVIRONMENT_NAME } from "../constants";
 import {
   CCloudEnvironment,
   DirectEnvironment,
   EnvironmentTreeItem,
   LocalEnvironment,
 } from "./environment";
+import { EnvironmentId } from "./resource";
 
 describe("models/environment.ts Environment", () => {
   it("should return the correct .children for a CCloudEnvironment", () => {
@@ -240,5 +242,108 @@ describe("models/environment.ts EnvironmentTreeItem", () => {
         `${formConnectionType} Connection`,
       ),
     );
+  });
+});
+
+describe("models/environment.ts update() implementations", () => {
+  it("LocalEnvironment.update()", () => {
+    const env = new LocalEnvironment(TEST_LOCAL_ENVIRONMENT);
+    env.kafkaClusters = [];
+    env.schemaRegistry = undefined;
+    env.isLoading = true;
+
+    const updateWith = new LocalEnvironment(TEST_LOCAL_ENVIRONMENT);
+
+    updateWith.kafkaClusters = [TEST_LOCAL_KAFKA_CLUSTER];
+    updateWith.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+    updateWith.isLoading = false;
+
+    env.update(updateWith);
+
+    assert.deepStrictEqual(env.kafkaClusters, updateWith.kafkaClusters);
+    assert.deepStrictEqual(env.schemaRegistry, updateWith.schemaRegistry);
+    assert.strictEqual(env.isLoading, updateWith.isLoading);
+    assert.strictEqual(env.name, LOCAL_ENVIRONMENT_NAME);
+  });
+
+  it("CCloudEnvironment.update()", () => {
+    const env = new CCloudEnvironment(TEST_CCLOUD_ENVIRONMENT);
+    env.name = "Original Name";
+    env.streamGovernancePackage = "Original package";
+    env.kafkaClusters = [];
+    env.schemaRegistry = undefined;
+    env.flinkComputePools = [];
+    env.isLoading = true;
+
+    const updateWith = new CCloudEnvironment(TEST_CCLOUD_ENVIRONMENT);
+
+    updateWith.name = "Updated Name";
+    updateWith.streamGovernancePackage = "Updated package";
+    updateWith.kafkaClusters = [TEST_CCLOUD_KAFKA_CLUSTER];
+    updateWith.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+    updateWith.flinkComputePools = [TEST_CCLOUD_FLINK_COMPUTE_POOL];
+    updateWith.isLoading = false;
+
+    env.update(updateWith);
+
+    assert.strictEqual(env.name, updateWith.name);
+    assert.strictEqual(env.streamGovernancePackage, updateWith.streamGovernancePackage);
+    assert.deepStrictEqual(env.kafkaClusters, updateWith.kafkaClusters);
+    assert.deepStrictEqual(env.schemaRegistry, updateWith.schemaRegistry);
+    assert.deepStrictEqual(env.flinkComputePools, updateWith.flinkComputePools);
+    assert.strictEqual(env.isLoading, updateWith.isLoading);
+  });
+
+  it("DirectEnvironment.update()", () => {
+    const env = new DirectEnvironment(TEST_DIRECT_ENVIRONMENT);
+    env.name = "Original Name";
+    env.kafkaClusters = [];
+    env.schemaRegistry = undefined;
+    env.kafkaConfigured = false;
+    env.schemaRegistryConfigured = false;
+    env.formConnectionType = "Other";
+    env.kafkaConnectionFailed = "Original Kafka error";
+    env.schemaRegistryConnectionFailed = "Original SR error";
+    env.isLoading = true;
+
+    const updateWith = new DirectEnvironment(TEST_DIRECT_ENVIRONMENT);
+
+    updateWith.name = "Updated Name";
+    updateWith.kafkaClusters = [TEST_DIRECT_KAFKA_CLUSTER];
+    updateWith.schemaRegistry = TEST_DIRECT_SCHEMA_REGISTRY;
+    updateWith.kafkaConfigured = true;
+    updateWith.schemaRegistryConfigured = true;
+    updateWith.formConnectionType = "Apache Kafka";
+    updateWith.kafkaConnectionFailed = undefined;
+    updateWith.schemaRegistryConnectionFailed = undefined;
+    updateWith.isLoading = false;
+
+    env.update(updateWith);
+
+    assert.strictEqual(env.name, updateWith.name);
+    assert.deepStrictEqual(env.kafkaClusters, updateWith.kafkaClusters);
+    assert.deepStrictEqual(env.schemaRegistry, updateWith.schemaRegistry);
+    assert.strictEqual(env.kafkaConfigured, updateWith.kafkaConfigured);
+    assert.strictEqual(env.schemaRegistryConfigured, updateWith.schemaRegistryConfigured);
+    assert.strictEqual(env.formConnectionType, updateWith.formConnectionType);
+    assert.strictEqual(env.kafkaConnectionFailed, updateWith.kafkaConnectionFailed);
+    assert.strictEqual(
+      env.schemaRegistryConnectionFailed,
+      updateWith.schemaRegistryConnectionFailed,
+    );
+    assert.strictEqual(env.isLoading, updateWith.isLoading);
+  });
+
+  it("Disallows updating given reference with different id", () => {
+    const env = new DirectEnvironment(TEST_DIRECT_ENVIRONMENT);
+
+    const updateWith = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      id: "different-id" as EnvironmentId,
+    });
+
+    assert.throws(() => {
+      env.update(updateWith);
+    }, /Cannot update Environment with different ID/);
   });
 });

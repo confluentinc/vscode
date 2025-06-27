@@ -1,5 +1,5 @@
 import { graphql } from "gql.tada";
-import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
+import { LOCAL_CONNECTION_ID } from "../constants";
 import { logError } from "../errors";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
@@ -89,7 +89,6 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
     envs.push(
       new LocalEnvironment({
         id: connection.id as EnvironmentId,
-        name: LOCAL_ENVIRONMENT_NAME,
         kafkaClusters,
         schemaRegistry,
       }),
