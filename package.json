@@ -651,6 +651,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.query",
+        "title": "Query with Flink SQL",
+        "category": "Confluent: Topics"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -1216,6 +1221,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.query",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
@@ -1634,6 +1643,11 @@
         {
           "command": "confluent.openCCloudApiKeysUrl",
           "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.topics.query",
+          "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*/",
           "group": "z_openInCloud"
         },
         {
