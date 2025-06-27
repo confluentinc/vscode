@@ -1,9 +1,8 @@
 import { expect, Locator } from "@playwright/test";
 import { test } from "../baseTest";
-import { NotificationToast } from "../objects/notifications/NotificationToast";
-import { NotificationToasts } from "../objects/notifications/NotificationToasts";
+import { Notification } from "../objects/notifications/Notification";
+import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
-import { QuickpickItem } from "../objects/quickInputs/QuickpickItem";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { TopicsView } from "../objects/views/TopicsView";
 import { ViewItem } from "../objects/views/ViewItem";
@@ -50,7 +49,6 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
 
   test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
     page,
-    electronApp,
   }) => {
     // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
     // Flink compute pools
@@ -80,7 +78,6 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
 
   test("should select a Kafka cluster from the Topics view nav action, list topics, and open message viewer", async ({
     page,
-    electronApp,
   }) => {
     // instead of selecting a Kafka cluster from the Resources view, we're selecting it from the
     // Topics view nav action
@@ -94,15 +91,13 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
     // the Kafka cluster quickpick should open
     const kafkaClusterQuickpick = new Quickpick(page);
     await expect(kafkaClusterQuickpick.locator).toBeVisible();
-
-    // select the first Kafka cluster from the quickpick
-    const clusters: QuickpickItem[] = await kafkaClusterQuickpick.getItems({
-      waitForItems: true,
-    });
-    expect(clusters.length).toBeGreaterThan(0);
-    const firstCluster: QuickpickItem = clusters[0];
-    expect(await firstCluster.iconId()).toBe("confluent-kafka-cluster");
-    await firstCluster.locator.click();
+    // select the first (CCloud) Kafka cluster from the quickpick
+    await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+    // the first element under the "Confluent Cloud" separator will include the "Confluent Cloud"
+    // text in its aria-label, so we can filter by that since the label/description are dynamic
+    const clusterItems = kafkaClusterQuickpick.items.filter({ hasText: "Confluent Cloud" });
+    await expect(clusterItems).not.toHaveCount(0);
+    await clusterItems.first().click();
 
     // now the Topics view should show at least one topic item
     await expect(topicsView.topics).not.toHaveCount(0);
@@ -120,7 +115,7 @@ test.describe("Topic Message Viewer: CCLOUD connection", () => {
 test.describe("Topic Message Viewer: DIRECT connection", () => {
   let resourcesView: ResourcesView;
 
-  test.beforeEach(async ({ page, electronApp }) => {
+  test.beforeEach(async ({ page }) => {
     await openConfluentExtension(page);
     resourcesView = new ResourcesView(page);
     await resourcesView.focus();
@@ -141,13 +136,18 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     await expect(connectionForm.successMessage).toBeVisible();
     await connectionForm.saveConnection();
 
-    // wait for the progress notification to disappear before continuing
-    const notificationToasts = new NotificationToasts(page);
+    // make sure we see the notification indicating the connection was created
+    const notificationArea = new NotificationArea(page);
     // only wait on the progress notification to resolve if it's visible at all
-    const progressNotification: NotificationToast | null = await notificationToasts.findByMessage(
-      `Waiting for "${connectionName}" to be usable...`,
-    );
-    await progressNotification?.waitForProgressCompletion();
+    const notifications = notificationArea.infoNotifications.filter({
+      hasText: "New Connection Created",
+    });
+    await expect(notifications).toHaveCount(1);
+    const notification = new Notification(page, notifications.first());
+    await notification.dismiss();
+    // don't wait for the "Waiting for <connection> to be usable..." progress notification since
+    // it may disappear quickly
+
     // wait for the Resources view to refresh and show the new direct connection
     await expect(resourcesView.directConnections).not.toHaveCount(0);
     await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
@@ -155,7 +155,6 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
 
   test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
     page,
-    electronApp,
   }) => {
     // expand the first direct connection to show its Kafka cluster and Schema Registry
     await expect(resourcesView.directConnections).not.toHaveCount(0);
@@ -185,7 +184,6 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
 
   test("should select a Kafka cluster from the Topics view nav action, list topics, and open message viewer", async ({
     page,
-    electronApp,
   }) => {
     // instead of selecting a Kafka cluster from the Resources view, we're selecting it from the
     // Topics view nav action
@@ -199,15 +197,11 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     // the Kafka cluster quickpick should open
     const kafkaClusterQuickpick = new Quickpick(page);
     await expect(kafkaClusterQuickpick.locator).toBeVisible();
-
-    // select the first Kafka cluster from the quickpick
-    const clusters: QuickpickItem[] = await kafkaClusterQuickpick.getItems({
-      waitForItems: true,
-    });
-    expect(clusters.length).toBeGreaterThan(0);
-    const firstCluster: QuickpickItem = clusters[0];
-    expect(await firstCluster.iconId()).toBe("confluent-kafka-cluster");
-    await firstCluster.locator.click();
+    // select the first (direct) Kafka cluster from the quickpick
+    await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+    const firstCluster = kafkaClusterQuickpick.items.filter({ hasText: "Kafka Cluster" });
+    await expect(firstCluster).not.toHaveCount(0);
+    await firstCluster.click();
 
     // now the Topics view should show at least one topic item
     await expect(topicsView.topics).not.toHaveCount(0);
