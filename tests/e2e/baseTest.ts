@@ -20,7 +20,7 @@ export interface VSCodeFixture {
 }
 
 export const test = testBase.extend<VSCodeFixture>({
-  electronApp: async ({}, use) => {
+  electronApp: async ({ trace }, use, testInfo) => {
     // create a temporary directory for this test run
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
@@ -53,8 +53,8 @@ export const test = testBase.extend<VSCodeFixture>({
     }
 
     const extensionPath: string = path.resolve(__dirname, "..", "..");
-    const workspacePath: string = path.resolve(extensionPath, "out");
-    const vsixFiles: string[] = globSync(path.resolve(workspacePath, "*.vsix"));
+    const outPath: string = path.resolve(extensionPath, "out");
+    const vsixFiles: string[] = globSync(path.resolve(outPath, "*.vsix"));
     const vsixPath = vsixFiles[0];
     if (!vsixPath) {
       // shouldn't happen during normal `gulp e2e`
@@ -82,14 +82,24 @@ export const test = testBase.extend<VSCodeFixture>({
         "--disable-extensions",
         // additional args needed for the Electron launch:
         `--user-data-dir=${tempDir}`,
-        `--extensionDevelopmentPath=${workspacePath}`,
+        `--extensionDevelopmentPath=${outPath}`,
         "--new-window",
-        workspacePath,
       ],
     });
 
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
+    }
+
+    // on*, retain-on*
+    if (trace.toString().includes("on")) {
+      console.log("Starting trace capture for test:", testInfo.title);
+      await electronApp.context().tracing.start({
+        screenshots: true,
+        snapshots: true,
+        sources: true,
+        title: testInfo.title,
+      });
     }
 
     await use(electronApp);
@@ -114,9 +124,7 @@ export const test = testBase.extend<VSCodeFixture>({
 
     // wait for VS Code to be ready
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForSelector(".monaco-workbench", { timeout: 30000 });
+    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
     await use(page);
   },
 });
-
-export { expect } from "@playwright/test";
