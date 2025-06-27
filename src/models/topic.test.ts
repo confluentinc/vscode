@@ -140,4 +140,26 @@ describe("KafkaTopicTreeItem constructor", () => {
       vscode.TreeItemCollapsibleState.None,
     );
   });
+
+  it("should append context value with -flinkable if the cluster has matchking flink pool in the same provider/region", () => {
+    const flinkableTopicTreeItem = new KafkaTopicTreeItem(
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, isFlinkable: true }),
+    );
+    assert.strictEqual(flinkableTopicTreeItem.contextValue!.includes("-flinkable"), true);
+  });
+
+  it("should not append context value with -flinkable if the cluster has matchking flink pool in the same provider/region", () => {
+    const nonFlinkableTopicTreeItem = new KafkaTopicTreeItem(
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, isFlinkable: false }),
+    );
+    assert.strictEqual(nonFlinkableTopicTreeItem.contextValue!.includes("-flinkable"), false);
+  });
+
+  it("set context value for topic with muliple attributes such as schema and flinkable correctly", () => {
+    const topicWithBothTreeItem = new KafkaTopicTreeItem(
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, hasSchema: true, isFlinkable: true }),
+    );
+    assert.strictEqual(topicWithBothTreeItem.contextValue!.includes("-with-schema"), true);
+    assert.strictEqual(topicWithBothTreeItem.contextValue!.includes("-flinkable"), true);
+  });
 });
