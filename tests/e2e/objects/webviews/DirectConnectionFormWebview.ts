@@ -73,36 +73,6 @@ export class DirectConnectionForm extends Webview {
     return this.webview.locator(`#${namespace}\\.credentials\\.${credentialType}`);
   }
 
-  // 1. Basic auth (username/password)
-  get kafkaUsernameField(): Locator {
-    return this.getCredentialField("kafka_cluster", "username");
-  }
-  get kafkaPasswordField(): Locator {
-    return this.getCredentialField("kafka_cluster", "password");
-  }
-  get schemaRegistryUsernameField(): Locator {
-    return this.getCredentialField("schema_registry", "username");
-  }
-  get schemaRegistryPasswordField(): Locator {
-    return this.getCredentialField("schema_registry", "password");
-  }
-
-  // 2. API Key/Secret
-  get kafkaApiKeyField(): Locator {
-    return this.getCredentialField("kafka_cluster", "api_key");
-  }
-  get kafkaApiSecretField(): Locator {
-    return this.getCredentialField("kafka_cluster", "api_secret");
-  }
-  get schemaRegistryApiKeyField(): Locator {
-    return this.getCredentialField("schema_registry", "api_key");
-  }
-  get schemaRegistryApiSecretField(): Locator {
-    return this.getCredentialField("schema_registry", "api_secret");
-  }
-
-  // FUTURE: add other auth type config fields here as needed
-
   // form submission buttons
   get testButton(): Locator {
     return this.webview.getByRole("button", { name: "Test" });
