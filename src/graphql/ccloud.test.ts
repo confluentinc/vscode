@@ -212,4 +212,85 @@ describe("ccloud.ts getCCloudResources()", () => {
 
     sinon.assert.notCalled(showErrorNotificationStub);
   });
+
+  it("Associates Flink compute pools with Kafka clusters by matching provider/region", async () => {
+    const mockEnvironments = {
+      ccloudConnectionById: {
+        environments: [
+          {
+            id: "env1",
+            name: "Environment 1",
+            governancePackage: "package1",
+            kafkaClusters: [
+              {
+                id: "kafka1",
+                name: "Kafka Cluster 1",
+                provider: "aws",
+                region: "us-west-2",
+                bootstrapServers: "kafka1.example.com",
+                uri: "kafka1-uri",
+              },
+              {
+                id: "kafka2",
+                name: "Kafka Cluster 2",
+                provider: "gcp",
+                region: "us-central1",
+                bootstrapServers: "kafka2.example.com",
+                uri: "kafka2-uri",
+              },
+            ],
+            flinkComputePools: [
+              {
+                id: "flink1",
+                display_name: "Flink Pool 1",
+                provider: "aws",
+                region: "us-west-2",
+                max_cfu: 10,
+              },
+              {
+                id: "flink2",
+                display_name: "Flink Pool 2",
+                provider: "aws",
+                region: "us-east-1",
+                max_cfu: 5,
+              },
+              {
+                id: "flink3",
+                display_name: "Flink Pool 3",
+                provider: "gcp",
+                region: "us-central1",
+                max_cfu: 15,
+              },
+            ],
+            schemaRegistry: null,
+          },
+        ],
+      },
+    };
+    sidecarStub.query.resolves(mockEnvironments);
+
+    const result = await getCCloudResources();
+
+    assert.strictEqual(result.length, 1);
+    const environment = result[0];
+
+    // Check Kafka clusters have correct flinkPools associations
+    const kafka1 = environment.kafkaClusters.find((k) => k.id === "kafka1");
+    const kafka2 = environment.kafkaClusters.find((k) => k.id === "kafka2");
+
+    assert.ok(kafka1, "Kafka cluster 1 should exist");
+    assert.ok(kafka2, "Kafka cluster 2 should exist");
+
+    // Kafka cluster 1 (aws/us-west-2) should have 1 matching Flink pool
+    assert.strictEqual(kafka1.flinkPools?.length, 1);
+    assert.strictEqual(kafka1.flinkPools?.[0].id, "flink1");
+    assert.strictEqual(kafka1.flinkPools?.[0].name, "Flink Pool 1");
+
+    // Kafka cluster 2 (gcp/us-central1) should have 1 matching Flink pool
+    assert.strictEqual(kafka2.flinkPools?.length, 1);
+    assert.strictEqual(kafka2.flinkPools?.[0].id, "flink3");
+    assert.strictEqual(kafka2.flinkPools?.[0].name, "Flink Pool 3");
+
+    sinon.assert.notCalled(showErrorNotificationStub);
+  });
 });
