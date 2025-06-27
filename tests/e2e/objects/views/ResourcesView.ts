@@ -1,6 +1,5 @@
-import { Locator, Page } from "@playwright/test";
+import { expect, Locator, Page } from "@playwright/test";
 import { Quickpick } from "../quickInputs/Quickpick";
-import { QuickpickItem } from "../quickInputs/QuickpickItem";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
 import { View } from "./View";
 
@@ -109,15 +108,9 @@ export class ResourcesView extends View {
 
     const quickpick = new Quickpick(this.page);
     // choices will be either "Enter manually" or "Import from file"
-    const items: QuickpickItem[] = await quickpick.getItems({
-      text: /Enter manually/,
-      waitForItems: true,
-    });
-    if (items.length === 0) {
-      throw new Error("'Enter manually' option not found in 'Add New Connection' quickpick");
-    }
-
-    await items[0].locator.click();
+    const enterManuallyItem = quickpick.items.filter({ hasText: /Enter manually/ });
+    await expect(enterManuallyItem).not.toHaveCount(0);
+    await enterManuallyItem.first().click();
     return new DirectConnectionForm(this.page);
   }
 }
