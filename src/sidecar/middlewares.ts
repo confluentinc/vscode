@@ -106,6 +106,15 @@ export class ErrorResponseMiddleware implements Middleware {
         return;
       }
 
+      // Special case: suppress error logs for schema registry RBAC-related 404s
+      if (
+        context.response.status === 404 &&
+        /gateway\/v1\/schema-registry\/[^/]+\/subjects\/[^/]+\/versions\/latest/.test(context.url)
+      ) {
+        logger.debug("Received 404 for schema registry subject version (likely RBAC limitation).");
+        return;
+      }
+
       const requestLogString = contextToRequestLogString(context);
       const responseLogString = await contextToResponseLogString(context);
 
