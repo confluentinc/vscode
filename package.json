@@ -652,7 +652,7 @@
       },
       {
         "command": "confluent.topics.query",
-        "title": "Query with Flink",
+        "title": "Query with Flink SQL",
         "category": "Confluent: Topics"
       },
       {
