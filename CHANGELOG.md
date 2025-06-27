@@ -6,6 +6,7 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
 - Any sidecar error logs will now include exception data in the "Confluent (Sidecar)" output
   channel, as well as the file saved from the "Save Sidecar Logs" or "Save Support File (.zip)"
   commands.
