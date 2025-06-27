@@ -950,22 +950,18 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
     await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
 
     assert.ok(openTextDocumentStub.calledOnce);
-    const docOptions = openTextDocumentStub.firstCall.args[0];
-    assert.strictEqual(docOptions.language, FLINK_SQL_LANGUAGE_ID);
-
-    const expectedFullyQualifiedName = `\`${TEST_CCLOUD_ENVIRONMENT.name}\`.\`${TEST_CCLOUD_KAFKA_CLUSTER.name}\`.\`${TEST_CCLOUD_KAFKA_TOPIC.name}\``;
     const expectedQuery = `-- Query topic "${TEST_CCLOUD_KAFKA_TOPIC.name}" with Flink SQL
 -- Replace this with your actual Flink SQL query
 
 SELECT *
-FROM ${expectedFullyQualifiedName}
+FROM \`${TEST_CCLOUD_ENVIRONMENT.name}\`.\`${TEST_CCLOUD_KAFKA_CLUSTER.name}\`.\`${TEST_CCLOUD_KAFKA_TOPIC.name}\`
 LIMIT 10;`;
-
-    assert.strictEqual(docOptions.content, expectedQuery);
+    sinon.assert.calledWithExactly(openTextDocumentStub, {
+      language: FLINK_SQL_LANGUAGE_ID,
+      content: expectedQuery,
+    });
 
     assert.ok(showTextDocumentStub.calledOnce);
-    assert.strictEqual(showTextDocumentStub.firstCall.args[0], mockDocument);
-    assert.deepStrictEqual(showTextDocumentStub.firstCall.args[1], { preview: false });
     sinon.assert.calledWithExactly(showTextDocumentStub, mockDocument, { preview: false });
   });
 
