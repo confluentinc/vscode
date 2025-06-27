@@ -1,13 +1,12 @@
 import assert from "assert";
 import sinon from "sinon";
-import { Uri } from "vscode";
+import { env, Uri } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_PROVIDER,
   TEST_CCLOUD_REGION,
   TEST_CCLOUD_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import * as ccloudStateHandling from "../authn/ccloudStateHandling";
 import * as notifications from "../notifications";
 import {
   containsPrivateNetworkPattern,
@@ -106,7 +105,7 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
 
   it("should show a notification with default values when no options provided", () => {
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-    const openExternalStub = sandbox.stub(ccloudStateHandling, "openExternal");
+    const openExternalStub = sandbox.stub(env, "openExternal");
 
     showPrivateNetworkingHelpNotification();
 
