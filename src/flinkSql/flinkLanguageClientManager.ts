@@ -1,6 +1,7 @@
 import {
   Disposable,
   LogOutputChannel,
+  TextDocument,
   TextEditor,
   Uri,
   window,
@@ -60,6 +61,30 @@ export class FlinkLanguageClientManager implements Disposable {
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
     this.registerListeners();
+    // This is true here when a user opens a new workspace after authenticating with CCloud in another one
+    if (hasCCloudAuthSession()) {
+      let flinkDoc: TextDocument | undefined = undefined;
+      const activeEditor = window.activeTextEditor;
+      // Check the active editor first
+      if (activeEditor && activeEditor.document.languageId === "flinksql") {
+        flinkDoc = activeEditor.document;
+      } else {
+        // If not active, scan all visible editors
+        const flinkSqlEditor = window.visibleTextEditors.find(
+          (editor) => editor.document.languageId === "flinksql",
+        );
+        if (flinkSqlEditor) {
+          flinkDoc = flinkSqlEditor.document;
+        }
+      }
+
+      if (flinkDoc) {
+        logger.trace(
+          "CCloud session already exists + found open Flink SQL document, initializing language client",
+        );
+        this.maybeStartLanguageClient(flinkDoc.uri);
+      }
+    }
   }
 
   private registerListeners(): void {
@@ -98,6 +123,23 @@ export class FlinkLanguageClientManager implements Disposable {
         ) {
           logger.trace("Active editor changed to Flink SQL file, initializing language client");
           await this.maybeStartLanguageClient(editor.document.uri);
+        }
+      }),
+    );
+
+    // Active editor should cover documents opening,
+    // but we still listen for open event since it's also called when the language id changes
+    this.disposables.push(
+      workspace.onDidOpenTextDocument(async (doc) => {
+        if (doc.languageId === "flinksql") {
+          const activeEditor = window.activeTextEditor;
+          // No-op if the document is not the active editor (let the active editor listener handle it)
+          if (activeEditor && activeEditor.document.uri.toString() !== doc.uri.toString()) {
+            return;
+          } else {
+            logger.trace("Initializing language client for changed active Flink SQL document");
+            await this.maybeStartLanguageClient(doc.uri);
+          }
         }
       }),
     );
