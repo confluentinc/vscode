@@ -1,11 +1,18 @@
 import { Locator, Page } from "@playwright/test";
 
+export enum NotificationType {
+  Info = "info",
+  Warning = "warning",
+  Error = "error",
+  Progress = "progress",
+}
+
 /**
  * Object representing a single
- * {@link https://code.visualstudio.com/api/ux-guidelines/notifications notification} toast in
+ * {@link https://code.visualstudio.com/api/ux-guidelines/notifications notification} (toast) in
  * the notification area.
  */
-export class NotificationToast {
+export class Notification {
   constructor(
     public readonly page: Page,
     public readonly locator: Locator,
@@ -51,47 +58,9 @@ export class NotificationToast {
     return this.locator.locator(".monaco-progress-container");
   }
 
-  /** Get the notification type based on its icon. */
-  async getNotificationType(): Promise<"info" | "warning" | "error" | "progress"> {
-    const hasProgress = await this.progressIndicator.isVisible();
-    if (hasProgress) {
-      return "progress";
-    }
-
-    const iconElement = this.icon.locator(".codicon").first();
-    const className = await iconElement.getAttribute("class");
-    if (className?.includes("codicon-info")) {
-      return "info";
-    } else if (className?.includes("codicon-warning")) {
-      return "warning";
-    } else if (className?.includes("codicon-error")) {
-      return "error";
-    }
-    throw new Error(`Unknown notification type: ${className}`);
-  }
-
-  /** Get the notification icon ID (e.g., "info", "warning", "error"). */
-  async getIconId(): Promise<string> {
-    const iconElement = this.icon.locator(".codicon[class*='codicon-']").first();
-    const className = await iconElement.getAttribute("class");
-    if (className) {
-      const iconMatch = className.match(/codicon-([^\s]+)/);
-      if (iconMatch) {
-        return iconMatch[1];
-      }
-    }
-    return "";
-  }
-
-  /** Get the visible message text of the notification. */
-  async getMessageText(): Promise<string> {
-    const text = await this.message.textContent();
-    return text?.trim() ?? "";
-  }
-
   /** Click the dismiss button (X) in the notification's toolbar area. */
   async dismiss(): Promise<void> {
-    const dismissButton = this.toolbar.getByRole("button", { name: "Dismiss" });
+    const dismissButton = this.toolbar.locator(".codicon-notifications-clear");
     await dismissButton.click();
   }
 
@@ -99,12 +68,5 @@ export class NotificationToast {
   async clickActionButton(buttonText: string): Promise<void> {
     const button = this.buttonsContainer.getByRole("button", { name: buttonText });
     await button.click();
-  }
-
-  /** Wait for a progress notification to complete (progress indicator disappears). */
-  async waitForProgressCompletion(): Promise<void> {
-    if (await this.progressIndicator.isVisible()) {
-      await this.progressIndicator.waitFor({ state: "detached" });
-    }
   }
 }
