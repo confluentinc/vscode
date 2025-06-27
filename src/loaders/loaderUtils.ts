@@ -97,7 +97,7 @@ export function correlateTopicsWithSchemaSubjects(
     let isFlinkable = false;
     if (isCCloud(cluster)) {
       const ccloudCluster = cluster as CCloudKafkaCluster;
-      isFlinkable = !!(ccloudCluster.flinkPools && ccloudCluster.flinkPools.length > 0);
+      isFlinkable = Array.isArray(ccloudCluster.flinkPools) && ccloudCluster.flinkPools.length > 0;
     }
 
     return KafkaTopic.create({
