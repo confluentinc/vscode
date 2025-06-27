@@ -2,13 +2,21 @@ import { Locator, Page } from "@playwright/test";
 import { Webview } from "./Webview";
 
 // same as src/directConnections/types.ts
-type FormConnectionType =
-  | "Apache Kafka"
-  | "Confluent Cloud"
-  | "Confluent Platform"
-  | "WarpStream"
-  | "Other";
-type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth" | "Kerberos";
+export enum FormConnectionType {
+  ApacheKafka = "Apache Kafka",
+  ConfluentCloud = "Confluent Cloud",
+  ConfluentPlatform = "Confluent Platform",
+  WarpStream = "WarpStream",
+  Other = "Other",
+}
+export enum SupportedAuthType {
+  None = "None",
+  Basic = "Basic",
+  API = "API",
+  SCRAM = "SCRAM",
+  OAuth = "OAuth",
+  Kerberos = "Kerberos",
+}
 
 /**
  * Object representing the Direct Connection form {@link https://code.visualstudio.com/api/ux-guidelines/webviews webview}.
@@ -145,7 +153,7 @@ export class DirectConnectionForm extends Webview {
    * Select Kafka authentication type.
    * @param authType The authentication type to select
    */
-  async selectKafkaAuthType(authType: SupportedAuthTypes): Promise<void> {
+  async selectKafkaAuthType(authType: SupportedAuthType): Promise<void> {
     await this.kafkaAuthTypeDropdown.click();
     await this.kafkaAuthTypeDropdown.selectOption(authType);
   }
@@ -172,7 +180,7 @@ export class DirectConnectionForm extends Webview {
    * Select Schema Registry authentication type.
    * @param authType The authentication type to select
    */
-  async selectSchemaRegistryAuthType(authType: SupportedAuthTypes): Promise<void> {
+  async selectSchemaRegistryAuthType(authType: SupportedAuthType): Promise<void> {
     await this.schemaRegistryAuthTypeDropdown.click();
     await this.schemaRegistryAuthTypeDropdown.selectOption(authType);
   }
@@ -183,56 +191,6 @@ export class DirectConnectionForm extends Webview {
       const field = this.getCredentialField("schema_registry", key);
       await field.click();
       await this.page.keyboard.type(value);
-    }
-  }
-
-  /** Test the connection configuration. */
-  async testConnection(): Promise<void> {
-    await this.testButton.click();
-  }
-
-  /** Save the connection configuration. */
-  async saveConnection(): Promise<void> {
-    await this.saveButton.click();
-  }
-
-  /** Set up a connection using API key/secret for Kafka and/or Schema Registry. */
-  async configureWithApiKeyAndSecret(config: {
-    name: string;
-    connectionType: FormConnectionType;
-    kafka?: {
-      bootstrapServers: string;
-      apiKey: string;
-      apiSecret: string;
-    };
-    schemaRegistry?: {
-      apiKey: string;
-      apiSecret: string;
-      uri: string;
-    };
-  }): Promise<void> {
-    if (!config.kafka && !config.schemaRegistry) {
-      throw new Error("At least one of Kafka or Schema Registry configuration is required");
-    }
-
-    await this.fillConnectionName(config.name);
-    await this.selectConnectionType(config.connectionType);
-
-    if (config.kafka) {
-      await this.fillKafkaBootstrapServers(config.kafka.bootstrapServers);
-      await this.selectKafkaAuthType("API");
-      await this.fillKafkaCredentials({
-        api_key: config.kafka?.apiKey,
-        api_secret: config.kafka?.apiSecret,
-      });
-    }
-    if (config.schemaRegistry) {
-      await this.fillSchemaRegistryUri(config.schemaRegistry.uri);
-      await this.selectSchemaRegistryAuthType("API");
-      await this.fillSchemaRegistryCredentials({
-        api_key: config.schemaRegistry?.apiKey,
-        api_secret: config.schemaRegistry?.apiSecret,
-      });
     }
   }
 }

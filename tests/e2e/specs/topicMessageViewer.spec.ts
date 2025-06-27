@@ -6,7 +6,11 @@ import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { TopicsView } from "../objects/views/TopicsView";
 import { ViewItem } from "../objects/views/ViewItem";
-import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
+import {
+  DirectConnectionForm,
+  FormConnectionType,
+  SupportedAuthType,
+} from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { CollapsibleState, expand, getCollapsibleState } from "../utils/expansion";
 import { openConfluentExtension } from "./utils/confluent";
@@ -123,18 +127,17 @@ test.describe("Topic Message Viewer: DIRECT connection", () => {
     // direct connection setup:
     const connectionForm: DirectConnectionForm = await resourcesView.openDirectConnectionForm();
     const connectionName = "Playwright";
-    await connectionForm.configureWithApiKeyAndSecret({
-      name: connectionName,
-      connectionType: "Confluent Cloud",
-      kafka: {
-        apiKey: process.env.E2E_KAFKA_API_KEY!,
-        apiSecret: process.env.E2E_KAFKA_API_SECRET!,
-        bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-      },
+    await connectionForm.fillConnectionName(connectionName);
+    await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
+    await connectionForm.fillKafkaBootstrapServers(process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!);
+    await connectionForm.selectKafkaAuthType(SupportedAuthType.API);
+    await connectionForm.fillKafkaCredentials({
+      api_key: process.env.E2E_KAFKA_API_KEY!,
+      api_secret: process.env.E2E_KAFKA_API_SECRET!,
     });
-    await connectionForm.testConnection();
+    await connectionForm.testButton.click();
     await expect(connectionForm.successMessage).toBeVisible();
-    await connectionForm.saveConnection();
+    await connectionForm.saveButton.click();
 
     // make sure we see the notification indicating the connection was created
     const notificationArea = new NotificationArea(page);
