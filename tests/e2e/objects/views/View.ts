@@ -60,6 +60,6 @@ export class View {
    * (with `"group": "navigation"`) by its `label`. */
   async clickNavAction(label: string): Promise<void> {
     await this.header.hover();
-    await this.header.getByLabel(label).click();
+    await this.header.getByRole("button", { name: label }).click();
   }
 }
