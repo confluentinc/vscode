@@ -2,7 +2,10 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_KEY_SCHEMA,
   TEST_LOCAL_SCHEMA,
@@ -10,6 +13,7 @@ import {
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
@@ -24,12 +28,14 @@ import {
 import * as sidecar from "../sidecar";
 import * as fileUtils from "../utils/file";
 import { ExecutionResult } from "../utils/workerPool";
+import * as topicViewProvider from "../viewProviders/topics";
 import {
   handleSchemaValidationErrors,
   produceMessage,
   ProduceMessageBadRequestError,
   produceMessagesFromDocument,
   ProduceResult,
+  queryTopicWithFlink,
   summarizeErrors,
 } from "./topics";
 import { ProduceMessageSchemaOptions } from "./utils/types";
@@ -909,5 +915,118 @@ describe("commands/topics.ts produceMessage()", function () {
         return true;
       },
     );
+  });
+});
+
+describe("commands/topics.ts queryTopicWithFlink()", function () {
+  let sandbox: sinon.SinonSandbox;
+  let openTextDocumentStub: sinon.SinonStub;
+  let showTextDocumentStub: sinon.SinonStub;
+  let getTopicViewProviderStub: sinon.SinonStub;
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+
+    openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
+    showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
+    getTopicViewProviderStub = sandbox.stub(topicViewProvider, "getTopicViewProvider");
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should create a new document with Flink SQL language and correct placeholder query for CCloud topic", async function () {
+    const mockTopicViewProvider = {
+      kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER,
+      environment: TEST_CCLOUD_ENVIRONMENT,
+    };
+    getTopicViewProviderStub.returns(mockTopicViewProvider);
+
+    const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
+    openTextDocumentStub.resolves(mockDocument);
+    showTextDocumentStub.resolves();
+
+    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
+
+    assert.ok(openTextDocumentStub.calledOnce);
+    const docOptions = openTextDocumentStub.firstCall.args[0];
+    assert.strictEqual(docOptions.language, FLINK_SQL_LANGUAGE_ID);
+
+    const expectedFullyQualifiedName = `\`${TEST_CCLOUD_ENVIRONMENT.name}\`.\`${TEST_CCLOUD_KAFKA_CLUSTER.name}\`.\`${TEST_CCLOUD_KAFKA_TOPIC.name}\``;
+    const expectedQuery = `-- Query topic "${TEST_CCLOUD_KAFKA_TOPIC.name}" with Flink SQL
+-- Replace this with your actual Flink SQL query
+
+SELECT *
+FROM ${expectedFullyQualifiedName}
+LIMIT 10;`;
+
+    assert.strictEqual(docOptions.content, expectedQuery);
+
+    assert.ok(showTextDocumentStub.calledOnce);
+    assert.strictEqual(showTextDocumentStub.firstCall.args[0], mockDocument);
+    assert.deepStrictEqual(showTextDocumentStub.firstCall.args[1], { preview: false });
+  });
+
+  it("should return early if topic is null or not a KafkaTopic instance", async function () {
+    await queryTopicWithFlink(null as any);
+
+    assert.ok(openTextDocumentStub.notCalled);
+    assert.ok(showTextDocumentStub.notCalled);
+    assert.ok(getTopicViewProviderStub.notCalled);
+  });
+
+  it("should return early if topic is not a KafkaTopic instance", async function () {
+    const notATopic = { name: "fake-topic" };
+
+    await queryTopicWithFlink(notATopic as any);
+
+    assert.ok(openTextDocumentStub.notCalled);
+    assert.ok(showTextDocumentStub.notCalled);
+    assert.ok(getTopicViewProviderStub.notCalled);
+  });
+
+  it("should return early if environment is missing", async function () {
+    const mockTopicViewProvider = {
+      kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER,
+      environment: null,
+    };
+    getTopicViewProviderStub.returns(mockTopicViewProvider);
+
+    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
+
+    assert.ok(getTopicViewProviderStub.calledOnce);
+    assert.ok(openTextDocumentStub.notCalled);
+    assert.ok(showTextDocumentStub.notCalled);
+  });
+
+  it("should return early if cluster is missing", async function () {
+    const mockTopicViewProvider = {
+      kafkaCluster: null,
+      environment: TEST_CCLOUD_ENVIRONMENT,
+    };
+    getTopicViewProviderStub.returns(mockTopicViewProvider);
+
+    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
+
+    assert.ok(getTopicViewProviderStub.calledOnce);
+    assert.ok(openTextDocumentStub.notCalled);
+    assert.ok(showTextDocumentStub.notCalled);
+  });
+
+  it("should return early if topic is a local", async function () {
+    await queryTopicWithFlink(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.ok(openTextDocumentStub.notCalled);
+    assert.ok(showTextDocumentStub.notCalled);
+    assert.ok(getTopicViewProviderStub.notCalled);
+  });
+
+  it("should return early if topic is a direct connection topic", async function () {
+    await queryTopicWithFlink(TEST_DIRECT_KAFKA_TOPIC);
+
+    assert.ok(openTextDocumentStub.notCalled);
+    assert.ok(showTextDocumentStub.notCalled);
+    assert.ok(getTopicViewProviderStub.notCalled);
   });
 });

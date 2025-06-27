@@ -484,8 +484,8 @@ async function produceMessages(
 }
 
 /** Open a new tab set to Flink SQL type with placeholder Flink query of the selected topic */
-async function queryTopicWithFlink(topic: KafkaTopic) {
-  if (!topic || !(topic instanceof KafkaTopic)) {
+export async function queryTopicWithFlink(topic: KafkaTopic) {
+  if (!topic || !(topic instanceof KafkaTopic) || !isCCloud(topic)) {
     return;
   }
 
