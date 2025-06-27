@@ -33,7 +33,7 @@ import { login } from "./utils/confluentCloud";
  * 5. View should open with basic webview components, even if messages aren't (yet) available
  */
 
-test.describe.only("Topics Listing & Message Viewer", () => {
+test.describe("Topics Listing & Message Viewer", () => {
   let resourcesView: ResourcesView;
 
   test.beforeEach(async ({ page }) => {
