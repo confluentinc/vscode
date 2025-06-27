@@ -7,6 +7,7 @@ import {
   LOCAL_CONNECTION_ID,
   UTM_SOURCE_VSCODE,
 } from "../constants";
+import { CCloudFlinkComputePool } from "./flinkComputePool";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -47,6 +48,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
 
   // added separately from sidecar responses
   environmentId!: Enforced<EnvironmentId>;
+  flinkPools?: CCloudFlinkComputePool[];
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.id}?utm_source=${UTM_SOURCE_VSCODE}`;

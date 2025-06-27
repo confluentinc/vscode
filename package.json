@@ -1647,7 +1647,7 @@
         },
         {
           "command": "confluent.topics.query",
-          "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*/",
+          "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
           "group": "z_openInCloud"
         },
         {

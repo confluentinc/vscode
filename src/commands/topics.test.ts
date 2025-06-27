@@ -966,6 +966,7 @@ LIMIT 10;`;
     assert.ok(showTextDocumentStub.calledOnce);
     assert.strictEqual(showTextDocumentStub.firstCall.args[0], mockDocument);
     assert.deepStrictEqual(showTextDocumentStub.firstCall.args[1], { preview: false });
+    sinon.assert.calledWithExactly(showTextDocumentStub, mockDocument, { preview: false });
   });
 
   it("should return early if topic is null or not a KafkaTopic instance", async function () {

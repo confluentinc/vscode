@@ -69,30 +69,7 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
       return;
     }
 
-    // parse Kafka clusters and sort by name
-    let kafkaClusters: CCloudKafkaCluster[] = [];
-    if (env.kafkaClusters) {
-      const envKafkaClusters = env.kafkaClusters.map(
-        (cluster: any): CCloudKafkaCluster =>
-          CCloudKafkaCluster.create({
-            ...cluster,
-            environmentId: env.id,
-          }),
-      );
-      envKafkaClusters.sort((a: KafkaCluster, b: KafkaCluster) => a.name.localeCompare(b.name));
-      kafkaClusters.push(...envKafkaClusters);
-    }
-
-    // parse Schema Registry
-    let schemaRegistry: CCloudSchemaRegistry | undefined;
-    if (env.schemaRegistry) {
-      schemaRegistry = CCloudSchemaRegistry.create({
-        ...env.schemaRegistry,
-        environmentId: env.id as EnvironmentId,
-      });
-    }
-
-    // parse Flink Compute Pools
+    // parse Flink Compute Pools first for later association with Kafka clusters
     let flinkComputePools: CCloudFlinkComputePool[] = [];
     if (env.flinkComputePools) {
       const envFlinkComputePools = env.flinkComputePools.map(
@@ -105,6 +82,34 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
           }),
       );
       flinkComputePools.push(...envFlinkComputePools);
+    }
+
+    // parse Kafka clusters and sort by name
+    let kafkaClusters: CCloudKafkaCluster[] = [];
+    if (env.kafkaClusters) {
+      const envKafkaClusters = env.kafkaClusters.map((cluster: any): CCloudKafkaCluster => {
+        // Associate Flink compute pools with the same provider/region
+        const matchingFlinkPools = flinkComputePools.filter(
+          (pool) => pool.provider === cluster.provider && pool.region === cluster.region,
+        );
+
+        return CCloudKafkaCluster.create({
+          ...cluster,
+          environmentId: env.id,
+          flinkPools: matchingFlinkPools,
+        });
+      });
+      envKafkaClusters.sort((a: KafkaCluster, b: KafkaCluster) => a.name.localeCompare(b.name));
+      kafkaClusters.push(...envKafkaClusters);
+    }
+
+    // parse Schema Registry
+    let schemaRegistry: CCloudSchemaRegistry | undefined;
+    if (env.schemaRegistry) {
+      schemaRegistry = CCloudSchemaRegistry.create({
+        ...env.schemaRegistry,
+        environmentId: env.id as EnvironmentId,
+      });
     }
 
     envs.push(
