@@ -34,6 +34,7 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
         schema_registry: undefined,
       },
       status: {
+        authentication: undefined,
         ccloud: {
           state: ConnectedState.Success,
           user: {
