@@ -36,7 +36,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
+    showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves();
     showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
     // Other stubs
