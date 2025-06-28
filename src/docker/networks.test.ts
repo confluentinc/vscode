@@ -15,7 +15,7 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
     // because the functions below are constructing new instances of the NetworkApi class each time
     // and if we stubbed the instance, the stubs would not be applied to the new instances and the
     // tests would try to call the real methods
-    networkCreateStub = sandbox.stub(NetworkApi.prototype, "networkCreate");
+    networkCreateStub = sandbox.stub(NetworkApi.prototype, "networkCreate").resolves();
   });
 
   afterEach(() => {
