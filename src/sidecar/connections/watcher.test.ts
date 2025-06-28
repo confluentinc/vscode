@@ -349,7 +349,9 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
   });
 
   afterEach(() => {
@@ -532,7 +534,7 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    getDirectConnectionStub = sandbox.stub(getResourceManager(), "getDirectConnection");
+    getDirectConnectionStub = sandbox.stub(getResourceManager(), "getDirectConnection").resolves();
   });
 
   afterEach(() => {
