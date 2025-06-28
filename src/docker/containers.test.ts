@@ -28,18 +28,28 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    imageExistsStub = sandbox.stub(dockerImages, "imageExists");
-    pullImageStub = sandbox.stub(dockerImages, "pullImage");
+    imageExistsStub = sandbox.stub(dockerImages, "imageExists").resolves();
+    pullImageStub = sandbox.stub(dockerImages, "pullImage").resolves();
 
     // need to stub the ContainerApi class methods directly instead of using a stubbed instance,
     // because the functions below are constructing new instances of the ContainerApi class each time
     // and if we stubbed the instance, the stubs would not be applied to the new instances and the
     // tests would try to call the real methods
-    containerListStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerList");
-    containerCreateStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerCreate");
-    containerStartStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerStart");
-    containerStopStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerStop");
-    containerInspectStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerInspect");
+    containerListStub = sandbox
+      .stub(dockerClients.ContainerApi.prototype, "containerList")
+      .resolves();
+    containerCreateStub = sandbox
+      .stub(dockerClients.ContainerApi.prototype, "containerCreate")
+      .resolves();
+    containerStartStub = sandbox
+      .stub(dockerClients.ContainerApi.prototype, "containerStart")
+      .resolves();
+    containerStopStub = sandbox
+      .stub(dockerClients.ContainerApi.prototype, "containerStop")
+      .resolves();
+    containerInspectStub = sandbox
+      .stub(dockerClients.ContainerApi.prototype, "containerInspect")
+      .resolves();
   });
 
   afterEach(() => {

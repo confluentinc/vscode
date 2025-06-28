@@ -57,10 +57,9 @@ describe("ResourceViewProvider methods", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    getDirectConnectionsStub = sandbox.stub(
-      resourceManager.getResourceManager(),
-      "getDirectConnections",
-    );
+    getDirectConnectionsStub = sandbox
+      .stub(resourceManager.getResourceManager(), "getDirectConnections")
+      .resolves();
 
     provider = ResourceViewProvider.getInstance();
   });
@@ -142,7 +141,7 @@ describe("ResourceViewProvider loading functions", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
   });
 
   afterEach(() => {
@@ -297,7 +296,7 @@ describe("ResourceViewProvider context value updates", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     provider = ResourceViewProvider.getInstance();
-    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
   });
 
   afterEach(() => {

@@ -1,13 +1,12 @@
 import assert from "assert";
 import sinon from "sinon";
-import { Uri } from "vscode";
+import { env, Uri } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_PROVIDER,
   TEST_CCLOUD_REGION,
   TEST_CCLOUD_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import * as ccloudStateHandling from "../authn/ccloudStateHandling";
 import * as notifications from "../notifications";
 import {
   containsPrivateNetworkPattern,
@@ -105,8 +104,10 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
   });
 
   it("should show a notification with default values when no options provided", () => {
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-    const openExternalStub = sandbox.stub(ccloudStateHandling, "openExternal");
+    const showErrorStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
+    const openExternalStub = sandbox.stub(env, "openExternal").resolves();
 
     showPrivateNetworkingHelpNotification();
 
@@ -132,7 +133,9 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
   });
 
   it("should format message with resource name and type when provided", () => {
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    const showErrorStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
 
     showPrivateNetworkingHelpNotification({
       resourceName: "test-cluster",
@@ -151,11 +154,13 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
 
   it("should include default error notification buttons", () => {
     sandbox.stub(notifications, "DEFAULT_ERROR_NOTIFICATION_BUTTONS").value({
-      "Open Logs": sinon.stub(),
-      "File Issue": sinon.stub(),
+      "Open Logs": sandbox.stub(),
+      "File Issue": sandbox.stub(),
     });
 
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    const showErrorStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
 
     showPrivateNetworkingHelpNotification();
 

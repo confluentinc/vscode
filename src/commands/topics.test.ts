@@ -61,7 +61,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
+    showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
     showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
     executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 
@@ -269,7 +269,7 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    sandbox.stub(vscode.window, "showErrorMessage");
+    sandbox.stub(vscode.window, "showErrorMessage").resolves();
     sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
     // stub the quickpick for file/editor URI and the resulting content
@@ -278,9 +278,11 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
       .stub(fileUtils, "getEditorOrFileContents")
       .resolves({ content: JSON.stringify(fakeMessage) });
 
-    schemaKindMultiSelectStub = sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect");
-    getSubjectNameStrategyStub = sandbox.stub(schemaSubjectUtils, "getSubjectNameStrategy");
-    promptForSchemaStub = sandbox.stub(schemaUtils, "promptForSchema");
+    schemaKindMultiSelectStub = sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect").resolves();
+    getSubjectNameStrategyStub = sandbox
+      .stub(schemaSubjectUtils, "getSubjectNameStrategy")
+      .resolves();
+    promptForSchemaStub = sandbox.stub(schemaUtils, "promptForSchema").resolves();
 
     // create the stubs for the sidecar + service clients
     const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
@@ -927,8 +929,8 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
-    showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
+    openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument").resolves();
+    showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument").resolves();
     getTopicViewProviderStub = sandbox.stub(topicViewProvider, "getTopicViewProvider");
   });
 

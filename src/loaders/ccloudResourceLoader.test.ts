@@ -279,8 +279,8 @@ describe("CCloudResourceLoader", () => {
     let getCurrentOrganizationStub: sinon.SinonStub;
 
     beforeEach(() => {
-      getEnvironmentsStub = sandbox.stub(graphqlCCloud, "getCCloudResources");
-      getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
+      getEnvironmentsStub = sandbox.stub(graphqlCCloud, "getCCloudResources").resolves();
+      getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization").resolves();
     });
 
     it("should not throw any errors when no CCloud org is available", async () => {

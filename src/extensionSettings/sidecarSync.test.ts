@@ -31,7 +31,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    logErrorStub = sandbox.stub(errors, "logError");
+    logErrorStub = sandbox.stub(errors, "logError").resolves();
 
     // create the stubs for the sidecar + service client
     const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
@@ -51,10 +51,9 @@ describe("extensionSettings/sidecarSync.ts", function () {
     });
 
     // stub the notifications
-    showErrorNotificationWithButtonsStub = sandbox.stub(
-      notifications,
-      "showErrorNotificationWithButtons",
-    );
+    showErrorNotificationWithButtonsStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
   });
 
   afterEach(function () {

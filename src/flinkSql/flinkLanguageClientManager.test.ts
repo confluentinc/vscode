@@ -38,10 +38,9 @@ describe("FlinkLanguageClientManager", () => {
     hasCCloudAuthSessionStub = sandbox.stub(ccloud, "hasCCloudAuthSession");
     hasCCloudAuthSessionStub.returns(false);
     ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
-    getCatalogDatabaseFromMetadataStub = sandbox.stub(
-      flinkSqlProvider,
-      "getCatalogDatabaseFromMetadata",
-    );
+    getCatalogDatabaseFromMetadataStub = sandbox
+      .stub(flinkSqlProvider, "getCatalogDatabaseFromMetadata")
+      .resolves();
 
     resourceManagerStub = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(resourceManagerStub);

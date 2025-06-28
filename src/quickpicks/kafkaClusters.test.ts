@@ -3,6 +3,10 @@ import * as sinon from "sinon";
 import { QuickPickItemKind, window } from "vscode";
 
 import {
+  getStubbedCCloudResourceLoader,
+  getStubbedLocalResourceLoader,
+} from "../../tests/stubs/resourceLoaders";
+import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_ENVIRONMENT,
@@ -10,7 +14,7 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ResourceLoader } from "../loaders";
+import { CCloudResourceLoader, LocalResourceLoader } from "../loaders";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import * as topicsViewProviders from "../viewProviders/topics";
 import { flinkDatabaseQuickpick, kafkaClusterQuickPick, logger as qpLogger } from "./kafkaClusters";
@@ -18,14 +22,8 @@ import { QuickPickItemWithValue } from "./types";
 
 describe("kafkaClusterQuickPick", () => {
   let sandbox: sinon.SinonSandbox;
-  const mockLoaders = [
-    {
-      getEnvironments: sinon.stub(),
-      getKafkaClustersForEnvironmentId: sinon.stub(),
-    },
-  ];
-
   let showQuickPickStub: sinon.SinonStub;
+  let stubbedLocalLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
 
   before(async () => {
     // Set up the test environment
@@ -34,9 +32,8 @@ describe("kafkaClusterQuickPick", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    const loadersStub = sandbox.stub(ResourceLoader, "loaders");
-    loadersStub.returns(mockLoaders as any);
-    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    stubbedLocalLoader = getStubbedLocalResourceLoader(sandbox);
+    showQuickPickStub = sandbox.stub(window, "showQuickPick").resolves();
     showQuickPickStub.resolves(undefined);
   });
 
@@ -45,8 +42,8 @@ describe("kafkaClusterQuickPick", () => {
   });
 
   it("bails out early if the environment has no clusters", async () => {
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves([]);
+    stubbedLocalLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    stubbedLocalLoader.getKafkaClustersForEnvironmentId.resolves([]);
     const showInformationMessageStub = sandbox
       .stub(window, "showInformationMessage")
       .resolves(undefined);
@@ -61,9 +58,9 @@ describe("kafkaClusterQuickPick", () => {
   });
 
   it("should return undefined if getKafkaClustersForEnvironmentId() is out of synch with getEnvironments()", async () => {
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    stubbedLocalLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
     // should have included clusters referencing TEST_LOCAL_ENVIRONMENT, so will make code hit error.
-    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+    stubbedLocalLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
 
     // mock out the logger's warning method so we can prove going down into this unexpected codepath
     const loggerWarnStub = sandbox.stub(qpLogger, "warn");
@@ -83,8 +80,8 @@ describe("kafkaClusterQuickPick", () => {
       LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
     ];
 
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves(clusters);
+    stubbedLocalLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    stubbedLocalLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
     // Call with no filter lambda.
     await kafkaClusterQuickPick();
@@ -110,8 +107,8 @@ describe("kafkaClusterQuickPick", () => {
       LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
     ];
 
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves(clusters);
+    stubbedLocalLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    stubbedLocalLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
     // Call with a filter lambda that only allows the first cluster.
     const filter = (cluster: KafkaCluster) => cluster.id === TEST_LOCAL_KAFKA_CLUSTER.id;
@@ -133,8 +130,8 @@ describe("kafkaClusterQuickPick", () => {
       LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
     ];
 
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves(clusters);
+    stubbedLocalLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    stubbedLocalLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
     const placeHolder = "Select a Juicy Kafka cluster";
     await kafkaClusterQuickPick({ placeHolder: placeHolder });
@@ -149,8 +146,8 @@ describe("kafkaClusterQuickPick", () => {
       LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
     ];
 
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-    mockLoaders[0].getKafkaClustersForEnvironmentId.resolves(clusters);
+    stubbedLocalLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+    stubbedLocalLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
     // Simulate a focused cluster
     const focusedCluster = clusters[1];
@@ -172,15 +169,8 @@ describe("kafkaClusterQuickPick", () => {
 
 describe("flinkDatabaseQuickPick", () => {
   let sandbox: sinon.SinonSandbox;
-
+  let stubbedCCloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let showQuickPickStub: sinon.SinonStub;
-
-  const mockLoaders = [
-    {
-      getEnvironments: sinon.stub(),
-      getKafkaClustersForEnvironmentId: sinon.stub(),
-    },
-  ];
 
   before(async () => {
     // Set up the test environment
@@ -189,10 +179,8 @@ describe("flinkDatabaseQuickPick", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    const loadersStub = sandbox.stub(ResourceLoader, "loaders");
-    loadersStub.returns(mockLoaders as any);
-    showQuickPickStub = sandbox.stub(window, "showQuickPick");
-    showQuickPickStub.resolves(undefined);
+    stubbedCCloudLoader = getStubbedCCloudResourceLoader(sandbox);
+    showQuickPickStub = sandbox.stub(window, "showQuickPick").resolves();
   });
 
   afterEach(() => {
@@ -205,7 +193,6 @@ describe("flinkDatabaseQuickPick", () => {
     assert.equal(computePool.provider, TEST_CCLOUD_KAFKA_CLUSTER.provider);
     assert.equal(computePool.region, TEST_CCLOUD_KAFKA_CLUSTER.region);
 
-    const localClusters = [TEST_LOCAL_KAFKA_CLUSTER];
     const ccloudClusters = [
       TEST_CCLOUD_KAFKA_CLUSTER,
       CCloudKafkaCluster.create({
@@ -216,14 +203,8 @@ describe("flinkDatabaseQuickPick", () => {
       }),
     ];
 
-    mockLoaders[0].getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT]);
-    mockLoaders[0].getKafkaClustersForEnvironmentId.callsFake((envId: string) => {
-      if (envId === TEST_LOCAL_ENVIRONMENT.id) {
-        return localClusters;
-      } else if (envId === TEST_CCLOUD_ENVIRONMENT.id) {
-        return ccloudClusters;
-      }
-    });
+    stubbedCCloudLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
+    stubbedCCloudLoader.getKafkaClustersForEnvironmentId.resolves(ccloudClusters);
 
     await flinkDatabaseQuickpick(computePool);
     const itemsCalledWith = showQuickPickStub.getCall(0).args[0];

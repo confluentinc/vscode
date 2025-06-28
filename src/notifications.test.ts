@@ -20,7 +20,7 @@ describe("notifications.ts showErrorNotificationWithButtons()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves(undefined);
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
   });
 
@@ -201,7 +201,7 @@ describe("notifications.ts showInfoNotificationWithButtons()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showInfoMessageStub = sandbox.stub(window, "showInformationMessage").resolves(undefined);
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
   });
 
@@ -242,7 +242,7 @@ describe("notifications.ts showWarningNotificationWithButtons()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
   });
 
