@@ -31,7 +31,7 @@ describe("schemas/produceMessageSchema validation", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     // stub the loadDocumentContent function to return fake content from a document
-    getEditorOrFileContentsStub = sandbox.stub(fileUtils, "getEditorOrFileContents");
+    getEditorOrFileContentsStub = sandbox.stub(fileUtils, "getEditorOrFileContents").resolves();
   });
 
   afterEach(function () {
