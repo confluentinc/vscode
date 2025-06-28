@@ -161,7 +161,7 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
     let setContextValueStub: sinon.SinonStub;
 
     beforeEach(() => {
-      setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+      setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     });
 
     it("should set internal search state when a value is passed", () => {
@@ -495,10 +495,12 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
     let updateTreeViewDescriptionStub: sinon.SinonStub;
 
     beforeEach(() => {
-      refreshStub = sandbox.stub(provider, "refresh");
+      refreshStub = sandbox.stub(provider, "refresh").resolves();
       setSearchStub = sandbox.stub(provider, "setSearch");
-      setContextValueStub = sandbox.stub(contextValues, "setContextValue");
-      updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
+      setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
+      updateTreeViewDescriptionStub = sandbox
+        .stub(provider, "updateTreeViewDescription")
+        .resolves();
     });
 
     it("Should handle setting to null", async () => {
@@ -525,7 +527,7 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
 
     it("Should be called when parentResourceChangedEmitter fires", () => {
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      const setParentResourceStub = sandbox.stub(provider, "setParentResource");
+      const setParentResourceStub = sandbox.stub(provider, "setParentResource").resolves();
       provider.parentResourceChangedEmitter.fire(resource);
       sinon.assert.calledOnce(setParentResourceStub);
       sinon.assert.calledWith(setParentResourceStub, resource);
