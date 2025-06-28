@@ -568,9 +568,7 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
       .stub(parsing, "getRangeForDocument")
       .resolves(new vscode.Range(0, 0, 1, 10));
 
-    // stub the diagnostic collection's set method
-    diagnosticCollectionSetStub = sandbox.stub();
-    sandbox.stub(JSON_DIAGNOSTIC_COLLECTION, "set").value(diagnosticCollectionSetStub);
+    diagnosticCollectionSetStub = sandbox.stub(JSON_DIAGNOSTIC_COLLECTION, "set");
   });
 
   afterEach(function () {

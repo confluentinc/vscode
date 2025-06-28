@@ -23,7 +23,7 @@ describe("configureFlinkDefaults command", () => {
       .stub(quickpicks, "flinkComputePoolQuickPick")
       .resolves();
     flinkDatabaseQuickpickStub = sandbox.stub(kafkaQuickpicks, "flinkDatabaseQuickpick").resolves();
-    updateStub = sandbox.stub();
+    updateStub = sandbox.stub().resolves(); // the only thenable method in WorkspaceConfiguration
     getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration").returns({
       update: updateStub,
       get: sandbox.stub().callsFake((section: string, defaultValue?: unknown) => defaultValue),

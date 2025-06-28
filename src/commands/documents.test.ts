@@ -53,7 +53,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     // vscode stubs
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       get: getConfigStub,
       has: sandbox.stub(),
       inspect: sandbox.stub(),
@@ -218,7 +218,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     // vscode stubs
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       get: getConfigStub,
       has: sandbox.stub(),
       inspect: sandbox.stub(),

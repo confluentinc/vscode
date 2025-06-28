@@ -46,7 +46,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
     sandbox.stub(workspace, "getConfiguration").returns({
       get: getConfigurationStub,
       has: sandbox.stub(),
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       inspect: sandbox.stub(),
     });
 

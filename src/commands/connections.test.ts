@@ -36,7 +36,7 @@ describe("commands/connections.ts", function () {
     showOpenDialogStub.resolves([uri]);
     getConfigurationStub.returns({
       get: sandbox.stub().returns([]),
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
     });
 
     await connections.addSSLPemPath();
@@ -50,7 +50,7 @@ describe("commands/connections.ts", function () {
     showOpenDialogStub.resolves([]);
     getConfigurationStub.returns({
       get: sandbox.stub().returns([]),
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
     });
 
     await connections.addSSLPemPath();
@@ -64,7 +64,7 @@ describe("commands/connections.ts", function () {
     showOpenDialogStub.resolves([uri]);
     getConfigurationStub.returns({
       get: sandbox.stub().returns([]),
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
     });
 
     await connections.addSSLPemPath();
@@ -78,7 +78,7 @@ describe("commands/connections.ts", function () {
     showOpenDialogStub.resolves([uri]);
     getConfigurationStub.returns({
       get: sandbox.stub().returns(["existing/path.pem"]),
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
     });
 
     await connections.addSSLPemPath();
