@@ -22,7 +22,7 @@ describe("sidecarManager.ts", () => {
       sandbox = sinon.createSandbox();
       clock = sandbox.useFakeTimers();
       manager = new SidecarManager();
-      logErrorStub = sandbox.stub(errors, "logError");
+      logErrorStub = sandbox.stub(errors, "logError").resolves();
     });
 
     afterEach(() => {

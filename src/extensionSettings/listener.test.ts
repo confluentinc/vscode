@@ -33,7 +33,7 @@ describe("extensionSettings/listener.ts", function () {
     // stub the WorkspaceConfiguration and onDidChangeConfiguration emitter
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
     onDidChangeConfigurationStub = sandbox.stub(workspace, "onDidChangeConfiguration");
-    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     logUsageStub = sandbox.stub(telemetryEvents, "logUsage").returns();
   });
 
@@ -78,7 +78,7 @@ describe("extensionSettings/listener.ts", function () {
   });
 
   it("should not call updatePreferences() if config change does not affect SSL_PEM_PATHS or SSL_VERIFY_SERVER_CERT_DISABLED", async function () {
-    const updatePreferencesStub = sandbox.stub(updates, "updatePreferences");
+    const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();
 
     const mockEvent = {
       affectsConfiguration: (config: string) => config === "some.other.config",

@@ -19,8 +19,10 @@ describe("configureFlinkDefaults command", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    flinkComputePoolQuickPickStub = sandbox.stub(quickpicks, "flinkComputePoolQuickPick");
-    flinkDatabaseQuickpickStub = sandbox.stub(kafkaQuickpicks, "flinkDatabaseQuickpick");
+    flinkComputePoolQuickPickStub = sandbox
+      .stub(quickpicks, "flinkComputePoolQuickPick")
+      .resolves();
+    flinkDatabaseQuickpickStub = sandbox.stub(kafkaQuickpicks, "flinkDatabaseQuickpick").resolves();
     updateStub = sandbox.stub();
     getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration").returns({
       update: updateStub,

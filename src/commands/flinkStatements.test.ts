@@ -26,8 +26,8 @@ describe("commands/flinkStatements.ts", () => {
     let setUriMetadataStub: sinon.SinonStub;
 
     beforeEach(() => {
-      showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
-      setUriMetadataStub = sandbox.stub(ResourceManager.getInstance(), "setUriMetadata");
+      showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument").resolves();
+      setUriMetadataStub = sandbox.stub(ResourceManager.getInstance(), "setUriMetadata").resolves();
     });
 
     it("should hate undefined statement", async () => {
