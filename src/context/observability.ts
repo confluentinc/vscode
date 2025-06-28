@@ -1,6 +1,6 @@
 import { version } from "ide-sidecar";
 import { env, version as ideVersion } from "vscode";
-import { Status } from "../clients/sidecar";
+import { ConnectedState } from "../clients/sidecar";
 /**
  * Per-extension-instance singleton object for storing basic data to help debug issues, errors, etc.
  * This is created fresh each time the extension is activated, and will grow throughout the course
@@ -47,7 +47,7 @@ class ObservabilityContext {
     /** The expiration date of the Confluent Cloud auth session. */
     public ccloudAuthExpiration: Date | undefined = undefined,
     /** The last auth status seen for the Confluent Cloud auth session. */
-    public ccloudAuthLastSeenStatus: Status | undefined = undefined,
+    public ccloudAuthLastSeenState: ConnectedState | undefined = undefined,
     /** How many times the user signed in to Confluent Cloud. */
     public ccloudSignInCount: number = 0,
     /** How many times the user signed out of Confluent Cloud. */
