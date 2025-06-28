@@ -21,8 +21,8 @@ describe("commands/connections.ts", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     // avoid opening a dialog or notification modal during tests
-    showOpenDialogStub = sandbox.stub(vscode.window, "showOpenDialog");
-    showWarningMessageStub = sandbox.stub(vscode.window, "showWarningMessage");
+    showOpenDialogStub = sandbox.stub(vscode.window, "showOpenDialog").resolves();
+    showWarningMessageStub = sandbox.stub(vscode.window, "showWarningMessage").resolves();
     // stub the WorkspaceConfiguration
     getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration");
   });
@@ -154,10 +154,9 @@ describe("commands/connections.ts", function () {
   it("deleteDirectConnection() should not delete the connection if user cancels", async function () {
     const item = TEST_DIRECT_ENVIRONMENT;
     showWarningMessageStub.resolves("Cancel");
-    const deleteConnectionStub = sandbox.stub(
-      DirectConnectionManager.getInstance(),
-      "deleteConnection",
-    );
+    const deleteConnectionStub = sandbox
+      .stub(DirectConnectionManager.getInstance(), "deleteConnection")
+      .resolves();
 
     await connections.deleteDirectConnection(item);
 
