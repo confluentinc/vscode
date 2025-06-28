@@ -54,7 +54,13 @@ export default [
   },
   {
     files: ["src/**/*.test.ts"],
-    languageOptions: { globals: { ...globals.mocha } },
+    languageOptions: {
+      parser,
+      parserOptions: {
+        project: "./tsconfig.json",
+      },
+      globals: { ...globals.mocha },
+    },
     rules: {
       "local/require-async-stub-behavior": "error",
     },
