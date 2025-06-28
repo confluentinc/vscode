@@ -4,6 +4,7 @@ import parser from "@typescript-eslint/parser";
 import playwright from "eslint-plugin-playwright";
 import prettier from "eslint-plugin-prettier/recommended";
 import globals from "globals";
+import requireAsyncStubBehavior from "./.eslint/rules/require-async-stub-behavior.js";
 
 export default [
   {
@@ -55,6 +56,16 @@ export default [
   {
     files: ["src/**/*.test.ts"],
     languageOptions: { globals: { ...globals.mocha } },
+    rules: {
+      "local/require-async-stub-behavior": "error",
+    },
+    plugins: {
+      local: {
+        rules: {
+          "require-async-stub-behavior": requireAsyncStubBehavior,
+        },
+      },
+    },
   },
   {
     files: ["tests/**/*.spec.ts", "tests/**/*.ts", "src/webviews/**/*.ts"],
