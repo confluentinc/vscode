@@ -61,7 +61,7 @@ const rule = {
       return null;
     }
 
-    function checkTypeScriptReturnType(objectName, methodName, node) {
+    function checkTypeScriptReturnType(objectArg, methodName, node) {
       // Try to use TypeScript parser services if available
       const parserServices = context.getSourceCode().parserServices;
 
@@ -79,7 +79,6 @@ const rule = {
 
         // Get the type of the first argument (the object being stubbed)
         if (node.arguments.length >= 1) {
-          const objectArg = node.arguments[0];
           const objectTsNode = parserServices.esTreeNodeToTSNodeMap.get(objectArg);
 
           if (objectTsNode) {
@@ -94,7 +93,7 @@ const rule = {
                 methodSymbol.valueDeclaration,
               );
 
-              // Check if the return type is a Promise
+              // Check if the return type is a Promise/Thenable
               if (methodType.getCallSignatures().length > 0) {
                 const returnType = methodType.getCallSignatures()[0].getReturnType();
                 const returnTypeString = checker.typeToString(returnType);
@@ -103,6 +102,8 @@ const rule = {
                 const isPromise =
                   returnTypeString.includes("Promise") ||
                   returnTypeString.includes("PromiseLike") ||
+                  returnTypeString.includes("Thenable") ||
+                  returnType.symbol?.name === "Thenable" ||
                   returnType.symbol?.name === "Promise";
 
                 return isPromise;
@@ -125,24 +126,30 @@ const rule = {
         return true;
       }
 
-      // Check if it's a function that returns a Promise
+      // Check if it's a function that returns a Promise/Thenable
       if (
         node.type === "FunctionExpression" ||
         node.type === "FunctionDeclaration" ||
         node.type === "ArrowFunctionExpression"
       ) {
-        // Look for Promise return types in JSDoc or explicit Promise returns
+        // Look for Promise/Thenable return types in JSDoc or explicit Promise/Thenable returns
         const comments = sourceCode.getCommentsBefore ? sourceCode.getCommentsBefore(node) : [];
         for (const comment of comments) {
-          if (comment.value.includes("@returns") && comment.value.includes("Promise")) {
+          if (
+            comment.value.includes("@returns") &&
+            (comment.value.includes("Promise") || comment.value.includes("Thenable"))
+          ) {
             return true;
           }
-          if (comment.value.includes("@return") && comment.value.includes("Promise")) {
+          if (
+            comment.value.includes("@return") &&
+            (comment.value.includes("Promise") || comment.value.includes("Thenable"))
+          ) {
             return true;
           }
         }
 
-        // Check if the function body returns a Promise
+        // Check if the function body returns a Promise/Thenable
         if (node.body && node.body.type === "BlockStatement") {
           return hasPromiseReturn(node.body);
         } else if (node.body && node.body.type !== "BlockStatement") {
@@ -274,6 +281,10 @@ const rule = {
             let objectName = null;
             if (objectArg.type === "Identifier") {
               objectName = objectArg.name;
+            } else if (objectArg.type === "MemberExpression") {
+              // Handle cases like vscode.window, where we want to check the full member expression
+              // For now, we'll try to get type information directly from the member expression
+              objectName = null; // We'll handle this in TypeScript checking
             }
 
             // Look for the function declaration to check if it's async
@@ -283,8 +294,7 @@ const rule = {
 
             // Check if it's async based on function declaration or TypeScript type information
             const isAsyncFromDeclaration = funcDeclaration && isAsyncFunction(funcDeclaration);
-            const isAsyncFromTypeScript =
-              objectName && checkTypeScriptReturnType(objectName, methodName, node);
+            const isAsyncFromTypeScript = checkTypeScriptReturnType(objectArg, methodName, node);
 
             if ((isAsyncFromDeclaration || isAsyncFromTypeScript) && !hasAsyncBehavior(node)) {
               context.report({
