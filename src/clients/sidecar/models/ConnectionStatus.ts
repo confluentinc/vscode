@@ -12,35 +12,26 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { SchemaRegistryStatus } from "./SchemaRegistryStatus";
-import {
-  SchemaRegistryStatusFromJSON,
-  SchemaRegistryStatusFromJSONTyped,
-  SchemaRegistryStatusToJSON,
-  SchemaRegistryStatusToJSONTyped,
-} from "./SchemaRegistryStatus";
 import type { Authentication } from "./Authentication";
 import {
   AuthenticationFromJSON,
-  AuthenticationFromJSONTyped,
-  AuthenticationToJSON,
-  AuthenticationToJSONTyped,
+  AuthenticationToJSON
 } from "./Authentication";
 import type { CCloudStatus } from "./CCloudStatus";
 import {
   CCloudStatusFromJSON,
-  CCloudStatusFromJSONTyped,
-  CCloudStatusToJSON,
-  CCloudStatusToJSONTyped,
+  CCloudStatusToJSON
 } from "./CCloudStatus";
 import type { KafkaClusterStatus } from "./KafkaClusterStatus";
 import {
   KafkaClusterStatusFromJSON,
-  KafkaClusterStatusFromJSONTyped,
-  KafkaClusterStatusToJSON,
-  KafkaClusterStatusToJSONTyped,
+  KafkaClusterStatusToJSON
 } from "./KafkaClusterStatus";
+import type { SchemaRegistryStatus } from "./SchemaRegistryStatus";
+import {
+  SchemaRegistryStatusFromJSON,
+  SchemaRegistryStatusToJSON
+} from "./SchemaRegistryStatus";
 
 /**
  *
@@ -71,7 +62,7 @@ export interface ConnectionStatus {
    * @type {Authentication}
    * @memberof ConnectionStatus
    */
-  authentication: Authentication;
+  authentication?: Authentication;
 }
 
 /**
