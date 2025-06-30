@@ -119,7 +119,8 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
 
     // parse AuthErrors to see if we have any transient (or non-transient) errors
     const isTransientValues: boolean[] = [];
-    Object.values(errors).forEach((error: AuthError) => {
+    Object.values(errors).forEach((error: AuthError | undefined) => {
+      if (!error) return;
       const isTransient: boolean | undefined = error.is_transient;
       if (isTransient !== undefined) {
         isTransientValues.push(isTransient);
