@@ -366,6 +366,11 @@ export class EnvironmentTreeItem extends TreeItem {
     // "ccloud-environment", "direct-environment", "local-environment"
     this.contextValue = contextParts.join("-");
 
+    if (isDirect(resource)) {
+      // mainly to help E2E tests distinguish direct connections from other tree items
+      this.accessibilityInformation = { label: `Direct connection: "${resource.name}"` };
+    }
+
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;
     this.iconPath = new ThemeIcon(this.resource.iconName);
