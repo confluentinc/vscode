@@ -20,7 +20,7 @@ export async function getCollapsibleState(locator: Locator): Promise<Collapsible
     // this .getAttribute() call
     const ariaExpanded = await locator.getAttribute(EXPANDABLE_ATTRIBUTE);
     return ariaExpanded === "true" ? CollapsibleState.Expanded : CollapsibleState.Collapsed;
-  } catch (error) {
+  } catch {
     return CollapsibleState.None;
   }
 }
