@@ -5,14 +5,13 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { TopicsView } from "../objects/views/TopicsView";
-import { ViewItem } from "../objects/views/ViewItem";
+import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import {
   DirectConnectionForm,
   FormConnectionType,
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
-import { CollapsibleState, expand, getCollapsibleState } from "../utils/expansion";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
@@ -39,7 +38,7 @@ test.describe("Topics Listing & Message Viewer", () => {
   test.beforeEach(async ({ page }) => {
     await openConfluentExtension(page);
     resourcesView = new ResourcesView(page);
-    await resourcesView.focus();
+    await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
   });
 
   test.describe("CCLOUD connection", () => {
@@ -51,7 +50,7 @@ test.describe("Topics Listing & Message Viewer", () => {
       const ccloudItem: Locator = resourcesView.confluentCloudItem;
       await expect(ccloudItem).toBeVisible();
       await expect(ccloudItem).not.toHaveText("(Not Connected)");
-      expect(await getCollapsibleState(ccloudItem)).toBe(CollapsibleState.Expanded);
+      await expect(ccloudItem).toHaveAttribute("aria-expanded", "true");
     });
 
     test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
@@ -61,8 +60,10 @@ test.describe("Topics Listing & Message Viewer", () => {
       // Flink compute pools
       await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
       const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
-      await expand(firstEnvironment);
-      expect(await getCollapsibleState(firstEnvironment)).toBe(CollapsibleState.Expanded);
+      // environments are collapsed by default, so we need to expand it first
+      await expect(firstEnvironment).toHaveAttribute("aria-expanded", "false");
+      await firstEnvironment.click();
+      await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
 
       // then click on the first (CCloud) Kafka cluster to select it
       await expect(resourcesView.ccloudKafkaClusters).not.toHaveCount(0);
@@ -71,13 +72,12 @@ test.describe("Topics Listing & Message Viewer", () => {
 
       // now the Topics view should be expanded and show at least one topic item
       const topicsView = new TopicsView(page);
-      await topicsView.focus();
+      await expect(topicsView.header).toHaveAttribute("aria-expanded", "true");
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
@@ -89,7 +89,10 @@ test.describe("Topics Listing & Message Viewer", () => {
       // instead of selecting a Kafka cluster from the Resources view, we're selecting it from the
       // Topics view nav action
       const topicsView = new TopicsView(page);
-      await topicsView.focus();
+      // should be collapsed by default since we haven't selected a Kafka cluster yet
+      await expect(topicsView.header).toHaveAttribute("aria-expanded", "false");
+      await topicsView.header.click();
+      await expect(topicsView.header).toHaveAttribute("aria-expanded", "true");
 
       // Topics view should show empty state since no cluster is selected yet
       await expect(topicsView.viewsWelcome).toContainText("No Kafka cluster selected");
@@ -108,11 +111,10 @@ test.describe("Topics Listing & Message Viewer", () => {
 
       // now the Topics view should show at least one topic item
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
@@ -122,7 +124,7 @@ test.describe("Topics Listing & Message Viewer", () => {
   test.describe("DIRECT connection", () => {
     test.beforeEach(async ({ page }) => {
       // direct connection setup:
-      const connectionForm: DirectConnectionForm = await resourcesView.openDirectConnectionForm();
+      const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
       const connectionName = "Playwright";
       await connectionForm.fillConnectionName(connectionName);
       await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
@@ -159,8 +161,10 @@ test.describe("Topics Listing & Message Viewer", () => {
       // expand the first direct connection to show its Kafka cluster and Schema Registry
       await expect(resourcesView.directConnections).not.toHaveCount(0);
       const firstConnection = resourcesView.directConnections.first();
-      await expand(firstConnection);
-      expect(await getCollapsibleState(firstConnection)).toBe(CollapsibleState.Expanded);
+      // direct connections are collapsed by default, so we need to expand it first
+      await expect(firstConnection).toHaveAttribute("aria-expanded", "false");
+      await firstConnection.click();
+      await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
 
       // then click on the first (direct) Kafka cluster to select it
       const directKafkaClusters: Locator = resourcesView.directKafkaClusters;
@@ -170,13 +174,12 @@ test.describe("Topics Listing & Message Viewer", () => {
 
       // now the Topics view should be expanded and show at least one topic item
       const topicsView = new TopicsView(page);
-      await topicsView.focus();
+      await expect(topicsView.header).toHaveAttribute("aria-expanded", "true");
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
@@ -188,7 +191,10 @@ test.describe("Topics Listing & Message Viewer", () => {
       // instead of selecting a Kafka cluster from the Resources view, we're selecting it from the
       // Topics view nav action
       const topicsView = new TopicsView(page);
-      await topicsView.focus();
+      // should be collapsed by default since we haven't selected a Kafka cluster yet
+      await expect(topicsView.header).toHaveAttribute("aria-expanded", "false");
+      await topicsView.header.click();
+      await expect(topicsView.header).toHaveAttribute("aria-expanded", "true");
 
       // Topics view should show empty state since no cluster is selected yet
       await expect(topicsView.viewsWelcome).toContainText("No Kafka cluster selected");
@@ -205,11 +211,10 @@ test.describe("Topics Listing & Message Viewer", () => {
 
       // now the Topics view should show at least one topic item
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();

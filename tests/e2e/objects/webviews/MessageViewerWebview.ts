@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import { Locator } from "@playwright/test";
 import { Webview } from "./Webview";
 
 /**
@@ -7,10 +7,6 @@ import { Webview } from "./Webview";
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view}.
  */
 export class MessageViewerWebview extends Webview {
-  constructor(page: Page) {
-    super(page);
-  }
-
   /** The top-level wrapper element containing the header/content/footer sections. */
   get wrapper(): Locator {
     return this.webview.locator("main.wrapper");
