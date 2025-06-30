@@ -5,7 +5,7 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { TopicsView } from "../objects/views/TopicsView";
-import { ViewItem } from "../objects/views/ViewItem";
+import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import {
   DirectConnectionForm,
   FormConnectionType,
@@ -73,11 +73,10 @@ test.describe("Topics Listing & Message Viewer", () => {
       const topicsView = new TopicsView(page);
       await topicsView.focus();
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
@@ -108,11 +107,10 @@ test.describe("Topics Listing & Message Viewer", () => {
 
       // now the Topics view should show at least one topic item
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
@@ -172,11 +170,10 @@ test.describe("Topics Listing & Message Viewer", () => {
       const topicsView = new TopicsView(page);
       await topicsView.focus();
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
@@ -205,11 +202,10 @@ test.describe("Topics Listing & Message Viewer", () => {
 
       // now the Topics view should show at least one topic item
       await expect(topicsView.topics).not.toHaveCount(0);
-      const firstTopic = new ViewItem(page, topicsView.topics.first());
-      await firstTopic.clickInlineAction("View Messages");
+      const firstTopic = new TopicItem(page, topicsView.topics.first());
+      const messageViewer: MessageViewerWebview = await firstTopic.viewMessages();
 
       // the message viewer webview should now be visible in the editor area
-      const messageViewer = new MessageViewerWebview(page);
       await expect(messageViewer.messageViewerSettings).toBeVisible();
       await expect(messageViewer.content).toBeVisible();
       await expect(messageViewer.paginationControls).toBeVisible();
