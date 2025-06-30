@@ -120,7 +120,7 @@ test.describe("Topics Listing & Message Viewer", () => {
   test.describe("DIRECT connection", () => {
     test.beforeEach(async ({ page }) => {
       // direct connection setup:
-      const connectionForm: DirectConnectionForm = await resourcesView.openDirectConnectionForm();
+      const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
       const connectionName = "Playwright";
       await connectionForm.fillConnectionName(connectionName);
       await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
