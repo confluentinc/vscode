@@ -142,16 +142,13 @@ export const MessageBodyDecoders: { [K in MessageType]: MessageBodyDecoder<K> | 
     // generic object -> Connection object conversion (includes string -> Date conversions)
     body.connection = ConnectionFromJSON(body.connection);
 
-    // explicitly check and raise if any date coversion fails, because JS can't be bothered to throw an error on invalid date strings
-    for (const dateField of [
-      body.connection.status.authentication?.requires_authentication_at,
-      body.connection.status.ccloud?.requires_authentication_at,
-    ] as (Date | undefined)[]) {
-      if (dateField && isNaN(dateField.valueOf())) {
-        throw new Error(
-          "MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid requires_authentication_at date",
-        );
-      }
+    // explicitly check and raise if the date coversion fails, because JS can't be bothered to throw
+    // an error on invalid date strings
+    const dateField = body.connection.status.ccloud?.requires_authentication_at;
+    if (dateField && isNaN(dateField.valueOf())) {
+      throw new Error(
+        "MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid requires_authentication_at date",
+      );
     }
     return body;
   },
