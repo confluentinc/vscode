@@ -70,7 +70,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     getContainersForImageStub = sandbox
       .stub(dockerContainers, "getContainersForImage")
       .resolves([]);
-    createNetworkStub = sandbox.stub(dockerNetworks, "createNetwork");
+    createNetworkStub = sandbox.stub(dockerNetworks, "createNetwork").resolves();
 
     workflow = ConfluentLocalWorkflow.getInstance();
 

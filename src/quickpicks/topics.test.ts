@@ -42,7 +42,7 @@ describe("quickpicks/topics.ts topicQuickPick()", function () {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    showQuickPickStub = sandbox.stub(window, "showQuickPick").resolves();
     executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 

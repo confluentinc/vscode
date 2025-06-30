@@ -44,7 +44,7 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
     showWarningMessageStub = sandbox.stub(vscode.window, "showWarningMessage").resolves();
     showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
     // prevent attempting to open a browser window for these tests
-    sandbox.stub(vscode.env, "openExternal");
+    sandbox.stub(vscode.env, "openExternal").resolves();
   });
 
   afterEach(() => {

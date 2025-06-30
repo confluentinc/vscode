@@ -59,7 +59,7 @@ describe("ResourceLoader::getSubjects()", () => {
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
 
-    fetchSubjectsStub = sandbox.stub(loaderUtils, "fetchSubjects");
+    fetchSubjectsStub = sandbox.stub(loaderUtils, "fetchSubjects").resolves([]);
 
     loaderInstance = LocalResourceLoader.getInstance();
 
@@ -70,8 +70,8 @@ describe("ResourceLoader::getSubjects()", () => {
       .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
 
     // Stub these out for test to then provide the return values.
-    rmGetSubjectsStub = sandbox.stub(resourceManager, "getSubjects");
-    rmSetSubjectsStub = sandbox.stub(resourceManager, "setSubjects");
+    rmGetSubjectsStub = sandbox.stub(resourceManager, "getSubjects").resolves([]);
+    rmSetSubjectsStub = sandbox.stub(resourceManager, "setSubjects").resolves();
   });
 
   afterEach(() => {
@@ -207,7 +207,7 @@ describe("ResourceLoader::checkedGetSubjects()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
-    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
+    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects").resolves([]);
   });
 
   afterEach(() => {
@@ -224,10 +224,9 @@ describe("ResourceLoader::checkedGetSubjects()", () => {
 
   it("Returns empty array and opens notification when error", async () => {
     const isResponseErrorStub = sandbox.stub(errors, "isResponseError").returns(true);
-    const showWarningNotificationWithButtonsStub = sandbox.stub(
-      notifications,
-      "showWarningNotificationWithButtons",
-    );
+    const showWarningNotificationWithButtonsStub = sandbox
+      .stub(notifications, "showWarningNotificationWithButtons")
+      .resolves();
 
     getSubjectsStub.rejects(new Error("Test error"));
 
@@ -337,7 +336,7 @@ describe("ResourceLoader::clearCache()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
-    rmSetSubjectsStub = sandbox.stub(getResourceManager(), "setSubjects");
+    rmSetSubjectsStub = sandbox.stub(getResourceManager(), "setSubjects").resolves();
   });
   afterEach(() => {
     sandbox.restore();
@@ -374,9 +373,9 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     sandbox = sinon.createSandbox();
 
     // set up stubs, loaderInstance
-    fetchTopicsStub = sandbox.stub(loaderUtils, "fetchTopics");
+    fetchTopicsStub = sandbox.stub(loaderUtils, "fetchTopics").resolves([]);
     loaderInstance = LocalResourceLoader.getInstance();
-    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
+    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects").resolves([]);
   });
 
   afterEach(async () => {
@@ -397,8 +396,9 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
   it("Returns cached data if available", async () => {
     const cachedTopics = [TEST_LOCAL_KAFKA_TOPIC];
     // Set up the resource manager to return cached topics.
-    const rmGetTopicsStub = sandbox.stub(getResourceManager(), "getTopicsForCluster");
-    rmGetTopicsStub.resolves(cachedTopics);
+    const rmGetTopicsStub = sandbox
+      .stub(getResourceManager(), "getTopicsForCluster")
+      .resolves(cachedTopics);
 
     // Call the method under test.
     const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
@@ -462,10 +462,9 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     // checkedGetSubjects().
     sandbox.stub(errors, "isResponseError").returns(true);
     getSubjectsStub.rejects(new Error("Test error"));
-    const showWarningNotificationWithButtonsStub = sandbox.stub(
-      notifications,
-      "showWarningNotificationWithButtons",
-    );
+    const showWarningNotificationWithButtonsStub = sandbox
+      .stub(notifications, "showWarningNotificationWithButtons")
+      .resolves();
 
     const topicsResponseData: TopicData[] = [
       createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"]),
@@ -491,7 +490,7 @@ describe("ResourceLoader::getSchemasForSubject()", () => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
 
-    fetchSchemasForSubjectStub = sandbox.stub(loaderUtils, "fetchSchemasForSubject");
+    fetchSchemasForSubjectStub = sandbox.stub(loaderUtils, "fetchSchemasForSubject").resolves([]);
   });
 
   afterEach(() => {
@@ -521,8 +520,8 @@ describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
     loaderInstance = LocalResourceLoader.getInstance();
 
     sandbox = sinon.createSandbox();
-    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
-    getSchemasForSubjectStub = sandbox.stub(loaderInstance, "getSchemasForSubject");
+    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects").resolves([]);
+    getSchemasForSubjectStub = sandbox.stub(loaderInstance, "getSchemasForSubject").resolves([]);
   });
 
   afterEach(() => {
@@ -592,10 +591,11 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
       },
     };
 
-    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
-
+    // shoup: set up stubbedSidecarHandle() and fix this:
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar").resolves();
     getSidecarStub.resolves(mockHandle);
-    clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
+
+    clearCacheStub = sandbox.stub(loaderInstance, "clearCache").resolves();
   });
 
   afterEach(() => {
@@ -667,7 +667,7 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
   it("Deletion route call calls logError() on deletion attempt failure, rethrows", async () => {
     const schema = TEST_LOCAL_SCHEMA;
 
-    const logErrorStub = sandbox.stub(errors, "logError");
+    const logErrorStub = sandbox.stub(errors, "logError").resolves();
 
     const thrownError = new Error("Deletion error");
     stubbedSubjectsV1Api.deleteSchemaVersion.rejects(thrownError);
@@ -703,14 +703,15 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
       },
     };
 
-    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
+    // shoup: set up stubbedSidecarHandle() and fix this:
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar").resolves();
     getSidecarStub.resolves(mockHandle);
 
     sandbox
       .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
       .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
 
-    clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
+    clearCacheStub = sandbox.stub(loaderInstance, "clearCache").resolves();
   });
 
   afterEach(() => {

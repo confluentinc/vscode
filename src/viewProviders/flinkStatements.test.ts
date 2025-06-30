@@ -15,11 +15,11 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
+import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 describe("FlinkStatementsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
@@ -312,7 +312,7 @@ describe("FlinkStatementsViewProvider", () => {
     it("calls treeView.reveal() with the correct statement", async () => {
       const statement = createFlinkStatement();
       resourcesInTreeView.set(statement.id, statement);
-      const revealStub = sandbox.stub(viewProvider["treeView"], "reveal");
+      const revealStub = sandbox.stub(viewProvider["treeView"], "reveal").resolves();
       await viewProvider.focus(statement.id);
       sinon.assert.calledOnce(revealStub);
       sinon.assert.calledWith(revealStub, statement, { focus: true, select: true });

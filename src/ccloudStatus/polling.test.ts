@@ -25,7 +25,7 @@ describe("ccloudStatus/polling.ts", () => {
     sandbox.stub(timing, "IntervalPoller").returns(stubbedIntervalPoller);
 
     // stub the helper functions
-    fetchCCloudStatusStub = sandbox.stub(api, "fetchCCloudStatus");
+    fetchCCloudStatusStub = sandbox.stub(api, "fetchCCloudStatus").resolves();
     updateCCloudStatusStub = sandbox.stub(ccloudStatusBar, "updateCCloudStatus");
 
     // reset the poller before each test

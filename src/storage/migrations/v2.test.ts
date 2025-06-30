@@ -27,8 +27,8 @@ describe("storage/migrations/v2", () => {
     sandbox = sinon.createSandbox();
     // only stub the methods we need to test so we aren't interfering with SecretStorage; just test
     // the call arguments for `store()` based on returned `get()` values
-    secretsGetStub = sandbox.stub(context.secrets, "get");
-    secretsStoreStub = sandbox.stub(context.secrets, "store");
+    secretsGetStub = sandbox.stub(context.secrets, "get").resolves();
+    secretsStoreStub = sandbox.stub(context.secrets, "store").resolves();
 
     migration = new MigrationV2();
   });

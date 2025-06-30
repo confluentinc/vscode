@@ -209,9 +209,9 @@ describe("commands/docker.ts addDockerPath()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    showOpenDialogStub = sandbox.stub(window, "showOpenDialog");
+    showOpenDialogStub = sandbox.stub(window, "showOpenDialog").resolves();
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    updateConfigStub = sandbox.stub();
+    updateConfigStub = sandbox.stub().resolves(); // the only thenable method in WorkspaceConfiguration
   });
 
   afterEach(() => {
