@@ -9,6 +9,7 @@ import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
+import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import {
   containsPrivateNetworkPattern,
   showPrivateNetworkingHelpNotification,
@@ -217,11 +218,8 @@ export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Prom
     subject: params.subject,
     version: params.version.toString(),
   });
-
-  // Convert the response schema to a Schema model. Discards the returned schema document, sigh. We're
-  // only interested in the metadata.
   const schemaRegistry = params.schemaRegistry;
-  return Schema.create({
+  const schema = Schema.create({
     // Fields copied from the SR ...
     connectionId: schemaRegistry.connectionId,
     connectionType: schemaRegistry.connectionType,
@@ -231,10 +229,25 @@ export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Prom
     // Fields specific to this single schema subject binding.
     id: responseSchema.id!.toString(),
     subject: responseSchema.subject!,
+    schema: responseSchema.schema!,
     version: responseSchema.version!,
     // AVRO doesn't show up in `schemaType`
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
     type: (responseSchema.schemaType as SchemaType) || SchemaType.Avro,
     isHighestVersion: responseSchema.version === params.highestVersion,
   });
+  logUsage(UserEvent.SchemaAction, {
+    action: "loaded schema",
+
+    connection_id: schema.connectionId,
+    connection_type: schema.connectionType,
+    environment_id: schema.environmentId,
+
+    schema_registry_id: schema.schemaRegistryId,
+    schema_type: schema.type,
+    subject_hash: hashed(schema.subject),
+    schema_hash: hashed(schema.schema, "md5"),
+    schema_version: schema.version,
+  });
+  return schema;
 }

@@ -185,6 +185,8 @@ export class Schema extends Data implements IResourceBase {
 
   id!: Enforced<string>;
   subject!: Enforced<string>;
+  // The body of the schema, called schema.schema in other repos, so we match that here.
+  schema!: Enforced<string>;
   version!: Enforced<number>;
   type!: SchemaType;
   // added separately from the response data, used for follow-on API calls
