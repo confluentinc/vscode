@@ -40,24 +40,24 @@ export class DirectConnectionForm extends Webview {
 
   // general Kafka cluster config fields
   get kafkaBootstrapServersField(): Locator {
-    return this.webview.locator("#kafka_cluster\\.bootstrap_servers");
+    return this.webview.locator('[name="kafka_cluster.bootstrap_servers"]');
   }
   get kafkaAuthTypeDropdown(): Locator {
-    return this.webview.locator("#kafka_cluster\\.auth_type");
+    return this.webview.locator('[name="kafka_cluster.auth_type"]');
   }
   get kafkaSSLEnabledCheckbox(): Locator {
-    return this.webview.locator("#kafka_cluster\\.ssl\\.enabled");
+    return this.webview.locator('[name="kafka_cluster.ssl.enabled"]');
   }
 
   // general Schema Registry config fields
   get schemaRegistryUriField(): Locator {
-    return this.webview.locator("#schema_registry\\.uri");
+    return this.webview.locator('[name="schema_registry.uri"]');
   }
   get schemaRegistryAuthTypeDropdown(): Locator {
-    return this.webview.locator("#schema_registry\\.auth_type");
+    return this.webview.locator('[name="schema_registry.auth_type"]');
   }
   get schemaRegistrySSLEnabledCheckbox(): Locator {
-    return this.webview.locator("#schema_registry\\.ssl\\.enabled");
+    return this.webview.locator('[name="schema_registry.ssl.enabled"]');
   }
 
   /**
@@ -70,7 +70,7 @@ export class DirectConnectionForm extends Webview {
     namespace: "kafka_cluster" | "schema_registry",
     credentialType: string,
   ): Locator {
-    return this.webview.locator(`#${namespace}\\.credentials\\.${credentialType}`);
+    return this.webview.locator(`[name="${namespace}.credentials.${credentialType}"]`);
   }
 
   // form submission buttons
