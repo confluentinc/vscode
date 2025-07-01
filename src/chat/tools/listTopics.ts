@@ -56,20 +56,19 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       .appendMarkdown(`## List Kafka Topics\n`)
       .appendMarkdown(`This tool will retrieve topics with the following criteria:\n`);
 
-    if (input.kafkaClusterId) {
-      confirmationMessage.appendMarkdown(`\n- **Kafka Cluster ID**: ${input.kafkaClusterId}`);
-    }
-    if (input.environmentId) {
-      confirmationMessage.appendMarkdown(`\n- **Environment ID**: ${input.environmentId}`);
-    }
-    if (input.connectionId) {
-      confirmationMessage.appendMarkdown(`\n- **Connection ID**: ${input.connectionId}`);
-    }
-    if (input.topicNameSubstring) {
-      confirmationMessage.appendMarkdown(
-        `\n- **Topic Name Filter**: "${input.topicNameSubstring}"`,
-      );
-    }
+    const criteria = [
+      { label: 'Kafka Cluster ID', value: input.kafkaClusterId },
+      { label: 'Environment ID', value: input.environmentId },
+      { label: 'Connection ID', value: input.connectionId },
+      { label: 'Topic Name Filter', value: input.topicNameSubstring, quoted: true },
+    ];
+
+    criteria.forEach(({ label, value, quoted }) => {
+      if (value) {
+        const displayValue = quoted ? `"${value}"` : value;
+        confirmationMessage.appendMarkdown(`\n- **${label}**: ${displayValue}`);
+      }
+    });
 
     confirmationMessage
       .appendMarkdown(`\n\n**Additional Information:**`)
@@ -226,4 +225,5 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
+}
 }
