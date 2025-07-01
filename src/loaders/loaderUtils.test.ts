@@ -1,7 +1,6 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
-import { restoreSchemaRegistryApi, stubSchemaRegistryApi } from "../../tests/unit/apis";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
@@ -60,13 +59,6 @@ describe("loaderUtils fetchSubjects() and fetchSchemasForSubject() tests", () =>
 
   let sandbox: sinon.SinonSandbox;
   let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
-
-  before(() => {
-    restoreSchemaRegistryApi();
-  });
-  after(() => {
-    stubSchemaRegistryApi();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();

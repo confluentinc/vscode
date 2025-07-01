@@ -2,7 +2,6 @@ import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { join, resolve } from "path";
-import { setupGlobalApiStubs } from "../tests/unit/apis";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
 
 export async function run() {
@@ -57,9 +56,6 @@ export async function run() {
 
 async function globalBeforeAll() {
   console.log("Global test suite setup");
-
-  // stub APIs that should never actually be called during tests
-  setupGlobalApiStubs();
 
   // extension host debugging
   process.on("disconnect", () => {

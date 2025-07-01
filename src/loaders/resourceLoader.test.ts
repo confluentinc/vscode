@@ -1,7 +1,6 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { restoreSchemaRegistryApi, stubSchemaRegistryApi } from "../../tests/unit/apis";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -588,13 +587,6 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
   let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let clearCacheStub: sinon.SinonStub;
 
-  before(() => {
-    restoreSchemaRegistryApi();
-  });
-  after(() => {
-    stubSchemaRegistryApi();
-  });
-
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
@@ -706,13 +698,6 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
   let sandbox: sinon.SinonSandbox;
   let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let clearCacheStub: sinon.SinonStub;
-
-  before(() => {
-    restoreSchemaRegistryApi();
-  });
-  after(() => {
-    stubSchemaRegistryApi();
-  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
