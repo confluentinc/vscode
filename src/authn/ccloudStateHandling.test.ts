@@ -12,7 +12,7 @@ import { handleUpdatedConnection, REAUTH_BUTTON_TEXT } from "./ccloudStateHandli
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import * as utils from "./utils";
 
-describe.skip("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
+describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
   let sandbox: sinon.SinonSandbox;
   let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
   let stableCCloudConnectedStateFireStub: sinon.SinonStub;
