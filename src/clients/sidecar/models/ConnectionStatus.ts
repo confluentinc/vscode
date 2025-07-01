@@ -20,13 +20,6 @@ import {
   SchemaRegistryStatusToJSON,
   SchemaRegistryStatusToJSONTyped,
 } from "./SchemaRegistryStatus";
-import type { Authentication } from "./Authentication";
-import {
-  AuthenticationFromJSON,
-  AuthenticationFromJSONTyped,
-  AuthenticationToJSON,
-  AuthenticationToJSONTyped,
-} from "./Authentication";
 import type { CCloudStatus } from "./CCloudStatus";
 import {
   CCloudStatusFromJSON,
@@ -66,19 +59,12 @@ export interface ConnectionStatus {
    * @memberof ConnectionStatus
    */
   schema_registry?: SchemaRegistryStatus;
-  /**
-   *
-   * @type {Authentication}
-   * @memberof ConnectionStatus
-   */
-  authentication: Authentication;
 }
 
 /**
  * Check if a given object implements the ConnectionStatus interface.
  */
 export function instanceOfConnectionStatus(value: object): value is ConnectionStatus {
-  if (!("authentication" in value) || value["authentication"] === undefined) return false;
   return true;
 }
 
@@ -101,7 +87,6 @@ export function ConnectionStatusFromJSONTyped(
       json["schema_registry"] == null
         ? undefined
         : SchemaRegistryStatusFromJSON(json["schema_registry"]),
-    authentication: AuthenticationFromJSON(json["authentication"]),
   };
 }
 
@@ -121,6 +106,5 @@ export function ConnectionStatusToJSONTyped(
     ccloud: CCloudStatusToJSON(value["ccloud"]),
     kafka_cluster: KafkaClusterStatusToJSON(value["kafka_cluster"]),
     schema_registry: SchemaRegistryStatusToJSON(value["schema_registry"]),
-    authentication: AuthenticationToJSON(value["authentication"]),
   };
 }
