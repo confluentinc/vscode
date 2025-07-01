@@ -80,6 +80,7 @@ export function build(done) {
   if (result.error) throw result.error;
 
   if (production) {
+    console.log("Setting up Segment, Sentry, and LaunchDarkly for production build...");
     process.env.SENTRY_ENV = "production";
     setupSegment();
     setupSentry();

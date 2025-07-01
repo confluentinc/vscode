@@ -74,7 +74,7 @@ export function sentryCaptureException(ex: unknown, hint?: EventHint | undefined
   const scope = getSentryScope();
   const client = scope.getClient();
   if (!client) {
-    logger.error("No Sentry client available");
+    logger.error("No Sentry client available", ex instanceof Error ? ex.stack : ex);
     return ex;
   }
   logger.debug("sending exception to Sentry", { ex, hint });
