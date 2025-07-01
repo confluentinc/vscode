@@ -2,9 +2,8 @@ import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { join, resolve } from "path";
-import * as sinon from "sinon";
+import { setupGlobalApiStubs } from "../tests/unit/apis";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
-import { BaseAPI } from "./clients/schemaRegistryRest/runtime";
 
 export async function run() {
   // Unix cwd is ___/vscode, but on Windows it's ___/vscode/.vscode-test/<archive>/
@@ -91,15 +90,4 @@ async function globalBeforeEach(this: Mocha.Context) {
 
 async function globalAfterEach(this: Mocha.Context) {
   console.log(`Global afterEach hook: "${this.currentTest?.fullTitle()}"`);
-}
-
-function setupGlobalApiStubs() {
-  const fakeResponse = new Response("{}", {
-    status: 200,
-    statusText: "OK",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  const requestStub = sinon.stub().callsFake(async () => fakeResponse);
-  BaseAPI.prototype["request"] = requestStub;
 }

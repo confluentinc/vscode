@@ -1,5 +1,6 @@
 import assert from "assert";
 import sinon from "sinon";
+import { restoreSchemaRegistryApi, stubSchemaRegistryApi } from "../../tests/unit/apis";
 import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
 import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
 import * as sidecar from "../sidecar";
@@ -9,6 +10,13 @@ describe("DiffableReadOnlyDocumentProvider tests", function () {
   let sandbox: sinon.SinonSandbox;
   let mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
   let mockClient: sinon.SinonStubbedInstance<SchemasV1Api>;
+
+  before(() => {
+    restoreSchemaRegistryApi();
+  });
+  after(() => {
+    stubSchemaRegistryApi();
+  });
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
