@@ -773,7 +773,7 @@ describe("ResourceManager general utility methods", function () {
   });
 });
 
-describe.only("ResourceManager Uri metadata methods", () => {
+describe("ResourceManager Uri metadata methods", () => {
   let resourceManager: ResourceManager;
 
   const testUri: Uri = Uri.parse("file:///test-file.sql");
