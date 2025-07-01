@@ -34,7 +34,7 @@ describe("ccloudStatus/polling.ts", () => {
   });
 
   afterEach(async function () {
-    cleanup(async () => disableCCloudStatusPolling(), this);
+    cleanup(async () => disableCCloudStatusPolling(), this.currentTest?.fullTitle());
 
     sandbox.restore();
   });
