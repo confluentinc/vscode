@@ -130,19 +130,7 @@ export class ResourceManager {
       mutex = new Mutex();
       this.mutexes.set(key, mutex);
     }
-    // logger.debug(`Acquiring mutex for key: ${key}`);
-    // try {
-    //   return await mutex.runExclusive(callback);
-    // } catch (error) {
-    //   logger.error(
-    //     `Error while running callback with mutex for key ${key}:`,
-    //     error instanceof Error ? error.stack : error,
-    //   );
-    //   throw error;
-    // } finally {
-    //   logger.debug(`Released mutex for key: ${key}`);
-    // }
-    return await callback();
+    return await mutex.runExclusive(callback);
   }
 
   /**
