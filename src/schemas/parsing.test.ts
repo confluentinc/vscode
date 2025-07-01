@@ -106,7 +106,7 @@ describe("schemas/parsing.ts getRangeForDocument()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    getEditorOrFileContentsStub = sandbox.stub(fileUtils, "getEditorOrFileContents");
+    getEditorOrFileContentsStub = sandbox.stub(fileUtils, "getEditorOrFileContents").resolves();
     initializeJsonDocumentStub = sandbox.stub(validateDocument, "initializeJsonDocument");
   });
 

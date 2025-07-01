@@ -38,10 +38,10 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
       get: getConfigStub,
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       has: sandbox.stub(),
       inspect: sandbox.stub(),
-    } as unknown as WorkspaceConfiguration);
+    } satisfies WorkspaceConfiguration);
   });
 
   afterEach(() => {

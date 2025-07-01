@@ -16,11 +16,11 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sandbox = sinon.createSandbox();
 
     // stub the actual fetching
-    fetchStub = sandbox.stub(global, "fetch");
+    fetchStub = sandbox.stub(global, "fetch").resolves();
 
     // stub helper functions
     summaryFromJSONStub = sandbox.stub(types, "CCloudStatusSummaryFromJSON");
-    logErrorStub = sandbox.stub(errors, "logError");
+    logErrorStub = sandbox.stub(errors, "logError").resolves();
   });
 
   afterEach(() => {

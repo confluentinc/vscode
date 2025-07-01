@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { TEST_CCLOUD_STATUS_SUMMARY } from "../../tests/unit/testResources/ccloudStatus";
+import { cleanup } from "../../tests/unit/testUtils";
 import * as ccloudStatusBar from "../statusBar/ccloudItem";
 import * as timing from "../utils/timing";
 import * as api from "./api";
@@ -25,16 +26,16 @@ describe("ccloudStatus/polling.ts", () => {
     sandbox.stub(timing, "IntervalPoller").returns(stubbedIntervalPoller);
 
     // stub the helper functions
-    fetchCCloudStatusStub = sandbox.stub(api, "fetchCCloudStatus");
+    fetchCCloudStatusStub = sandbox.stub(api, "fetchCCloudStatus").resolves();
     updateCCloudStatusStub = sandbox.stub(ccloudStatusBar, "updateCCloudStatus");
 
     // reset the poller before each test
     disableCCloudStatusPolling();
   });
 
-  afterEach(() => {
-    // reset the poller after each test
-    disableCCloudStatusPolling();
+  afterEach(async function () {
+    cleanup(async () => disableCCloudStatusPolling(), this);
+
     sandbox.restore();
   });
 

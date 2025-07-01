@@ -64,14 +64,13 @@ describe("loaderUtils fetchSubjects() and fetchSchemasForSubject() tests", () =>
     sandbox = sinon.createSandbox();
 
     stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
-
-    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
-
     const mockHandle = {
       getSubjectsV1Api: () => {
         return stubbedSubjectsV1Api;
       },
     };
+    // shoup: set up stubbedSidecarHandle() and fix this:
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar").resolves();
     getSidecarStub.resolves(mockHandle);
   });
 

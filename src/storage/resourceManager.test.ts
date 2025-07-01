@@ -18,7 +18,7 @@ import {
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { cleanup, getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ConnectionSpec,
   KafkaClusterConfigFromJSON,
@@ -60,9 +60,11 @@ describe("ResourceManager getEnvironments() / setEnvironments() / getEnvironment
     rm = getResourceManager();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   it("setEnvironments() should throw an error if given mixed connection IDs", async () => {
@@ -148,9 +150,11 @@ describe("ResourceManager kafka cluster methods", function () {
     rm = getResourceManager();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   it("setKafkaClusters() / getKafkaClusters() should correctly store CCloud Kafka clusters", async () => {
@@ -262,9 +266,11 @@ describe("ResourceManager setTopicsForCluster() / getTopicsForCluster() / topicK
     await clearWorkspaceState();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   it("setTopicsForCluster() should throw an error if given mixed connection IDs", async () => {
@@ -383,9 +389,11 @@ describe("ResourceManager Schema Registry methods", function () {
     rm = getResourceManager();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   it("setSchemaRegistries() error when given mixed connection id array", async () => {
@@ -460,9 +468,11 @@ describe("ResourceManager direct connection methods", function () {
     await rm.deleteDirectConnections();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await rm.deleteDirectConnections();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await rm.deleteDirectConnections();
+    }, this);
   });
 
   it("addDirectConnection() should correctly store a direct connection spec", async () => {
@@ -562,14 +572,16 @@ describe("ResourceManager SR subject methods", function () {
     resourceManager = getResourceManager();
   });
 
-  this.beforeEach(async () => {
+  beforeEach(async () => {
     // fresh slate for each test
     await clearWorkspaceState();
   });
 
-  this.afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   function createTestSubjects(schemaRegistry: SchemaRegistry, count: number): Subject[] {
@@ -720,9 +732,11 @@ describe("ResourceManager general utility methods", function () {
     await clearWorkspaceState();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   it("CCLOUD: purgeConnectionResources() should correctly delete all CCloud resources", async () => {
@@ -779,9 +793,11 @@ describe("ResourceManager Uri metadata methods", () => {
     await clearWorkspaceState();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clean up after each test
+      await clearWorkspaceState();
+    }, this);
   });
 
   it("should set and get Uri metadata correctly", async () => {

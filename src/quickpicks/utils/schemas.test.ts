@@ -38,7 +38,9 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
 
     // ResourceLoader stubs
     stubbedLoader = getStubbedLocalResourceLoader(sandbox);
@@ -46,7 +48,9 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
     stubbedLoader.getSchemasForSubject.resolves(testSchemas);
 
     // quickpick+util stubs
-    schemaVersionQuickPickStub = sandbox.stub(schemaQuickPicks, "schemaVersionQuickPick");
+    schemaVersionQuickPickStub = sandbox
+      .stub(schemaQuickPicks, "schemaVersionQuickPick")
+      .resolves();
     getSubjectNameForStrategyStub = sandbox
       .stub(schemaSubjects, "getSubjectNameForStrategy")
       .resolves(TEST_LOCAL_SCHEMA.subject);

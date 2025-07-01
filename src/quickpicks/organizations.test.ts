@@ -28,11 +28,11 @@ describe("quickpicks/organizations.ts organizationQuickPick()", function () {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    showQuickPickStub = sandbox.stub(window, "showQuickPick").resolves();
     showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 
     // graphql stubs
-    getOrganizationsStub = sandbox.stub(organizationsGraphQL, "getOrganizations");
+    getOrganizationsStub = sandbox.stub(organizationsGraphQL, "getOrganizations").resolves();
     // return the two test organizations for most tests
     getOrganizationsStub.resolves(testOrganizations);
   });

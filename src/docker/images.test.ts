@@ -32,8 +32,8 @@ describe("docker/images.ts ImageApi wrappers", () => {
     // because the functions below are constructing new instances of the ImageApi class each time
     // and if we stubbed the instance, the stubs would not be applied to the new instances and the
     // tests would try to call the real methods
-    imageListStub = sandbox.stub(ImageApi.prototype, "imageList");
-    imageCreateRawStub = sandbox.stub(ImageApi.prototype, "imageCreateRaw");
+    imageListStub = sandbox.stub(ImageApi.prototype, "imageList").resolves();
+    imageCreateRawStub = sandbox.stub(ImageApi.prototype, "imageCreateRaw").resolves();
   });
 
   afterEach(() => {

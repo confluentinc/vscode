@@ -28,7 +28,7 @@ describe("storage/migrationManager", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    executeMigrationsStub = sandbox.stub(migrationUtils, "executeMigrations");
+    executeMigrationsStub = sandbox.stub(migrationUtils, "executeMigrations").resolves();
   });
 
   afterEach(() => {

@@ -110,7 +110,7 @@ describe("commands/utils/flinkStatements.ts", function () {
     const expectedDatePart = "2024-10-21t12-00-00";
 
     beforeEach(() => {
-      getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+      getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession").resolves();
       sandbox.useFakeTimers(now);
     });
 
@@ -174,7 +174,7 @@ describe("commands/utils/flinkStatements.ts", function () {
       mockSidecar = getSidecarStub(sandbox);
 
       const ccloudLoader: CCloudResourceLoader = CCloudResourceLoader.getInstance();
-      getOrganizationStub = sandbox.stub(ccloudLoader, "getOrganization");
+      getOrganizationStub = sandbox.stub(ccloudLoader, "getOrganization").resolves();
     });
 
     it("Raises an error if no organization is found", async function () {
@@ -222,7 +222,7 @@ describe("commands/utils/flinkStatements.ts", function () {
       sandbox.useFakeTimers(new Date());
 
       const ccloudLoader = CCloudResourceLoader.getInstance();
-      refreshFlinkStatementStub = sandbox.stub(ccloudLoader, "refreshFlinkStatement");
+      refreshFlinkStatementStub = sandbox.stub(ccloudLoader, "refreshFlinkStatement").resolves();
     });
 
     it("returns when statement is running", async function () {

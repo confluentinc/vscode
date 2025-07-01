@@ -1,9 +1,18 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { CodeLens, Position, Range, TextDocument, Uri, workspace } from "vscode";
+import {
+  CodeLens,
+  Position,
+  Range,
+  TextDocument,
+  Uri,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
+import { cleanup } from "../../tests/unit/testUtils";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -51,11 +60,13 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
     FlinkSqlCodelensProvider["instance"] = null;
   });
 
-  afterEach(async () => {
+  afterEach(async function () {
+    cleanup(async () => {
+      await getResourceManager().deleteAllUriMetadata();
+    }, this);
+
     FlinkSqlCodelensProvider["instance"] = null;
     sandbox.restore();
-    // clean up any stored metadata
-    await getResourceManager().deleteAllUriMetadata();
   });
 
   it("should create only one instance of FlinkSqlCodelensProvider", () => {
@@ -247,11 +258,11 @@ describe("codelens/flinkSqlProvider.ts getComputePoolFromMetadata()", () => {
     // vscode stubs
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       get: getConfigStub,
       has: sandbox.stub(),
       inspect: sandbox.stub(),
-    });
+    } satisfies WorkspaceConfiguration);
   });
 
   afterEach(() => {
@@ -357,11 +368,11 @@ describe("codelens/flinkSqlProvider.ts getCatalogDatabaseFromMetadata()", () => 
     // vscode stubs
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       get: getConfigStub,
       has: sandbox.stub(),
       inspect: sandbox.stub(),
-    });
+    } satisfies WorkspaceConfiguration);
   });
 
   afterEach(() => {

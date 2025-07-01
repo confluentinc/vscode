@@ -3,7 +3,7 @@ import { homedir } from "os";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { cleanup, getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Schema } from "../models/schema";
@@ -23,13 +23,16 @@ describe("commands/diffs.ts", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
-    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
   });
 
-  afterEach(async () => {
-    // clear stored URI between tests
-    await workspaceState.update(WorkspaceStorageKeys.DIFF_BASE_URI, undefined);
+  afterEach(async function () {
+    cleanup(async () => {
+      // clear stored URI between tests
+      await workspaceState.update(WorkspaceStorageKeys.DIFF_BASE_URI, undefined);
+    }, this);
+
     sandbox.restore();
   });
 

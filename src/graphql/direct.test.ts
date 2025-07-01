@@ -111,9 +111,11 @@ describe("graphql/direct.ts getDirectResources()", () => {
     sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
 
     // helper stubs
-    logErrorStub = sandbox.stub(errorModule, "logError");
+    logErrorStub = sandbox.stub(errorModule, "logError").resolves();
     logUsageStub = sandbox.stub(telemetry, "logUsage");
-    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
     showWarningNotificationStub = sandbox
       .stub(notifications, "showWarningNotificationWithButtons")
       .resolves();
