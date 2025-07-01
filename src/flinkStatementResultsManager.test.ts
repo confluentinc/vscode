@@ -53,7 +53,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     cleanup(async () => {
       ctx.manager.dispose();
       vm.dispose();
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     sandbox.restore();
   });

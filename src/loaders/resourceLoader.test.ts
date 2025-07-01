@@ -383,7 +383,7 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     cleanup(async () => {
       // clear cached workspace state
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     sandbox.restore();
   });

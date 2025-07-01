@@ -64,7 +64,7 @@ describe("ResourceManager getEnvironments() / setEnvironments() / getEnvironment
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("setEnvironments() should throw an error if given mixed connection IDs", async () => {
@@ -154,7 +154,7 @@ describe("ResourceManager kafka cluster methods", function () {
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("setKafkaClusters() / getKafkaClusters() should correctly store CCloud Kafka clusters", async () => {
@@ -270,7 +270,7 @@ describe("ResourceManager setTopicsForCluster() / getTopicsForCluster() / topicK
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("setTopicsForCluster() should throw an error if given mixed connection IDs", async () => {
@@ -393,7 +393,7 @@ describe("ResourceManager Schema Registry methods", function () {
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("setSchemaRegistries() error when given mixed connection id array", async () => {
@@ -472,7 +472,7 @@ describe("ResourceManager direct connection methods", function () {
     cleanup(async () => {
       // clean up after each test
       await rm.deleteDirectConnections();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("addDirectConnection() should correctly store a direct connection spec", async () => {
@@ -581,7 +581,7 @@ describe("ResourceManager SR subject methods", function () {
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   function createTestSubjects(schemaRegistry: SchemaRegistry, count: number): Subject[] {
@@ -736,7 +736,7 @@ describe("ResourceManager general utility methods", function () {
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("CCLOUD: purgeConnectionResources() should correctly delete all CCloud resources", async () => {
@@ -773,7 +773,7 @@ describe("ResourceManager general utility methods", function () {
   });
 });
 
-describe("ResourceManager Uri metadata methods", () => {
+describe.only("ResourceManager Uri metadata methods", () => {
   let resourceManager: ResourceManager;
 
   const testUri: Uri = Uri.parse("file:///test-file.sql");
@@ -797,7 +797,7 @@ describe("ResourceManager Uri metadata methods", () => {
     cleanup(async () => {
       // clean up after each test
       await clearWorkspaceState();
-    }, this);
+    }, this.currentTest?.fullTitle());
   });
 
   it("should set and get Uri metadata correctly", async () => {

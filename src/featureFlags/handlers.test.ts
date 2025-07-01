@@ -33,7 +33,7 @@ describe("featureFlags/handlers", function () {
     cleanup(async () => {
       // reset feature flags after each test
       clientModule.resetFlagDefaults();
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     sandbox.restore();
   });

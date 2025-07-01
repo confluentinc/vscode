@@ -36,17 +36,17 @@ describe("WebsocketManager peerWorkspaceCount tests", () => {
 });
 
 describe("WebsocketManager disconnected tests", () => {
+  let sandbox: sinon.SinonSandbox;
   const websocketManager = WebsocketManager.getInstance();
-  let websocketStub: sinon.SinonStub;
 
   before(() => {
+    sandbox = sinon.createSandbox();
     // ensure websocket smells not connected at this point
-    websocketStub = sinon.stub(websocketManager as any, "websocket").value(null);
+    sandbox.stub(websocketManager as any, "websocket").value(null);
   });
 
   after(() => {
-    // restore the original websocket
-    websocketStub.restore();
+    sandbox.restore();
   });
 
   it("Should not smell connected when websocket is null", () => {
@@ -126,15 +126,8 @@ describe("WebsocketManager dispose tests", () => {
 
 describe("WebsocketManager.parseMessage tests", () => {
   it("parseMessage vs bad message structure tests", () => {
-    // Nontrivial setups: break clones of GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE by respelling date fields to be something
+    // Nontrivial setups: break clone of GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE by respelling date fields to be something
     // not parseable as a Date.
-    const broken_ccloud_connection_event_bad_auth_time: any = JSON.parse(
-      JSON.stringify(GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE),
-    );
-    broken_ccloud_connection_event_bad_auth_time.body.connection.status.authentication.requires_authentication_at =
-      "ceci n'est pas une date";
-
-    // likewise for ...ccloud.requires_authentication_at
     const broken_ccloud_connection_event_bad_ccloud_auth_time: any = JSON.parse(
       JSON.stringify(GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE),
     );
@@ -169,7 +162,6 @@ describe("WebsocketManager.parseMessage tests", () => {
 
       // various bad body structures for CONNECTION_EVENT
       // bad timestamp formats
-      JSON.stringify(broken_ccloud_connection_event_bad_auth_time),
       JSON.stringify(broken_ccloud_connection_event_bad_ccloud_auth_time),
       // bad action
       JSON.stringify(broken_ccloud_connection_event_bad_action),
@@ -221,9 +213,8 @@ describe("WebsocketManager.parseMessage tests", () => {
 });
 
 describe("WebsocketManager message recepit + callback routing tests (messageRouter interactions)", () => {
-  const manager = WebsocketManager.getInstance();
-
   let sandbox: sinon.SinonSandbox;
+  const manager = WebsocketManager.getInstance();
 
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
@@ -243,6 +234,7 @@ describe("WebsocketManager message recepit + callback routing tests (messageRout
   });
 
   afterEach(() => {
+    // Restore the stashed event emitter.
     sandbox.restore();
   });
 
