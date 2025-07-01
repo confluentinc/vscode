@@ -685,6 +685,9 @@ export async function testRun() {
       "--disable-updates",
       "--disable-workspace-trust",
       "--disable-extensions",
+      // DEBUGGING:
+      "--verbose",
+      "--log=trace",
     ],
   });
   if (reportCoverage) {

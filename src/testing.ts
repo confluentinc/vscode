@@ -37,7 +37,6 @@ export async function run() {
   }
 
   mocha.suite.beforeAll("Global suite setup", globalBeforeAll);
-  // mocha.suite.beforeEach("Global individual setup", globalBeforeEach);
 
   const failures = await new Promise<number>((resolve) => mocha.run(resolve));
   if (failures > 0) throw new Error(`${failures} tests failed.`);

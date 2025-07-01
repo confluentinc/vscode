@@ -60,9 +60,9 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    getCCloudConnectionStub = sandbox.stub(ccloud, "getCCloudConnection");
-    createCCloudConnectionStub = sandbox.stub(ccloud, "createCCloudConnection");
-    deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection");
+    getCCloudConnectionStub = sandbox.stub(ccloud, "getCCloudConnection").resolves();
+    createCCloudConnectionStub = sandbox.stub(ccloud, "createCCloudConnection").resolves();
+    deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection").resolves();
 
     // assume the connection is immediately usable for most tests
     sandbox
@@ -332,7 +332,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
 
     showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
-    deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection");
+    deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection").resolves();
 
     authProvider = getAuthProvider();
     createSessionStub = sandbox.stub(authProvider, "createSession").resolves();

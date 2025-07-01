@@ -39,11 +39,11 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
 
-    getContainerStub = sandbox.stub(dockerContainers, "getContainer");
-    startContainerStub = sandbox.stub(dockerContainers, "startContainer");
-    restartContainerStub = sandbox.stub(dockerContainers, "restartContainer");
-    imageExistsStub = sandbox.stub(dockerImages, "imageExists");
-    pullImageStub = sandbox.stub(dockerImages, "pullImage");
+    getContainerStub = sandbox.stub(dockerContainers, "getContainer").resolves();
+    startContainerStub = sandbox.stub(dockerContainers, "startContainer").resolves();
+    restartContainerStub = sandbox.stub(dockerContainers, "restartContainer").resolves();
+    imageExistsStub = sandbox.stub(dockerImages, "imageExists").resolves();
+    pullImageStub = sandbox.stub(dockerImages, "pullImage").resolves();
 
     workflow = new TestWorkflow();
   });
@@ -79,7 +79,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
   });
 
   it("handleExistingContainers() should handle an existing container and automatically start it if it isn't running", async () => {
-    const workflowStartContainerStub = sandbox.stub(workflow, "startContainer");
+    const workflowStartContainerStub = sandbox.stub(workflow, "startContainer").resolves();
     const fakeContainers: ContainerSummary[] = [
       { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
     ];
@@ -95,7 +95,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
   });
 
   it("handleExistingContainers() should handle multiple existing containers and automatically start them all", async () => {
-    const workflowStartContainerStub = sandbox.stub(workflow, "startContainer");
+    const workflowStartContainerStub = sandbox.stub(workflow, "startContainer").resolves();
     const fakeContainers: ContainerSummary[] = [
       { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
       { Id: "2", Names: ["/container2"], Image: "image1", State: "exited" },

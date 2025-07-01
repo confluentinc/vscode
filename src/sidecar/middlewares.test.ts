@@ -40,11 +40,13 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     ccloudAuthSessionInvalidatedStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
 
     resourceManager = getResourceManager();
-    getCCloudAuthStatusStub = sandbox.stub(resourceManager, "getCCloudAuthStatus");
+    getCCloudAuthStatusStub = sandbox.stub(resourceManager, "getCCloudAuthStatus").resolves();
 
     middleware = new CCloudAuthStatusMiddleware();
     handleCCloudAuthStatusSpy = sandbox.spy(middleware, "handleCCloudAuthStatus");
-    handleCCloudInvalidTokenStatusStub = sandbox.stub(middleware, "handleCCloudInvalidTokenStatus");
+    handleCCloudInvalidTokenStatusStub = sandbox
+      .stub(middleware, "handleCCloudInvalidTokenStatus")
+      .resolves();
   });
 
   afterEach(() => {
