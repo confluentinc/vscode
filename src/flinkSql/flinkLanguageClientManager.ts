@@ -49,6 +49,7 @@ export class FlinkLanguageClientManager implements Disposable {
   private lastDocUri: Uri | null = null;
   private reconnectCounter = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 2;
+  private textDocumentListener: Disposable | null = null;
 
   static getInstance(): FlinkLanguageClientManager {
     if (!FlinkLanguageClientManager.instance) {
@@ -315,14 +316,16 @@ export class FlinkLanguageClientManager implements Disposable {
         this.disposables.push(this.languageClient);
         this.lastDocUri = uri;
         this.lastWebSocketUrl = url;
+        if (this.textDocumentListener) {
+          this.textDocumentListener.dispose();
+        }
         // Clear outdated diagnostics on change, since the CCloud Flink SQL Server intermittently won't publish new diagnostics
-        this.disposables.push(
-          workspace.onDidChangeTextDocument((event) => {
-            if (event.document.uri.toString() === uri.toString()) {
-              this.languageClient?.diagnostics?.set(event.document.uri, []);
-            }
-          }),
-        );
+        this.textDocumentListener = workspace.onDidChangeTextDocument((event) => {
+          if (event.document.uri.toString() === uri.toString()) {
+            this.languageClient?.diagnostics?.set(event.document.uri, []);
+          }
+        });
+        this.disposables.push(this.textDocumentListener);
         logger.trace("Flink SQL language client successfully initialized");
         this.notifyConfigChanged();
       }
