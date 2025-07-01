@@ -364,7 +364,7 @@ describe("ResourceLoader::clearCache()", () => {
   });
 });
 
-describe.skip("ResourceLoader::getTopicsForCluster()", function () {
+describe("ResourceLoader::getTopicsForCluster()", function () {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
   let getSubjectsStub: sinon.SinonStub;
