@@ -218,8 +218,6 @@ components:
           $ref: "#/components/schemas/KafkaClusterStatus"
         schema_registry:
           $ref: "#/components/schemas/SchemaRegistryStatus"
-        authentication:
-          $ref: "#/components/schemas/Authentication"
     ConnectionType:
       enum:
       - LOCAL
