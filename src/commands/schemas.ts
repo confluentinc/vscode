@@ -2,7 +2,7 @@ import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/sidecar";
-import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
+import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
@@ -15,7 +15,6 @@ import {
   showErrorNotificationWithButtons,
 } from "../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
-import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
@@ -212,16 +211,13 @@ async function evolveSchemaCommand(schema: Schema) {
     return;
   }
 
-  // Go get the schema.
-  const schemaBody = await fetchSchemaBody(schema);
-
   // Get an untitled scheme URI corresponding the the schema that has no file path currently
   // (so that if they opt save to disk, it won't fail -- untitleds cannot supplant file:// schema documents).
   const evolveSchemaUri = await determineDraftSchemaUri(schema);
 
   // Initialize the editor with the current schema body.
   const edit = new vscode.WorkspaceEdit();
-  edit.insert(evolveSchemaUri, new vscode.Position(0, 0), schemaBody);
+  edit.insert(evolveSchemaUri, new vscode.Position(0, 0), schema.schema);
   await vscode.workspace.applyEdit(edit);
 
   // Load the evolve schema URI into an editor.
@@ -316,7 +312,6 @@ async function deleteSchemaVersionCommand(schema: Schema) {
       return;
     }
   }
-  let success = true;
 
   // Drive the delete via the resource loader so will be cache consistent.
   // Resource loader will also emit event to alert views to refresh if needed.
@@ -357,26 +352,11 @@ async function deleteSchemaVersionCommand(schema: Schema) {
       schemaVersionsChanged.fire({ change: "deleted", subject: newSubject });
     }
   } catch (e) {
-    success = false;
     logError(e, "Error deleting schema version", { extra: { error: {} } });
     showErrorNotificationWithButtons(
       `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
-
-  logUsage(UserEvent.SchemaAction, {
-    action: "delete schema version",
-    status: success ? "succeeded" : "failed",
-
-    connection_id: schema.connectionId,
-    connection_type: schema.connectionType,
-    environment_id: schema.environmentId,
-
-    schema_registry_id: schema.schemaRegistryId,
-    schema_type: schema.type,
-    subject_hash: hashed(schema.subject),
-    schema_version: schema.version,
-  });
 }
 
 async function deleteSchemaSubjectCommand(subject: Subject) {
@@ -478,8 +458,6 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
 
   logger.info("Deleting schema subject", subject.name);
 
-  let success = true;
-
   try {
     const message =
       schemaGroup.length > 1
@@ -503,7 +481,6 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
       `Subject ${subject.name} and ${versionCount} ${adjective} deleted.`,
     );
   } catch (e) {
-    success = false;
     logError(e, "Error deleting schema subject", { extra: { error: {} } });
     showErrorNotificationWithButtons(
       `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
@@ -514,20 +491,6 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
     //  instead of possibly lying).
     schemaSubjectChanged.fire({ change: "deleted", subject: subject });
   }
-
-  logUsage(UserEvent.SchemaAction, {
-    action: "delete schema subject",
-    status: success ? "succeeded" : "failed",
-
-    connection_id: subject.connectionId,
-    connection_type: subject.connectionType,
-    environment_id: subject.environmentId,
-
-    schema_registry_id: subject.schemaRegistryId,
-    schema_type: schemaGroup[0].type,
-    subject_hash: hashed(subject.name),
-    count_schema_versions_deleted: schemaGroup.length,
-  });
 }
 
 /**
