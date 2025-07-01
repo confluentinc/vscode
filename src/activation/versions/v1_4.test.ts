@@ -22,13 +22,12 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
       utils,
       "canShowNewOrUpdatedExtensionNotifications",
     );
-    showInfoNotificationWithButtonsStub = sandbox.stub(
-      notifications,
-      "showInfoNotificationWithButtons",
-    );
+    showInfoNotificationWithButtonsStub = sandbox
+      .stub(notifications, "showInfoNotificationWithButtons")
+      .resolves();
 
     // vscode stubs
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
   });
 
   afterEach(() => {

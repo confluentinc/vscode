@@ -45,7 +45,7 @@ describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function ()
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showQuickPickStub = sandbox.stub(window, "showQuickPick");
+    showQuickPickStub = sandbox.stub(window, "showQuickPick").resolves();
     executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     // assume user dismisses the notification for most tests
     showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();

@@ -130,7 +130,7 @@ export class ResourceManager {
       mutex = new Mutex();
       this.mutexes.set(key, mutex);
     }
-
+    logger.debug(`Acquiring mutex for key: ${key}`);
     return await mutex.runExclusive(callback);
   }
 

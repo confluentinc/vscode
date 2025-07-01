@@ -55,7 +55,7 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
   });
 
   afterEach(() => {

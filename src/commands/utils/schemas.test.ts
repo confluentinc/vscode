@@ -135,7 +135,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
+      showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves();
     });
 
     afterEach(function () {
@@ -167,7 +167,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves();
     });
 
     afterEach(function () {
@@ -203,7 +203,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves();
     });
 
     afterEach(function () {

@@ -90,7 +90,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     getContainersForImageStub = sandbox
       .stub(dockerContainers, "getContainersForImage")
       .resolves([]);
-    getContainerStub = sandbox.stub(dockerContainers, "getContainer");
+    getContainerStub = sandbox.stub(dockerContainers, "getContainer").resolves();
 
     workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
 
@@ -118,7 +118,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       .stub(workflow, "waitForLocalResourceEventChange")
       .resolves();
 
-    updateLocalConnectionStub = sandbox.stub(local, "updateLocalConnection");
+    updateLocalConnectionStub = sandbox.stub(local, "updateLocalConnection").resolves();
   });
 
   afterEach(() => {
