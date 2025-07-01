@@ -208,4 +208,96 @@ describe("FlinkLanguageClientManager", () => {
       sinon.assert.calledOnce(getCatalogDatabaseFromMetadataStub);
     });
   });
+  describe("constructor behavior", () => {
+    it("should initialize language client when has auth session & active flinksql document", async () => {
+      hasCCloudAuthSessionStub.returns(true);
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
+      sandbox.stub(vscode.window, "activeTextEditor").value(fakeEditor);
+      const maybeStartStub = sandbox
+        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
+        .resolves();
+
+      // Re-initialize the singleton so the constructor runs
+      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager.getInstance();
+
+      sinon.assert.calledOnce(maybeStartStub);
+      sinon.assert.calledWith(maybeStartStub, fakeUri);
+    });
+
+    it("should initialize language client when has auth session & visible flinksql document (no active flinksql document)", async () => {
+      hasCCloudAuthSessionStub.returns(true);
+
+      // Non-flinksql active editor
+      const nonFlinkDocument = {
+        languageId: "typescript",
+        uri: vscode.Uri.parse("file:///non/flink/doc.ts"),
+      } as vscode.TextDocument;
+      const nonFlinkEditor = { document: nonFlinkDocument } as vscode.TextEditor;
+      sandbox.stub(vscode.window, "activeTextEditor").value(nonFlinkEditor);
+
+      // Visible flinksql editor
+      const fakeUri = vscode.Uri.parse("file:///fake/path/visible.flinksql");
+      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
+      sandbox.stub(vscode.window, "visibleTextEditors").value([fakeEditor]);
+
+      const maybeStartStub = sandbox
+        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
+        .resolves();
+
+      // Re-initialize the singleton so the constructor runs
+      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager.getInstance();
+
+      sinon.assert.calledOnce(maybeStartStub);
+      sinon.assert.calledWith(maybeStartStub, fakeUri);
+    });
+
+    it("should not initialize language client when has auth session but no flinksql document is open", async () => {
+      hasCCloudAuthSessionStub.returns(true);
+
+      // No active editor
+      sandbox.stub(vscode.window, "activeTextEditor").value(undefined);
+
+      // No visible flinksql editors
+      const nonFlinkDocument = {
+        languageId: "typescript",
+        uri: vscode.Uri.parse("file:///non/flink/doc.ts"),
+      } as vscode.TextDocument;
+      const nonFlinkEditor = { document: nonFlinkDocument } as vscode.TextEditor;
+      sandbox.stub(vscode.window, "visibleTextEditors").value([nonFlinkEditor]);
+
+      const maybeStartStub = sandbox
+        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
+        .resolves();
+
+      // Re-initialize the singleton so the constructor runs
+      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager.getInstance();
+
+      sinon.assert.notCalled(maybeStartStub);
+    });
+
+    it("should not initialize language client when not authenticated with CCloud", async () => {
+      hasCCloudAuthSessionStub.returns(false);
+
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
+      sandbox.stub(vscode.window, "activeTextEditor").value(fakeEditor);
+
+      const maybeStartStub = sandbox
+        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
+        .resolves();
+
+      // Re-initialize the singleton so the constructor runs
+      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager.getInstance();
+
+      sinon.assert.notCalled(maybeStartStub);
+    });
+  });
 });
