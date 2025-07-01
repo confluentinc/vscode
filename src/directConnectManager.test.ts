@@ -5,7 +5,7 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../tests/unit/testUtils";
+import { cleanup, getTestExtensionContext } from "../tests/unit/testUtils";
 import {
   ConnectionSpec,
   ConnectionSpecFromJSON,
@@ -81,12 +81,14 @@ describe("DirectConnectionManager behavior", () => {
       .resolves(TEST_DIRECT_CONNECTION);
   });
 
-  afterEach(async () => {
+  afterEach(async function () {
+    cleanup(async () => {
+      // wipe out any stored connections
+      await getResourceManager().deleteDirectConnections();
+    }, this);
+
     // reset the singleton instance
     DirectConnectionManager["instance"] = null;
-    // wipe out any stored connections
-    await getResourceManager().deleteDirectConnections();
-
     sandbox.restore();
   });
 
