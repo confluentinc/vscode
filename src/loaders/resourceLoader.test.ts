@@ -364,28 +364,33 @@ describe("ResourceLoader::clearCache()", () => {
   });
 });
 
-describe("ResourceLoader::getTopicsForCluster()", () => {
+describe("ResourceLoader::getTopicsForCluster()", function () {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
   let getSubjectsStub: sinon.SinonStub;
   let fetchTopicsStub: sinon.SinonStub;
 
-  beforeEach(() => {
+  this.beforeEach(function () {
+    console.info(`starting beforeEach: "${this.currentTest?.fullTitle()}"`);
     sandbox = sinon.createSandbox();
 
     // set up stubs, loaderInstance
     fetchTopicsStub = sandbox.stub(loaderUtils, "fetchTopics").resolves([]);
     loaderInstance = LocalResourceLoader.getInstance();
     getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects").resolves([]);
+
+    console.info(`done with beforeEach: "${this.currentTest?.fullTitle()}"`);
   });
 
   afterEach(async function () {
+    console.info(`starting afterEach: "${this.currentTest?.fullTitle()}"`);
     cleanup(async () => {
       // clear cached workspace state
       await clearWorkspaceState();
     }, this.currentTest?.fullTitle());
 
     sandbox.restore();
+    console.info(`done with afterEach: "${this.currentTest?.fullTitle()}"`);
   });
 
   it("Raises error for mismatched connectionId in givent cluster", async () => {
