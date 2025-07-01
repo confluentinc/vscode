@@ -676,6 +676,7 @@ export async function testRun() {
     extensionTestsEnv: {
       // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
       FGREP: testFilter,
+      DEBUG: "vscode:*,mocha:*",
     },
     launchArgs: [
       "--no-sandbox",
