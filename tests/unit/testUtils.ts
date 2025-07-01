@@ -93,6 +93,7 @@ export function createTestSubject(schemaRegistry: SchemaRegistry, name: string):
     schemaRegistry.id,
   );
 }
+
 /**
  * Create a mock ResponseError for testing.
  * @param status - HTTP status code
@@ -116,4 +117,26 @@ export function createResponseError(
     json: () => Promise.resolve(JSON.parse(body)),
   } as Response;
   return new ResponseError(response);
+}
+
+/**
+ * Helper function to run a cleanup function with a timeout. Used in order to isolate potentially
+ * long-running cleanup functions in tests that may break `beforeEach`/`afterEach` hooks.
+ * @param func - The (async) cleanup function to run.
+ * @param thisContext - The Mocha context, used for logging errors.
+ * @param timeout - Optional timeout for the cleanup function, defaults to 3000ms (3sec).
+ */
+export async function cleanup(
+  func: () => Promise<void>,
+  testName: string | undefined,
+  timeout = 3000,
+): Promise<void> {
+  try {
+    await Promise.race([
+      func(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("cleanup timed out")), timeout)),
+    ]);
+  } catch (error) {
+    console.error(`🔥 ${testName} afterEach error:`, error);
+  }
 }

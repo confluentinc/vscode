@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { LDElectronMainClient, LDFlagChangeset, LDFlagSet } from "launchdarkly-electron-client-sdk";
 import * as sinon from "sinon";
 import { env } from "vscode";
+import { cleanup } from "../../tests/unit/testUtils";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import * as clientModule from "./client";
 import { FEATURE_FLAG_DEFAULTS, FeatureFlag, FeatureFlags } from "./constants";
@@ -29,8 +30,11 @@ describe("featureFlags/handlers", function () {
   });
 
   afterEach(function () {
-    // reset feature flags after each test
-    clientModule.resetFlagDefaults();
+    cleanup(async () => {
+      // reset feature flags after each test
+      clientModule.resetFlagDefaults();
+    }, this.currentTest?.fullTitle());
+
     sandbox.restore();
   });
 

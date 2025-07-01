@@ -305,10 +305,9 @@ describe("sidecar/utils.ts", () => {
 
     beforeEach(() => {
       sandbox = sinon.createSandbox();
-      showErrorNotificationWithButtonsStub = sandbox.stub(
-        notifications,
-        "showErrorNotificationWithButtons",
-      );
+      showErrorNotificationWithButtonsStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
     });
 
     afterEach(() => {

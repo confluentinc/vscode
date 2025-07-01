@@ -22,11 +22,10 @@ describe("sidecarManager.ts", () => {
       sandbox = sinon.createSandbox();
       clock = sandbox.useFakeTimers();
       manager = new SidecarManager();
-      logErrorStub = sandbox.stub(errors, "logError");
+      logErrorStub = sandbox.stub(errors, "logError").resolves();
     });
 
     afterEach(() => {
-      clock.restore();
       sandbox.restore();
     });
 
@@ -144,7 +143,7 @@ describe("sidecarManager.ts", () => {
             unref: () => {},
           };
           spawnStub.returns(mockProcess);
-          confirmSidecarProcessIsRunningStub = sinon
+          confirmSidecarProcessIsRunningStub = sandbox
             .stub(manager, "confirmSidecarProcessIsRunning")
             .resolves();
 

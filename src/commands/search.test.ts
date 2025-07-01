@@ -8,14 +8,14 @@ import {
   topicSearchSet,
 } from "../emitters";
 import {
-  searchResources,
-  clearResourceSearch,
-  searchTopics,
-  clearTopicSearch,
-  searchSchemas,
-  clearSchemaSearch,
-  searchFlinkStatements,
   clearFlinkStatementsSearch,
+  clearResourceSearch,
+  clearSchemaSearch,
+  clearTopicSearch,
+  searchFlinkStatements,
+  searchResources,
+  searchSchemas,
+  searchTopics,
 } from "./search";
 
 describe("commands/search.ts", () => {
@@ -30,9 +30,9 @@ describe("commands/search.ts", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves();
 
-    setContextValueStub = sandbox.stub(context, "setContextValue");
+    setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
 
     resourceSearchSetFireStub = sandbox.stub(resourceSearchSet, "fire");
     topicSearchSetFireStub = sandbox.stub(topicSearchSet, "fire");

@@ -118,8 +118,8 @@ describe("WriteableTmpDir", () => {
     sandbox = sinon.createSandbox();
 
     tmpdirStub = sandbox.stub(fsWrappers, "tmpdir");
-    writeFileStub = sandbox.stub(fsWrappers, "writeFile");
-    deleteFileStub = sandbox.stub(fsWrappers, "deleteFile");
+    writeFileStub = sandbox.stub(fsWrappers, "writeFile").resolves();
+    deleteFileStub = sandbox.stub(fsWrappers, "deleteFile").resolves();
 
     originalInstance = WriteableTmpDir["instance"];
     instance = WriteableTmpDir.getInstance();

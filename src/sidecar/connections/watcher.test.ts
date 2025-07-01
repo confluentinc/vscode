@@ -10,7 +10,7 @@ import {
   TEST_DIRECT_CONNECTION_ID,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
+import { cleanup, getTestExtensionContext } from "../../../tests/unit/testUtils";
 import {
   ConnectedState,
   Connection,
@@ -56,8 +56,11 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
     logErrorStub = sandbox.stub(errors, "logError").resolves();
   });
 
-  afterEach(() => {
-    connectionStateWatcher.purgeCachedConnectionState(CCLOUD_CONNECTION_ID);
+  afterEach(function () {
+    cleanup(async () => {
+      connectionStateWatcher.purgeCachedConnectionState(CCLOUD_CONNECTION_ID);
+    }, this.currentTest?.fullTitle());
+
     sandbox.restore();
   });
 
@@ -349,7 +352,9 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+    showErrorNotificationStub = sandbox
+      .stub(notifications, "showErrorNotificationWithButtons")
+      .resolves();
   });
 
   afterEach(() => {
@@ -532,7 +537,7 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    getDirectConnectionStub = sandbox.stub(getResourceManager(), "getDirectConnection");
+    getDirectConnectionStub = sandbox.stub(getResourceManager(), "getDirectConnection").resolves();
   });
 
   afterEach(() => {
