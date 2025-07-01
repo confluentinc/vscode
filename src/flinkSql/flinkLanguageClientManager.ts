@@ -315,6 +315,14 @@ export class FlinkLanguageClientManager implements Disposable {
         this.disposables.push(this.languageClient);
         this.lastDocUri = uri;
         this.lastWebSocketUrl = url;
+        // Clear outdated diagnostics on change, since the CCloud Flink SQL Server intermittently won't publish new diagnostics
+        this.disposables.push(
+          workspace.onDidChangeTextDocument((event) => {
+            if (event.document.uri.toString() === uri.toString()) {
+              this.languageClient?.diagnostics?.set(event.document.uri, []);
+            }
+          }),
+        );
         logger.trace("Flink SQL language client successfully initialized");
         this.notifyConfigChanged();
       }
