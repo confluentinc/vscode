@@ -467,7 +467,7 @@ export class ResourceViewProvider
     }
     logger.debug("updating environment with last status from connection state watcher", {
       id: env.id,
-      status: { ...status, authentication: undefined },
+      status,
     });
     // if either of these are undefined, we clear any error text that will be seen in the tooltips;
     // otherwise we display the error message(s) in the tooltip

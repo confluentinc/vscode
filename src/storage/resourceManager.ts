@@ -2,10 +2,10 @@ import { Mutex } from "async-mutex";
 import { SecretStorage, Uri } from "vscode";
 import { AuthCallbackEvent } from "../authn/types";
 import {
+  ConnectedState,
   ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionSpecToJSON,
-  Status,
 } from "../clients/sidecar";
 import { getExtensionContext } from "../context/extension";
 import { FormConnectionType } from "../directConnections/types";
@@ -31,7 +31,7 @@ const logger = new Logger("storage.resourceManager");
 export interface CustomConnectionSpec extends ConnectionSpec {
   // enforce `ConnectionId` type over `string`
   id: ConnectionId;
-  /** The option chosen by the user to describe this connection. Similar to {@link ConnectionType} */
+  /** The option chosen by the user to describe this connection. Similar to `ConnectionType` */
   formConnectionType: FormConnectionType;
   /** If the formConnectionType is "Other" we prompt users to specify the type */
   specifiedConnectionType?: string;
@@ -131,7 +131,17 @@ export class ResourceManager {
       this.mutexes.set(key, mutex);
     }
     logger.debug(`Acquiring mutex for key: ${key}`);
-    return await mutex.runExclusive(callback);
+    try {
+      return await mutex.runExclusive(callback);
+    } catch (error) {
+      logger.error(
+        `Error while running callback with mutex for key ${key}:`,
+        error instanceof Error ? error.stack : error,
+      );
+      throw error;
+    } finally {
+      logger.debug(`Released mutex for key: ${key}`);
+    }
   }
 
   /**
@@ -518,14 +528,26 @@ export class ResourceManager {
     return reset === "true";
   }
 
-  /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
-  async setCCloudAuthStatus(status: Status): Promise<void> {
-    await this.secrets.store(SecretStorageKeys.CCLOUD_AUTH_STATUS, String(status));
+  /** Store the latest CCloud {@link ConnectedState} from the sidecar. */
+  async setCCloudState(state: ConnectedState): Promise<void> {
+    // no additional stringification needed since this is just a string enum value
+    await this.secrets.store(SecretStorageKeys.CCLOUD_STATE, state);
   }
 
-  /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
-  async getCCloudAuthStatus(): Promise<string | undefined> {
-    return await this.secrets.get(SecretStorageKeys.CCLOUD_AUTH_STATUS);
+  /** Get the last stored CCloud {@link ConnectedState} we received from the sidecar. */
+  async getCCloudState(): Promise<ConnectedState> {
+    const storedState: string | undefined = await this.secrets.get(SecretStorageKeys.CCLOUD_STATE);
+    if (!storedState) {
+      return ConnectedState.None;
+    }
+
+    if (!Object.values(ConnectedState).includes(storedState as ConnectedState)) {
+      logger.warn(
+        `Invalid CCloud state found in storage: ${storedState}. Defaulting to ${ConnectedState.None}.`,
+      );
+      return ConnectedState.None;
+    }
+    return storedState as ConnectedState;
   }
 
   // DIRECT CONNECTIONS - entirely handled through SecretStorage
