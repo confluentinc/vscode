@@ -16,7 +16,7 @@ import { getFlinkSQLLanguageServerOutputChannel } from "./logging";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient.Client");
-
+const FLINK_DIAGNOSTIC_COLLECTION_NAME = "confluent.flinkSql";
 /** Initialize the FlinkSQL language client and connect to the language server websocket.
  * Creates a WebSocket (ws), then on ws.onopen makes the WebsocketTransport class for server, and then creates the Client.
  * Provides middleware for completions and diagnostics in ClientOptions
@@ -60,6 +60,7 @@ export async function initializeLanguageClient(
           ],
           outputChannel: getFlinkSQLLanguageServerOutputChannel(),
           progressOnInitialization: true,
+          diagnosticCollectionName: FLINK_DIAGNOSTIC_COLLECTION_NAME,
           middleware: {
             sendRequest: async (type, params, token, next) => {
               // CCloud Flink SQL Server does not support multiline completions atm, so we need to convert ranges to single-line & back
