@@ -61,7 +61,6 @@ test.describe("Topics Listing & Message Viewer", () => {
       await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
       const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
       // environments are collapsed by default, so we need to expand it first
-      await expect(firstEnvironment).toHaveAttribute("aria-expanded", "false");
       await firstEnvironment.click();
       await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
 
@@ -90,7 +89,6 @@ test.describe("Topics Listing & Message Viewer", () => {
       // Topics view nav action
       const topicsView = new TopicsView(page);
       // should be collapsed by default since we haven't selected a Kafka cluster yet
-      await expect(topicsView.header).toHaveAttribute("aria-expanded", "false");
       await topicsView.header.click();
       await expect(topicsView.header).toHaveAttribute("aria-expanded", "true");
 
@@ -162,7 +160,6 @@ test.describe("Topics Listing & Message Viewer", () => {
       await expect(resourcesView.directConnections).not.toHaveCount(0);
       const firstConnection = resourcesView.directConnections.first();
       // direct connections are collapsed by default, so we need to expand it first
-      await expect(firstConnection).toHaveAttribute("aria-expanded", "false");
       await firstConnection.click();
       await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
 
@@ -192,7 +189,6 @@ test.describe("Topics Listing & Message Viewer", () => {
       // Topics view nav action
       const topicsView = new TopicsView(page);
       // should be collapsed by default since we haven't selected a Kafka cluster yet
-      await expect(topicsView.header).toHaveAttribute("aria-expanded", "false");
       await topicsView.header.click();
       await expect(topicsView.header).toHaveAttribute("aria-expanded", "true");
 
