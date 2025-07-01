@@ -39,7 +39,7 @@ export class Logger {
 
   debug(message: string, ...args: any[]) {
     const prefix = this.logPrefix("debug");
-    console.debug(prefix, message, ...args);
+    console.info(prefix, message, ...args);
     this.logToOutputChannelAndFile("debug", prefix, message, ...args);
   }
 
