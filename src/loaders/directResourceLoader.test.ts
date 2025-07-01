@@ -45,7 +45,9 @@ describe("DirectResourceLoader", () => {
       .resolves(myEnvironment);
 
     // Ensure workspace storage cached data for this connection id is cleared before each test.
+    console.log("Resetting DirectResourceLoader cache");
     await loader.reset();
+    console.log("DirectResourceLoader cache reset complete");
   });
 
   afterEach(() => {
