@@ -429,6 +429,11 @@ describe("CCloud auth flow", () => {
     await ccloud.deleteCCloudConnection();
   });
 
+  afterEach(async () => {
+    // force sign-out so we don't have a lingering CCloud connection for other tests
+    await ccloud.deleteCCloudConnection();
+  });
+
   it("should successfully authenticate via CCloud with the sign_in_uri", async function () {
     if (!process.env.E2E_USERNAME || !process.env.E2E_PASSWORD) {
       // These env vars needed within testAuthFlow() for any of this to work.
