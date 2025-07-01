@@ -52,6 +52,14 @@ export async function run() {
 async function globalBeforeAll() {
   console.log("Global test suite setup");
 
+  // extension host debugging
+  process.on("disconnect", () => {
+    console.warn("Extension Host process disconnected");
+  });
+  process.on("exit", (code) => {
+    console.log(`Extension Host process exiting with code ${code}`);
+  });
+
   // smoke-test to make sure we can set up the environment for tests by activating the extension:
   // - set the extension context
   // - start the sidecar process
