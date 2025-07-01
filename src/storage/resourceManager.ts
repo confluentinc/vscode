@@ -131,9 +131,16 @@ export class ResourceManager {
       this.mutexes.set(key, mutex);
     }
     logger.debug(`Acquiring mutex for key: ${key}`);
-    const result = await mutex.runExclusive(callback);
-    logger.debug(`Released mutex for key: ${key}`);
-    return result;
+    try {
+      return await mutex.runExclusive(callback);
+    } catch (error) {
+      logger.error(
+        `Error while running callback with mutex for key ${key}:`,
+        error instanceof Error ? error.stack : error,
+      );
+    } finally {
+      logger.debug(`Released mutex for key: ${key}`);
+    }
   }
 
   /**
