@@ -80,6 +80,7 @@ export function build(done) {
   if (result.error) throw result.error;
 
   if (production) {
+    console.log("Setting up Segment, Sentry, and LaunchDarkly for production build...");
     process.env.SENTRY_ENV = "production";
     setupSegment();
     setupSentry();
@@ -685,6 +686,9 @@ export async function testRun() {
       "--disable-updates",
       "--disable-workspace-trust",
       "--disable-extensions",
+      // DEBUGGING:
+      "--verbose",
+      "--log=trace",
     ],
   });
   if (reportCoverage) {

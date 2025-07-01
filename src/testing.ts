@@ -16,7 +16,10 @@ export async function run() {
     color: true,
     forbidOnly: !!process.env.CI, // fail in CI if there are any .only tests
     ui: "bdd",
-    timeout: process.env.CI !== null ? 30_000 : 10_000,
+    timeout: process.env.CI != null ? 30_000 : 10_000,
+    allowUncaught: false,
+    checkLeaks: true,
+    fullTrace: true,
     reporter: "mocha-multi-reporters",
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
