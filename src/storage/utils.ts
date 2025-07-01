@@ -12,13 +12,36 @@ export function getGlobalState(): GlobalState {
   return context.globalState;
 }
 
+class InternalMemento implements Memento {
+  private store: Map<string, any> = new Map();
+
+  get(key: string, defaultValue?: any): any {
+    return this.store.get(key) ?? defaultValue;
+  }
+
+  update(key: string, value: any): Thenable<void> {
+    if (value === undefined) {
+      this.store.delete(key);
+    } else {
+      this.store.set(key, value);
+    }
+    return Promise.resolve();
+  }
+
+  keys(): readonly string[] {
+    return Array.from(this.store.keys()).sort();
+  }
+}
+const fakeWorkspaceState: WorkspaceState = new InternalMemento();
+
 /**
  * Minimal wrapper around the {@link ExtensionContext}'s
  * {@linkcode ExtensionContext.workspaceState workspaceState} to allow stubbing {@link Memento} for tests.
  */
 export function getWorkspaceState(): WorkspaceState {
-  const context: ExtensionContext = getExtensionContext();
-  return context.workspaceState;
+  // const context: ExtensionContext = getExtensionContext();
+  // return context.workspaceState;
+  return fakeWorkspaceState;
 }
 
 /**
