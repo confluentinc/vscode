@@ -40,6 +40,8 @@ export async function run() {
   }
 
   mocha.suite.beforeAll("Global suite setup", globalBeforeAll);
+  mocha.suite.beforeEach("Global beforeEach", globalBeforeEach);
+  mocha.suite.afterEach("Global afterEach", globalAfterEach);
 
   const failures = await new Promise<number>((resolve) => mocha.run(resolve));
   if (failures > 0) throw new Error(`${failures} tests failed.`);
@@ -76,4 +78,12 @@ async function globalBeforeAll() {
 
   // otherwise, we should see this log line and tests should continue:
   console.log("✅ Test environment is ready. Running tests...");
+}
+
+async function globalBeforeEach(this: Mocha.Context) {
+  console.log(`Global beforeEach hook: "${this.currentTest?.fullTitle()}"`);
+}
+
+async function globalAfterEach(this: Mocha.Context) {
+  console.log(`Global afterEach hook: "${this.currentTest?.fullTitle()}"`);
 }
