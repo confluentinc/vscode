@@ -16,6 +16,7 @@ import {
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import {
+  cleanup,
   createTestSubject,
   createTestTopicData,
   getTestExtensionContext,
@@ -378,9 +379,11 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects").resolves([]);
   });
 
-  afterEach(async () => {
-    // clear cached workspace state
-    await clearWorkspaceState();
+  afterEach(async function () {
+    cleanup(async () => {
+      // clear cached workspace state
+      await clearWorkspaceState();
+    }, this);
 
     sandbox.restore();
   });

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import type { LDClientBase } from "launchdarkly-js-sdk-common";
 import * as sinon from "sinon";
+import { cleanup } from "../../tests/unit/testUtils";
 import * as clientModule from "./client";
 import * as constants from "./constants";
 import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
@@ -37,9 +38,12 @@ describe("featureFlags/client.ts", function () {
   });
 
   afterEach(function () {
-    // reset feature flags and client after each test
-    clientModule.resetFlagDefaults();
-    clientModule.disposeLaunchDarklyClient();
+    cleanup(async () => {
+      // reset feature flags and client after each test
+      clientModule.resetFlagDefaults();
+      clientModule.disposeLaunchDarklyClient();
+    }, this);
+
     sandbox.restore();
   });
 
