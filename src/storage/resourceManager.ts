@@ -138,6 +138,7 @@ export class ResourceManager {
         `Error while running callback with mutex for key ${key}:`,
         error instanceof Error ? error.stack : error,
       );
+      throw error;
     } finally {
       logger.debug(`Released mutex for key: ${key}`);
     }
