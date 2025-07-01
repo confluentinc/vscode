@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { window, workspace } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { restoreSchemaRegistryApi, stubSchemaRegistryApi } from "../../tests/unit/apis";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -21,6 +22,13 @@ describe("authz.schemaRegistry", function () {
   let mockClient: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let getConfigurationStub: sinon.SinonStub;
   let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+
+  before(() => {
+    restoreSchemaRegistryApi();
+  });
+  after(() => {
+    stubSchemaRegistryApi();
+  });
 
   beforeEach(async function () {
     // preload the schema registry in extension state

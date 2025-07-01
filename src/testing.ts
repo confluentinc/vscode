@@ -2,6 +2,7 @@ import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { join, resolve } from "path";
+import { setupGlobalApiStubs } from "../tests/unit/apis";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
 
 export async function run() {
@@ -16,7 +17,10 @@ export async function run() {
     color: true,
     forbidOnly: !!process.env.CI, // fail in CI if there are any .only tests
     ui: "bdd",
-    timeout: process.env.CI !== null ? 30_000 : 10_000,
+    timeout: process.env.CI != null ? 30_000 : 10_000,
+    allowUncaught: false,
+    checkLeaks: true,
+    fullTrace: true,
     reporter: "mocha-multi-reporters",
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
@@ -37,6 +41,8 @@ export async function run() {
   }
 
   mocha.suite.beforeAll("Global suite setup", globalBeforeAll);
+  mocha.suite.beforeEach("Global beforeEach", globalBeforeEach);
+  mocha.suite.afterEach("Global afterEach", globalAfterEach);
 
   const failures = await new Promise<number>((resolve) => mocha.run(resolve));
   if (failures > 0) throw new Error(`${failures} tests failed.`);
@@ -52,6 +58,17 @@ export async function run() {
 async function globalBeforeAll() {
   console.log("Global test suite setup");
 
+  // stub APIs that should never actually be called during tests
+  setupGlobalApiStubs();
+
+  // extension host debugging
+  process.on("disconnect", () => {
+    console.warn("Extension Host process disconnected");
+  });
+  process.on("exit", (code) => {
+    console.log(`Extension Host process exiting with code ${code}`);
+  });
+
   // smoke-test to make sure we can set up the environment for tests by activating the extension:
   // - set the extension context
   // - start the sidecar process
@@ -65,4 +82,12 @@ async function globalBeforeAll() {
 
   // otherwise, we should see this log line and tests should continue:
   console.log("✅ Test environment is ready. Running tests...");
+}
+
+async function globalBeforeEach(this: Mocha.Context) {
+  console.log(`Global beforeEach hook: "${this.currentTest?.fullTitle()}"`);
+}
+
+async function globalAfterEach(this: Mocha.Context) {
+  console.log(`Global afterEach hook: "${this.currentTest?.fullTitle()}"`);
 }
