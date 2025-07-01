@@ -4,8 +4,13 @@ import {
   ChatResponseStream,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
+  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
+  MarkdownString,
+  PreparedToolInvocation,
+  ProviderResult,
 } from "vscode";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
@@ -26,6 +31,63 @@ export interface IListTopicsParameters {
 
 export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters> {
   readonly name = "list_topics";
+
+  prepareInvocation(
+    options: LanguageModelToolInvocationPrepareOptions<IListTopicsParameters>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    token: CancellationToken,
+  ): ProviderResult<PreparedToolInvocation> {
+    const { input } = options;
+    let invocationMessage: string;
+    let confirmationMessage: MarkdownString;
+
+    // Build invocation message based on parameters
+    const messageParts = ["Get topics"];
+    if (input.kafkaClusterId) {
+      messageParts.push(`from Kafka cluster ${input.kafkaClusterId}`);
+    }
+    if (input.topicNameSubstring) {
+      messageParts.push(`filtered by "${input.topicNameSubstring}"`);
+    }
+    invocationMessage = messageParts.join(" ");
+
+    // Build confirmation message with multiple options on separate lines
+    confirmationMessage = new MarkdownString()
+      .appendMarkdown(`## List Kafka Topics\n`)
+      .appendMarkdown(`This tool will retrieve topics with the following criteria:\n`);
+
+    const criteria = [
+      { label: 'Kafka Cluster ID', value: input.kafkaClusterId },
+      { label: 'Environment ID', value: input.environmentId },
+      { label: 'Connection ID', value: input.connectionId },
+      { label: 'Topic Name Filter', value: input.topicNameSubstring, quoted: true },
+    ];
+
+    criteria.forEach(({ label, value, quoted }) => {
+      if (value) {
+        const displayValue = quoted ? `"${value}"` : value;
+        confirmationMessage.appendMarkdown(`\n- **${label}**: ${displayValue}`);
+      }
+    });
+
+    confirmationMessage
+      .appendMarkdown(`\n\n**Additional Information:**`)
+      .appendMarkdown(`\n- Results will be limited to 30 topics maximum`)
+      .appendMarkdown(`\n- Topic summaries will include partition count and configuration details`)
+      .appendMarkdown(`\n- Filtering is case-sensitive when using topic name substring`)
+      .appendMarkdown(`\n\nDo you want to proceed?`);
+
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "List Topics",
+      message: confirmationMessage,
+    };
+
+    return {
+      invocationMessage,
+      confirmationMessages,
+    };
+  }
+
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTopicsParameters>,
     token: CancellationToken,
@@ -94,9 +156,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     const topicNameSubstring = params.topicNameSubstring;
 
     if (topicNameSubstring) {
-      sampleTopics = sampleTopics.filter((topic) =>
-        topic.name.toLowerCase().includes(topicNameSubstring.toLowerCase()),
-      );
+      sampleTopics = sampleTopics.filter((topic) => topic.name.includes(topicNameSubstring));
       logger.debug(
         `Filtered topics by substring "${topicNameSubstring}": ${sampleTopics.length} matches`,
       );
@@ -165,4 +225,5 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
+}
 }
