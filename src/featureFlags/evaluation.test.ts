@@ -2,6 +2,7 @@ import * as assert from "assert";
 import type { LDClientBase } from "launchdarkly-js-sdk-common";
 import * as sinon from "sinon";
 import { commands, env, window } from "vscode";
+import { cleanup } from "../../tests/unit/testUtils";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import * as clientModule from "./client";
 import * as constants from "./constants";
@@ -36,7 +37,7 @@ describe("featureFlags/evaluation.ts", function () {
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
 
     // stub LD_CLIENT_ID instead of process.env
@@ -61,9 +62,12 @@ describe("featureFlags/evaluation.ts", function () {
   });
 
   afterEach(function () {
-    // reset feature flags and client after each test
-    clientModule.resetFlagDefaults();
-    clientModule.disposeLaunchDarklyClient();
+    cleanup(async () => {
+      // reset feature flags and client after each test
+      clientModule.resetFlagDefaults();
+      clientModule.disposeLaunchDarklyClient();
+    }, this.currentTest?.fullTitle());
+
     sandbox.restore();
   });
 

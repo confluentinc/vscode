@@ -222,7 +222,8 @@ describe("WebsocketManager.parseMessage tests", () => {
 
 describe("WebsocketManager message recepit + callback routing tests (messageRouter interactions)", () => {
   const manager = WebsocketManager.getInstance();
-  let messageRouterStub: sinon.SinonStub;
+
+  let sandbox: sinon.SinonSandbox;
 
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
@@ -236,13 +237,13 @@ describe("WebsocketManager message recepit + callback routing tests (messageRout
   };
 
   beforeEach(() => {
+    sandbox = sinon.createSandbox();
     // overlay the messageRouter member with an empty event emitter.
-    messageRouterStub = sinon.stub(manager as any, "messageRouter").value(constructMessageRouter());
+    sandbox.stub(manager as any, "messageRouter").value(constructMessageRouter());
   });
 
   afterEach(() => {
-    // Restore the stashed event emitter.
-    messageRouterStub.restore();
+    sandbox.restore();
   });
 
   // test subscribe, deliver lifecycle.

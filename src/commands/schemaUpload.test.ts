@@ -249,8 +249,10 @@ describe("commands/schemaUpload.ts chooseSubject()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    schemaSubjectQuickPickStub = sandbox.stub(quickPicksSchemas, "schemaSubjectQuickPick");
-    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+    schemaSubjectQuickPickStub = sandbox
+      .stub(quickPicksSchemas, "schemaSubjectQuickPick")
+      .resolves();
+    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves();
   });
 
   afterEach(() => {

@@ -25,11 +25,13 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
     sandbox = sinon.createSandbox();
 
     // vscode stubs
-    showErrorNotificationStub = sandbox.stub(window, "showErrorMessage");
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
+    showErrorNotificationStub = sandbox.stub(window, "showErrorMessage").resolves();
+    executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
 
     // quickpick stubs
-    schemaSubjectQuickPickStub = sandbox.stub(schemaQuickPicks, "schemaSubjectQuickPick");
+    schemaSubjectQuickPickStub = sandbox
+      .stub(schemaQuickPicks, "schemaSubjectQuickPick")
+      .resolves();
 
     // ResourceLoader stubs
     stubbedLoader = getStubbedLocalResourceLoader(sandbox);
@@ -224,10 +226,9 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
     });
 
     // quickpick stubs
-    subjectNameStrategyQuickPickStub = sandbox.stub(
-      schemaQuickPicks,
-      "subjectNameStrategyQuickPick",
-    );
+    subjectNameStrategyQuickPickStub = sandbox
+      .stub(schemaQuickPicks, "subjectNameStrategyQuickPick")
+      .resolves();
   });
 
   afterEach(() => {

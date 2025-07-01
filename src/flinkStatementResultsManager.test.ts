@@ -8,7 +8,7 @@ import {
 } from "../tests/createResultsManager";
 import { eventually } from "../tests/eventually";
 import { loadFixture } from "../tests/fixtures/utils";
-import { createResponseError } from "../tests/unit/testUtils";
+import { cleanup, createResponseError } from "../tests/unit/testUtils";
 import {
   GetSqlv1StatementResult200Response,
   GetSqlv1StatementResult200ResponseApiVersionEnum,
@@ -49,10 +49,13 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
     ({ ctx, vm } = await createTestResultsManagerContext(sandbox, statement));
   });
 
-  afterEach(() => {
+  afterEach(async function () {
+    cleanup(async () => {
+      ctx.manager.dispose();
+      vm.dispose();
+    }, this.currentTest?.fullTitle());
+
     sandbox.restore();
-    ctx.manager.dispose();
-    vm.dispose();
   });
 
   it("should process results from fixtures correctly", async () => {
@@ -64,7 +67,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
   });
 
   it("should handle viewing the statement source", async () => {
-    const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
+    const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 
     // Simulate hitting the button to view the statement source
     await vm.viewStatementSource();
@@ -305,7 +308,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       // Eventually, the idea would be to move this fake timer up to
       // the top-level describe's beforeEach.
       // See https://github.com/confluentinc/vscode/issues/1807
-      clock = sinon.useFakeTimers({ shouldClearNativeTimers: true });
+      clock = sandbox.useFakeTimers({ shouldClearNativeTimers: true });
     });
 
     afterEach(() => {

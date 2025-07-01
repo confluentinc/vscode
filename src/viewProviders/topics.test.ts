@@ -103,7 +103,7 @@ describe("TopicViewProvider search behavior", () => {
   });
 
   it("getChildren() should showErrorMessage if loader.getTopicsForCluster() raises TopicFetchError", async () => {
-    const showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
+    const showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
     getTopicsForClusterStub.rejects(new TopicFetchError("Test error"));
 
     const shouldBeEmpty = await provider.getChildren();

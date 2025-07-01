@@ -530,7 +530,7 @@ describe("directConnect.ts", () => {
       mockDispose = sandbox.stub();
 
       // Mock window.showInformationMessage
-      mockShowInformationMessage = sandbox.stub(vscode.window, "showInformationMessage");
+      mockShowInformationMessage = sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
       // Mock resource manager with required methods
       stubResourceManager = sandbox.createStubInstance(ResourceManager);

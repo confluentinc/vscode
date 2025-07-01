@@ -40,10 +40,9 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
 
     stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
-    flinkComputePoolQuickPickStub = sandbox.stub(
-      flinkComputePoolsQuickPick,
-      "flinkComputePoolQuickPick",
-    );
+    flinkComputePoolQuickPickStub = sandbox
+      .stub(flinkComputePoolsQuickPick, "flinkComputePoolQuickPick")
+      .resolves();
     uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
     updateDefaultFlinkPoolIdStub = sandbox.stub(updates, "updateDefaultFlinkPoolId").resolves();
     // assume the user is signed in to CCloud for most tests
@@ -54,7 +53,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     // vscode stubs
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       get: getConfigStub,
       has: sandbox.stub(),
       inspect: sandbox.stub(),
@@ -63,7 +62,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     getConfigStub.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS).returns("never");
     getConfigStub.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS).returns("never");
 
-    showInfoMessageStub = sandbox.stub(window, "showInformationMessage");
+    showInfoMessageStub = sandbox.stub(window, "showInformationMessage").resolves();
   });
 
   afterEach(() => {
@@ -203,11 +202,12 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
 
     stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
-    flinkComputePoolQuickPickStub = sandbox.stub(
-      flinkComputePoolsQuickPick,
-      "flinkComputePoolQuickPick",
-    );
-    flinkDatabaseQuickpickStub = sandbox.stub(flinkDatabaseQuickpick, "flinkDatabaseQuickpick");
+    flinkComputePoolQuickPickStub = sandbox
+      .stub(flinkComputePoolsQuickPick, "flinkComputePoolQuickPick")
+      .resolves();
+    flinkDatabaseQuickpickStub = sandbox
+      .stub(flinkDatabaseQuickpick, "flinkDatabaseQuickpick")
+      .resolves();
     uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
     updateDefaultDatabaseIdStub = sandbox.stub(updates, "updateDefaultFlinkDatabaseId").resolves();
     // assume the user is signed in to CCloud for most tests
@@ -218,7 +218,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     // vscode stubs
     getConfigStub = sandbox.stub();
     sandbox.stub(workspace, "getConfiguration").returns({
-      update: sandbox.stub(),
+      update: sandbox.stub().resolves(), // the only thenable method in WorkspaceConfiguration
       get: getConfigStub,
       has: sandbox.stub(),
       inspect: sandbox.stub(),
@@ -227,7 +227,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     getConfigStub.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS).returns("never");
     getConfigStub.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS).returns("never");
 
-    showInfoMessageStub = sandbox.stub(window, "showInformationMessage");
+    showInfoMessageStub = sandbox.stub(window, "showInformationMessage").resolves();
   });
 
   afterEach(() => {
