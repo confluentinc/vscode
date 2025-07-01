@@ -75,7 +75,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       .appendMarkdown(`\n\n**Additional Information:**`)
       .appendMarkdown(`\n- Results will be limited to 30 topics maximum`)
       .appendMarkdown(`\n- Topic summaries will include partition count and configuration details`)
-      .appendMarkdown(`\n- Filtering is case-insensitive when using topic name substring`)
+      .appendMarkdown(`\n- Filtering is case-sensitive when using topic name substring`)
       .appendMarkdown(`\n\nDo you want to proceed?`);
 
     const confirmationMessages: LanguageModelToolConfirmationMessages = {
