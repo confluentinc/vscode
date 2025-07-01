@@ -128,7 +128,7 @@ export function createResponseError(
  */
 export async function cleanup(
   func: () => Promise<void>,
-  thisContext: Mocha.Context,
+  testName: string | undefined,
   timeout = 3000,
 ): Promise<void> {
   try {
@@ -137,6 +137,6 @@ export async function cleanup(
       new Promise((_, reject) => setTimeout(() => reject(new Error("cleanup timed out")), timeout)),
     ]);
   } catch (error) {
-    console.error(`🔥 ${thisContext.currentTest?.fullTitle} afterEach error:`, error);
+    console.error(`🔥 ${testName} afterEach error:`, error);
   }
 }

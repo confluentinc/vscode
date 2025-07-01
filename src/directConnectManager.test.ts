@@ -85,7 +85,7 @@ describe("DirectConnectionManager behavior", () => {
     cleanup(async () => {
       // wipe out any stored connections
       await getResourceManager().deleteDirectConnections();
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     // reset the singleton instance
     DirectConnectionManager["instance"] = null;

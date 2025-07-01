@@ -42,7 +42,7 @@ describe("featureFlags/client.ts", function () {
       // reset feature flags and client after each test
       clientModule.resetFlagDefaults();
       clientModule.disposeLaunchDarklyClient();
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     sandbox.restore();
   });

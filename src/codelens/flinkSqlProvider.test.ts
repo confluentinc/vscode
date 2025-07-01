@@ -63,7 +63,7 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
   afterEach(async function () {
     cleanup(async () => {
       await getResourceManager().deleteAllUriMetadata();
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     FlinkSqlCodelensProvider["instance"] = null;
     sandbox.restore();

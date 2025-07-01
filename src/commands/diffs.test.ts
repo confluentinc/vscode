@@ -31,7 +31,7 @@ describe("commands/diffs.ts", () => {
     cleanup(async () => {
       // clear stored URI between tests
       await workspaceState.update(WorkspaceStorageKeys.DIFF_BASE_URI, undefined);
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     sandbox.restore();
   });

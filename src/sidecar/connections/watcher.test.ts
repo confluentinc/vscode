@@ -59,7 +59,7 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
   afterEach(function () {
     cleanup(async () => {
       connectionStateWatcher.purgeCachedConnectionState(CCLOUD_CONNECTION_ID);
-    }, this);
+    }, this.currentTest?.fullTitle());
 
     sandbox.restore();
   });
