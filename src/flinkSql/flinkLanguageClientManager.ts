@@ -315,8 +315,7 @@ export class FlinkLanguageClientManager implements Disposable {
         this.disposables.push(this.languageClient);
         this.lastDocUri = uri;
         this.lastWebSocketUrl = url;
-        // Adds an on change listener for our doc to clear language client diagnostics
-        // This is necessary because the language server intermittently does not publish new diagnostics after changes
+        // Clear outdated diagnostics on change, since the CCloud Flink SQL Server intermittently won't publish new diagnostics
         this.disposables.push(
           workspace.onDidChangeTextDocument((event) => {
             if (event.document.uri.toString() === uri.toString()) {
