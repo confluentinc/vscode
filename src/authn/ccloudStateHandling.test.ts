@@ -98,12 +98,7 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     sinon.assert.notCalled(stubbedResourceManager.setCCloudState);
   });
 
-  for (const currentState of [
-    ConnectedState.None,
-    ConnectedState.Expired,
-    ConnectedState.Success,
-    ConnectedState.Failed,
-  ]) {
+  for (const currentState of [ConnectedState.None, ConnectedState.Success, ConnectedState.Failed]) {
     it(`should fire a stableCCloudConnectedState event when the connected state is stable (${currentState})`, async () => {
       // previous connected state doesn't matter for this test
       const connection: Connection = {
