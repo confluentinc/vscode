@@ -1,6 +1,6 @@
 /** Sample test suite spellings of complex websocket messages */
 
-import { ConnectedState, ConnectionType, Status } from "../../../src/clients/sidecar";
+import { ConnectedState, ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI } from "../../../src/constants";
 import { ConnectionEventAction, Message, MessageType } from "../../../src/ws/messageTypes";
 
@@ -34,19 +34,6 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
         schema_registry: undefined,
       },
       status: {
-        authentication: {
-          status: Status.ValidToken,
-          user: {
-            id: "u-n9dv06",
-            username: "foo@bar.com",
-            first_name: "Foo",
-            last_name: "Bar",
-            social_connection: "",
-            auth_type: "AUTH_TYPE_LOCAL",
-          },
-          requires_authentication_at: new Date("2025-01-24T04:25:01.242072Z"),
-          errors: undefined,
-        },
         ccloud: {
           state: ConnectedState.Success,
           user: {
