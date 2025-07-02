@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { RequestContext } from "../clients/sidecar";
+import { ConnectedState, RequestContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
@@ -25,7 +25,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
   let middleware: CCloudAuthStatusMiddleware;
 
   let sandbox: sinon.SinonSandbox;
-  let getCCloudAuthStatusStub: sinon.SinonStub;
+  let getCCloudStateStub: sinon.SinonStub;
   let handleCCloudAuthStatusSpy: sinon.SinonSpy;
   let handleCCloudInvalidTokenStatusStub: sinon.SinonStub;
   let ccloudAuthSessionInvalidatedStub: sinon.SinonStub;
@@ -40,11 +40,13 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     ccloudAuthSessionInvalidatedStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
 
     resourceManager = getResourceManager();
-    getCCloudAuthStatusStub = sandbox.stub(resourceManager, "getCCloudAuthStatus");
+    getCCloudStateStub = sandbox.stub(resourceManager, "getCCloudState").resolves();
 
     middleware = new CCloudAuthStatusMiddleware();
     handleCCloudAuthStatusSpy = sandbox.spy(middleware, "handleCCloudAuthStatus");
-    handleCCloudInvalidTokenStatusStub = sandbox.stub(middleware, "handleCCloudInvalidTokenStatus");
+    handleCCloudInvalidTokenStatusStub = sandbox
+      .stub(middleware, "handleCCloudInvalidTokenStatus")
+      .resolves();
   });
 
   afterEach(() => {
@@ -56,7 +58,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
       SIDECAR_CONNECTION_ID_HEADER,
       CCLOUD_CONNECTION_ID,
     );
-    getCCloudAuthStatusStub.resolves("foo");
+    getCCloudStateStub.resolves(ConnectedState.Success);
 
     await middleware.pre(requestContext);
 
@@ -77,12 +79,12 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
   });
 
-  it("should call handleCCloudInvalidTokenStatus() from an INVALID_TOKEN auth status", async () => {
+  it(`should call handleCCloudInvalidTokenStatus() from the ${ConnectedState.Attempting} state`, async () => {
     const requestContext = fakeRequestWithHeader(
       SIDECAR_CONNECTION_ID_HEADER,
       CCLOUD_CONNECTION_ID,
     );
-    getCCloudAuthStatusStub.resolves("INVALID_TOKEN");
+    getCCloudStateStub.resolves(ConnectedState.Attempting);
 
     await middleware.pre(requestContext);
 
@@ -90,12 +92,12 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     assert.ok(handleCCloudInvalidTokenStatusStub.calledOnce);
   });
 
-  it("should fire ccloudAuthSessionInvalidated from a NO_TOKEN or FAILED auth status", async () => {
+  it(`should fire ccloudAuthSessionInvalidated from a ${ConnectedState.None} or ${ConnectedState.Failed} state`, async () => {
     const requestContext = fakeRequestWithHeader(
       SIDECAR_CONNECTION_ID_HEADER,
       CCLOUD_CONNECTION_ID,
     );
-    getCCloudAuthStatusStub.resolves("FAILED");
+    getCCloudStateStub.resolves(ConnectedState.Failed);
 
     await middleware.pre(requestContext);
 
@@ -103,19 +105,19 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     // isn't easy to get into this state since we should delete the CCloud connection and reset the
     // associated resources for the (previous) connection, but just in case:
-    getCCloudAuthStatusStub.resolves("NO_TOKEN");
+    getCCloudStateStub.resolves(ConnectedState.None);
 
     await middleware.pre(requestContext);
 
     assert.ok(ccloudAuthSessionInvalidatedStub.calledTwice);
   });
 
-  it("should not block requests from a VALID_TOKEN auth status", async () => {
+  it(`should not block requests from the ${ConnectedState.Success} state`, async () => {
     const requestContext = fakeRequestWithHeader(
       SIDECAR_CONNECTION_ID_HEADER,
       CCLOUD_CONNECTION_ID,
     );
-    getCCloudAuthStatusStub.resolves("VALID_TOKEN");
+    getCCloudStateStub.resolves(ConnectedState.Success);
 
     await middleware.pre(requestContext);
 
