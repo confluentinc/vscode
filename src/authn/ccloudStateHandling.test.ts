@@ -180,7 +180,7 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
 
       await handleUpdatedConnection(connection);
 
-      sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
+      sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
     });
   }
 
