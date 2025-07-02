@@ -6,6 +6,7 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
 - Any sidecar error logs will now include exception data in the "Confluent (Sidecar)" output
   channel, as well as the file saved from the "Save Sidecar Logs" or "Save Support File (.zip)"
   commands.
@@ -19,6 +20,9 @@ All notable changes to this extension will be documented in this file.
   formatted logs (same format as the "Confluent (Sidecar)" output channel).
 - Saving the support .zip will now also include the formatted sidecar logs, in addition to the raw
   logs.
+- Dropped the minimum required version of VS Code from
+  [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to
+  [`1.96.2`](https://code.visualstudio.com/updates/v1_96) to support VS Code forks.
 
 ## 1.4.1
 

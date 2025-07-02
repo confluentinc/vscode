@@ -29,6 +29,7 @@ export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   // CCloud env IDs are unique, direct/local env IDs match their connection IDs
   environmentId!: EnvironmentId;
   hasSchema: boolean = false;
+  isFlinkable: boolean = false;
 
   /** Schema subjects; only used with Topics view search. */
   children: Subject[] = [];
@@ -71,6 +72,11 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
       this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
     } else {
       this.collapsibleState = vscode.TreeItemCollapsibleState.None;
+    }
+
+    // Check if the topic is flinkable and append the flag
+    if (this.resource.isFlinkable) {
+      this.contextValue += "-flinkable";
     }
 
     // user-facing properties

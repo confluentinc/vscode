@@ -3,7 +3,8 @@ import { TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { isResponseError } from "../errors";
 import { Logger } from "../logging";
-import { KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { isCCloud } from "../models/resource";
 import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -92,6 +93,13 @@ export function correlateTopicsWithSchemaSubjects(
       subjectMatchesTopicName(subject.name, topic.topic_name),
     );
 
+    // Check if the cluster has any Flink pools (for CCloud clusters only)
+    let isFlinkable = false;
+    if (isCCloud(cluster)) {
+      const ccloudCluster = cluster as CCloudKafkaCluster;
+      isFlinkable = Array.isArray(ccloudCluster.flinkPools) && ccloudCluster.flinkPools.length > 0;
+    }
+
     return KafkaTopic.create({
       connectionId: cluster.connectionId,
       connectionType: cluster.connectionType,
@@ -104,6 +112,7 @@ export function correlateTopicsWithSchemaSubjects(
       clusterId: cluster.id,
       environmentId: cluster.environmentId,
       hasSchema: matchingSubjects.length > 0,
+      isFlinkable: isFlinkable,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
       children: matchingSubjects,
     });

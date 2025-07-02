@@ -84,6 +84,25 @@ export abstract class Environment implements IResourceBase, ISearchable {
     return children;
   }
 
+  /** In-place update this Environment with an updated-from-GraphQL instance of the same type. */
+  update(other: Environment): void {
+    if (this.id !== other.id) {
+      throw new Error(`Cannot update Environment with different ID: ${this.id} !== ${other.id}.`);
+    }
+
+    // Copy over the possibly changing properties. Singular items ...
+    this.name = other.name;
+    this.isLoading = other.isLoading;
+
+    this.schemaRegistry = other.schemaRegistry;
+
+    this.kafkaClusters.length = 0; // clear the array
+    this.kafkaClusters.push(...other.kafkaClusters); // copy over the new clusters
+
+    this.flinkComputePools.length = 0; // clear the array
+    this.flinkComputePools.push(...other.flinkComputePools); // copy over the new pools
+  }
+
   searchableText(): string {
     return `${this.name} ${this.id}`;
   }
@@ -145,6 +164,12 @@ export class CCloudEnvironment extends Environment {
     );
     children.push(...this.flinkComputePools.map((pool) => new CCloudFlinkComputePool(pool)));
     return children;
+  }
+
+  override update(other: CCloudEnvironment): void {
+    super.update(other);
+    // Copy over the possibly changing CCloud-centric properties.
+    this.streamGovernancePackage = other.streamGovernancePackage;
   }
 }
 
@@ -241,6 +266,17 @@ export class DirectEnvironment extends Environment {
     // same as Environment, but `id` isn't used since it isn't visible in the UI
     return this.name;
   }
+
+  override update(other: DirectEnvironment): void {
+    super.update(other);
+
+    // Copy over the possibly changing DirectEnvironment-centric properties.
+    this.kafkaConfigured = other.kafkaConfigured;
+    this.schemaRegistryConfigured = other.schemaRegistryConfigured;
+    this.formConnectionType = other.formConnectionType;
+    this.kafkaConnectionFailed = other.kafkaConnectionFailed;
+    this.schemaRegistryConnectionFailed = other.schemaRegistryConnectionFailed;
+  }
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -250,16 +286,15 @@ export class LocalEnvironment extends Environment {
 
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 
-  name: string = LOCAL_ENVIRONMENT_NAME;
+  readonly name: string = LOCAL_ENVIRONMENT_NAME;
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
   schemaRegistry?: LocalSchemaRegistry;
 
-  constructor(props: Pick<LocalEnvironment, "id" | "name" | "kafkaClusters" | "schemaRegistry">) {
+  constructor(props: Pick<LocalEnvironment, "id" | "kafkaClusters" | "schemaRegistry">) {
     super();
     this.id = props.id;
-    this.name = props.name;
     this.kafkaClusters = props.kafkaClusters.map((cluster) =>
       cluster instanceof LocalKafkaCluster ? cluster : LocalKafkaCluster.create(cluster),
     );
@@ -330,6 +365,11 @@ export class EnvironmentTreeItem extends TreeItem {
     contextParts.push(`${this.resource.connectionType.toLowerCase()}-environment`);
     // "ccloud-environment", "direct-environment", "local-environment"
     this.contextValue = contextParts.join("-");
+
+    if (isDirect(resource)) {
+      // mainly to help E2E tests distinguish direct connections from other tree items
+      this.accessibilityInformation = { label: `Direct connection: "${resource.name}"` };
+    }
 
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;
