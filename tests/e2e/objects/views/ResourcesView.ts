@@ -103,7 +103,7 @@ export class ResourcesView extends View {
    * Open the Direct Connection form by clicking "Add New Connection" -> "Enter manually".
    * @returns A DirectConnectionForm instance for interacting with the form
    */
-  async openDirectConnectionForm(): Promise<DirectConnectionForm> {
+  async addNewConnectionManually(): Promise<DirectConnectionForm> {
     await this.clickAddNewConnection();
 
     const quickpick = new Quickpick(this.page);

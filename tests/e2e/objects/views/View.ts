@@ -1,5 +1,4 @@
 import { Locator, Page } from "@playwright/test";
-import { expand } from "../../utils/expansion";
 
 /**
  * Object representing a
@@ -41,17 +40,6 @@ export class View {
   /** Get all tree items in this view. Use Playwright's filter methods to narrow down the selection. */
   get treeItems(): Locator {
     return this.body.locator('[role="treeitem"]');
-  }
-
-  /**
-   * The equivalent of the built-in `<view id>.focus` command in VS Code, which locates the view,
-   * expands it if necessary, and focuses it.
-   */
-  async focus(): Promise<void> {
-    await this.header.waitFor({ state: "visible", timeout: 500 });
-    await expand(this.header);
-    await this.body.waitFor({ state: "visible", timeout: 500 });
-    await this.locator.focus();
   }
 
   /**
