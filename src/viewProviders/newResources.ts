@@ -243,11 +243,6 @@ export class NewResourceViewProvider
 
   constructor() {
     super();
-
-    // Initialize the default connections.
-    for (const connectionRow of [new CCloudConnectionRow(), new LocalConnectionRow()]) {
-      this.storeConnection(connectionRow);
-    }
   }
 
   protected async refreshConnection(connectionId: ConnectionId): Promise<void> {
@@ -297,10 +292,33 @@ export class NewResourceViewProvider
     this._onDidChangeTreeData.fire(object);
   }
 
+  /**
+   * Lazy initialize the connections map with the known connections.
+   * This is called when the view is first opened or when there are no connections yet.
+   */
+  private async lazyInitializeConnections(): Promise<void> {
+    this.logger.debug("Lazy initializing connections");
+    // Initialize the default connections.
+    for (const connectionRow of [new CCloudConnectionRow(), new LocalConnectionRow()]) {
+      void this.storeConnection(connectionRow);
+    }
+    // In future as migrate more away from old resource manager, also
+    // rehydrate any existing Direct connections? Or better yet, get that
+    // behavior outside of responsibility of either view provider and
+    // here we just initialize the known connections.
+  }
+
   getChildren(element: NewResourceViewProviderData | undefined): NewResourceViewProviderData[] {
     this.logger.debug("Getting children", {
       element: element ? element.constructor.name : "undefined",
     });
+
+    // if empty map, kick of initialization, but return empty array
+    if (this.connections.size === 0) {
+      this.logger.debug("No connections found, initializing connections");
+      void this.lazyInitializeConnections();
+      return [];
+    }
 
     if (!element) {
       return this.getToplevelChildren();
@@ -362,9 +380,19 @@ export class NewResourceViewProvider
     throw new Error(`Unhandled element: ${(element as any).constructor.name}`);
   }
 
-  storeConnection(connectionRow: ConnectionRow<ConcreteEnvironment>): void {
+  async storeConnection(connectionRow: ConnectionRow<ConcreteEnvironment>): Promise<void> {
     connectionRow.ordering = this.connectionIndex++;
     this.connections.set(connectionRow.connectionId, connectionRow);
+
+    // Kick off the initial fetching for this connection.
+    await connectionRow.refresh().then(() => {
+      this.logger.debug("New connection row back from initial refresh", {
+        connectionId: connectionRow.connectionId,
+      });
+
+      // Indicate that we have a new happy toplevel child.
+      this.repaint();
+    });
   }
 
   private getToplevelChildren(): ConnectionRow<ConcreteEnvironment>[] {
