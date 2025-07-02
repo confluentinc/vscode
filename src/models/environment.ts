@@ -31,6 +31,7 @@ import {
   isCCloud,
   isDirect,
   ISearchable,
+  IUpdatableResource,
   UsedConnectionType,
 } from "./resource";
 import {
@@ -46,7 +47,7 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment implements IResourceBase, ISearchable {
+export abstract class Environment implements IResourceBase, ISearchable, IUpdatableResource {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
@@ -149,7 +150,9 @@ export class CCloudEnvironment extends Environment {
     } else {
       this.schemaRegistry = undefined;
     }
-    this.flinkComputePools = props.flinkComputePools;
+    this.flinkComputePools = props.flinkComputePools.map((pool) =>
+      pool instanceof CCloudFlinkComputePool ? pool : new CCloudFlinkComputePool(pool),
+    );
   }
 
   get ccloudUrl(): string {
@@ -308,7 +311,6 @@ export class LocalEnvironment extends Environment {
           ? props.schemaRegistry
           : LocalSchemaRegistry.create(props.schemaRegistry);
     }
-    this.schemaRegistry = props.schemaRegistry;
   }
 }
 

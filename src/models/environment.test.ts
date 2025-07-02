@@ -19,7 +19,10 @@ import {
   EnvironmentTreeItem,
   LocalEnvironment,
 } from "./environment";
+import { CCloudFlinkComputePool } from "./flinkComputePool";
+import { CCloudKafkaCluster, LocalKafkaCluster } from "./kafkaCluster";
 import { EnvironmentId } from "./resource";
+import { CCloudSchemaRegistry, LocalSchemaRegistry } from "./schemaRegistry";
 
 describe("models/environment.ts Environment", () => {
   it("should return the correct .children for a CCloudEnvironment", () => {
@@ -123,6 +126,58 @@ describe("models/environment.ts Environment", () => {
       TEST_DIRECT_KAFKA_CLUSTER,
       TEST_DIRECT_SCHEMA_REGISTRY,
     ]);
+  });
+});
+
+describe("models/environment.ts LocalEnvironment", () => {
+  it("constructs from plain object as from JSON representation properly", () => {
+    const env = new LocalEnvironment({
+      id: TEST_LOCAL_ENVIRONMENT.id,
+      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+    });
+
+    assert.strictEqual(env.id, TEST_LOCAL_ENVIRONMENT.id);
+    assert.ok(env.kafkaClusters[0] instanceof LocalKafkaCluster);
+    assert.ok(env.schemaRegistry instanceof LocalSchemaRegistry);
+
+    // Now go to / from JSON to end up with just plain objects all the way down.
+    const rawFromStorage = JSON.parse(JSON.stringify(env));
+    // Now reconstruct the LocalEnvironment from the plain object.
+    const asReconstitutedFromStorage = new LocalEnvironment(rawFromStorage);
+
+    // Should have properly promoted the plain object kafka cluster and schema registry
+    // to their respective classes.
+    assert.ok(asReconstitutedFromStorage.kafkaClusters[0] instanceof LocalKafkaCluster);
+    assert.ok(asReconstitutedFromStorage.schemaRegistry instanceof LocalSchemaRegistry);
+    assert.deepStrictEqual(asReconstitutedFromStorage, env);
+  });
+});
+
+describe("models/environment.ts CCloudEnvironment", () => {
+  it("constructs from plain object as from JSON representation properly", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    });
+
+    assert.strictEqual(env.id, TEST_CCLOUD_ENVIRONMENT.id);
+    assert.ok(env.kafkaClusters[0] instanceof CCloudKafkaCluster);
+    assert.ok(env.schemaRegistry instanceof CCloudSchemaRegistry);
+    assert.ok(env.flinkComputePools[0] instanceof CCloudFlinkComputePool);
+
+    // Now go to / from JSON to end up with just plain objects all the way down.
+    const rawFromStorage = JSON.parse(JSON.stringify(env));
+    // Now reconstruct the CCloudEnvironment from the plain object.
+    const asReconstitutedFromStorage = new CCloudEnvironment(rawFromStorage);
+    // Should have properly promoted the plain object kafka cluster and schema registry
+    // to their respective classes.
+    assert.ok(asReconstitutedFromStorage.kafkaClusters[0] instanceof CCloudKafkaCluster);
+    assert.ok(asReconstitutedFromStorage.schemaRegistry instanceof CCloudSchemaRegistry);
+    assert.ok(asReconstitutedFromStorage.flinkComputePools[0] instanceof CCloudFlinkComputePool);
+    assert.deepStrictEqual(asReconstitutedFromStorage, env);
   });
 });
 
