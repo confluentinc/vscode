@@ -16,7 +16,6 @@ import {
   IResourceBase,
   isCCloud,
   ISearchable,
-  UsedConnectionType,
 } from "./resource";
 
 /** Base class for all KafkaClusters */
@@ -94,7 +93,7 @@ export type KafkaClusterSubclass =
 export type KafkaClusterType = CCloudKafkaCluster | DirectKafkaCluster | LocalKafkaCluster;
 
 /** Mapping of connection type to corresponding KafkaCluster subclass */
-const kafkaClusterClassByConnectionType: Record<UsedConnectionType, KafkaClusterSubclass> = {
+const kafkaClusterClassByConnectionType: Record<ConnectionType, KafkaClusterSubclass> = {
   [ConnectionType.Ccloud]: CCloudKafkaCluster,
   [ConnectionType.Direct]: DirectKafkaCluster,
   [ConnectionType.Local]: LocalKafkaCluster,

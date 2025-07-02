@@ -144,7 +144,7 @@ describe("sidecarManager.ts", () => {
             unref: () => {},
           };
           spawnStub.returns(mockProcess);
-          confirmSidecarProcessIsRunningStub = sinon
+          confirmSidecarProcessIsRunningStub = sandbox
             .stub(manager, "confirmSidecarProcessIsRunning")
             .resolves();
 
