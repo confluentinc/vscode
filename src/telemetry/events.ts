@@ -22,7 +22,7 @@ export enum UserEvent {
   FlinkStatementAction = "Flink Statement Action",
   FlinkStatementViewStatistics = "Flink Statement View Statistics",
   CopilotInteraction = "Copilot Interaction",
-  FlinkSqlLanguageClientInteraction = "Flink SQL Language Client Interaction",
+  FlinkSqlClientInteraction = "Flink SQL Language Client Interaction",
   /**
    * Used for basic settings changes like enabling/disabling a feature or changing enum/numeric
    * values.

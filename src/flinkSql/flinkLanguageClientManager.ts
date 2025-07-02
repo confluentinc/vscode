@@ -282,7 +282,7 @@ export class FlinkLanguageClientManager implements Disposable {
       logger.error(msg, error);
       logError(error, msg, {
         extra: {
-          computePoolId,
+          compute_pool_id: computePoolId,
         },
       });
       return null;
@@ -340,7 +340,7 @@ export class FlinkLanguageClientManager implements Disposable {
       logger.error(msg, error);
       logError(error, msg, {
         extra: {
-          computePoolId,
+          compute_pool_id: computePoolId,
         },
       });
       return null;
@@ -383,7 +383,7 @@ export class FlinkLanguageClientManager implements Disposable {
         });
         this.disposables.push(this.textDocumentListener);
         logger.trace("Flink SQL language client successfully initialized");
-        logUsage(UserEvent.FlinkSqlLanguageAction, {
+        logUsage(UserEvent.FlinkSqlClientInteraction, {
           action: "client_initialized",
           compute_pool_id: computePoolId,
         });
@@ -394,7 +394,7 @@ export class FlinkLanguageClientManager implements Disposable {
       logger.error(msg, error);
       logError(error, msg, {
         extra: {
-          computePoolId,
+          compute_pool_id: computePoolId,
           url,
           reconnectCounter: this.reconnectCounter,
         },
@@ -495,7 +495,7 @@ export class FlinkLanguageClientManager implements Disposable {
             ComputePoolId: settings.computePoolId,
           },
         });
-        logUsage(UserEvent.FlinkSqlLanguageAction, {
+        logUsage(UserEvent.FlinkSqlClientInteraction, {
           action: "configuration_changed",
           hasComputePool: true,
           hasCatalog: true,
