@@ -126,9 +126,9 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
   const connectionStateMatches: ConnectionStateMatches[] = [
     [
       TEST_CCLOUD_CONNECTION,
-      ConnectedState.None,
-      ConnectedState.None,
-      ConnectedState.None,
+      ConnectedState.Expired,
+      ConnectedState.Expired,
+      ConnectedState.Expired,
       ConnectedState.Success,
     ],
     [

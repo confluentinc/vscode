@@ -120,8 +120,8 @@ export class ErrorResponseMiddleware implements Middleware {
   }
 }
 
-/** Used to prevent multiple instances of the `ATTEMPTING` progress notification stacking up. */
-let attemptingStateNotificationOpen: boolean = false;
+/** Used to prevent multiple instances of the `EXPIRED` progress notification stacking up. */
+let problematicStateNotificationOpen: boolean = false;
 
 /** Check if a request is for Confluent Cloud handle different connected state scenarios. */
 export class CCloudAuthStatusMiddleware implements Middleware {
@@ -136,18 +136,18 @@ export class CCloudAuthStatusMiddleware implements Middleware {
   /**
    * Handle the various states that can be returned by the sidecar for the current CCloud connection.
    *
-   * - If the status is `ATTEMPTING`, block the request and show a progress notification until we
+   * - If the status is `EXPIRED`, block the request and show a progress notification until we
    *  see a status change (to a non-transient state like `SUCCESS` or `FAILED`/`NONE`) from the
    *  websocket connection event handling.
    * - If the status is `NONE` or `FAILED`, invalidate the current CCloud auth session to prompt
    *  the user to sign in again.
    */
   async handleCCloudAuthStatus(status: ConnectedState): Promise<void> {
-    if (status !== ConnectedState.Attempting) {
-      // resolve any open progress notification if we see a non-`ATTEMPTING` state
+    if (status !== ConnectedState.Expired) {
+      // resolve any open progress notification if we see a non-`EXPIRED` state
       stableCCloudConnectedState.fire();
-      // and set the flag back so the notification can open again if we see another `ATTEMPTING` state
-      attemptingStateNotificationOpen = false;
+      // and set the flag back so the notification can open again if we see another `EXPIRED` state
+      problematicStateNotificationOpen = false;
     }
 
     if ([ConnectedState.Failed, ConnectedState.None].includes(status)) {
@@ -159,17 +159,17 @@ export class CCloudAuthStatusMiddleware implements Middleware {
         },
       );
       ccloudAuthSessionInvalidated.fire();
-    } else if (status === ConnectedState.Attempting) {
+    } else if (status === ConnectedState.Expired) {
       // this may block for a while depending on how long it takes before we get an updated state
-      await this.handleCCloudInvalidTokenStatus();
+      await this.handleProblematicStatus();
     }
   }
 
-  async handleCCloudInvalidTokenStatus() {
+  async handleProblematicStatus() {
     logger.warn("current CCloud connection has an invalid token; waiting for updated status");
     // only notify if we haven't shown the notification yet
-    if (!attemptingStateNotificationOpen) {
-      attemptingStateNotificationOpen = true;
+    if (!problematicStateNotificationOpen) {
+      problematicStateNotificationOpen = true;
       vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,

@@ -162,13 +162,13 @@ describe("isConnectionStable", () => {
   it("ccloud connection tests", () => {
     type CCloudConnectionStateAndResult = [ConnectedState, boolean];
 
-    // ccloud connection is stable if not in Attempting state
     const testCases: CCloudConnectionStateAndResult[] = [
-      [ConnectedState.None, false],
-      [ConnectedState.Attempting, true],
+      [ConnectedState.None, true],
       [ConnectedState.Success, true],
-      [ConnectedState.Expired, true],
+      [ConnectedState.Expired, false],
       [ConnectedState.Failed, true],
+      // CCloud connections don't use ATTEMPTING like direct connections do, see
+      // https://github.com/confluentinc/ide-sidecar/blob/b2dd9932849fd758f489661c0b8aebcde8681616/src/main/java/io/confluent/idesidecar/restapi/connections/CCloudConnectionState.java#L57-L82
     ];
 
     for (const [connectedState, expectedResult] of testCases) {

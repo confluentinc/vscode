@@ -120,6 +120,11 @@ export function isConnectionStable(event: ConnectionEventBody): boolean {
   }
 }
 
+/**
+ * Unlike direct connections, CCloud connections don't use `ATTEMPTING` but will show `EXPIRED` if
+ * requests to the (CCloud) API fail even if all tokens are present and valid.
+ * @see https://github.com/confluentinc/ide-sidecar/blob/b2dd9932849fd758f489661c0b8aebcde8681616/src/main/java/io/confluent/idesidecar/restapi/connections/CCloudConnectionState.java#L57-L82
+ */
 function isCCloudConnectionStable(connection: Connection): boolean {
   const ccloudStatus = connection.status.ccloud!;
   const ccloudState = ccloudStatus.state;
@@ -129,7 +134,7 @@ function isCCloudConnectionStable(connection: Connection): boolean {
     logger.error(`isCCloudConnectionStable(): error: ${ccloudFailed}`);
   }
 
-  const rv = ccloudState !== "NONE";
+  const rv = ccloudState !== ConnectedState.Expired;
   logger.debug(`isCCloudConnectionStable(): returning ${rv} based on state ${ccloudState}`);
 
   return rv;

@@ -204,8 +204,8 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
     });
   });
 
-  it(`should NOT fire the stableCCloudConnectedState event emitter when the CCloud connected state is ${ConnectedState.Attempting}`, async () => {
-    const status = ConnectedState.Attempting;
+  it(`should NOT fire the stableCCloudConnectedState event emitter when the CCloud connected state is ${ConnectedState.Expired}`, async () => {
+    const status = ConnectedState.Expired;
     const connection = createFakeConnection(120);
     connection.status.ccloud!.state = status;
 

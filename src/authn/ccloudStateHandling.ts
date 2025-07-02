@@ -69,7 +69,7 @@ export async function reactToCCloudAuthState(connection: Connection): Promise<vo
   observabilityContext.ccloudAuthLastSeenState = connectedState;
 
   await getResourceManager().setCCloudState(connectedState);
-  if (connectedState === ConnectedState.Attempting) {
+  if (connectedState === ConnectedState.Expired) {
     // Don't bother checking for expiration or errors until we get another status back
     return;
   } else {

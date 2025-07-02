@@ -27,7 +27,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
   let sandbox: sinon.SinonSandbox;
   let getCCloudStateStub: sinon.SinonStub;
   let handleCCloudAuthStatusSpy: sinon.SinonSpy;
-  let handleCCloudInvalidTokenStatusStub: sinon.SinonStub;
+  let handleProblematicStatusStub: sinon.SinonStub;
   let ccloudAuthSessionInvalidatedStub: sinon.SinonStub;
 
   before(async () => {
@@ -44,9 +44,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
 
     middleware = new CCloudAuthStatusMiddleware();
     handleCCloudAuthStatusSpy = sandbox.spy(middleware, "handleCCloudAuthStatus");
-    handleCCloudInvalidTokenStatusStub = sandbox
-      .stub(middleware, "handleCCloudInvalidTokenStatus")
-      .resolves();
+    handleProblematicStatusStub = sandbox.stub(middleware, "handleProblematicStatus").resolves();
   });
 
   afterEach(() => {
@@ -63,7 +61,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     await middleware.pre(requestContext);
 
     assert.ok(handleCCloudAuthStatusSpy.calledOnce);
-    assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
+    assert.ok(handleProblematicStatusStub.notCalled);
   });
 
   it("should not call handleCCloudAuthStatus() when the CCloud connection header is missing", async () => {
@@ -76,20 +74,20 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     await middleware.pre(requestContext3);
 
     assert.ok(handleCCloudAuthStatusSpy.notCalled);
-    assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
+    assert.ok(handleProblematicStatusStub.notCalled);
   });
 
-  it(`should call handleCCloudInvalidTokenStatus() from the ${ConnectedState.Attempting} state`, async () => {
+  it(`should call handleProblematicStatus() from the ${ConnectedState.Expired} state`, async () => {
     const requestContext = fakeRequestWithHeader(
       SIDECAR_CONNECTION_ID_HEADER,
       CCLOUD_CONNECTION_ID,
     );
-    getCCloudStateStub.resolves(ConnectedState.Attempting);
+    getCCloudStateStub.resolves(ConnectedState.Expired);
 
     await middleware.pre(requestContext);
 
     assert.ok(handleCCloudAuthStatusSpy.calledOnce);
-    assert.ok(handleCCloudInvalidTokenStatusStub.calledOnce);
+    assert.ok(handleProblematicStatusStub.calledOnce);
   });
 
   it(`should fire ccloudAuthSessionInvalidated from a ${ConnectedState.None} or ${ConnectedState.Failed} state`, async () => {
@@ -122,7 +120,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
     await middleware.pre(requestContext);
 
     assert.ok(handleCCloudAuthStatusSpy.calledOnce);
-    assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
+    assert.ok(handleProblematicStatusStub.notCalled);
     assert.ok(ccloudAuthSessionInvalidatedStub.notCalled);
   });
 });
