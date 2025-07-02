@@ -10,12 +10,9 @@ export type EnvironmentId = string & { readonly brand: unique symbol };
 
 export type OrganizationId = string & { readonly brand: unique symbol };
 
-/** Subtype of ConnectionType excluding ConnectionType.Platform, which we don't ever use here in extension-land. */
-export type UsedConnectionType = Exclude<ConnectionType, ConnectionType.Platform>;
-
 // Function to convert a ConnectionId to a ConnectionType, because we can always
 // go from one to the other.
-export function connectionIdToType(id: ConnectionId): UsedConnectionType {
+export function connectionIdToType(id: ConnectionId): ConnectionType {
   if (id === LOCAL_CONNECTION_ID) {
     return ConnectionType.Local;
   } else if (id === CCLOUD_CONNECTION_ID) {

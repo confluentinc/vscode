@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
+import { ConnectedState, Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
+import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
@@ -120,39 +120,37 @@ export class ErrorResponseMiddleware implements Middleware {
   }
 }
 
-/** Used to prevent multiple instances of the `INVALID_TOKEN` progress notification stacking up. */
-let invalidTokenNotificationOpen: boolean = false;
+/** Used to prevent multiple instances of the `EXPIRED` progress notification stacking up. */
+let problematicStateNotificationOpen: boolean = false;
 
-/** Check if a request is for Confluent Cloud handle different auth status scenarios. */
+/** Check if a request is for Confluent Cloud handle different connected state scenarios. */
 export class CCloudAuthStatusMiddleware implements Middleware {
   async pre(context: RequestContext): Promise<void> {
     if (hasCCloudConnectionIdHeader(context.init.headers)) {
-      // check the last auth status stored as a "secret" by the auth poller instead of re-fetching
-      const status: string | undefined = await getResourceManager().getCCloudAuthStatus();
-      if (status) {
-        await this.handleCCloudAuthStatus(status);
-      }
+      // check the last stored connected state instead of re-fetching
+      const status: ConnectedState = await getResourceManager().getCCloudState();
+      await this.handleCCloudAuthStatus(status);
     }
   }
 
   /**
-   * Handle the various auth statuses that can be returned by the sidecar for the current CCloud connection.
+   * Handle the various states that can be returned by the sidecar for the current CCloud connection.
    *
-   * - If the status is `INVALID_TOKEN`, block the request and show a progress notification until we
-   *  see a status change (to a non-transient state like `VALID_TOKEN` or `FAILED`/`NO_TOKEN`) from the
-   *  auth poller.
-   * - If the status is `NO_TOKEN` or `FAILED`, invalidate the current CCloud auth session to prompt
+   * - If the status is `EXPIRED`, block the request and show a progress notification until we
+   *  see a status change (to a non-transient state like `SUCCESS` or `FAILED`/`NONE`) from the
+   *  websocket connection event handling.
+   * - If the status is `NONE` or `FAILED`, invalidate the current CCloud auth session to prompt
    *  the user to sign in again.
    */
-  async handleCCloudAuthStatus(status: string): Promise<void> {
-    if (status !== "INVALID_TOKEN") {
-      // resolve any open progress notification if we see a non-`INVALID_TOKEN` status
-      nonInvalidTokenStatus.fire();
-      // and set the flag back so the notification can open again if we see another `INVALID_TOKEN`
-      invalidTokenNotificationOpen = false;
+  async handleCCloudAuthStatus(status: ConnectedState): Promise<void> {
+    if (status !== ConnectedState.Expired) {
+      // resolve any open progress notification if we see a non-`EXPIRED` state
+      stableCCloudConnectedState.fire();
+      // and set the flag back so the notification can open again if we see another `EXPIRED` state
+      problematicStateNotificationOpen = false;
     }
 
-    if (["NO_TOKEN", "FAILED"].includes(status)) {
+    if ([ConnectedState.Failed, ConnectedState.None].includes(status)) {
       // some unusable state that requires the user to reauthenticate
       logger.error(
         "current CCloud connection has no token or transitioned to a failed state; invalidating auth session",
@@ -161,17 +159,17 @@ export class CCloudAuthStatusMiddleware implements Middleware {
         },
       );
       ccloudAuthSessionInvalidated.fire();
-    } else if (status === "INVALID_TOKEN") {
-      // this may block for a while depending on how long it takes before we get an updated auth status
-      await this.handleCCloudInvalidTokenStatus();
+    } else if (status === ConnectedState.Expired) {
+      // this may block for a while depending on how long it takes before we get an updated state
+      await this.handleProblematicStatus();
     }
   }
 
-  async handleCCloudInvalidTokenStatus() {
+  async handleProblematicStatus() {
     logger.warn("current CCloud connection has an invalid token; waiting for updated status");
     // only notify if we haven't shown the notification yet
-    if (!invalidTokenNotificationOpen) {
-      invalidTokenNotificationOpen = true;
+    if (!problematicStateNotificationOpen) {
+      problematicStateNotificationOpen = true;
       vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -180,7 +178,7 @@ export class CCloudAuthStatusMiddleware implements Middleware {
         },
         async () => {
           await new Promise((resolve) => {
-            const subscriber: vscode.Disposable = nonInvalidTokenStatus.event(() => {
+            const subscriber: vscode.Disposable = stableCCloudConnectedState.event(() => {
               subscriber.dispose();
               resolve(void 0);
             });
@@ -189,12 +187,12 @@ export class CCloudAuthStatusMiddleware implements Middleware {
       );
     }
 
-    // block the request that got us into this flow until the auth status "secret" changes
+    // block the request that got us into this flow until the connected state "secret" changes
     await new Promise((resolve) => {
       const secretSubscriber: vscode.Disposable = getSecretStorage().onDidChange(
         async ({ key }: vscode.SecretStorageChangeEvent) => {
-          // any change (other status or the "secret" being deleted entirely) will resolve and unblock requests
-          if (key === SecretStorageKeys.CCLOUD_AUTH_STATUS) {
+          // any change (other state or the "secret" being deleted entirely) will resolve and unblock requests
+          if (key === SecretStorageKeys.CCLOUD_STATE) {
             secretSubscriber.dispose();
             resolve(void 0);
           }

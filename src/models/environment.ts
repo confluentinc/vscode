@@ -32,7 +32,6 @@ import {
   isDirect,
   ISearchable,
   IUpdatableResource,
-  UsedConnectionType,
 } from "./resource";
 import {
   CCloudSchemaRegistry,
@@ -328,7 +327,7 @@ export type EnvironmentType = CCloudEnvironment | DirectEnvironment | LocalEnvir
  * Mapping of connection types to their corresponding Environment subclass.
  * @see getEnvironmentClass
  */
-const environmentClassByConnectionType: Record<UsedConnectionType, EnvironmentSubclass> = {
+const environmentClassByConnectionType: Record<ConnectionType, EnvironmentSubclass> = {
   [ConnectionType.Ccloud]: CCloudEnvironment,
   [ConnectionType.Direct]: DirectEnvironment,
   [ConnectionType.Local]: LocalEnvironment,

@@ -10,7 +10,7 @@ import {
 
 import sinon from "sinon";
 import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
-import { ConnectedState, Status } from "../../clients/sidecar/models";
+import { ConnectedState } from "../../clients/sidecar/models";
 import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
@@ -145,7 +145,6 @@ describe("connectionEventHandler", () => {
           // either one of these being in Attempting state should prevent firing.
           kafka_cluster: { state: ConnectedState.Attempting },
           schema_registry: { state: ConnectedState.Success },
-          authentication: { status: Status.NoToken },
         },
       },
     };
@@ -160,18 +159,16 @@ describe("connectionEventHandler", () => {
 });
 
 describe("isConnectionStable", () => {
-  const testAuthStatus = { authentication: { status: Status.NoToken } };
-
   it("ccloud connection tests", () => {
     type CCloudConnectionStateAndResult = [ConnectedState, boolean];
 
-    // ccloud connection is stable if not in Attempting state
     const testCases: CCloudConnectionStateAndResult[] = [
-      [ConnectedState.None, false],
-      [ConnectedState.Attempting, true],
+      [ConnectedState.None, true],
       [ConnectedState.Success, true],
-      [ConnectedState.Expired, true],
+      [ConnectedState.Expired, false],
       [ConnectedState.Failed, true],
+      // CCloud connections don't use ATTEMPTING like direct connections do, see
+      // https://github.com/confluentinc/ide-sidecar/blob/b2dd9932849fd758f489661c0b8aebcde8681616/src/main/java/io/confluent/idesidecar/restapi/connections/CCloudConnectionState.java#L57-L82
     ];
 
     for (const [connectedState, expectedResult] of testCases) {
@@ -181,7 +178,6 @@ describe("isConnectionStable", () => {
           ...TEST_CCLOUD_CONNECTION,
           status: {
             ccloud: { state: connectedState },
-            ...testAuthStatus,
           },
         },
       };
@@ -213,7 +209,6 @@ describe("isConnectionStable", () => {
           status: {
             kafka_cluster: { state: kafkaState },
             schema_registry: { state: schemaRegistryState },
-            ...testAuthStatus,
           },
         },
       };
