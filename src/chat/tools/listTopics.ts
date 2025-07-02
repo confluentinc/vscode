@@ -151,7 +151,9 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     const topicNameSubstring = params.topicNameSubstring;
 
     if (topicNameSubstring) {
-      sampleTopics = sampleTopics.filter((topic) => topic.name.includes(topicNameSubstring));
+      sampleTopics = sampleTopics.filter((topic) =>
+        topic.name.toLowerCase().includes(topicNameSubstring.toLowerCase()),
+      );
       logger.debug(
         `Filtered topics by substring "${topicNameSubstring}": ${sampleTopics.length} matches`,
       );
