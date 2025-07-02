@@ -5,7 +5,6 @@ import {
   ConnectionFromJSON,
   ConnectionSpecFromJSON,
   ConnectionType,
-  Status,
   UserInfo,
 } from "../../../src/clients/sidecar";
 import {
@@ -30,7 +29,7 @@ export const TEST_CCLOUD_USER: UserInfo = {
 };
 const TEST_AUTH_EXPIRATION = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
-/** A basic CCloud {@link Connection} with `NO_TOKEN` auth status. */
+/** A basic CCloud {@link Connection} with `NONE` connected state. */
 export const TEST_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   api_version: "gateway/v1",
   kind: "Connection",
@@ -47,24 +46,19 @@ export const TEST_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
     },
   },
   status: {
-    // start with unauthenticated connection, then add TEST_CCLOUD_USER and TEST_AUTH_EXPIRATION later
-    authentication: {
-      status: Status.NoToken,
+    // start with unauthenticated connection, then switch to ConnectedState.Success and
+    // add TEST_CCLOUD_USER and TEST_AUTH_EXPIRATION later
+    ccloud: {
+      state: ConnectedState.None,
     },
   },
 } satisfies Connection);
 
-/** A CCloud {@link Connection} with `VALID_TOKEN` auth status and user info. */
+/** A CCloud {@link Connection} with `SUCCESS` state and user info. */
 export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   ...TEST_CCLOUD_CONNECTION,
   status: {
     ...TEST_CCLOUD_CONNECTION.status,
-    authentication: {
-      ...TEST_CCLOUD_CONNECTION.status.authentication,
-      requires_authentication_at: TEST_AUTH_EXPIRATION,
-      status: Status.ValidToken,
-      user: TEST_CCLOUD_USER,
-    },
     ccloud: {
       ...TEST_CCLOUD_CONNECTION.status.ccloud,
       requires_authentication_at: TEST_AUTH_EXPIRATION,
@@ -82,11 +76,7 @@ export const TEST_LOCAL_CONNECTION: Connection = ConnectionFromJSON({
     self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${LOCAL_CONNECTION_ID}`,
   },
   spec: LOCAL_CONNECTION_SPEC,
-  status: {
-    authentication: {
-      status: Status.NoToken,
-    },
-  },
+  status: {},
 } satisfies Connection);
 
 export const TEST_DIRECT_CONNECTION_ID = randomUUID() as ConnectionId;
@@ -102,11 +92,7 @@ export const TEST_DIRECT_CONNECTION: Connection = ConnectionFromJSON({
     name: "New Connection",
     type: ConnectionType.Direct,
   },
-  status: {
-    authentication: {
-      status: Status.NoToken,
-    },
-  },
+  status: {},
 } satisfies Connection);
 
 /** Fake spec augmented with `formConnectionType` for test purposes. */

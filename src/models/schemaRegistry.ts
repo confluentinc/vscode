@@ -16,7 +16,6 @@ import {
   isCCloud,
   ISchemaRegistryResource,
   ISearchable,
-  UsedConnectionType,
 } from "./resource";
 
 export abstract class SchemaRegistry
@@ -82,7 +81,7 @@ export type SchemaRegistryType = CCloudSchemaRegistry | DirectSchemaRegistry | L
  *  Mapping of our used connection types -> concrete SchemaRegistry subclass.
  *  See {@link getSchemaRegistryClass}.
  */
-const schemaRegistryClassByConnectionType: Record<UsedConnectionType, SchemaRegistrySubclass> = {
+const schemaRegistryClassByConnectionType: Record<ConnectionType, SchemaRegistrySubclass> = {
   [ConnectionType.Ccloud]: CCloudSchemaRegistry,
   [ConnectionType.Direct]: DirectSchemaRegistry,
   [ConnectionType.Local]: LocalSchemaRegistry,

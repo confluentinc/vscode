@@ -1,7 +1,7 @@
 // helpers for connection status testing, factored out for test spying
 
-import { reactToCCloudAuthState } from "../../authn/ccloudStateHandling";
-import { Connection, ConnectionType } from "../../clients/sidecar/models";
+import { handleUpdatedConnection } from "../../authn/ccloudStateHandling";
+import { ConnectedState, Connection, ConnectionType } from "../../clients/sidecar/models";
 import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { Logger } from "../../logging";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
@@ -73,15 +73,15 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "CONNECTED":
         case "DISCONNECTED":
           logger.debug(
-            "connectionEventHandler: ccloud connection update received, passing to reactToCCloudAuthState()",
+            "connectionEventHandler: ccloud connection update received, passing to handleUpdatedConnection()",
           );
-          reactToCCloudAuthState(connection).catch((e) => {
-            logger.error(`connectionEventHandler: reactToCCloudAuthState() failed: ${e}`, e.stack);
+          handleUpdatedConnection(connection).catch((e) => {
+            logger.error(`connectionEventHandler: handleUpdatedConnection() failed: ${e}`, e.stack);
           });
           break;
         case "DELETED":
           // When a DELETED event comes, it will come with the prior (perhaps fully happy) spelling of the connection.
-          // We don't want to consider it anymore, so don't call reactToCCloudAuthState.
+          // We don't want to consider it anymore, so don't call handleUpdatedConnection.
           // (Other actions hinging off of a secret being deleted will cause us to cascade through
           // to have us go to a not-ccloud-authenticated state, so this is fine.)
           logger.debug("connectionEventHandler: ccloud connection deleted.");
@@ -150,7 +150,8 @@ function isDirectConnectionStable(connection: Connection): boolean {
   const kafkaState = status.kafka_cluster?.state;
   const schemaRegistryState = status.schema_registry?.state;
 
-  const rv = kafkaState !== "ATTEMPTING" && schemaRegistryState !== "ATTEMPTING";
+  const rv =
+    kafkaState !== ConnectedState.Attempting && schemaRegistryState !== ConnectedState.Attempting;
   logger.debug(
     `isDirectConnectionStable(): returning ${rv} for connection ${connection.id} based on kafkaState ${kafkaState} and schemaRegistryState ${schemaRegistryState}`,
   );
