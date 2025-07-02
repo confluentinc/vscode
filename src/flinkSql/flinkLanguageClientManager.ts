@@ -13,6 +13,7 @@ import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
+import { logError } from "../errors";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -22,6 +23,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { initializeLanguageClient } from "./languageClient";
 import {
   clearFlinkSQLLanguageServerOutputChannel,
@@ -276,7 +278,13 @@ export class FlinkLanguageClientManager implements Disposable {
       logger.warn(`Could not find environment containing compute pool ${computePoolId}`);
       return null;
     } catch (error) {
-      logger.error("Error while looking up compute pool", error);
+      let msg = "Error while looking up compute pool";
+      logger.error(msg, error);
+      logError(error, msg, {
+        extra: {
+          compute_pool_id: computePoolId,
+        },
+      });
       return null;
     }
   }
@@ -328,7 +336,13 @@ export class FlinkLanguageClientManager implements Disposable {
     }
 
     let url: string | null = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
-      logger.error("Failed to build WebSocket URL:", error);
+      let msg = "Failed to build WebSocket URL";
+      logger.error(msg, error);
+      logError(error, msg, {
+        extra: {
+          compute_pool_id: computePoolId,
+        },
+      });
       return null;
     });
     if (!url) {
@@ -369,10 +383,22 @@ export class FlinkLanguageClientManager implements Disposable {
         });
         this.disposables.push(this.textDocumentListener);
         logger.trace("Flink SQL language client successfully initialized");
+        logUsage(UserEvent.FlinkSqlClientInteraction, {
+          action: "client_initialized",
+          compute_pool_id: computePoolId,
+        });
         this.notifyConfigChanged();
       }
     } catch (error) {
-      logger.error("Failed to initialize Flink SQL language client:", error);
+      let msg = "Failed to start Flink SQL language client";
+      logger.error(msg, error);
+      logError(error, msg, {
+        extra: {
+          compute_pool_id: computePoolId,
+          url,
+          reconnectCounter: this.reconnectCounter,
+        },
+      });
     }
   }
 
@@ -388,7 +414,14 @@ export class FlinkLanguageClientManager implements Disposable {
 
     // If we've reached max attempts, stop trying to reconnect
     if (this.reconnectCounter >= this.MAX_RECONNECT_ATTEMPTS) {
-      logger.error(`Failed to reconnect after ${this.MAX_RECONNECT_ATTEMPTS} attempts`);
+      let msg = `Failed to reconnect after ${this.MAX_RECONNECT_ATTEMPTS} attempts`;
+      logger.error(msg);
+      logError(new Error(msg), msg, {
+        extra: {
+          reconnectCounter: this.reconnectCounter,
+          lastWebSocketUrl: this.lastWebSocketUrl,
+        },
+      });
       return;
     }
 
@@ -409,7 +442,14 @@ export class FlinkLanguageClientManager implements Disposable {
       // Reset counter on successful reconnection
       this.reconnectCounter = 0;
     } catch (e) {
-      logger.error(`Failed to reconnect: ${e}`);
+      let msg = "Failed to restart language client";
+      logger.error(msg, e);
+      logError(e, msg, {
+        extra: {
+          reconnectCounter: this.reconnectCounter,
+          lastWebSocketUrl: this.lastWebSocketUrl,
+        },
+      });
       if (this.reconnectCounter < this.MAX_RECONNECT_ATTEMPTS) {
         this.handleWebSocketDisconnect();
       }
@@ -423,7 +463,9 @@ export class FlinkLanguageClientManager implements Disposable {
         this.languageClient = null;
       }
     } catch (error) {
-      logger.error("Error stopping language client:", error);
+      let msg = "Error stopping language client during cleanup";
+      logger.error(msg, error);
+      logError(error, msg);
     }
     // Make sure we clean up even if there's an error
     this.languageClient = null;
@@ -452,6 +494,12 @@ export class FlinkLanguageClientManager implements Disposable {
             Database: settings.databaseName,
             ComputePoolId: settings.computePoolId,
           },
+        });
+        logUsage(UserEvent.FlinkSqlClientInteraction, {
+          action: "configuration_changed",
+          hasComputePool: true,
+          hasCatalog: true,
+          hasDatabase: true,
         });
       } else {
         logger.trace("Incomplete settings, not sending configuration update", {
