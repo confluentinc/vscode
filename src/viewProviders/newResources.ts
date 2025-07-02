@@ -47,7 +47,7 @@ type ConcreteEnvironment = CCloudEnvironment | LocalEnvironment | DirectEnvironm
 type ConcreteKafkaCluster = CCloudKafkaCluster | LocalKafkaCluster | DirectKafkaCluster;
 type ConcreteSchemaRegistry = CCloudSchemaRegistry | LocalSchemaRegistry | DirectSchemaRegistry;
 
-export class ConnectionRow<ET extends ConcreteEnvironment>
+export abstract class ConnectionRow<ET extends ConcreteEnvironment>
   implements IResourceBase, IdItem, ISearchable
 {
   logger: Logger;
@@ -58,17 +58,16 @@ export class ConnectionRow<ET extends ConcreteEnvironment>
     public readonly loader: ResourceLoader,
     public readonly name: string,
     public readonly iconPath: ThemeIcon,
-    public status: string,
     public baseContextValue: string,
   ) {
     this.environments = [];
     this.logger = new Logger(`viewProviders.newResources.ConnectionRow.${this.connectionId}`);
   }
 
-  async refresh(): Promise<void> {
-    this.logger.debug("Refreshing");
+  async refresh(deepRefresh: boolean = false): Promise<void> {
+    this.logger.debug("Refreshing", { deepRefresh });
 
-    const refreshedEnvironments: ET[] = (await this.loader.getEnvironments(true)) as ET[];
+    const refreshedEnvironments: ET[] = (await this.loader.getEnvironments(deepRefresh)) as ET[];
     this.logger.debug("Loaded updated environments", {
       environments: refreshedEnvironments.length,
     });
@@ -98,6 +97,8 @@ export class ConnectionRow<ET extends ConcreteEnvironment>
     return this.loader.connectionId;
   }
 
+  abstract get status(): string;
+
   get id(): ConnectionId {
     return this.connectionId;
   }
@@ -116,10 +117,9 @@ export class ConnectionRow<ET extends ConcreteEnvironment>
     item.iconPath = this.iconPath;
     item.description = this.status;
     item.contextValue = `${this.baseContextValue}${this.connected ? "-connected" : ""}`;
-    item.collapsibleState =
-      this.environments.length === 0
-        ? TreeItemCollapsibleState.None
-        : TreeItemCollapsibleState.Collapsed;
+    item.collapsibleState = this.connected
+      ? TreeItemCollapsibleState.Collapsed
+      : TreeItemCollapsibleState.None;
     return item;
   }
 
@@ -137,13 +137,16 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment> {
       CCloudResourceLoader.getInstance(),
       "Confluent Cloud",
       new ThemeIcon(IconNames.CCLOUD_ENVIRONMENT),
-      "(No Connection)",
       "resources-ccloud-container",
     );
   }
+
+  get status(): string {
+    return this.connected ? "Connected" : "(No Connection)";
+  }
 }
 
-export class SingleEnvironmentConnectionRow<
+export abstract class SingleEnvironmentConnectionRow<
   ET extends ConcreteEnvironment,
   KCT extends LocalKafkaCluster | DirectKafkaCluster,
   SRT extends LocalSchemaRegistry | DirectSchemaRegistry,
@@ -162,8 +165,8 @@ export class SingleEnvironmentConnectionRow<
     return this.environments[0].schemaRegistry as SRT | undefined;
   }
 
-  override async refresh(): Promise<void> {
-    await super.refresh();
+  override async refresh(deepRefresh: boolean = false): Promise<void> {
+    await super.refresh(deepRefresh);
     if (this.environments.length > 0) {
       this.logger.debug("SingleEnvironmentConnectionRow children", {
         kafkaCluster: this.kafkaCluster,
@@ -217,9 +220,12 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
       LocalResourceLoader.getInstance(),
       "Local",
       new ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP),
-      "(Not Running)",
       "local-container",
     );
+  }
+
+  get status(): string {
+    return this.connected ? "" : "(Not Running)";
   }
 }
 
@@ -245,8 +251,11 @@ export class NewResourceViewProvider
     super();
   }
 
-  protected async refreshConnection(connectionId: ConnectionId): Promise<void> {
-    this.logger.debug("Refreshing connection", { connectionId });
+  protected async refreshConnection(
+    connectionId: ConnectionId,
+    deepRefresh: boolean = false,
+  ): Promise<void> {
+    this.logger.debug("Refreshing connection", { connectionId, deepRefresh });
 
     const connectionRow = this.connections.get(connectionId);
     if (!connectionRow) {
@@ -254,7 +263,7 @@ export class NewResourceViewProvider
       return;
     }
 
-    await connectionRow.refresh();
+    await connectionRow.refresh(deepRefresh);
     this.logger.debug("Connection row refreshed, signaling row repaint.");
     this.repaint(connectionRow);
   }
@@ -266,18 +275,18 @@ export class NewResourceViewProvider
     // upon ccloud connection state changes.
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       this.logger.debug("ccloudConnected event fired", { connected });
-      void this.refreshConnection(CCLOUD_CONNECTION_ID);
+      void this.refreshConnection(CCLOUD_CONNECTION_ID, true);
     });
 
     // Local connection needs two different observers, one for local Kafka and one for local Schema Registry.
     const localKafkaConnectedSub: Disposable = localKafkaConnected.event((connected: boolean) => {
       this.logger.debug("localKafkaConnected event fired", { connected });
-      void this.refreshConnection(LOCAL_CONNECTION_ID);
+      void this.refreshConnection(LOCAL_CONNECTION_ID, true);
     });
     const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
       (connected: boolean) => {
         this.logger.debug("localSchemaRegistryConnected event fired", { connected });
-        void this.refreshConnection(LOCAL_CONNECTION_ID);
+        void this.refreshConnection(LOCAL_CONNECTION_ID, true);
       },
     );
 
