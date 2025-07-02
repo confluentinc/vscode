@@ -17,7 +17,6 @@ import {
   ConnectionFromJSON,
   ConnectionType,
   instanceOfConnection,
-  Status,
 } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
 import { connectionStable } from "../../emitters";
@@ -127,9 +126,9 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
   const connectionStateMatches: ConnectionStateMatches[] = [
     [
       TEST_CCLOUD_CONNECTION,
-      ConnectedState.None,
-      ConnectedState.None,
-      ConnectedState.None,
+      ConnectedState.Expired,
+      ConnectedState.Expired,
+      ConnectedState.Expired,
       ConnectedState.Success,
     ],
     [
@@ -149,10 +148,6 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
     usableCcloudState,
   ] of connectionStateMatches) {
     const testConnectionId = baseConnection.id as ConnectionId;
-    // we aren't worried about `status.authentication` for this function, but it's required for the
-    // ConnectionStatus interface, e.g.:
-    // "Property 'authentication' is missing in type ... but required in type 'ConnectionStatus'."
-    const testAuthStatus = { authentication: { status: Status.NoToken } };
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should return the connection when it becomes usable`, async () => {
       const testConnection: Connection = ConnectionFromJSON({
@@ -161,7 +156,6 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           kafka_cluster: { state: usableKafkaClusterState },
           schema_registry: { state: usableSchemaRegistryState },
           ccloud: { state: usableCcloudState },
-          ...testAuthStatus,
         },
       });
 
@@ -182,7 +176,6 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           kafka_cluster: { state: pendingState },
           schema_registry: { state: pendingState },
           ccloud: { state: pendingState },
-          ...testAuthStatus,
         },
       });
       announceConnectionState(testConnection);
@@ -209,7 +202,6 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           kafka_cluster: { state: usableKafkaClusterState },
           schema_registry: { state: usableSchemaRegistryState },
           ccloud: { state: usableCcloudState },
-          ...testAuthStatus,
         },
       });
 
@@ -284,7 +276,6 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
         status: {
           kafka_cluster: { state: ConnectedState.Attempting },
           schema_registry: { state: ConnectedState.Attempting },
-          authentication: { status: Status.NoToken },
         },
       },
     };
@@ -308,7 +299,6 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
         status: {
           kafka_cluster: { state: ConnectedState.Success },
           schema_registry: { state: ConnectedState.Success },
-          authentication: { status: Status.ValidToken },
         },
       },
     };
@@ -328,7 +318,6 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
         status: {
           kafka_cluster: { state: ConnectedState.Attempting },
           schema_registry: { state: ConnectedState.Attempting },
-          authentication: { status: Status.NoToken },
         },
       },
     };
@@ -362,7 +351,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
       status: {
         kafka_cluster: { state: ConnectedState.Success },
         schema_registry: { state: ConnectedState.Success },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -377,7 +365,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
       status: {
         kafka_cluster: { state: ConnectedState.Failed },
         schema_registry: { state: ConnectedState.Success },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -399,7 +386,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
       status: {
         kafka_cluster: { state: ConnectedState.Success },
         schema_registry: { state: ConnectedState.Failed },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -420,7 +406,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
       status: {
         kafka_cluster: { state: ConnectedState.Failed },
         schema_registry: { state: ConnectedState.Failed },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -439,9 +424,8 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
-        // these should not be possible with a DIRECT connection type, but still:
+        // this should not be possible with a DIRECT connection type, but still:
         ccloud: { state: ConnectedState.Failed },
-        authentication: { status: Status.Failed },
       },
     };
 
@@ -455,7 +439,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: { state: ConnectedState.Success },
-        authentication: { status: Status.ValidToken },
       },
     };
 
@@ -469,7 +452,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: { state: ConnectedState.Failed },
-        authentication: { status: Status.Failed },
       },
     };
 
@@ -491,7 +473,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
         // these should not be possible with a CCLOUD connection type, but still:
         kafka_cluster: { state: ConnectedState.Failed },
         schema_registry: { state: ConnectedState.Failed },
-        authentication: { status: Status.ValidToken },
       },
     };
 
@@ -510,7 +491,6 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
         kafka_cluster: { state: ConnectedState.Failed },
         schema_registry: { state: ConnectedState.Failed },
         ccloud: { state: ConnectedState.Failed },
-        authentication: { status: Status.Failed },
       },
     };
 
@@ -545,7 +525,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       status: {
         kafka_cluster: { state: ConnectedState.Success },
         schema_registry: { state: ConnectedState.Failed }, // not checked in this test, ignore it
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -567,7 +546,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       status: {
         kafka_cluster: { state: ConnectedState.Failed }, // not checked in this test, ignore it
         schema_registry: { state: ConnectedState.Success },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -589,7 +567,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       status: {
         kafka_cluster: { state: ConnectedState.Success },
         schema_registry: { state: ConnectedState.Success },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -612,7 +589,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       status: {
         kafka_cluster: { state: ConnectedState.Failed },
         schema_registry: { state: ConnectedState.Failed },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -635,7 +611,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       status: {
         kafka_cluster: { state: ConnectedState.Success },
         schema_registry: { state: ConnectedState.Failed },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -663,7 +638,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
         },
         status: {
           kafka_cluster: { state: ConnectedState.Success },
-          authentication: { status: Status.NoToken },
         },
       };
 
@@ -682,7 +656,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: { state: ConnectedState.Success },
-        authentication: { status: Status.ValidToken },
       },
     };
 
@@ -703,7 +676,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       ...TEST_CCLOUD_CONNECTION,
       status: {
         ccloud: { state: ConnectedState.Failed },
-        authentication: { status: Status.ValidToken },
       },
     };
 
@@ -720,7 +692,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
       ...TEST_DIRECT_CONNECTION,
       status: {
         // missing kafka_cluster and schema_registry
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -742,7 +713,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
           errors: { sign_in: { message: kafkaFailedMessage } },
         },
         schema_registry: { state: ConnectedState.Success },
-        authentication: { status: Status.NoToken },
       },
     };
 
@@ -765,7 +735,6 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
           state: ConnectedState.Failed,
           errors: { sign_in: { message: srFailedMessage } },
         },
-        authentication: { status: Status.NoToken },
       },
     };
 

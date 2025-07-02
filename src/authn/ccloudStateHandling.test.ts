@@ -4,8 +4,8 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { Connection, Status } from "../clients/sidecar";
-import { nonInvalidTokenStatus } from "../emitters";
+import { ConnectedState, Connection } from "../clients/sidecar";
+import { stableCCloudConnectedState } from "../emitters";
 import { ResourceManager } from "../storage/resourceManager";
 import {
   AuthPromptTracker,
@@ -26,7 +26,7 @@ function createFakeConnection(expiresInMinutes: number | undefined): Connection 
   // to either expire in `expiresInMinutes` minutes or not at all.
   // (Mutating the original object may cause test flakiness)
   const connection = JSON.parse(JSON.stringify(TEST_CCLOUD_CONNECTION));
-  connection.status.authentication.requires_authentication_at = expiresInMinutes
+  connection.status.ccloud!.requires_authentication_at = expiresInMinutes
     ? new Date(Date.now() + expiresInMinutes * 60 * 1000)
     : undefined;
   return connection;
@@ -167,7 +167,7 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
 describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let nonInvalidTokenStatusFireStub: sinon.SinonStub;
+  let stableCCloudConnectedStateFireStub: sinon.SinonStub;
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
 
   before(async () => {
@@ -177,7 +177,7 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    nonInvalidTokenStatusFireStub = sandbox.stub(nonInvalidTokenStatus, "fire");
+    stableCCloudConnectedStateFireStub = sandbox.stub(stableCCloudConnectedState, "fire");
 
     stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
@@ -187,28 +187,32 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
     sandbox.restore();
   });
 
-  const nonTransientStatuses: Status[] = [Status.Failed, Status.NoToken, Status.ValidToken];
-  nonTransientStatuses.forEach((status) => {
-    it(`should fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${status}`, async () => {
+  const nonTransientStates: ConnectedState[] = [
+    ConnectedState.Failed,
+    ConnectedState.None,
+    ConnectedState.Success,
+  ];
+  nonTransientStates.forEach((status) => {
+    it(`should fire the stableCCloudConnectedState event emitter when the CCloud connected state is ${status}`, async () => {
       const connection = createFakeConnection(120);
-      connection.status.authentication.status = status;
+      connection.status.ccloud!.state = status;
 
       await reactToCCloudAuthState(connection);
 
-      assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(status));
-      assert.ok(nonInvalidTokenStatusFireStub.called);
+      assert.ok(stubResourceManager.setCCloudState.calledOnceWith(status));
+      assert.ok(stableCCloudConnectedStateFireStub.called);
     });
   });
 
-  it("should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
-    const status = Status.InvalidToken;
+  it(`should NOT fire the stableCCloudConnectedState event emitter when the CCloud connected state is ${ConnectedState.Expired}`, async () => {
+    const status = ConnectedState.Expired;
     const connection = createFakeConnection(120);
-    connection.status.authentication.status = status;
+    connection.status.ccloud!.state = status;
 
     await reactToCCloudAuthState(connection);
 
-    assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(status));
-    assert.ok(nonInvalidTokenStatusFireStub.notCalled);
+    assert.ok(stubResourceManager.setCCloudState.calledOnceWith(status));
+    assert.ok(stableCCloudConnectedStateFireStub.notCalled);
   });
 
   // shoup: ccloudPolling.ts will need to be refactored to allow stubbing across the entire module
