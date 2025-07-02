@@ -23,6 +23,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { initializeLanguageClient } from "./languageClient";
 import {
   clearFlinkSQLLanguageServerOutputChannel,
@@ -382,6 +383,10 @@ export class FlinkLanguageClientManager implements Disposable {
         });
         this.disposables.push(this.textDocumentListener);
         logger.trace("Flink SQL language client successfully initialized");
+        logUsage(UserEvent.FlinkSqlLanguageAction, {
+          action: "client_initialized",
+          compute_pool_id: computePoolId,
+        });
         this.notifyConfigChanged();
       }
     } catch (error) {
@@ -489,6 +494,12 @@ export class FlinkLanguageClientManager implements Disposable {
             Database: settings.databaseName,
             ComputePoolId: settings.computePoolId,
           },
+        });
+        logUsage(UserEvent.FlinkSqlLanguageAction, {
+          action: "configuration_changed",
+          hasComputePool: true,
+          hasCatalog: true,
+          hasDatabase: true,
         });
       } else {
         logger.trace("Incomplete settings, not sending configuration update", {
