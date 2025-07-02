@@ -54,13 +54,13 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
     // Build confirmation message with multiple options on separate lines
     confirmationMessage = new MarkdownString()
       .appendMarkdown(`## List Kafka Topics\n`)
-      .appendMarkdown(`This tool will retrieve topics with the following criteria:\n`);
+      .appendMarkdown(`This tool will retrieve up to 30 topics with the following criteria:\n`);
 
     const criteria = [
-      { label: 'Kafka Cluster ID', value: input.kafkaClusterId },
-      { label: 'Environment ID', value: input.environmentId },
-      { label: 'Connection ID', value: input.connectionId },
-      { label: 'Topic Name Filter', value: input.topicNameSubstring, quoted: true },
+      { label: "Connection ID", value: input.connectionId },
+      { label: "Environment ID", value: input.environmentId },
+      { label: "Kafka Cluster ID", value: input.kafkaClusterId },
+      { label: "Topic Name Filter", value: input.topicNameSubstring, quoted: true },
     ];
 
     criteria.forEach(({ label, value, quoted }) => {
@@ -70,12 +70,7 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
       }
     });
 
-    confirmationMessage
-      .appendMarkdown(`\n\n**Additional Information:**`)
-      .appendMarkdown(`\n- Results will be limited to 30 topics maximum`)
-      .appendMarkdown(`\n- Topic summaries will include partition count and configuration details`)
-      .appendMarkdown(`\n- Filtering is case-sensitive when using topic name substring`)
-      .appendMarkdown(`\n\nDo you want to proceed?`);
+    confirmationMessage.appendMarkdown(`\n\nDo you want to proceed?`);
 
     const confirmationMessages: LanguageModelToolConfirmationMessages = {
       title: "List Topics",
@@ -225,5 +220,4 @@ export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters>
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
   }
-}
 }
