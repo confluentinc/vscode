@@ -4,8 +4,13 @@ import {
   ChatResponseStream,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
+  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
+  MarkdownString,
+  PreparedToolInvocation,
+  ProviderResult,
 } from "vscode";
 import { ResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
@@ -26,6 +31,58 @@ export interface IListTopicsParameters {
 
 export class ListTopicsTool extends BaseLanguageModelTool<IListTopicsParameters> {
   readonly name = "list_topics";
+
+  prepareInvocation(
+    options: LanguageModelToolInvocationPrepareOptions<IListTopicsParameters>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    token: CancellationToken,
+  ): ProviderResult<PreparedToolInvocation> {
+    const { input } = options;
+    let invocationMessage: string;
+    let confirmationMessage: MarkdownString;
+
+    // Build invocation message based on parameters
+    const messageParts = ["Get topics"];
+    if (input.kafkaClusterId) {
+      messageParts.push(`from Kafka cluster ${input.kafkaClusterId}`);
+    }
+    if (input.topicNameSubstring) {
+      messageParts.push(`filtered by "${input.topicNameSubstring}"`);
+    }
+    invocationMessage = messageParts.join(" ");
+
+    // Build confirmation message with multiple options on separate lines
+    confirmationMessage = new MarkdownString()
+      .appendMarkdown(`## List Kafka Topics\n`)
+      .appendMarkdown(`This tool will retrieve up to 30 topics with the following criteria:\n`);
+
+    const criteria = [
+      { label: "Connection ID", value: input.connectionId },
+      { label: "Environment ID", value: input.environmentId },
+      { label: "Kafka Cluster ID", value: input.kafkaClusterId },
+      { label: "Topic Name Filter", value: input.topicNameSubstring, quoted: true },
+    ];
+
+    criteria.forEach(({ label, value, quoted }) => {
+      if (value) {
+        const displayValue = quoted ? `"${value}"` : value;
+        confirmationMessage.appendMarkdown(`\n- **${label}**: ${displayValue}`);
+      }
+    });
+
+    confirmationMessage.appendMarkdown(`\n\nDo you want to proceed?`);
+
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "List Topics",
+      message: confirmationMessage,
+    };
+
+    return {
+      invocationMessage,
+      confirmationMessages,
+    };
+  }
+
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTopicsParameters>,
     token: CancellationToken,
