@@ -79,11 +79,10 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
       break;
 
     case Status.NoToken:
-      // ccloudAuthSessionInvalidated.fire();
-
       // try to detect session expiration via transition from SUCCESS/EXPIRED to NONE
       // see https://github.com/confluentinc/ide-sidecar/blob/121dc766ab64bea1d88212f34f0084eb692ade4d/src/main/java/io/confluent/idesidecar/restapi/connections/CCloudConnectionState.java#L116-L122
       if (previousState === Status.ValidToken || previousState === Status.InvalidToken) {
+        ccloudAuthSessionInvalidated.fire();
         logger.debug("CCloud session expired, prompting for reauthentication");
         void showInfoNotificationWithButtons(
           "Your Confluent Cloud session has expired. Please sign in again to continue.",
@@ -93,6 +92,7 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
         );
       } else if (previousState !== Status.NoToken) {
         logger.debug(`CCloud connection transitioned from ${previousState} to ${Status.NoToken}`);
+        ccloudAuthSessionInvalidated.fire();
       } else {
         logger.debug(`CCloud connection in initial ${Status.NoToken} state (no tokens)`);
       }

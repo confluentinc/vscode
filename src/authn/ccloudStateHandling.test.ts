@@ -138,13 +138,30 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
     sinon.assert.notCalled(nonInvalidTokenStatusFireStub);
   });
 
-  const badStates: [ConnectedState, Status][] = [
+  it(`should fire ccloudAuthSessionInvalidated when the connected state is ${ConnectedState.Failed}`, async () => {
+    // previous connected state doesn't matter for this test
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: { state: ConnectedState.Failed },
+        authentication: { status: Status.Failed },
+      },
+    };
+
+    await handleUpdatedConnection(connection);
+
+    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
+  });
+
+  const invalidatedStates: [ConnectedState, Status][] = [
+    [ConnectedState.Success, Status.ValidToken],
+    [ConnectedState.Expired, Status.InvalidToken],
     [ConnectedState.None, Status.NoToken],
-    [ConnectedState.Failed, Status.Failed],
+    [ConnectedState.Attempting, Status.NoToken],
   ];
-  for (const [currentState, authStatus] of badStates) {
-    it(`should fire ccloudAuthSessionInvalidated when the connected state is ${currentState}`, async () => {
-      // previous connected state doesn't matter for this test
+  for (const [currentState, authStatus] of invalidatedStates) {
+    it(`should not fire ccloudAuthSessionInvalidated when the connected state is ${currentState}/${authStatus}`, async () => {
+      stubbedResourceManager.getCCloudAuthStatus.resolves(Status.NoToken);
       const connection: Connection = {
         ...TEST_CCLOUD_CONNECTION,
         status: {
@@ -155,17 +172,36 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
 
       await handleUpdatedConnection(connection);
 
+      sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
+    });
+  }
+
+  for (const previousState of [Status.ValidToken, Status.InvalidToken]) {
+    it(`should fire ccloudAuthSessionInvalidated when transitioning from ${previousState} to ${Status.NoToken}`, async () => {
+      stubbedResourceManager.getCCloudAuthStatus.resolves(previousState);
+
+      const connection: Connection = {
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          ccloud: { state: ConnectedState.None },
+          authentication: { status: Status.NoToken },
+        },
+      };
+
+      await handleUpdatedConnection(connection);
+
       sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
     });
   }
 
-  it(`should not fire ccloudAuthSessionInvalidated when the connected state is ${Status.InvalidToken}`, async () => {
-    // previous connected state doesn't matter for this test
+  it(`should not fire ccloudAuthSessionInvalidated when already in ${Status.NoToken} state`, async () => {
+    stubbedResourceManager.getCCloudAuthStatus.resolves(Status.NoToken);
+
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
-        ccloud: { state: ConnectedState.Expired },
-        authentication: { status: Status.InvalidToken },
+        ccloud: { state: ConnectedState.None },
+        authentication: { status: Status.NoToken },
       },
     };
 
@@ -218,6 +254,7 @@ describe("authn/ccloudStateHandling.ts handleUpdatedConnection()", () => {
           [REAUTH_BUTTON_TEXT]: sinon.match.func,
         },
       );
+      sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
     });
   }
 
