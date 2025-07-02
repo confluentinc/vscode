@@ -1,7 +1,7 @@
 // helpers for connection status testing, factored out for test spying
 
 import { reactToCCloudAuthState } from "../../authn/ccloudStateHandling";
-import { Connection, ConnectionType } from "../../clients/sidecar/models";
+import { ConnectedState, Connection, ConnectionType } from "../../clients/sidecar/models";
 import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { Logger } from "../../logging";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
@@ -150,7 +150,8 @@ function isDirectConnectionStable(connection: Connection): boolean {
   const kafkaState = status.kafka_cluster?.state;
   const schemaRegistryState = status.schema_registry?.state;
 
-  const rv = kafkaState !== "ATTEMPTING" && schemaRegistryState !== "ATTEMPTING";
+  const rv =
+    kafkaState !== ConnectedState.Attempting && schemaRegistryState !== ConnectedState.Attempting;
   logger.debug(
     `isDirectConnectionStable(): returning ${rv} for connection ${connection.id} based on kafkaState ${kafkaState} and schemaRegistryState ${schemaRegistryState}`,
   );
