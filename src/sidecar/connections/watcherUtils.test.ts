@@ -40,13 +40,13 @@ describe("connectionEventHandler", () => {
     ConnectionEventAction.CONNECTED,
     ConnectionEventAction.DISCONNECTED,
   ]) {
-    it(`CCloud connection update should cascade through to call ccloudStateHandling.reactToCCloudAuthState on ${action}`, () => {
-      // connectionEventHandler() should call through to ccloudStateHandling.reactToCCloudAuthState()
+    it(`CCloud connection update should cascade through to call ccloudStateHandling.handleUpdatedConnection on ${action}`, () => {
+      // connectionEventHandler() should call through to ccloudStateHandling.handleUpdatedConnection()
       // upon reciept of a connection event for the CCloud connection.
 
       // Arrange
-      const reactToCCloudAuthStateStub = sandbox
-        .stub(ccloudStateHandling, "reactToCCloudAuthState")
+      const handleUpdatedConnectionStub = sandbox
+        .stub(ccloudStateHandling, "handleUpdatedConnection")
         .resolves();
 
       const testConnectionEvent: ConnectionEventBody = {
@@ -59,14 +59,14 @@ describe("connectionEventHandler", () => {
 
       // Assert
       assert.strictEqual(
-        reactToCCloudAuthStateStub.calledOnce,
+        handleUpdatedConnectionStub.calledOnce,
         true,
-        "reactToCCloudAuthState called",
+        "handleUpdatedConnection called",
       );
 
       assert.ok(
-        reactToCCloudAuthStateStub.calledWith(TEST_CCLOUD_CONNECTION),
-        `reactToCCloudAuthState called with ${reactToCCloudAuthStateStub.getCall(0).args[0]}`,
+        handleUpdatedConnectionStub.calledWith(TEST_CCLOUD_CONNECTION),
+        `handleUpdatedConnection called with ${handleUpdatedConnectionStub.getCall(0).args[0]}`,
       );
 
       // ccloud events should never fire directConnectionCreatedStub
@@ -74,10 +74,10 @@ describe("connectionEventHandler", () => {
     });
   }
 
-  it("CCloud connection DELETED event should not call ccloudStateHandling.reactToCCloudAuthState", () => {
+  it("CCloud connection DELETED event should not call ccloudStateHandling.handleUpdatedConnection", () => {
     // Arrange
-    const reactToCCloudAuthStateStub = sandbox
-      .stub(ccloudStateHandling, "reactToCCloudAuthState")
+    const handleUpdatedConnectionStub = sandbox
+      .stub(ccloudStateHandling, "handleUpdatedConnection")
       .resolves();
 
     const testConnectionEvent: ConnectionEventBody = {
@@ -89,7 +89,7 @@ describe("connectionEventHandler", () => {
     connectionEventHandler(testConnectionEvent);
 
     // Assert
-    assert.strictEqual(reactToCCloudAuthStateStub.notCalled, true);
+    assert.strictEqual(handleUpdatedConnectionStub.notCalled, true);
   });
 
   for (const action of [
