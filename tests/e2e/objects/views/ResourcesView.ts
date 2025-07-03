@@ -75,9 +75,10 @@ export class ResourcesView extends View {
    * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
    */
   get ccloudKafkaClusters(): Locator {
-    return this.kafkaClusters
-      .filter({ hasNotText: "confluent-local" })
-      .filter({ hasNotText: "Kafka Cluster" });
+    // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
+    return this.body
+      .locator("[role='treeitem'][aria-level='3']")
+      .filter({ has: this.page.locator(".codicon-confluent-kafka-cluster") });
   }
 
   /**
@@ -97,7 +98,40 @@ export class ResourcesView extends View {
     return this.kafkaClusters.filter({ hasText: "Kafka Cluster" });
   }
 
-  // FUTURE: add Schema Registry and Flink compute pool getter methods
+  /** Locator for all Schema Registry tree items. */
+  get schemaRegistries(): Locator {
+    return this.treeItems.filter({ has: this.page.locator(".codicon-confluent-schema-registry") });
+  }
+
+  /**
+   * Locator for CCloud Schema Registry tree items.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
+   */
+  get ccloudSchemaRegistries(): Locator {
+    // third nested element: Confluent Cloud item -> environment item -> Schema Registry item
+    return this.body
+      .locator("[role='treeitem'][aria-level='3']")
+      .filter({ has: this.page.locator(".codicon-confluent-schema-registry") });
+  }
+
+  /**
+   * Locator for local Schema Registry tree items.
+   * Only visible when the {@link localItem "Local" item} is expanded.
+   */
+  get localSchemaRegistries(): Locator {
+    return this.schemaRegistries.filter({ hasText: "confluent-local" });
+  }
+
+  /**
+   * Locator for direct connection Schema Registry tree items.
+   * Only visible when a {@link directConnections "Direct Connections" item} is available and
+   * expanded.
+   */
+  get directSchemaRegistries(): Locator {
+    return this.schemaRegistries.filter({ hasText: "Schema Registry" });
+  }
+
+  // FUTURE: add Flink compute pool getter methods
 
   /**
    * Open the Direct Connection form by clicking "Add New Connection" -> "Enter manually".
