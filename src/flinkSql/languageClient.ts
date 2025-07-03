@@ -9,6 +9,7 @@ import {
   Trace,
 } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getSecretStorage } from "../storage/utils";
@@ -32,9 +33,9 @@ export async function initializeLanguageClient(
     SecretStorageKeys.SIDECAR_AUTH_TOKEN,
   );
   if (!accessToken) {
-    logger.error(
-      "Failed to initialize Flink SQL language client: No access token found for language client",
-    );
+    let msg = "Failed to initialize Flink SQL language client: No access token found";
+    logger.error(msg);
+    logError(new Error(msg), "No token found in secret storage");
     return null;
   }
   return new Promise((resolve, reject) => {
@@ -42,8 +43,14 @@ export async function initializeLanguageClient(
       headers: { authorization: `Bearer ${accessToken}` },
     });
     ws.onerror = (error) => {
-      logger.error(`WebSocket connection error: ${error}`);
-      reject(new Error("Failed to connect to Flink SQL language server")); //FIXME here's one error that surfaces to users
+      let msg = "WebSocket error connecting to Flink SQL language server.";
+      logger.error(msg, error.message);
+      logError(error, msg, {
+        extra: {
+          wsUrl: url,
+        },
+      });
+      reject(error);
     };
     ws.onopen = async () => {
       logger.debug("WebSocket connection opened");
@@ -92,12 +99,24 @@ export async function initializeLanguageClient(
             },
           },
           initializationFailedHandler: (error) => {
-            logger.error(`Language server initialization failed: ${error}`);
+            let msg = "Language client initialization failed";
+            logger.error(msg, JSON.stringify(error));
+            logError(error, msg, {
+              extra: {
+                wsUrl: url,
+              },
+            });
             return true; // Don't send the user an error, we are handling it
           },
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
-              logger.error(`Language server error: ${message}`);
+              let msg = "Language client error handler invoked.";
+              logger.error(msg, JSON.stringify(error));
+              logError(error, msg, {
+                extra: {
+                  wsUrl: url,
+                },
+              });
               return {
                 action: ErrorAction.Continue,
                 message: `${message ?? error.message}`,
@@ -105,7 +124,13 @@ export async function initializeLanguageClient(
               };
             },
             closed: () => {
-              logger.warn("Language server connection closed by the client's error handler");
+              let msg = "Language client connection closed by the client's error handler";
+              logger.warn(msg);
+              logError(new Error(msg), msg, {
+                extra: {
+                  wsUrl: url,
+                },
+              });
               onWebSocketDisconnect();
               return {
                 action: CloseAction.Restart,
@@ -127,7 +152,13 @@ export async function initializeLanguageClient(
         languageClient.setTrace(Trace.Compact);
         resolve(languageClient);
       } catch (e) {
-        logger.error(`Error starting FlinkSQL language server: ${e}`);
+        let msg = "Error while starting FlinkSQL language server";
+        logger.error(msg, JSON.stringify(e));
+        logError(e, msg, {
+          extra: {
+            wsUrl: url,
+          },
+        });
         reject(e);
       }
     };
@@ -135,6 +166,20 @@ export async function initializeLanguageClient(
       const reason = event.reason || "Unknown reason";
       const code = event.code;
       logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
+      if (code !== 1000) {
+        // 1000 is normal closure
+        logError(
+          new Error(`WebSocket closed unexpectedly: ${reason}`),
+          "WebSocket onClose handler called",
+          {
+            extra: {
+              code,
+              reason,
+              wsUrl: url,
+            },
+          },
+        );
+      }
     };
   });
 }
