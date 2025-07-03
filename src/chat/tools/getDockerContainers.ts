@@ -4,9 +4,13 @@ import {
   ChatResponseStream,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
+  LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
+  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
   MarkdownString,
+  PreparedToolInvocation,
+  ProviderResult,
 } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, SystemApi } from "../../clients/docker";
 import { defaultRequestInit } from "../../docker/configs";
@@ -147,5 +151,39 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
     // no footer needed
 
     return new TextOnlyToolResultPart(toolCall.callId, resultParts);
+  }
+
+  prepareInvocation(
+    options: LanguageModelToolInvocationPrepareOptions<IGetDockerContainersParameters>,
+  ): ProviderResult<PreparedToolInvocation> {
+    const { input } = options;
+    let invocationMessage: string;
+    let confirmationMessage: MarkdownString;
+
+    if (input.resourceKind) {
+      invocationMessage = `Get all Docker containers for resource kind: ${input.resourceKind}`;
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Docker Containers Lookup\n`)
+        .appendMarkdown(
+          `This tool will look up all Docker containers associated with **${input.resourceKind}** resources. Results will include container details. Do you want to proceed?`,
+        );
+    } else {
+      invocationMessage = "No resource kind provided for Docker containers lookup.";
+      confirmationMessage = new MarkdownString()
+        .appendMarkdown(`## Missing Resource Kind\n`)
+        .appendMarkdown(
+          `No resource kind was provided. Please provide a valid resource kind (e.g., Kafka, SchemaRegistry) and try again.`,
+        );
+    }
+
+    const confirmationMessages: LanguageModelToolConfirmationMessages = {
+      title: "Get Docker Containers",
+      message: confirmationMessage,
+    };
+
+    return {
+      invocationMessage,
+      confirmationMessages,
+    };
   }
 }
