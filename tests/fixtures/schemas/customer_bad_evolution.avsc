@@ -1,27 +1,11 @@
 {
   "type": "record",
-  "name": "Customer",
+  "name": "Orders",
   "namespace": "examples",
   "fields": [
     {
-      "name": "name",
+      "name": "foo",
       "type": "string"
-    },
-    {
-      "name": "email",
-      "type": "string"
-    },
-    {
-      "name": "address",
-      "type": "string"
-    },
-    {
-      "name": "phone",
-      "type": "string"
-    },
-    {
-      "name": "age",
-      "type": "int"
     }
   ]
 }
