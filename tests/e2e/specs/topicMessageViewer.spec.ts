@@ -64,7 +64,7 @@ test.describe("Topics Listing & Message Viewer", () => {
       await firstEnvironment.click();
       await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
 
-      // then click on the first (CCloud) Kafka cluster to select it
+      // then click on the first (CCloud) Kafka cluster to focus it in the Topics view
       await expect(resourcesView.ccloudKafkaClusters).not.toHaveCount(0);
       const firstKafkaCluster: Locator = resourcesView.ccloudKafkaClusters.first();
       await firstKafkaCluster.click();
@@ -126,19 +126,20 @@ test.describe("Topics Listing & Message Viewer", () => {
       const connectionName = "Playwright";
       await connectionForm.fillConnectionName(connectionName);
       await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
+      // only configure the Kafka connection
       await connectionForm.fillKafkaBootstrapServers(process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!);
       await connectionForm.selectKafkaAuthType(SupportedAuthType.API);
       await connectionForm.fillKafkaCredentials({
         api_key: process.env.E2E_KAFKA_API_KEY!,
         api_secret: process.env.E2E_KAFKA_API_SECRET!,
       });
+
       await connectionForm.testButton.click();
       await expect(connectionForm.successMessage).toBeVisible();
       await connectionForm.saveButton.click();
 
       // make sure we see the notification indicating the connection was created
       const notificationArea = new NotificationArea(page);
-      // only wait on the progress notification to resolve if it's visible at all
       const notifications = notificationArea.infoNotifications.filter({
         hasText: "New Connection Created",
       });
@@ -156,7 +157,7 @@ test.describe("Topics Listing & Message Viewer", () => {
     test("should select a Kafka cluster from the Resources view, list topics, and open message viewer", async ({
       page,
     }) => {
-      // expand the first direct connection to show its Kafka cluster and Schema Registry
+      // expand the first direct connection to show its Kafka cluster
       await expect(resourcesView.directConnections).not.toHaveCount(0);
       const firstConnection = resourcesView.directConnections.first();
       // direct connections are collapsed by default, so we need to expand it first
