@@ -1,4 +1,6 @@
 import { FrameLocator } from "@playwright/test";
+import * as path from "path";
+import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
@@ -8,6 +10,9 @@ import {
   verifyResultsStats,
   verifyStatementStatus,
 } from "./utils/flinkStatement";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename)
 
 test.describe("Flink statements and statement results viewer", () => {
   let webview: FrameLocator;
@@ -28,19 +33,19 @@ test.describe("Flink statements and statement results viewer", () => {
   const testCases = [
     {
       name: "SELECT statement",
-      fileName: "select.flink.sql",
+      fileName: path.join(__dirname, "../../fixtures/flinksql/select.flink.sql"),
       eventualExpectedStatus: "RUNNING",
       expectedStats: "Showing 1..100 of 200 results (total: 200).",
     },
     {
       name: "EXPLAIN statement",
-      fileName: "explain.flink.sql",
+      fileName: path.join(__dirname, "../../fixtures/flinksql/explain.flink.sql"),
       eventualExpectedStatus: "COMPLETED",
       expectedStats: "Showing 1..1 of 1 results (total: 1).",
     },
     {
       name: "DESCRIBE statement",
-      fileName: "describe.flink.sql",
+      fileName: path.join(__dirname, "../../fixtures/flinksql/describe.flink.sql"),
       eventualExpectedStatus: "COMPLETED",
       expectedStats: "Showing 1..5 of 5 results (total: 5).",
     },
