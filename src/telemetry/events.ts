@@ -40,6 +40,6 @@ export function logUsage(event: UserEvent, data?: Record<string, any | Telemetry
 }
 
 /** Compute a hex-encoded SHA-256 hash of a client-side string to accompany telemetry data. */
-export function hashed(input: string): string {
-  return createHash("sha256").update(input).digest("hex");
+export function hashed(input: string, algorithm: string = "sha256"): string {
+  return createHash(algorithm).update(input).digest("hex");
 }
