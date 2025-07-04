@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Customer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "age": {
+      "oneOf": [
+        { "type": "integer" },
+        { "type": "null" }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "address",
+    "phone"
+  ],
+  "additionalProperties": false
+}
