@@ -119,7 +119,7 @@ export class ResourcesView extends View {
    * Only visible when the {@link localItem "Local" item} is expanded.
    */
   get localSchemaRegistries(): Locator {
-    return this.schemaRegistries.filter({ hasText: "confluent-local" });
+    return this.schemaRegistries.filter({ hasText: "local-sr" });
   }
 
   /**
