@@ -1,7 +1,7 @@
 import assert from "assert";
 import * as sinon from "sinon";
 
-import { loadFixture } from "../../tests/fixtures/utils";
+import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
@@ -206,9 +206,10 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should return the statement if found", async () => {
-      const mockResponse = loadFixture(
+      const responseString = loadFixtureFromFile(
         "flink-statement-results-processing/create-statement-response.json",
-      ) as GetSqlv1Statement200Response;
+      );
+      const mockResponse = JSON.parse(responseString) as GetSqlv1Statement200Response;
 
       flinkSqlStatementsApi.getSqlv1Statement.resolves(mockResponse);
 
