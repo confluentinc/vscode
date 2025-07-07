@@ -279,7 +279,6 @@ export class FlinkLanguageClientManager implements Disposable {
       return null;
     } catch (error) {
       let msg = "Error while looking up compute pool";
-      logger.error(msg, error);
       logError(error, msg, {
         extra: {
           compute_pool_id: computePoolId,
@@ -337,7 +336,6 @@ export class FlinkLanguageClientManager implements Disposable {
 
     let url: string | null = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
       let msg = "Failed to build WebSocket URL";
-      logger.error(msg, error);
       logError(error, msg, {
         extra: {
           compute_pool_id: computePoolId,
@@ -391,7 +389,6 @@ export class FlinkLanguageClientManager implements Disposable {
       }
     } catch (error) {
       let msg = "Failed to start Flink SQL language client";
-      logger.error(msg, error);
       logError(error, msg, {
         extra: {
           compute_pool_id: computePoolId,
@@ -415,7 +412,6 @@ export class FlinkLanguageClientManager implements Disposable {
     // If we've reached max attempts, stop trying to reconnect
     if (this.reconnectCounter >= this.MAX_RECONNECT_ATTEMPTS) {
       let msg = `Failed to reconnect after ${this.MAX_RECONNECT_ATTEMPTS} attempts`;
-      logger.error(msg);
       logError(new Error(msg), msg, {
         extra: {
           reconnectCounter: this.reconnectCounter,
@@ -443,7 +439,6 @@ export class FlinkLanguageClientManager implements Disposable {
       this.reconnectCounter = 0;
     } catch (e) {
       let msg = "Failed to restart language client";
-      logger.error(msg, e);
       logError(e, msg, {
         extra: {
           reconnectCounter: this.reconnectCounter,
@@ -464,7 +459,6 @@ export class FlinkLanguageClientManager implements Disposable {
       }
     } catch (error) {
       let msg = "Error stopping language client during cleanup";
-      logger.error(msg, error);
       logError(error, msg);
     }
     // Make sure we clean up even if there's an error

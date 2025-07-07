@@ -34,7 +34,6 @@ export async function initializeLanguageClient(
   );
   if (!accessToken) {
     let msg = "Failed to initialize Flink SQL language client: No access token found";
-    logger.error(msg);
     logError(new Error(msg), "No token found in secret storage");
     return null;
   }
@@ -44,7 +43,6 @@ export async function initializeLanguageClient(
     });
     ws.onerror = (error) => {
       let msg = "WebSocket error connecting to Flink SQL language server.";
-      logger.error(msg, error.message);
       logError(error, msg, {
         extra: {
           wsUrl: url,
@@ -100,7 +98,6 @@ export async function initializeLanguageClient(
           },
           initializationFailedHandler: (error) => {
             let msg = "Language client initialization failed";
-            logger.error(msg, JSON.stringify(error));
             logError(error, msg, {
               extra: {
                 wsUrl: url,
@@ -111,7 +108,6 @@ export async function initializeLanguageClient(
           errorHandler: {
             error: (error: Error, message: Message): ErrorHandlerResult => {
               let msg = "Language client error handler invoked.";
-              logger.error(msg, JSON.stringify(error));
               logError(error, msg, {
                 extra: {
                   wsUrl: url,
@@ -126,11 +122,6 @@ export async function initializeLanguageClient(
             closed: () => {
               let msg = "Language client connection closed by the client's error handler";
               logger.warn(msg);
-              logError(new Error(msg), msg, {
-                extra: {
-                  wsUrl: url,
-                },
-              });
               onWebSocketDisconnect();
               return {
                 action: CloseAction.Restart,
@@ -153,7 +144,6 @@ export async function initializeLanguageClient(
         resolve(languageClient);
       } catch (e) {
         let msg = "Error while starting FlinkSQL language server";
-        logger.error(msg, JSON.stringify(e));
         logError(e, msg, {
           extra: {
             wsUrl: url,
