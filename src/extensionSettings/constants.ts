@@ -104,7 +104,7 @@ export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS_DEFAULT = true;
 /** Whether or not to enable the Confluent Cloud language client+server integration for Flink SQL documents. */
 export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER =
   prefix + "flink.enableConfluentCloudLanguageServer";
-export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT = false;
+export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT = true;
 
 /** Whether or not to enable the `@Confluent` chat participant and associated tools. */
 export const ENABLE_CHAT_PARTICIPANT = prefix + "experimental.enableChatParticipant";
