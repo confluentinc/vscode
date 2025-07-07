@@ -29,7 +29,7 @@ export class TextDocument {
   /** Save the currently-focused document. */
   async save(): Promise<void> {
     await this.locator.click();
-    await this.page.keyboard.press("ControlOrMeta+s");
+    await this.editorContent.press("ControlOrMeta+s");
   }
 
   /** Close the currently-focused document. */
@@ -42,13 +42,13 @@ export class TextDocument {
   /** Select all content in the document. */
   async selectAll(): Promise<void> {
     await this.locator.click();
-    await this.page.keyboard.press("ControlOrMeta+a");
+    await this.editorContent.press("ControlOrMeta+a");
   }
 
   /** Delete all content in the document. */
   async deleteAll(): Promise<void> {
     await this.selectAll();
-    await this.page.keyboard.press("Backspace");
+    await this.editorContent.press("Backspace");
   }
 
   /**
