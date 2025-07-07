@@ -12,7 +12,7 @@ import {
   ResultsViewerStorageState,
 } from "../src/webview/flink-statement-results";
 import { eventually } from "./eventually";
-import { loadFixture } from "./fixtures/utils";
+import { loadFixtureFromFile } from "./fixtures/utils";
 
 class FakeWebviewStorage<T> implements WebviewStorage<T> {
   private storage: T | undefined;
@@ -80,9 +80,12 @@ export async function createTestResultsManagerContext(
 
   const notifyUIStub = sandbox.stub();
 
-  const stmtResults = Array.from({ length: 5 }, (_, i) =>
-    loadFixture(`flink-statement-results-processing/get-statement-results-${i + 1}.json`),
-  );
+  const stmtResults = Array.from({ length: 5 }, (_, i) => {
+    const resultsString = loadFixtureFromFile(
+      `flink-statement-results-processing/get-statement-results-${i + 1}.json`,
+    );
+    return JSON.parse(resultsString);
+  });
 
   // Update the refreshFlinkStatement stub to return the mock statement
   refreshFlinkStatementStub.returns(Promise.resolve(statement));
@@ -123,9 +126,10 @@ export async function createTestResultsManagerContext(
     });
 
     // Verify the results match expected format
-    const expectedParsedResults = loadFixture(
+    const expected: string = loadFixtureFromFile(
       "flink-statement-results-processing/expected-parsed-results.json",
     );
+    const expectedParsedResults = JSON.parse(expected);
     assert.deepStrictEqual(results, { results: expectedParsedResults });
   }, 10_000);
 

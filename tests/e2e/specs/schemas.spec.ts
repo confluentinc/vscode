@@ -1,238 +1,394 @@
-import { Page, expect } from "@playwright/test";
+import { expect, Locator, Page } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
+import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
+import { TextDocument } from "../objects/editor/TextDocument";
+import { Notification } from "../objects/notifications/Notification";
+import { NotificationArea } from "../objects/notifications/NotificationArea";
+import { InputBox } from "../objects/quickInputs/InputBox";
+import { Quickpick } from "../objects/quickInputs/Quickpick";
+import { ResourcesView } from "../objects/views/ResourcesView";
+import { SchemasView } from "../objects/views/SchemasView";
+import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
+import {
+  DirectConnectionForm,
+  FormConnectionType,
+  SupportedAuthType,
+} from "../objects/webviews/DirectConnectionFormWebview";
+import { executeVSCodeCommand } from "../utils/commands";
+import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
-import { openFixtureFile } from "./utils/flinkStatement";
 
-async function createNewSubject(page: Page, subjectName: string, schemaFile: string) {
-  await openFixtureFile(page, schemaFile);
-
-  await page.getByLabel(/Schemas.*Section/).click();
-  await page.getByLabel(/Schemas.*Section/).hover();
-  await page.getByLabel("Select Schema Registry").click();
-  await expect(page.getByPlaceholder("Select a Schema Registry")).toBeVisible();
-  await page.getByPlaceholder("Select a Schema Registry").click();
-
-  // Select the first option.
-  await page.keyboard.press("Enter");
-
-  await page.getByLabel(/Schemas.*Section/).hover();
-  await page.getByLabel("Upload Schema to Schema Registry", { exact: true }).click();
-
-  await page.getByPlaceholder("Select a file").click();
-  await page.keyboard.type(schemaFile);
-  await page.keyboard.press("Enter");
-
-  await page.getByText("Create new subject").click();
-  await page.getByLabel("Schema Subject").click();
-  await page.getByLabel("Schema Subject").press("ControlOrMeta+a");
-  await page.getByLabel("Schema Subject").fill(subjectName);
-  await page.getByLabel("Schema Subject").press("Enter");
-
-  await expect(
-    page.getByText(/Schema registered to new subject.*/, { exact: true }).first(),
-  ).toBeVisible();
-}
-
-async function evolveSchema(page: Page, subjectName: string, fixtureFile: string) {
-  await openFixtureFile(page, fixtureFile);
-  // Copy the schema to the clipboard.
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.press("ControlOrMeta+c");
-
-  await page.getByLabel(subjectName).first().hover({ timeout: 200 });
-  await page.getByRole("button", { name: "Evolve Latest Schema" }).click();
-  // Wait for the unsaved schema document to open.
-  await page.waitForTimeout(1000);
-
-  await page.getByRole("tab", { name: subjectName }).first().click();
-  // Wait for the tab to be focused.
-  await page.waitForTimeout(200);
-  // Paste the schema into the tab.
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.press("Backspace");
-  await page.keyboard.press("ControlOrMeta+v");
-
-  // The unsaved file buffer will start with the subject name, so we can just use that.
-  await uploadSchema(page, subjectName);
-}
+/** Schema types and their corresponding file extensions to test. */
+const SCHEMA_TYPES = [
+  ["AVRO", "avsc"],
+  ["JSON", "json"],
+  ["PROTOBUF", "proto"],
+] as const;
 
 /**
- * Upload a schema to the Schema Registry. Caller is expected to have opened
- * and focused the file buffer with the schema to upload.
+ * E2E test suite for testing the whole schema management flow in the extension.
+ * {@see https://github.com/confluentinc/vscode/issues/1839}
  *
- * @param page - The Playwright page object.
- * @param subjectName - The name of the subject to upload the schema to.
+ * Test flow:
+ * 1. Set up connection:
+ *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
+ *    b. DIRECT: Fill out the Add New Connection form and submit with Schema Registry connection details
+ * 2. Select a Schema Registry
+ * 3. Create a new subject with an initial schema version
+ * 4. Try to evolve the schema to a new version
+ *    a. Valid/compatible schema update
+ *    b. Invalid/incompatible schema update
+ * 5. Clean up by deleting the subject
  */
-async function uploadSchema(page: any, subjectName: string) {
-  await page.getByLabel(/Schemas.*Section/).hover();
-  await expect(page.getByLabel("Upload Schema to Schema Registry", { exact: true })).toBeVisible();
-  await page.getByLabel("Upload Schema to Schema Registry", { exact: true }).click();
 
-  await expect(page.getByPlaceholder("Select a file")).toBeVisible();
-  await page.getByPlaceholder("Select a file").click();
-  // Select the first option.
-  await page.keyboard.press("Enter");
+test.describe("Schema Management", () => {
+  let resourcesView: ResourcesView;
+  // this is set after the connections are set up based on their beforeEach hooks
+  let schemasView: SchemasView;
+  let notificationArea: NotificationArea;
 
-  await page.keyboard.type("AVRO");
-  await page.keyboard.press("Enter");
-
-  await page.keyboard.type(subjectName);
-  await page.keyboard.press("Enter");
-}
-
-async function deleteSubject(page: any, subjectName: string) {
-  await page.keyboard.press("Shift+ControlOrMeta+P");
-  await page.keyboard.type("Delete Subject");
-  await page.keyboard.press("Enter");
-
-  await expect(page.getByPlaceholder("Select existing subject")).toBeVisible();
-  await page.keyboard.type(subjectName);
-  await page.keyboard.press("Enter");
-
-  await page.getByLabel("Hard Delete").click();
-
-  const validationMessage = await page
-    .getByPlaceholder(/Enter "hard .*" to confirm/)
-    .getAttribute("placeholder");
-  const match = validationMessage?.match(/Enter "hard (.*)" to confirm/);
-  if (match) {
-    const requiredText = match[1];
-    await page.keyboard.type(`hard ${requiredText}`);
-    await page.keyboard.press("Enter");
-  }
-
-  await expect(
-    page.getByText(/Subject customer-.*-value and.*hard deleted./, { exact: true }).first(),
-  ).toBeVisible();
-}
-
-test.describe("Schema related functionality", () => {
   let subjectName: string;
+  // most tests only create one schema version, but the "should evolve schema to second version" test
+  // should create a second version, which will change this to the subject name itself
+  let deletionConfirmation = "v1";
 
-  test.beforeEach(async ({ page }) => {
-    await openConfluentExtension(page);
-  });
+  test.beforeEach(async ({ page, electronApp }) => {
+    subjectName = "";
 
-  test.afterEach(async ({ page }) => {
-    if (subjectName) {
-      await deleteSubject(page, subjectName);
-    }
-  });
-
-  /**
-   * Steps:
-   * 1. Create a new subject.
-   * 2. Evolve the schema using an incompatible schema and verify that the evolution fails.
-   * 3. Evolve the schema using a compatible schema and verify that the evolution succeeds.
-   * 4. Delete the subject.
-   */
-  async function testSchemaEvolution({ page }: { page: Page }) {
-    const randomValue = Math.random().toString(36).substring(2, 15);
-    subjectName = `customer-${randomValue}-value`;
-
-    await createNewSubject(page, subjectName, "customer.avsc");
-    await evolveSchema(page, subjectName, "customer_bad_evolution.avsc");
-
-    await expect(
-      page.getByLabel(
-        "Conflict with prior schema version: The field 'age' at path '/fields/4' in the new schema has no default value and is missing in the old schema, source: Confluent, notification",
-        { exact: true },
-      ),
-    ).toBeVisible();
-
-    await evolveSchema(page, subjectName, "customer_good_evolution.avsc");
-
-    await expect(
-      page.getByText(/^New version 2 registered to existing subject "customer-.*-value"$/, {
-        exact: true,
-      }),
-    ).toBeVisible();
-  }
-
-  test.describe("using Confluent Cloud connection", () => {
-    test.beforeEach(async ({ page, electronApp }) => {
-      await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
+    // disable auto-formatting and language detection to avoid issues with the editor
+    // NOTE: this can't be done in a .beforeAll hook since it won't persist for each test run
+    await configureVSCodeSettings(page, electronApp, {
+      // this is to avoid VS Code incorrectly setting the language of .proto files as C# so they
+      // appear correctly (as "plaintext") in the URI quickpick
+      "workbench.editor.languageDetection": false,
+      // we also have to disable a lot of auto-formatting so the .insertContent() method properly
+      // adds the schema content as it exists in the fixture files
+      "editor.autoClosingBrackets": "never",
+      "editor.autoClosingQuotes": "never",
+      "editor.autoIndent": "none",
+      "editor.autoSurround": "never",
+      "editor.formatOnType": false,
+      "editor.insertSpaces": false,
+      "json.format.enable": false,
+      "json.validate.enable": false,
+      // XXX: this must be set to prevent skipping newlines/commas while content is added to the editor
+      "editor.acceptSuggestionOnEnter": "off",
+      // this prevents VS Code from converting the `http` to `https` in `$schema` URIs:
+      "editor.linkedEditing": false,
     });
 
-    test("create a new subject and evolve it", testSchemaEvolution);
+    await openConfluentExtension(page);
+    resourcesView = new ResourcesView(page);
+    await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
+
+    notificationArea = new NotificationArea(page);
   });
 
-  test.describe("using direct connection to Confluent Cloud Schema Registry using SR API Key", () => {
-    test.beforeEach(async ({ page, electronApp }) => {
-      // Stub the dialog that tells you the connection was created
+  test.afterEach(async ({ page, electronApp }) => {
+    // reset VS Code settings to defaults
+    await configureVSCodeSettings(page, electronApp, {});
+
+    // delete the subject if it was created during the test
+    if (subjectName) {
+      // stub the system dialog (warning modal) that appears when hard-deleting
       await stubMultipleDialogs(electronApp, [
         {
           method: "showMessageBox",
           value: {
-            response: 0, // Simulates clicking "OK"
+            response: 0, // simulate clicking "Yes, Hard Delete" (first button)
             checkboxChecked: false,
           },
         },
       ]);
 
-      await page.getByLabel("Resources Section").hover();
-      await page.getByLabel("Add New Connection").click();
-      await page.getByLabel("Enter manually").locator("a").click();
-      const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
+      // replace this with right-click context actions once this issue is resolved:
+      // https://github.com/confluentinc/vscode/issues/1875
+      await executeVSCodeCommand(page, "Confluent: Delete All Schemas in Subject");
 
-      const { apiKey, apiSecret, endpoint } = extractConfluentCredentials();
+      // select the subject to delete
+      const subjectInputBox = new InputBox(page);
+      await expect(subjectInputBox.placeholder).toBeVisible();
+      await subjectInputBox.input.fill(subjectName);
+      await subjectInputBox.confirm();
 
-      await webview.locator("#name").click();
-      await page.waitForTimeout(100);
-      await page.keyboard.type("Playwright");
+      // select the Hard Delete option
+      const deletionQuickpick = new Quickpick(page);
+      const hardDelete = deletionQuickpick.items.filter({ hasText: "Hard Delete" });
+      await expect(hardDelete).not.toHaveCount(0);
+      await hardDelete.click();
 
-      await webview.locator("#formconnectiontype").click();
-      await page.waitForTimeout(100);
+      // enter the confirmation text input
+      const confirmationBox = new InputBox(page);
+      await expect(confirmationBox.input).toBeVisible();
+      await confirmationBox.input.fill(deletionConfirmation);
+      await confirmationBox.confirm();
 
-      await webview.locator("#formconnectiontype").selectOption("Confluent Cloud");
+      // the system dialog is automatically handled by the stub above, no need to handle it here
 
-      await webview.locator('[id="schema_registry\\.uri"]').click();
-      // Wait for the input to be focused.
-      await page.waitForTimeout(100);
-      await page.keyboard.type(endpoint);
+      const deletionNotifications = notificationArea.infoNotifications.filter({
+        hasText: /hard deleted/,
+      });
+      await expect(deletionNotifications.first()).toBeVisible();
+    }
+  });
 
-      await webview.locator('[id="schema_registry\\.auth_type"]').click();
-      await webview.locator('[id="schema_registry\\.auth_type"]').selectOption("API");
+  for (const [schemaType, fileExtension] of SCHEMA_TYPES) {
+    const schemaFile = `schemas/customer.${fileExtension}`;
 
-      await webview.locator('[id="schema_registry\\.credentials\\.api_key"]').click();
-      await page.waitForTimeout(100);
-      await page.keyboard.type(apiKey);
+    /** Main tests covered by each connection type test block. */
+    const schemaTests = () => {
+      test(`${schemaType}: should create a new subject and upload the first schema version`, async ({
+        page,
+      }) => {
+        subjectName = await createSchemaVersion(page, schemaType, schemaFile);
 
-      await webview.locator('[id="schema_registry\\.credentials\\.api_secret"]').click();
-      await page.waitForTimeout(100);
-      await page.keyboard.type(apiSecret);
+        const successNotifications: Locator = notificationArea.infoNotifications.filter({
+          hasText: /Schema registered to new subject/,
+        });
+        await expect(successNotifications.first()).toBeVisible();
 
-      // First test
-      await webview.getByRole("button", { name: "Test" }).click();
-      await expect(webview.getByText("Connection test succeeded")).toBeVisible();
+        const subjectLocator: Locator = schemasView.getSubjectByName(subjectName);
+        await expect(subjectLocator).toBeVisible();
+      });
 
-      await webview.getByRole("button", { name: "Save" }).click();
+      test(`${schemaType}: should create a new schema version with valid/compatible changes`, async ({
+        page,
+      }) => {
+        subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+        // try to evolve the newly-created schema
+        const subjectLocator: Locator = schemasView.getSubjectByName(subjectName);
+        const subjectItem = new SubjectItem(page, subjectLocator.first());
+        await subjectItem.clickEvolveLatestSchema();
 
-      // TODO: Check that connection was established successfully.
+        // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
+        const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
+        const evolutionDocument = new TextDocument(page, expectedTabName);
+        await expect(evolutionDocument.tab).toBeVisible();
+        // make sure the new document is focused before performing operations
+        await evolutionDocument.tab.click();
+        await expect(evolutionDocument.locator).toBeVisible();
+
+        // enter new (valid) schema content into the new editor
+        const goodEvolutionFile = `schemas/customer_good_evolution.${fileExtension}`;
+        const schemaContent: string = loadFixtureFromFile(goodEvolutionFile);
+        await evolutionDocument.replaceContent(schemaContent);
+
+        // attempt to upload from the subject item (instead of the Schemas view nav action)
+        await subjectItem.uploadSchemaForSubject();
+        await selectCurrentDocumentFromQuickpick(page, expectedTabName);
+        await selectSchemaTypeFromQuickpick(page, schemaType);
+
+        const successNotifications = notificationArea.infoNotifications.filter({
+          hasText: /New version 2 registered to existing subject/,
+        });
+        await expect(successNotifications.first()).toBeVisible();
+
+        // update deletion confirmation from "v1" to the subject name for proper cleanup
+        // since there are now two versions
+        deletionConfirmation = subjectName;
+      });
+
+      test(`${schemaType}: should reject invalid/incompatible schema evolution and not create a second version`, async ({
+        page,
+      }) => {
+        subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+        // try to evolve the newly-created schema
+        const subjectLocator: Locator = schemasView.getSubjectByName(subjectName);
+        const subjectItem = new SubjectItem(page, subjectLocator.first());
+        await subjectItem.clickEvolveLatestSchema();
+
+        // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
+        const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
+        const badEvolutionDocument = new TextDocument(page, expectedTabName);
+        await expect(badEvolutionDocument.tab).toBeVisible();
+        // make sure the new document is focused before performing operations
+        await badEvolutionDocument.tab.click();
+        await expect(badEvolutionDocument.locator).toBeVisible();
+
+        // enter new (invalid) schema content into the new editor
+        const badEvolutionFile = `schemas/customer_bad_evolution.${fileExtension}`;
+        const schemaContent: string = loadFixtureFromFile(badEvolutionFile);
+        await badEvolutionDocument.replaceContent(schemaContent);
+
+        // attempt to upload from the subject item (instead of the Schemas view nav action)
+        await subjectItem.uploadSchemaForSubject();
+        await selectCurrentDocumentFromQuickpick(page, expectedTabName);
+        await selectSchemaTypeFromQuickpick(page, schemaType);
+
+        const errorNotifications: Locator = notificationArea.errorNotifications.filter({
+          hasText: "Conflict with prior schema version",
+        });
+        await expect(errorNotifications.first()).toBeVisible();
+
+        // since we didn't create a second schema version, we should still be able to delete
+        // the subject based on the fact that there is still only one version
+        deletionConfirmation = "v1";
+      });
+    };
+
+    test.describe("CCLOUD Connection", () => {
+      test.beforeEach(async ({ page, electronApp }) => {
+        // CCloud connection setup:
+        await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
+        // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
+        // "(Not Connected)" description
+        const ccloudItem: Locator = resourcesView.confluentCloudItem;
+        await expect(ccloudItem).toBeVisible();
+        await expect(ccloudItem).not.toHaveText("(Not Connected)");
+        await expect(ccloudItem).toHaveAttribute("aria-expanded", "true");
+
+        // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
+        // Flink compute pools
+        await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+        const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
+        // environments are collapsed by default, so we need to expand it first
+        await firstEnvironment.click();
+        await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
+
+        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+        await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
+        const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
+        await firstSchemaRegistry.click();
+        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+        // view for these tests, so we're just picking from the Resources view here
+        schemasView = new SchemasView(page);
+        await expect(schemasView.header).toHaveAttribute("aria-expanded", "true");
+      });
+
+      schemaTests();
     });
 
-    test("create a new subject and evolve it", testSchemaEvolution);
-  });
+    test.describe("DIRECT Connection", () => {
+      test.beforeEach(async ({ page }) => {
+        // direct connection setup:
+        const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
+        const connectionName = "Playwright";
+        await connectionForm.fillConnectionName(connectionName);
+        await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
+        // only configure the Schema Registry connection
+        await connectionForm.fillSchemaRegistryUri(process.env.E2E_SR_URL!);
+        await connectionForm.selectSchemaRegistryAuthType(SupportedAuthType.API);
+        await connectionForm.fillSchemaRegistryCredentials({
+          api_key: process.env.E2E_SR_API_KEY!,
+          api_secret: process.env.E2E_SR_API_SECRET!,
+        });
+
+        await connectionForm.testButton.click();
+        await expect(connectionForm.successMessage).toBeVisible();
+        await connectionForm.saveButton.click();
+
+        // make sure we see the notification indicating the connection was created
+        const notifications: Locator = notificationArea.infoNotifications.filter({
+          hasText: "New Connection Created",
+        });
+        await expect(notifications).toHaveCount(1);
+        const notification = new Notification(page, notifications.first());
+        await notification.dismiss();
+        // don't wait for the "Waiting for <connection> to be usable..." progress notification since
+        // it may disappear quickly
+
+        // wait for the Resources view to refresh and show the new direct connection
+        await expect(resourcesView.directConnections).not.toHaveCount(0);
+        await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
+
+        // expand the first direct connection to show its Schema Registry
+        await expect(resourcesView.directConnections).not.toHaveCount(0);
+        const firstConnection: Locator = resourcesView.directConnections.first();
+        // direct connections are collapsed by default, so we need to expand it first
+        await firstConnection.click();
+        await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
+
+        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+        const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
+        await expect(directSchemaRegistries).not.toHaveCount(0);
+        const firstSchemaRegistry: Locator = directSchemaRegistries.first();
+        await firstSchemaRegistry.click();
+        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+        // view for these tests, so we're just picking from the Resources view here
+        schemasView = new SchemasView(page);
+        await expect(schemasView.header).toHaveAttribute("aria-expanded", "true");
+      });
+
+      schemaTests();
+    });
+  }
+
+  /**
+   * Creates a new schema version and subject by going through the full flow:
+   * 1. Opens schema creation workflow
+   * 2. Selects schema type
+   * 3. Enters schema content
+   * 4. Uploads and creates new subject
+   * @returns The generated subject name for cleanup
+   */
+  async function createSchemaVersion(
+    page: Page,
+    schemaType: string,
+    schemaFile: string,
+  ): Promise<string> {
+    await schemasView.clickCreateNewSchema();
+    await selectSchemaTypeFromQuickpick(page, schemaType);
+
+    // enter schema content into editor
+    const schemaContent: string = loadFixtureFromFile(schemaFile);
+    const untitledDocument = new TextDocument(page, "Untitled-1");
+    await expect(untitledDocument.locator).toBeVisible();
+    await untitledDocument.insertContent(schemaContent);
+
+    await schemasView.clickUploadSchema();
+
+    // select editor/file name in the first quickpick
+    await selectCurrentDocumentFromQuickpick(page, "Untitled");
+    await selectSchemaTypeFromQuickpick(page, schemaType);
+
+    // select "Create new subject" in the next quickpick
+    const subjectQuickpick = new Quickpick(page);
+    await expect(subjectQuickpick.locator).toBeVisible();
+    const createNewSubjectItem: Locator = subjectQuickpick.items.filter({
+      hasText: "Create new subject",
+    });
+    await expect(createNewSubjectItem).not.toHaveCount(0);
+    await createNewSubjectItem.click();
+
+    // enter subject name in the input box and submit
+    const randomValue: string = Math.random().toString(36).substring(2, 15);
+    const generatedSubjectName = `customer-${randomValue}-value`;
+    const subjectInputBox = new InputBox(page);
+    await expect(subjectInputBox.input).toBeVisible();
+    await subjectInputBox.input.fill(generatedSubjectName);
+    await subjectInputBox.confirm();
+
+    // clear out and close the untitled document after uploading so we only have one editor open
+    // during the rest of the tests'
+    await untitledDocument.deleteAll();
+    await untitledDocument.close();
+
+    // if we made it this far, we can return the subject so the .afterEach() hook can delete the
+    // subject (and schema version) that was just created
+    return generatedSubjectName;
+  }
+
+  /** Select an item from the document quickpick based on a title to match. */
+  async function selectCurrentDocumentFromQuickpick(
+    page: Page,
+    documentTitle: string,
+  ): Promise<void> {
+    const fileQuickpick = new Quickpick(page);
+    await expect(fileQuickpick.locator).toBeVisible();
+    const currentFileItem: Locator = fileQuickpick.items.filter({ hasText: documentTitle });
+    await expect(currentFileItem).not.toHaveCount(0);
+    await currentFileItem.click();
+  }
+
+  /** Select a schema type (AVRO/JSON/PROTOBUF) from the schema type quickpick. */
+  async function selectSchemaTypeFromQuickpick(page: Page, schemaType: string): Promise<void> {
+    const confirmSchemaTypeQuickpick = new Quickpick(page);
+    await expect(confirmSchemaTypeQuickpick.locator).toBeVisible();
+    const schemaTypeItem: Locator = confirmSchemaTypeQuickpick.items.filter({
+      hasText: schemaType,
+    });
+    await schemaTypeItem.click();
+  }
 });
-
-/**
- * Extracts the API key, secret, and endpoint from the E2E_SR_API_KEY environment variable. The
- * environment variable contains the text of the downloaded API key from Confluent Cloud, which contains
- * the API key, secret, and endpoint (as well as Resource scope, Environment, and Resource, which we
- * don't need).
- * @returns { apiKey: string, apiSecret: string, endpoint: string }
- */
-function extractConfluentCredentials() {
-  const e2e_sr_api_key = process.env.E2E_SR_API_KEY!;
-  const apiKeyMatch = e2e_sr_api_key.match(/API key:\s*([A-Z0-9]+)/)!;
-  const apiSecretMatch = e2e_sr_api_key.match(/API secret:\s*([A-Za-z0-9]+)/)!;
-  const endpointMatch = e2e_sr_api_key.match(/Endpoint:\s*(\S+)/)!;
-
-  return {
-    apiKey: apiKeyMatch[1],
-    apiSecret: apiSecretMatch[1],
-    endpoint: endpointMatch[1],
-  };
-}
