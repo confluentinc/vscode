@@ -110,7 +110,7 @@ test.describe("Schema Management", () => {
       // select the subject to delete
       const subjectInputBox = new InputBox(page);
       await expect(subjectInputBox.placeholder).toBeVisible();
-      await subjectInputBox.fill(subjectName);
+      await subjectInputBox.input.fill(subjectName);
       await subjectInputBox.confirm();
 
       // select the Hard Delete option
@@ -122,7 +122,7 @@ test.describe("Schema Management", () => {
       // enter the confirmation text input
       const confirmationBox = new InputBox(page);
       await expect(confirmationBox.input).toBeVisible();
-      await confirmationBox.fill(deletionConfirmation);
+      await confirmationBox.input.fill(deletionConfirmation);
       await confirmationBox.confirm();
 
       // the system dialog is automatically handled by the stub above, no need to handle it here
@@ -357,7 +357,7 @@ test.describe("Schema Management", () => {
     const generatedSubjectName = `customer-${randomValue}-value`;
     const subjectInputBox = new InputBox(page);
     await expect(subjectInputBox.input).toBeVisible();
-    await subjectInputBox.fill(generatedSubjectName);
+    await subjectInputBox.input.fill(generatedSubjectName);
     await subjectInputBox.confirm();
 
     // clear out and close the untitled document after uploading so we only have one editor open

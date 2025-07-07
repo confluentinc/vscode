@@ -24,20 +24,13 @@ export class InputBox {
     return this.locator.locator(".quick-input-message");
   }
 
-  /** Clear the input box and type new `text`. */
-  async fill(text: string): Promise<void> {
-    await this.input.click();
-    await this.page.keyboard.press("ControlOrMeta+a");
-    await this.page.keyboard.type(text);
-  }
-
   /** Press Enter to confirm the input. */
   async confirm(): Promise<void> {
-    await this.page.keyboard.press("Enter");
+    await this.locator.press("Enter");
   }
 
   /** Press Escape to cancel the input. */
   async cancel(): Promise<void> {
-    await this.page.keyboard.press("Escape");
+    await this.locator.press("Escape");
   }
 }
