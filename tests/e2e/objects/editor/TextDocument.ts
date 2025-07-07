@@ -1,10 +1,7 @@
 import { Locator, Page } from "@playwright/test";
 import { executeVSCodeCommand } from "../../utils/commands";
 
-/**
- * Object representing a VS Code text editor document/tab.
- * Provides methods for common document operations like selecting all, replacing content, etc.
- */
+/** Object representing a VS Code text editor document. */
 export class TextDocument {
   constructor(
     private readonly page: Page,

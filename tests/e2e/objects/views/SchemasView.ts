@@ -11,7 +11,11 @@ export class SchemasView extends View {
     super(page, /Schemas.*Section/);
   }
 
-  /** Click the "Search" nav action in the view title area. */
+  /**
+   * Click the "Search" nav action in the view title area.
+   *
+   * NOTE: This requires a Schema Registry to be selected first.
+   */
   async clickSearch(): Promise<void> {
     await this.clickNavAction("Search");
   }
@@ -21,17 +25,29 @@ export class SchemasView extends View {
     await this.clickNavAction("Create New Schema");
   }
 
-  /** Click the "Upload Schema to Schema Registry" nav action in the view title area. */
+  /**
+   * Click the "Upload Schema to Schema Registry" nav action in the view title area.
+   *
+   * NOTE: This requires a Schema Registry to be selected first.
+   */
   async clickUploadSchema(): Promise<void> {
     await this.clickNavAction("Upload Schema to Schema Registry");
   }
 
-  /** Click the "Select Schema Registry" nav action in the view title area. */
+  /**
+   * Click the "Select Schema Registry" nav action in the view title area.
+   *
+   * NOTE: This requires at least one connection with a Schema Registry to be available.
+   */
   async clickSelectSchemaRegistry(): Promise<void> {
     await this.clickNavAction("Select Schema Registry");
   }
 
-  /** Click the "Refresh" nav action in the view title area. */
+  /**
+   * Click the "Refresh" nav action in the view title area.
+   *
+   * NOTE: This requires a Schema Registry to be selected first.
+   */
   async clickRefresh(): Promise<void> {
     await this.clickNavAction("Refresh");
   }
@@ -48,13 +64,5 @@ export class SchemasView extends View {
   get schemaVersions(): Locator {
     // we don't use `this.subjects` because these are sibling elements to subjects in the DOM
     return this.body.locator("[role='treeitem'][aria-level='2']");
-  }
-
-  /**
-   * Get a specific subject by name.
-   * @param subjectName The name of the subject to find
-   */
-  getSubjectByName(subjectName: string): Locator {
-    return this.subjects.filter({ hasText: subjectName });
   }
 }

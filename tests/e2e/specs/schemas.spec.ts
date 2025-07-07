@@ -149,7 +149,7 @@ test.describe("Schema Management", () => {
         });
         await expect(successNotifications.first()).toBeVisible();
 
-        const subjectLocator: Locator = schemasView.getSubjectByName(subjectName);
+        const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
         await expect(subjectLocator).toBeVisible();
       });
 
@@ -158,7 +158,7 @@ test.describe("Schema Management", () => {
       }) => {
         subjectName = await createSchemaVersion(page, schemaType, schemaFile);
         // try to evolve the newly-created schema
-        const subjectLocator: Locator = schemasView.getSubjectByName(subjectName);
+        const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
         const subjectItem = new SubjectItem(page, subjectLocator.first());
         await subjectItem.clickEvolveLatestSchema();
 
@@ -195,7 +195,7 @@ test.describe("Schema Management", () => {
       }) => {
         subjectName = await createSchemaVersion(page, schemaType, schemaFile);
         // try to evolve the newly-created schema
-        const subjectLocator: Locator = schemasView.getSubjectByName(subjectName);
+        const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
         const subjectItem = new SubjectItem(page, subjectLocator.first());
         await subjectItem.clickEvolveLatestSchema();
 
