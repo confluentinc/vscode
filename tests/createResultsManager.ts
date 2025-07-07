@@ -126,9 +126,10 @@ export async function createTestResultsManagerContext(
     });
 
     // Verify the results match expected format
-    const expectedParsedResults = loadFixtureFromFile(
+    const expected: string = loadFixtureFromFile(
       "flink-statement-results-processing/expected-parsed-results.json",
     );
+    const expectedParsedResults = JSON.parse(expected);
     assert.deepStrictEqual(results, { results: expectedParsedResults });
   }, 10_000);
 
