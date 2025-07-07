@@ -21,6 +21,11 @@ export class TextDocument {
     return this.page.getByRole("tab", { name: this.documentTitle });
   }
 
+  /** The editor content area where text is displayed and edited. */
+  get editorContent(): Locator {
+    return this.locator.getByRole("code");
+  }
+
   /** Save the currently-focused document. */
   async save(): Promise<void> {
     await this.locator.click();
@@ -54,13 +59,12 @@ export class TextDocument {
    */
   async insertContent(content: string): Promise<void> {
     await this.locator.click();
-    await this.page.keyboard.type(content);
+    // we can't use `locator.fill()` since it doesn't work nicely with the monaco editor elements,
+    // but we can't use `page.keyboard.type()` directly since it might miss/skip some characters
+    await this.editorContent.pressSequentially(content);
   }
 
-  /**
-   * Replace all content in the document with new content.
-   * Uses clipboard to avoid VS Code auto-indentation issues.
-   */
+  /** Replace all content in the document with new content. */
   async replaceContent(content: string): Promise<void> {
     await this.deleteAll();
     await this.insertContent(content);

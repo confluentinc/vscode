@@ -47,6 +47,7 @@ test.describe("Schema Management", () => {
   let resourcesView: ResourcesView;
   // this is set after the connections are set up based on their beforeEach hooks
   let schemasView: SchemasView;
+  let notificationArea: NotificationArea;
 
   let subjectName: string;
   // most tests only create one schema version, but the "should evolve schema to second version" test
@@ -59,7 +60,11 @@ test.describe("Schema Management", () => {
     // disable auto-formatting and language detection to avoid issues with the editor
     // NOTE: this can't be done in a .beforeAll hook since it won't persist for each test run
     await configureVSCodeSettings(page, electronApp, {
+      // this is to avoid VS Code incorrectly setting the language of .proto files as C# so they
+      // appear correctly (as "plaintext") in the URI quickpick
       "workbench.editor.languageDetection": false,
+      // we also have to disable a lot of auto-formatting so the .insertContent() method properly
+      // adds the schema content as it exists in the fixture files
       "editor.autoClosingBrackets": "never",
       "editor.autoClosingQuotes": "never",
       "editor.autoIndent": "none",
@@ -68,11 +73,17 @@ test.describe("Schema Management", () => {
       "editor.insertSpaces": false,
       "json.format.enable": false,
       "json.validate.enable": false,
+      // XXX: this must be set to prevent skipping newlines/commas while content is added to the editor
+      "editor.acceptSuggestionOnEnter": "off",
+      // this prevents VS Code from converting the `http` to `https` in `$schema` URIs:
+      "editor.linkedEditing": false,
     });
 
     await openConfluentExtension(page);
     resourcesView = new ResourcesView(page);
     await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
+
+    notificationArea = new NotificationArea(page);
   });
 
   test.afterEach(async ({ page, electronApp }) => {
@@ -116,7 +127,6 @@ test.describe("Schema Management", () => {
 
       // the system dialog is automatically handled by the stub above, no need to handle it here
 
-      const notificationArea = new NotificationArea(page);
       const deletionNotifications = notificationArea.infoNotifications.filter({
         hasText: /hard deleted/,
       });
@@ -134,7 +144,6 @@ test.describe("Schema Management", () => {
       }) => {
         subjectName = await createSchemaVersion(page, schemaType, schemaFile);
 
-        const notificationArea = new NotificationArea(page);
         const successNotifications: Locator = notificationArea.infoNotifications.filter({
           hasText: /Schema registered to new subject/,
         });
@@ -171,7 +180,6 @@ test.describe("Schema Management", () => {
         await selectCurrentDocumentFromQuickpick(page, expectedTabName);
         await selectSchemaTypeFromQuickpick(page, schemaType);
 
-        const notificationArea = new NotificationArea(page);
         const successNotifications = notificationArea.infoNotifications.filter({
           hasText: /New version 2 registered to existing subject/,
         });
@@ -209,7 +217,6 @@ test.describe("Schema Management", () => {
         await selectCurrentDocumentFromQuickpick(page, expectedTabName);
         await selectSchemaTypeFromQuickpick(page, schemaType);
 
-        const notificationArea = new NotificationArea(page);
         const errorNotifications: Locator = notificationArea.errorNotifications.filter({
           hasText: "Conflict with prior schema version",
         });
@@ -273,7 +280,6 @@ test.describe("Schema Management", () => {
         await connectionForm.saveButton.click();
 
         // make sure we see the notification indicating the connection was created
-        const notificationArea = new NotificationArea(page);
         const notifications: Locator = notificationArea.infoNotifications.filter({
           hasText: "New Connection Created",
         });
@@ -353,6 +359,11 @@ test.describe("Schema Management", () => {
     await expect(subjectInputBox.input).toBeVisible();
     await subjectInputBox.fill(generatedSubjectName);
     await subjectInputBox.confirm();
+
+    // clear out and close the untitled document after uploading so we only have one editor open
+    // during the rest of the tests'
+    await untitledDocument.deleteAll();
+    await untitledDocument.close();
 
     // if we made it this far, we can return the subject so the .afterEach() hook can delete the
     // subject (and schema version) that was just created
