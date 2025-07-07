@@ -821,7 +821,7 @@
         "properties": {
           "confluent.flink.enableConfluentCloudLanguageServer": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
             "tags": [
               "preview"
