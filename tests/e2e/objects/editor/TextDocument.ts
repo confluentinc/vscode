@@ -59,8 +59,7 @@ export class TextDocument {
    */
   async insertContent(content: string): Promise<void> {
     await this.locator.click();
-    // we can't use `locator.fill()` since it doesn't work nicely with the monaco editor elements,
-    // but we can't use `page.keyboard.type()` directly since it might miss/skip some characters
+    // we can't use `.fill()` here since it doesn't work nicely with the monaco editor elements
     await this.editorContent.pressSequentially(content);
   }
 
