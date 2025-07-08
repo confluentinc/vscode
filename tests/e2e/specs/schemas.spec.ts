@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from "@playwright/test";
+import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
@@ -19,13 +19,6 @@ import { executeVSCodeCommand } from "../utils/commands";
 import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
-
-/** Schema types and their corresponding file extensions to test. */
-const SCHEMA_TYPES = [
-  ["AVRO", "avsc"],
-  ["JSON", "json"],
-  ["PROTOBUF", "proto"],
-] as const;
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
@@ -134,11 +127,31 @@ test.describe("Schema Management", () => {
     }
   });
 
-  for (const [schemaType, fileExtension] of SCHEMA_TYPES) {
+  // test dimensions:
+  const connectionTypes: Array<
+    [string, (page: Page, electronApp: ElectronApplication) => Promise<void>]
+  > = [
+    ["CCLOUD", async (page, electronApp) => await setupCCloudConnection(page, electronApp)],
+    ["DIRECT", async (page) => await setupDirectConnection(page)],
+    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+  ];
+  const schemaTypes: Array<[string, string]> = [
+    ["AVRO", "avsc"],
+    ["JSON", "json"],
+    ["PROTOBUF", "proto"],
+  ];
+
+  for (const [connectionType, connectionSetup] of connectionTypes) {
+    test.describe(`${connectionType} Connection`, () => {
+      test.beforeEach(async ({ page, electronApp }) => {
+        // set up the connection based on type
+        await connectionSetup(page, electronApp);
+        schemasView = new SchemasView(page);
+      });
+
+      for (const [schemaType, fileExtension] of schemaTypes) {
     const schemaFile = `schemas/customer.${fileExtension}`;
 
-    /** Main tests covered by each connection type test block. */
-    const schemaTests = () => {
       test(`${schemaType}: should create a new subject and upload the first schema version`, async ({
         page,
       }) => {
@@ -226,10 +239,19 @@ test.describe("Schema Management", () => {
         // the subject based on the fact that there is still only one version
         deletionConfirmation = "v1";
       });
-    };
+      }
+    });
+  }
 
-    test.describe("CCLOUD Connection", () => {
-      test.beforeEach(async ({ page, electronApp }) => {
+  /**
+   * Creates a CCloud connection by logging in to Confluent Cloud from the sidebar auth flow, then
+   * expands the "Confluent Cloud" item in the Resources view and selects the first Schema Registry
+   * item.
+   */
+  async function setupCCloudConnection(
+    page: Page,
+    electronApp: ElectronApplication,
+  ): Promise<void> {
         // CCloud connection setup:
         await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
         // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
@@ -253,16 +275,13 @@ test.describe("Schema Management", () => {
         await firstSchemaRegistry.click();
         // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
         // view for these tests, so we're just picking from the Resources view here
-        schemasView = new SchemasView(page);
-        await expect(schemasView.header).toHaveAttribute("aria-expanded", "true");
-      });
+  }
 
-      schemaTests();
-    });
-
-    test.describe("DIRECT Connection", () => {
-      test.beforeEach(async ({ page }) => {
-        // direct connection setup:
+  /**
+   * Creates a direct connection to a Schema Registry instance via CCloud API key/secret, then
+   * expands the first direct connection in the Resources view and selects its Schema Registry item.
+   */
+  async function setupDirectConnection(page: Page): Promise<void> {
         const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
         const connectionName = "Playwright";
         await connectionForm.fillConnectionName(connectionName);
@@ -307,12 +326,6 @@ test.describe("Schema Management", () => {
         await firstSchemaRegistry.click();
         // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
         // view for these tests, so we're just picking from the Resources view here
-        schemasView = new SchemasView(page);
-        await expect(schemasView.header).toHaveAttribute("aria-expanded", "true");
-      });
-
-      schemaTests();
-    });
   }
 
   /**
