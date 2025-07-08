@@ -57,6 +57,12 @@ type ConcreteEnvironment = CCloudEnvironment | LocalEnvironment | DirectEnvironm
 type ConcreteKafkaCluster = CCloudKafkaCluster | LocalKafkaCluster | DirectKafkaCluster;
 type ConcreteSchemaRegistry = CCloudSchemaRegistry | LocalSchemaRegistry | DirectSchemaRegistry;
 
+type ConnectionRowChildren =
+  | ConcreteEnvironment
+  | ConcreteKafkaCluster
+  | ConcreteSchemaRegistry
+  | CCloudFlinkComputePool;
+
 export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends ResourceLoader>
   implements IResourceBase, IdItem, ISearchable
 {
@@ -121,24 +127,27 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     return this.environments.length > 0;
   }
 
+  /** Convert this ConnectionRow into a TreeItem. */
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name);
-    item.id = this.connectionId;
-    item.iconPath = this.iconPath;
-    item.description = this.status;
-    item.contextValue = `${this.baseContextValue}${this.connected ? "-connected" : ""}`;
+
     item.collapsibleState = this.connected
       ? TreeItemCollapsibleState.Expanded
       : TreeItemCollapsibleState.None;
+
+    const connectedTrailer = this.connected ? "-connected" : "";
+    item.contextValue = this.baseContextValue + connectedTrailer;
+    // The id must change based on the connection state, so that the tree view will
+    // honor auto-expanded state when we have children. Ugh.
+    item.id = this.connectionId + connectedTrailer;
+
+    item.iconPath = this.iconPath;
+    item.description = this.status;
+
     return item;
   }
 
-  getChildren(): NewResourceViewProviderData[] {
-    this.logger.debug("ConnectionRow getting children", {
-      environments: this.environments.length,
-    });
-    return this.environments;
-  }
+  abstract getChildren(): ConnectionRowChildren[];
 }
 
 export abstract class SingleEnvironmentConnectionRow<
@@ -251,6 +260,14 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
 
   get status(): string {
     return this.connected ? this.ccloudOrganization!.name : "(No Connection)";
+  }
+
+  getChildren(): CCloudEnvironment[] {
+    this.logger.debug("CCloudConnectionRow getting children", {
+      environments: this.environments.length,
+    });
+
+    return this.environments;
   }
 }
 
