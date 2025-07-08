@@ -149,6 +149,7 @@ test.describe("Schema Management", () => {
         // set up the connection based on type
         await connectionSetup(page, electronApp);
         schemasView = new SchemasView(page);
+        await expect(schemasView.header).toHaveAttribute("aria-expanded", "true");
       });
 
       for (const [schemaType, fileExtension] of schemaTypes) {
