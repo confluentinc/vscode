@@ -128,10 +128,15 @@ export class FlinkLanguageClientManager implements Disposable {
         return;
       }
 
-      const documentUri = event.document.uri.toString();
-      if (this.openFlinkSqlDocuments.has(documentUri) && this.languageClient?.diagnostics) {
-        logger.debug(`Clearing diagnostics for document: ${documentUri}`);
+      const uriString = event.document.uri.toString();
+      if (
+        this.openFlinkSqlDocuments.has(uriString) &&
+        this.languageClient?.diagnostics?.get(event.document.uri)
+      ) {
+        logger.debug(`Clearing diagnostics for document: ${uriString}`);
         this.languageClient.diagnostics.set(event.document.uri, []);
+      } else {
+        logger.trace(`Not clearing diagnostics for document: ${uriString}`);
       }
     });
 
