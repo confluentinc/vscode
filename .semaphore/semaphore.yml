@@ -80,6 +80,9 @@ blocks:
         - name: "Playwright: Webview Tests (VS Code)"
           commands:
             - make test-playwright-webviews
+        - name: "Playwright: E2E Tests (VS Code)"
+          commands:
+            - make test-playwright-e2e-smoke
       epilogue: &build-test-epilogue
         always:
           commands:
