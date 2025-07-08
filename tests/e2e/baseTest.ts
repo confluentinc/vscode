@@ -84,6 +84,8 @@ export const test = testBase.extend<VSCodeFixture>({
         `--user-data-dir=${tempDir}`,
         `--extensionDevelopmentPath=${outPath}`,
         "--new-window",
+        // run headless in CI environments
+        ...(process.env.CI ? ["--headless"] : []),
       ],
     });
 
