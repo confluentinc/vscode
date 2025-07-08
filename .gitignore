@@ -103,7 +103,7 @@ yarn-error.log
 .parallelperf.*
 tests/baselines/reference/dt
 .failed-tests
-TEST-results.xml
+TEST-result*.xml
 .eslintcache
 *v8.log
 /lib/
