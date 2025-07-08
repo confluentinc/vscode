@@ -1,5 +1,4 @@
-import { Uri } from "vscode";
-import { openExternal } from "../authn/ccloudStateHandling";
+import { env, Uri } from "vscode";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
@@ -52,7 +51,9 @@ export function showPrivateNetworkingHelpNotification(
   const message = `Unable to connect to ${typeInfo}${resourceInfo}${urlSuffix}. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.`;
   const buttons = {
     ["View Docs"]: () =>
-      openExternal(Uri.parse("https://docs.confluent.io/cloud/current/networking/overview.html")),
+      env.openExternal(
+        Uri.parse("https://docs.confluent.io/cloud/current/networking/overview.html"),
+      ),
     ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   };
   void showErrorNotificationWithButtons(message, buttons);

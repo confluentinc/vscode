@@ -1,4 +1,3 @@
-import { env, Uri } from "vscode";
 import {
   AuthError,
   AuthErrors,
@@ -149,13 +148,4 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
       });
     }
   }
-}
-
-export function openExternal(uri: Uri) {
-  if (process.env.NODE_ENV === "testing") {
-    // XXX never remove this log, tests rely on it
-    logger.info("actionOpenExternal", uri.toString());
-    return Promise.resolve(true);
-  }
-  return env.openExternal(uri);
 }
