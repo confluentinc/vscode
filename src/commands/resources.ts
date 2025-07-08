@@ -7,6 +7,7 @@ import {
   NewResourceViewProvider,
 } from "../viewProviders/newResources";
 
+/** User gestured to refresh a single connection in the (new) resources view. */
 export async function refreshConnectionCommand(connectionRow: AnyConnectionRow): Promise<void> {
   if (!connectionRow) {
     throw new Error("No ConnectionRow provided to refreshConnectionCommand");
