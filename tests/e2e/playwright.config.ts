@@ -21,7 +21,19 @@ export default defineConfig({
   expect: {
     timeout: 10000,
   },
-  reporter: "html",
+  reporter: process.env.CI
+    ? [
+        ["html"],
+        [
+          "junit",
+          {
+            outputFile: path.join(__dirname, "..", "..", "TEST-result-e2e.xml"),
+            includeProjectInTestName: true,
+            suiteName: `VS Code (${vscodeVersion}) Extension Tests: E2E (${process.platform} ${process.arch})`,
+          },
+        ],
+      ]
+    : "html",
   use: {
     headless: process.env.CI ? true : false,
     trace: "retain-on-failure",

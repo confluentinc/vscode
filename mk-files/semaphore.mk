@@ -1,4 +1,6 @@
 TEST_RESULT_FILE = $(CURDIR)/TEST-result.xml
+TEST_RESULT_E2E_FILE = $(CURDIR)/TEST-result-e2e.xml
+TEST_RESULT_WEBVIEW_FILE = $(CURDIR)/TEST-result-webview.xml
 
 # How many days cache entries can stay in the semaphore cache before they are considered stale
 SEM_CACHE_DURATION_DAYS ?= 7
@@ -9,14 +11,29 @@ os_name_and_arch := $(shell echo $$(uname -s)-$$(uname -m) | tr '[:upper:]' '[:l
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
+	@echo "Publishing test results to Semaphore..."
 ifneq ($(wildcard $(TEST_RESULT_FILE)),)
 ifeq ($(TEST_RESULT_NAME),)
 	test-results publish $(TEST_RESULT_FILE) --force
+	@echo "Published Mocha test results from $(TEST_RESULT_FILE)"
 else
 	test-results publish $(TEST_RESULT_FILE) --name "$(TEST_RESULT_NAME)"
+	@echo "Published Mocha test results from $(TEST_RESULT_FILE) with name $(TEST_RESULT_NAME)"
 endif
 else
-	@echo "test results not found at $(TEST_RESULT_FILE)"
+	@echo "Mocha test results not found at $(TEST_RESULT_FILE)"
+endif
+ifneq ($(wildcard $(TEST_RESULT_E2E_FILE)),)
+	test-results publish $(TEST_RESULT_E2E_FILE) --name "E2E Tests" --force
+	@echo "Published E2E test results from $(TEST_RESULT_E2E_FILE)"
+else
+	@echo "E2E test results not found at $(TEST_RESULT_E2E_FILE)"
+endif
+ifneq ($(wildcard $(TEST_RESULT_WEBVIEW_FILE)),)
+	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --name "Webview Tests" --force
+	@echo "Published Webview test results from $(TEST_RESULT_WEBVIEW_FILE)"
+else
+	@echo "Webview test results not found at $(TEST_RESULT_WEBVIEW_FILE)"
 endif
 
 # Only write to the cache from main builds because of security reasons.
