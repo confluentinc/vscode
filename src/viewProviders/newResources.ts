@@ -327,7 +327,7 @@ type NewResourceViewProviderData =
   | ConcreteSchemaRegistry
   | CCloudFlinkComputePool;
 
-type AnyConnectionRow = ConnectionRow<ConcreteEnvironment, ResourceLoader>;
+export type AnyConnectionRow = ConnectionRow<ConcreteEnvironment, ResourceLoader>;
 
 export class NewResourceViewProvider
   extends BaseViewProvider<NewResourceViewProviderData>
@@ -344,7 +344,7 @@ export class NewResourceViewProvider
     super();
   }
 
-  protected async refreshConnection(
+  public async refreshConnection(
     connectionId: ConnectionId,
     deepRefresh: boolean = false,
   ): Promise<void> {

@@ -383,6 +383,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.refreshConnection",
+        "icon": "$(sync)",
+        "title": "Refresh Connection",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.kafka-clusters.item.rename",
         "icon": "$(pencil)",
         "title": "Rename Kafka Cluster",
@@ -1168,6 +1174,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.refreshConnection",
+          "when": "false"
+        },
+        {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
         },
@@ -1480,6 +1490,11 @@
           "command": "confluent.copyResourceUri",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithURIs",
           "group": "2_copy@3"
+        },
+        {
+          "command": "confluent.resources.refreshConnection",
+          "when": "view == new-confluent-resources && viewItem =~ /.*-container.*/",
+          "group": "inline"
         },
         {
           "command": "confluent.docker.startLocalResources",

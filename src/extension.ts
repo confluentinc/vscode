@@ -28,6 +28,7 @@ import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
+import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
@@ -242,6 +243,7 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
+    ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
 
