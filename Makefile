@@ -61,6 +61,11 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 	npx gulp build
 	npx gulp functional
 
+# Run only E2E (Playwright) smoke test(s)
+.PHONY: test-playwright-e2e-smoke
+test-playwright-e2e-smoke: setup-test-env install-test-dependencies install-dependencies
+	npx gulp e2e -t @smoke
+
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
 .PHONY: validate-bump
