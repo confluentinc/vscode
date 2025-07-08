@@ -35,7 +35,6 @@ export default defineConfig({
       ]
     : "html",
   use: {
-    headless: process.env.CI ? true : false,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
