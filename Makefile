@@ -64,7 +64,20 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 # Run only E2E (Playwright) smoke test(s)
 .PHONY: test-playwright-e2e-smoke
 test-playwright-e2e-smoke: setup-test-env install-test-dependencies install-dependencies
-	npx gulp e2e -t @smoke
+	npx gulp build
+	@if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp e2e -t @smoke; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			if pgrep -x "Dock" > /dev/null; then \
+					echo "GUI session is active."; \
+					npx gulp e2e -t @smoke; \
+			else \
+					echo "No active GUI session. Aborting tests."; \
+					exit 1; \
+			fi \
+	else \
+			npx gulp e2e -t @smoke; \
+	fi
 
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
