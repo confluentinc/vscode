@@ -24,13 +24,13 @@ else
 	@echo "Mocha test results not found at $(TEST_RESULT_FILE)"
 endif
 ifneq ($(wildcard $(TEST_RESULT_E2E_FILE)),)
-	test-results publish $(TEST_RESULT_E2E_FILE) --name "E2E Tests" --force
+	test-results publish $(TEST_RESULT_E2E_FILE) --force
 	@echo "Published E2E test results from $(TEST_RESULT_E2E_FILE)"
 else
 	@echo "E2E test results not found at $(TEST_RESULT_E2E_FILE)"
 endif
 ifneq ($(wildcard $(TEST_RESULT_WEBVIEW_FILE)),)
-	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --name "Webview Tests" --force
+	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --force
 	@echo "Published Webview test results from $(TEST_RESULT_WEBVIEW_FILE)"
 else
 	@echo "Webview test results not found at $(TEST_RESULT_WEBVIEW_FILE)"
