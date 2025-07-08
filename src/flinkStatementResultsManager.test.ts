@@ -7,7 +7,7 @@ import {
   createTestResultsManagerContext,
 } from "../tests/createResultsManager";
 import { eventually } from "../tests/eventually";
-import { loadFixture } from "../tests/fixtures/utils";
+import { loadFixtureFromFile } from "../tests/fixtures/utils";
 import { createResponseError } from "../tests/unit/testUtils";
 import {
   GetSqlv1StatementResult200Response,
@@ -22,10 +22,10 @@ import {
 } from "./webview/flink-statement-results";
 
 function createMockStatement(): FlinkStatement {
-  const fakeFlinkStatement = loadFixture(
+  const fakeFlinkStatement = loadFixtureFromFile(
     "flink-statement-results-processing/fake-flink-statement.json",
   );
-  const mockStatement = new FlinkStatement(fakeFlinkStatement);
+  const mockStatement = new FlinkStatement(JSON.parse(fakeFlinkStatement));
   mockStatement.metadata = {
     ...mockStatement.metadata,
     created_at: new Date(),
@@ -37,9 +37,10 @@ function createMockStatement(): FlinkStatement {
 describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () => {
   let sandbox: sinon.SinonSandbox;
   let ctx: FlinkStatementResultsManagerTestContext;
-  const expectedParsedResults = loadFixture(
+  const resultsString = loadFixtureFromFile(
     "flink-statement-results-processing/expected-parsed-results.json",
   );
+  const expectedParsedResults = JSON.parse(resultsString);
   let vm: FlinkStatementResultsViewModel;
   const statement: FlinkStatement = createMockStatement();
 
