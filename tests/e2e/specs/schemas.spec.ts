@@ -86,11 +86,13 @@ test.describe("Schema Management", () => {
     // delete the subject if it was created during the test
     if (subjectName) {
       // stub the system dialog (warning modal) that appears when hard-deleting
+      // NOTE: "Yes, Hard Delete" is the first button on macOS/Windows, second on Linux
+      const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
       await stubMultipleDialogs(electronApp, [
         {
           method: "showMessageBox",
           value: {
-            response: 0, // simulate clicking "Yes, Hard Delete" (first button)
+            response: confirmButtonIndex, // simulate clicking the "Yes, Hard Delete" button
             checkboxChecked: false,
           },
         },
@@ -150,95 +152,95 @@ test.describe("Schema Management", () => {
       });
 
       for (const [schemaType, fileExtension] of schemaTypes) {
-    const schemaFile = `schemas/customer.${fileExtension}`;
+        const schemaFile = `schemas/customer.${fileExtension}`;
 
-      test(`${schemaType}: should create a new subject and upload the first schema version`, async ({
-        page,
-      }) => {
-        subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+        test(`${schemaType}: should create a new subject and upload the first schema version`, async ({
+          page,
+        }) => {
+          subjectName = await createSchemaVersion(page, schemaType, schemaFile);
 
-        const successNotifications: Locator = notificationArea.infoNotifications.filter({
-          hasText: /Schema registered to new subject/,
+          const successNotifications: Locator = notificationArea.infoNotifications.filter({
+            hasText: /Schema registered to new subject/,
+          });
+          await expect(successNotifications.first()).toBeVisible();
+
+          const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+          await expect(subjectLocator).toBeVisible();
         });
-        await expect(successNotifications.first()).toBeVisible();
 
-        const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-        await expect(subjectLocator).toBeVisible();
-      });
+        test(`${schemaType}: should create a new schema version with valid/compatible changes`, async ({
+          page,
+        }) => {
+          subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+          // try to evolve the newly-created schema
+          const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+          const subjectItem = new SubjectItem(page, subjectLocator.first());
+          await subjectItem.clickEvolveLatestSchema();
 
-      test(`${schemaType}: should create a new schema version with valid/compatible changes`, async ({
-        page,
-      }) => {
-        subjectName = await createSchemaVersion(page, schemaType, schemaFile);
-        // try to evolve the newly-created schema
-        const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-        const subjectItem = new SubjectItem(page, subjectLocator.first());
-        await subjectItem.clickEvolveLatestSchema();
+          // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
+          const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
+          const evolutionDocument = new TextDocument(page, expectedTabName);
+          await expect(evolutionDocument.tab).toBeVisible();
+          // make sure the new document is focused before performing operations
+          await evolutionDocument.tab.click();
+          await expect(evolutionDocument.locator).toBeVisible();
 
-        // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
-        const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
-        const evolutionDocument = new TextDocument(page, expectedTabName);
-        await expect(evolutionDocument.tab).toBeVisible();
-        // make sure the new document is focused before performing operations
-        await evolutionDocument.tab.click();
-        await expect(evolutionDocument.locator).toBeVisible();
+          // enter new (valid) schema content into the new editor
+          const goodEvolutionFile = `schemas/customer_good_evolution.${fileExtension}`;
+          const schemaContent: string = loadFixtureFromFile(goodEvolutionFile);
+          await evolutionDocument.replaceContent(schemaContent);
 
-        // enter new (valid) schema content into the new editor
-        const goodEvolutionFile = `schemas/customer_good_evolution.${fileExtension}`;
-        const schemaContent: string = loadFixtureFromFile(goodEvolutionFile);
-        await evolutionDocument.replaceContent(schemaContent);
+          // attempt to upload from the subject item (instead of the Schemas view nav action)
+          await subjectItem.uploadSchemaForSubject();
+          await selectCurrentDocumentFromQuickpick(page, expectedTabName);
+          await selectSchemaTypeFromQuickpick(page, schemaType);
 
-        // attempt to upload from the subject item (instead of the Schemas view nav action)
-        await subjectItem.uploadSchemaForSubject();
-        await selectCurrentDocumentFromQuickpick(page, expectedTabName);
-        await selectSchemaTypeFromQuickpick(page, schemaType);
+          const successNotifications = notificationArea.infoNotifications.filter({
+            hasText: /New version 2 registered to existing subject/,
+          });
+          await expect(successNotifications.first()).toBeVisible();
 
-        const successNotifications = notificationArea.infoNotifications.filter({
-          hasText: /New version 2 registered to existing subject/,
+          // update deletion confirmation from "v1" to the subject name for proper cleanup
+          // since there are now two versions
+          deletionConfirmation = subjectName;
         });
-        await expect(successNotifications.first()).toBeVisible();
 
-        // update deletion confirmation from "v1" to the subject name for proper cleanup
-        // since there are now two versions
-        deletionConfirmation = subjectName;
-      });
+        test(`${schemaType}: should reject invalid/incompatible schema evolution and not create a second version`, async ({
+          page,
+        }) => {
+          subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+          // try to evolve the newly-created schema
+          const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+          const subjectItem = new SubjectItem(page, subjectLocator.first());
+          await subjectItem.clickEvolveLatestSchema();
 
-      test(`${schemaType}: should reject invalid/incompatible schema evolution and not create a second version`, async ({
-        page,
-      }) => {
-        subjectName = await createSchemaVersion(page, schemaType, schemaFile);
-        // try to evolve the newly-created schema
-        const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-        const subjectItem = new SubjectItem(page, subjectLocator.first());
-        await subjectItem.clickEvolveLatestSchema();
+          // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
+          const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
+          const badEvolutionDocument = new TextDocument(page, expectedTabName);
+          await expect(badEvolutionDocument.tab).toBeVisible();
+          // make sure the new document is focused before performing operations
+          await badEvolutionDocument.tab.click();
+          await expect(badEvolutionDocument.locator).toBeVisible();
 
-        // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
-        const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
-        const badEvolutionDocument = new TextDocument(page, expectedTabName);
-        await expect(badEvolutionDocument.tab).toBeVisible();
-        // make sure the new document is focused before performing operations
-        await badEvolutionDocument.tab.click();
-        await expect(badEvolutionDocument.locator).toBeVisible();
+          // enter new (invalid) schema content into the new editor
+          const badEvolutionFile = `schemas/customer_bad_evolution.${fileExtension}`;
+          const schemaContent: string = loadFixtureFromFile(badEvolutionFile);
+          await badEvolutionDocument.replaceContent(schemaContent);
 
-        // enter new (invalid) schema content into the new editor
-        const badEvolutionFile = `schemas/customer_bad_evolution.${fileExtension}`;
-        const schemaContent: string = loadFixtureFromFile(badEvolutionFile);
-        await badEvolutionDocument.replaceContent(schemaContent);
+          // attempt to upload from the subject item (instead of the Schemas view nav action)
+          await subjectItem.uploadSchemaForSubject();
+          await selectCurrentDocumentFromQuickpick(page, expectedTabName);
+          await selectSchemaTypeFromQuickpick(page, schemaType);
 
-        // attempt to upload from the subject item (instead of the Schemas view nav action)
-        await subjectItem.uploadSchemaForSubject();
-        await selectCurrentDocumentFromQuickpick(page, expectedTabName);
-        await selectSchemaTypeFromQuickpick(page, schemaType);
+          const errorNotifications: Locator = notificationArea.errorNotifications.filter({
+            hasText: "Conflict with prior schema version",
+          });
+          await expect(errorNotifications.first()).toBeVisible();
 
-        const errorNotifications: Locator = notificationArea.errorNotifications.filter({
-          hasText: "Conflict with prior schema version",
+          // since we didn't create a second schema version, we should still be able to delete
+          // the subject based on the fact that there is still only one version
+          deletionConfirmation = "v1";
         });
-        await expect(errorNotifications.first()).toBeVisible();
-
-        // since we didn't create a second schema version, we should still be able to delete
-        // the subject based on the fact that there is still only one version
-        deletionConfirmation = "v1";
-      });
       }
     });
   }
@@ -252,29 +254,29 @@ test.describe("Schema Management", () => {
     page: Page,
     electronApp: ElectronApplication,
   ): Promise<void> {
-        // CCloud connection setup:
-        await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-        // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
-        // "(Not Connected)" description
-        const ccloudItem: Locator = resourcesView.confluentCloudItem;
-        await expect(ccloudItem).toBeVisible();
-        await expect(ccloudItem).not.toHaveText("(Not Connected)");
-        await expect(ccloudItem).toHaveAttribute("aria-expanded", "true");
+    // CCloud connection setup:
+    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
+    // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
+    // "(Not Connected)" description
+    const ccloudItem: Locator = resourcesView.confluentCloudItem;
+    await expect(ccloudItem).toBeVisible();
+    await expect(ccloudItem).not.toHaveText("(Not Connected)");
+    await expect(ccloudItem).toHaveAttribute("aria-expanded", "true");
 
-        // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
-        // Flink compute pools
-        await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-        const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
-        // environments are collapsed by default, so we need to expand it first
-        await firstEnvironment.click();
-        await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
+    // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
+    // Flink compute pools
+    await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+    const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
+    // environments are collapsed by default, so we need to expand it first
+    await firstEnvironment.click();
+    await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
 
-        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-        await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
-        const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
-        await firstSchemaRegistry.click();
-        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-        // view for these tests, so we're just picking from the Resources view here
+    // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+    await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
+    const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
+    await firstSchemaRegistry.click();
+    // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+    // view for these tests, so we're just picking from the Resources view here
   }
 
   /**
@@ -282,50 +284,50 @@ test.describe("Schema Management", () => {
    * expands the first direct connection in the Resources view and selects its Schema Registry item.
    */
   async function setupDirectConnection(page: Page): Promise<void> {
-        const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
-        const connectionName = "Playwright";
-        await connectionForm.fillConnectionName(connectionName);
-        await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
-        // only configure the Schema Registry connection
-        await connectionForm.fillSchemaRegistryUri(process.env.E2E_SR_URL!);
-        await connectionForm.selectSchemaRegistryAuthType(SupportedAuthType.API);
-        await connectionForm.fillSchemaRegistryCredentials({
-          api_key: process.env.E2E_SR_API_KEY!,
-          api_secret: process.env.E2E_SR_API_SECRET!,
-        });
+    const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
+    const connectionName = "Playwright";
+    await connectionForm.fillConnectionName(connectionName);
+    await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
+    // only configure the Schema Registry connection
+    await connectionForm.fillSchemaRegistryUri(process.env.E2E_SR_URL!);
+    await connectionForm.selectSchemaRegistryAuthType(SupportedAuthType.API);
+    await connectionForm.fillSchemaRegistryCredentials({
+      api_key: process.env.E2E_SR_API_KEY!,
+      api_secret: process.env.E2E_SR_API_SECRET!,
+    });
 
-        await connectionForm.testButton.click();
-        await expect(connectionForm.successMessage).toBeVisible();
-        await connectionForm.saveButton.click();
+    await connectionForm.testButton.click();
+    await expect(connectionForm.successMessage).toBeVisible();
+    await connectionForm.saveButton.click();
 
-        // make sure we see the notification indicating the connection was created
-        const notifications: Locator = notificationArea.infoNotifications.filter({
-          hasText: "New Connection Created",
-        });
-        await expect(notifications).toHaveCount(1);
-        const notification = new Notification(page, notifications.first());
-        await notification.dismiss();
-        // don't wait for the "Waiting for <connection> to be usable..." progress notification since
-        // it may disappear quickly
+    // make sure we see the notification indicating the connection was created
+    const notifications: Locator = notificationArea.infoNotifications.filter({
+      hasText: "New Connection Created",
+    });
+    await expect(notifications).toHaveCount(1);
+    const notification = new Notification(page, notifications.first());
+    await notification.dismiss();
+    // don't wait for the "Waiting for <connection> to be usable..." progress notification since
+    // it may disappear quickly
 
-        // wait for the Resources view to refresh and show the new direct connection
-        await expect(resourcesView.directConnections).not.toHaveCount(0);
-        await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
+    // wait for the Resources view to refresh and show the new direct connection
+    await expect(resourcesView.directConnections).not.toHaveCount(0);
+    await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
 
-        // expand the first direct connection to show its Schema Registry
-        await expect(resourcesView.directConnections).not.toHaveCount(0);
-        const firstConnection: Locator = resourcesView.directConnections.first();
-        // direct connections are collapsed by default, so we need to expand it first
-        await firstConnection.click();
-        await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
+    // expand the first direct connection to show its Schema Registry
+    await expect(resourcesView.directConnections).not.toHaveCount(0);
+    const firstConnection: Locator = resourcesView.directConnections.first();
+    // direct connections are collapsed by default, so we need to expand it first
+    await firstConnection.click();
+    await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
 
-        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-        const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
-        await expect(directSchemaRegistries).not.toHaveCount(0);
-        const firstSchemaRegistry: Locator = directSchemaRegistries.first();
-        await firstSchemaRegistry.click();
-        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-        // view for these tests, so we're just picking from the Resources view here
+    // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+    const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
+    await expect(directSchemaRegistries).not.toHaveCount(0);
+    const firstSchemaRegistry: Locator = directSchemaRegistries.first();
+    await firstSchemaRegistry.click();
+    // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+    // view for these tests, so we're just picking from the Resources view here
   }
 
   /**
