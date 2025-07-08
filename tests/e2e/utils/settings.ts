@@ -16,7 +16,7 @@ export async function configureVSCodeSettings(
   // XXX: VS Code will have some file-formatting settings enabled by default. As a result of this,
   // we can't really insert text directly without risking it being auto-formatted, auto-indented,
   // pairs auto-closed/etc. Instead, we write to the clipboard and paste directly into the document.
-  electronApp.context().grantPermissions(["clipboard-write"]);
+  await electronApp.context().grantPermissions(["clipboard-write"]);
   await page.evaluate(
     (content) => navigator.clipboard.writeText(content),
     JSON.stringify(settings, null, 2),
