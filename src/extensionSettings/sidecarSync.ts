@@ -59,8 +59,9 @@ export async function updatePreferences() {
     const resp = await client.gatewayV1PreferencesPut({
       Preferences: preferences,
     });
-    logger.debug("Successfully updated preferences: ", { resp });
+    logger.debug("Successfully synced preferences with sidecar: ", { resp });
   } catch (error) {
+    let sentryContext = {};
     if (error instanceof Error) {
       let errorMsg = error.message;
       let buttons: Record<string, () => void> | undefined;
@@ -98,11 +99,11 @@ export async function updatePreferences() {
         showErrorNotificationWithButtons(`Failed to sync settings: ${errorMsg}`, buttons);
       }
       if (!(error instanceof ResponseError) || error.response.status !== 400) {
-        // only send non-400 errors to Sentry
-        logError(error, "updating preferences", {
-          extra: { functionName: "updatePreferences" },
-        });
+        // no need to send error 400 responses to Sentry; the notification should tell the user what
+        // needs to be changed
+        sentryContext = { extra: { functionName: "updatePreferences" } };
       }
     }
+    logError(error, "syncing settings to sidecar preferences API", sentryContext);
   }
 }
