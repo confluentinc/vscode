@@ -193,11 +193,15 @@ describe("extensionSettings/sidecarSync.ts", function () {
     await updates.updatePreferences();
 
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
-    assert.strictEqual(callArgs[0], `Failed to sync settings: ${fakeFailureError.detail}`);
-    assert.ok(Object.keys(callArgs[1]).includes("Update Settings"));
-    assert.ok(Object.keys(callArgs[1]).includes("Open Logs"));
-    assert.ok(Object.keys(callArgs[1]).includes("File Issue"));
+    sinon.assert.calledOnceWithExactly(
+      showErrorNotificationWithButtonsStub,
+      `Failed to sync settings: ${fakeFailureError.detail}`,
+      {
+        "Update Settings": sinon.match.func,
+        "Open Logs": sinon.match.func,
+        "File Issue": sinon.match.func,
+      },
+    );
     // not sending error 400s to Sentry
     sinon.assert.calledOnce(logErrorStub);
     sinon.assert.calledWithExactly(
@@ -225,11 +229,15 @@ describe("extensionSettings/sidecarSync.ts", function () {
     await updates.updatePreferences();
 
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
-    assert.strictEqual(callArgs[0], `Failed to sync settings: ${fakeFailureError.detail}`);
-    assert.ok(Object.keys(callArgs[1]).includes("Update Settings"));
-    assert.ok(Object.keys(callArgs[1]).includes("Open Logs"));
-    assert.ok(Object.keys(callArgs[1]).includes("File Issue"));
+    sinon.assert.calledOnceWithExactly(
+      showErrorNotificationWithButtonsStub,
+      `Failed to sync settings: ${fakeFailureError.detail}`,
+      {
+        "Update Settings": sinon.match.func,
+        "Open Logs": sinon.match.func,
+        "File Issue": sinon.match.func,
+      },
+    );
     // not an expected 400 error, so send to Sentry and let the team triage
     sinon.assert.calledOnce(logErrorStub);
     sinon.assert.calledWithExactly(
