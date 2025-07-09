@@ -1,13 +1,18 @@
+import { stubAllDialogs } from "electron-playwright-helpers";
 import { test } from "../baseTest";
 import { Tag } from "../tags";
-
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
 test.describe(() => {
-  test("should load the extension properly", { tag: [Tag.Smoke] }, async ({ page }) => {
-    await openConfluentExtension(page);
-  });
+  test(
+    "should load the extension properly",
+    { tag: [Tag.Smoke] },
+    async ({ page, electronApp }) => {
+      await stubAllDialogs(electronApp);
+      await openConfluentExtension(page);
+    },
+  );
 
   test("sign in to confluent cloud", async ({ page, electronApp }) => {
     await openConfluentExtension(page);
