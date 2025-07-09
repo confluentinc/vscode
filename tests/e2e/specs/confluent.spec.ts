@@ -1,10 +1,11 @@
 import { test } from "../baseTest";
+import { Tag } from "../tags";
 
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
 test.describe(() => {
-  test("should load the extension properly", async ({ page }) => {
+  test("should load the extension properly", { tag: [Tag.Smoke] }, async ({ page }) => {
     await openConfluentExtension(page);
   });
 
