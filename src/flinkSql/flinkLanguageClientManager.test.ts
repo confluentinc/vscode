@@ -328,7 +328,6 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should untrack documents when closed", () => {
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
       flinkManager.trackDocument(fakeUri);
 
       flinkManager.untrackDocument(fakeUri);
