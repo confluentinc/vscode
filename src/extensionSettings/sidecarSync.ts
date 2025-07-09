@@ -4,6 +4,7 @@ import {
   PreferencesResourceApi,
   PreferencesSpec,
   ResponseError,
+  SidecarError,
 } from "../clients/sidecar";
 import { logError } from "../errors";
 import { Logger } from "../logging";
@@ -44,16 +45,6 @@ export function loadPreferencesFromWorkspaceConfig(): PreferencesSpec {
   };
 }
 
-// TODO: move this if needed elsewhere, or remove entirely if the spec updates away from `Error`
-export type PreferencesFailureError = {
-  code?: string;
-  status?: string;
-  title?: string;
-  id?: string;
-  detail?: string;
-  source?: string; // spec says it's a JsonNode, but it's a string in the error response
-};
-
 /** Update the sidecar's preferences API with the current user settings. */
 export async function updatePreferences() {
   const preferencesSpec: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
@@ -70,7 +61,6 @@ export async function updatePreferences() {
     });
     logger.debug("Successfully updated preferences: ", { resp });
   } catch (error) {
-    logError(error, "updating preferences", { extra: { functionName: "updatePreferences" } });
     if (error instanceof Error) {
       let errorMsg = error.message;
       let buttons: Record<string, () => void> | undefined;
@@ -80,7 +70,7 @@ export async function updatePreferences() {
           const body = await error.response.clone().json();
           if (Array.isArray(body.errors) && body.errors.length) {
             const errorDetails: string[] = [];
-            body.errors.forEach((err: PreferencesFailureError) => {
+            body.errors.forEach((err: SidecarError) => {
               if (typeof err.detail === "string") {
                 errorDetails.push(err.detail);
               }
@@ -106,6 +96,12 @@ export async function updatePreferences() {
       }
       if (errorMsg) {
         showErrorNotificationWithButtons(`Failed to sync settings: ${errorMsg}`, buttons);
+      }
+      if (!(error instanceof ResponseError) || error.response.status !== 400) {
+        // only send non-400 errors to Sentry
+        logError(error, "updating preferences", {
+          extra: { functionName: "updatePreferences" },
+        });
       }
     }
   }
