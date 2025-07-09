@@ -1,4 +1,6 @@
 import { FrameLocator } from "@playwright/test";
+import * as path from "path";
+import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
@@ -8,6 +10,9 @@ import {
   verifyResultsStats,
   verifyStatementStatus,
 } from "./utils/flinkStatement";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename)
 
 test.describe("Flink statements and statement results viewer", () => {
   let webview: FrameLocator;
@@ -49,7 +54,10 @@ test.describe("Flink statements and statement results viewer", () => {
   for (const testCase of testCases) {
     test(`should submit Flink statement - ${testCase.name}`, async ({ page }) => {
       // Submit the statement
-      await submitFlinkStatement(page, testCase.fileName);
+      await submitFlinkStatement(
+        page,
+        path.join(__dirname, `../../fixtures/flinksql/${testCase.fileName}`)
+      );
 
       webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
