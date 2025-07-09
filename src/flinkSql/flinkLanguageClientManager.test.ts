@@ -329,7 +329,6 @@ describe("FlinkLanguageClientManager", () => {
     it("should untrack documents when closed", () => {
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
       flinkManager.trackDocument(fakeUri);
-
       flinkManager.untrackDocument(fakeUri);
 
       assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);

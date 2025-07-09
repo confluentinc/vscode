@@ -180,10 +180,10 @@ export class FlinkLanguageClientManager implements Disposable {
     // Clear outdated diagnostics on document change; CCloud Flink SQL Server won't publish cleared diagnostics
     this.disposables.push(
       workspace.onDidChangeTextDocument((event) => {
-        if (event.document.uri.toString().includes("output")) {
+        const uriString = event.document.uri.toString();
+        if (uriString.startsWith("output:")) {
           return;
         }
-        const uriString = event.document.uri.toString();
         if (
           this.openFlinkSqlDocuments.has(uriString) &&
           this.languageClient?.diagnostics?.get(event.document.uri)
