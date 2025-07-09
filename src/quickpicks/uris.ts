@@ -88,6 +88,7 @@ export async function uriQuickpick(
   });
 
   const quickPick = window.createQuickPick();
+  quickPick.ignoreFocusOut = true;
   quickPick.items = quickpickItems;
 
   if (documents.length > 0) {

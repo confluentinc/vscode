@@ -1,13 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
- * Loads a JSON fixture file from the fixtures directory
+ * Loads a fixture file from the fixtures directory. Callers will need to parse the resulting string
+ * output as needed.
  * @param relativePath - Path relative to the fixtures directory (e.g. 'flink-statement-results-processing/get-statement-results-1.json')
- * @returns The parsed JSON content of the fixture file
+ * @returns The string content of the file
  */
-export function loadFixture(relativePath: string): any {
+export function loadFixtureFromFile(relativePath: string): string {
   const fixturePath = path.join(__dirname, relativePath);
-  const content = fs.readFileSync(fixturePath, "utf8");
-  return JSON.parse(content);
+  return fs.readFileSync(fixturePath, "utf8");
 }
