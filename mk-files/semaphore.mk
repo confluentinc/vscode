@@ -7,7 +7,7 @@ SEM_CACHE_DURATION_DAYS ?= 7
 current_time := $(shell date +"%s")
 # OS Name
 os_name := $(shell uname -s)
-os_name_and_arch := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')")
+os_name_and_arch := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/') $$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')")
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
