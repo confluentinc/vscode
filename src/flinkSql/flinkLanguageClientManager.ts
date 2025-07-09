@@ -67,7 +67,7 @@ export class FlinkLanguageClientManager implements Disposable {
     // make sure we dispose the output channel when the manager is disposed
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
-    this.initializeOpenDocumentTracking();
+    this.initializeDocumentTracking();
     this.registerListeners();
 
     // This is true here when a user opens a new workspace after authenticating with CCloud in another one
@@ -96,7 +96,7 @@ export class FlinkLanguageClientManager implements Disposable {
     }
   }
 
-  private initializeOpenDocumentTracking(): void {
+  private initializeDocumentTracking(): void {
     workspace.textDocuments.forEach((doc) => {
       if (doc.languageId === "flinksql" && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
         this.trackDocument(doc.uri);
