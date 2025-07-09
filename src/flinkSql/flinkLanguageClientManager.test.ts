@@ -8,6 +8,7 @@ import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
 } from "../../tests/unit/testResources/flinkComputePool";
 import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
+import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -330,6 +331,23 @@ describe("FlinkLanguageClientManager", () => {
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
       flinkManager.trackDocument(fakeUri);
       flinkManager.untrackDocument(fakeUri);
+
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);
+      assert.strictEqual(
+        (flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()),
+        false,
+      );
+    });
+
+    it("should not track readonly statements", () => {
+      const fakeUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.flinksql`);
+      const fakeDocument = {
+        languageId: "flinksql",
+        uri: fakeUri,
+      } as vscode.TextDocument;
+      sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
+
+      flinkManager.trackDocument(fakeUri);
 
       assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);
       assert.strictEqual(
