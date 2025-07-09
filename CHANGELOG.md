@@ -24,6 +24,8 @@ All notable changes to this extension will be documented in this file.
   [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to
   [`1.96.2`](https://code.visualstudio.com/updates/v1_96) to support VS Code forks.
 
+## 1.4.2
+
 ### Fixed
 
 - Prevent the existence of an empty-string subject from breaking operations
