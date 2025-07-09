@@ -1,13 +1,15 @@
 import { FrameLocator, Page, expect } from "@playwright/test";
 import { FlinkStatementTestIds } from "./testIds";
 
+const DEFAULT_TIMEOUT_MS = 2000;
+
 /**
  * Waits for a specified amount of time and then presses a key on the Playwright page.
  * @param page - The Playwright page object.
  * @param key - The key to press, e.g., "Enter", "Escape", etc.
  * @param timeout - The time to wait before pressing the key, in milliseconds. Default is 2000ms.
  */
-async function pressKey(page: Page, key: string, timeout = 2000) {
+async function pressKey(page: Page, key: string, timeout = DEFAULT_TIMEOUT_MS) {
   await page.waitForTimeout(timeout);
   await page.keyboard.press(key, { delay: 100 });
 }
@@ -30,16 +32,16 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   // Select the Flink compute pool
   await (await page.getByText("Set Compute Pool")).click();
   const computePoolInput = await page.getByPlaceholder("Select a Flink compute pool");
-  await computePoolInput.isVisible();
+  await expect(computePoolInput).toBeVisible();
   await computePoolInput.fill("GCP.us-west2");
   await computePoolInput.click();
   await pressKey(page, "Enter");
 
   // Select the Kafka cluster
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(DEFAULT_TIMEOUT_MS);
   await (await page.getByText("Set Catalog & Database")).click();
   const kafkaClusterInput = await page.getByPlaceholder("Select the Kafka cluster to use as the default database for the statement");
-  await kafkaClusterInput.isVisible();
+  await expect(kafkaClusterInput).toBeVisible();
   await kafkaClusterInput.fill("main-test-cluster");
   await kafkaClusterInput.click();
   await pressKey(page, "Enter");
@@ -48,7 +50,7 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   await (await page.getByText("Submit Statement")).click();
 
   // Move the mouse and hover over Flink Statements
-  (await page.getByLabel("Flink Statements (Preview) - main-test-env").all())[0].hover();
+  await (await page.getByLabel("Flink Statements (Preview) - main-test-env").all())[0].hover();
 
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
   await page.waitForSelector("text=Statement:");
