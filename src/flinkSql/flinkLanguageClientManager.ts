@@ -67,8 +67,9 @@ export class FlinkLanguageClientManager implements Disposable {
     // make sure we dispose the output channel when the manager is disposed
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
-    this.registerListeners();
     this.initializeOpenDocumentTracking();
+    this.registerListeners();
+
     // This is true here when a user opens a new workspace after authenticating with CCloud in another one
     if (hasCCloudAuthSession()) {
       let flinkDoc: TextDocument | undefined = undefined;
@@ -101,10 +102,9 @@ export class FlinkLanguageClientManager implements Disposable {
         this.trackDocument(doc.uri);
       }
     });
-    this.registerDiagnosticsClearingListener();
   }
 
-  private trackDocument(uri: Uri): void {
+  public trackDocument(uri: Uri): void {
     if (uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
       const uriString = uri.toString();
       logger.trace(`Tracking Flink SQL document: ${uriString}`);
@@ -112,35 +112,12 @@ export class FlinkLanguageClientManager implements Disposable {
     }
   }
 
-  private untrackDocument(uri: Uri): void {
+  public untrackDocument(uri: Uri): void {
     const uriString = uri.toString();
     if (this.openFlinkSqlDocuments.has(uriString)) {
       logger.trace(`Untracking Flink SQL document: ${uriString}`);
       this.openFlinkSqlDocuments.delete(uriString);
     }
-  }
-
-  private registerDiagnosticsClearingListener(): void {
-    // Clear outdated diagnostics on change, since the CCloud Flink SQL Server
-    // intermittently won't publish new diagnostics
-    const listener = workspace.onDidChangeTextDocument((event) => {
-      if (event.document.uri.toString().includes("output")) {
-        return;
-      }
-
-      const uriString = event.document.uri.toString();
-      if (
-        this.openFlinkSqlDocuments.has(uriString) &&
-        this.languageClient?.diagnostics?.get(event.document.uri)
-      ) {
-        logger.debug(`Clearing diagnostics for document: ${uriString}`);
-        this.languageClient.diagnostics.set(event.document.uri, []);
-      } else {
-        logger.trace(`Not clearing diagnostics for document: ${uriString}`);
-      }
-    });
-
-    this.disposables.push(listener);
   }
 
   private registerListeners(): void {
@@ -196,6 +173,25 @@ export class FlinkLanguageClientManager implements Disposable {
             logger.trace("Initializing language client for changed active Flink SQL document");
             await this.maybeStartLanguageClient(doc.uri);
           }
+        }
+      }),
+    );
+
+    // Clear outdated diagnostics on document change; CCloud Flink SQL Server won't publish cleared diagnostics
+    this.disposables.push(
+      workspace.onDidChangeTextDocument((event) => {
+        if (event.document.uri.toString().includes("output")) {
+          return;
+        }
+        const uriString = event.document.uri.toString();
+        if (
+          this.openFlinkSqlDocuments.has(uriString) &&
+          this.languageClient?.diagnostics?.get(event.document.uri)
+        ) {
+          logger.trace(`Clearing diagnostics for document: ${uriString}`);
+          this.languageClient.diagnostics.set(event.document.uri, []);
+        } else {
+          logger.trace(`Not clearing diagnostics for document: ${uriString}`);
         }
       }),
     );
