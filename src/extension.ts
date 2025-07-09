@@ -183,6 +183,10 @@ async function _activateExtension(
   await getSidecar();
   logger.info("Sidecar ready for use.");
 
+  // Rehydrate sidecar with any direct connections from the secret storage. Do this before
+  // setting up the resource view provider.
+  await rehydrateDirectConnections();
+
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
@@ -564,4 +568,12 @@ export function deactivate() {
     logStream.end();
   }
   console.info("Extension deactivated");
+}
+
+/**
+ * Rehydrate the direct connections from the secret storage at startup time, informing
+ * the sidecar about them.
+ */
+export async function rehydrateDirectConnections(): Promise<void> {
+  await DirectConnectionManager.getInstance().rehydrateConnections();
 }

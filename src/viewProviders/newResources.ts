@@ -73,7 +73,6 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   constructor(
     public readonly loader: LT,
     public readonly name: string,
-    public readonly iconPath: ThemeIcon,
     public baseContextValue: string,
   ) {
     this.environments = [];
@@ -114,6 +113,7 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   }
 
   abstract get status(): string;
+  abstract get iconPath(): ThemeIcon;
 
   get id(): ConnectionId {
     return this.connectionId;
@@ -156,6 +156,14 @@ export abstract class SingleEnvironmentConnectionRow<
   SRT extends LocalSchemaRegistry | DirectSchemaRegistry,
   LT extends ResourceLoader = LocalResourceLoader | DirectResourceLoader,
 > extends ConnectionRow<ET, LT> {
+  /** Get my single environment (if loaded), otherwise undefined. */
+  get environment(): ET | undefined {
+    if (this.environments.length === 0) {
+      return undefined;
+    }
+    return this.environments[0];
+  }
+
   get kafkaCluster(): KCT | undefined {
     if (this.environments.length === 0) {
       return undefined;
@@ -220,12 +228,11 @@ export abstract class SingleEnvironmentConnectionRow<
 export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloudResourceLoader> {
   ccloudOrganization?: CCloudOrganization;
   constructor() {
-    super(
-      CCloudResourceLoader.getInstance(),
-      "Confluent Cloud",
-      new ThemeIcon(IconNames.CONFLUENT_LOGO),
-      "resources-ccloud-container",
-    );
+    super(CCloudResourceLoader.getInstance(), "Confluent Cloud", "resources-ccloud-container");
+  }
+
+  get iconPath(): ThemeIcon {
+    return new ThemeIcon(IconNames.CONFLUENT_LOGO);
   }
 
   /**
@@ -271,6 +278,30 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
   }
 }
 
+export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
+  DirectEnvironment,
+  DirectKafkaCluster,
+  DirectSchemaRegistry,
+  DirectResourceLoader
+> {
+  constructor(loader: DirectResourceLoader) {
+    super(loader, "Direct Connection", "resources-direct-container");
+  }
+
+  get iconPath(): ThemeIcon {
+    if (this.environment) {
+      return new ThemeIcon(this.environment.iconName);
+    } else {
+      throw new Error("DirectConnectionRow: Environment not yet loaded; cannot get icon path.");
+    }
+  }
+
+  // Fix this, stolen from LocalConnectionRow for now.
+  get status(): string {
+    return this.connected ? "(connected)" : "(Not Running)";
+  }
+}
+
 export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalEnvironment,
   LocalKafkaCluster,
@@ -281,12 +312,11 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   private needUpdateLocalConnection = true;
 
   constructor() {
-    super(
-      LocalResourceLoader.getInstance(),
-      "Local",
-      new ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP),
-      "local-container",
-    );
+    super(LocalResourceLoader.getInstance(), "Local", "local-container");
+  }
+
+  get iconPath(): ThemeIcon {
+    return new ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
   }
 
   override async refresh(deepRefresh: boolean = false): Promise<void> {
@@ -400,14 +430,19 @@ export class NewResourceViewProvider
    */
   private async lazyInitializeConnections(): Promise<void> {
     this.logger.debug("Lazy initializing connections");
-    // Initialize the default connections.
+
+    // Store all of the connections. Will also kick off the initial loading of environments
+    // for each connection.
     for (const connectionRow of [new CCloudConnectionRow(), new LocalConnectionRow()]) {
-      void this.storeConnection(connectionRow);
+      void this.loadAndStoreConnection(connectionRow, true);
     }
-    // In future as migrate more away from old resource manager, also
-    // rehydrate any existing Direct connections? Or better yet, get that
-    // behavior outside of responsibility of either view provider and
-    // here we just initialize the known connections.
+
+    // Queue up storing of the initial population of direct connections,
+    // after each completes refreshing (so we can know what icon type and name to use)
+    const directLoaders = ResourceLoader.directLoaders();
+    directLoaders.forEach((loader) => {
+      void this.loadAndStoreConnection(new DirectConnectionRow(loader), false);
+    });
   }
 
   getChildren(element: NewResourceViewProviderData | undefined): NewResourceViewProviderData[] {
@@ -482,19 +517,41 @@ export class NewResourceViewProvider
     throw new Error(`Unhandled element: ${(element as any).constructor.name}`);
   }
 
-  async storeConnection(connectionRow: AnyConnectionRow): Promise<void> {
-    connectionRow.ordering = this.connectionIndex++;
-    this.connections.set(connectionRow.connectionId, connectionRow);
+  async loadAndStoreConnection(
+    connectionRow: AnyConnectionRow,
+    insertBeforeRefresh: boolean,
+  ): Promise<void> {
+    if (insertBeforeRefresh) {
+      this.logger.debug("Storing connection row before initial refresh", {
+        connectionId: connectionRow.connectionId,
+      });
+      this.storeConnection(connectionRow);
+    }
 
-    // Kick off the initial (deep) fetching for this connection.
-    await connectionRow.refresh(true).then(() => {
+    // Kick off the initial fetching for this connection.
+    await connectionRow.refresh().then(() => {
       this.logger.debug("New connection row back from initial refresh", {
         connectionId: connectionRow.connectionId,
       });
 
+      if (!insertBeforeRefresh) {
+        // If we didn't insert the connection row before the refresh, we need to set the ordering
+        // after the refresh is done, so that the ordering is correct.
+
+        this.logger.debug("Storing connection row now that initial refresh has completed", {
+          connectionId: connectionRow.connectionId,
+        });
+        this.storeConnection(connectionRow);
+      }
+
       // Indicate that we have a new happy toplevel child.
       this.repaint();
     });
+  }
+
+  private storeConnection(connectionRow: AnyConnectionRow): void {
+    connectionRow.ordering = this.connectionIndex++;
+    this.connections.set(connectionRow.connectionId, connectionRow);
   }
 
   private getToplevelChildren(): AnyConnectionRow[] {
