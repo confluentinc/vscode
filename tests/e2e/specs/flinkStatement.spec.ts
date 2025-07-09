@@ -14,7 +14,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename)
 
-test.describe("Flink statements and statement results viewer", () => {
+test.describe("Flink Statements", () => {
   let webview: FrameLocator;
 
   test.beforeEach(async ({ page, electronApp }) => {
@@ -32,19 +32,19 @@ test.describe("Flink statements and statement results viewer", () => {
 
   const testCases = [
     {
-      name: "SELECT statement",
+      name: "SELECT Statement",
       fileName: "select.flink.sql",
       eventualExpectedStatus: "RUNNING",
       expectedStats: "Showing 1..100 of 200 results (total: 200).",
     },
     {
-      name: "EXPLAIN statement",
+      name: "EXPLAIN Statement",
       fileName: "explain.flink.sql",
       eventualExpectedStatus: "COMPLETED",
       expectedStats: "Showing 1..1 of 1 results (total: 1).",
     },
     {
-      name: "DESCRIBE statement",
+      name: "DESCRIBE Statement",
       fileName: "describe.flink.sql",
       eventualExpectedStatus: "COMPLETED",
       expectedStats: "Showing 1..5 of 5 results (total: 5).",
@@ -52,7 +52,7 @@ test.describe("Flink statements and statement results viewer", () => {
   ];
 
   for (const testCase of testCases) {
-    test(`should submit Flink statement - ${testCase.name}`, async ({ page }) => {
+    test(`${testCase.name}: should submit Flink statement`, async ({ page }) => {
       // Submit the statement
       await submitFlinkStatement(
         page,
