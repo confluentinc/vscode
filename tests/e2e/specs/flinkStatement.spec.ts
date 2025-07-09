@@ -52,7 +52,7 @@ test.describe("Flink Statements", () => {
   ];
 
   for (const testCase of testCases) {
-    test(`${testCase.name}: should submit Flink statement`, async ({ page }) => {
+    test(`${testCase.name}: should submit Flink Statement`, async ({ page }) => {
       // Submit the statement
       await submitFlinkStatement(
         page,
