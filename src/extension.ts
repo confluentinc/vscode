@@ -97,6 +97,8 @@ const logger = new Logger("extension");
 export async function activate(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext | undefined> {
+  throw new Error("NOPE");
+
   const extVersion = context.extension.packageJSON.version;
   observabilityContext.extensionVersion = extVersion;
   observabilityContext.extensionActivated = false;
