@@ -82,7 +82,7 @@ export const test = testBase.extend<VSCodeFixture>({
         "--disable-extensions",
         // additional args needed for the Electron launch:
         `--user-data-dir=${tempDir}`,
-        `--extensionDevelopmentPath=${outPath}`,
+        `--extensionDevelopmentPath=${extensionPath}`,
         "--new-window",
       ],
     });
