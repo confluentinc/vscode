@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-6-3
+Date generated: 2025-7-9
 
-Revision ID: c0edc618cde3f532957ac9411fd5efad04bf34e5
+Revision ID: 657b6ab1be216af945e407232e2cbcd81a3af6c0
 
 ================================================================================
 ================================================================================
@@ -170,7 +170,7 @@ No licenses found
 - @volar/source-map (2.4.0-alpha.18) [MIT]
 - @vscode/codicons (0.0.36) [CC-BY-4.0, MIT, CC-BY-SA-4.0]
 - @vscode/l10n (0.0.18) [MIT]
-- @vscode/webview-ui-toolkit (1.4.0) [MIT, CC0-1.0, 0BSD, bsd-2-clause-views]
+- @vscode/webview-ui-toolkit (1.4.0) [MIT, bsd-2-clause-views, CC0-1.0, 0BSD]
 - @vue/compiler-core (3.4.34) [MIT]
 - @vue/compiler-dom (3.4.34) [MIT]
 - @vue/compiler-vue2 (2.7.16) [MIT, 0BSD]
@@ -802,7 +802,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 MIT License
@@ -13229,7 +13229,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-build/types/proxy/index.d.ts
+package.json
 --------------------------------------------------------------------------------
 
 MIT License
@@ -13335,10 +13335,6 @@ Package Depth: Direct
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 MIT License
 
@@ -13401,10 +13397,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 * BSD-3-Clause *
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 # MIT License
 
@@ -13574,7 +13566,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
     MIT License
@@ -13817,6 +13809,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 MIT License
 
@@ -14507,7 +14503,39 @@ SOFTWARE.
 
 
 * Other Licenses *
-CC0-1.0, 0BSD, bsd-2-clause-views
+bsd-2-clause-views, CC0-1.0, 0BSD
+
+* bsd-2-clause-views *
+--------------------------------------------------------------------------------
+File matches:
+NOTICES
+--------------------------------------------------------------------------------
+
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list
+of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those
+of the authors and should not be interpreted as representing official policies,
+either expressed or implied, of the FreeBSD Project.
 
 * CC0-1.0 *
 --------------------------------------------------------------------------------
@@ -14548,38 +14576,6 @@ dist/toolkit.js
 Copyright (C) 2006 by Rob Landley <rob@landley.net>
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-* bsd-2-clause-views *
---------------------------------------------------------------------------------
-File matches:
-NOTICES
---------------------------------------------------------------------------------
-
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-
-Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-The views and conclusions contained in the software and documentation are those
-of the authors and should not be interpreted as representing official policies,
-either expressed or implied, of the FreeBSD Project.
 
 
 --------------------------------------------------------------------------------
@@ -26634,6 +26630,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -28736,7 +28736,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE.md
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -38381,9 +38381,9 @@ Copyright (c) 2009-2011 Mozilla Foundation and contributors
 
 Copyright (c) 2011 Mozilla Foundation and contributors
 
-Copyright (c) 2014 Mozilla Foundation and contributors
-
 Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
+
+Copyright (c) 2014 Mozilla Foundation and contributors
 
 Copyright (c) 2022 Sentry
 
@@ -38803,9 +38803,9 @@ MIT License
 
 Copyright (c) Microsoft Corporation.
 
-Copyright (c)  Microsoft Corporation. All rights reserved.");
-
 Copyright (c)  Microsoft Corporation.
+
+Copyright (c)  Microsoft Corporation. All rights reserved.");
 
 Copyright (c)  Microsoft Corporation. All rights reserved.
 
@@ -38819,9 +38819,9 @@ Copyright (c) 2014 Nathan Rajlich <nathan@tootallnate.net>
 
 Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>
 
-Copyright (c) 2014-2017 TJ Holowaychuk &lt;tj@vision-media.ca&gt;
-
 Copyright (c) 2018-2021 Josh Junon
+
+Copyright (c) 2014-2017 TJ Holowaychuk &lt;tj@vision-media.ca&gt;
 
 Copyright (c) 2017 TJ Holowaychuk <tj@vision-media.ca>
 
@@ -39011,6 +39011,8 @@ Copyright (c) 2019 David Pershouse
 
 Copyright (c) 2019 Functional Software, Inc. dba Sentry
 
+Copyright (c)  Joyent, Inc.and other Node contributors.
+
 Copyright (c) 2021 Sergio Xalambrí
 
 Copyright (c) 2012-2014 Roman Shtylman <shtylman@gmail.com>
@@ -39018,8 +39020,6 @@ Copyright (c) 2012-2014 Roman Shtylman <shtylman@gmail.com>
 Copyright (c) 2015 Douglas Christopher Wilson <doug@somethingdoug.com>
 
 Copyright (c)  Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
-
-Copyright (c)  Joyent, Inc.and other Node contributors.
 
 Copyright (c) 2021 PRESENT Nuxt Contrib
 
@@ -39034,8 +39034,6 @@ Copyright (c) 2022 Inspect JS
 Copyright (c) 2022 present Johnson Chu
 
 Copyright (c) 2023 Functional Software, Inc. dba Sentry
-
-Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>*
 
 Copyright (c) 2023 Sven Sauleau
 
@@ -39055,9 +39053,9 @@ Copyright (c)  Jordan Harband and contributors
 
 Copyright (c) Matteo Collina and Undici contributors
 
-Copyright (c)  Matteo Collina and Undici contributors
-
 Copyright (c) 2020 Ethan Arrowood
+
+Copyright (c)  Matteo Collina and Undici contributors
 
 Copyright (c) Marak Squires
 
@@ -39164,6 +39162,8 @@ Copyright (c) 2019 Mathias Buus
 Copyright (c) 2021 Mathias Buus
 
 Copyright (c) Feross Aboukhadijeh
+
+Copyright (c)  Feross Aboukhadijeh
 
 Copyright (c) Feross Aboukhadijeh, and other contributors.
 
@@ -39479,4 +39479,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-6-3
+Report Generated by FOSSA on 2025-7-9
