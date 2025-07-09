@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package examples;
+
+message Customer {
+  string name = 1;
+  string email = 2;
+  string address = 3;
+  string phone = 4;
+  // In Avro, "age" is ["null", "int"], default null.
+  // In Protobuf, use google.protobuf.Int32Value for optional int.
+  // Requires import of wrappers.proto.
+  google.protobuf.Int32Value age = 5;
+}
+
+import "google/protobuf/wrappers.proto";
