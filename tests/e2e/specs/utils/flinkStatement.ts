@@ -28,7 +28,6 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   await openFixtureFile(page, fileName);
 
   // Select the Flink compute pool
-  await page.waitForTimeout(1000);
   await (await page.getByText("Set Compute Pool")).click();
   const computePoolInput = await page.getByPlaceholder("Select a Flink compute pool");
   await computePoolInput.isVisible();
