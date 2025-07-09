@@ -2,6 +2,17 @@ import { FrameLocator, Page, expect } from "@playwright/test";
 import { FlinkStatementTestIds } from "./testIds";
 
 /**
+ * Waits for a specified amount of time and then presses a key on the Playwright page.
+ * @param page - The Playwright page object.
+ * @param key - The key to press, e.g., "Enter", "Escape", etc.
+ * @param timeout - The time to wait before pressing the key, in milliseconds. Default is 2000ms.
+ */
+async function pressKey(page: Page, key: string, timeout = 2000) {
+  await page.waitForTimeout(timeout);
+  await page.keyboard.press(key, { delay: 100 });
+}
+
+/**
  * Submit a Flink statement to Confluent Cloud.
  *
  * @param page - The Playwright page object.
@@ -11,32 +22,33 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   // First, expand the CCloud env
   await (await page.getByText("main-test-env")).click();
 
-  // Click on the first Flink compute pool
-  await (await page.getByText("AWS.us-east-1")).click();
+  // Click on a Flink compute pool
+  await (await page.getByText("GCP.us-west2")).click();
 
   await openFixtureFile(page, fileName);
 
-  // Move the mouse and hover over Flink Statements
-  (await page.getByLabel("Flink Statements - main-test-env").all())[0].hover();
-
-  // Click cloud upload icon in Flink statements view
-  await (await page.getByLabel("Submit Flink Statement")).click();
-
-  // Choose the select.flinksql file
-  await page.keyboard.type(fileName);
-  await page.keyboard.press("Enter");
-
-  // Select the first compute pool
-  const computePoolInput = await page.getByPlaceholder(/compute pool/);
+  // Select the Flink compute pool
+  await (await page.getByText("Set Compute Pool")).click();
+  const computePoolInput = await page.getByPlaceholder("Select a Flink compute pool");
   await computePoolInput.isVisible();
+  await computePoolInput.fill("GCP.us-west2");
   await computePoolInput.click();
-  await page.keyboard.press("Enter");
+  await pressKey(page, "Enter");
 
-  // Select the first kafka cluster
-  const kafkaClusterInput = await page.getByPlaceholder(/Kafka cluster/);
+  // Select the Kafka cluster
+  await page.waitForTimeout(1000);
+  await (await page.getByText("Set Catalog & Database")).click();
+  const kafkaClusterInput = await page.getByPlaceholder("Select the Kafka cluster to use as the default database for the statement");
   await kafkaClusterInput.isVisible();
+  await kafkaClusterInput.fill("main-test-cluster");
   await kafkaClusterInput.click();
-  await page.keyboard.press("Enter");
+  await pressKey(page, "Enter");
+
+  // Submit the Flink statement
+  await (await page.getByText("Submit Statement")).click();
+
+  // Move the mouse and hover over Flink Statements
+  (await page.getByLabel("Flink Statements (Preview) - main-test-env").all())[0].hover();
 
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
   await page.waitForSelector("text=Statement:");
@@ -47,10 +59,11 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
 
 export async function openFixtureFile(page: Page, fileName: string) {
   // Could be interrupted by other events while typing.
-  await page.keyboard.press("ControlOrMeta+P");
-  await expect(page.getByPlaceholder("Search files by name")).toBeVisible();
-  await page.keyboard.type(fileName);
-  await page.keyboard.press("Enter");
+  await pressKey(page, "ControlOrMeta+P");
+  const input = await page.getByPlaceholder("Search files by name");
+  await input.isVisible();
+  await input.fill(fileName);
+  await pressKey(page, "Enter");
 }
 
 /**
