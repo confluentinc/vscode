@@ -214,12 +214,32 @@ export class FlinkLanguageClientManager implements Disposable {
       }),
     );
 
-    // Listen for CCloud authentication
+    // Listen for CCloud authentication events
     this.disposables.push(
       ccloudConnected.event(async (connected) => {
         if (!connected) {
           logger.trace("CCloud auth session invalid, stopping Flink language client");
           this.cleanupLanguageClient();
+        } else {
+          logger.trace("CCloud connected, checking for open Flink SQL documents");
+          let docUri: Uri | undefined;
+          const activeEditor = window.activeTextEditor;
+          if (
+            activeEditor &&
+            activeEditor.document.languageId === "flinksql" &&
+            activeEditor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME
+          ) {
+            // Prioritize the active document
+            docUri = activeEditor.document.uri;
+          } else if (this.openFlinkSqlDocuments.size > 0) {
+            // Fall back to the first tracked document
+            const firstDocUri = Array.from(this.openFlinkSqlDocuments)[0];
+            docUri = Uri.parse(firstDocUri);
+          }
+
+          if (docUri) {
+            await this.maybeStartLanguageClient(docUri);
+          }
         }
       }),
     );
