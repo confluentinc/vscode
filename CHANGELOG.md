@@ -24,14 +24,20 @@ All notable changes to this extension will be documented in this file.
   [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to
   [`1.96.2`](https://code.visualstudio.com/updates/v1_96) to support VS Code forks.
 
+### Fixed
+
+- Prevent the existence of an empty-string subject from breaking operations
+  ([#2149](https://github.com/confluentinc/vscode/issues/2149)).
+
 ## 1.4.1
 
 ### Changed
- - Removed CCloud email from LaunchDarkly client identify calls
+
+- Removed CCloud email from LaunchDarkly client identify calls
 
 ### Fixed
- - Removed unneeded Flink language client cleanup call
 
+- Removed unneeded Flink language client cleanup call
 
 ## 1.4.0
 

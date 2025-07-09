@@ -64,10 +64,8 @@ export class Subject implements IResourceBase, ISearchable, ISchemaRegistryResou
   ) {
     // These may be constructed from either route responses or resource manager cache load,
     // (i.e. outside of typescript's control), so be extra cautious.
-    if (name === undefined || name === null || name === "") {
-      throw new Error(
-        `Subject name cannot be undefined, null, or empty: ${name} from ${connectionId}`,
-      );
+    if (name === undefined || name === null) {
+      throw new Error(`Subject name cannot be undefined or null: ${name} from ${connectionId}`);
     }
 
     this.name = name;
