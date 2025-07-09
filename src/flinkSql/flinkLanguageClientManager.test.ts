@@ -221,7 +221,7 @@ describe("FlinkLanguageClientManager", () => {
         .resolves();
 
       // Re-initialize the singleton so the constructor runs
-      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager["instance"] = null;
       FlinkLanguageClientManager.getInstance();
 
       sinon.assert.calledOnce(maybeStartStub);
@@ -250,7 +250,7 @@ describe("FlinkLanguageClientManager", () => {
         .resolves();
 
       // Re-initialize the singleton so the constructor runs
-      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager["instance"] = null;
       FlinkLanguageClientManager.getInstance();
 
       sinon.assert.calledOnce(maybeStartStub);
@@ -276,7 +276,7 @@ describe("FlinkLanguageClientManager", () => {
         .resolves();
 
       // Re-initialize the singleton so the constructor runs
-      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager["instance"] = null;
       FlinkLanguageClientManager.getInstance();
 
       sinon.assert.notCalled(maybeStartStub);
@@ -295,7 +295,7 @@ describe("FlinkLanguageClientManager", () => {
         .resolves();
 
       // Re-initialize the singleton so the constructor runs
-      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager["instance"] = null;
       FlinkLanguageClientManager.getInstance();
 
       sinon.assert.notCalled(maybeStartStub);
@@ -309,11 +309,11 @@ describe("FlinkLanguageClientManager", () => {
       sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
 
       // Re-initialize the singleton so the constructor runs
-      (FlinkLanguageClientManager as any).instance = null;
+      FlinkLanguageClientManager["instance"] = null;
       flinkManager = FlinkLanguageClientManager.getInstance();
 
-      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 1);
-      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()), true);
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 1);
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), true);
     });
 
     it("should track documents when opened", () => {
@@ -323,8 +323,8 @@ describe("FlinkLanguageClientManager", () => {
 
       flinkManager.trackDocument(fakeUri);
 
-      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 1);
-      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()), true);
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 1);
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), true);
     });
 
     it("should untrack documents when closed", () => {
@@ -332,11 +332,8 @@ describe("FlinkLanguageClientManager", () => {
       flinkManager.trackDocument(fakeUri);
       flinkManager.untrackDocument(fakeUri);
 
-      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);
-      assert.strictEqual(
-        (flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()),
-        false,
-      );
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 0);
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), false);
     });
 
     it("should not track readonly statements", () => {
@@ -349,11 +346,8 @@ describe("FlinkLanguageClientManager", () => {
 
       flinkManager.trackDocument(fakeUri);
 
-      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);
-      assert.strictEqual(
-        (flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()),
-        false,
-      );
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 0);
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), false);
     });
   });
 });
