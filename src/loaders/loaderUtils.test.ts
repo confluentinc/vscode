@@ -26,7 +26,8 @@ export const topicsResponseData: TopicData[] = [
 describe("loaderUtils correlateTopicsWithSchemaSubjects() test", () => {
   it("should correlate topics with schema subjects as strings", () => {
     // topic 1-3 will be correlated with schema subjects, topic 4 will not.
-    const subjectStrings: string[] = ["topic1-value", "topic2-key", "topic3-Foo"];
+    // (Include empty string subject to further exercise issue #2149.)
+    const subjectStrings: string[] = ["topic1-value", "topic2-key", "topic3-Foo", ""];
     const subjects: Subject[] = subjectStrings.map(
       (name) =>
         new Subject(
@@ -85,6 +86,14 @@ describe("loaderUtils fetchSubjects() and fetchSchemasForSubject() tests", () =>
     // be sure to test against a wholly separate array, 'cause .sort() is in-place.
     // Will do a locale search which is case independent
     assert.deepStrictEqual(subjectStrings, ["subject1", "Subject2", "subject3"]);
+  });
+
+  it("fetchSubjects() should work with empty string subjects", async () => {
+    stubbedSubjectsV1Api.list.resolves(["subject1", "", "subject2"]);
+    const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    const subjectStrings = subjects.map((s) => s.name);
+    // Should include the empty string subject.
+    assert.deepStrictEqual(subjectStrings, ["", "subject1", "subject2"]);
   });
 
   it("fetchSchemasForSubject() should fetch versions of schemas for a given subject", async () => {
