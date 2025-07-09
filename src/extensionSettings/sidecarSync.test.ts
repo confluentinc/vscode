@@ -2,10 +2,12 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { workspace } from "vscode";
 import {
+  JsonNode,
   Preferences,
   PreferencesResourceApi,
   PreferencesSpec,
   ResponseError,
+  SidecarError,
 } from "../clients/sidecar";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
@@ -135,7 +137,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
     sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
   });
 
-  it("updatePreferences() should log and not re-throw errors when updating preferences", async function () {
+  it("updatePreferences() should log and not re-throw errors when syncing settings to the sidecar preferences API", async function () {
     const errorMessage = "Failed to update preferences";
     const error = new Error(errorMessage);
     mockClient.gatewayV1PreferencesPut.rejects(error);
@@ -143,15 +145,16 @@ describe("extensionSettings/sidecarSync.ts", function () {
     await updates.updatePreferences();
 
     sinon.assert.calledOnce(mockClient.gatewayV1PreferencesPut);
-    sinon.assert.calledWithExactly(
-      logErrorStub,
-      sinon.match.instanceOf(Error).and(sinon.match.has("message", errorMessage)),
-      "updating preferences",
-      { extra: { functionName: "updatePreferences" } },
-    );
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
     const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
     assert.strictEqual(callArgs[0], `Failed to sync settings: ${errorMessage}`);
+    // non-ResponseError should go to Sentry
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(Error).and(sinon.match.has("message", errorMessage)),
+      "syncing settings to sidecar preferences API",
+      { extra: { functionName: "updatePreferences" } },
+    );
   });
 
   it("updatePreferences() should show an error notification when an Error is caught", async function () {
@@ -164,7 +167,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
     sinon.assert.calledWithExactly(
       logErrorStub,
       sinon.match.instanceOf(Error).and(sinon.match.has("message", error.message)),
-      "updating preferences",
+      "syncing settings to sidecar preferences API",
       { extra: { functionName: "updatePreferences" } },
     );
 
@@ -173,14 +176,14 @@ describe("extensionSettings/sidecarSync.ts", function () {
     assert.strictEqual(callArgs[0], `Failed to sync settings: ${error.message}`);
   });
 
-  it("updatePreferences() should show an error notification with a settings button when a ResponseError is caught and valid failure errors are returned", async function () {
+  it("updatePreferences() should show an error notification with a settings button when a ResponseError (status 400) is caught and valid failure errors are returned", async function () {
     const errorResponse = new Response("Bad Request", { status: 400 });
-    const fakeFailureError: updates.PreferencesFailureError = {
+    const fakeFailureError = {
       code: "cert_not_found",
       title: "Cert file cannot be found",
       detail: "The cert file '/foo/bar/baz' cannot be found.",
-      source: "/spec/tls_pem_paths",
-    };
+      source: "/spec/tls_pem_paths" as JsonNode, // pointer to the specific field, not actual object
+    } satisfies SidecarError;
     sandbox.stub(errorResponse, "clone").returns(errorResponse);
     sandbox.stub(errorResponse, "json").resolves({ errors: [fakeFailureError] });
     const error = new ResponseError(errorResponse);
@@ -189,18 +192,61 @@ describe("extensionSettings/sidecarSync.ts", function () {
 
     await updates.updatePreferences();
 
+    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+    sinon.assert.calledOnceWithExactly(
+      showErrorNotificationWithButtonsStub,
+      `Failed to sync settings: ${fakeFailureError.detail}`,
+      {
+        "Update Settings": sinon.match.func,
+        "Open Logs": sinon.match.func,
+        "File Issue": sinon.match.func,
+      },
+    );
+    // not sending error 400s to Sentry
     sinon.assert.calledOnce(logErrorStub);
     sinon.assert.calledWithExactly(
       logErrorStub,
-      sinon.match.instanceOf(ResponseError).and(sinon.match.has("response", errorResponse)),
-      "updating preferences",
-      { extra: { functionName: "updatePreferences" } },
+      error,
+      "syncing settings to sidecar preferences API",
+      {},
     );
+  });
+
+  it("updatePreferences() should show an error notification with a settings button when a ResponseError (non-400 status) is caught and valid failure errors are returned", async function () {
+    const errorResponse = new Response("Internal server error", { status: 500 });
+    const fakeFailureError = {
+      code: "cert_not_found",
+      title: "Cert file cannot be found",
+      detail: "The cert file '/foo/bar/baz' cannot be found.",
+      source: "/spec/tls_pem_paths" as JsonNode, // pointer to the specific field, not actual object
+    } satisfies SidecarError;
+    sandbox.stub(errorResponse, "clone").returns(errorResponse);
+    sandbox.stub(errorResponse, "json").resolves({ errors: [fakeFailureError] });
+    const error = new ResponseError(errorResponse);
+
+    mockClient.gatewayV1PreferencesPut.rejects(error);
+
+    await updates.updatePreferences();
+
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
-    assert.strictEqual(callArgs[0], `Failed to sync settings: ${fakeFailureError.detail}`);
-    assert.ok(Object.keys(callArgs[1]).includes("Update Settings"));
-    assert.ok(Object.keys(callArgs[1]).includes("Open Logs"));
-    assert.ok(Object.keys(callArgs[1]).includes("File Issue"));
+    sinon.assert.calledOnceWithExactly(
+      showErrorNotificationWithButtonsStub,
+      `Failed to sync settings: ${fakeFailureError.detail}`,
+      {
+        "Update Settings": sinon.match.func,
+        "Open Logs": sinon.match.func,
+        "File Issue": sinon.match.func,
+      },
+    );
+    // not an expected 400 error, so send to Sentry and let the team triage
+    sinon.assert.calledOnce(logErrorStub);
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      error,
+      "syncing settings to sidecar preferences API",
+      {
+        extra: { functionName: "updatePreferences" },
+      },
+    );
   });
 });
