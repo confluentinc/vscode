@@ -15,7 +15,7 @@ const vscodeVersion = process.env.VSCODE_VERSION || "stable";
 export default defineConfig({
   testDir: path.join(__dirname, "specs"),
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   timeout: 120000,
   workers: 1,
   expect: {
