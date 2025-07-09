@@ -55,6 +55,8 @@ export class FlinkLanguageClientManager implements Disposable {
   private readonly MAX_RECONNECT_ATTEMPTS = 2;
   private openFlinkSqlDocuments: Set<string> = new Set();
   private clientInitMutex = new Mutex();
+  private cleanupTimer: NodeJS.Timeout | null = null;
+  private readonly CLEANUP_DELAY_MS = 60000; // 60 seconds
 
   static getInstance(): FlinkLanguageClientManager {
     if (!FlinkLanguageClientManager.instance) {
@@ -109,6 +111,8 @@ export class FlinkLanguageClientManager implements Disposable {
       const uriString = uri.toString();
       logger.trace(`Tracking Flink SQL document: ${uriString}`);
       this.openFlinkSqlDocuments.add(uriString);
+      // Cancel any pending cleanup when a new document is tracked
+      this.clearCleanupTimer();
     }
   }
 
@@ -117,6 +121,35 @@ export class FlinkLanguageClientManager implements Disposable {
     if (this.openFlinkSqlDocuments.has(uriString)) {
       logger.trace(`Untracking Flink SQL document: ${uriString}`);
       this.openFlinkSqlDocuments.delete(uriString);
+      // If no more documents are open, schedule client cleanup
+      if (this.openFlinkSqlDocuments.size === 0 && this.isLanguageClientConnected()) {
+        logger.trace("Last Flink SQL document closed, scheduling language client cleanup");
+        this.scheduleClientCleanup();
+      }
+    }
+  }
+
+  private scheduleClientCleanup(): void {
+    this.clearCleanupTimer();
+    this.cleanupTimer = setTimeout(async () => {
+      logger.trace("Executing scheduled cleanup of language client after inactivity");
+      // Only clean up if there are still no open documents
+      if (this.openFlinkSqlDocuments.size === 0) {
+        await this.cleanupLanguageClient();
+        logUsage(UserEvent.FlinkSqlClientInteraction, {
+          action: "client_auto_disposed",
+          reason: "inactivity",
+        });
+      }
+      this.cleanupTimer = null;
+    }, this.CLEANUP_DELAY_MS);
+  }
+
+  private clearCleanupTimer(): void {
+    if (this.cleanupTimer !== null) {
+      clearTimeout(this.cleanupTimer);
+      this.cleanupTimer = null;
+      logger.trace("Cleared scheduled language client cleanup timer");
     }
   }
 
@@ -531,6 +564,7 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private async cleanupLanguageClient(): Promise<void> {
+    this.clearCleanupTimer();
     try {
       if (this.languageClient) {
         await this.languageClient.dispose();
