@@ -82,7 +82,7 @@ export const test = testBase.extend<VSCodeFixture>({
         "--disable-extensions",
         // additional args needed for the Electron launch:
         `--user-data-dir=${tempDir}`,
-        `--extensionDevelopmentPath=${outPath}`,
+        `--extensionDevelopmentPath=${extensionPath}`,
         "--new-window",
       ],
     });
@@ -105,9 +105,21 @@ export const test = testBase.extend<VSCodeFixture>({
     await use(electronApp);
 
     try {
-      await electronApp.close();
+      // shorten grace period for shutdown to avoid hanging the entire test run
+      await Promise.race([
+        electronApp.close(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("electronApp.close() timeout after 10s")), 10000),
+        ),
+      ]);
     } catch (error) {
       console.warn("Error closing electron app:", error);
+      // force-kill if needed
+      try {
+        await electronApp.context().close();
+      } catch (contextError) {
+        console.warn("Error closing electron context:", contextError);
+      }
     }
   },
 
