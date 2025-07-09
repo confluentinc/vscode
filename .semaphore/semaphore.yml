@@ -100,6 +100,14 @@ blocks:
                 artifact push workflow coverage/lcov-functional.info --force
                 echo "Uploaded Playwright coverage artifacts"
               fi
+            # Upload Playwright artifacts, if available
+            - |
+              if [ -d test-results ]; then
+                artifact push workflow test-results
+              fi
+              if [ -d playwright-report ]; then
+                artifact push workflow playwright-report  
+              fi
 
   - name: "Linux ARM64 Stable: Tests"
     dependencies: ["Static Analysis (TypeScript & ESLint)"]
