@@ -2,10 +2,12 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { workspace } from "vscode";
 import {
+  JsonNode,
   Preferences,
   PreferencesResourceApi,
   PreferencesSpec,
   ResponseError,
+  SidecarError,
 } from "../clients/sidecar";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
@@ -175,12 +177,12 @@ describe("extensionSettings/sidecarSync.ts", function () {
 
   it("updatePreferences() should show an error notification with a settings button when a ResponseError is caught and valid failure errors are returned", async function () {
     const errorResponse = new Response("Bad Request", { status: 400 });
-    const fakeFailureError: updates.PreferencesFailureError = {
+    const fakeFailureError = {
       code: "cert_not_found",
       title: "Cert file cannot be found",
       detail: "The cert file '/foo/bar/baz' cannot be found.",
-      source: "/spec/tls_pem_paths",
-    };
+      source: "/spec/tls_pem_paths" as JsonNode, // pointer to the specific field, not actual object
+    } satisfies SidecarError;
     sandbox.stub(errorResponse, "clone").returns(errorResponse);
     sandbox.stub(errorResponse, "json").resolves({ errors: [fakeFailureError] });
     const error = new ResponseError(errorResponse);
@@ -189,13 +191,9 @@ describe("extensionSettings/sidecarSync.ts", function () {
 
     await updates.updatePreferences();
 
-    sinon.assert.calledOnce(logErrorStub);
-    sinon.assert.calledWithExactly(
-      logErrorStub,
-      sinon.match.instanceOf(ResponseError).and(sinon.match.has("response", errorResponse)),
-      "updating preferences",
-      { extra: { functionName: "updatePreferences" } },
-    );
+    // no need to send error 400 responses to Sentry; the notification should tell the user what
+    // needs to be changed
+    sinon.assert.notCalled(logErrorStub);
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
     const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
     assert.strictEqual(callArgs[0], `Failed to sync settings: ${fakeFailureError.detail}`);
