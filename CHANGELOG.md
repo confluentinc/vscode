@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.4.2
+
 ### Fixed
  - Prevent the existence of an empty-string subject from breaking operations ([#2149](https://github.com/confluentinc/vscode/issues/2149)).
 
