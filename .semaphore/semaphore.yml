@@ -80,6 +80,9 @@ blocks:
         - name: "Playwright: Webview Tests (VS Code)"
           commands:
             - make test-playwright-webviews
+        - name: "Playwright: E2E Smoke Tests (VS Code)"
+          commands:
+            - make test-playwright-e2e-smoke
       epilogue: &build-test-epilogue
         always:
           commands:
@@ -96,6 +99,14 @@ blocks:
               if [ -f "coverage/lcov-functional.info" ]; then
                 artifact push workflow coverage/lcov-functional.info --force
                 echo "Uploaded Playwright coverage artifacts"
+              fi
+            # Upload Playwright artifacts, if available
+            - |
+              if [ -d test-results ]; then
+                artifact push workflow test-results --destination test-results-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+              fi
+              if [ -d playwright-report ]; then
+                artifact push workflow playwright-report --destination playwright-report-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
               fi
 
   - name: "Linux ARM64 Stable: Tests"
@@ -171,12 +182,27 @@ blocks:
             - Remove-Item .env -ErrorAction SilentlyContinue
             # Windows version of store-test-results-to-semaphore
             - |
+              Write-Output "Publishing test results to Semaphore..."
               $TestResultFile = Join-Path -Path $PWD -ChildPath "TEST-result.xml"
               if (Test-Path $TestResultFile) {
-                  Write-Output "Publishing test results from $TestResultFile"
+                  Write-Output "Publishing Mocha test results from $TestResultFile"
                   test-results publish $TestResultFile --force
               } else {
-                  Write-Output "Test results not found at $TestResultFile"
+                  Write-Output "Mocha test results not found at $TestResultFile"
+              }
+              $TestResultE2EFile = Join-Path -Path $PWD -ChildPath "TEST-result-e2e.xml"
+              if (Test-Path $TestResultE2EFile) {
+                  Write-Output "Publishing E2E test results from $TestResultE2EFile"
+                  test-results publish $TestResultE2EFile --name "E2E Tests" --force
+              } else {
+                  Write-Output "E2E test results not found at $TestResultE2EFile"
+              }
+              $TestResultWebviewFile = Join-Path -Path $PWD -ChildPath "TEST-result-webview.xml"
+              if (Test-Path $TestResultWebviewFile) {
+                  Write-Output "Publishing Webview test results from $TestResultWebviewFile"
+                  test-results publish $TestResultWebviewFile --name "Webview Tests" --force
+              } else {
+                  Write-Output "Webview test results not found at $TestResultWebviewFile"
               }
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
