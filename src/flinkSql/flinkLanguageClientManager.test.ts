@@ -8,6 +8,7 @@ import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
 } from "../../tests/unit/testResources/flinkComputePool";
 import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
+import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -298,6 +299,61 @@ describe("FlinkLanguageClientManager", () => {
       FlinkLanguageClientManager.getInstance();
 
       sinon.assert.notCalled(maybeStartStub);
+    });
+  });
+
+  describe("document tracking", () => {
+    it("should add open flink documents to the tracking set when initializing", () => {
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
+
+      // Re-initialize the singleton so the constructor runs
+      (FlinkLanguageClientManager as any).instance = null;
+      flinkManager = FlinkLanguageClientManager.getInstance();
+
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 1);
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()), true);
+    });
+
+    it("should track documents when opened", () => {
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
+      sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
+
+      flinkManager.trackDocument(fakeUri);
+
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 1);
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()), true);
+    });
+
+    it("should untrack documents when closed", () => {
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      flinkManager.trackDocument(fakeUri);
+      flinkManager.untrackDocument(fakeUri);
+
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);
+      assert.strictEqual(
+        (flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()),
+        false,
+      );
+    });
+
+    it("should not track readonly statements", () => {
+      const fakeUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.flinksql`);
+      const fakeDocument = {
+        languageId: "flinksql",
+        uri: fakeUri,
+      } as vscode.TextDocument;
+      sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
+
+      flinkManager.trackDocument(fakeUri);
+
+      assert.strictEqual((flinkManager as any).openFlinkSqlDocuments.size, 0);
+      assert.strictEqual(
+        (flinkManager as any).openFlinkSqlDocuments.has(fakeUri.toString()),
+        false,
+      );
     });
   });
 });
