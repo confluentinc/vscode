@@ -33,19 +33,19 @@ test.describe("Flink statements and statement results viewer", () => {
   const testCases = [
     {
       name: "SELECT statement",
-      fileName: path.join(__dirname, "../../fixtures/flinksql/select.flink.sql"),
+      fileName: "select.flink.sql",
       eventualExpectedStatus: "RUNNING",
       expectedStats: "Showing 1..100 of 200 results (total: 200).",
     },
     {
       name: "EXPLAIN statement",
-      fileName: path.join(__dirname, "../../fixtures/flinksql/explain.flink.sql"),
+      fileName: "explain.flink.sql",
       eventualExpectedStatus: "COMPLETED",
       expectedStats: "Showing 1..1 of 1 results (total: 1).",
     },
     {
       name: "DESCRIBE statement",
-      fileName: path.join(__dirname, "../../fixtures/flinksql/describe.flink.sql"),
+      fileName: "describe.flink.sql",
       eventualExpectedStatus: "COMPLETED",
       expectedStats: "Showing 1..5 of 5 results (total: 5).",
     },
@@ -54,7 +54,10 @@ test.describe("Flink statements and statement results viewer", () => {
   for (const testCase of testCases) {
     test(`should submit Flink statement - ${testCase.name}`, async ({ page }) => {
       // Submit the statement
-      await submitFlinkStatement(page, testCase.fileName);
+      await submitFlinkStatement(
+        page,
+        path.join(__dirname, `../../fixtures/flinksql/${testCase.fileName}`)
+      );
 
       webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
