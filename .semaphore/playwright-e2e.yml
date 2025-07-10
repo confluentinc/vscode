@@ -42,7 +42,12 @@ blocks:
       jobs: &e2e-jobs
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
-            - make test-playwright-e2e TEST_SUITE="$TEST_SUITE" VSCODE_VERSION="$VSCODE_VERSION"
+            - |
+              if [ -n "$TEST_SUITE" ] && [ "$TEST_SUITE" != "" ]; then
+                make test-playwright-e2e TEST_SUITE="$TEST_SUITE" VSCODE_VERSION="$VSCODE_VERSION"
+              else
+                make test-playwright-e2e VSCODE_VERSION="$VSCODE_VERSION"
+              fi
           env_vars:
             - name: TEST_SUITE
               value: ${{parameters.TEST_SUITE}}
