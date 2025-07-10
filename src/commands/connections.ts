@@ -18,6 +18,7 @@ import {
   getResourceManager,
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
+import { DirectConnectionRow } from "../viewProviders/newResources";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
@@ -168,8 +169,8 @@ export async function createNewDirectConnection() {
   }
 }
 
-export async function deleteDirectConnection(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
+export async function deleteDirectConnection(item: DirectEnvironment | DirectConnectionRow) {
+  if (!(item instanceof DirectEnvironment || item instanceof DirectConnectionRow)) {
     return;
   }
 
@@ -225,14 +226,25 @@ export async function renameDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 }
 
-export async function editDirectConnection(item: ConnectionId | DirectEnvironment) {
+export async function editDirectConnection(
+  item: ConnectionId | DirectEnvironment | DirectConnectionRow,
+) {
   // if the user clicked on the "Edit" button in the Resources view, the item will be a DirectEnvironment
   // otherwise, this was triggered via the commands API and should have been passed a ConnectionId arg
-  if (!(item instanceof DirectEnvironment || typeof item === "string")) {
+  if (
+    !(
+      item instanceof DirectConnectionRow ||
+      item instanceof DirectEnvironment ||
+      typeof item === "string"
+    )
+  ) {
     return;
   }
 
-  const connectionId = item instanceof DirectEnvironment ? item.connectionId : item;
+  const connectionId =
+    item instanceof DirectEnvironment || item instanceof DirectConnectionRow
+      ? item.connectionId
+      : item;
   // look up the associated ConnectionSpec
   const spec: CustomConnectionSpec | null =
     await getResourceManager().getDirectConnection(connectionId);

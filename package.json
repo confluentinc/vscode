@@ -1528,17 +1528,17 @@
         },
         {
           "command": "confluent.connections.direct.delete",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@3"
         },
         {
           "command": "confluent.connections.direct.edit",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@2"
         },
         {
           "command": "confluent.connections.direct.export",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@1"
         },
         {
