@@ -42,11 +42,10 @@ blocks:
       jobs: &e2e-jobs
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
-            - echo "${{parameters.VSCODE_VERSION}} ${{parameters.TEST_SUITE | default ""}}"
-            - make test-playwright-e2e TEST_SUITE="${{parameters.TEST_SUITE | default ""}}"
+            - make test-playwright-e2e TEST_SUITE="$TEST_SUITE"
           env_vars:
             - name: VSCODE_VERSION
-              value: "${{parameters.VSCODE_VERSION}}"
+              value: "%{{parameters.VSCODE_VERSION | lower }}"
       epilogue: &e2e-epilogue
         always:
           commands:
