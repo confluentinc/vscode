@@ -156,6 +156,29 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     );
   });
 
+  it("createSession() should handle authentication failure when gathering sidecar logs fails", async () => {
+    getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // authentication fails
+    browserAuthFlowStub.resolves({ success: false, resetPassword: false });
+    // stub sidecar log gathering failure
+    const sidecarLogError = new Error("Failed to read log file");
+    gatherSidecarOutputsStub.rejects(sidecarLogError);
+
+    const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
+    await assert.rejects(authProvider.createSession(), {
+      message: authFailedMsg,
+    });
+
+    sinon.assert.calledWith(showErrorMessageStub, authFailedMsg);
+    sinon.assert.calledOnce(gatherSidecarOutputsStub);
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(Error),
+      "CCloud authentication failed",
+      { extra: { sidecarLogs: `Failed to gather sidecar logs:\n${sidecarLogError.stack}` } },
+    );
+  });
+
   it("createSession() should handle password reset scenario", async () => {
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // password reset occurred

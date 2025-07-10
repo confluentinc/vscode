@@ -158,14 +158,19 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       const failedAuthError = new Error(authFailedMsg);
 
       // include sidecar logs in the Sentry event to help debug
-      const sidecarLogPath: string = getSidecarLogfilePath();
-      const outputs: SidecarOutputs = await gatherSidecarOutputs(
-        sidecarLogPath,
-        `${sidecarLogPath}.stderr`,
-      );
-      logError(failedAuthError, "CCloud authentication failed", {
-        extra: { sidecarLogs: outputs.logLines.join("\n") },
-      });
+      let sidecarLogs: string = "";
+      try {
+        const sidecarLogPath: string = getSidecarLogfilePath();
+        const outputs: SidecarOutputs = await gatherSidecarOutputs(
+          sidecarLogPath,
+          `${sidecarLogPath}.stderr`,
+        );
+        sidecarLogs = outputs.logLines.join("\n");
+      } catch (error) {
+        sidecarLogs = `Failed to gather sidecar logs:\n${error instanceof Error ? error.stack : error}`;
+        logger.error(sidecarLogs);
+      }
+      logError(failedAuthError, "CCloud authentication failed", { extra: { sidecarLogs } });
 
       throw failedAuthError;
     }
