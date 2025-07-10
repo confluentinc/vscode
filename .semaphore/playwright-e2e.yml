@@ -1,7 +1,8 @@
 # Playwright E2E Tests Pipeline
 # This pipeline focuses specifically on end-to-end testing using Playwright
+# Designed to be run as a parameterized task (manually or scheduled)
 version: v1.0
-name: playwright-e2e-tests
+name: "Playwright E2E Tests - VS Code ${{parameters.VSCODE_VERSION}}"
 agent:
   machine:
     type: s1-prod-ubuntu24-04-amd64-1
@@ -39,12 +40,12 @@ blocks:
               . vault-setup
             fi
       jobs: &e2e-jobs
-        - name: "Playwright: E2E Tests (VS Code)"
+        - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
-            - make test-playwright-e2e TEST_SUITE=$TEST_SUITE
+            - make test-playwright-e2e TEST_SUITE=${{parameters.TEST_SUITE}}
           env_vars:
             - name: VSCODE_VERSION
-              value: $VSCODE_VERSION
+              value: ${{parameters.VSCODE_VERSION}}
       epilogue: &e2e-epilogue
         always:
           commands:
