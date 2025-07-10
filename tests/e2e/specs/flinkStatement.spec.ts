@@ -1,6 +1,6 @@
 import { FrameLocator } from "@playwright/test";
 import { test } from "../baseTest";
-import { openConfluentExtension } from "./utils/confluent";
+import { openConfluentSidebar } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 import {
   stopStatement,
@@ -22,7 +22,7 @@ test.describe.fixme(
 
     test.beforeEach(async ({ page, electronApp }) => {
       // Open the extension
-      await openConfluentExtension(page);
+      await openConfluentSidebar(page);
 
       // Login to Confluent Cloud
       await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);

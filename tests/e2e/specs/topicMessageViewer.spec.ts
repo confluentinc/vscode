@@ -12,7 +12,7 @@ import {
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
-import { openConfluentExtension } from "./utils/confluent";
+import { openConfluentSidebar } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
 /**
@@ -36,7 +36,7 @@ test.describe("Topics Listing & Message Viewer", () => {
   let resourcesView: ResourcesView;
 
   test.beforeEach(async ({ page }) => {
-    await openConfluentExtension(page);
+    await openConfluentSidebar(page);
     resourcesView = new ResourcesView(page);
     await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
   });

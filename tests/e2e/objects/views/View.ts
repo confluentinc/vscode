@@ -27,6 +27,11 @@ export class View {
     return this.locator.locator(".pane-header");
   }
 
+  /** Get the progress container in this view, if it exists. */
+  get progress(): Locator {
+    return this.locator.locator(".monaco-progress-container");
+  }
+
   /** Get the body section of this view containing the tree items and content. */
   get body(): Locator {
     return this.locator.locator(".pane-body");

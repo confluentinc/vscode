@@ -17,7 +17,7 @@ import {
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { executeVSCodeCommand } from "../utils/commands";
 import { configureVSCodeSettings } from "../utils/settings";
-import { openConfluentExtension } from "./utils/confluent";
+import { openConfluentSidebar } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
 /**
@@ -72,7 +72,7 @@ test.describe("Schema Management", () => {
       "editor.linkedEditing": false,
     });
 
-    await openConfluentExtension(page);
+    await openConfluentSidebar(page);
     resourcesView = new ResourcesView(page);
     await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
 

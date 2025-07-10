@@ -1,20 +1,11 @@
 import { Page } from "@playwright/test";
+import { ActivityBar } from "../../objects/activityBar/ActivityBar";
 
 /**
- * Clicks on the Confluent extension to load it. This is meant to be called
- * before any subsequent action is taken place.
- * @param page
+ * Activates the Confluent extension by clicking on its tab on the activity bar, which opens the
+ * Confluent sidebar (view container) and makes its views available.
  */
-export async function openConfluentExtension(page: Page): Promise<void> {
-  await page.waitForLoadState("domcontentloaded");
-
-  const confluentTab = await page.getByRole("tab", { name: "Confluent" }).locator("a").first();
-  await confluentTab.click();
-
-  // The "Confluent Cloud" text will be present whether logged in or not
-  // so this function is safe to use regardless.
-  await page.getByText("Confluent Cloud").waitFor({
-    state: "visible",
-    timeout: 30_000,
-  });
+export async function openConfluentSidebar(page: Page): Promise<void> {
+  const activityBar = new ActivityBar(page);
+  await activityBar.confluentTab.click();
 }
