@@ -6,14 +6,6 @@ agent:
   machine:
     type: s1-prod-ubuntu24-04-amd64-1
 
-parameters:
-  - name: VSCODE_VERSION
-    description: "VS Code version to test against"
-    default: "stable"
-  - name: TEST_SUITE
-    description: "Which E2E test suite to run"
-    default: ""
-
 auto_cancel:
   running:
     when: "branch != 'main'"
