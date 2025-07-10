@@ -72,7 +72,6 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
 
   constructor(
     public readonly loader: LT,
-    public readonly name: string,
     public baseContextValue: string,
   ) {
     this.environments = [];
@@ -95,6 +94,8 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
       environments: this.environments.length,
     });
   }
+
+  abstract get name(): string;
 
   searchableText(): string {
     return this.name;
@@ -228,7 +229,11 @@ export abstract class SingleEnvironmentConnectionRow<
 export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloudResourceLoader> {
   ccloudOrganization?: CCloudOrganization;
   constructor() {
-    super(CCloudResourceLoader.getInstance(), "Confluent Cloud", "resources-ccloud-container");
+    super(CCloudResourceLoader.getInstance(), "resources-ccloud-container");
+  }
+
+  get name(): string {
+    return "Confluent Cloud";
   }
 
   get iconPath(): ThemeIcon {
@@ -266,7 +271,7 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
   }
 
   get status(): string {
-    return this.connected ? this.ccloudOrganization!.name : "(No Connection)";
+    return this.connected ? this.ccloudOrganization!.name : "(No connection)";
   }
 
   getChildren(): CCloudEnvironment[] {
@@ -285,7 +290,7 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
   DirectResourceLoader
 > {
   constructor(loader: DirectResourceLoader) {
-    super(loader, "Direct Connection", "resources-direct-container");
+    super(loader, "resources-direct-container");
   }
 
   get iconPath(): ThemeIcon {
@@ -296,9 +301,16 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
     }
   }
 
-  // Fix this, stolen from LocalConnectionRow for now.
+  get name(): string {
+    if (this.environment) {
+      return this.environment.name;
+    } else {
+      throw new Error("DirectConnectionRow: Environment not yet loaded; cannot get name.");
+    }
+  }
+
   get status(): string {
-    return this.connected ? "(connected)" : "(Not Running)";
+    return "";
   }
 }
 
@@ -312,7 +324,11 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   private needUpdateLocalConnection = true;
 
   constructor() {
-    super(LocalResourceLoader.getInstance(), "Local", "local-container");
+    super(LocalResourceLoader.getInstance(), "local-container");
+  }
+
+  get name(): string {
+    return "Local";
   }
 
   get iconPath(): ThemeIcon {
