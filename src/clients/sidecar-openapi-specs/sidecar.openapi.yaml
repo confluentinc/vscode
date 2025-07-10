@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.211.0
+  version: 0.211.2
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -1404,18 +1404,20 @@ components:
     HealthResponse:
       type: object
       properties:
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
           - UP
           - DOWN
           type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheck"
     HealthCheck:
       type: object
       properties:
+        name:
+          type: string
         data:
           type: object
           nullable: true
@@ -1423,6 +1425,4 @@ components:
           enum:
           - UP
           - DOWN
-          type: string
-        name:
           type: string
