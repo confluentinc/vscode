@@ -1,5 +1,6 @@
 import {
   Disposable,
+  MarkdownString,
   ThemeIcon,
   TreeDataProvider,
   TreeItem,
@@ -18,6 +19,7 @@ import {
 import { Logger } from "../logging";
 import {
   CCloudEnvironment,
+  createEnvironmentTooltip,
   DirectEnvironment,
   Environment,
   EnvironmentTreeItem,
@@ -97,6 +99,8 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
 
   abstract get name(): string;
 
+  abstract get tooltip(): string | MarkdownString;
+
   searchableText(): string {
     return this.name;
   }
@@ -144,6 +148,7 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
 
     item.iconPath = this.iconPath;
     item.description = this.status;
+    item.tooltip = this.tooltip;
 
     return item;
   }
@@ -274,6 +279,10 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
     return this.connected ? this.ccloudOrganization!.name : "(No connection)";
   }
 
+  get tooltip(): string {
+    return "Confluent Cloud";
+  }
+
   getChildren(): CCloudEnvironment[] {
     this.logger.debug("CCloudConnectionRow getting children", {
       environments: this.environments.length,
@@ -312,6 +321,14 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
   get status(): string {
     return "";
   }
+
+  get tooltip(): MarkdownString {
+    if (this.environment) {
+      return createEnvironmentTooltip(this.environment);
+    } else {
+      throw new Error("DirectConnectionRow: Environment not yet loaded; cannot get tooltip.");
+    }
+  }
 }
 
 export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
@@ -333,6 +350,10 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
 
   get iconPath(): ThemeIcon {
     return new ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
+  }
+
+  get tooltip(): MarkdownString {
+    return new MarkdownString("Local Kafka clusters discoverable at port `8082` are shown here.");
   }
 
   override async refresh(deepRefresh: boolean = false): Promise<void> {

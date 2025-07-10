@@ -397,7 +397,7 @@ function checkForMissingResources(resource: Environment) {
   return { missingKafka, missingSR };
 }
 
-function createEnvironmentTooltip(resource: Environment): MarkdownString {
+export function createEnvironmentTooltip(resource: Environment): MarkdownString {
   let resourceLabel = "Environment";
   const isDirectResource = isDirect(resource);
   if (isDirectResource) {
