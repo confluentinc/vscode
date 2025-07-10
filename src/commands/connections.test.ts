@@ -1,10 +1,16 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
 import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import * as authnUtils from "../authn/utils";
 import { DirectConnectionManager } from "../directConnectManager";
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { SSL_PEM_PATHS } from "../extensionSettings/constants";
+import * as ccloudConnections from "../sidecar/connections/ccloud";
+import { SecretStorageKeys } from "../storage/constants";
 import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {
@@ -163,5 +169,136 @@ describe("commands/connections.ts", function () {
 
     assert.ok(showWarningMessageStub.calledOnce);
     assert.ok(deleteConnectionStub.notCalled);
+  });
+});
+
+describe("commands/connections.ts ccloudSignIn()", function () {
+  let sandbox: sinon.SinonSandbox;
+  let getCCloudAuthSessionStub: sinon.SinonStub;
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+    getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+    // no need to stub the info notification here since that's done through the auth provider
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should call getCCloudAuthSession(true) to sign in through the auth provider", async function () {
+    getCCloudAuthSessionStub.resolves(TEST_CCLOUD_AUTH_SESSION);
+
+    await connections.ccloudSignIn();
+
+    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+  });
+
+  for (const errorMsg of [
+    "User did not consent to login.",
+    "User cancelled the authentication flow.",
+    "Confluent Cloud authentication failed. See browser for details.",
+    "User reset their password.",
+  ]) {
+    it(`should not re-throw specific errors -> "${errorMsg}"`, async function () {
+      const cancelError = new Error(errorMsg);
+      getCCloudAuthSessionStub.rejects(cancelError);
+
+      await connections.ccloudSignIn();
+
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+    });
+  }
+
+  it("should re-throw unexpected errors", async function () {
+    const unexpectedError = new Error("Something unexpected happened");
+    getCCloudAuthSessionStub.rejects(unexpectedError);
+
+    await assert.rejects(connections.ccloudSignIn(), unexpectedError);
+
+    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+  });
+});
+
+describe("commands/connections.ts ccloudSignOut()", function () {
+  let sandbox: sinon.SinonSandbox;
+
+  let showInformationMessageStub: sinon.SinonStub;
+  let getCCloudAuthSessionStub: sinon.SinonStub;
+  let deleteCCloudConnectionStub: sinon.SinonStub;
+  let ccloudAuthSessionInvalidatedFireStub: sinon.SinonStub;
+  let stubbedSecretStorage: StubbedSecretStorage;
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+    showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+    // stub auth functions and emitters
+    getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
+    deleteCCloudConnectionStub = sandbox.stub(ccloudConnections, "deleteCCloudConnection");
+    ccloudAuthSessionInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
+    stubbedSecretStorage = getStubbedSecretStorage(sandbox);
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should return early when no CCloud auth session exists", async function () {
+    getCCloudAuthSessionStub.resolves(undefined);
+
+    await connections.ccloudSignOut();
+
+    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub);
+    sinon.assert.notCalled(showInformationMessageStub);
+    sinon.assert.notCalled(deleteCCloudConnectionStub);
+  });
+
+  it("should show a confirmation modal with the correct message and account label", async function () {
+    getCCloudAuthSessionStub.resolves(TEST_CCLOUD_AUTH_SESSION);
+    showInformationMessageStub.resolves("Cancel");
+
+    await connections.ccloudSignOut();
+
+    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub);
+    sinon.assert.calledOnceWithExactly(
+      showInformationMessageStub,
+      `The account '${TEST_CCLOUD_AUTH_SESSION.account.label}' has been used by: 
+
+Confluent
+
+Sign out from this extension?`,
+      {
+        modal: true,
+      },
+      "Sign Out",
+    );
+    sinon.assert.notCalled(deleteCCloudConnectionStub);
+  });
+
+  it("should return early when the user cancels/dismisses the sign-out confirmation modal", async function () {
+    getCCloudAuthSessionStub.resolves(TEST_CCLOUD_AUTH_SESSION);
+    // no difference in the return value between dismissing or clicking "Cancel" in the modal
+    showInformationMessageStub.resolves(undefined);
+
+    await connections.ccloudSignOut();
+
+    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub);
+    sinon.assert.calledOnce(showInformationMessageStub);
+    sinon.assert.notCalled(deleteCCloudConnectionStub);
+    sinon.assert.notCalled(ccloudAuthSessionInvalidatedFireStub);
+  });
+
+  it("should sign-out successfully by deleting the CCloud connection, clearing CCloud connected state in storage, and firing ccloudAuthSessionInvalidated", async function () {
+    getCCloudAuthSessionStub.resolves(TEST_CCLOUD_AUTH_SESSION);
+    showInformationMessageStub.resolves("Sign Out");
+    deleteCCloudConnectionStub.resolves();
+
+    await connections.ccloudSignOut();
+
+    sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub);
+    sinon.assert.calledOnce(showInformationMessageStub);
+    sinon.assert.calledOnce(deleteCCloudConnectionStub);
+    sinon.assert.calledOnceWithExactly(stubbedSecretStorage.delete, SecretStorageKeys.CCLOUD_STATE);
+    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
   });
 });
