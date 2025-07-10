@@ -303,8 +303,11 @@ export async function gatherSidecarOutputs(
     const parsed: SidecarLogFormat | null = parseSidecarLogLine(rawLogLine);
     if (parsed && parsed.timestamp) {
       parsedLines.push(parsed);
-
-      const formatted = `\t> ${parsed.timestamp} ${parsed.level} [${parsed.loggerName}] ${parsed.message}`;
+      const formatted: string = formatSidecarLogLine(parsed, {
+        withTimestamp: true,
+        withLevel: true,
+        withMdc: true,
+      });
       reformattedLogLines.push(formatted);
     } else {
       // JSON parsing failed or the line is missing required fields. Only append the raw line if nonempty.
