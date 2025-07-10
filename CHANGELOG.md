@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.5.0
+
 ### Added
 
 - On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
