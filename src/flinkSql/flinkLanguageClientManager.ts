@@ -1,3 +1,4 @@
+import { Mutex } from "async-mutex";
 import {
   Disposable,
   LogOutputChannel,
@@ -52,7 +53,10 @@ export class FlinkLanguageClientManager implements Disposable {
   private lastDocUri: Uri | null = null;
   private reconnectCounter = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 2;
-  private textDocumentListener: Disposable | null = null;
+  private openFlinkSqlDocuments: Set<string> = new Set();
+  private clientInitMutex = new Mutex();
+  private cleanupTimer: NodeJS.Timeout | null = null;
+  private readonly CLEANUP_DELAY_MS = 60000; // 60 seconds
 
   static getInstance(): FlinkLanguageClientManager {
     if (!FlinkLanguageClientManager.instance) {
@@ -65,7 +69,9 @@ export class FlinkLanguageClientManager implements Disposable {
     // make sure we dispose the output channel when the manager is disposed
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
+    this.initializeDocumentTracking();
     this.registerListeners();
+
     // This is true here when a user opens a new workspace after authenticating with CCloud in another one
     if (hasCCloudAuthSession()) {
       let flinkDoc: TextDocument | undefined = undefined;
@@ -89,6 +95,61 @@ export class FlinkLanguageClientManager implements Disposable {
         );
         this.maybeStartLanguageClient(flinkDoc.uri);
       }
+    }
+  }
+
+  private initializeDocumentTracking(): void {
+    workspace.textDocuments.forEach((doc) => {
+      if (doc.languageId === "flinksql" && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+        this.trackDocument(doc.uri);
+      }
+    });
+  }
+
+  public trackDocument(uri: Uri): void {
+    if (uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+      const uriString = uri.toString();
+      logger.trace(`Tracking Flink SQL document: ${uriString}`);
+      this.openFlinkSqlDocuments.add(uriString);
+      // Cancel any pending cleanup when a new document is tracked
+      this.clearCleanupTimer();
+    }
+  }
+
+  public untrackDocument(uri: Uri): void {
+    const uriString = uri.toString();
+    if (this.openFlinkSqlDocuments.has(uriString)) {
+      logger.trace(`Untracking Flink SQL document: ${uriString}`);
+      this.openFlinkSqlDocuments.delete(uriString);
+      // If no more documents are open, schedule client cleanup
+      if (this.openFlinkSqlDocuments.size === 0 && this.isLanguageClientConnected()) {
+        logger.trace("Last Flink SQL document closed, scheduling language client cleanup");
+        this.scheduleClientCleanup();
+      }
+    }
+  }
+
+  private scheduleClientCleanup(): void {
+    this.clearCleanupTimer();
+    this.cleanupTimer = setTimeout(async () => {
+      logger.trace("Executing scheduled cleanup of language client after inactivity");
+      // Only clean up if there are still no open documents
+      if (this.openFlinkSqlDocuments.size === 0) {
+        await this.cleanupLanguageClient();
+        logUsage(UserEvent.FlinkSqlClientInteraction, {
+          action: "client_auto_disposed",
+          reason: "inactivity",
+        });
+      }
+      this.cleanupTimer = null;
+    }, this.CLEANUP_DELAY_MS);
+  }
+
+  private clearCleanupTimer(): void {
+    if (this.cleanupTimer !== null) {
+      clearTimeout(this.cleanupTimer);
+      this.cleanupTimer = null;
+      logger.trace("Cleared scheduled language client cleanup timer");
     }
   }
 
@@ -149,12 +210,69 @@ export class FlinkLanguageClientManager implements Disposable {
       }),
     );
 
-    // Listen for CCloud authentication
+    // Clear outdated diagnostics on document change; CCloud Flink SQL Server won't publish cleared diagnostics
+    this.disposables.push(
+      workspace.onDidChangeTextDocument((event) => {
+        const uriString = event.document.uri.toString();
+        if (uriString.startsWith("output:")) {
+          return;
+        }
+        if (
+          this.openFlinkSqlDocuments.has(uriString) &&
+          this.languageClient?.diagnostics?.get(event.document.uri)
+        ) {
+          logger.trace(`Clearing diagnostics for document: ${uriString}`);
+          this.languageClient.diagnostics.set(event.document.uri, []);
+        } else {
+          logger.trace(`Not clearing diagnostics for document: ${uriString}`);
+        }
+      }),
+    );
+
+    // Track documents being opened
+    this.disposables.push(
+      workspace.onDidOpenTextDocument((doc) => {
+        if (doc.languageId === "flinksql" && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+          this.trackDocument(doc.uri);
+        }
+      }),
+    );
+
+    // Track documents being closed
+    this.disposables.push(
+      workspace.onDidCloseTextDocument((doc) => {
+        if (doc.languageId === "flinksql") {
+          this.untrackDocument(doc.uri);
+        }
+      }),
+    );
+
+    // Listen for CCloud authentication events
     this.disposables.push(
       ccloudConnected.event(async (connected) => {
         if (!connected) {
           logger.trace("CCloud auth session invalid, stopping Flink language client");
           this.cleanupLanguageClient();
+        } else {
+          logger.trace("CCloud connected, checking for open Flink SQL documents");
+          let docUri: Uri | undefined;
+          const activeEditor = window.activeTextEditor;
+          if (
+            activeEditor &&
+            activeEditor.document.languageId === "flinksql" &&
+            activeEditor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME
+          ) {
+            // Prioritize the active document
+            docUri = activeEditor.document.uri;
+          } else if (this.openFlinkSqlDocuments.size > 0) {
+            // Fall back to the first tracked document
+            const firstDocUri = Array.from(this.openFlinkSqlDocuments)[0];
+            docUri = Uri.parse(firstDocUri);
+          }
+
+          if (docUri) {
+            await this.maybeStartLanguageClient(docUri);
+          }
         }
       }),
     );
@@ -312,91 +430,105 @@ export class FlinkLanguageClientManager implements Disposable {
    * - User has opened a Flink SQL file
    */
   public async maybeStartLanguageClient(uri?: Uri): Promise<void> {
-    if (!hasCCloudAuthSession()) {
-      logger.trace("User is not authenticated with CCloud, not initializing language client");
-      return;
-    }
-    // TODO remove when Preview Flag is gone.
-    // See extension settings listener: uri may not be set, but we need it to start the client
-    if (!uri) {
-      logger.trace("No URI provided, cannot start language client");
-      return;
-    }
+    const uriStr = uri?.toString() || "undefined";
+    logger.trace(`Requesting language client initialization for ${uriStr}`);
+    // We use runExclusive to ensure only one initialization attempt at a time
+    await this.clientInitMutex.runExclusive(async () => {
+      try {
+        logger.trace(`Acquired initialization lock for ${uriStr}`);
 
-    const { computePoolId } = await this.getFlinkSqlSettings(uri);
-    if (!computePoolId) {
-      logger.trace("No compute pool, not starting language client");
-      return;
-    }
-    const isPoolOk = await this.validateFlinkSettings(computePoolId);
-    if (!isPoolOk) {
-      logger.trace("No valid compute pool; not initializing language client");
-      return;
-    }
-
-    let url: string | null = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch((error) => {
-      let msg = "Failed to build WebSocket URL";
-      logError(error, msg, {
-        extra: {
-          compute_pool_id: computePoolId,
-        },
-      });
-      return null;
-    });
-    if (!url) {
-      logger.error("Failed to build WebSocket URL, cannot start language client");
-      return;
-    }
-    if (this.isLanguageClientConnected() && url === this.lastWebSocketUrl) {
-      // If we already have a client, it's alive, the compute pool matches, so we're good
-      logger.trace("Language client already connected to correct url, no need to reinitialize");
-      return;
-    } else {
-      logger.trace("Cleaning up and reinitializing", {
-        clientConnected: this.isLanguageClientConnected(),
-        lastWebSocketUrl: this.lastWebSocketUrl,
-        websocketUrlMatch: url === this.lastWebSocketUrl,
-      });
-      await this.cleanupLanguageClient();
-    }
-
-    try {
-      // Reset reconnect counter on new initialization
-      this.reconnectCounter = 0;
-      this.languageClient = await initializeLanguageClient(url, () =>
-        this.handleWebSocketDisconnect(),
-      );
-      if (this.languageClient) {
-        this.disposables.push(this.languageClient);
-        this.lastDocUri = uri;
-        this.lastWebSocketUrl = url;
-        if (this.textDocumentListener) {
-          this.textDocumentListener.dispose();
+        if (!hasCCloudAuthSession()) {
+          logger.trace("User is not authenticated with CCloud, not initializing language client");
+          return;
         }
-        // Clear outdated diagnostics on change, since the CCloud Flink SQL Server intermittently won't publish new diagnostics
-        this.textDocumentListener = workspace.onDidChangeTextDocument((event) => {
-          if (event.document.uri.toString() === uri.toString()) {
-            this.languageClient?.diagnostics?.set(event.document.uri, []);
-          }
+
+        if (!uri) {
+          logger.trace("No URI provided, cannot start language client");
+          return;
+        }
+
+        // Check if we already have a client for this exact URI
+        if (
+          this.isLanguageClientConnected() &&
+          this.lastDocUri &&
+          uri.toString() === this.lastDocUri.toString()
+        ) {
+          logger.trace("Language client already exists for this URI, skipping initialization");
+          return;
+        }
+
+        const { computePoolId } = await this.getFlinkSqlSettings(uri);
+        if (!computePoolId) {
+          logger.trace("No compute pool, not starting language client");
+          return;
+        }
+
+        const isPoolOk = await this.validateFlinkSettings(computePoolId);
+        if (!isPoolOk) {
+          logger.trace("No valid compute pool; not initializing language client");
+          return;
+        }
+
+        let url: string | null = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch(
+          (error) => {
+            let msg = "Failed to build WebSocket URL";
+            logError(error, msg, {
+              extra: {
+                compute_pool_id: computePoolId,
+              },
+            });
+            return null;
+          },
+        );
+
+        if (!url) {
+          logger.error("Failed to build WebSocket URL, cannot start language client");
+          return;
+        }
+
+        if (this.isLanguageClientConnected() && url === this.lastWebSocketUrl) {
+          // If we already have a client, it's alive, the compute pool matches, so we're good
+          logger.trace("Language client already connected to correct url, no need to reinitialize");
+          return;
+        } else {
+          logger.trace("Cleaning up and reinitializing", {
+            clientConnected: this.isLanguageClientConnected(),
+            lastWebSocketUrl: this.lastWebSocketUrl,
+            websocketUrlMatch: url === this.lastWebSocketUrl,
+          });
+          await this.cleanupLanguageClient();
+        }
+
+        // Reset reconnect counter on new initialization
+        this.reconnectCounter = 0;
+        logger.debug(`Starting language client with URL: ${url} for document ${uriStr}`);
+        this.languageClient = await initializeLanguageClient(url, () =>
+          this.handleWebSocketDisconnect(),
+        );
+
+        if (this.languageClient) {
+          this.disposables.push(this.languageClient);
+          this.lastDocUri = uri;
+          this.lastWebSocketUrl = url;
+
+          logger.trace("Flink SQL language client successfully initialized");
+          logUsage(UserEvent.FlinkSqlClientInteraction, {
+            action: "client_initialized",
+            compute_pool_id: computePoolId,
+          });
+          this.notifyConfigChanged();
+        }
+      } catch (error) {
+        let msg = "Error in maybeStartLanguageClient";
+        logError(error, msg, {
+          extra: {
+            uri: uri?.toString(),
+          },
         });
-        this.disposables.push(this.textDocumentListener);
-        logger.trace("Flink SQL language client successfully initialized");
-        logUsage(UserEvent.FlinkSqlClientInteraction, {
-          action: "client_initialized",
-          compute_pool_id: computePoolId,
-        });
-        this.notifyConfigChanged();
+      } finally {
+        logger.trace(`Released initialization lock for ${uriStr}`);
       }
-    } catch (error) {
-      let msg = "Failed to start Flink SQL language client";
-      logError(error, msg, {
-        extra: {
-          compute_pool_id: computePoolId,
-          url,
-          reconnectCounter: this.reconnectCounter,
-        },
-      });
-    }
+    });
   }
 
   /**
@@ -452,6 +584,7 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private async cleanupLanguageClient(): Promise<void> {
+    this.clearCleanupTimer();
     try {
       if (this.languageClient) {
         await this.languageClient.dispose();
@@ -516,6 +649,7 @@ export class FlinkLanguageClientManager implements Disposable {
     await this.cleanupLanguageClient();
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
+    this.openFlinkSqlDocuments.clear();
     FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
     clearFlinkSQLLanguageServerOutputChannel();
     logger.trace("FlinkLanguageClientManager disposed");
