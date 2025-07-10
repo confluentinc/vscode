@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ScaffoldV1Template } from "../clients/scaffoldingService";
 import * as sidecarModule from "../sidecar";
-import { getTemplatesList, pickTemplate } from "./templates";
+import { getTemplatesList, pickTemplate, sanitizeTemplateOptions } from "./templates";
 
 describe("templates.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -14,6 +14,51 @@ describe("templates.ts", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("sanitizeTemplateOptions", () => {
+    it("should filter out sensitive keys from template options", () => {
+      const template = {
+        spec: {
+          name: "test-template",
+          options: {
+            api_key: "secret-key",
+            secret: "secret-value",
+            normalOption: "normal-value",
+            anotherOption: "another-value",
+          },
+        },
+      } as unknown as ScaffoldV1Template;
+
+      const result = sanitizeTemplateOptions(template);
+
+      assert.strictEqual(result.spec?.name, "test-template");
+      assert.strictEqual(result.spec?.options?.normalOption, "normal-value");
+      assert.strictEqual(result.spec?.options?.anotherOption, "another-value");
+      assert.strictEqual(result.spec?.options?.api_key, undefined);
+      assert.strictEqual(result.spec?.options?.secret, undefined);
+    });
+
+    it("should handle template with no options", () => {
+      const template = {
+        spec: {
+          name: "test-template",
+        },
+      } as ScaffoldV1Template;
+
+      const result = sanitizeTemplateOptions(template);
+
+      assert.strictEqual(result.spec?.name, "test-template");
+      assert.deepStrictEqual(result.spec?.options, {});
+    });
+
+    it("should handle template with no spec", () => {
+      const template = {} as ScaffoldV1Template;
+
+      const result = sanitizeTemplateOptions(template);
+
+      assert.deepStrictEqual(result.spec?.options, {});
+    });
   });
 
   describe("getTemplatesList", () => {

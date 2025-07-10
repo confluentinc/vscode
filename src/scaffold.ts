@@ -397,19 +397,6 @@ export function filterSensitiveKeys<T>(obj: Record<string, T>): Record<string, T
   );
 }
 
-export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV1Template {
-  const spec = template.spec as ScaffoldV1TemplateSpec;
-  const sanitizedOptions = spec?.options ? filterSensitiveKeys(spec.options) : {};
-
-  return {
-    ...template,
-    spec: {
-      ...spec,
-      options: sanitizedOptions,
-    } as ScaffoldV1TemplateSpec,
-  };
-}
-
 export async function handleProjectScaffoldUri(
   collection: string | null,
   template: string | null,

@@ -1,8 +1,21 @@
 import * as vscode from "vscode";
-import { ScaffoldV1Template } from "../clients/scaffoldingService";
+import { ScaffoldV1Template, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
 import { QuickPickItemWithValue } from "../quickpicks/types";
-import { sanitizeTemplateOptions } from "../scaffold";
+import { filterSensitiveKeys } from "../scaffold";
 import { getSidecar } from "../sidecar";
+
+export function sanitizeTemplateOptions(template: ScaffoldV1Template): ScaffoldV1Template {
+  const spec = template.spec as ScaffoldV1TemplateSpec;
+  const sanitizedOptions = spec?.options ? filterSensitiveKeys(spec.options) : {};
+
+  return {
+    ...template,
+    spec: {
+      ...spec,
+      options: sanitizedOptions,
+    } as ScaffoldV1TemplateSpec,
+  };
+}
 
 export async function getTemplatesList(
   collection?: string,
@@ -20,11 +33,8 @@ export async function getTemplatesList(
 export async function pickTemplate(
   templateList: ScaffoldV1Template[],
 ): Promise<ScaffoldV1Template | undefined> {
-  const sortedList = templateList.sort((a, b) => {
-    return a.spec!.display_name!.toLowerCase().localeCompare(b.spec!.display_name!.toLowerCase());
-  });
   const quickPickItems: QuickPickItemWithValue<ScaffoldV1Template>[] = [];
-  sortedList.forEach((templateItem: ScaffoldV1Template) => {
+  templateList.forEach((templateItem: ScaffoldV1Template) => {
     const spec = templateItem.spec;
     if (!spec) return;
 
