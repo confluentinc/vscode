@@ -4,19 +4,28 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.4.3
+
+### Fixed
+
+- Sidecar version update to harden the Confluent Cloud authentication flow.
+
 ## 1.4.2
 
 ### Fixed
- - Prevent the existence of an empty-string subject from breaking operations ([#2149](https://github.com/confluentinc/vscode/issues/2149)).
+
+- Prevent the existence of an empty-string subject from breaking operations
+  ([#2149](https://github.com/confluentinc/vscode/issues/2149)).
 
 ## 1.4.1
 
 ### Changed
- - Removed CCloud email from LaunchDarkly client identify calls
+
+- Removed CCloud email from LaunchDarkly client identify calls
 
 ### Fixed
- - Removed unneeded Flink language client cleanup call
 
+- Removed unneeded Flink language client cleanup call
 
 ## 1.4.0
 
