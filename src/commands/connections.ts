@@ -11,11 +11,13 @@ import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
+import { SecretStorageKeys } from "../storage/constants";
 import {
   CustomConnectionSpec,
   CustomConnectionSpecFromJSON,
   getResourceManager,
 } from "../storage/resourceManager";
+import { getSecretStorage } from "../storage/utils";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
@@ -69,8 +71,16 @@ Sign out from this extension?`,
   if (confirmation !== yesButton) {
     return;
   }
-  // sign out by clearing the stored auth session
-  await deleteCCloudConnection();
+
+  // sign out by clearing the stored auth session, and also clear any previous connected state
+  // so ccloudStateHandling doesn't see old state and incorrectly show an expiration notification
+  await Promise.all([
+    deleteCCloudConnection(),
+    getSecretStorage().delete(SecretStorageKeys.CCLOUD_STATE),
+  ]);
+
+  // this will trigger the auth provider's `.handleSessionRemoved(true)` and fire the
+  // ccloudConnected event, which covers the rest of the `.removeSession()` logic
   ccloudAuthSessionInvalidated.fire();
 }
 
