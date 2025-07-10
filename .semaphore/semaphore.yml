@@ -82,7 +82,7 @@ blocks:
             - make test-playwright-webviews
         - name: "Playwright: E2E Smoke Tests (VS Code)"
           commands:
-            - make test-playwright-e2e-smoke
+            - make test-playwright-e2e TEST_SUITE=@smoke
       epilogue: &build-test-epilogue
         always:
           commands:

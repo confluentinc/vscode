@@ -61,13 +61,21 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 	npx gulp build
 	npx gulp functional
 
-# Run only E2E (Playwright) smoke test(s)
-.PHONY: test-playwright-e2e-smoke
-test-playwright-e2e-smoke: setup-test-env install-test-dependencies install-dependencies
-	@if [ $$(uname -s) = "Linux" ]; then \
-			xvfb-run -a npx gulp e2e -t @smoke; \
+# Run E2E (Playwright) tests with optional test name
+# Usage: make test-playwright-e2e (runs all tests)
+# Usage: make test-playwright-e2e TEST_SUITE=@smoke
+# Usage: make test-playwright-e2e TEST_SUITE=@regression
+.PHONY: test-playwright-e2e
+test-playwright-e2e: setup-test-env install-test-dependencies install-dependencies
+	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ]; then \
+			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
 	else \
-			npx gulp e2e -t @smoke; \
+			TEST_SUITE_ARG=""; \
+	fi; \
+	if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp e2e $$TEST_SUITE_ARG; \
+	else \
+			npx gulp e2e $$TEST_SUITE_ARG; \
 	fi
 
 # Validates bump based on current version (in package.json)
