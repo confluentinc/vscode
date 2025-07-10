@@ -1,0 +1,79 @@
+# Playwright E2E Tests Pipeline
+# This pipeline focuses specifically on end-to-end testing using Playwright
+# Designed to be run as a parameterized task (manually or scheduled)
+version: v1.0
+name: "Playwright E2E Tests - VS Code ${{parameters.VSCODE_VERSION}}"
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+
+blocks:
+  - name: "Linux x64: Playwright E2E Tests"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      prologue: &e2e-prologue
+        commands:
+          - make ci-bin-sem-cache-restore
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
+      jobs: &e2e-jobs
+        - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
+          commands:
+            - make test-playwright-e2e TEST_SUITE=${{parameters.TEST_SUITE}}
+          env_vars:
+            - name: VSCODE_VERSION
+              value: ${{parameters.VSCODE_VERSION}}
+      epilogue: &e2e-epilogue
+        always:
+          commands:
+            - make remove-test-env
+            - make ci-bin-sem-cache-store
+            - make store-test-results-to-semaphore
+            # Upload Playwright artifacts, if available
+            - |
+              if [ -d test-results ]; then
+                artifact push workflow test-results --destination test-results-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+              fi
+              if [ -d playwright-report ]; then
+                artifact push workflow playwright-report --destination playwright-report-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+              fi
+
+  - name: "Linux ARM64: Playwright E2E Tests"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-arm64-1
+      prologue: *e2e-prologue
+      jobs: *e2e-jobs
+      epilogue: *e2e-epilogue
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results to Semaphore
+        commands:
+          - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
