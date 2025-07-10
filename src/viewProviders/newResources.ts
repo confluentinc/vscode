@@ -8,7 +8,12 @@ import {
 } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { ccloudConnected, localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
+import {
+  ccloudConnected,
+  directConnectionsChanged,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { logError } from "../errors";
 import {
   CCloudResourceLoader,
@@ -450,7 +455,72 @@ export class NewResourceViewProvider
       },
     );
 
-    return [ccloudConnectedSub, localKafkaConnectedSub, localSchemaRegistryConnectedSub];
+    // Watch for direct connections changing, call into our handler.
+    const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(() => {
+      this.logger.debug("directConnectionsChanged event fired");
+      void this.synchronizeDirectConnections();
+    });
+
+    return [
+      ccloudConnectedSub,
+      localKafkaConnectedSub,
+      localSchemaRegistryConnectedSub,
+      directConnectionsChangedSub,
+    ];
+  }
+
+  private async synchronizeDirectConnections(): Promise<void> {
+    this.logger.debug("Synchronizing direct connections");
+
+    // collect current direct connections from this.connections map
+    const existingDirectConnections = Array.from(this.connections.values()).filter(
+      (row) => row instanceof DirectConnectionRow,
+    );
+
+    // ... and the new list of direct loaders. We ought to find one or more diffs between the two.
+    const directLoaders = ResourceLoader.directLoaders();
+
+    // TODO move to own method.
+    // Find if any new direct connections have been added
+    const newDirectLoaders = directLoaders.filter(
+      (loader) =>
+        !existingDirectConnections.some((row) => row.connectionId === loader.connectionId),
+    );
+
+    this.logger.debug("New direct loaders found", {
+      newDirectLoaders: newDirectLoaders.length,
+    });
+
+    if (newDirectLoaders.length > 0) {
+      // For each new direct loader, create a new DirectConnectionRow and store it.
+      for (const loader of newDirectLoaders) {
+        const connectionRow = new DirectConnectionRow(loader);
+        void this.loadAndStoreConnection(connectionRow, false);
+      }
+    }
+
+    // TODO move to own method.
+    // Now check for any direct connections that have been removed.
+    const removedDirectLoaders = existingDirectConnections.filter(
+      (row) => !directLoaders.some((loader) => loader.connectionId === row.connectionId),
+    );
+
+    this.logger.debug("Removed direct loaders found", {
+      removedDirectLoaders: removedDirectLoaders.length,
+    });
+    if (removedDirectLoaders.length > 0) {
+      // For each removed direct loader, remove the connection row from the map.
+      for (const row of removedDirectLoaders) {
+        this.logger.debug("Removing direct connection row", {
+          connectionId: row.connectionId,
+        });
+        this.connections.delete(row.connectionId);
+      }
+    }
+
+    // Finally, repaint the view to reflect the changes.
+    this.logger.debug("Repainting view after synchronizing direct connections");
+    this.repaint();
   }
 
   /** Repaint this node in the treeview. */
