@@ -401,7 +401,6 @@ async function setupContextValues() {
     resourcesWithURIs,
     diffableResources,
   ]);
-  throw new Error("NOPE");
 }
 
 /**
