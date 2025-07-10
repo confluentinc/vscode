@@ -42,17 +42,21 @@ blocks:
       jobs: &e2e-jobs
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
+            - echo "TEST_SUITE parameter value ':' '$TEST_SUITE'"
+            - echo "VSCODE_VERSION parameter value ':' '$VSCODE_VERSION'"
             - |
-              if [ -n "$TEST_SUITE" ] && [ "$TEST_SUITE" != "" ]; then
+              if [ -n "$TEST_SUITE" ] && [ "$TEST_SUITE" != "" ] && [ "$TEST_SUITE" != "TEST_SUITE" ]; then
+                echo "Running with test suite filter: $TEST_SUITE"
                 make test-playwright-e2e TEST_SUITE="$TEST_SUITE" VSCODE_VERSION="$VSCODE_VERSION"
               else
+                echo "Running all tests (no test suite filter)"
                 make test-playwright-e2e VSCODE_VERSION="$VSCODE_VERSION"
               fi
           env_vars:
             - name: TEST_SUITE
-              value: ${{parameters.TEST_SUITE}}
+              value: "${{parameters.TEST_SUITE}}"
             - name: VSCODE_VERSION
-              value: ${{parameters.VSCODE_VERSION}}
+              value: "${{parameters.VSCODE_VERSION}}"
       epilogue: &e2e-epilogue
         always:
           commands:
