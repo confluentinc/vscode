@@ -23,7 +23,7 @@ import { ResourceViewProvider } from "../viewProviders/resources";
 const logger = new Logger("commands.connections");
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
-async function ccloudSignIn() {
+export async function ccloudSignIn() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
@@ -47,7 +47,7 @@ async function ccloudSignIn() {
   }
 }
 
-async function ccloudSignOut() {
+export async function ccloudSignOut() {
   const authSession = await getCCloudAuthSession();
   if (!authSession) {
     return;
