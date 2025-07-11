@@ -10,6 +10,8 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import {
   ccloudConnected,
+  connectionDisconnected,
+  connectionStable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -197,6 +199,15 @@ export abstract class SingleEnvironmentConnectionRow<
         schemaRegistry: this.schemaRegistry,
       });
     }
+  }
+
+  override get connected(): boolean {
+    // connected if we have at least one environment AND that env
+    // has either Kafka cluster or a Schema Registry visible.
+    return (
+      this.environments.length > 0 &&
+      (this.kafkaCluster !== undefined || this.schemaRegistry !== undefined)
+    );
   }
 
   getChildren(): (KCT | SRT)[] {
@@ -455,17 +466,37 @@ export class NewResourceViewProvider
       },
     );
 
-    // Watch for direct connections changing, call into our handler.
+    // Watch for direct connections being added/removed, call into our handler.
     const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(() => {
       this.logger.debug("directConnectionsChanged event fired");
       void this.synchronizeDirectConnections();
     });
+
+    // Watch for (direct) connections going 'stable', which will happen
+    // when they get created and settled. Should remove from set
+    // driving our throbber indicating something loading, then reload this
+    // connection.
+    const connectionUsableSub: Disposable = connectionStable.event((id: ConnectionId) => {
+      this.logger.debug("connectionStable event fired, refreshing connection", { id });
+      void this.refreshConnection(id, true);
+    });
+
+    // watch for (direct) connections going disconnected (but not deleted)
+    // (will happen, say, if sidecar can no longer get at direct connection Kafka cluster)
+    const connectionDisconnectedSub: Disposable = connectionDisconnected.event(
+      (id: ConnectionId) => {
+        this.logger.debug("connectionDisconnected event fired, refreshing connection", { id });
+        void this.refreshConnection(id, true);
+      },
+    );
 
     return [
       ccloudConnectedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
       directConnectionsChangedSub,
+      connectionUsableSub,
+      connectionDisconnectedSub,
     ];
   }
 

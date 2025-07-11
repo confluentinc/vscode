@@ -119,6 +119,8 @@ export const currentFlinkArtifactsPoolChanged =
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 
+export const connectionDisconnected = new vscode.EventEmitter<ConnectionId>();
+
 /** The user set/unset a filter for the Resources view. */
 export const resourceSearchSet = new vscode.EventEmitter<string | null>();
 /** The user set/unset a filter for the Topics view. */

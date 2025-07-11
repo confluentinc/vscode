@@ -2,7 +2,12 @@
 
 import { handleUpdatedConnection } from "../../authn/ccloudStateHandling";
 import { ConnectedState, Connection, ConnectionType } from "../../clients/sidecar/models";
-import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
+import {
+  connectionDisconnected,
+  connectionStable,
+  directConnectionCreated,
+  environmentChanged,
+} from "../../emitters";
 import { Logger } from "../../logging";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
 import { ConnectionEventBody } from "../../ws/messageTypes";
@@ -59,6 +64,13 @@ export function connectionEventHandler(event: ConnectionEventBody) {
           connectionStable.fire(id);
           // ???
           environmentChanged.fire({ id: environmentId, wasDeleted: true });
+
+          if (event.action === "DISCONNECTED") {
+            logger.info(
+              `connectionEventHandler: direct connection ${event.action} ${connection.id} disconnected side effects firing.`,
+            );
+            connectionDisconnected.fire(id);
+          }
           break;
         default:
           logger.warn(`connectionEventHandler: unhandled ccloud connection action ${event.action}`);
