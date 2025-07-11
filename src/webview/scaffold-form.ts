@@ -93,9 +93,16 @@ class ScaffoldFormViewModel extends ViewModel {
     }
     this.hasValidationErrors(document.querySelectorAll(".input-container.error").length > 0);
   }
+
   async handleSubmit(event: Event) {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
+    // Re-check all inputs to catch errors missed if validateInput doesn't run onBlur (submitted with Enter)
+    const inputs = Array.from(form.querySelectorAll<HTMLInputElement>("input"));
+    for (const input of inputs) {
+      // type casting to unknown! it's ok, the only part of the Event validateInput cares about is target.input
+      this.validateInput({ target: input } as unknown as Event);
+    }
     this.hasValidationErrors(
       document.querySelectorAll(".input-container.error").length > 0 || !form.checkValidity(),
     );
