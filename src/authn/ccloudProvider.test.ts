@@ -12,9 +12,12 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectedState, Connection } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
+import * as errors from "../errors";
 import { getSidecar } from "../sidecar";
 import * as ccloud from "../sidecar/connections/ccloud";
 import * as watcher from "../sidecar/connections/watcher";
+import * as sidecarLogging from "../sidecar/logging";
+import { SidecarOutputs } from "../sidecar/types";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
@@ -35,6 +38,8 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   let getCCloudConnectionStub: sinon.SinonStub;
   let createCCloudConnectionStub: sinon.SinonStub;
   let deleteConnectionStub: sinon.SinonStub;
+  let logErrorStub: sinon.SinonStub;
+  let gatherSidecarOutputsStub: sinon.SinonStub;
   // auth provider stubs
   let browserAuthFlowStub: sinon.SinonStub;
   let stubOnDidChangeSessions: sinon.SinonStubbedInstance<
@@ -68,6 +73,13 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
 
     showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
     showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
+
+    logErrorStub = sandbox.stub(errors, "logError").resolves();
+    gatherSidecarOutputsStub = sandbox.stub(sidecarLogging, "gatherSidecarOutputs").resolves({
+      logLines: [],
+      parsedLogLines: [],
+      stderrLines: [],
+    } satisfies SidecarOutputs);
   });
 
   afterEach(() => {
@@ -117,10 +129,17 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     );
   });
 
-  it("createSession() should handle authentication failure", async () => {
+  it("createSession() should handle authentication failure and send sidecar logs to Sentry", async () => {
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication fails
     browserAuthFlowStub.resolves({ success: false, resetPassword: false });
+    // stub the sidecar logs so we don't pull in the real logs and blow up test output
+    const fakeSidecarLogs = {
+      logLines: ["oh no", "something went wrong"],
+      parsedLogLines: [],
+      stderrLines: [],
+    } satisfies SidecarOutputs;
+    gatherSidecarOutputsStub.resolves(fakeSidecarLogs);
 
     const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
     await assert.rejects(authProvider.createSession(), {
@@ -128,6 +147,36 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     });
 
     sinon.assert.calledWith(showErrorMessageStub, authFailedMsg);
+    sinon.assert.calledOnce(gatherSidecarOutputsStub);
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(Error),
+      "CCloud authentication failed",
+      { extra: { sidecarLogs: fakeSidecarLogs.logLines.join("\n") } },
+    );
+  });
+
+  it("createSession() should handle authentication failure when gathering sidecar logs fails", async () => {
+    getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // authentication fails
+    browserAuthFlowStub.resolves({ success: false, resetPassword: false });
+    // stub sidecar log gathering failure
+    const sidecarLogError = new Error("Failed to read log file");
+    gatherSidecarOutputsStub.rejects(sidecarLogError);
+
+    const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
+    await assert.rejects(authProvider.createSession(), {
+      message: authFailedMsg,
+    });
+
+    sinon.assert.calledWith(showErrorMessageStub, authFailedMsg);
+    sinon.assert.calledOnce(gatherSidecarOutputsStub);
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(Error),
+      "CCloud authentication failed",
+      { extra: { sidecarLogs: `Failed to gather sidecar logs:\n${sidecarLogError.stack}` } },
+    );
   });
 
   it("createSession() should handle password reset scenario", async () => {
@@ -144,6 +193,8 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
       "Your password has been reset. Please sign in again to Confluent Cloud.",
       sinon.match(CCLOUD_SIGN_IN_BUTTON_LABEL),
     );
+    sinon.assert.notCalled(gatherSidecarOutputsStub);
+    sinon.assert.notCalled(logErrorStub);
   });
 
   it("createSession() should handle user cancellation", async () => {
@@ -158,6 +209,8 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
     sinon.assert.notCalled(deleteConnectionStub);
     sinon.assert.notCalled(showInfoMessageStub);
     sinon.assert.notCalled(showErrorMessageStub);
+    sinon.assert.notCalled(gatherSidecarOutputsStub);
+    sinon.assert.notCalled(logErrorStub);
   });
 
   it(`getSessions() should treat connections with a ${ConnectedState.None}/${ConnectedState.Failed} state as nonexistent`, async () => {

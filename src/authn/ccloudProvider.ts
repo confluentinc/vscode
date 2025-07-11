@@ -5,7 +5,7 @@ import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
-import { ExtensionContextNotSetError } from "../errors";
+import { ExtensionContextNotSetError, logError } from "../errors";
 import { loadPreferencesFromWorkspaceConfig } from "../extensionSettings/sidecarSync";
 import { getLaunchDarklyClient } from "../featureFlags/client";
 import { Logger } from "../logging";
@@ -16,6 +16,8 @@ import {
   getCCloudConnection,
 } from "../sidecar/connections/ccloud";
 import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
+import { gatherSidecarOutputs, getSidecarLogfilePath } from "../sidecar/logging";
+import { SidecarOutputs } from "../sidecar/types";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
@@ -148,12 +150,29 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     }
 
     if (!authCallback.success) {
-      const authFailedMsg = `Confluent Cloud authentication failed. See browser for details.`;
+      const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
       vscode.window.showErrorMessage(authFailedMsg);
       logUsage(UserEvent.CCloudAuthentication, {
         status: "authentication failed",
       });
-      throw new Error(authFailedMsg);
+      const failedAuthError = new Error(authFailedMsg);
+
+      // include sidecar logs in the Sentry event to help debug
+      let sidecarLogs: string = "";
+      try {
+        const sidecarLogPath: string = getSidecarLogfilePath();
+        const outputs: SidecarOutputs = await gatherSidecarOutputs(
+          sidecarLogPath,
+          `${sidecarLogPath}.stderr`,
+        );
+        sidecarLogs = outputs.logLines.join("\n");
+      } catch (error) {
+        sidecarLogs = `Failed to gather sidecar logs:\n${error instanceof Error ? error.stack : error}`;
+        logger.error(sidecarLogs);
+      }
+      logError(failedAuthError, "CCloud authentication failed", { extra: { sidecarLogs } });
+
+      throw failedAuthError;
     }
 
     logUsage(UserEvent.CCloudAuthentication, {
