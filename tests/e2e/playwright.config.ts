@@ -15,15 +15,26 @@ const vscodeVersion = process.env.VSCODE_VERSION || "stable";
 export default defineConfig({
   testDir: path.join(__dirname, "specs"),
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   timeout: 120000,
   workers: 1,
   expect: {
     timeout: 10000,
   },
-  reporter: "html",
+  reporter: process.env.CI
+    ? [
+        ["html"],
+        [
+          "junit",
+          {
+            outputFile: path.join(__dirname, "..", "..", "TEST-result-e2e.xml"),
+            includeProjectInTestName: true,
+            suiteName: `VS Code (${vscodeVersion}) Extension Tests: E2E (${process.platform} ${process.arch})`,
+          },
+        ],
+      ]
+    : "html",
   use: {
-    // headless: process.env.CI ? true : false,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
