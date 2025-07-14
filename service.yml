@@ -25,7 +25,7 @@ semaphore:
           default_value: "stable"
         - name: TEST_SUITE
           required: false
-          description: The test name or tag to run. If not specified, will run all E2E tests.
+          description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
 sonarqube:
   enable: false
 make:
