@@ -1,4 +1,3 @@
-import { window } from "vscode";
 import {
   ApiResponse,
   ContainerApi,
@@ -13,7 +12,7 @@ import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
-import { NewResourceViewProvider } from "../viewProviders/newResources";
+import { resourceViewWithProgress } from "../viewProviders/newResources";
 import {
   defaultRequestInit,
   getLocalKafkaImageName,
@@ -324,24 +323,10 @@ export class EventListener {
       // TODO: also update status bar item once it's available
 
       // Show progress in both old and new Resources view
-      await NewResourceViewProvider.getInstance().withProgress(
-        "Waiting for local resources to be ready...",
-        async () => {
-          await window.withProgress(
-            {
-              location: { viewId: "confluent-resources" },
-              title: "Waiting for local resources to be ready...",
-            },
-            async () => {
-              started = await this.waitForContainerLog(
-                containerId,
-                SERVER_STARTED_LOG_LINE,
-                eventTime,
-              );
-            },
-          );
-        },
-      );
+      await resourceViewWithProgress("Waiting for local resources to be ready...", async () => {
+        started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
+      });
+
       logger.debug("done waiting for container log line", {
         started,
         stringToInclude: SERVER_STARTED_LOG_LINE,
