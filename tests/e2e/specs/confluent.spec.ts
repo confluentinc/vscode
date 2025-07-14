@@ -14,7 +14,7 @@ test.describe(() => {
     },
   );
 
-  test("sign in to confluent cloud", async ({ page, electronApp }) => {
+  test("sign in to confluent cloud", { tag: [Tag.CCloud] }, async ({ page, electronApp }) => {
     await openConfluentExtension(page);
 
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
