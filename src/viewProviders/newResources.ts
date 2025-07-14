@@ -1,6 +1,7 @@
 import {
   Disposable,
   MarkdownString,
+  ThemeColor,
   ThemeIcon,
   TreeDataProvider,
   TreeItem,
@@ -156,6 +157,12 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     item.iconPath = this.iconPath;
     item.description = this.status;
     item.tooltip = this.tooltip;
+
+    this.logger.debug("getTreeItem", {
+      name: this.name,
+      id: item.id,
+      contextValue: item.contextValue,
+    });
 
     return item;
   }
@@ -320,6 +327,11 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
 
   get iconPath(): ThemeIcon {
     if (this.environment) {
+      // Are we connected to all of the components we expect?
+      const { missingKafka, missingSR } = this.environment.checkForMissingResources();
+      if (missingKafka || missingSR) {
+        return new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
+      }
       return new ThemeIcon(this.environment.iconName);
     } else {
       throw new Error("DirectConnectionRow: Environment not yet loaded; cannot get icon path.");

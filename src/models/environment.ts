@@ -264,6 +264,16 @@ export class DirectEnvironment extends Environment {
     }
   }
 
+  /**
+   * Compare provided `kafkaClusters` against `kafkaConfigured` and `schemaRegistry` against
+   * `schemaRegistryConfigured` to determine whether or not expected resources are missing
+   */
+  checkForMissingResources(): { missingKafka: boolean; missingSR: boolean } {
+    const missingKafka: boolean = this.kafkaConfigured && !this.kafkaClusters.length;
+    const missingSR: boolean = this.schemaRegistryConfigured && !this.schemaRegistry;
+    return { missingKafka, missingSR };
+  }
+
   searchableText(): string {
     // same as Environment, but `id` isn't used since it isn't visible in the UI
     return this.name;
@@ -426,7 +436,7 @@ export function createEnvironmentTooltip(resource: Environment): MarkdownString 
     // properties, but in the event we didn't get those websocket events (e.g. new workspace),
     // we can check to see if they're just "missing" based on the expected configuration(s)
     const directEnv = resource as DirectEnvironment;
-    const { missingKafka, missingSR } = checkForMissingResources(resource);
+    const { missingKafka, missingSR } = directEnv.checkForMissingResources();
 
     const failedResources = [];
     const missingResources = [];
