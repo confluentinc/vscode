@@ -13,7 +13,7 @@ import { checkTelemetrySettings, includeObservabilityContext } from "./eventProc
 const logger = new Logger("sentry");
 let sentryScope: Scope | null = null;
 let sentryClient: NodeClient | null = null;
-const throttledEvents: Record<string, boolean> = {};
+const throttledEvents: Record<string, NodeJS.Timeout> = {};
 
 /**
  * Returns the Sentry Scope singleton, creating it if it doesn't exist
@@ -70,11 +70,8 @@ export function initSentry() {
           logger.debug("Rate limiting activated for", msg);
           return null;
         }
-        throttledEvents[msg] = true;
-        setTimeout(() => {
-          if (msg) {
-            delete throttledEvents[msg];
-          }
+        throttledEvents[msg] = setTimeout(() => {
+          delete throttledEvents[msg];
         }, 60000); // clear after 1 minute
       }
       return event;
