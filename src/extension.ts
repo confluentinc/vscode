@@ -70,6 +70,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
+import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { closeFormattedSidecarLogStream, SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
 import { WebsocketManager } from "./sidecar/websocketManager";
@@ -185,7 +186,7 @@ async function _activateExtension(
 
   // Rehydrate sidecar with any direct connections from the secret storage. Do this before
   // setting up the resource view provider.
-  await rehydrateDirectConnections();
+  await rehydrateConnections();
 
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
@@ -573,7 +574,30 @@ export function deactivate() {
 /**
  * Rehydrate the direct connections from the secret storage at startup time, informing
  * the sidecar about them.
+ *
+ * Also go ahead and create the local connection in the sidecar if it doesn't exist yet
+ * (as would be the case if opening a second workspace talking to the sidecar).
  */
-export async function rehydrateDirectConnections(): Promise<void> {
-  await DirectConnectionManager.getInstance().rehydrateConnections();
+export async function rehydrateConnections(): Promise<void> {
+  const createConnectionPromises = [
+    // Rehydrate the direct connections from the secret storage.
+    DirectConnectionManager.getInstance().rehydrateConnections(),
+    // Create the local connection if it doesn't exist yet.
+    // (Must happen before we try to GraphQL query it, for instance.)
+    async () => {
+      if (!(await getLocalConnection())) {
+        try {
+          await createLocalConnection();
+        } catch (error) {
+          logger.error("Failed to create local connection for rehydration", { error });
+        }
+      }
+    },
+    // Do not need to pre-create the distinquished ccloud connection, as its creation is
+    // explicitly handled in the auth provider, and no codepath should try to GraphQL query
+    // it unless hasCCloudAuthSession() is true, which will only be the case if the
+    // ccloud connection exists and is valid.
+  ];
+
+  await Promise.all(createConnectionPromises);
 }
