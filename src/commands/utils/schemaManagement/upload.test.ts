@@ -1,22 +1,42 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as vscode from "vscode";
-import { SchemaType } from "../models/schema";
-import * as quickPicksSchemas from "../quickpicks/schemas";
+import { env, InputBoxValidationMessage, InputBoxValidationSeverity, Uri, window } from "vscode";
+
 import {
+  getStubbedCCloudResourceLoader,
+  getStubbedResourceLoader,
+} from "../../../../tests/stubs/resourceLoaders";
+import {
+  TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_KAFKA_TOPIC,
+  TEST_LOCAL_SCHEMA,
+  TEST_LOCAL_SCHEMA_REGISTRY,
+  TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
+} from "../../../../tests/unit/testResources";
+import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../../../loaders";
+import { type Schema, SchemaType, Subject } from "../../../models/schema";
+import { type SchemaRegistry } from "../../../models/schemaRegistry";
+import { KafkaTopic } from "../../../models/topic";
+import * as quickPicksSchemas from "../../../quickpicks/schemas";
+import { copySubjectCommand } from "../../schemas";
+import {
+  CannotLoadSchemasError,
   chooseSubject,
+  determineLatestSchema,
   determineSchemaType,
   extractDetail,
+  getLatestSchemasForTopic,
   parseConflictMessage,
   schemaFromString,
   schemaRegistrationMessage,
   validateNewSubject,
-} from "./schemaUpload";
+} from "./upload";
 
-import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
-import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources/schema";
-
-describe("commands/schemaUpload.ts determineSchemaType tests", function () {
+describe("commands/utils/schemaManagement/upload.ts determineSchemaType()", function () {
   let sandbox: sinon.SinonSandbox;
   let schemaTypeQuickPickStub: sinon.SinonStub;
 
@@ -37,7 +57,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
       ["avsc", SchemaType.Avro],
       ["proto", SchemaType.Protobuf],
     ]) {
-      const fileUri = vscode.Uri.file(`some-file.${fileExtension}`);
+      const fileUri = Uri.file(`some-file.${fileExtension}`);
       const schemaType = await determineSchemaType(fileUri);
 
       assert.strictEqual(
@@ -50,7 +70,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
   });
 
   it("should show the schema type quickpick when unable to determine the schema type from the provided Uri and language ID", async () => {
-    const fileUri = vscode.Uri.file("some-file.txt");
+    const fileUri = Uri.file("some-file.txt");
     await determineSchemaType(fileUri, "plaintext");
 
     assert.ok(schemaTypeQuickPickStub.calledOnce);
@@ -59,7 +79,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
   it("should show the schema type quickpick when the provided Uri has a JSON file extension and language ID", async () => {
     // first, simulate the user cancelling the quickpick
     schemaTypeQuickPickStub.resolves(undefined);
-    const fileUri = vscode.Uri.file("some-file.json");
+    const fileUri = Uri.file("some-file.json");
     const result = await determineSchemaType(fileUri, "json");
 
     assert.ok(schemaTypeQuickPickStub.calledOnce);
@@ -79,7 +99,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
       ["proto", SchemaType.Protobuf],
       ["proto3", SchemaType.Protobuf],
     ]) {
-      const fileUri = vscode.Uri.file("some-file.txt");
+      const fileUri = Uri.file("some-file.txt");
       const schemaType = await determineSchemaType(fileUri, languageId);
 
       assert.strictEqual(
@@ -97,7 +117,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
       ["proto", "PROTOBUF"],
     ]) {
       // unhelpful file extension
-      const fileUri = vscode.Uri.file(`some-file.txt`);
+      const fileUri = Uri.file(`some-file.txt`);
       const schemaType = await determineSchemaType(fileUri, languageId);
 
       assert.strictEqual(
@@ -112,7 +132,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
   it("should return undefined when a schema type can't be determined from the Uri, no language ID is passed, and the user cancels the quickpick", async () => {
     // simulate the user cancelling the quickpick
     schemaTypeQuickPickStub.resolves(undefined);
-    const fileUri = vscode.Uri.file("some-file.txt");
+    const fileUri = Uri.file("some-file.txt");
 
     const result = await determineSchemaType(fileUri);
 
@@ -120,7 +140,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
   });
 });
 
-describe("commands/schemaUpload.ts schemaRegistrationMessage tests", function () {
+describe("commands/utils/schemaManagement/upload.ts schemaRegistrationMessage()", function () {
   it("new subject registration message is correct", () => {
     const subject = "MyTopic-value";
     const message = schemaRegistrationMessage(subject, undefined, 1);
@@ -160,20 +180,20 @@ describe("commands/schemaUpload.ts schemaRegistrationMessage tests", function ()
   });
 });
 
-describe("commands/schemaUpload.ts extractDetail tests", () => {
+describe("commands/utils/schemaManagement/upload.ts extractDetail()", () => {
   for (const [instance, message, expectedResult] of [
     ["one details", 'blah blah details: "this is a test"', '"this is a test"'],
     ["no details", "blah blah", "blah blah"],
     ["multiple details", 'details: "one", details: "two"', '"two"'],
   ]) {
-    it(`extractDetail successfully extracts detail from case ${instance}`, () => {
+    it(`should successfully extract detail from case ${instance}`, () => {
       const detail = extractDetail(message);
       assert.strictEqual(detail, expectedResult);
     });
   }
 });
 
-describe("commands/schemaUpload.ts parseConflictMessage tests", () => {
+describe("commands/utils/schemaManagement/upload.ts parseConflictMessage()", () => {
   for (const [instance, schemaType, message, expectedResult] of [
     [
       "Avro with embedded single quotes",
@@ -219,7 +239,7 @@ describe("commands/schemaUpload.ts parseConflictMessage tests", () => {
   }
 });
 
-describe("schemaFromString tests", () => {
+describe("commands/utils/schemaManagement/upload.ts schemaFromString()", () => {
   it("Should return a schema object with the correct values", () => {
     const schemaString = JSON.stringify(TEST_CCLOUD_SCHEMA);
     const schema = schemaFromString(schemaString);
@@ -239,7 +259,7 @@ describe("schemaFromString tests", () => {
   });
 });
 
-describe("commands/schemaUpload.ts chooseSubject()", () => {
+describe("commands/utils/schemaManagement/upload.ts chooseSubject()", () => {
   let sandbox: sinon.SinonSandbox;
   let schemaSubjectQuickPickStub: sinon.SinonStub;
   let showInputBoxStub: sinon.SinonStub;
@@ -250,7 +270,7 @@ describe("commands/schemaUpload.ts chooseSubject()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     schemaSubjectQuickPickStub = sandbox.stub(quickPicksSchemas, "schemaSubjectQuickPick");
-    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+    showInputBoxStub = sandbox.stub(window, "showInputBox");
   });
 
   afterEach(() => {
@@ -306,24 +326,211 @@ describe("commands/schemaUpload.ts chooseSubject()", () => {
   });
 });
 
-describe("commands/schemaUpload.ts validateNewSubject", () => {
+describe("commands/utils/schemaManagement/upload.ts validateNewSubject()", () => {
   it("should return undefined for a subject name ending with '-key'", () => {
-    const result: vscode.InputBoxValidationMessage | undefined =
-      validateNewSubject("test-topic-key");
+    const result: InputBoxValidationMessage | undefined = validateNewSubject("test-topic-key");
     assert.strictEqual(result, undefined);
   });
 
   it("should return undefined for a subject name ending with '-value'", () => {
-    const result: vscode.InputBoxValidationMessage | undefined =
-      validateNewSubject("test-topic-value");
+    const result: InputBoxValidationMessage | undefined = validateNewSubject("test-topic-value");
     assert.strictEqual(result, undefined);
   });
 
   it("should return a warning for subject names not ending with '-key' or '-value'", () => {
-    const result: vscode.InputBoxValidationMessage | undefined = validateNewSubject("test-topic");
+    const result: InputBoxValidationMessage | undefined = validateNewSubject("test-topic");
 
     assert.ok(result);
-    assert.strictEqual(result?.severity, vscode.InputBoxValidationSeverity.Warning);
+    assert.strictEqual(result?.severity, InputBoxValidationSeverity.Warning);
     assert.ok(result?.message.includes("will not match the [TopicNameStrategy]"));
   });
 });
+
+describe("commands/utils/schemaManagement/upload.ts copySubject", () => {
+  let _originalClipboardContents: string | undefined;
+
+  beforeEach(async () => {
+    _originalClipboardContents = await env.clipboard.readText();
+  });
+
+  afterEach(async () => {
+    if (_originalClipboardContents !== undefined) {
+      await env.clipboard.writeText(_originalClipboardContents);
+    }
+  });
+
+  it("should copy the subject name to the clipboard", async () => {
+    await copySubjectCommand(TEST_CCLOUD_SUBJECT);
+    const writtenValue = await env.clipboard.readText();
+    assert.strictEqual(writtenValue, TEST_CCLOUD_SUBJECT.name);
+  });
+});
+
+// Run one set of tests for the local resource loader and another for the CCloud resource loader
+describe(
+  "commands/schemas.ts getLatestSchemasForTopic vs local registry tests",
+  generateGetLatestSchemasForTopicTests(
+    LocalResourceLoader,
+    TEST_LOCAL_KAFKA_TOPIC,
+    TEST_LOCAL_SCHEMA,
+    TEST_LOCAL_SCHEMA_REGISTRY,
+  ),
+);
+
+describe(
+  "commands/schemas.ts getLatestSchemasForTopic vs CCloud registry tests",
+  generateGetLatestSchemasForTopicTests(
+    CCloudResourceLoader,
+    TEST_CCLOUD_KAFKA_TOPIC,
+    TEST_CCLOUD_SCHEMA,
+    TEST_CCLOUD_SCHEMA_REGISTRY,
+  ),
+);
+
+/** Generic function used to generate same tests over getLatestSchemasForTopic() for varying ResourceLoaders */
+function generateGetLatestSchemasForTopicTests<
+  ResourceLoaderType extends ResourceLoader,
+  SchemaRegistryType extends SchemaRegistry,
+>(
+  resourceLoaderClass: Constructor<ResourceLoaderType>,
+  baseTopic: KafkaTopic,
+  testSchema: Schema,
+  baseSchemaRegistry: SchemaRegistryType,
+): () => void {
+  return function () {
+    let sandbox: sinon.SinonSandbox;
+
+    let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoaderType>;
+    let testTopic: KafkaTopic;
+
+    beforeEach(function () {
+      sandbox = sinon.createSandbox();
+      stubbedLoader = getStubbedResourceLoader(
+        sandbox,
+      ) as sinon.SinonStubbedInstance<ResourceLoaderType>;
+
+      // Ensure that testTopic smells like it has a schema and is named "test-topic", the default expectation of these tests.
+      testTopic = KafkaTopic.create({ ...baseTopic, hasSchema: true, name: "test-topic" });
+    });
+
+    afterEach(function () {
+      sandbox.restore();
+    });
+
+    it("hates topics without schemas", async function () {
+      await assert.rejects(
+        async () => {
+          await getLatestSchemasForTopic(KafkaTopic.create({ ...testTopic, hasSchema: false }));
+        },
+        raisedErrorMatcher(
+          /Asked to get schemas for topic "test-topic" believed to not have schema/,
+        ),
+      );
+    });
+
+    it("hates topics without subject groups", async function () {
+      stubbedLoader.getTopicSubjectGroups.resolves([]);
+      await assert.rejects(
+        async () => {
+          await getLatestSchemasForTopic(testTopic);
+        },
+        raisedCannotLoadSchemasErrorMatcher(
+          /Topic "test-topic" has no related schemas in registry/,
+        ),
+      );
+    });
+
+    it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
+      stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
+
+      // Doesn't really matter that we're mixing local and CCloud here, just wanting to test returning
+      // multiple subjects with multiple schemas each.
+      stubbedLoader.getTopicSubjectGroups.resolves([
+        TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+      ]);
+
+      const fetchedLatestSchemas = await getLatestSchemasForTopic(testTopic);
+      assert.strictEqual(fetchedLatestSchemas.length, 2);
+
+      const expectedSubjectToVersion: Map<string, number> = new Map([
+        [TEST_LOCAL_SUBJECT_WITH_SCHEMAS.name, 2],
+        [TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name, 2],
+      ]);
+
+      for (const schema of fetchedLatestSchemas) {
+        assert.strictEqual(schema.version, expectedSubjectToVersion.get(schema.subject));
+        expectedSubjectToVersion.delete(schema.subject);
+      }
+
+      // should have been all.
+      assert.strictEqual(expectedSubjectToVersion.size, 0);
+    });
+  };
+}
+
+describe("commands/schemas.ts determineLatestSchema()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return first Schema from a Subject carrying Schemas", async () => {
+    const result = await determineLatestSchema("test", TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.strictEqual(result, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0]);
+  });
+
+  it("should fetch and return latest Schema when given Subject", async () => {
+    const expectedSchema = TEST_CCLOUD_SCHEMA;
+    const subject = TEST_CCLOUD_SUBJECT;
+
+    stubbedLoader.getSchemasForSubject.resolves([expectedSchema]);
+
+    const result = await determineLatestSchema("test", subject);
+
+    assert.strictEqual(result, expectedSchema);
+  });
+
+  it("should throw error for invalid argument type", async () => {
+    await assert.rejects(
+      async () => await determineLatestSchema("test", {} as Subject),
+      /called with invalid argument type/,
+    );
+  });
+});
+
+/**
+ * Generic interface for types with a constructor function (i.e. a real class)
+ *
+ * Needed to constrain to types that have constructors as a requirement
+ * for generic typing over types to be fed into sandbox.createStubInstance()
+ */
+interface Constructor<T> {
+  new (...args: any[]): T;
+}
+
+/** Function generator that returns a matcher function that checks if the error message matches the given regex
+ *  and that the exception is an instance of Error (and only Error, not a subclass)
+ */
+function raisedErrorMatcher(matcher: RegExp): (error: any) => boolean {
+  return (error: any) => {
+    return error instanceof Error && error.constructor === Error && matcher.test(error.message);
+  };
+}
+
+/**
+ * Error matcher function generator that checks if the error is an instance of CannotLoadSchemasError and that the error message
+ * matches the given regex.
+ */
+function raisedCannotLoadSchemasErrorMatcher(matcher: RegExp): (error: any) => boolean {
+  return (error: any) => {
+    return error instanceof CannotLoadSchemasError && matcher.test(error.message);
+  };
+}
