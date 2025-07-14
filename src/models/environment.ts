@@ -389,22 +389,15 @@ export class EnvironmentTreeItem extends TreeItem {
     if (this.resource.isLoading) {
       this.iconPath = new ThemeIcon(IconNames.LOADING);
     } else if (isDirect(resource)) {
-      const { missingKafka, missingSR } = checkForMissingResources(resource);
+      const { missingKafka, missingSR } = (
+        resource as DirectEnvironment
+      ).checkForMissingResources();
       if (missingKafka || missingSR) {
         this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
       }
     }
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
-}
-
-/** Compare provided `kafkaClusters` against `kafkaConfigured` and `schemaRegistry` against
- * `schemaRegistryConfigured` to determine whether or not expected resources are missing, */
-function checkForMissingResources(resource: Environment) {
-  const directEnv = resource as DirectEnvironment;
-  const missingKafka: boolean = directEnv.kafkaConfigured && !directEnv.kafkaClusters.length;
-  const missingSR: boolean = directEnv.schemaRegistryConfigured && !directEnv.schemaRegistry;
-  return { missingKafka, missingSR };
 }
 
 export function createEnvironmentTooltip(resource: Environment): MarkdownString {
