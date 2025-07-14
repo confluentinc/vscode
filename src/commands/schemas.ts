@@ -45,7 +45,7 @@ const logger = new Logger("commands.schemas");
 export function registerSchemaCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
-    registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFile),
+    registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFileCommand),
     registerCommandWithLogging(
       "confluent.schemas.uploadForSubject",
       uploadSchemaForSubjectFromFileCommand,
@@ -525,7 +525,7 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
 }
 
 /**
- * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from:
+ * Wrapper around {@linkcode uploadSchemaFromFileCommand}, triggered from:
  *  1. A Subject from the Schemas view
  *  2. On one of a topic's subjects in the Topics view
  */
@@ -535,7 +535,7 @@ async function uploadSchemaForSubjectFromFileCommand(subject: Subject) {
   }
   const loader = ResourceLoader.getInstance(subject.connectionId);
   const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
-  await uploadSchemaFromFile(registry, subject.name);
+  await uploadSchemaFromFileCommand(registry, subject.name);
 }
 
 /**
@@ -545,7 +545,10 @@ async function uploadSchemaForSubjectFromFileCommand(subject: Subject) {
  * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
  * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
-export async function uploadSchemaFromFile(registry?: SchemaRegistry, subjectString?: string) {
+export async function uploadSchemaFromFileCommand(
+  registry?: SchemaRegistry,
+  subjectString?: string,
+) {
   // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
   // editor languages, and file extensions
   const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
