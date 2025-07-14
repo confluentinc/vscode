@@ -42,10 +42,17 @@ blocks:
       jobs: &e2e-jobs
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
-            - make test-playwright-e2e TEST_SUITE="$TEST_SUITE"
+            - make test-playwright-e2e TEST_SUITE="$TEST_SUITE_TAG"
           env_vars:
             - name: VSCODE_VERSION
               value: "%{{parameters.VSCODE_VERSION | lower }}"
+          # Use matrix to create parallel jobs for each tag when TEST_SUITE contains multiple tags separated by |
+          # - if TEST_SUITE is a single tag or empty, it creates one job
+          # - if TEST_SUITE is "@ccloud|@direct", it creates two parallel jobs: one for @ccloud and one for @direct
+          # (see https://docs.semaphoreci.com/reference/pipeline-yaml#matrix-in-jobs)
+          matrix:
+            - env_var: TEST_SUITE_TAG
+              values: "%{{parameters.TEST_SUITE | splitList \"|\"}}"
       epilogue: &e2e-epilogue
         always:
           commands:
