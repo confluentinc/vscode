@@ -13,9 +13,7 @@ import { checkTelemetrySettings, includeObservabilityContext } from "./eventProc
 const logger = new Logger("sentry");
 let sentryScope: Scope | null = null;
 let sentryClient: NodeClient | null = null;
-const DEFAULT_RATE_LIMIT = 100; // Maximum events per minute
-let sentryEventCount = 0;
-let sentryLastResetTime = Date.now();
+const throttledEvents: Record<string, boolean> = {};
 
 /**
  * Returns the Sentry Scope singleton, creating it if it doesn't exist
@@ -63,6 +61,24 @@ export function initSentry() {
     transport: makeNodeTransport,
     stackParser: defaultStackParser,
     ignoreErrors: ["Canceled"],
+    beforeSend: (event, hint) => {
+      const msg = event.message || hint?.originalException?.message || undefined;
+      // if message is undefined we will always send the event
+      if (msg) {
+        if (msg in throttledEvents) {
+          // do not send event if we already sent same msg in the last 1 minute
+          logger.debug("Rate limiting activated for", msg);
+          return null;
+        }
+        throttledEvents[msg] = true;
+        setTimeout(() => {
+          if (msg) {
+            delete throttledEvents[msg];
+          }
+        }, 60000); // clear after 1 minute
+      }
+      return event;
+    },
   });
 
   const scope = getSentryScope();
@@ -73,47 +89,11 @@ export function initSentry() {
   sentryClient.init();
 }
 
-/**
- * Checks if we should send the current error to Sentry based on DEFAULT_RATE_LIMIT.
- * Resets the counter every minute and tracks error event frequency.
- *
- * @returns boolean True if the error should be sent, False if rate limited
- */
-function shouldSendToSentry(): boolean {
-  const now = Date.now();
-  const oneMinuteMs = 60 * 1000;
-
-  // Reset counter if a minute has passed since the last reset
-  if (now - sentryLastResetTime > oneMinuteMs) {
-    sentryEventCount = 0;
-    sentryLastResetTime = now;
-  }
-
-  sentryEventCount++;
-  if (sentryEventCount > DEFAULT_RATE_LIMIT) {
-    // Only log this one time when we first hit the limit after a reset
-    if (sentryEventCount === DEFAULT_RATE_LIMIT + 1) {
-      logger.warn(
-        `Sentry rate limit of ${DEFAULT_RATE_LIMIT} events per minute exceeded. Errors will not be sent to Sentry for the next minute.`,
-      );
-    }
-    return false;
-  }
-
-  return true;
-}
-
 export function sentryCaptureException(ex: unknown, hint?: EventHint | undefined): unknown {
   const scope = getSentryScope();
   const client = scope.getClient();
   if (!client) {
     logger.error("No Sentry client available");
-    return ex;
-  }
-
-  if (!shouldSendToSentry()) {
-    // Still log locally but don't send to Sentry
-    logger.debug("Rate limited: not sending exception to Sentry", { ex, hint });
     return ex;
   }
 
