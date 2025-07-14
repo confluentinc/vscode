@@ -7,7 +7,7 @@ import {
   TreeItem,
   TreeItemCollapsibleState,
 } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
+import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import {
   ccloudConnected,
@@ -61,6 +61,7 @@ import {
 import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
+import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { BaseViewProvider } from "./base";
 
 type ConcreteEnvironment = CCloudEnvironment | LocalEnvironment | DirectEnvironment;
@@ -88,10 +89,19 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     this.logger = new Logger(`viewProviders.newResources.ConnectionRow.${this.connectionId}`);
   }
 
+  /**
+   * Refresh this connection row, which will fetch the latest environments and resources
+   * for this connection.
+   *
+   * @param deepRefresh Passed to the loader's `getEnvironments` method to indicate whether
+   *                    to perform a deep refresh (e.g. re-fetch all resources) or a shallow refresh
+   *                    (e.g. use cached resources).
+   */
   async refresh(deepRefresh: boolean = false): Promise<void> {
     this.logger.debug("Refreshing", { deepRefresh });
 
-    const refreshedEnvironments: ET[] = (await this.loader.getEnvironments(deepRefresh)) as ET[];
+    const refreshedEnvironments: ET[] = await this.getEnvironments(deepRefresh);
+
     this.logger.debug("Loaded updated environments", {
       environments: refreshedEnvironments.length,
     });
@@ -103,6 +113,12 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     this.logger.debug("Refreshed cache of environments", {
       environments: this.environments.length,
     });
+  }
+
+  /** Drive getting the environment(s) from the ResourceLoader. */
+  async getEnvironments(deepRefresh: boolean = false): Promise<ET[]> {
+    this.logger.debug("Getting environments", { deepRefresh });
+    return (await this.loader.getEnvironments(deepRefresh)) as ET[];
   }
 
   abstract get name(): string;
@@ -323,6 +339,26 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
 > {
   constructor(loader: DirectResourceLoader) {
     super(loader, "resources-direct-container");
+  }
+
+  override async getEnvironments(deepRefresh: boolean = false): Promise<DirectEnvironment[]> {
+    const environments = await this.loader.getEnvironments(deepRefresh);
+
+    if (environments.length > 0) {
+      // Augment with information from websocket events, if available.
+      // Taken from old resources view updateEnvironmentFromConnectionStatus().
+      const watcher = ConnectionStateWatcher.getInstance();
+      const latestStatus: ConnectionStatus | undefined = watcher.getLatestConnectionEvent(
+        this.connectionId,
+      )?.connection.status;
+      if (latestStatus) {
+        const env = environments[0];
+        env.kafkaConnectionFailed = latestStatus.kafka_cluster?.errors?.sign_in?.message;
+        env.schemaRegistryConnectionFailed = latestStatus.schema_registry?.errors?.sign_in?.message;
+      }
+    }
+
+    return environments;
   }
 
   get iconPath(): ThemeIcon {
