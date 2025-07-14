@@ -13,7 +13,7 @@ import { checkTelemetrySettings, includeObservabilityContext } from "./eventProc
 const logger = new Logger("sentry");
 let sentryScope: Scope | null = null;
 let sentryClient: NodeClient | null = null;
-const throttledEvents: Record<string, NodeJS.Timeout> = {};
+const throttledEvents: Record<string, number> = {};
 
 /**
  * Returns the Sentry Scope singleton, creating it if it doesn't exist
@@ -62,17 +62,16 @@ export function initSentry() {
     stackParser: defaultStackParser,
     ignoreErrors: ["Canceled"],
     beforeSend: (event, hint) => {
-      const msg = event.message || hint?.originalException?.message || undefined;
-      // if message is undefined we will always send the event
+      // throttle events to prevent spamming Sentry with the same error more than once per minute
+      const msg = event.message || (hint?.originalException as Error)?.message;
       if (msg) {
-        if (msg in throttledEvents) {
-          // do not send event if we already sent same msg in the last 1 minute
+        const now = Date.now();
+        const lastSent = throttledEvents[msg];
+        if (lastSent && now - lastSent < 60_000) {
           logger.debug("Rate limiting activated for", msg);
           return null;
         }
-        throttledEvents[msg] = setTimeout(() => {
-          delete throttledEvents[msg];
-        }, 60000); // clear after 1 minute
+        throttledEvents[msg] = now;
       }
       return event;
     },
