@@ -784,9 +784,12 @@ export function mergeUpdates(
   }
 }
 
-// While there are two different resource view providers, provide
-// a single API to get both (or either, if / when are settings-flagged)
-// to throb.
+/**
+ * While there are two different resource view providers, provide
+ * a single API to get both (or either, if / when are settings-flagged)
+ * to throb. When only new resources view exists, then replace
+ * this with newResourcesView.withProgress().
+ **/
 export async function resourceViewWithProgress<T>(
   title: string,
   task: () => Promise<T>,
