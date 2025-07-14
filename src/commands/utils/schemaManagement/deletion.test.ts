@@ -1,13 +1,13 @@
 import * as assert from "assert";
-import sinon from "sinon";
-import * as vscode from "vscode";
+import * as sinon from "sinon";
+import { InputBoxValidationSeverity, window } from "vscode";
 
 import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
   TEST_LOCAL_SCHEMA,
-} from "../../../tests/unit/testResources";
-import { Schema } from "../../models/schema";
+} from "../../../../tests/unit/testResources";
+import { Schema } from "../../../models/schema";
 import {
   confirmSchemaSubjectDeletion,
   confirmSchemaVersionDeletion,
@@ -16,9 +16,9 @@ import {
   getSchemaDeletionValidatorAndPlaceholder,
   getSubjectDeletionValidatorAndPlaceholder,
   hardDeletionQuickPick,
-} from "./schemas";
+} from "./deletion";
 
-describe("commands/schemas/utils/schemas.ts", function () {
+describe("commands/schemas/utils/schemaManagement/deletion.ts", function () {
   describe("getDeleteSchemaVersionPrompt()", function () {
     it("single schema version tests", async function () {
       // single version.
@@ -95,13 +95,13 @@ describe("commands/schemas/utils/schemas.ts", function () {
       const invalid = validator(`v${version + 1}`)!;
       assert.deepStrictEqual(invalid, {
         message: `Enter "v${version}" to confirm deletion, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Error,
+        severity: InputBoxValidationSeverity.Error,
       });
 
       const empty = validator("")!;
       assert.deepStrictEqual(empty, {
         message: `Enter "v${version}" to confirm deletion, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Error,
+        severity: InputBoxValidationSeverity.Error,
       });
     });
   });
@@ -118,13 +118,13 @@ describe("commands/schemas/utils/schemas.ts", function () {
       const invalid = validator(`${subject.name}Extra`)!;
       assert.deepStrictEqual(invalid, {
         message: `Enter "${subject.name}" to confirm deletion, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Warning,
+        severity: InputBoxValidationSeverity.Warning,
       });
 
       const empty = validator("")!;
       assert.deepStrictEqual(empty, {
         message: `Enter "${subject.name}" to confirm deletion, escape to cancel.`,
-        severity: vscode.InputBoxValidationSeverity.Warning,
+        severity: InputBoxValidationSeverity.Warning,
       });
     });
   });
@@ -135,7 +135,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
+      showQuickPickStub = sandbox.stub(window, "showQuickPick");
     });
 
     afterEach(function () {
@@ -167,7 +167,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub = sandbox.stub(window, "showInputBox");
     });
 
     afterEach(function () {
@@ -203,7 +203,7 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     beforeEach(function () {
       sandbox = sinon.createSandbox();
-      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub = sandbox.stub(window, "showInputBox");
     });
 
     afterEach(function () {
