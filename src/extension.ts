@@ -184,7 +184,7 @@ async function _activateExtension(
   await getSidecar();
   logger.info("Sidecar ready for use.");
 
-  // Rehydrate sidecar with any direct connections from the secret storage. Do this before
+  // Rehydrate sidecar with local + any direct connections from the secret storage. Do this before
   // setting up the resource view provider.
   await rehydrateConnections();
 
@@ -580,8 +580,14 @@ export function deactivate() {
  */
 export async function rehydrateConnections(): Promise<void> {
   const createConnectionPromises = [
-    // Rehydrate the direct connections from the secret storage.
-    DirectConnectionManager.getInstance().rehydrateConnections(),
+    // Rehydrate the direct connections from secret storage.
+    async () => {
+      try {
+        await DirectConnectionManager.getInstance().rehydrateConnections();
+      } catch (error) {
+        logger.error("Failed to rehydrate direct connections", { error });
+      }
+    },
     // Create the local connection if it doesn't exist yet.
     // (Must happen before we try to GraphQL query it, for instance.)
     async () => {
@@ -599,5 +605,8 @@ export async function rehydrateConnections(): Promise<void> {
     // ccloud connection exists and is valid.
   ];
 
-  await Promise.all(createConnectionPromises);
+  const results = await Promise.all(createConnectionPromises.map((fn) => fn()));
+  logger.info("Rehydrated direct connections and created local connection if needed", {
+    results,
+  });
 }
