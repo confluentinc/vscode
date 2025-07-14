@@ -12,6 +12,7 @@ import {
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
+import { Tag } from "../tags";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
@@ -41,7 +42,7 @@ test.describe("Topics Listing & Message Viewer", () => {
     await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
   });
 
-  test.describe("CCLOUD connection", () => {
+  test.describe("CCLOUD connection", { tag: [Tag.CCloud] }, () => {
     test.beforeEach(async ({ page, electronApp }) => {
       // CCloud connection setup:
       await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
@@ -119,7 +120,7 @@ test.describe("Topics Listing & Message Viewer", () => {
     });
   });
 
-  test.describe("DIRECT connection", () => {
+  test.describe("DIRECT connection", { tag: [Tag.Direct] }, () => {
     test.beforeEach(async ({ page }) => {
       // direct connection setup:
       const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
