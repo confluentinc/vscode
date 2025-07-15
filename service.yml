@@ -21,7 +21,7 @@ semaphore:
       parameters:
         - name: VSCODE_VERSION
           required: true
-          description: The version of VS Code to test against (e.g., "stable", "insiders", or a specific version like "1.100.0").
+          description: The version of VS Code to test against (e.g., 'stable', 'insiders', or a specific version like '1.100.0').
           default_value: "stable"
         - name: TEST_SUITE
           required: false
