@@ -23,6 +23,8 @@ export async function run() {
       mochaJunitReporterReporterOptions: {
         testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
         mochaFile: resultFilePath,
+        useFullSuiteTitle: true,
+        rootSuiteTitle: "Tests",
       },
     },
   });
