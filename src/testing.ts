@@ -19,12 +19,12 @@ export async function run() {
     timeout: process.env.CI !== null ? 30_000 : 10_000,
     reporter: "mocha-multi-reporters",
     reporterOptions: {
-      // see https://www.npmjs.com/package/mocha-junit-reporter#results-report
       reporterEnabled: "spec, mocha-junit-reporter",
-      testsuitesTitle: true,
       mochaJunitReporterReporterOptions: {
         testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
         mochaFile: resultFilePath,
+        useFullSuiteTitle: true,
+        rootSuiteTitle: "Tests",
       },
     },
   });
