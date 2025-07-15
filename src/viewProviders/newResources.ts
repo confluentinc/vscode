@@ -310,8 +310,11 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
         this.ccloudOrganization = undefined;
       }
     } else {
-      this.logger.debug("No CCloud auth session, skipping organization refresh");
+      this.logger.debug(
+        "No CCloud auth session, skipping organization refresh; setting values to undefined.",
+      );
       this.ccloudOrganization = undefined;
+      this.environments.length = 0; // Clear environments if no auth session.
     }
   }
 
