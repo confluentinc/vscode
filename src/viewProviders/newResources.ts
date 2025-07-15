@@ -726,9 +726,7 @@ export class NewResourceViewProvider
       });
 
       if (!insertBeforeRefresh) {
-        // If we didn't insert the connection row before the refresh, we need to set the ordering
-        // after the refresh is done, so that the ordering is correct.
-
+        // If we didn't insert the connection row before the refresh, do so now.
         this.logger.debug("Storing connection row now that initial refresh has completed", {
           connectionId: connectionRow.connectionId,
         });
