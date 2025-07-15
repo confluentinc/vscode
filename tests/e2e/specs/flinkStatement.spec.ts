@@ -2,6 +2,7 @@ import { FrameLocator } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
+import { Tag } from "../tags";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 import {
@@ -12,9 +13,9 @@ import {
 } from "./utils/flinkStatement";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename)
+const __dirname = path.dirname(__filename);
 
-test.describe("Flink Statements", () => {
+test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
   let webview: FrameLocator;
 
   test.beforeEach(async ({ page, electronApp }) => {
@@ -56,7 +57,7 @@ test.describe("Flink Statements", () => {
       // Submit the statement
       await submitFlinkStatement(
         page,
-        path.join(__dirname, `../../fixtures/flinksql/${testCase.fileName}`)
+        path.join(__dirname, `../../fixtures/flinksql/${testCase.fileName}`),
       );
 
       webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
