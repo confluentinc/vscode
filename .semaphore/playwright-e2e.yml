@@ -62,10 +62,10 @@ blocks:
             # Upload Playwright artifacts, if available
             - |
               if [ -d test-results ]; then
-                artifact push workflow test-results --destination test-results-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+                artifact push workflow test-results --destination test-results-$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/') --force
               fi
               if [ -d playwright-report ]; then
-                artifact push workflow playwright-report --destination playwright-report-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m) --force
+                artifact push workflow playwright-report --destination playwright-report-$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/') --force
               fi
 
   - name: "Linux ARM64: Playwright E2E Tests"
