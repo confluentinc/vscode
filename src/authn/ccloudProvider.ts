@@ -304,13 +304,16 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       sessionSecretExists,
     };
     logger.debug("getSessions() local auth state change check", logBody);
+
+    // Do this before possibly firing event, 'cause event listeners may pivot
+    // off of the context value.
+    await this.updateContextValue(connectionExists);
+
     if (changedToConnected || changedToDisconnected) {
       logger.debug("getSessions() auth state changed, firing ccloudConnected event", logBody);
       // inform any listeners whether or not we have a CCloud connection (auth session)
       ccloudConnected.fire(!!connection);
     }
-
-    this.updateContextValue(connectionExists);
 
     if (!connection) {
       if (changedToDisconnected) {
@@ -532,7 +535,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       removed: [],
       changed: [],
     });
-    this.updateContextValue(true);
+    await this.updateContextValue(true);
 
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
@@ -550,7 +553,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private async handleSessionRemoved(updateSecret: boolean = false) {
     // the following calls are all workspace-scoped
     logger.debug("handleSessionRemoved()", { updateSecret });
-    this.updateContextValue(false);
+    await this.updateContextValue(false);
     await clearCurrentCCloudResources();
     if (!this._session) {
       logger.debug("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
@@ -610,9 +613,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * source of truth for connection status, it makes sense to handle it here despite the fact that
    * it's mainly a UI concern.
    */
-  private updateContextValue(connected: boolean) {
-    // async, but we can fire-and-forget since we don't need to wait for this to complete
-    setContextValue(ContextValues.ccloudConnectionAvailable, connected);
+  private async updateContextValue(connected: boolean) {
+    await setContextValue(ContextValues.ccloudConnectionAvailable, connected);
   }
 
   /**
