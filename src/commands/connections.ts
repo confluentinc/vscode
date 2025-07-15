@@ -18,6 +18,7 @@ import {
   getResourceManager,
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
+import { readFile, writeFile } from "../utils/fsWrappers";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
@@ -147,7 +148,7 @@ export async function createNewDirectConnectionCommand() {
       try {
         const newSpecPath: string = newSpecUris[0].fsPath;
         // read the file and parse it as a JSON object
-        const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
+        const fileContent = await readFile(Uri.file(newSpecPath));
         const jsonSpec = JSON.parse(fileContent.toString());
 
         // validate the JSON object against the ConnectionSpec schema
@@ -265,7 +266,7 @@ export async function exportDirectConnectionCommand(item: DirectEnvironment) {
         const name = spec.name ? spec.name : "connection";
         const fileName = name.trim().replace(/\s+/g, "_") + ".json";
         const fileUri = Uri.joinPath(destination, fileName);
-        await workspace.fs.writeFile(fileUri, new TextEncoder().encode(specJson));
+        await writeFile(fileUri, new TextEncoder().encode(specJson));
         // Show success, allow user to open file in current workspace
         const openFileButton = "Open File";
         window
