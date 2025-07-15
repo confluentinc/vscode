@@ -18,12 +18,13 @@ import {
   getResourceManager,
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
+import { readFile, writeFile } from "../utils/fsWrappers";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
-export async function ccloudSignIn() {
+export async function ccloudSignInCommand() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
@@ -47,7 +48,7 @@ export async function ccloudSignIn() {
   }
 }
 
-export async function ccloudSignOut() {
+export async function ccloudSignOutCommand() {
   const authSession = await getCCloudAuthSession();
   if (!authSession) {
     return;
@@ -85,7 +86,7 @@ Sign out from this extension?`,
 }
 
 /** Show the Open File dialog to let the user pick a .pem file and store it in the extension configs. */
-export async function addSSLPemPath() {
+export async function addSSLPemPathCommand() {
   const newPemUris: Uri[] | undefined = await window.showOpenDialog({
     openLabel: "Select",
     canSelectFiles: true,
@@ -113,7 +114,7 @@ export async function addSSLPemPath() {
   }
 }
 
-export async function createNewDirectConnection() {
+export async function createNewDirectConnectionCommand() {
   // ignore any arguments passed through this command function (e.g. if something was highlighted
   // in the Resources view) so we always open the "Create a new connection" form
   // Open a quickpick to choose either from file or manual entry
@@ -147,7 +148,7 @@ export async function createNewDirectConnection() {
       try {
         const newSpecPath: string = newSpecUris[0].fsPath;
         // read the file and parse it as a JSON object
-        const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
+        const fileContent = await readFile(Uri.file(newSpecPath));
         const jsonSpec = JSON.parse(fileContent.toString());
 
         // validate the JSON object against the ConnectionSpec schema
@@ -168,7 +169,7 @@ export async function createNewDirectConnection() {
   }
 }
 
-export async function deleteDirectConnection(item: DirectEnvironment) {
+export async function deleteDirectConnectionCommand(item: DirectEnvironment) {
   if (!(item instanceof DirectEnvironment)) {
     return;
   }
@@ -191,41 +192,7 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().deleteConnection(item.connectionId);
 }
 
-// XXX: the UI for this was replaced by editDirectConnection. Keeping in case we want to expose it again in the future elsewhere.
-export async function renameDirectConnection(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
-    return;
-  }
-  const newName = await window.showInputBox({
-    placeHolder: "Enter a new name for this connection",
-    value: item.name,
-    ignoreFocusOut: true,
-  });
-  if (!newName) {
-    return;
-  }
-
-  // look up the associated ConnectionSpec
-  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-    item.connectionId,
-  );
-  if (!spec) {
-    logger.error("Direct connection not found, can't rename");
-    // possibly stale Resources view? this shouldn't happen
-    window.showErrorMessage("Connection not found.");
-    ResourceViewProvider.getInstance().refresh();
-    return;
-  }
-
-  // update and send it to the manager to update the sidecar + secret storage
-  const updatedSpec: CustomConnectionSpec = {
-    ...spec,
-    name: newName,
-  };
-  await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
-}
-
-export async function editDirectConnection(item: ConnectionId | DirectEnvironment) {
+export async function editDirectConnectionCommand(item: ConnectionId | DirectEnvironment) {
   // if the user clicked on the "Edit" button in the Resources view, the item will be a DirectEnvironment
   // otherwise, this was triggered via the commands API and should have been passed a ConnectionId arg
   if (!(item instanceof DirectEnvironment || typeof item === "string")) {
@@ -247,7 +214,11 @@ export async function editDirectConnection(item: ConnectionId | DirectEnvironmen
   openDirectConnectionForm(spec);
 }
 
-export async function exportDirectConnection(item: DirectEnvironment) {
+export async function exportDirectConnectionCommand(item: DirectEnvironment) {
+  if (!(item instanceof DirectEnvironment)) {
+    return;
+  }
+
   // look up the associated ConnectionSpec
   const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
     item.connectionId,
@@ -295,7 +266,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
         const name = spec.name ? spec.name : "connection";
         const fileName = name.trim().replace(/\s+/g, "_") + ".json";
         const fileUri = Uri.joinPath(destination, fileName);
-        await workspace.fs.writeFile(fileUri, new TextEncoder().encode(specJson));
+        await writeFile(fileUri, new TextEncoder().encode(specJson));
         // Show success, allow user to open file in current workspace
         const openFileButton = "Open File";
         window
@@ -313,7 +284,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
   }
 }
 
-export async function setKrb5ConfigPath() {
+export async function setKrb5ConfigPathCommand() {
   const uris: Uri[] | undefined = await window.showOpenDialog({
     openLabel: "Select Kerberos config",
     canSelectFiles: true,
@@ -339,15 +310,20 @@ export async function setKrb5ConfigPath() {
 
 export function registerConnectionCommands(): Disposable[] {
   return [
-    registerCommandWithLogging("confluent.connections.ccloud.signIn", ccloudSignIn),
-    registerCommandWithLogging("confluent.connections.ccloud.signOut", ccloudSignOut),
-    registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
-    registerCommandWithLogging("confluent.connections.direct", createNewDirectConnection),
-    registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
-    // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
-    registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
-    registerCommandWithLogging("confluent.connections.direct.export", exportDirectConnection),
-    registerCommandWithLogging("confluent.connections.setKrb5ConfigPath", setKrb5ConfigPath),
+    registerCommandWithLogging("confluent.connections.ccloud.signIn", ccloudSignInCommand),
+    registerCommandWithLogging("confluent.connections.ccloud.signOut", ccloudSignOutCommand),
+    registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPathCommand),
+    registerCommandWithLogging("confluent.connections.direct", createNewDirectConnectionCommand),
+    registerCommandWithLogging(
+      "confluent.connections.direct.delete",
+      deleteDirectConnectionCommand,
+    ),
+    registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnectionCommand),
+    registerCommandWithLogging(
+      "confluent.connections.direct.export",
+      exportDirectConnectionCommand,
+    ),
+    registerCommandWithLogging("confluent.connections.setKrb5ConfigPath", setKrb5ConfigPathCommand),
   ];
 }
 
