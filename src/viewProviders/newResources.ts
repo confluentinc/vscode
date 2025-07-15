@@ -445,7 +445,8 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
       this.logger.debug("No local environments found, not connected.");
     } else {
       this.logger.debug("Local environments refreshed", {
-        environments: this.environments.length,
+        kafkaCluster: this.kafkaCluster === undefined ? "undefined" : this.kafkaCluster.name,
+        schemaRegistry: this.schemaRegistry === undefined ? "undefined" : this.schemaRegistry.name,
       });
     }
   }
