@@ -20,6 +20,7 @@ export async function run() {
     reporter: "mocha-multi-reporters",
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
+      // see https://www.npmjs.com/package/mocha-junit-reporter
       mochaJunitReporterReporterOptions: {
         testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
         mochaFile: resultFilePath,
