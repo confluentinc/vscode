@@ -484,17 +484,19 @@ export class NewResourceViewProvider
     connectionId: ConnectionId,
     deepRefresh: boolean = false,
   ): Promise<void> {
-    this.logger.debug("Refreshing connection", { connectionId, deepRefresh });
+    await this.withProgress("Refreshing connection ...", async () => {
+      this.logger.debug("Refreshing connection", { connectionId, deepRefresh });
 
-    const connectionRow = this.connections.get(connectionId);
-    if (!connectionRow) {
-      this.logger.warn("No connection row found for connectionId", { connectionId });
-      return;
-    }
+      const connectionRow = this.connections.get(connectionId);
+      if (!connectionRow) {
+        this.logger.warn("No connection row found for connectionId", { connectionId });
+        return;
+      }
 
-    await connectionRow.refresh(deepRefresh);
-    this.logger.debug("Connection row refreshed, signaling row repaint.");
-    this.repaint(connectionRow);
+      await connectionRow.refresh(deepRefresh);
+      this.logger.debug("Connection row refreshed, signaling row repaint.");
+      this.repaint(connectionRow);
+    });
   }
 
   protected setCustomEventListeners(): Disposable[] {
