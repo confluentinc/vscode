@@ -15,6 +15,7 @@ import {
   FormConnectionType,
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
+import { Tag } from "../tags";
 import { executeVSCodeCommand } from "../utils/commands";
 import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentExtension } from "./utils/confluent";
@@ -131,10 +132,14 @@ test.describe("Schema Management", () => {
 
   // test dimensions:
   const connectionTypes: Array<
-    [string, (page: Page, electronApp: ElectronApplication) => Promise<void>]
+    [string, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
   > = [
-    ["CCLOUD", async (page, electronApp) => await setupCCloudConnection(page, electronApp)],
-    ["DIRECT", async (page) => await setupDirectConnection(page)],
+    [
+      "CCLOUD",
+      Tag.CCloud,
+      async (page, electronApp) => await setupCCloudConnection(page, electronApp),
+    ],
+    ["DIRECT", Tag.Direct, async (page) => await setupDirectConnection(page)],
     // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
   ];
   const schemaTypes: Array<[string, string]> = [
@@ -143,8 +148,8 @@ test.describe("Schema Management", () => {
     ["PROTOBUF", "proto"],
   ];
 
-  for (const [connectionType, connectionSetup] of connectionTypes) {
-    test.describe(`${connectionType} Connection`, () => {
+  for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
+    test.describe(`${connectionType} Connection`, { tag: [connectionTag] }, () => {
       test.beforeEach(async ({ page, electronApp }) => {
         // set up the connection based on type
         await connectionSetup(page, electronApp);
