@@ -55,7 +55,7 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subjectStr
   const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
   const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json"];
   const fileFilters = {
-    "Schema files": [".avsc", ".avro", ".json", ".proto"],
+    "Schema files": ["avsc", "avro", "json", "proto"],
   };
   const schemaUri: vscode.Uri | undefined = await uriQuickpick(
     uriSchemes,
