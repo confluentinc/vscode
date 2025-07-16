@@ -60,9 +60,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
           logger.info(
             `connectionEventHandler: direct connection ${event.action} ${connection.id} disconnected/deleted side effects firing.`,
           );
-          // Stop any loading spinny...
-          connectionStable.fire(id);
-          // ???
+          // Inform any single-environement watchers that the environment has been deleted.
           environmentChanged.fire({ id: environmentId, wasDeleted: true });
 
           if (event.action === "DISCONNECTED") {

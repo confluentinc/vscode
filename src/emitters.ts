@@ -119,6 +119,7 @@ export const currentFlinkArtifactsPoolChanged =
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 
+/** When we get a DISCONNECTED websocket event for a direct connection */
 export const connectionDisconnected = new vscode.EventEmitter<ConnectionId>();
 
 /** The user set/unset a filter for the Resources view. */

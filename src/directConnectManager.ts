@@ -10,11 +10,11 @@ import {
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { getCredentialsType } from "./directConnections/credentials";
-import { directConnectionsChanged } from "./emitters";
+import { directConnectionsChanged, environmentChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { DirectResourceLoader, ResourceLoader } from "./loaders";
 import { Logger } from "./logging";
-import { ConnectionId, isDirect } from "./models/resource";
+import { ConnectionId, EnvironmentId } from "./models/resource";
 import { getSidecar } from "./sidecar";
 import {
   tryToCreateConnection,
@@ -30,8 +30,7 @@ import {
 } from "./storage/resourceManager";
 import { getSecretStorage } from "./storage/utils";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { getSchemasViewProvider } from "./viewProviders/schemas";
-import { getTopicViewProvider } from "./viewProviders/topics";
+import { resourceViewWithProgress } from "./viewProviders/newResources";
 
 const logger = new Logger("directConnectManager");
 
@@ -71,7 +70,7 @@ export class DirectConnectionManager {
     // Register to call handleDirectConnectionsChanged() if the direct connections
     // key in SecretStorage changes, which happens when a direct connection is added, edited,
     // or deleted in the webview form, by either this or another workspace.
-    const connectionsListener: Disposable = getSecretStorage().onDidChange(
+    const secretStoreChangeListener: Disposable = getSecretStorage().onDidChange(
       async ({ key }: SecretStorageChangeEvent) => {
         // watch for any cross-workspace (or self-made) direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
@@ -80,7 +79,7 @@ export class DirectConnectionManager {
       },
     );
 
-    return [connectionsListener];
+    return [secretStoreChangeListener];
   }
 
   /**
@@ -89,6 +88,7 @@ export class DirectConnectionManager {
    */
   private async handleDirectConnectionsChanged(): Promise<void> {
     const connections: DirectConnectionsById = await getResourceManager().getDirectConnections();
+
     // Ensure all DirectResourceLoader instances are up to date.
 
     // Part 1: ensure any new connections have registered loaders; if this isn't done, hopping
@@ -121,30 +121,27 @@ export class DirectConnectionManager {
 
     // Part 2: remove any direct connections not in the secret storage to prevent
     // requests to orphaned resources/connections
+
     for (const id of existingLoaderIds) {
       if (!connections.has(id)) {
+        logger.debug(
+          `handleDirectConnectionsChanged() removing loader for ${id} as it no longer exists in SecretStorage`,
+        );
         ResourceLoader.deregisterInstance(id);
+
+        // Also inform the single-environment-oriented views that the environment has been deleted,
+        // giving them notice to reset() themselves.
+        environmentChanged.fire({
+          id: id as unknown as EnvironmentId,
+          wasDeleted: true,
+        });
       }
     }
 
-    // Inform the Resources view to refresh its list of connections
+    // Inform the Resources view(s) to reconcile their knowledge of direct connections vs
+    // either ResourceManager.getDirectConnections() or ResourceLoader.directLoaders().
+    logger.debug("handleDirectConnectionsChanged() firing directConnectionsChanged event");
     directConnectionsChanged.fire();
-
-    // If the Topics/Schemas views were focused on a resource whose direct connection was removed,
-    // reset the view(s) to prevent orphaned resources from being used for requests
-    const topicsView = getTopicViewProvider();
-    if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
-      if (!connections.has(topicsView.kafkaCluster.connectionId)) {
-        topicsView.reset();
-      }
-    }
-
-    const schemasView = getSchemasViewProvider();
-    if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
-      if (!connections.has(schemasView.schemaRegistry.connectionId)) {
-        await schemasView.reset();
-      }
-    }
   }
 
   /**
@@ -181,7 +178,9 @@ export class DirectConnectionManager {
     });
 
     if (connection && !dryRun) {
-      // save the new connection in secret storage
+      // save the new connection in secret storage. This will then ultimately trigger
+      // the directConnectionsChanged event listener when it changes the secret storage
+      // key value.
       await getResourceManager().addDirectConnection(spec);
       // create a new ResourceLoader instance for managing the new connection's resources
       this.initResourceLoader(spec.id);
@@ -199,7 +198,18 @@ export class DirectConnectionManager {
       return;
     }
 
-    await Promise.all([resourceManager.deleteDirectConnection(id), tryToDeleteConnection(id)]);
+    // Deregistering the resource loader needs to happen before resourceManager.deleteDirectConnection(id),
+    // which ends up rewriting the secret storage key, which then ultimately fires the
+    // directConnectionsChanged event, whose observers may try to reconcile their knowledge
+    // of loaders with current loaders.
+    ResourceLoader.deregisterInstance(id);
+
+    await Promise.all([
+      // Rewrite the secret storage key to remove the connection.
+      resourceManager.deleteDirectConnection(id),
+      // Tell the sidecar to delete the connection.
+      tryToDeleteConnection(id),
+    ]);
 
     logUsage(UserEvent.DirectConnectionAction, {
       action: "deleted",
@@ -212,8 +222,6 @@ export class DirectConnectionManager {
       schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
       schemaRegistrySslEnabled: spec.schema_registry?.ssl?.enabled,
     });
-
-    ResourceLoader.deregisterInstance(id);
   }
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
@@ -256,8 +264,13 @@ export class DirectConnectionManager {
     update: boolean = false,
     dryRun: boolean = false,
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
+    const title = `${update ? "Updating" : "Creating"} connection ...`;
+
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
+
+    logger.debug("Starting createOrUpdateConnection()");
+    // While all this happening, show a progress notification over the resource view(s)...
 
     try {
       connection = update
@@ -265,15 +278,18 @@ export class DirectConnectionManager {
         : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
       if (!dryRun) {
-        window.withProgress(
-          {
-            location: ProgressLocation.Notification,
-            title: `Waiting for "${connection.spec.name}" to be usable...`,
-          },
-          async () => {
-            await waitForConnectionToBeStable(connectionId);
-          },
-        );
+        await resourceViewWithProgress(title, async () => {
+          await window.withProgress(
+            {
+              location: ProgressLocation.Notification,
+              title: `Waiting for "${spec.name}" to be usable...`,
+            },
+            async () => {
+              await waitForConnectionToBeStable(connectionId);
+              logger.debug(`Connection "${spec.name}" is now stable and usable.`);
+            },
+          );
+        });
       }
     } catch (error) {
       // logging happens in the above call
@@ -288,6 +304,8 @@ export class DirectConnectionManager {
       if (!dryRun) window.showErrorMessage(msg);
       errorMessage = msg;
     }
+
+    logger.debug("Ending createOrUpdateConnection()");
     return { connection, errorMessage };
   }
 

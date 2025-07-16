@@ -524,7 +524,7 @@ export class NewResourceViewProvider
     // Watch for direct connections being added/removed, call into our handler.
     const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(() => {
       this.logger.debug("directConnectionsChanged event fired");
-      void this.synchronizeDirectConnections();
+      void this.reconcileDirectConnections();
     });
 
     // Watch for (direct) connections going 'stable', which will happen
@@ -555,66 +555,89 @@ export class NewResourceViewProvider
     ];
   }
 
-  private async synchronizeDirectConnections(): Promise<void> {
-    this.logger.debug("Synchronizing direct connections");
+  /**
+   * Reconcile the direct connections within this.connections with authoritative
+   * list from ResourceLoader.directLoaders().
+   * This will either insert or remove DirectConnectionRow instances
+   * from this.connections map, and then repaint the view to reflect the changes.
+   */
+  private async reconcileDirectConnections(): Promise<void> {
+    await this.withProgress("Synchronizing direct connections ...", async () => {
+      this.logger.debug("Synchronizing direct connections");
 
-    // collect current direct connections from this.connections map
-    const existingDirectConnections = Array.from(this.connections.values()).filter(
-      (row) => row instanceof DirectConnectionRow,
-    );
+      // The new list of direct loaders.
+      const directLoaders = ResourceLoader.directLoaders();
 
-    // ... and the new list of direct loaders. We ought to find one or more diffs between the two.
-    const directLoaders = ResourceLoader.directLoaders();
+      // collect current direct connections from this.connections map
+      const existingDirectConnections = Array.from(this.connections.values()).filter(
+        (row) => row instanceof DirectConnectionRow,
+      );
 
-    // TODO move to own method.
-    // Find if any new direct connections have been added
-    const newDirectLoaders = directLoaders.filter(
-      (loader) =>
-        !existingDirectConnections.some((row) => row.connectionId === loader.connectionId),
-    );
+      // We nay collect more than one async operation to perform while within
+      // the withProgress() call, so we can show a single throbber while
+      // we perform all of the operations.
+      const loadAndStorePromises: Promise<void>[] = [];
 
-    this.logger.debug("New direct loaders found", {
-      newDirectLoaders: newDirectLoaders.length,
-    });
+      // Find if any new direct connections have been added. Will need to make
+      // new DirectConnectionRow instances for them, add into map, ... .
+      const newDirectLoaders = directLoaders.filter(
+        (loader) =>
+          !existingDirectConnections.some((row) => row.connectionId === loader.connectionId),
+      );
 
-    if (newDirectLoaders.length > 0) {
-      // For each new direct loader, create a new DirectConnectionRow and store it.
-      for (const loader of newDirectLoaders) {
-        const connectionRow = new DirectConnectionRow(loader);
-        void this.loadAndStoreConnection(connectionRow, false);
+      this.logger.debug("New direct loaders found", {
+        newDirectLoaders: newDirectLoaders.length,
+      });
+
+      if (newDirectLoaders.length > 0) {
+        // For each new direct loader, create a new DirectConnectionRow and queue up to
+        // load its coarse resources and store it.
+        for (const loader of newDirectLoaders) {
+          const connectionRow = new DirectConnectionRow(loader);
+          loadAndStorePromises.push(this.loadAndStoreConnection(connectionRow, false));
+        }
       }
-    }
 
-    // TODO move to own method.
-    // Now check for any direct connections that have been removed.
-    const removedDirectLoaders = existingDirectConnections.filter(
-      (row) => !directLoaders.some((loader) => loader.connectionId === row.connectionId),
-    );
+      // Now check for any direct connections that have been removed.
+      const removedDirectLoaders = existingDirectConnections.filter(
+        (row) => !directLoaders.some((loader) => loader.connectionId === row.connectionId),
+      );
 
-    this.logger.debug("Removed direct loaders found", {
-      removedDirectLoaders: removedDirectLoaders.length,
-    });
-    if (removedDirectLoaders.length > 0) {
-      // For each removed direct loader, remove the connection row from the map.
-      for (const row of removedDirectLoaders) {
-        this.logger.debug("Removing direct connection row", {
-          connectionId: row.connectionId,
-        });
-        this.connections.delete(row.connectionId);
+      this.logger.debug("Removed direct loaders found", {
+        removedDirectLoaders: removedDirectLoaders.length,
+      });
+      if (removedDirectLoaders.length > 0) {
+        // For each removed direct loader, remove the connection row from the map.
+        for (const row of removedDirectLoaders) {
+          this.logger.debug("Removing direct connection row", {
+            connectionId: row.connectionId,
+          });
+          this.connections.delete(row.connectionId);
+        }
       }
-    }
 
-    // Finally, repaint the view to reflect the changes.
-    this.logger.debug("Repainting view after synchronizing direct connections");
-    this.repaint();
+      if (loadAndStorePromises.length > 0) {
+        this.logger.debug("Waiting for direct connection load/store promises to complete");
+        await Promise.all(loadAndStorePromises);
+      }
+
+      // Finally, repaint the view to reflect the changes.
+      this.logger.debug("Repainting view after reconciling direct connections");
+      this.repaint();
+    });
   }
 
   /** Repaint this node in the treeview. */
   private repaint(object: NewResourceViewProviderData | undefined = undefined): void {
-    this.logger.debug("Repainting child", {
-      object: object ? object.constructor.name : "undefined",
-    });
-    this._onDidChangeTreeData.fire(object);
+    if (object) {
+      this.logger.debug("Repainting specific child", {
+        object: object.constructor.name,
+      });
+      this._onDidChangeTreeData.fire(object);
+    } else {
+      this.logger.debug("Repainting whole view");
+      this._onDidChangeTreeData.fire();
+    }
   }
 
   /**
