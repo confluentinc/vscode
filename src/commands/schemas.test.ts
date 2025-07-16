@@ -30,7 +30,7 @@ import {
 import * as schemaManagementDeletion from "./utils/schemaManagement/deletion";
 import * as schemaManagementUpload from "./utils/schemaManagement/upload";
 
-describe.only("commands/schemas.ts", function () {
+describe("commands/schemas.ts", function () {
   let sandbox: sinon.SinonSandbox;
 
   before(async function () {
