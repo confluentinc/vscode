@@ -11,7 +11,7 @@ import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Schema, SchemaType, Subject } from "../models/schema";
+import { Schema, type SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
@@ -76,7 +76,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
  * Load a schema into a new editor tab for viewing, wrapped with a progress window
  * (during the schema fetch).
  */
-async function viewLocallyCommand(schema: Schema) {
+export async function viewLocallyCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
     logger.error("viewLocallyCommand called with invalid argument type", schema);
     return;
@@ -93,7 +93,7 @@ async function viewLocallyCommand(schema: Schema) {
 }
 
 /** Copy the Schema Registry ID from the Schemas tree provider nav action. */
-async function copySchemaRegistryIdCommand() {
+export async function copySchemaRegistryIdCommand() {
   const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   if (!schemaRegistry) {
     return;
@@ -102,6 +102,7 @@ async function copySchemaRegistryIdCommand() {
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
 }
 
+/** Copy the subject name to the clipboard from the Subject tree item in the Topics or Schemas views. */
 export async function copySubjectCommand(subject: Subject) {
   if (!subject || typeof subject.name !== "string") {
     return;
@@ -110,11 +111,10 @@ export async function copySubjectCommand(subject: Subject) {
   vscode.window.showInformationMessage(`Copied subject name "${subject.name}" to clipboard.`);
 }
 
-/** User has gestured to create a new schema from scratch relative to the currently selected schema registry. */
-async function createSchemaCommand() {
+/** Open a new editor and set its language to one of the supported Schema types. */
+export async function createSchemaCommand() {
   const chosenSchemaType = await schemaTypeQuickPick();
   if (!chosenSchemaType) {
-    logger.info("User canceled schema type selection.");
     return;
   }
 
@@ -149,7 +149,7 @@ export async function diffLatestSchemasCommand(subjectWithSchemas: Subject) {
 }
 
 /** Read-only view the latest schema version(s) related to a topic. */
-async function openLatestSchemasCommand(topic: KafkaTopic) {
+export async function openLatestSchemasCommand(topic: KafkaTopic) {
   let highestVersionedSchemas: Schema[] | null = null;
 
   try {
@@ -188,7 +188,10 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
 }
 
 /** Drop into read-only viewing the latest version of the schema in the subject group.  */
-async function viewLatestLocallyCommand(subject: Subject) {
+export async function viewLatestLocallyCommand(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    return;
+  }
   const schema: Schema = await determineLatestSchema("viewLatestLocallyCommand", subject);
   await viewLocallyCommand(schema);
 }
@@ -200,7 +203,7 @@ async function viewLatestLocallyCommand(subject: Subject) {
  * upload schema command, allowing to default to the originating schema registr
  * and subject.
  **/
-async function evolveSchemaCommand(schema: Schema) {
+export async function evolveSchemaCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
     logger.error("evolveSchema called with invalid argument type", schema);
     return;
@@ -231,9 +234,11 @@ async function evolveSchemaCommand(schema: Schema) {
 }
 
 /** Drop into evolving the latest version of the schema in the subject group. */
-async function evolveSchemaSubjectCommand(subject: Subject) {
+export async function evolveSchemaSubjectCommand(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    return;
+  }
   const schema: Schema = await determineLatestSchema("evolveSchemaSubjectCommand", subject);
-
   await evolveSchemaCommand(schema);
 }
 
@@ -243,7 +248,7 @@ async function evolveSchemaSubjectCommand(subject: Subject) {
  * If was the last version bound to the subject, the subject will disappear also.
  *
  */
-async function deleteSchemaVersionCommand(schema: Schema) {
+export async function deleteSchemaVersionCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
     logger.error("deleteSchemaVersionCommand called with invalid argument type", schema);
     return;
@@ -273,7 +278,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
       // If the whole subject is gone, we will get a 404. Say, last version
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
-        // not a 404, something unexpected/
+        // not a 404, something unexpected
         logError(e, "Error fetching schemas for subject while deleting schema version", {
           extra: { error: {} },
         });
@@ -295,9 +300,8 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     return;
   }
 
-  // Ask if they are sure they want to delete the schema version.
+  // Show the input box to confirm the deletion based on the version number or the subject name
   const confirmation = await confirmSchemaVersionDeletion(hardDelete, schema, schemaGroup);
-
   if (!confirmation) {
     logger.debug("User canceled schema version deletion.");
     return;
@@ -333,6 +337,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     if (wasOnlyVersionForSubject) {
       successMessage += ` Subject ${schema.subject} deleted.`;
     }
+    logger.info(successMessage);
     vscode.window.showInformationMessage(successMessage);
 
     // Fire off event to update views if needed.
@@ -373,8 +378,13 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   });
 }
 
-async function deleteSchemaSubjectCommand(subject: Subject) {
+/**
+ * Delete a schema subject, which may contain multiple schema versions.
+ * If the subject is deleted, all versions will be deleted.
+ */
+export async function deleteSchemaSubjectCommand(subject: Subject) {
   if (subject === undefined) {
+    // shoup: only used by E2E tests until https://github.com/confluentinc/vscode/issues/1875 is done
     const schemaViewProvider = getSchemasViewProvider();
     const registry = schemaViewProvider.schemaRegistry!;
     if (!registry) {
@@ -412,7 +422,7 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
   try {
     schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
 
-    if (!schemaGroup) {
+    if (!Array.isArray(schemaGroup) || schemaGroup.length === 0) {
       showErrorNotificationWithButtons("Schema subject not found in registry.", {
         "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
         ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
@@ -447,7 +457,6 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
   }
 
   let confirmation: boolean | undefined;
-
   if (schemaGroup.length > 1) {
     // Wordier confirmation message for deleting multiple schema versions.
     confirmation = await confirmSchemaSubjectDeletion(hardDelete, subject, schemaGroup);
@@ -456,7 +465,6 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
     // confirmation experience deleting the single version in the subject.
     confirmation = await confirmSchemaVersionDeletion(hardDelete, schemaGroup[0], schemaGroup);
   }
-
   if (!confirmation) {
     logger.debug("User canceled schema subject deletion.");
     return;
@@ -529,9 +537,9 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
  *  1. A Subject from the Schemas view
  *  2. On one of a topic's subjects in the Topics view
  */
-async function uploadSchemaForSubjectFromFileCommand(subject: Subject) {
+export async function uploadSchemaForSubjectFromFileCommand(subject: Subject) {
   if (!(subject instanceof Subject)) {
-    throw new Error("uploadSchemaForSubjectFromfile called with invalid argument type");
+    return;
   }
   const loader = ResourceLoader.getInstance(subject.connectionId);
   const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
