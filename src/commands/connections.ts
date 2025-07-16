@@ -170,8 +170,8 @@ export async function createNewDirectConnectionCommand() {
   }
 }
 
-export async function deleteDirectConnectionCommand(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
+export async function deleteDirectConnectionCommand(item: DirectEnvironment | DirectConnectionRow) {
+  if (!(item instanceof DirectEnvironment || item instanceof DirectConnectionRow)) {
     return;
   }
 
@@ -222,8 +222,8 @@ export async function editDirectConnectionCommand(item: ConnectionId | DirectEnv
   openDirectConnectionForm(spec);
 }
 
-export async function exportDirectConnectionCommand(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
+export async function exportDirectConnectionCommand(item: DirectEnvironment | DirectConnectionRow) {
+  if (!(item instanceof DirectEnvironment || item instanceof DirectConnectionRow)) {
     return;
   }
 
