@@ -199,8 +199,6 @@ class DirectConnectFormViewModel extends ViewModel {
         if (input.value === "Confluent Cloud") {
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
-          this.kafkaAuthType("API");
-          // this.schemaAuthType("API");
         }
         if (input.value === "WarpStream") {
           this.kafkaAuthType("Basic");
