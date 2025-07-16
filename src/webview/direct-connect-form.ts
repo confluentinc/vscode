@@ -200,10 +200,6 @@ class DirectConnectFormViewModel extends ViewModel {
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
         }
-        if (input.value === "WarpStream") {
-          this.kafkaAuthType("Basic");
-          // this.schemaAuthType("Basic");
-        }
         break;
       case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
