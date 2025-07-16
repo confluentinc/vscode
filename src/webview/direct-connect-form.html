@@ -118,11 +118,14 @@
               id="kafka_cluster.auth_type"
               name="kafka_cluster.auth_type"
               data-on-input="this.updateValue(event)"
-              data-value="this.kafkaAuthType()"
               data-attr-disabled="this.editing() ? true : false"
             >
               <template data-for="auth of this.getValidAuthTypes()">
-                <option data-attr-value="this.auth().value" data-text="this.auth().label"></option>
+                <option
+                  data-attr-value="this.auth().value"
+                  data-text="this.auth().label"
+                  data-attr-selected="this.auth().value === this.kafkaAuthType()"
+                ></option>
               </template>
             </select>
           </div>
