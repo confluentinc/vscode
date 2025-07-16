@@ -18,7 +18,7 @@ import {
   hardDeletionQuickPick,
 } from "./deletion";
 
-describe("commands/schemas/utils/schemaManagement/deletion.ts", function () {
+describe("commands/utils/schemaManagement/deletion.ts", function () {
   describe("getDeleteSchemaVersionPrompt()", function () {
     it("single schema version tests", async function () {
       // single version.
