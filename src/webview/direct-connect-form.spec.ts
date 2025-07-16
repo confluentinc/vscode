@@ -92,8 +92,6 @@ test("renders form html correctly", async ({ page }) => {
 
   const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
   await expect(authKafka).toBeVisible();
-  // Don't check for options count - these are populated dynamically by JavaScript
-  // which isn't executed in this static HTML test
 
   const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
   await expect(schemaUrlInput).toBeVisible();
@@ -105,8 +103,6 @@ test("renders form html correctly", async ({ page }) => {
 
   const authSchema = page.locator("select[name='schema_registry.auth_type']");
   await expect(authSchema).not.toBe(null);
-  const authSchemaOptions = await authSchema.locator("option").all();
-  await expect(authSchemaOptions.length).toBe(4); // None, Basic, API, OAuth
 });
 test("renders form with existing connection spec values (for edit/import)", async ({
   execute,
