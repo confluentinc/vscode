@@ -1,4 +1,4 @@
-import { commands, workspace, WorkspaceConfiguration } from "vscode";
+import { commands } from "vscode";
 import { USE_TOPIC_NAME_STRATEGY } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
 import { Subject } from "../../models/schema";
@@ -19,8 +19,7 @@ export async function getSubjectNameStrategy(
   topic: KafkaTopic,
   kind: "key" | "value",
 ): Promise<SubjectNameStrategy | undefined> {
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const useTopicNameStrategy: boolean = config.get(USE_TOPIC_NAME_STRATEGY) ?? true;
+  const useTopicNameStrategy: boolean = USE_TOPIC_NAME_STRATEGY.value;
   if (useTopicNameStrategy) {
     return SubjectNameStrategy.TOPIC_NAME;
   }
@@ -62,7 +61,7 @@ export async function getSubjectNameForStrategy(
             "Open Settings": () => {
               commands.executeCommand(
                 "workbench.action.openSettings",
-                `@id:${USE_TOPIC_NAME_STRATEGY}`,
+                `@id:${USE_TOPIC_NAME_STRATEGY.id}`,
               );
             },
             ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,

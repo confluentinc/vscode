@@ -21,7 +21,7 @@ export function showFlinkPreviewNotification() {
       "Change Notification Settings": () => {
         void commands.executeCommand(
           "workbench.action.openSettings",
-          `@id:${SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS}`,
+          `@id:${SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.id}`,
         );
       },
     });
