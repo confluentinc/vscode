@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { workspace } from "vscode";
 import { getStubbedLocalResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import {
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REVISED,
@@ -24,7 +24,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
   let getSubjectNameForStrategyStub: sinon.SinonStub;
   let schemaVersionQuickPickStub: sinon.SinonStub;
 
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   // use local loaders for these tests; no functional difference between local/CCloud/direct here
   let stubbedLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
@@ -52,10 +52,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
       .resolves(TEST_LOCAL_SCHEMA.subject);
 
     // stub the WorkspaceConfiguration
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub(),
-    });
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
   });
 
   afterEach(() => {
@@ -92,9 +89,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
 
   it("should use schemaVersionQuickPick when `allowOlderVersions` is true", async () => {
     // allowOlderVersions setting enabled
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(ALLOW_OLDER_SCHEMA_VERSIONS, false).returns(true),
-    });
+    stubbedConfigs.get.withArgs(ALLOW_OLDER_SCHEMA_VERSIONS.id, false).returns(true);
     // user selects the schema version quick pick
     schemaVersionQuickPickStub.resolves(TEST_LOCAL_SCHEMA);
 
@@ -114,9 +109,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
 
   it("should throw an error when user cancels schema version selection", async () => {
     // allowOlderVersions setting enabled
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(ALLOW_OLDER_SCHEMA_VERSIONS, false).returns(true),
-    });
+    stubbedConfigs.get.withArgs(ALLOW_OLDER_SCHEMA_VERSIONS.id, false).returns(true);
     // user cancels the schema version quick pick
     schemaVersionQuickPickStub.resolves(undefined);
 

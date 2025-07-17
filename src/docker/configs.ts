@@ -3,20 +3,8 @@ import { Agent, RequestInit as UndiciRequestInit } from "undici";
 import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
 import { logError } from "../errors";
-import {
-  LOCAL_DOCKER_SOCKET_PATH,
-  LOCAL_KAFKA_IMAGE,
-  LOCAL_KAFKA_IMAGE_TAG,
-  LOCAL_SCHEMA_REGISTRY_IMAGE,
-  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
-} from "../extensionSettings/constants";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import { Logger } from "../logging";
-import {
-  DEFAULT_KAFKA_IMAGE_REPO,
-  DEFAULT_KAFKA_IMAGE_TAG,
-  DEFAULT_SCHEMA_REGISTRY_REPO,
-  DEFAULT_SCHEMA_REGISTRY_TAG,
-} from "./constants";
 import { getDockerCredentials } from "./credentials";
 
 const logger = new Logger("docker.configs");
@@ -26,8 +14,7 @@ export const DEFAULT_UNIX_SOCKET_PATH = "/var/run/docker.sock";
 
 /** Get the path to the Docker socket based on user settings or platform defaults. */
 export function getSocketPath(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  let path: string = configs.get(LOCAL_DOCKER_SOCKET_PATH, "").trim();
+  let path: string = LOCAL_DOCKER_SOCKET_PATH.value.trim();
 
   if (process.platform === "win32") {
     path = path ? normalize(path) : normalize(DEFAULT_WINDOWS_SOCKET_PATH);
@@ -36,31 +23,6 @@ export function getSocketPath(): string {
   }
 
   return path;
-}
-
-/** Get the local Kafka image name based on user settings. */
-export function getLocalKafkaImageName(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  return configs.get(LOCAL_KAFKA_IMAGE, DEFAULT_KAFKA_IMAGE_REPO);
-}
-
-/** Get the local Kafka image tag based on user settings. */
-export function getLocalKafkaImageTag(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  return configs.get(LOCAL_KAFKA_IMAGE_TAG, DEFAULT_KAFKA_IMAGE_TAG);
-}
-
-/** Get the local Schema Registry image name based on user settings. */
-export function getLocalSchemaRegistryImageName(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  // we are not currently exposing these settings, so we'll always use the default value
-  return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE, DEFAULT_SCHEMA_REGISTRY_REPO);
-}
-
-/** Get the local Schema Registry image tag based on user settings. */
-export function getLocalSchemaRegistryImageTag(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, DEFAULT_SCHEMA_REGISTRY_TAG);
 }
 
 /** Default request options for Docker API requests, to be used with service class methods from `src/clients/docker/*`. */

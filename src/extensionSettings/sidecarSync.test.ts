@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { workspace } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
   JsonNode,
   Preferences,
@@ -12,21 +12,14 @@ import {
 import * as errors from "../errors";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
-import {
-  DEFAULT_KRB5_CONFIG_PATH,
-  DEFAULT_SSL_PEM_PATHS,
-  DEFAULT_TRUST_ALL_CERTIFICATES,
-  KRB5_CONFIG_PATH,
-  SSL_PEM_PATHS,
-  SSL_VERIFY_SERVER_CERT_DISABLED,
-} from "./constants";
+import { KRB5_CONFIG_PATH, SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
 import * as updates from "./sidecarSync";
 import { loadPreferencesFromWorkspaceConfig } from "./sidecarSync";
 
 describe("extensionSettings/sidecarSync.ts", function () {
   let sandbox: sinon.SinonSandbox;
   let mockClient: sinon.SinonStubbedInstance<PreferencesResourceApi>;
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let logErrorStub: sinon.SinonStub;
   let showErrorNotificationWithButtonsStub: sinon.SinonStub;
 
@@ -43,14 +36,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
     // stub the getSidecar function to return the mock sidecar handle
     sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
 
-    // stub the WorkspaceConfiguration
-    getConfigurationStub = sandbox.stub();
-    sandbox.stub(workspace, "getConfiguration").returns({
-      get: getConfigurationStub,
-      has: sandbox.stub(),
-      update: sandbox.stub(),
-      inspect: sandbox.stub(),
-    });
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
 
     // stub the notifications
     showErrorNotificationWithButtonsStub = sandbox.stub(
@@ -65,22 +51,18 @@ describe("extensionSettings/sidecarSync.ts", function () {
 
   it("loadDefaultPreferences() should load default preferences from the workspace configuration", async function () {
     // default values, no user changes
-    const tlsPemPaths: string[] = DEFAULT_SSL_PEM_PATHS;
-    const trustAllCerts = DEFAULT_TRUST_ALL_CERTIFICATES;
-    const krb5Config = DEFAULT_KRB5_CONFIG_PATH;
-
-    getConfigurationStub.withArgs(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS).returns(tlsPemPaths);
-    getConfigurationStub
-      .withArgs(SSL_VERIFY_SERVER_CERT_DISABLED, DEFAULT_TRUST_ALL_CERTIFICATES)
-      .returns(trustAllCerts);
-    getConfigurationStub.withArgs(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH).returns(krb5Config);
+    stubbedConfigs.configure({
+      [SSL_PEM_PATHS.id]: SSL_PEM_PATHS.defaultValue,
+      [SSL_VERIFY_SERVER_CERT_DISABLED.id]: SSL_VERIFY_SERVER_CERT_DISABLED.defaultValue,
+      [KRB5_CONFIG_PATH.id]: KRB5_CONFIG_PATH.defaultValue,
+    });
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
     assert.deepStrictEqual(result, {
-      kerberos_config_file_path: krb5Config,
-      tls_pem_paths: DEFAULT_SSL_PEM_PATHS,
-      trust_all_certificates: DEFAULT_TRUST_ALL_CERTIFICATES,
+      tls_pem_paths: SSL_PEM_PATHS.defaultValue,
+      trust_all_certificates: SSL_VERIFY_SERVER_CERT_DISABLED.defaultValue,
+      kerberos_config_file_path: KRB5_CONFIG_PATH.defaultValue,
     });
   });
 
@@ -89,12 +71,11 @@ describe("extensionSettings/sidecarSync.ts", function () {
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
     const krb5Config = "path/to/custom/krb5.conf";
-
-    getConfigurationStub.withArgs(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS).returns(tlsPemPaths);
-    getConfigurationStub
-      .withArgs(SSL_VERIFY_SERVER_CERT_DISABLED, DEFAULT_TRUST_ALL_CERTIFICATES)
-      .returns(trustAllCerts);
-    getConfigurationStub.withArgs(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH).returns(krb5Config);
+    stubbedConfigs.configure({
+      [SSL_PEM_PATHS.id]: tlsPemPaths,
+      [SSL_VERIFY_SERVER_CERT_DISABLED.id]: trustAllCerts,
+      [KRB5_CONFIG_PATH.id]: krb5Config,
+    });
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
@@ -110,12 +91,11 @@ describe("extensionSettings/sidecarSync.ts", function () {
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
     const krb5Config = "path/to/custom/krb5.conf";
-
-    getConfigurationStub.withArgs(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS).returns(tlsPemPaths);
-    getConfigurationStub
-      .withArgs(SSL_VERIFY_SERVER_CERT_DISABLED, DEFAULT_TRUST_ALL_CERTIFICATES)
-      .returns(trustAllCerts);
-    getConfigurationStub.withArgs(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH).returns(krb5Config);
+    stubbedConfigs.configure({
+      [SSL_PEM_PATHS.id]: tlsPemPaths,
+      [SSL_VERIFY_SERVER_CERT_DISABLED.id]: trustAllCerts,
+      [KRB5_CONFIG_PATH.id]: krb5Config,
+    });
 
     const fakePreferences: Preferences = {
       api_version: "gateway/v1",

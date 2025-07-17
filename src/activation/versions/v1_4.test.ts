@@ -91,7 +91,7 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
     sinon.assert.calledOnceWithExactly(
       executeCommandStub,
       "workbench.action.openSettings",
-      `@id:${SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS}`,
+      `@id:${SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.id}`,
     );
   });
 });
