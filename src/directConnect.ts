@@ -1,29 +1,19 @@
 import { randomUUID } from "crypto";
 import { platform } from "os";
-import {
-  Disposable,
-  Uri,
-  ViewColumn,
-  WebviewPanel,
-  WorkspaceConfiguration,
-  commands,
-  env,
-  window,
-  workspace,
-} from "vscode";
+import { Disposable, Uri, ViewColumn, WebviewPanel, commands, env, window } from "vscode";
 import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { getCredentialsType } from "./directConnections/credentials";
 import { SupportedAuthTypes } from "./directConnections/types";
 import { directConnectionsChanged } from "./emitters";
-import { DEFAULT_KRB5_CONFIG_PATH, KRB5_CONFIG_PATH } from "./extensionSettings/constants";
+import { KRB5_CONFIG_PATH } from "./extensionSettings/constants";
 import { ConnectionId } from "./models/resource";
+import { showInfoNotificationWithButtons } from "./notifications";
 import { CustomConnectionSpec, getResourceManager } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
-import { showInfoNotificationWithButtons } from "./notifications";
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
@@ -221,11 +211,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       case "GetOSInfo":
         return { platform: platform() } satisfies MessageResponse<"GetOSInfo">;
       case "GetKrb5ConfigPath": {
-        const config: WorkspaceConfiguration = workspace.getConfiguration();
-        return config.get(
-          KRB5_CONFIG_PATH,
-          DEFAULT_KRB5_CONFIG_PATH,
-        ) satisfies MessageResponse<"GetKrb5ConfigPath">;
+        return KRB5_CONFIG_PATH.value satisfies MessageResponse<"GetKrb5ConfigPath">;
       }
       case "GetVsCodeUriScheme": {
         return env.uriScheme satisfies MessageResponse<"GetVsCodeUriScheme">;

@@ -21,7 +21,6 @@ import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getLocalResourceContainers } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
-import { getLocalKafkaImageTag } from "../configs";
 import { createContainer } from "../containers";
 import { createNetwork } from "../networks";
 import { findFreePort } from "../ports";
@@ -61,7 +60,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.imageTag = getLocalKafkaImageTag();
+    this.imageTag = LOCAL_KAFKA_IMAGE_TAG.value;
 
     // already handles logging + updating the progress notification
     await this.checkForImage(this.imageRepo, this.imageTag);
@@ -158,7 +157,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.imageTag = getLocalKafkaImageTag();
+    this.imageTag = LOCAL_KAFKA_IMAGE_TAG.value;
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
     const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
@@ -179,7 +178,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
           if (selection) {
             commands.executeCommand(
               "workbench.action.openSettings",
-              `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+              `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
             );
           }
         });
