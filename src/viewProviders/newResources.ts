@@ -47,7 +47,6 @@ import { CCloudOrganization } from "../models/organization";
 import {
   ConnectionId,
   connectionIdToType,
-  EnvironmentId,
   IResourceBase,
   ISearchable,
   IUpdatableResource,
@@ -130,14 +129,6 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     return this.name;
   }
 
-  clearEnvironments(): void {
-    this.environments.length = 0;
-  }
-
-  getEnvironment(environmentId: EnvironmentId): ET | undefined {
-    return this.environments.find((env) => env.id === environmentId);
-  }
-
   get connectionId(): ConnectionId {
     return this.loader.connectionId;
   }
@@ -153,9 +144,7 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     return connectionIdToType(this.connectionId);
   }
 
-  get connected(): boolean {
-    return this.environments.length > 0;
-  }
+  abstract get connected(): boolean;
 
   /** Convert this ConnectionRow into a TreeItem. */
   getTreeItem(): TreeItem {
@@ -258,6 +247,10 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
 
   get iconPath(): ThemeIcon {
     return new ThemeIcon(IconNames.CONFLUENT_LOGO);
+  }
+
+  get connected(): boolean {
+    return this.environments.length > 0;
   }
 
   /**

@@ -12,6 +12,7 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { IconNames } from "../constants";
 import { DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { DirectEnvironment, LocalEnvironment } from "../models/environment";
@@ -61,6 +62,166 @@ describe("viewProviders/newResources.ts", () => {
     beforeEach(() => {
       directLoader = new DirectResourceLoader("test-direct-connection-id" as ConnectionId);
       directConnectionRow = new DirectConnectionRow(directLoader);
+    });
+
+    describe("ConnectionRow getters via DirectConnectionRow", () => {
+      it("connectionId returns the loader's connectionId", () => {
+        assert.strictEqual(directConnectionRow.connectionId, directLoader.connectionId);
+      });
+
+      it("id returns the loader's connectionId", () => {
+        assert.strictEqual(directConnectionRow.id, directLoader.connectionId);
+      });
+
+      it("connectionType returns the connection type", () => {
+        assert.strictEqual(directConnectionRow.connectionType, ConnectionType.Direct);
+      });
+    });
+
+    describe("ConnectionRow methods via DirectConnectionRow", () => {
+      describe("refresh", () => {
+        let getEnvironmentsStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
+        });
+
+        for (const deepRefresh of [false, true]) {
+          it(`calls getEnvironments with deepRefresh=${deepRefresh}`, async () => {
+            await directConnectionRow.refresh(deepRefresh);
+            sinon.assert.calledOnceWithExactly(getEnvironmentsStub, deepRefresh);
+          });
+        }
+
+        it("properly merges environment into initially empty environments array", async () => {
+          assert.strictEqual(directConnectionRow.environments.length, 0);
+          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
+          await directConnectionRow.refresh();
+          assert.strictEqual(directConnectionRow.environments.length, 1);
+          assert.deepStrictEqual(
+            directConnectionRow.environments[0],
+            TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
+          );
+        });
+
+        it("properly merges updated environment into populated array", async () => {
+          // initially no SR. Be sure to make a transient object here, 'cause is
+          // going to get mutated during the refresh.
+          directConnectionRow.environments.push(
+            new DirectEnvironment({ ...TEST_DIRECT_ENVIRONMENT_WITH_KAFKA }),
+          );
+          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
+
+          await directConnectionRow.refresh();
+
+          assert.strictEqual(directConnectionRow.environments.length, 1);
+          assert.deepStrictEqual(
+            directConnectionRow.environments[0],
+            TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
+          );
+        });
+      });
+
+      describe("getEnvironments", () => {
+        let loaderGetEnvironmentsStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          loaderGetEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
+        });
+
+        it("calls loader.getEnvironments with deepRefresh=false", async () => {
+          await directConnectionRow.getEnvironments();
+          sinon.assert.calledOnceWithExactly(loaderGetEnvironmentsStub, false);
+        });
+
+        it("returns the environments from the loader", async () => {
+          const expectedEnvironments = [TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR];
+          loaderGetEnvironmentsStub.resolves(expectedEnvironments);
+          const environments = await directConnectionRow.getEnvironments();
+          assert.deepStrictEqual(environments, expectedEnvironments);
+        });
+      });
+    });
+
+    describe("SingleEnvironmentConnectionRow methods via DirectConnectionRow", () => {
+      describe("getChildren", () => {
+        it("returns kafka and schema registry children when both are set", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          const children = directConnectionRow.getChildren();
+          assert.strictEqual(children.length, 2);
+          assert.strictEqual(children[0].name, TEST_DIRECT_KAFKA_CLUSTER.name);
+          assert.strictEqual(children[1].name, TEST_DIRECT_SCHEMA_REGISTRY.name);
+        });
+
+        it("returns only kafka child when schema registry is not set", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA);
+          const children = directConnectionRow.getChildren();
+          assert.strictEqual(children.length, 1);
+          assert.deepStrictEqual(children[0], TEST_DIRECT_KAFKA_CLUSTER);
+        });
+
+        it("returns only schema registry child when kafka is not set", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_SR);
+          const children = directConnectionRow.getChildren();
+          assert.strictEqual(children.length, 1);
+          assert.deepStrictEqual(children[0], TEST_DIRECT_SCHEMA_REGISTRY);
+        });
+
+        it("returns empty array when no environment is set", () => {
+          const children = directConnectionRow.getChildren();
+          assert.strictEqual(children.length, 0);
+        });
+      });
+    });
+
+    describe("SingleConnectionRow getters via DirectConnectionRow", () => {
+      describe("kafkaCluster", () => {
+        it("Returns the first Kafka cluster from the environment when set", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          assert.strictEqual(directConnectionRow.kafkaCluster, TEST_DIRECT_KAFKA_CLUSTER);
+        });
+
+        it("Returns undefined when no environment is set", () => {
+          assert.strictEqual(directConnectionRow.kafkaCluster, undefined);
+        });
+      });
+
+      describe("schemaRegistry", () => {
+        it("Returns the Schema Registry from the environment when set", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          assert.strictEqual(directConnectionRow.schemaRegistry, TEST_DIRECT_SCHEMA_REGISTRY);
+        });
+
+        it("Returns undefined when no environment is set", () => {
+          assert.strictEqual(directConnectionRow.schemaRegistry, undefined);
+        });
+      });
+
+      describe("connected", () => {
+        it("returns true when the environment has a Kafka cluster", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA);
+          assert.strictEqual(directConnectionRow.connected, true);
+        });
+
+        it("returns true when the environment has a schema registry", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_SR);
+          assert.strictEqual(directConnectionRow.connected, true);
+        });
+
+        it("returns true when the environment has a both kafka and schema registry", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          assert.strictEqual(directConnectionRow.connected, true);
+        });
+
+        it("returns false when the environment is missing Kafka AND Schema Registry", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT);
+          assert.strictEqual(directConnectionRow.connected, false);
+        });
+
+        it("returns false when no environment is set", () => {
+          assert.strictEqual(directConnectionRow.connected, false);
+        });
+      });
     });
 
     describe("getters", () => {
@@ -126,132 +287,6 @@ describe("viewProviders/newResources.ts", () => {
           assert.throws(() => {
             return directConnectionRow.tooltip;
           }, /Environment not yet loaded/);
-        });
-      });
-
-      // test some of the SingleConnectionRow getters using the DirectConnectionRow
-
-      describe("kafkaCluster", () => {
-        it("Returns the first Kafka cluster from the environment when set", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          assert.strictEqual(directConnectionRow.kafkaCluster, TEST_DIRECT_KAFKA_CLUSTER);
-        });
-
-        it("Returns undefined when no environment is set", () => {
-          assert.strictEqual(directConnectionRow.kafkaCluster, undefined);
-        });
-      });
-
-      describe("schemaRegistry", () => {
-        it("Returns the Schema Registry from the environment when set", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          assert.strictEqual(directConnectionRow.schemaRegistry, TEST_DIRECT_SCHEMA_REGISTRY);
-        });
-
-        it("Returns undefined when no environment is set", () => {
-          assert.strictEqual(directConnectionRow.schemaRegistry, undefined);
-        });
-      });
-
-      describe("connected", () => {
-        it("returns true when the environment has a Kafka cluster", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA);
-          assert.strictEqual(directConnectionRow.connected, true);
-        });
-
-        it("returns true when the environment has a schema registry", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_SR);
-          assert.strictEqual(directConnectionRow.connected, true);
-        });
-
-        it("returns true when the environment has a both kafka and schema registry", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          assert.strictEqual(directConnectionRow.connected, true);
-        });
-
-        it("returns false when the environment is missing Kafka AND Schema Registry", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT);
-          assert.strictEqual(directConnectionRow.connected, false);
-        });
-
-        it("returns false when no environment is set", () => {
-          assert.strictEqual(directConnectionRow.connected, false);
-        });
-      });
-    });
-
-    describe("SingleEnvironmentConnectionRow methods via DirectConnectionRow", () => {
-      describe("getChildren", () => {
-        it("returns kafka and schema registry children when both are set", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          const children = directConnectionRow.getChildren();
-          assert.strictEqual(children.length, 2);
-          assert.strictEqual(children[0].name, TEST_DIRECT_KAFKA_CLUSTER.name);
-          assert.strictEqual(children[1].name, TEST_DIRECT_SCHEMA_REGISTRY.name);
-        });
-
-        it("returns only kafka child when schema registry is not set", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA);
-          const children = directConnectionRow.getChildren();
-          assert.strictEqual(children.length, 1);
-          assert.deepStrictEqual(children[0], TEST_DIRECT_KAFKA_CLUSTER);
-        });
-
-        it("returns only schema registry child when kafka is not set", () => {
-          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_SR);
-          const children = directConnectionRow.getChildren();
-          assert.strictEqual(children.length, 1);
-          assert.deepStrictEqual(children[0], TEST_DIRECT_SCHEMA_REGISTRY);
-        });
-
-        it("returns empty array when no environment is set", () => {
-          const children = directConnectionRow.getChildren();
-          assert.strictEqual(children.length, 0);
-        });
-      });
-    });
-
-    describe("ConnectionRow methods via DirectConnectionRow", () => {
-      describe("refresh", () => {
-        let getEnvironmentsStub: sinon.SinonStub;
-
-        beforeEach(() => {
-          getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
-        });
-
-        for (const deepRefresh of [false, true]) {
-          it(`calls getEnvironments with deepRefresh=${deepRefresh}`, async () => {
-            await directConnectionRow.refresh(deepRefresh);
-            sinon.assert.calledOnceWithExactly(getEnvironmentsStub, deepRefresh);
-          });
-        }
-
-        it("properly merges environment into initially empty environments array", async () => {
-          assert.strictEqual(directConnectionRow.environments.length, 0);
-          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
-          await directConnectionRow.refresh();
-          assert.strictEqual(directConnectionRow.environments.length, 1);
-          assert.deepStrictEqual(
-            directConnectionRow.environments[0],
-            TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
-          );
-        });
-
-        it("properly merges updated environment into populated array", async () => {
-          // initially no SR. Be sure to make a transient object here, 'cause is
-          // going to get mutated during the refresh.
-          directConnectionRow.environments.push(
-            new DirectEnvironment({ ...TEST_DIRECT_ENVIRONMENT_WITH_KAFKA }),
-          );
-          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
-
-          await directConnectionRow.refresh();
-
-          assert.strictEqual(directConnectionRow.environments.length, 1);
-          assert.deepStrictEqual(
-            directConnectionRow.environments[0],
-            TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
-          );
         });
       });
     });
