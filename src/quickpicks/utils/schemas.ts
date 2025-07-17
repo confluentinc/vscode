@@ -1,4 +1,3 @@
-import { workspace, WorkspaceConfiguration } from "vscode";
 import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
 import { Schema } from "../../models/schema";
@@ -50,8 +49,7 @@ export async function promptForSchema(
 
   // show the user a quickpick of schema versions for the given subject if the user has not disabled
   // the option to use older schema versions
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const allowOlderSchemaVersions: boolean = config.get(ALLOW_OLDER_SCHEMA_VERSIONS, false);
+  const allowOlderSchemaVersions: boolean = ALLOW_OLDER_SCHEMA_VERSIONS.value;
   if (allowOlderSchemaVersions) {
     const schemaVersion: Schema | undefined = await schemaVersionQuickPick(registry, schemaSubject);
     if (!schemaVersion) {

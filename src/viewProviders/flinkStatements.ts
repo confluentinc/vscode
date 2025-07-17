@@ -1,12 +1,4 @@
-import {
-  Disposable,
-  EventEmitter,
-  TreeDataProvider,
-  TreeItem,
-  Uri,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { Disposable, EventEmitter, TreeDataProvider, TreeItem, Uri } from "vscode";
 import { ContextValues } from "../context/values";
 import {
   currentFlinkStatementsResourceChanged,
@@ -15,9 +7,6 @@ import {
   flinkStatementUpdated,
 } from "../emitters";
 import {
-  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-  DEFAULT_STATEMENT_POLLING_LIMIT,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
@@ -225,7 +214,6 @@ export class FlinkStatementsViewProvider
    * @param nonTerminalStatements The number of non-terminal statements in the view.
    */
   logTelemetry(totalStatements: number, nonTerminalStatements: number): void {
-    const configs: WorkspaceConfiguration = workspace.getConfiguration();
     logUsage(UserEvent.FlinkStatementViewStatistics, {
       // What resource was just loaded. Will be one or the other.
       compute_pool_id: this.computePool?.id,
@@ -238,13 +226,9 @@ export class FlinkStatementsViewProvider
 
       // user's settings for polling the non-terminal statements, germane
       // to compare against the above.
-      nonterminal_polling_concurrency:
-        configs.get<number>(STATEMENT_POLLING_CONCURRENCY) ?? DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-      nonterminal_polling_frequency:
-        configs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS) ??
-        DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-      nonterminal_statements_to_poll:
-        configs.get<number>(STATEMENT_POLLING_LIMIT) ?? DEFAULT_STATEMENT_POLLING_LIMIT,
+      nonterminal_polling_concurrency: STATEMENT_POLLING_CONCURRENCY.value,
+      nonterminal_polling_frequency: STATEMENT_POLLING_FREQUENCY_SECONDS.value,
+      nonterminal_statements_to_poll: STATEMENT_POLLING_LIMIT.value,
     });
   }
 }
