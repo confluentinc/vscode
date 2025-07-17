@@ -19,6 +19,8 @@ All notable changes to this extension will be documented in this file.
   and hardening of CCloud authentication flow
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
+- "New Connection Created" notifications are now non-modal and include an "Edit" button for quick
+  access to connection configuration
 - Saving the sidecar logs will now prompt the user to save either the raw (JSON) logs or the
   formatted logs (same format as the "Confluent (Sidecar)" output channel).
 - Saving the support .zip will now also include the formatted sidecar logs, in addition to the raw
