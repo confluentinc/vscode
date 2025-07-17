@@ -105,5 +105,7 @@ export async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, typ
     `Could not find a matching editor language for "${type}". Try again after installing [an extension that supports "${preferredLanguage}"](${marketplaceUrl}).`,
   );
 
-  logger.warn("Could not find a matching language for schema ${schema.subject}");
+  logger.warn(
+    `Could not find a matching language for ${type}, using the first one: ${preferredLanguage}`,
+  );
 }
