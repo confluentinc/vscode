@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.5.0
+
 ### Added
 
 - On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
@@ -13,9 +15,12 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- Updated ide-sidecar version to v0.216.0
+- Updated ide-sidecar version to v0.224.0 to include support for `snappy`-compressed topic messages
+  and hardening of CCloud authentication flow
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
+- "New Connection Created" notifications are now non-modal and include an "Edit" button for quick
+  access to connection configuration
 - Saving the sidecar logs will now prompt the user to save either the raw (JSON) logs or the
   formatted logs (same format as the "Confluent (Sidecar)" output channel).
 - Saving the support .zip will now also include the formatted sidecar logs, in addition to the raw
