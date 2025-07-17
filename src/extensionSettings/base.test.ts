@@ -46,7 +46,7 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
       const setting = new ExtensionSetting("test.setting.id");
 
       assert.strictEqual(setting.id, "test.setting.id");
-      assert.strictEqual(setting.sectionTitle, SettingsSection.MAIN);
+      assert.strictEqual(setting.sectionTitle, SettingsSection.GENERAL);
     });
 
     it("should create an instance with a custom 'sectionTitle'", () => {
@@ -83,7 +83,7 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
     it("should return the correct default value for an existing setting", () => {
       const setting = new ExtensionSetting(
         "confluent.showNewVersionNotifications",
-        SettingsSection.MAIN,
+        SettingsSection.GENERAL,
       );
 
       const defaultValue = setting.defaultValue;
