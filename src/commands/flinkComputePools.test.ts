@@ -54,13 +54,13 @@ describe("configureFlinkDefaults command", () => {
 
     sinon.assert.calledWithExactly(
       updateStub,
-      FLINK_CONFIG_COMPUTE_POOL,
+      FLINK_CONFIG_COMPUTE_POOL.id,
       TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
       true,
     );
     sinon.assert.calledWithExactly(
       updateStub,
-      FLINK_CONFIG_DATABASE,
+      FLINK_CONFIG_DATABASE.id,
       TEST_CCLOUD_KAFKA_CLUSTER.id,
       true,
     );

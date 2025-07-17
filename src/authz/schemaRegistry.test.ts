@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window, workspace } from "vscode";
+import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -19,7 +20,7 @@ import * as schemaRegistry from "./schemaRegistry";
 describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;
   let mockClient: sinon.SinonStubbedInstance<SubjectsV1Api>;
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
   beforeEach(async function () {
@@ -34,9 +35,8 @@ describe("authz.schemaRegistry", function () {
     mockSidecarHandle.getSubjectsV1Api.returns(mockClient);
     // stub the getSidecar function to return the mock sidecar handle
     sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
-    // mock the workspace configuration until we can solve this in the test runner:
-    // "Unable to write to Workspace Settings because no workspace is opened. Please open a workspace first and try again.: CodeExpectedError: Unable to write to Workspace Settings because no workspace is opened. Please open a workspace first and try again."
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
 
     ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
     // By default, set the ccloudLoader to return the TEST_CCLOUD_SCHEMA_REGISTRY for its environmentId
@@ -140,10 +140,7 @@ describe("authz.schemaRegistry", function () {
 
   // showNoSchemaAccessWarningNotification() tests
   it("showNoSchemaAccessWarningNotification() should show warning if warnings are enabled", function () {
-    const mockConfig = {
-      get: sandbox.stub().withArgs(SCHEMA_RBAC_WARNINGS_ENABLED).returns(true),
-    };
-    getConfigurationStub.returns(mockConfig);
+    stubbedConfigs.get.withArgs(SCHEMA_RBAC_WARNINGS_ENABLED.id).returns(true);
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
@@ -151,10 +148,7 @@ describe("authz.schemaRegistry", function () {
   });
 
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
-    const mockConfig = {
-      get: sandbox.stub().withArgs(SCHEMA_RBAC_WARNINGS_ENABLED).returns(false),
-    };
-    getConfigurationStub.returns(mockConfig);
+    stubbedConfigs.get.withArgs(SCHEMA_RBAC_WARNINGS_ENABLED.id).returns(false);
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();

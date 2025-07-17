@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { commands, window, workspace } from "vscode";
+import { commands, window } from "vscode";
 import { getStubbedLocalResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import { TEST_LOCAL_SUBJECT } from "../../../tests/unit/testResources/schema";
 import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
@@ -117,7 +118,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
     sinon.assert.calledWithExactly(
       executeCommandStub,
       "workbench.action.openSettings",
-      `@id:${USE_TOPIC_NAME_STRATEGY}`,
+      `@id:${USE_TOPIC_NAME_STRATEGY.id}`,
     );
   });
 
@@ -209,21 +210,12 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameForStrategy()", () =>
 
 describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
   let sandbox: sinon.SinonSandbox;
-
-  let getConfigurationStub: sinon.SinonStub;
-
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let subjectNameStrategyQuickPickStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    // vscode stubs
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub(),
-    });
-
-    // quickpick stubs
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     subjectNameStrategyQuickPickStub = sandbox.stub(
       schemaQuickPicks,
       "subjectNameStrategyQuickPick",
@@ -234,11 +226,9 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
     sandbox.restore();
   });
 
-  it(`should return ${SubjectNameStrategy.TOPIC_NAME} strategy when "${USE_TOPIC_NAME_STRATEGY}" is enabled`, async () => {
+  it(`should return ${SubjectNameStrategy.TOPIC_NAME} strategy when "${USE_TOPIC_NAME_STRATEGY.id}" is enabled`, async () => {
     // `useTopicNameStrategy` enabled
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(USE_TOPIC_NAME_STRATEGY).returns(true),
-    });
+    stubbedConfigs.get.withArgs(USE_TOPIC_NAME_STRATEGY.id).returns(true);
 
     const result = await getSubjectNameStrategy(TEST_LOCAL_KAFKA_TOPIC, "key");
 
@@ -246,11 +236,9 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
     sinon.assert.notCalled(subjectNameStrategyQuickPickStub);
   });
 
-  it(`should prompt for strategy when "${USE_TOPIC_NAME_STRATEGY}" is disabled`, async () => {
+  it(`should prompt for strategy when "${USE_TOPIC_NAME_STRATEGY.id}" is disabled`, async () => {
     // `useTopicNameStrategy` disabled
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(USE_TOPIC_NAME_STRATEGY).returns(false),
-    });
+    stubbedConfigs.get.withArgs(USE_TOPIC_NAME_STRATEGY.id).returns(false);
     subjectNameStrategyQuickPickStub.resolves(SubjectNameStrategy.RECORD_NAME);
 
     const result = await getSubjectNameStrategy(TEST_LOCAL_KAFKA_TOPIC, "key");
@@ -265,9 +253,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
 
   it("should return `undefined` when subjectNameStrategyQuickPick returns undefined", async () => {
     // `useTopicNameStrategy` disabled
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(USE_TOPIC_NAME_STRATEGY).returns(false),
-    });
+    stubbedConfigs.get.withArgs(USE_TOPIC_NAME_STRATEGY.id).returns(false);
     subjectNameStrategyQuickPickStub.resolves(undefined);
 
     const result = await getSubjectNameStrategy(TEST_LOCAL_KAFKA_TOPIC, "key");

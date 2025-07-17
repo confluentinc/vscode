@@ -2,21 +2,18 @@ import * as assert from "assert";
 import { normalize } from "path";
 import sinon from "sinon";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
-import { window, workspace } from "vscode";
+import { window } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { ResponseError, SystemApi } from "../clients/docker";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as configs from "./configs";
 
 describe("docker/configs functions", function () {
   let sandbox: sinon.SinonSandbox;
-
-  // vscode stubs
   let showErrorMessageStub: sinon.SinonStub;
-  let getConfigurationStub: sinon.SinonStub;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
-
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
   });
 
@@ -41,15 +38,14 @@ describe("docker/configs functions", function () {
   });
 
   it("getSocketPath() should return socket path from user settings", function () {
-    const getConfigStub = sandbox.stub(workspace, "getConfiguration").returns({
-      get: sandbox.stub().withArgs(LOCAL_DOCKER_SOCKET_PATH).returns("/custom/path/docker.sock"),
-    } as any);
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.get.withArgs(LOCAL_DOCKER_SOCKET_PATH.id).returns("/custom/path/docker.sock");
 
     const path: string = configs.getSocketPath();
 
     // normalized to adjust slashes for Windows vs Unix
     assert.strictEqual(path, normalize("/custom/path/docker.sock"));
-    assert.ok(getConfigStub.calledOnce);
+    sinon.assert.calledOnce(stubbedConfigs.get);
   });
 
   it("defaultRequestInit() should set the dispatcher as an Agent", async function () {
@@ -109,10 +105,8 @@ describe("docker/configs functions", function () {
 
   it("showDockerUnavailableErrorNotification() should show a canned response when dealing with non-ResponseErrors", async () => {
     // assume "http.fetchAdditionalSupport" is disabled by default
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs("http.fetchAdditionalSupport").returns(false),
-    });
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.get.withArgs("http.fetchAdditionalSupport").returns(false);
 
     const error = new Error("connect ENOENT /var/run/docker.sock");
     await configs.showDockerUnavailableErrorNotification(error);
@@ -129,10 +123,8 @@ describe("docker/configs functions", function () {
   // TODO(shoup): remove this once we have a better way to handle the behavior described in
   //   https://github.com/confluentinc/vscode/issues/751
   it("showDockerUnavailableErrorNotification() should suggest toggling the http.fetchAdditionalSupport setting if it's enabled when dealing with non-ResponseErrors", async () => {
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs("http.fetchAdditionalSupport").returns(true),
-    });
+    const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.get.withArgs("http.fetchAdditionalSupport").returns(true);
 
     const error = new Error("ECONNREFUSED: fetch failed, AggregateError");
     await configs.showDockerUnavailableErrorNotification(error);
