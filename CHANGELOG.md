@@ -20,7 +20,7 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Updated ide-sidecar version to v0.224.0 to include support for `snappy`-compressed topic messages
-  and hardening of CCloud authentication flow
+  and additional hardening of the CCloud authentication flow
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
 - "New Connection Created" notifications are now non-modal and include an "Edit" button for quick
@@ -39,6 +39,12 @@ All notable changes to this extension will be documented in this file.
   schema to a Schema Registry.([#2175](https://github.com/confluentinc/vscode/issues/2175))
 - Fixed an issue where CCloud authenticated sessions wouldn't show the correct notification when the
   session expires. ([#1098](https://github.com/confluentinc/vscode/issues/1098))
+
+## 1.4.3
+
+### Fixed
+
+- Sidecar version update to harden the Confluent Cloud authentication flow.
 
 ## 1.4.2
 
