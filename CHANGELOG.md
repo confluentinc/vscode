@@ -15,7 +15,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- Updated ide-sidecar version to v0.216.0
+- Updated ide-sidecar version to v0.224.0 to include support for `snappy`-compressed topic messages
+  and hardening of CCloud authentication flow
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
 - Saving the sidecar logs will now prompt the user to save either the raw (JSON) logs or the
