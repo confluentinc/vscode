@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { InputBoxValidationMessage, InputBoxValidationSeverity, window, workspace } from "vscode";
+import { InputBoxValidationMessage, InputBoxValidationSeverity, window } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import {
   TEST_BROKER_CONFIGS,
   TEST_CANCELLATION_TOKEN,
@@ -34,7 +35,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   // vscode stubs
   let showInputBoxStub: sinon.SinonStub;
   let showErrorMessageStub: sinon.SinonStub;
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   // docker/containers.ts+networks.ts wrapper function stubs
   let createContainerStub: sinon.SinonStub;
@@ -60,10 +61,10 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     showInputBoxStub = sandbox.stub(window, "showInputBox").resolves("1");
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
-    // this should probably live in a separate test helper file
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_DOCKER_SOCKET_PATH).returns(DEFAULT_UNIX_SOCKET_PATH),
+
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs.configure({
+      [LOCAL_DOCKER_SOCKET_PATH.id]: DEFAULT_UNIX_SOCKET_PATH,
     });
 
     // assume no running containers matching this workflow image for most tests
@@ -106,9 +107,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
   it("start() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
-    });
+    stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag);
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
@@ -218,9 +217,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
   it("stop() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
-    });
+    stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag);
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 

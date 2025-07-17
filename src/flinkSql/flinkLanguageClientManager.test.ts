@@ -72,8 +72,8 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("");
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL.id).returns("");
+      configMock.get.withArgs(FLINK_CONFIG_DATABASE.id).returns("");
       configStub.returns(configMock);
 
       const result = await flinkManager.validateFlinkSettings(null);
@@ -85,7 +85,7 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("invalid-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL.id).returns("invalid-pool-id");
       configStub.returns(configMock);
 
       const result = await flinkManager.validateFlinkSettings("invalid-pool-id");
@@ -97,7 +97,9 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
+      configMock.get
+        .withArgs(FLINK_CONFIG_COMPUTE_POOL.id)
+        .returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       configStub.returns(configMock);
 
       const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
@@ -110,7 +112,9 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
+      configMock.get
+        .withArgs(FLINK_CONFIG_COMPUTE_POOL.id)
+        .returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       configStub.returns(configMock);
 
       const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
@@ -141,8 +145,8 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("config-pool-id");
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("config-db-id");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL.id).returns("config-pool-id");
+      configMock.get.withArgs(FLINK_CONFIG_DATABASE.id).returns("config-db-id");
       configStub.returns(configMock);
       resourceManagerStub.getUriMetadata.resolves(undefined);
 
@@ -160,8 +164,10 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("test-db");
+      configMock.get
+        .withArgs(FLINK_CONFIG_COMPUTE_POOL.id)
+        .returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
+      configMock.get.withArgs(FLINK_CONFIG_DATABASE.id).returns("test-db");
       configStub.returns(configMock);
 
       // Mock the getCatalogDatabaseFromMetadata function to return catalog and database names
@@ -184,8 +190,8 @@ describe("FlinkLanguageClientManager", () => {
       const configMock = {
         get: sandbox.stub(),
       };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("config-pool");
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("config-db");
+      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL.id).returns("config-pool");
+      configMock.get.withArgs(FLINK_CONFIG_DATABASE.id).returns("config-db");
       configStub.returns(configMock);
 
       resourceManagerStub.getUriMetadata.resolves({
