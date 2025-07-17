@@ -746,7 +746,7 @@
     ],
     "configuration": [
       {
-        "title": "Confluent",
+        "title": "General",
         "properties": {
           "confluent.debugging.showSidecarExceptions": {
             "type": "boolean",
