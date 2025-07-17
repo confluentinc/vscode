@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Uri, window, workspace, WorkspaceConfiguration } from "vscode";
+import { Uri, window } from "vscode";
 import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
@@ -158,44 +159,41 @@ Sign out from this extension?`,
   });
 
   describe("addSSLPemPathCommand()", function () {
-    let getConfigStub: sinon.SinonStub;
-    let updateConfigStub: sinon.SinonStub;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
     let showOpenDialogStub: sinon.SinonStub;
 
     beforeEach(function () {
-      getConfigStub = sandbox.stub().returns([]);
-      updateConfigStub = sandbox.stub().resolves();
-      sandbox.stub(workspace, "getConfiguration").returns({
-        get: getConfigStub,
-        update: updateConfigStub,
-        has: sandbox.stub(),
-        inspect: sandbox.stub(),
-      } as unknown as WorkspaceConfiguration);
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
 
       showOpenDialogStub = sandbox.stub(window, "showOpenDialog").resolves([]);
     });
 
-    it(`should show a file open dialog and update the "${SSL_PEM_PATHS}" setting if a valid .pem file is selected`, async function () {
+    it(`should show a file open dialog and update the "${SSL_PEM_PATHS.id}" setting if a valid .pem file is selected`, async function () {
       const uri = { fsPath: "path/to/file.pem" } as Uri;
       showOpenDialogStub.resolves([uri]);
 
       await connections.addSSLPemPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.calledOnce(updateConfigStub);
-      sinon.assert.calledOnceWithExactly(updateConfigStub, SSL_PEM_PATHS, [uri.fsPath], true);
+      sinon.assert.calledOnce(stubbedConfigs.update);
+      sinon.assert.calledOnceWithExactly(
+        stubbedConfigs.update,
+        SSL_PEM_PATHS.id,
+        [uri.fsPath],
+        true,
+      );
     });
 
-    it(`should not update the "${SSL_PEM_PATHS}" setting if no file is selected`, async function () {
+    it(`should not update the "${SSL_PEM_PATHS.id}" setting if no file is selected`, async function () {
       showOpenDialogStub.resolves([]);
 
       await connections.addSSLPemPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.notCalled(updateConfigStub);
+      sinon.assert.notCalled(stubbedConfigs.update);
     });
 
-    it(`should not update the "${SSL_PEM_PATHS}" setting if an invalid file type is selected`, async function () {
+    it(`should not update the "${SSL_PEM_PATHS.id}" setting if an invalid file type is selected`, async function () {
       // shouldn't be possible from the command since we set a file extension filter, but just in case
       const uri = { fsPath: "path/to/file.txt" } as Uri;
       showOpenDialogStub.resolves([uri]);
@@ -203,21 +201,21 @@ Sign out from this extension?`,
       await connections.addSSLPemPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.notCalled(updateConfigStub);
+      sinon.assert.notCalled(stubbedConfigs.update);
     });
 
-    it(`should add paths to existing paths in the "${SSL_PEM_PATHS}" setting`, async function () {
+    it(`should add paths to existing paths in the "${SSL_PEM_PATHS.id}" setting`, async function () {
       const uri = { fsPath: "path/to/file.pem" } as Uri;
       showOpenDialogStub.resolves([uri]);
-      getConfigStub.withArgs(SSL_PEM_PATHS).returns(["existing/path.pem"]);
+      stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id).returns(["existing/path.pem"]);
 
       await connections.addSSLPemPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.calledOnce(updateConfigStub);
+      sinon.assert.calledOnce(stubbedConfigs.update);
       sinon.assert.calledOnceWithExactly(
-        updateConfigStub,
-        SSL_PEM_PATHS,
+        stubbedConfigs.update,
+        SSL_PEM_PATHS.id,
         ["existing/path.pem", uri.fsPath],
         true,
       );
@@ -612,19 +610,13 @@ Sign out from this extension?`,
   });
 
   describe("setKrb5ConfigPathCommand()", function () {
-    let updateConfigStub: sinon.SinonStub;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
     let showOpenDialogStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
     let showErrorMessageStub: sinon.SinonStub;
 
     beforeEach(function () {
-      updateConfigStub = sandbox.stub().resolves();
-      sandbox.stub(workspace, "getConfiguration").returns({
-        get: sandbox.stub(),
-        update: updateConfigStub,
-        has: sandbox.stub(),
-        inspect: sandbox.stub(),
-      } as unknown as WorkspaceConfiguration);
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
       showOpenDialogStub = sandbox.stub(window, "showOpenDialog").resolves([]);
       showInformationMessageStub = sandbox.stub(window, "showInformationMessage");
       showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
@@ -636,20 +628,20 @@ Sign out from this extension?`,
       await connections.setKrb5ConfigPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.notCalled(updateConfigStub);
+      sinon.assert.notCalled(stubbedConfigs.update);
     });
 
-    it(`should update the "${KRB5_CONFIG_PATH}" setting for valid .conf file`, async function () {
+    it(`should update the "${KRB5_CONFIG_PATH.id}" setting for valid .conf file`, async function () {
       const fakeFileUri = { fsPath: "/path/to/krb5.conf" } as Uri;
       showOpenDialogStub.resolves([fakeFileUri]);
 
       await connections.setKrb5ConfigPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.calledOnce(updateConfigStub);
+      sinon.assert.calledOnce(stubbedConfigs.update);
       sinon.assert.calledOnceWithExactly(
-        updateConfigStub,
-        KRB5_CONFIG_PATH,
+        stubbedConfigs.update,
+        KRB5_CONFIG_PATH.id,
         fakeFileUri.fsPath,
         true,
       );
@@ -666,7 +658,7 @@ Sign out from this extension?`,
       await connections.setKrb5ConfigPathCommand();
 
       sinon.assert.calledOnce(showOpenDialogStub);
-      sinon.assert.notCalled(updateConfigStub);
+      sinon.assert.notCalled(stubbedConfigs.update);
       sinon.assert.calledOnceWithExactly(
         showErrorMessageStub,
         "No file selected. Please select a krb5.conf file.",
@@ -675,30 +667,22 @@ Sign out from this extension?`,
   });
 
   describe("getSSLPemPaths()", function () {
-    let getConfigStub: sinon.SinonStub;
-    let updateConfigStub: sinon.SinonStub;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
 
     beforeEach(function () {
-      getConfigStub = sandbox.stub().returns([]);
-      updateConfigStub = sandbox.stub().resolves();
-      sandbox.stub(workspace, "getConfiguration").returns({
-        get: getConfigStub,
-        update: updateConfigStub,
-        has: sandbox.stub(),
-        inspect: sandbox.stub(),
-      } as unknown as WorkspaceConfiguration);
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     });
 
-    it(`should return paths if they exists in the "${SSL_PEM_PATHS}" setting`, function () {
-      getConfigStub.withArgs(SSL_PEM_PATHS, []).returns(["path/to/file.pem"]);
+    it(`should return paths if they exists in the "${SSL_PEM_PATHS.id}" setting`, function () {
+      stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id, []).returns(["path/to/file.pem"]);
 
       const result = connections.getSSLPemPaths();
 
       assert.deepStrictEqual(result, ["path/to/file.pem"]);
     });
 
-    it(`should return an empty array if the value of the "${SSL_PEM_PATHS}" setting is empty`, function () {
-      getConfigStub.withArgs(SSL_PEM_PATHS, []).returns([]);
+    it(`should return an empty array if the value of the "${SSL_PEM_PATHS.id}" setting is empty`, function () {
+      stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id, []).returns([]);
 
       const result = connections.getSSLPemPaths();
 
@@ -706,7 +690,9 @@ Sign out from this extension?`,
     });
 
     it("should only return valid .pem paths and not other string values", function () {
-      getConfigStub.withArgs(SSL_PEM_PATHS, []).returns(["path/to/file.pem", "invalid/path", ""]);
+      stubbedConfigs.get
+        .withArgs(SSL_PEM_PATHS.id, [])
+        .returns(["path/to/file.pem", "invalid/path", ""]);
 
       const result = connections.getSSLPemPaths();
 
