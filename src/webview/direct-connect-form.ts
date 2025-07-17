@@ -275,6 +275,14 @@ class DirectConnectFormViewModel extends ViewModel {
       return;
     }
 
+    if (
+      data["formconnectiontype"] === "WarpStream" &&
+      data["kafka_cluster.auth_type"] === "SCRAM"
+    ) {
+      // Enforce SCRAM_SHA_512 for WarpStream in the data; that's all WarpStream supports
+      data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
+    }
+
     if (data["formconnectiontype"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.ssl.enabled"] = "true";
