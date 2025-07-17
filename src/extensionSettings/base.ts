@@ -15,7 +15,7 @@ const CONFIGURATION: ExtensionConfigurations[] =
 
 /** Each "title" section under `contributes.configuration` in package.json */
 export enum SettingsSection {
-  MAIN = "Confluent",
+  GENERAL = "General",
   CCLOUD = "Confluent Cloud",
   LOCAL = "Local",
   DIRECT_CONNECTIONS = "Connections",
@@ -33,7 +33,7 @@ export class ExtensionSetting<T> {
      */
     public readonly id: string,
     /** The title of the section this setting belongs to. */
-    public readonly sectionTitle: SettingsSection = SettingsSection.MAIN,
+    public readonly sectionTitle: SettingsSection = SettingsSection.GENERAL,
   ) {}
 
   /** Get the configuration section for this setting based on its title. */
