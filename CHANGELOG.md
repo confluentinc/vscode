@@ -4,18 +4,27 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.5.0
+
 ### Added
 
+- Language client support (diagnostics, auto-completion) for Flink SQL documents is now enabled by
+  default under the `confluent.flink.enableConfluentCloudLanguageServer` setting.
 - On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
 - Any sidecar error logs will now include exception data in the "Confluent (Sidecar)" output
   channel, as well as the file saved from the "Save Sidecar Logs" or "Save Support File (.zip)"
   commands.
+- "Copy Subject" context menu action for schema subjects in the Topics and Schemas views, allowing
+  users to easily copy the subject name to the clipboard.
 
 ### Changed
 
-- Updated ide-sidecar version to v0.216.0
+- Updated ide-sidecar version to v0.224.0 to include support for `snappy`-compressed topic messages
+  and hardening of CCloud authentication flow
 - Simplified subject and/or schema version hard deletion flow to include a warning dialog instead of
   requiring the word `hard` to be typed.
+- "New Connection Created" notifications are now non-modal and include an "Edit" button for quick
+  access to connection configuration
 - Saving the sidecar logs will now prompt the user to save either the raw (JSON) logs or the
   formatted logs (same format as the "Confluent (Sidecar)" output channel).
 - Saving the support .zip will now also include the formatted sidecar logs, in addition to the raw
@@ -23,6 +32,13 @@ All notable changes to this extension will be documented in this file.
 - Dropped the minimum required version of VS Code from
   [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to
   [`1.96.2`](https://code.visualstudio.com/updates/v1_96) to support VS Code forks.
+
+## Fixed
+
+- Fixed an issue that prevented schema files from being listed in the quickpick when uploading a
+  schema to a Schema Registry.([#2175](https://github.com/confluentinc/vscode/issues/2175))
+- Fixed an issue where CCloud authenticated sessions wouldn't show the correct notification when the
+  session expires. ([#1098](https://github.com/confluentinc/vscode/issues/1098))
 
 ## 1.4.2
 
