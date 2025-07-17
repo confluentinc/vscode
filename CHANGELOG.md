@@ -8,10 +8,14 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- Language client support (diagnostics, auto-completion) for Flink SQL documents is now enabled by
+  default under the `confluent.flink.enableConfluentCloudLanguageServer` setting.
 - On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
 - Any sidecar error logs will now include exception data in the "Confluent (Sidecar)" output
   channel, as well as the file saved from the "Save Sidecar Logs" or "Save Support File (.zip)"
   commands.
+- "Copy Subject" context menu action for schema subjects in the Topics and Schemas views, allowing
+  users to easily copy the subject name to the clipboard.
 
 ### Changed
 
@@ -28,6 +32,13 @@ All notable changes to this extension will be documented in this file.
 - Dropped the minimum required version of VS Code from
   [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to
   [`1.96.2`](https://code.visualstudio.com/updates/v1_96) to support VS Code forks.
+
+## Fixed
+
+- Fixed an issue that prevented schema files from being listed in the quickpick when uploading a
+  schema to a Schema Registry.([#2175](https://github.com/confluentinc/vscode/issues/2175))
+- Fixed an issue where CCloud authenticated sessions wouldn't show the correct notification when the
+  session expires. ([#1098](https://github.com/confluentinc/vscode/issues/1098))
 
 ## 1.4.2
 
