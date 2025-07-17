@@ -1,13 +1,17 @@
-import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/sidecar";
-import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
+import {
+  fetchSchemaBody,
+  loadOrCreateSchemaViewer,
+  SCHEMA_URI_SCHEME,
+  setEditorLanguageForSchema,
+} from "../documentProviders/schema";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
 import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema";
+import { Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
@@ -15,26 +19,36 @@ import {
   showErrorNotificationWithButtons,
 } from "../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
+import { uriQuickpick } from "../quickpicks/uris";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
-import { fileUriExists } from "../utils/file";
+import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 import {
   confirmSchemaSubjectDeletion,
   confirmSchemaVersionDeletion,
   hardDeletionQuickPick,
   showHardDeleteWarningModal,
-} from "./utils/schemas";
+} from "./utils/schemaManagement/deletion";
+import {
+  CannotLoadSchemasError,
+  chooseSubject,
+  determineDraftSchemaUri,
+  determineLatestSchema,
+  determineSchemaType,
+  documentHasErrors,
+  getLatestSchemasForTopic,
+  uploadSchema,
+} from "./utils/schemaManagement/upload";
 
 const logger = new Logger("commands.schemas");
 
 export function registerSchemaCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
-    registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFile),
+    registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFileCommand),
     registerCommandWithLogging(
       "confluent.schemas.uploadForSubject",
-      uploadSchemaForSubjectFromfile,
+      uploadSchemaForSubjectFromFileCommand,
     ),
     registerCommandWithLogging("confluent.schemas.evolveSchemaSubject", evolveSchemaSubjectCommand),
     registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
@@ -43,8 +57,11 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       "confluent.schemaViewer.viewLatestLocally",
       viewLatestLocallyCommand,
     ),
-    registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
-    registerCommandWithLogging("confluent.schemas.copySubject", copySubject),
+    registerCommandWithLogging(
+      "confluent.schemas.copySchemaRegistryId",
+      copySchemaRegistryIdCommand,
+    ),
+    registerCommandWithLogging("confluent.schemas.copySubject", copySubjectCommand),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
     registerCommandWithLogging(
       "confluent.schemas.diffMostRecentVersions",
@@ -76,7 +93,7 @@ async function viewLocallyCommand(schema: Schema) {
 }
 
 /** Copy the Schema Registry ID from the Schemas tree provider nav action. */
-async function copySchemaRegistryId() {
+async function copySchemaRegistryIdCommand() {
   const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   if (!schemaRegistry) {
     return;
@@ -85,7 +102,7 @@ async function copySchemaRegistryId() {
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
 }
 
-export async function copySubject(subject: Subject) {
+export async function copySubjectCommand(subject: Subject) {
   if (!subject || typeof subject.name !== "string") {
     return;
   }
@@ -174,29 +191,6 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
 async function viewLatestLocallyCommand(subject: Subject) {
   const schema: Schema = await determineLatestSchema("viewLatestLocallyCommand", subject);
   await viewLocallyCommand(schema);
-}
-
-/**
- * Get the latest schema from a subject, possibly fetching from the schema registry if needed.
- * @param subjectish
- * @returns
- */
-export async function determineLatestSchema(callpoint: string, subject: Subject): Promise<Schema> {
-  if (!(subject instanceof Subject)) {
-    const msg = `${callpoint} called with invalid argument type`;
-    logger.error(msg, subject);
-    throw new Error(msg);
-  }
-
-  if (subject.schemas) {
-    // Is already carrying schemas (as from when the subject coming from topics view)
-    return subject.schemas[0];
-  } else {
-    // Must promote the subject to its subject group, then get the first (latest) schema.
-    const loader = ResourceLoader.getInstance(subject.connectionId);
-    const schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
-    return schemaGroup[0];
-  }
 }
 
 /**
@@ -531,109 +525,86 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
 }
 
 /**
- * Return a URI for a draft schema file that does not exist in the filesystem corresponding to a draft
- * next version of the given schema. The URI will have an untitled scheme and the schema data encoded
- * in the query string for future reference.
- **/
-async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
-  const activeEditor = vscode.window.activeTextEditor;
-  const activeDir = activeEditor?.document.uri.fsPath;
-  const baseDir = activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || homedir();
-
-  // Now loop through draft file:// uris until we find one that doesn't exist.,
-  let chosenFileUri: vscode.Uri | null = null;
-  let draftNumber = -1;
-  while (!chosenFileUri || (await fileUriExists(chosenFileUri))) {
-    draftNumber += 1;
-    const draftFileName = schema.nextVersionDraftFileName(draftNumber);
-    chosenFileUri = vscode.Uri.parse("file://" + `${baseDir}/${draftFileName}`);
-
-    if (draftNumber > 15) {
-      throw new Error(
-        `Could not find a draft file URI that does not exist in the filesystem after 15 tries.`,
-      );
-    }
+ * Wrapper around {@linkcode uploadSchemaFromFileCommand}, triggered from:
+ *  1. A Subject from the Schemas view
+ *  2. On one of a topic's subjects in the Topics view
+ */
+async function uploadSchemaForSubjectFromFileCommand(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    throw new Error("uploadSchemaForSubjectFromfile called with invalid argument type");
   }
-
-  // Now respell to be unknown scheme and add the schema data to the query string,
-  // will become the default schema data for the upload schema command.
-  return vscode.Uri.from({
-    ...chosenFileUri,
-    scheme: "untitled",
-    query: encodeURIComponent(JSON.stringify(schema)),
-  });
+  const loader = ResourceLoader.getInstance(subject.connectionId);
+  const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
+  await uploadSchemaFromFileCommand(registry, subject.name);
 }
 
 /**
- * Convert a {@link Schema} to a URI and render via the {@link SchemaDocumentProvider} as a read-
- * only document in a new editor tab.
+ * Command backing "Upload a new schema" action, triggered either from a Schema Registry item in the
+ * Resources view or the nav action in the Schemas view (with a Schema Registry selected).
+ *
+ * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
+ * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
-async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEditor> {
-  const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
-  const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
-
-  await setEditorLanguageForSchema(textDoc, schema.type);
-
-  return textDoc;
-}
-
-/**
- * Possibly set the language of the editor's document based on the schema.
- * Depends on what languages the user has installed.
- */
-async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: SchemaType) {
-  const installedLanguages = await vscode.languages.getLanguages();
-
-  const languageTypes = getLanguageTypes(type);
-
-  for (const language of languageTypes) {
-    if (installedLanguages.indexOf(language) !== -1) {
-      vscode.languages.setTextDocumentLanguage(textDoc.document, language);
-      logger.debug(`Set document language to "${language}"`);
-      return;
-    } else {
-      logger.warn(`Language ${language} not installed type ${type}`);
-    }
-  }
-
-  const preferredLanguage = languageTypes[0];
-  const marketplaceUrl = `https://marketplace.visualstudio.com/search?term=${preferredLanguage}&target=VSCode&category=All%20categories&sortBy=Relevance`;
-  vscode.window.showWarningMessage(
-    `Could not find a matching editor language for "${type}". Try again after installing [an extension that supports "${preferredLanguage}"](${marketplaceUrl}).`,
+export async function uploadSchemaFromFileCommand(
+  registry?: SchemaRegistry,
+  subjectString?: string,
+) {
+  // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
+  // editor languages, and file extensions
+  const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
+  const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json"];
+  const fileFilters = {
+    "Schema files": ["avsc", "avro", "json", "proto"],
+  };
+  const schemaUri: vscode.Uri | undefined = await uriQuickpick(
+    uriSchemes,
+    languageIds,
+    fileFilters,
   );
-
-  logger.warn("Could not find a matching language for schema ${schema.subject}");
-}
-
-/**
- * Get the highest versioned schema(s) related to a single topic from the schema registry.
- * May return two schemas if the topic has both key and value schemas.
- */
-export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
-  if (!topic.hasSchema) {
-    throw new Error(`Asked to get schemas for topic "${topic.name}" believed to not have schemas.`);
+  if (!schemaUri) {
+    return;
   }
 
-  const loader = ResourceLoader.getInstance(topic.connectionId);
-
-  const topicSchemaGroups = await loader.getTopicSubjectGroups(topic);
-
-  if (topicSchemaGroups.length === 0) {
-    throw new CannotLoadSchemasError(`Topic "${topic.name}" has no related schemas in registry.`);
+  // If the document has (locally marked) errors, don't proceed.
+  if (await documentHasErrors(schemaUri)) {
+    // (error notification shown in the above function, no need to do anything else here)
+    logger.error("Document has errors, aborting schema upload");
+    return;
   }
 
-  // Return array of the highest versioned schemas. They
-  // will be the first schema in each subject group per return contract
-  // of getTopicSubjectGroups().
-  return topicSchemaGroups.map((sg) => sg.schemas![0]);
-}
+  const docContent: LoadedDocumentContent = await getEditorOrFileContents(schemaUri);
 
-/**
- * Raised when unexpectedly could not load schema(s) for a topic we previously believed
- * had related schemas. Message will be informative and user-facing.
- */
-export class CannotLoadSchemasError extends Error {
-  constructor(message: string) {
-    super(message);
+  // What kind of schema is this? We must tell the schema registry.
+  const schemaType: SchemaType | undefined = await determineSchemaType(
+    schemaUri,
+    docContent.openDocument?.languageId,
+  );
+  if (!schemaType) {
+    // the only way we get here is if the user bailed on the schema type quickpick after we failed
+    // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
+    return;
   }
+
+  if (!(registry instanceof SchemaRegistry)) {
+    // the only way we get here is if the user clicked the action in the Schemas view nav area, so
+    // we need to get the focused schema registry
+    const schemaViewProvider = getSchemasViewProvider();
+    registry = schemaViewProvider.schemaRegistry!;
+  }
+  if (!registry) {
+    logger.error("Could not determine schema registry");
+    return;
+  }
+
+  subjectString = subjectString ? subjectString : await chooseSubject(registry);
+  if (!subjectString) {
+    logger.error("Could not determine schema subject");
+    return;
+  }
+
+  // TODO after #951: grab the subject group and / or the most recent schema binding
+  // to the subject to ensure is the right type. Error out if not. This error
+  // will be more clear than the one that the schema registry will give us.
+
+  await uploadSchema(registry, subjectString, schemaType, docContent.content);
 }
