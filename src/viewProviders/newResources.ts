@@ -215,16 +215,6 @@ export abstract class SingleEnvironmentConnectionRow<
     return this.environments[0].schemaRegistry as SRT | undefined;
   }
 
-  override async refresh(deepRefresh: boolean = false): Promise<void> {
-    await super.refresh(deepRefresh);
-    if (this.environments.length > 0) {
-      this.logger.debug("SingleEnvironmentConnectionRow children", {
-        kafkaCluster: this.kafkaCluster,
-        schemaRegistry: this.schemaRegistry,
-      });
-    }
-  }
-
   override get connected(): boolean {
     // connected if we have at least one environment AND that env
     // has either Kafka cluster or a Schema Registry visible.
@@ -235,13 +225,6 @@ export abstract class SingleEnvironmentConnectionRow<
   }
 
   getChildren(): (KCT | SRT)[] {
-    this.logger.debug(
-      "SingleEnvironmentConnectionRow getting children for single environment connection row",
-      {
-        environments: this.environments.length,
-      },
-    );
-
     if (this.environments.length === 0) {
       return [];
     }
@@ -250,20 +233,12 @@ export abstract class SingleEnvironmentConnectionRow<
 
     const children: (KCT | SRT)[] = [];
 
-    if (environment.kafkaClusters) {
-      this.logger.debug("Adding Kafka clusters to children", {
-        kafkaClusters: environment.kafkaClusters.length,
-      });
+    if (environment.kafkaClusters.length > 0) {
       children.push(...(environment.kafkaClusters as KCT[]));
     }
     if (environment.schemaRegistry) {
-      this.logger.debug("Adding Schema Registry to children");
       children.push(environment.schemaRegistry as SRT);
     }
-
-    this.logger.debug("Returning children", {
-      children: children.length,
-    });
 
     return children;
   }
@@ -439,16 +414,6 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
     }
 
     await super.refresh(deepRefresh);
-
-    // If we have no environments, we are not connected.
-    if (this.environments.length === 0) {
-      this.logger.debug("No local environments found, not connected.");
-    } else {
-      this.logger.debug("Local environments refreshed", {
-        kafkaCluster: this.kafkaCluster === undefined ? "undefined" : this.kafkaCluster.name,
-        schemaRegistry: this.schemaRegistry === undefined ? "undefined" : this.schemaRegistry.name,
-      });
-    }
   }
 
   get status(): string {
