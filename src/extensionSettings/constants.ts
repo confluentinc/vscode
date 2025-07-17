@@ -7,18 +7,18 @@ export type NeverAskAlways = "never" | "ask" | "always";
 /** Whether to show an error notification on sidecar process exceptions (for debugging purposes). */
 export const SHOW_SIDECAR_EXCEPTIONS = new ExtensionSetting<boolean>(
   "confluent.debugging.showSidecarExceptions",
-  SettingsSection.MAIN,
+  SettingsSection.GENERAL,
 );
 /** Whether to use `TopicNameStrategy` by default for producing messages to a topic.
  * When disabled, will prompt the user to select a subject name strategy. */
 export const USE_TOPIC_NAME_STRATEGY = new ExtensionSetting<boolean>(
   "confluent.topic.produceMessages.schemas.useTopicNameStrategy",
-  SettingsSection.MAIN,
+  SettingsSection.GENERAL,
 );
 /** Whether to allow selecting older (than latest) schema versions when producing messages to a topic. */
 export const ALLOW_OLDER_SCHEMA_VERSIONS = new ExtensionSetting<boolean>(
   "confluent.topic.produceMessages.schemas.allowOlderVersions",
-  SettingsSection.MAIN,
+  SettingsSection.GENERAL,
 );
 /**
  * Whether or not to show notifications when the extension is first installed or updated to a new
@@ -27,7 +27,7 @@ export const ALLOW_OLDER_SCHEMA_VERSIONS = new ExtensionSetting<boolean>(
  */
 export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = new ExtensionSetting<boolean>(
   "confluent.showNewVersionNotifications",
-  SettingsSection.MAIN,
+  SettingsSection.GENERAL,
 );
 
 // ===== CCLOUD CONFIGS =====
