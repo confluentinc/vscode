@@ -73,7 +73,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   // Listen to changes in connections and close the form if the connection no longer exists
   // Only needed for edit/update forms, not for new connections
   let connectionChangesListener: Disposable | null = null;
-  if (action && connection) {
+  if (action === "update" && connection) {
     connectionChangesListener = directConnectionsChanged.event(async () => {
       await handleConnectionChange(connection, directConnectForm);
     });
