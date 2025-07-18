@@ -118,15 +118,15 @@
               id="kafka_cluster.auth_type"
               name="kafka_cluster.auth_type"
               data-on-input="this.updateValue(event)"
-              data-value="this.kafkaAuthType()"
               data-attr-disabled="this.editing() ? true : false"
             >
-              <option value="None" selected>None</option>
-              <option value="Basic">Username & Password (SASL/PLAIN)</option>
-              <option value="API">API Credentials (SASL/PLAIN)</option>
-              <option value="SCRAM">SASL/SCRAM</option>
-              <option value="OAuth">SASL/OAUTHBEARER</option>
-              <option value="Kerberos">Kerberos (SASL/GSSAPI)</option>
+              <template data-for="auth of this.getValidAuthTypes()">
+                <option
+                  data-attr-value="this.auth().value"
+                  data-text="this.auth().label"
+                  data-attr-selected="this.auth().value === this.kafkaAuthType()"
+                ></option>
+              </template>
             </select>
           </div>
           <div class="content-wrapper">
@@ -209,13 +209,15 @@
               id="schema_registry.auth_type"
               name="schema_registry.auth_type"
               data-on-input="this.updateValue(event)"
-              data-value="this.schemaAuthType()"
               data-attr-disabled="this.editing() ? true : false"
             >
-              <option value="None" selected>None</option>
-              <option value="Basic">Username & Password</option>
-              <option value="API">API Credentials</option>
-              <option value="OAuth">OAuth</option>
+              <template data-for="auth of this.getValidAuthTypes()">
+                <option
+                  data-attr-value="this.auth().value"
+                  data-text="this.auth().label"
+                  data-attr-selected="this.auth().value === this.schemaAuthType()"
+                ></option>
+              </template>
             </select>
           </div>
           <div class="content-wrapper">
