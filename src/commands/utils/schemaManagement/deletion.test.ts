@@ -16,12 +16,22 @@ import {
   getSchemaDeletionValidatorAndPlaceholder,
   getSubjectDeletionValidatorAndPlaceholder,
   hardDeletionQuickPick,
+  showHardDeleteWarningModal,
 } from "./deletion";
 
 describe("commands/utils/schemaManagement/deletion.ts", function () {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
   describe("getDeleteSchemaVersionPrompt()", function () {
-    it("single schema version tests", async function () {
-      // single version.
+    it("should handle a single schema version", async function () {
       const schemaGroup = [TEST_LOCAL_SCHEMA];
 
       for (const hardDeletion of [true, false]) {
@@ -35,9 +45,7 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
       }
     });
 
-    it("latest of multiple versions tests", async function () {
-      // multiple versions, deleting latest version
-
+    it("should handle the latest version of multiple versions", async function () {
       const toDelete: Schema = Schema.create({ ...TEST_LOCAL_SCHEMA, version: 2 });
       const schemaGroup = [toDelete, Schema.create({ ...TEST_LOCAL_SCHEMA, version: 1 })];
 
@@ -48,9 +56,7 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
       }
     });
 
-    it("not latest of multiple versions tests", async function () {
-      // multiple versions, deleting a non-latest version
-
+    it("should handle an earlier (not latest) version of multiple versions", async function () {
       const toDelete: Schema = Schema.create({ ...TEST_LOCAL_SCHEMA, version: 2 });
       const schemaGroup = [Schema.create({ ...TEST_LOCAL_SCHEMA, version: 3 }), toDelete];
 
@@ -63,7 +69,7 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
   });
 
   describe("getDeleteSchemaSubjectPrompt()", function () {
-    it("single schema version tests", function () {
+    it("should handle a single schema version", function () {
       // single version.
       const subject = TEST_CCLOUD_SUBJECT;
       for (const hardDeletion of [true, false]) {
@@ -73,7 +79,7 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
       }
     });
 
-    it("multiple schema version tests", function () {
+    it("should handle multiple schema versions", function () {
       // multiple versions.
       const subject = TEST_CCLOUD_SUBJECT;
       for (const hardDeletion of [true, false]) {
@@ -129,17 +135,47 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
     });
   });
 
+  describe("showHardDeleteWarningModal()", function () {
+    let showWarningMessageStub: sinon.SinonStub;
+
+    beforeEach(function () {
+      showWarningMessageStub = sandbox.stub(window, "showWarningMessage");
+    });
+
+    it("should return true when the user selects 'Yes, Hard Delete'", async function () {
+      showWarningMessageStub.resolves("Yes, Hard Delete");
+
+      const result = await showHardDeleteWarningModal("schema");
+
+      assert.strictEqual(result, true);
+      sinon.assert.calledOnceWithExactly(
+        showWarningMessageStub,
+        "WARNING: Hard deleting this schema is irreversible and may cause data loss. Are you sure you want to continue?",
+        { modal: true },
+        "Yes, Hard Delete",
+      );
+    });
+
+    it("should return false when the user cancels/dismisses the confirmation modal", async function () {
+      showWarningMessageStub.resolves(undefined);
+
+      const result = await showHardDeleteWarningModal("subject");
+
+      assert.strictEqual(result, false);
+      sinon.assert.calledOnceWithExactly(
+        showWarningMessageStub,
+        "WARNING: Hard deleting this subject is irreversible and may cause data loss. Are you sure you want to continue?",
+        { modal: true },
+        "Yes, Hard Delete",
+      );
+    });
+  });
+
   describe("hardDeletionQuickPick()", function () {
-    let sandbox: sinon.SinonSandbox;
     let showQuickPickStub: sinon.SinonStub;
 
     beforeEach(function () {
-      sandbox = sinon.createSandbox();
       showQuickPickStub = sandbox.stub(window, "showQuickPick");
-    });
-
-    afterEach(function () {
-      sandbox.restore();
     });
 
     it("returns true for hard delete", async function () {
@@ -162,16 +198,10 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
   });
 
   describe("confirmSchemaVersionDeletion()", function () {
-    let sandbox: sinon.SinonSandbox;
     let showInputBoxStub: sinon.SinonStub;
 
     beforeEach(function () {
-      sandbox = sinon.createSandbox();
       showInputBoxStub = sandbox.stub(window, "showInputBox");
-    });
-
-    afterEach(function () {
-      sandbox.restore();
     });
 
     it("returns true for hard delete confirmation", async function () {
@@ -179,7 +209,7 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
       const schemaGroup = [TEST_LOCAL_SCHEMA];
       const schema = TEST_LOCAL_SCHEMA;
 
-      showInputBoxStub.resolves(`hard v${TEST_LOCAL_SCHEMA.version}`);
+      showInputBoxStub.resolves(`v${TEST_LOCAL_SCHEMA.version}`);
 
       const result = await confirmSchemaVersionDeletion(hardDeletion, schema, schemaGroup);
       assert.strictEqual(result, true);
@@ -198,16 +228,10 @@ describe("commands/utils/schemaManagement/deletion.ts", function () {
   });
 
   describe("confirmSchemaSubjectDeletion()", function () {
-    let sandbox: sinon.SinonSandbox;
     let showInputBoxStub: sinon.SinonStub;
 
     beforeEach(function () {
-      sandbox = sinon.createSandbox();
       showInputBoxStub = sandbox.stub(window, "showInputBox");
-    });
-
-    afterEach(function () {
-      sandbox.restore();
     });
 
     it("returns true for hard delete confirmation", async function () {
