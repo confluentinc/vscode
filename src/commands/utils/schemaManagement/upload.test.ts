@@ -32,6 +32,7 @@ import {
 import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
 import {
   Configuration,
+  RegisterRequest,
   ResponseError,
   SchemasV1Api,
   SubjectsV1Api,
@@ -58,6 +59,7 @@ import {
   getHighestRegisteredVersion,
   getLatestSchemasForTopic,
   parseConflictMessage,
+  registerSchema,
   schemaFromString,
   schemaRegistrationMessage,
   uploadSchema,
@@ -739,7 +741,121 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
   });
 
-  describe("registerSchema()", function () {});
+  describe("registerSchema()", function () {
+    let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+    let showErrorStub: sinon.SinonStub;
+
+    const extraHeaders = { foo: "bar" };
+
+    beforeEach(function () {
+      stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
+      // this is just to handle passing existing headers from SidecarHandle.getSubjectsV1Api()
+      // when we manually set Content-Type: application/json
+      stubbedSubjectsV1Api["configuration"] = {
+        headers: { ...extraHeaders },
+      } as unknown as Configuration;
+
+      showErrorStub = sandbox.stub(window, "showErrorMessage").resolves();
+    });
+
+    it("should register a new schema and return the schema ID", async function () {
+      stubbedSubjectsV1Api.register.resolves({ id: 1 });
+      const subject = "test-subject";
+      const schemaType = SchemaType.Avro;
+      const schemaContents = "{}";
+      const normalize = true;
+
+      const expectedRegisterRequest: RegisterRequest = {
+        subject: subject,
+        RegisterSchemaRequest: {
+          schemaType: schemaType,
+          schema: schemaContents,
+        },
+        normalize,
+      };
+      const expectedInitOverride = {
+        headers: { ...extraHeaders, "Content-Type": "application/json" },
+      };
+
+      const result = await registerSchema(
+        stubbedSubjectsV1Api,
+        subject,
+        schemaType,
+        schemaContents,
+        normalize,
+      );
+
+      assert.strictEqual(result, 1);
+      sinon.assert.calledOnceWithExactly(
+        stubbedSubjectsV1Api.register,
+        expectedRegisterRequest,
+        expectedInitOverride,
+      );
+      sinon.assert.notCalled(showErrorStub);
+    });
+
+    it("should show an error notification for ResponseErrors", async function () {
+      const errorMessage = "uh oh";
+      const errorStatus = 400;
+      const error = new ResponseError(
+        new Response(`{"message": "${errorMessage}"}`, { status: errorStatus }),
+      );
+      stubbedSubjectsV1Api.register.rejects(error);
+
+      await assert.rejects(
+        async () => {
+          await registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true);
+        },
+        (err) => err instanceof ResponseError && err.response.status === errorStatus,
+      );
+
+      sinon.assert.calledOnce(stubbedSubjectsV1Api.register);
+      sinon.assert.calledOnceWithMatch(
+        showErrorStub,
+        `Error ${errorStatus} uploading schema: ${errorMessage}`,
+      );
+    });
+
+    it("should show an error notification for non-ResponseErrors", async function () {
+      const errorMessage = "unexpected error";
+      const error = new Error(errorMessage);
+      stubbedSubjectsV1Api.register.rejects(error);
+
+      await assert.rejects(
+        async () => {
+          await registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true);
+        },
+        (err) => err instanceof Error && err.message === errorMessage,
+      );
+
+      sinon.assert.calledOnce(stubbedSubjectsV1Api.register);
+      sinon.assert.calledOnceWithMatch(showErrorStub, `Error uploading schema: ${error}`);
+    });
+
+    const errorResponseCases: [number, string, RegExp][] = [
+      [409, '{"message": "test"}', /Conflict with prior schema version/],
+      [415, '{"message": "test"}', /Unsupported Media Type/],
+      [422, '{"message": "test", "error_code": 42201}', /Invalid schema/],
+      // uncommon 422 case where error_code isn't present, just pass it through
+      [422, '{"message": "uh oh"}', /Error 422 uploading schema/],
+    ];
+    for (const [statusCode, errorBody, expectedMessage] of errorResponseCases) {
+      it(`should show a specific error notification for common ResponseErrors (status=${statusCode}, expected=${expectedMessage})`, async function () {
+        const error = new ResponseError(new Response(errorBody, { status: statusCode }));
+        stubbedSubjectsV1Api.register.rejects(error);
+
+        await assert.rejects(
+          async () => {
+            await registerSchema(stubbedSubjectsV1Api, "test-subject", SchemaType.Avro, "{}", true);
+          },
+          (err) => err instanceof ResponseError && err.response.status === statusCode,
+        );
+
+        sinon.assert.calledOnce(stubbedSubjectsV1Api.register);
+        sinon.assert.calledOnceWithMatch(showErrorStub, expectedMessage);
+      });
+    }
+  });
 
   describe("getNewlyRegisteredVersion()", function () {});
 
