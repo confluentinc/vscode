@@ -8,6 +8,7 @@ import { EXTENSION_VERSION } from "../constants";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { NotificationButtons, showErrorNotificationWithButtons } from "../notifications";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import { MOMENTARY_PAUSE_MS, SIDECAR_PORT } from "./constants";
 import { SidecarFatalError } from "./errors";
@@ -204,61 +205,91 @@ export function checkSidecarFile(executablePath: string) {
 }
 
 /**
+ * Decide what message to show the user given a sidecar startup error, show it,
+ * report the reason to Segment for numerical tracking, and possibly log rarer
+ * reasons to Sentry, and return.
+ *
  * If there's an error that kicks us out of starting up the sidecar, this
  * is the ONLY place to present that error to the user.
  *
  * It is most desired for these errors to come as a SidecarFatalError
  * carrying a SidecarStartupFailureReason.
  */
-export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> {
+export async function triageSidecarStartupError(e: any): Promise<void> {
+  // Most of these are errors from the user's environment / OS, and we cannot fix.
+  // So only send the rather oddball ones to Sentry so we could learn more.
+
+  // By default, we will not send to Sentry.
+  let maybeSentryExtra: { extra: { reason: string } } | undefined = undefined;
+  // By default, err on the default buttons used by showErrorNotificationWithButtons().
+  let buttons: NotificationButtons | undefined = undefined;
+  // What message to use when making the logError() call.
+  let logErrorMessage: string;
+  // What message to show the user.
+  let userMessage: string;
+
   if (e instanceof SidecarFatalError) {
-    logger.error(`showSidecarStartupErrorMessage(): ${e.message} (${e.reason})`);
+    logErrorMessage = "Sidecar startup SidecarFatalError";
+
+    // Should we report this reason to Sentry? Depends on the reason. Only
+    // send the rarer / lesser understood ones.
+    let sendToSentry: boolean;
+
     const portBoilerplate = `Sidecar could not start, port ${SIDECAR_PORT} is in use by another process`;
-    let buttons: NotificationButtons | undefined = undefined;
-    let message: string;
+
     switch (e.reason) {
       case SidecarStartupFailureReason.PORT_IN_USE:
-        message = `${portBoilerplate}. If you have multiple IDE types open with the extension installed (like VS Code and VS Code Insiders), please close all but one. Otherwise, check for other applications using this port.`;
+        userMessage = `${portBoilerplate}. If you have multiple IDE types open with the extension installed (like VS Code and VS Code Insiders), please close all but one. Otherwise, check for other applications using this port.`;
+        sendToSentry = false;
         break;
 
       case SidecarStartupFailureReason.NON_SIDECAR_HTTP_SERVER:
-        message = `${portBoilerplate}, which seems to be a web server but is not our sidecar. Please check for other applications using this port.`;
+        userMessage = `${portBoilerplate}, which seems to be a web server but is not our sidecar. Please check for other applications using this port.`;
+        sendToSentry = false;
         break;
 
       case SidecarStartupFailureReason.LINUX_GLIBC_NOT_FOUND:
-        message = `It appears your Linux installation is too old and does not have the required GLIBC version. We build on Ubuntu 22.04 and need at least GLIBC_2.32. Please upgrade your distribution to a more recent version.`;
+        userMessage = `It appears your Linux installation is too old and does not have the required GLIBC version. We build on Ubuntu 22.04 and need at least GLIBC_2.32. Please upgrade your distribution to a more recent version.`;
+        sendToSentry = false;
         break;
 
       case SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS:
-        message = `Sidecar failed to start: Failed to kill old sidecar process.`;
+        userMessage = `Sidecar failed to start: Failed to kill old sidecar process.`;
+        sendToSentry = true;
         break;
 
       case SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN:
-        message = `Sidecar executable was not able to be spawned. This is likely due to a Windows anti-virus issue. Please check your anti-virus settings and try again.  "${sidecarExecutablePath}" needs to be approved to be executed for this extension to work.`;
+        userMessage = `Sidecar executable was not able to be spawned. This is likely due to a Windows anti-virus issue. Please check your anti-virus settings and try again.  "${sidecarExecutablePath}" needs to be approved to be executed for this extension to work.`;
+        sendToSentry = false;
         break;
 
       case SidecarStartupFailureReason.SPAWN_ERROR:
-        message = `Sidecar executable was not able to be spawned.`;
+        userMessage = `Sidecar executable was not able to be spawned.`;
+        sendToSentry = true;
         break;
 
       case SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID:
-        message = `Sidecar executable was not able to be spawned -- resulting PID was undefined.`;
+        userMessage = `Sidecar executable was not able to be spawned -- resulting PID was undefined.`;
+        sendToSentry = true;
         break;
 
       case SidecarStartupFailureReason.HANDSHAKE_FAILED:
-        message = `Sidecar failed to start: Handshake failed.`;
+        userMessage = `Sidecar failed to start: Handshake failed.`;
+        sendToSentry = true;
         break;
 
       case SidecarStartupFailureReason.MAX_ATTEMPTS_EXCEEDED:
-        message = `Sidecar failed to start: Handshake failed after repeated attempts.`;
+        userMessage = `Sidecar failed to start: Handshake failed after repeated attempts.`;
+        sendToSentry = true;
         break;
 
       case SidecarStartupFailureReason.MISSING_EXECUTABLE:
       case SidecarStartupFailureReason.WRONG_ARCHITECTURE:
       case SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID:
+        sendToSentry = false;
         // These use the error message embedded in the exception,
         // in that the raising point.
-        message = e.message;
+        userMessage = e.message;
 
         // But we can add a button to open the marketplace in case of WRONG_ARCHITECTURE.
         // (User direct installed from, say github, but grabbed the wrong vsix)
@@ -272,15 +303,34 @@ export async function showSidecarStartupErrorMessage(e: unknown): Promise<void> 
         break;
 
       default:
-        message = `Sidecar failed to start: ${e.message}`;
+        userMessage = `Sidecar failed to start: ${e.message}`;
+        sendToSentry = true;
         break;
     }
 
-    void showErrorNotificationWithButtons(message, buttons);
+    // Sent all the SidecarFatalError reasons to Segment for numerical tracking.
+    logUsage(UserEvent.SidecarStartupFailure, {
+      reason: e.reason,
+    });
+
+    if (sendToSentry) {
+      // Assigning here will cause the upcoming call to logError() to send to Sentry.
+      maybeSentryExtra = { extra: { reason: e.reason } };
+    }
   } else {
     // Was some truly unexpected exception!
-    void showErrorNotificationWithButtons(`Sidecar failed to start: ${e}`);
+    maybeSentryExtra = { extra: { reason: "Unknown" } };
+    userMessage = `Sidecar failed to start: ${e}`;
+    logErrorMessage = "Sidecar startup unexpected error";
   }
+
+  // Call logError which will always log to logger, but will only
+  // send to Sentry if sentryExtra is non-undefined.
+  logError(e, logErrorMessage, maybeSentryExtra);
+
+  // Show the error to the user, possibly with custom buttons. Do not block on
+  // any buttonpress.
+  void showErrorNotificationWithButtons(userMessage, buttons);
 }
 
 /** Stubbable wrapper over child_process.spawn() */
