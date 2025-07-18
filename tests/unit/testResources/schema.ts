@@ -106,7 +106,7 @@ export const TEST_LOCAL_SUBJECT_WITH_SCHEMAS = new Subject(
 );
 
 export const TEST_DIRECT_SCHEMA = Schema.create({
-  id: "direct-schema-1",
+  id: "101",
   subject: `${TEST_DIRECT_KAFKA_TOPIC.name}-value`,
   version: 1,
   type: SchemaType.Avro,
@@ -119,14 +119,14 @@ export const TEST_DIRECT_SCHEMA = Schema.create({
 
 export const TEST_DIRECT_SCHEMA_REVISED = Schema.create({
   ...TEST_DIRECT_SCHEMA,
-  id: "direct-schema-2",
+  id: "102",
   version: 2,
   isHighestVersion: true,
 });
 
 export const TEST_DIRECT_KEY_SCHEMA = Schema.create({
   ...TEST_DIRECT_SCHEMA,
-  id: "direct-schema-3",
+  id: "103",
   subject: `${TEST_DIRECT_KAFKA_TOPIC.name}-key`,
   isHighestVersion: true,
 });
