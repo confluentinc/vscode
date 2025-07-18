@@ -1,116 +1,113 @@
+import { homedir } from "os";
 import * as vscode from "vscode";
 import {
-  RegisterRequest,
+  type RegisterRequest,
   ResponseError,
-  SchemasV1Api,
-  SubjectsV1Api,
-  SubjectVersion,
-} from "../clients/schemaRegistryRest";
-import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
-import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
-import { ResourceLoader } from "../loaders";
-import { Logger } from "../logging";
-import { Schema, SchemaType, Subject } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
-import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
-import { uriQuickpick } from "../quickpicks/uris";
-import { getSidecar } from "../sidecar";
-import { hashed, logUsage, UserEvent } from "../telemetry/events";
-import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
-import { getSchemasViewProvider } from "../viewProviders/schemas";
+  type SchemasV1Api,
+  type SubjectsV1Api,
+  type SubjectVersion,
+} from "../../../clients/schemaRegistryRest";
+import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
+import { ResourceLoader } from "../../../loaders";
+import { Logger } from "../../../logging";
+import { Schema, SchemaType, Subject } from "../../../models/schema";
+import { type SchemaRegistry } from "../../../models/schemaRegistry";
+import { type KafkaTopic } from "../../../models/topic";
+import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks/schemas";
+import { getSidecar } from "../../../sidecar";
+import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
+import { fileUriExists } from "../../../utils/file";
+import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 
-const logger = new Logger("commands.schemaUpload");
+const logger = new Logger("commands.utils.schemaManagement.upload");
 
-/**
- * Module for the "upload schema to schema registry" command ("confluent.schemas.upload") and related functions.
- *
- * uploadNewSchema() command is registered over in ./schemas.ts, but the actual implementation is here.
- * All other exported functions are exported for the tests in schemaUpload.test.ts.
- */
-
-/**
- * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from:
- *  1. A Subject from the Schemas view
- *  2. On one of a topic's subjects in the Topics view
- */
-export async function uploadSchemaForSubjectFromfile(subject: Subject) {
+/** Get the latest schema from a subject, possibly fetching from the schema registry if needed. */
+export async function determineLatestSchema(callpoint: string, subject: Subject): Promise<Schema> {
   if (!(subject instanceof Subject)) {
-    throw new Error("uploadSchemaForSubjectFromfile called with invalid argument type");
+    const msg = `${callpoint} called with invalid argument type`;
+    logger.error(msg, subject);
+    throw new Error(msg);
   }
-  const loader = ResourceLoader.getInstance(subject.connectionId);
-  const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
-  await uploadSchemaFromFile(registry, subject.name);
+
+  if (subject.schemas) {
+    // Is already carrying schemas (as from when the subject coming from topics view)
+    return subject.schemas[0];
+  } else {
+    // Must promote the subject to its subject group, then get the first (latest) schema.
+    const loader = ResourceLoader.getInstance(subject.connectionId);
+    const schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
+    return schemaGroup[0];
+  }
 }
 
 /**
- * Command backing "Upload a new schema" action, triggered either from a Schema Registry item in the
- * Resources view or the nav action in the Schemas view (with a Schema Registry selected).
- *
- * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
- * Schema Registry and then ask for the file/editor (and schema subject if not provided).
- */
-export async function uploadSchemaFromFile(registry?: SchemaRegistry, subjectString?: string) {
-  // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
-  // editor languages, and file extensions
-  const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
-  const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json"];
-  const fileFilters = {
-    "Schema files": ["avsc", "avro", "json", "proto"],
-  };
-  const schemaUri: vscode.Uri | undefined = await uriQuickpick(
-    uriSchemes,
-    languageIds,
-    fileFilters,
-  );
-  if (!schemaUri) {
-    return;
+ * Return a URI for a draft schema file that does not exist in the filesystem corresponding to a draft
+ * next version of the given schema. The URI will have an untitled scheme and the schema data encoded
+ * in the query string for future reference.
+ **/
+export async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeDir = activeEditor?.document.uri.fsPath;
+  const baseDir = activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || homedir();
+
+  // Now loop through draft file:// uris until we find one that doesn't exist.,
+  let chosenFileUri: vscode.Uri | null = null;
+  let draftNumber = -1;
+  while (!chosenFileUri || (await fileUriExists(chosenFileUri))) {
+    draftNumber += 1;
+    const draftFileName = schema.nextVersionDraftFileName(draftNumber);
+    chosenFileUri = vscode.Uri.parse("file://" + `${baseDir}/${draftFileName}`);
+
+    if (draftNumber > 15) {
+      throw new Error(
+        `Could not find a draft file URI that does not exist in the filesystem after 15 tries.`,
+      );
+    }
   }
 
-  // If the document has (locally marked) errors, don't proceed.
-  if (await documentHasErrors(schemaUri)) {
-    // (error notification shown in the above function, no need to do anything else here)
-    logger.error("Document has errors, aborting schema upload");
-    return;
-  }
-
-  const docContent: LoadedDocumentContent = await getEditorOrFileContents(schemaUri);
-
-  // What kind of schema is this? We must tell the schema registry.
-  const schemaType: SchemaType | undefined = await determineSchemaType(
-    schemaUri,
-    docContent.openDocument?.languageId,
-  );
-  if (!schemaType) {
-    // the only way we get here is if the user bailed on the schema type quickpick after we failed
-    // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
-    return;
-  }
-
-  if (!(registry instanceof SchemaRegistry)) {
-    // the only way we get here is if the user clicked the action in the Schemas view nav area, so
-    // we need to get the focused schema registry
-    const schemaViewProvider = getSchemasViewProvider();
-    registry = schemaViewProvider.schemaRegistry!;
-  }
-  if (!registry) {
-    logger.error("Could not determine schema registry");
-    return;
-  }
-
-  subjectString = subjectString ? subjectString : await chooseSubject(registry);
-  if (!subjectString) {
-    logger.error("Could not determine schema subject");
-    return;
-  }
-
-  // TODO after #951: grab the subject group and / or the most recent schema binding
-  // to the subject to ensure is the right type. Error out if not. This error
-  // will be more clear than the one that the schema registry will give us.
-
-  await uploadSchema(registry, subjectString, schemaType, docContent.content);
+  // Now respell to be unknown scheme and add the schema data to the query string,
+  // will become the default schema data for the upload schema command.
+  return vscode.Uri.from({
+    ...chosenFileUri,
+    scheme: "untitled",
+    query: encodeURIComponent(JSON.stringify(schema)),
+  });
 }
 
-async function uploadSchema(
+/**
+ * Get the highest versioned schema(s) related to a single topic from the schema registry.
+ * May return two schemas if the topic has both key and value schemas.
+ */
+export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
+  if (!topic.hasSchema) {
+    throw new Error(`Asked to get schemas for topic "${topic.name}" believed to not have schemas.`);
+  }
+
+  const loader = ResourceLoader.getInstance(topic.connectionId);
+
+  const topicSchemaGroups = await loader.getTopicSubjectGroups(topic);
+
+  if (topicSchemaGroups.length === 0) {
+    throw new CannotLoadSchemasError(`Topic "${topic.name}" has no related schemas in registry.`);
+  }
+
+  // Return array of the highest versioned schemas. They
+  // will be the first schema in each subject group per return contract
+  // of getTopicSubjectGroups().
+  return topicSchemaGroups.map((sg) => sg.schemas![0]);
+}
+
+/**
+ * Raised when unexpectedly could not load schema(s) for a topic we previously believed
+ * had related schemas. Message will be informative and user-facing.
+ */
+export class CannotLoadSchemasError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export async function uploadSchema(
   registry: SchemaRegistry,
   subject: string,
   schemaType: SchemaType,
@@ -202,7 +199,7 @@ async function uploadSchema(
 }
 
 /** Does the given URI have any self-contained errors? If so, don't proceed with upload. */
-async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
+export async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
   const diagnostics = vscode.languages.getDiagnostics(uri);
   const errorDiagnostics = diagnostics.filter(
     (d) => d.severity === vscode.DiagnosticSeverity.Error,
@@ -412,7 +409,7 @@ export async function determineSchemaType(
 /**
  * Given a subject, learn the highest existing version number of the schemas bound to this subject, if any.
  */
-async function getHighestRegisteredVersion(
+export async function getHighestRegisteredVersion(
   schemaSubjectsApi: SubjectsV1Api,
   subject: string,
 ): Promise<number | undefined> {
@@ -449,7 +446,7 @@ async function getHighestRegisteredVersion(
  * existing schema that this one was normalized to. Alas that the schema registry doesn't return anything
  * other than the (new|existing) schema id.
  */
-async function registerSchema(
+export async function registerSchema(
   schemaSubjectsApi: SubjectsV1Api,
   subject: string,
   schemaType: SchemaType,
@@ -527,7 +524,7 @@ async function registerSchema(
  * Return the version number of the schema we just registered for the subject we
  * just bound it to.
  */
-async function getNewlyRegisteredVersion(
+export async function getNewlyRegisteredVersion(
   schemasApi: SchemasV1Api,
   subject: string,
   schemaId: number,
@@ -570,7 +567,7 @@ async function getNewlyRegisteredVersion(
  * @returns The new schema that was just registered, including the proper id, subject, etc. A TreeItem for this schema
  *         will have the same id as the corresponding TreeItem in the schema registry view.
  */
-async function updateRegistryCacheAndFindNewSchema(
+export async function updateRegistryCacheAndFindNewSchema(
   registry: SchemaRegistry,
   newSchemaID: number,
   boundSubject: string,

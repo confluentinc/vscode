@@ -1,10 +1,13 @@
 import * as vscode from "vscode";
 import { ResourceDocumentProvider } from ".";
 import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
-import { Schema } from "../models/schema";
+import { Logger } from "../logging";
+import { getLanguageTypes, Schema, type SchemaType } from "../models/schema";
 import { getSidecar } from "../sidecar";
 
 export const SCHEMA_URI_SCHEME = "confluent.schema";
+
+const logger = new Logger("documentProviders.schema");
 
 /** Makes a read-only editor buffer holding a schema */
 export class SchemaDocumentProvider extends ResourceDocumentProvider {
@@ -62,4 +65,47 @@ function prettifySchemaDefinition(schemaResp: SchemaString): string | undefined 
     }
   }
   return schemaDefinition;
+}
+
+/**
+ * Convert a {@link Schema} to a URI and render via the {@link SchemaDocumentProvider} as a read-
+ * only document in a new editor tab.
+ */
+export async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEditor> {
+  const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
+  const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
+
+  await setEditorLanguageForSchema(textDoc, schema.type);
+
+  return textDoc;
+}
+
+/**
+ * Possibly set the language of the editor's document based on the schema.
+ * Depends on what languages the user has installed.
+ */
+export async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: SchemaType) {
+  const installedLanguages = await vscode.languages.getLanguages();
+
+  const languageTypes = getLanguageTypes(type);
+
+  for (const language of languageTypes) {
+    if (installedLanguages.indexOf(language) !== -1) {
+      vscode.languages.setTextDocumentLanguage(textDoc.document, language);
+      logger.debug(`Set document language to "${language}"`);
+      return;
+    } else {
+      logger.warn(`Language ${language} not installed type ${type}`);
+    }
+  }
+
+  const preferredLanguage = languageTypes[0];
+  const marketplaceUrl = `https://marketplace.visualstudio.com/search?term=${preferredLanguage}&target=VSCode&category=All%20categories&sortBy=Relevance`;
+  vscode.window.showWarningMessage(
+    `Could not find a matching editor language for "${type}". Try again after installing [an extension that supports "${preferredLanguage}"](${marketplaceUrl}).`,
+  );
+
+  logger.warn(
+    `Could not find a matching language for ${type}, using the first one: ${preferredLanguage}`,
+  );
 }
