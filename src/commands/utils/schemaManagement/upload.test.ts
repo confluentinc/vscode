@@ -13,6 +13,7 @@ import {
   getStubbedDirectResourceLoader,
   getStubbedLocalResourceLoader,
 } from "../../../../tests/stubs/resourceLoaders";
+import { getSidecarStub } from "../../../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
@@ -20,13 +21,21 @@ import {
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_DIRECT_KAFKA_TOPIC,
+  TEST_DIRECT_SCHEMA,
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_DIRECT_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_KAFKA_TOPIC,
+  TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
-import { ResponseError } from "../../../clients/schemaRegistryRest";
+import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
+import {
+  Configuration,
+  ResponseError,
+  SchemasV1Api,
+  SubjectsV1Api,
+} from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../clients/sidecar";
 import { CCloudResourceLoader, ResourceLoader } from "../../../loaders";
 import { Schema, SchemaType, Subject } from "../../../models/schema";
@@ -37,6 +46,8 @@ import {
 } from "../../../models/schemaRegistry";
 import { KafkaTopic } from "../../../models/topic";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
+import { SidecarHandle } from "../../../sidecar";
+import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
   chooseSubject,
   determineDraftSchemaUri,
@@ -49,11 +60,16 @@ import {
   parseConflictMessage,
   schemaFromString,
   schemaRegistrationMessage,
+  uploadSchema,
   validateNewSubject,
 } from "./upload";
 
 describe("commands/utils/schemaManagement/upload.ts", function () {
   let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -224,7 +240,127 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
   }
 
-  describe("uploadSchema()", function () {});
+  for (const connectionType of Object.values(ConnectionType)) {
+    describe(`uploadSchema() to a ${connectionType} Schema Registry`, function () {
+      let stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle>;
+      let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+      let stubbedSchemasV1Api: sinon.SinonStubbedInstance<SchemasV1Api>;
+      let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
+      let showInfoStub: sinon.SinonStub;
+      let revealSchemaStub: sinon.SinonStub;
+
+      let testSchemaRegistry: CCloudSchemaRegistry | LocalSchemaRegistry | DirectSchemaRegistry;
+      let testSchema: Schema;
+
+      beforeEach(function () {
+        stubbedSidecar = getSidecarStub(sandbox);
+        stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
+        // this is just to handle passing existing headers from SidecarHandle.getSubjectsV1Api()
+        // when we manually set Content-Type: application/json
+        stubbedSubjectsV1Api["configuration"] = { headers: {} } as unknown as Configuration;
+        stubbedSchemasV1Api = sandbox.createStubInstance(SchemasV1Api);
+        stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
+        stubbedSidecar.getSchemasV1Api.returns(stubbedSchemasV1Api);
+
+        switch (connectionType) {
+          case ConnectionType.Ccloud:
+            stubbedLoader = getStubbedCCloudResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+            testSchema = TEST_CCLOUD_SCHEMA;
+            break;
+          case ConnectionType.Local:
+            stubbedLoader = getStubbedLocalResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+            testSchema = TEST_LOCAL_SCHEMA;
+            break;
+          case ConnectionType.Direct:
+            stubbedLoader = getStubbedDirectResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_DIRECT_SCHEMA_REGISTRY;
+            testSchema = TEST_DIRECT_SCHEMA;
+            break;
+          default:
+            throw new Error(`Unsupported connection type: ${connectionType}`);
+        }
+
+        showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
+        revealSchemaStub = sandbox.stub(getSchemasViewProvider(), "revealSchema").resolves();
+      });
+
+      it("should upload a schema and show an info notification", async function () {
+        // no existing versions, so we should create a new subject with schema version 1
+        stubbedSubjectsV1Api.listVersions.resolves([]);
+        // post-register, we should get the new schema version
+        stubbedSubjectsV1Api.register.resolves({ id: parseInt(testSchema.id, 10) });
+        stubbedSchemasV1Api.getVersions.resolves([{ subject: testSchema.subject, version: 1 }]);
+        stubbedLoader.getSchemasForSubject.resolves([testSchema]);
+
+        await uploadSchema(testSchemaRegistry, testSchema.subject, testSchema.type, "{}");
+
+        // getHighestRegisteredVersion() tests will cover this more
+        sinon.assert.calledOnce(stubbedSubjectsV1Api.listVersions);
+        // registerSchema() tests will cover this more
+        sinon.assert.calledOnce(stubbedSubjectsV1Api.register);
+        // getNewlyRegisteredVersion() tests will cover this more
+        sinon.assert.calledOnce(stubbedSchemasV1Api.getVersions);
+        // updateRegistryCacheAndFindNewSchema() tests will cover this more
+        sinon.assert.calledOnce(stubbedLoader.getSchemasForSubject);
+
+        sinon.assert.calledOnce(showInfoStub);
+        sinon.assert.notCalled(revealSchemaStub);
+      });
+
+      it("should upload a schema and show an info notification with existing subject (at least one schema version)", async function () {
+        // existing subject with one version, so we should create a new schema version 2
+        stubbedSubjectsV1Api.listVersions.resolves([1]);
+        // post-register, we should get the new schema version
+        stubbedSubjectsV1Api.register.resolves({ id: 2 });
+        stubbedSchemasV1Api.getVersions.resolves([{ subject: testSchema.subject, version: 2 }]);
+        const expectedNewSchema = Schema.create({
+          ...testSchema,
+          id: "2",
+          version: 2,
+          isHighestVersion: true,
+        });
+        stubbedLoader.getSchemasForSubject.resolves([testSchema, expectedNewSchema]);
+
+        await uploadSchema(testSchemaRegistry, testSchema.subject, testSchema.type, "{}");
+
+        // getHighestRegisteredVersion() tests will cover this more
+        sinon.assert.calledOnce(stubbedSubjectsV1Api.listVersions);
+        // registerSchema() tests will cover this more
+        sinon.assert.calledOnce(stubbedSubjectsV1Api.register);
+        // getNewlyRegisteredVersion() tests will cover this more
+        sinon.assert.calledOnce(stubbedSchemasV1Api.getVersions);
+        // updateRegistryCacheAndFindNewSchema() tests will cover this more
+        sinon.assert.calledOnce(stubbedLoader.getSchemasForSubject);
+
+        sinon.assert.calledOnce(showInfoStub);
+        sinon.assert.notCalled(revealSchemaStub);
+      });
+
+      it("should focus the newly-uploaded schema when the user clicks 'View in Schema Registry'", async function () {
+        // no existing versions, so we should create a new subject with schema version 1
+        stubbedSubjectsV1Api.listVersions.resolves([]);
+        // post-register, we should get the new schema version
+        stubbedSubjectsV1Api.register.resolves({ id: parseInt(testSchema.id, 10) });
+        stubbedSchemasV1Api.getVersions.resolves([{ subject: testSchema.subject, version: 1 }]);
+        stubbedLoader.getSchemasForSubject.resolves([testSchema]);
+        // simulate the user clicking "View in Schema Registry"
+        showInfoStub.resolves("View in Schema Registry");
+
+        await uploadSchema(testSchemaRegistry, testSchema.subject, testSchema.type, "{}");
+
+        sinon.assert.calledOnce(showInfoStub);
+        sinon.assert.calledOnce(revealSchemaStub);
+      });
+    });
+  }
 
   describe("documentHasErrors()", function () {
     let getDiagnosticsStub: sinon.SinonStub;
