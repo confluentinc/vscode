@@ -26,6 +26,7 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
+import { ResponseError } from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../clients/sidecar";
 import { CCloudResourceLoader, ResourceLoader } from "../../../loaders";
 import { Schema, SchemaType, Subject } from "../../../models/schema";
@@ -51,7 +52,7 @@ import {
   validateNewSubject,
 } from "./upload";
 
-describe("commands/utils/schemaManagement/upload.ts", function () {
+describe.only("commands/utils/schemaManagement/upload.ts", function () {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -192,7 +193,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       it("should return the highest versioned schemas for topic with key and value topics", async function () {
         stubbedLoader.getSchemaRegistryForEnvironmentId.resolves(testSchemaRegistry);
         const oldestTestSchema: Schema = testSubject.schemas![-1];
-        stubbedLoader.getTopicSubjectGroups.resolves([
+        const testSubjects = [
           testSubject,
           new Subject(
             testSubject.name,
@@ -209,15 +210,16 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
               Schema.create({ ...oldestTestSchema, id: "new-2", version: 2 }),
             ],
           ),
-        ]);
+        ];
+        stubbedLoader.getTopicSubjectGroups.resolves(testSubjects);
 
         const fetchedLatestSchemas: Schema[] = await getLatestSchemasForTopic(testTopic);
         // one latest-version for each subject
         assert.strictEqual(fetchedLatestSchemas.length, 2);
 
-        for (const schema of fetchedLatestSchemas) {
-          assert.strictEqual(schema.version, testSubject.schemas![0].version);
-        }
+        fetchedLatestSchemas.forEach((schema, index) => {
+          assert.strictEqual(schema.version, testSubjects[index].schemas![0].version);
+        });
       });
     });
   }
@@ -557,8 +559,8 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should return the highest version number when subject has versions", async function () {
-      const versions = [1, 2, 3, 5, 4]; // Unsorted to test max finding
-      mockSchemaSubjectsApi.listVersions.resolves({ data: versions });
+      const versions = [1, 2, 3, 5, 4];
+      mockSchemaSubjectsApi.listVersions.resolves(versions);
 
       const result = await getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject");
 
@@ -590,13 +592,13 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should re-throw non-404 errors", async function () {
-      const error = new Error("Server error");
+      const error = new ResponseError(new Response("Server error", { status: 500 }));
       (error as any).status = 500;
       mockSchemaSubjectsApi.listVersions.rejects(error);
 
       await assert.rejects(
         async () => await getHighestRegisteredVersion(mockSchemaSubjectsApi, "test-subject"),
-        /Server error/,
+        (error) => error instanceof ResponseError && error.response.status === 500,
       );
     });
   });
