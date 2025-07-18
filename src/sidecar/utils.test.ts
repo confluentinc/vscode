@@ -1,7 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as errorsModule from "../errors";
 import * as notifications from "../notifications";
 import { NotificationButtons } from "../notifications";
+import * as eventsModule from "../telemetry/events";
 import { WriteableTmpDir } from "../utils/file";
 import { MOMENTARY_PAUSE_MS } from "./constants";
 import { SidecarFatalError } from "./errors";
@@ -13,7 +15,7 @@ import {
   killSidecar,
   normalizedSidecarPath,
   safeKill,
-  showSidecarStartupErrorMessage,
+  triageSidecarStartupError,
   WAIT_FOR_SIDECAR_DEATH_MS,
   wasConnRefused,
 } from "./utils";
@@ -298,10 +300,12 @@ describe("sidecar/utils.ts", () => {
     });
   });
 
-  describe("showSidecarStartupErrorMessage()", () => {
+  describe("triageSidecarStartupError()", () => {
     let sandbox: sinon.SinonSandbox;
 
     let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+    let logErrorStub: sinon.SinonStub;
+    let logUsageStub: sinon.SinonStub;
 
     beforeEach(() => {
       sandbox = sinon.createSandbox();
@@ -309,6 +313,8 @@ describe("sidecar/utils.ts", () => {
         notifications,
         "showErrorNotificationWithButtons",
       );
+      logErrorStub = sandbox.stub(errorsModule, "logError");
+      logUsageStub = sandbox.stub(eventsModule, "logUsage");
     });
 
     afterEach(() => {
@@ -318,52 +324,63 @@ describe("sidecar/utils.ts", () => {
     type TestCase = {
       reason: SidecarStartupFailureReason;
       expectedRegex: RegExp;
+      sendToSentry: boolean;
     };
     for (const testCase of [
       {
         reason: SidecarStartupFailureReason.PORT_IN_USE,
         expectedRegex: /is in use by another process/,
+        sendToSentry: false,
       },
       {
         reason: SidecarStartupFailureReason.NON_SIDECAR_HTTP_SERVER,
         expectedRegex: /which seems to be a web server/,
+        sendToSentry: false,
       },
       {
         reason: SidecarStartupFailureReason.LINUX_GLIBC_NOT_FOUND,
         expectedRegex: /Linux.*required GLIBC version/,
+        sendToSentry: false,
       },
       {
         reason: SidecarStartupFailureReason.CANNOT_KILL_OLD_PROCESS,
         expectedRegex: /Failed to kill old sidecar process/,
+        sendToSentry: true,
       },
       {
         reason: SidecarStartupFailureReason.SPAWN_RESULT_UNKNOWN,
         expectedRegex: /Windows anti-virus issue/,
+        sendToSentry: false,
       },
       {
         reason: SidecarStartupFailureReason.SPAWN_ERROR,
         expectedRegex: /was not able to be spawned/,
+        sendToSentry: true,
       },
       {
         reason: SidecarStartupFailureReason.SPAWN_RESULT_UNDEFINED_PID,
         expectedRegex: /resulting PID was undefined/,
+        sendToSentry: true,
       },
       {
         reason: SidecarStartupFailureReason.HANDSHAKE_FAILED,
         expectedRegex: /Handshake failed/,
+        sendToSentry: true,
       },
       {
         reason: SidecarStartupFailureReason.MAX_ATTEMPTS_EXCEEDED,
         expectedRegex: /Handshake failed after/,
+        sendToSentry: true,
       },
       {
         reason: SidecarStartupFailureReason.UNKNOWN,
         expectedRegex: /Sidecar failed to start/,
+        sendToSentry: true,
       },
     ] as TestCase[]) {
       it(`should show expected error message for ${testCase.reason}`, async () => {
         const error = new SidecarFatalError(testCase.reason, `Test error: ${testCase.reason}`);
-        await showSidecarStartupErrorMessage(error);
+        await triageSidecarStartupError(error);
 
         sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
         const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
@@ -373,6 +390,22 @@ describe("sidecar/utils.ts", () => {
           true,
           `Message: ${message}`,
         );
+
+        // logError will always be called, but only sometimes with sentryExtra
+        // based on the failure reason.
+        sinon.assert.calledOnce(logErrorStub);
+        const logErrorArgs = logErrorStub.getCall(0).args;
+        if (testCase.sendToSentry) {
+          assert.deepStrictEqual(logErrorArgs[2], { extra: { reason: testCase.reason } });
+        } else {
+          assert.deepStrictEqual(logErrorArgs[2], undefined);
+        }
+
+        // logUsage (Segment) will always be called for SidecarStartupFailure events.
+        sinon.assert.calledOnce(logUsageStub);
+        const logUsageArgs = logUsageStub.getCall(0).args;
+        assert.strictEqual(logUsageArgs[0], eventsModule.UserEvent.SidecarStartupFailure);
+        assert.deepStrictEqual(logUsageArgs[1], { reason: testCase.reason });
       });
     }
 
@@ -383,7 +416,7 @@ describe("sidecar/utils.ts", () => {
         SidecarStartupFailureReason.MISSING_EXECUTABLE,
         "Component /path/to/sidecar does not exist or is not executable",
       );
-      await showSidecarStartupErrorMessage(error);
+      await triageSidecarStartupError(error);
       sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
       const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
       // assert that the message contains the expected regex
@@ -399,7 +432,7 @@ describe("sidecar/utils.ts", () => {
         SidecarStartupFailureReason.CANNOT_GET_SIDECAR_PID,
         "Cannot get PID from prior running sidecar",
       );
-      await showSidecarStartupErrorMessage(error);
+      await triageSidecarStartupError(error);
       sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
       const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
       // assert that the message contains the expected regex
@@ -415,7 +448,7 @@ describe("sidecar/utils.ts", () => {
         SidecarStartupFailureReason.WRONG_ARCHITECTURE,
         "This Confluent extension is built for a different platform",
       );
-      await showSidecarStartupErrorMessage(error);
+      await triageSidecarStartupError(error);
       sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
       const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
       // assert that the message contains the expected regex
@@ -435,7 +468,7 @@ describe("sidecar/utils.ts", () => {
 
     it("Should handle unknown error gracefully", async () => {
       const error = new Error("Unknown error");
-      await showSidecarStartupErrorMessage(error);
+      await triageSidecarStartupError(error);
       sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
       const message = showErrorNotificationWithButtonsStub.getCall(0).args[0];
       assert.strictEqual(
@@ -443,6 +476,15 @@ describe("sidecar/utils.ts", () => {
         true,
         `Message: ${message}`,
       );
+
+      sinon.assert.calledOnce(logErrorStub);
+      const logErrorArgs = logErrorStub.getCall(0).args;
+      assert.strictEqual(logErrorArgs[0], error);
+      assert.strictEqual(logErrorArgs[1], "Sidecar startup unexpected error");
+      // will send to Sentry with reason "Unknown".
+      assert.deepStrictEqual(logErrorArgs[2], { extra: { reason: "Unknown" } });
+      // will not have sent to Segment.
+      sinon.assert.notCalled(logUsageStub);
     });
   });
 });
