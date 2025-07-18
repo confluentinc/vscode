@@ -47,30 +47,30 @@ describe("commands/schemas.ts", function () {
 
   describe("viewLocallyCommand()", function () {
     let withProgressStub: sinon.SinonStub;
-    let loadOrCreateSchemaViewerStub: sinon.SinonStub;
+    let openReadOnlySchemaDocumentStub: sinon.SinonStub;
 
     beforeEach(function () {
       withProgressStub = sandbox.stub(window, "withProgress").resolves();
-      loadOrCreateSchemaViewerStub = sandbox
-        .stub(schemaDocumentProvider, "loadOrCreateSchemaViewer")
+      openReadOnlySchemaDocumentStub = sandbox
+        .stub(schemaDocumentProvider, "openReadOnlySchemaDocument")
         .resolves();
     });
 
     it("should load schema in viewer with progress notification", async function () {
       withProgressStub.callsFake(async (options, task) => await task());
-      loadOrCreateSchemaViewerStub.resolves();
+      openReadOnlySchemaDocumentStub.resolves();
 
       await schemas.viewLocallyCommand(TEST_CCLOUD_SCHEMA);
 
       sinon.assert.calledOnce(withProgressStub);
-      sinon.assert.calledOnceWithExactly(loadOrCreateSchemaViewerStub, TEST_CCLOUD_SCHEMA);
+      sinon.assert.calledOnceWithExactly(openReadOnlySchemaDocumentStub, TEST_CCLOUD_SCHEMA);
     });
 
     it("should return early if called if the passed argument is not a Schema", async function () {
       await schemas.viewLocallyCommand("invalid-argument" as any);
 
       sinon.assert.notCalled(withProgressStub);
-      sinon.assert.notCalled(loadOrCreateSchemaViewerStub);
+      sinon.assert.notCalled(openReadOnlySchemaDocumentStub);
     });
   });
 
@@ -156,14 +156,14 @@ describe("commands/schemas.ts", function () {
     let schemaTypeQuickPickStub: sinon.SinonStub;
     let openTextDocumentStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
-    let setEditorLanguageForSchemaStub: sinon.SinonStub;
+    let setLanguageForSchemaEditorStub: sinon.SinonStub;
 
     beforeEach(function () {
       schemaTypeQuickPickStub = sandbox.stub(quickpicks, "schemaTypeQuickPick").resolves();
       openTextDocumentStub = sandbox.stub(workspace, "openTextDocument").resolves();
       showTextDocumentStub = sandbox.stub(window, "showTextDocument").resolves();
-      setEditorLanguageForSchemaStub = sandbox
-        .stub(schemaDocumentProvider, "setEditorLanguageForSchema")
+      setLanguageForSchemaEditorStub = sandbox
+        .stub(schemaDocumentProvider, "setLanguageForSchemaEditor")
         .resolves();
     });
 
@@ -182,7 +182,7 @@ describe("commands/schemas.ts", function () {
         preview: false,
       });
       sinon.assert.calledOnceWithExactly(
-        setEditorLanguageForSchemaStub,
+        setLanguageForSchemaEditorStub,
         fakeEditor,
         SchemaType.Avro,
       );
@@ -240,7 +240,7 @@ describe("commands/schemas.ts", function () {
     let getLatestSchemasForTopicStub: sinon.SinonStub;
     let withProgressStub: sinon.SinonStub;
     let showErrorMessageStub: sinon.SinonStub;
-    let loadOrCreateSchemaViewerStub: sinon.SinonStub;
+    let openReadOnlySchemaDocumentStub: sinon.SinonStub;
 
     beforeEach(function () {
       getLatestSchemasForTopicStub = sandbox.stub(
@@ -249,8 +249,8 @@ describe("commands/schemas.ts", function () {
       );
       withProgressStub = sandbox.stub(window, "withProgress").resolves();
       showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
-      loadOrCreateSchemaViewerStub = sandbox
-        .stub(schemaDocumentProvider, "loadOrCreateSchemaViewer")
+      openReadOnlySchemaDocumentStub = sandbox
+        .stub(schemaDocumentProvider, "openReadOnlySchemaDocument")
         .resolves();
     });
 
@@ -258,13 +258,13 @@ describe("commands/schemas.ts", function () {
       const schemaGroup = [TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA_REVISED];
       getLatestSchemasForTopicStub.resolves(schemaGroup);
       withProgressStub.callsFake(async (options, task) => await task());
-      loadOrCreateSchemaViewerStub.resolves();
+      openReadOnlySchemaDocumentStub.resolves();
 
       await schemas.openLatestSchemasCommand(TEST_CCLOUD_KAFKA_TOPIC);
 
       sinon.assert.calledOnceWithExactly(getLatestSchemasForTopicStub, TEST_CCLOUD_KAFKA_TOPIC);
       sinon.assert.calledOnce(withProgressStub);
-      sinon.assert.calledTwice(loadOrCreateSchemaViewerStub);
+      sinon.assert.calledTwice(openReadOnlySchemaDocumentStub);
     });
 
     it("should show an error notification when schemas cannot be loaded", async function () {
@@ -316,7 +316,7 @@ describe("commands/schemas.ts", function () {
     let determineDraftSchemaUriStub: sinon.SinonStub;
     let applyEditStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
-    let setEditorLanguageForSchemaStub: sinon.SinonStub;
+    let setLanguageForSchemaEditorStub: sinon.SinonStub;
 
     beforeEach(function () {
       fetchSchemaBodyStub = sandbox.stub(schemaDocumentProvider, "fetchSchemaBody").resolves();
@@ -325,8 +325,8 @@ describe("commands/schemas.ts", function () {
         .resolves();
       applyEditStub = sandbox.stub(workspace, "applyEdit").resolves();
       showTextDocumentStub = sandbox.stub(window, "showTextDocument").resolves();
-      setEditorLanguageForSchemaStub = sandbox
-        .stub(schemaDocumentProvider, "setEditorLanguageForSchema")
+      setLanguageForSchemaEditorStub = sandbox
+        .stub(schemaDocumentProvider, "setLanguageForSchemaEditor")
         .resolves();
     });
 
@@ -346,7 +346,7 @@ describe("commands/schemas.ts", function () {
       sinon.assert.calledOnce(applyEditStub);
       sinon.assert.calledOnceWithExactly(showTextDocumentStub, draftUri, { preview: false });
       sinon.assert.calledOnceWithExactly(
-        setEditorLanguageForSchemaStub,
+        setLanguageForSchemaEditorStub,
         fakeEditor,
         TEST_CCLOUD_SCHEMA.type,
       );
@@ -359,7 +359,7 @@ describe("commands/schemas.ts", function () {
       sinon.assert.notCalled(determineDraftSchemaUriStub);
       sinon.assert.notCalled(applyEditStub);
       sinon.assert.notCalled(showTextDocumentStub);
-      sinon.assert.notCalled(setEditorLanguageForSchemaStub);
+      sinon.assert.notCalled(setLanguageForSchemaEditorStub);
     });
   });
 
