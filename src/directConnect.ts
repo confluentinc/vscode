@@ -18,12 +18,12 @@ import { SupportedAuthTypes } from "./directConnections/types";
 import { directConnectionsChanged } from "./emitters";
 import { DEFAULT_KRB5_CONFIG_PATH, KRB5_CONFIG_PATH } from "./extensionSettings/constants";
 import { ConnectionId } from "./models/resource";
+import { showInfoNotificationWithButtons } from "./notifications";
 import { CustomConnectionSpec, getResourceManager } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
-import { showInfoNotificationWithButtons } from "./notifications";
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
