@@ -253,6 +253,14 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
     return this.environments.length > 0;
   }
 
+  get status(): string {
+    return this.connected ? this.ccloudOrganization!.name : "(No connection)";
+  }
+
+  get tooltip(): string {
+    return "Confluent Cloud";
+  }
+
   /**
    * Refresh the ccloud connection row. Handles the organization aspect
    * here, defers to super().refresh() to handle environments.
@@ -274,7 +282,9 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
         logError(e, "loading CCloud environments or organization", {
           extra: { functionName: "loadCCloudResources" },
         });
-        showErrorNotificationWithButtons(msg);
+        void showErrorNotificationWithButtons(msg);
+
+        this.environments.length = 0;
         this.ccloudOrganization = undefined;
       }
     } else {
@@ -284,14 +294,6 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
       this.ccloudOrganization = undefined;
       this.environments.length = 0; // Clear environments if no auth session.
     }
-  }
-
-  get status(): string {
-    return this.connected ? this.ccloudOrganization!.name : "(No connection)";
-  }
-
-  get tooltip(): string {
-    return "Confluent Cloud";
   }
 
   getChildren(): CCloudEnvironment[] {

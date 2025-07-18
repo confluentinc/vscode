@@ -2,8 +2,11 @@ import * as assert from "assert";
 import sinon from "sinon";
 import { MarkdownString, TreeItemCollapsibleState } from "vscode";
 import * as environmentModels from "../../src/models/environment";
+import * as notifications from "../../src/notifications";
+import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../../src/sidecar/connections/local";
 import {
+  TEST_CCLOUD_ENVIRONMENT,
   TEST_DIRECT_ENVIRONMENT,
   TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
@@ -11,14 +14,16 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { IconNames } from "../constants";
-import { DirectResourceLoader, LocalResourceLoader } from "../loaders";
+import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { DirectEnvironment, LocalEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import {
+  CCloudConnectionRow,
   DirectConnectionRow,
   LocalConnectionRow,
   SingleEnvironmentConnectionRow,
@@ -443,6 +448,131 @@ describe("viewProviders/newResources.ts", () => {
       it("downcalls into SingleEnvironmentConnectionRow.refresh", async () => {
         await localConnectionRow.refresh();
         sinon.assert.calledOnce(singleEnvironmentConnectionRowRefresh);
+      });
+    });
+  });
+
+  describe("CCloudConnectionRow", () => {
+    let ccloudConnectionRow: CCloudConnectionRow;
+    let ccloudLoader = CCloudResourceLoader.getInstance();
+
+    beforeEach(() => {
+      ccloudConnectionRow = new CCloudConnectionRow();
+    });
+
+    describe("getters", () => {
+      it("name getter should return the correct name", () => {
+        assert.strictEqual(ccloudConnectionRow.name, "Confluent Cloud");
+      });
+
+      it("iconPath getter should return the correct icon", () => {
+        assert.strictEqual(ccloudConnectionRow.iconPath.id, IconNames.CONFLUENT_LOGO);
+      });
+
+      it("tooltip", () => {
+        assert.strictEqual(ccloudConnectionRow.tooltip, "Confluent Cloud");
+      });
+
+      describe("When connected", () => {
+        beforeEach(() => {
+          ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+          ccloudConnectionRow.ccloudOrganization = TEST_CCLOUD_ORGANIZATION;
+        });
+
+        it("connected()", () => {
+          ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+          assert.strictEqual(ccloudConnectionRow.connected, true);
+        });
+
+        it("status", () => {
+          assert.strictEqual(ccloudConnectionRow.status, TEST_CCLOUD_ORGANIZATION.name);
+        });
+      });
+
+      describe("When not connected", () => {
+        it("connected()", () => {
+          assert.strictEqual(ccloudConnectionRow.connected, false);
+        });
+        it("status", () => {
+          assert.strictEqual(ccloudConnectionRow.status, "(No connection)");
+        });
+      });
+    });
+
+    it("getChildren", () => {
+      ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+      const children = ccloudConnectionRow.getChildren();
+      assert.deepEqual(children, [TEST_CCLOUD_ENVIRONMENT]);
+    });
+
+    describe("refresh", () => {
+      let getEnvironmentsStub: sinon.SinonStub;
+      let getOrganizationStub: sinon.SinonStub;
+      let hasCCloudAuthSessionStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getEnvironmentsStub = sandbox.stub(ccloudLoader, "getEnvironments");
+        getOrganizationStub = sandbox.stub(ccloudLoader, "getOrganization");
+        hasCCloudAuthSessionStub = sandbox.stub(ccloudConnections, "hasCCloudAuthSession");
+      });
+
+      describe("when not logged in", () => {
+        beforeEach(() => {
+          hasCCloudAuthSessionStub.returns(false);
+          // smell like it used to be connected.
+          ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+          ccloudConnectionRow.ccloudOrganization = TEST_CCLOUD_ORGANIZATION;
+        });
+
+        it("makes no additional calls + reverts to empty state", async () => {
+          await ccloudConnectionRow.refresh();
+          sinon.assert.calledOnce(hasCCloudAuthSessionStub);
+          sinon.assert.notCalled(getEnvironmentsStub);
+          sinon.assert.notCalled(getOrganizationStub);
+
+          assert.strictEqual(ccloudConnectionRow.environments.length, 0);
+          assert.strictEqual(ccloudConnectionRow.ccloudOrganization, undefined);
+          assert.strictEqual(ccloudConnectionRow.connected, false);
+        });
+      });
+
+      describe("when logged in", () => {
+        beforeEach(() => {
+          hasCCloudAuthSessionStub.returns(true);
+          getOrganizationStub.resolves(TEST_CCLOUD_ORGANIZATION);
+          getEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+        });
+
+        it("calls getEnvironments and getOrganization", async () => {
+          await ccloudConnectionRow.refresh(true);
+          sandbox.assert.calledOnce(getOrganizationStub);
+          sandbox.assert.calledOnce(getEnvironmentsStub);
+          assert.strictEqual(ccloudConnectionRow.ccloudOrganization, TEST_CCLOUD_ORGANIZATION);
+          assert.strictEqual(ccloudConnectionRow.environments.length, 1);
+        });
+
+        it("handles error raised from getEnvironments", async () => {
+          const showErrorNotificationWithButtonsStub = sandbox.stub(
+            notifications,
+            "showErrorNotificationWithButtons",
+          );
+
+          // set up to smell like had been previously connected, but this refresh fails.
+          ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
+          ccloudConnectionRow.ccloudOrganization = TEST_CCLOUD_ORGANIZATION;
+
+          const msg = "Test error message";
+          getEnvironmentsStub.rejects(new Error(msg));
+
+          await ccloudConnectionRow.refresh(true);
+
+          // Should have notified the user of an error.
+          sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+
+          // Should have reverted to empty state.
+          assert.strictEqual(ccloudConnectionRow.ccloudOrganization, undefined);
+          assert.strictEqual(ccloudConnectionRow.environments.length, 0);
+        });
       });
     });
   });
