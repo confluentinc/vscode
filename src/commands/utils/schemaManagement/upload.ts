@@ -531,8 +531,8 @@ export async function getNewlyRegisteredVersion(
 ): Promise<number> {
   // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
   // (may take a few times / pauses if the request is served by a read replica that doesn't yet know about the schema we just registered, sigh.)
+  let subjectVersionPairs: SubjectVersion[] = [];
   for (let attempt = 0; attempt < 5; attempt++) {
-    let subjectVersionPairs: SubjectVersion[] | undefined;
     try {
       subjectVersionPairs = await schemasApi.getVersions({ id: schemaId });
     } catch (e) {
