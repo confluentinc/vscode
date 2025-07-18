@@ -454,10 +454,11 @@ describe("viewProviders/newResources.ts", () => {
 
   describe("CCloudConnectionRow", () => {
     let ccloudConnectionRow: CCloudConnectionRow;
-    let ccloudLoader = CCloudResourceLoader.getInstance();
+    let ccloudLoader: CCloudResourceLoader;
 
     beforeEach(() => {
       ccloudConnectionRow = new CCloudConnectionRow();
+      ccloudLoader = CCloudResourceLoader.getInstance();
     });
 
     describe("getters", () => {
@@ -545,6 +546,7 @@ describe("viewProviders/newResources.ts", () => {
 
         it("calls getEnvironments and getOrganization", async () => {
           await ccloudConnectionRow.refresh(true);
+
           sandbox.assert.calledOnce(getOrganizationStub);
           sandbox.assert.calledOnce(getEnvironmentsStub);
           assert.strictEqual(ccloudConnectionRow.ccloudOrganization, TEST_CCLOUD_ORGANIZATION);
