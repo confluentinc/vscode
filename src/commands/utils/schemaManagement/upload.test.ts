@@ -61,6 +61,7 @@ import {
   extractDetail,
   getHighestRegisteredVersion,
   getLatestSchemasForTopic,
+  getNewlyRegisteredVersion,
   parseConflictMessage,
   registerSchema,
   schemaFromString,
@@ -861,7 +862,85 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     }
   });
 
-  describe("getNewlyRegisteredVersion()", function () {});
+  describe("getNewlyRegisteredVersion()", function () {
+    let stubbedSchemasV1Api: sinon.SinonStubbedInstance<SchemasV1Api>;
+
+    const testSubjectName = "test-subject";
+    const testSchemaId = 123;
+    const testSchemaVersion = 7;
+    const subjectVersionPairs = [
+      { subject: "other-subject", version: 1 },
+      { subject: testSubjectName, version: testSchemaVersion },
+    ];
+
+    beforeEach(function () {
+      // no need to stub the sidecar method here since getNewlyRegisteredVersion gets passed
+      // an already-created stubbed instance of SchemasV1Api
+      stubbedSchemasV1Api = sandbox.createStubInstance(SchemasV1Api);
+    });
+
+    it("should return the correct version for the subject when found", async function () {
+      stubbedSchemasV1Api.getVersions.resolves(subjectVersionPairs);
+
+      const result = await getNewlyRegisteredVersion(
+        stubbedSchemasV1Api,
+        testSubjectName,
+        testSchemaId,
+      );
+
+      assert.strictEqual(result, testSchemaVersion);
+      sinon.assert.calledOnceWithExactly(stubbedSchemasV1Api.getVersions, { id: testSchemaId });
+    });
+
+    it("should retry up to 5 times for 404 error responses, then succeed when available", async function () {
+      const errorResponse = new ResponseError(new Response("Not found", { status: 404 }));
+      // first two attempts: error 404, then success
+      stubbedSchemasV1Api.getVersions
+        .onCall(0)
+        .rejects(errorResponse)
+        .onCall(1)
+        .rejects(errorResponse)
+        .onCall(2)
+        .resolves(subjectVersionPairs);
+
+      const result = await getNewlyRegisteredVersion(
+        stubbedSchemasV1Api,
+        testSubjectName,
+        testSchemaId,
+      );
+
+      assert.strictEqual(result, testSchemaVersion);
+      sinon.assert.callCount(stubbedSchemasV1Api.getVersions, 3);
+    });
+
+    it("should throw an error if subject is not found after retries", async function () {
+      stubbedSchemasV1Api.getVersions.resolves([{ subject: "other-subject", version: 1 }]);
+
+      await assert.rejects(
+        async () =>
+          await getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId),
+        (error) =>
+          error instanceof Error &&
+          error.message ===
+            `Could not find subject "${testSubjectName}" in the list of bindings for schema id ${testSchemaId}`,
+      );
+    });
+
+    it("should throw an error if getVersions throws non-404 error", async function () {
+      stubbedSchemasV1Api.getVersions.rejects(
+        new ResponseError(new Response("Server error", { status: 500 })),
+      );
+
+      await assert.rejects(
+        async () =>
+          await getNewlyRegisteredVersion(stubbedSchemasV1Api, testSubjectName, testSchemaId),
+        (error) =>
+          error instanceof Error &&
+          error.message ===
+            `Could not find subject "${testSubjectName}" in the list of bindings for schema id ${testSchemaId}`,
+      );
+    });
+  });
 
   for (const connectionType of Object.values(ConnectionType)) {
     describe(`updateRegistryCacheAndFindNewSchema() for a ${connectionType} loader`, function () {
