@@ -23,10 +23,12 @@ import {
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_DIRECT_SCHEMA,
   TEST_DIRECT_SCHEMA_REGISTRY,
+  TEST_DIRECT_SUBJECT,
   TEST_DIRECT_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
+  TEST_LOCAL_SUBJECT,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../../tests/unit/testUtils";
@@ -38,6 +40,7 @@ import {
   SubjectsV1Api,
 } from "../../../clients/schemaRegistryRest";
 import { ConnectionType } from "../../../clients/sidecar";
+import { schemaSubjectChanged, schemaVersionsChanged } from "../../../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../../../loaders";
 import { Schema, SchemaType, Subject } from "../../../models/schema";
 import {
@@ -62,6 +65,7 @@ import {
   registerSchema,
   schemaFromString,
   schemaRegistrationMessage,
+  updateRegistryCacheAndFindNewSchema,
   uploadSchema,
   validateNewSubject,
 } from "./upload";
@@ -859,7 +863,124 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
 
   describe("getNewlyRegisteredVersion()", function () {});
 
-  describe("updateRegistryCacheAndFindNewSchema()", function () {});
+  for (const connectionType of Object.values(ConnectionType)) {
+    describe(`updateRegistryCacheAndFindNewSchema() for a ${connectionType} loader`, function () {
+      let stubbedLoader: sinon.SinonStubbedInstance<ResourceLoader>;
+      let schemaSubjectChangedStub: sinon.SinonStub;
+      let schemaVersionsChangedStub: sinon.SinonStub;
+
+      let testSchemaRegistry: CCloudSchemaRegistry | LocalSchemaRegistry | DirectSchemaRegistry;
+      let testSchema: Schema;
+      let testSubject: Subject;
+
+      beforeEach(function () {
+        switch (connectionType) {
+          case ConnectionType.Ccloud:
+            stubbedLoader = getStubbedCCloudResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+            testSchema = TEST_CCLOUD_SCHEMA;
+            testSubject = TEST_CCLOUD_SUBJECT;
+            break;
+          case ConnectionType.Local:
+            stubbedLoader = getStubbedLocalResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+            testSchema = TEST_LOCAL_SCHEMA;
+            testSubject = TEST_LOCAL_SUBJECT;
+            break;
+          case ConnectionType.Direct:
+            stubbedLoader = getStubbedDirectResourceLoader(
+              sandbox,
+            ) as unknown as sinon.SinonStubbedInstance<ResourceLoader>;
+            testSchemaRegistry = TEST_DIRECT_SCHEMA_REGISTRY;
+            testSchema = TEST_DIRECT_SCHEMA;
+            testSubject = TEST_DIRECT_SUBJECT;
+            break;
+          default:
+            throw new Error(`Unsupported connection type: ${connectionType}`);
+        }
+
+        schemaSubjectChangedStub = sandbox.stub(schemaSubjectChanged, "fire");
+        schemaVersionsChangedStub = sandbox.stub(schemaVersionsChanged, "fire");
+      });
+
+      it("should throw an error if the loader can't find the schema by id", async function () {
+        const testSchemaId = 1;
+        stubbedLoader.getSchemasForSubject.resolves([]);
+
+        await assert.rejects(
+          async () => {
+            await updateRegistryCacheAndFindNewSchema(
+              testSchemaRegistry,
+              testSchemaId,
+              testSubject.name,
+            );
+          },
+          (error) =>
+            error instanceof Error &&
+            error.message ===
+              `Could not find schema with id ${testSchemaId} in registry ${testSchemaRegistry.id}`,
+        );
+
+        sinon.assert.notCalled(schemaSubjectChangedStub);
+        sinon.assert.notCalled(schemaVersionsChangedStub);
+      });
+
+      it("should fire schemaSubjectChanged when a new subject is created", async function () {
+        testSubject.schemas = [testSchema];
+        stubbedLoader.getSchemasForSubject.resolves([testSchema]);
+
+        const result = await updateRegistryCacheAndFindNewSchema(
+          testSchemaRegistry,
+          parseInt(testSchema.id, 10),
+          testSubject.name,
+        );
+
+        assert.strictEqual(result, testSchema);
+        sinon.assert.calledOnce(stubbedLoader.clearCache);
+        sinon.assert.calledOnceWithExactly(stubbedLoader.clearCache, testSchemaRegistry);
+        sinon.assert.calledOnce(schemaSubjectChangedStub);
+        sinon.assert.calledOnceWithMatch(schemaSubjectChangedStub, {
+          change: "added",
+          subject: sinon.match((subject: Subject) => {
+            return subject.name === testSubject.name && subject.schemas?.length === 1;
+          }),
+        });
+        sinon.assert.notCalled(schemaVersionsChangedStub);
+      });
+
+      it("should fire schemaVersionsChanged when a new schema version is added to an existing subject", async function () {
+        const testNewerSchema = Schema.create({
+          ...testSchema,
+          id: "2",
+          version: 2,
+          isHighestVersion: true,
+        });
+        testSubject.schemas = [testNewerSchema, testSchema];
+        stubbedLoader.getSchemasForSubject.resolves([testNewerSchema, testSchema]);
+
+        const result = await updateRegistryCacheAndFindNewSchema(
+          testSchemaRegistry,
+          parseInt(testNewerSchema.id, 10),
+          testSubject.name,
+        );
+
+        assert.strictEqual(result, testNewerSchema);
+        sinon.assert.notCalled(stubbedLoader.clearCache);
+        sinon.assert.notCalled(schemaSubjectChangedStub);
+        sinon.assert.calledOnce(schemaVersionsChangedStub);
+        sinon.assert.calledOnceWithMatch(schemaVersionsChangedStub, {
+          change: "added",
+          subject: sinon.match((subject: Subject) => {
+            return subject.name === testSubject.name && subject.schemas?.length === 2;
+          }),
+        });
+      });
+    });
+  }
 
   describe("schemaFromString()", () => {
     it("should return a schema object with the correct values", () => {
