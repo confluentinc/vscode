@@ -125,10 +125,6 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
 
   abstract get tooltip(): string | MarkdownString;
 
-  searchableText(): string {
-    return this.name;
-  }
-
   get connectionId(): ConnectionId {
     return this.loader.connectionId;
   }
@@ -145,6 +141,13 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   }
 
   abstract get connected(): boolean;
+
+  /**
+   * Return the immediate children of this connection row:
+   *  * Kafka cluster and / or schema registry if is a single env row,
+   *  * environment(s) if is the logged-in ccloud row
+   **/
+  abstract getChildren(): ConnectionRowChildren[];
 
   /** Convert this ConnectionRow into a TreeItem. */
   getTreeItem(): TreeItem {
@@ -164,16 +167,13 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     item.description = this.status;
     item.tooltip = this.tooltip;
 
-    this.logger.debug("getTreeItem", {
-      name: this.name,
-      id: item.id,
-      contextValue: item.contextValue,
-    });
-
     return item;
   }
 
-  abstract getChildren(): ConnectionRowChildren[];
+  /** Degenerate implementation for now, we don't yet handle the search aspect. */
+  searchableText(): string {
+    return this.name;
+  }
 }
 
 export abstract class SingleEnvironmentConnectionRow<

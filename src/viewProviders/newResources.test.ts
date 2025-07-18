@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { MarkdownString } from "vscode";
+import { MarkdownString, TreeItemCollapsibleState } from "vscode";
 import * as environmentModels from "../../src/models/environment";
 import * as sidecarLocalConnections from "../../src/sidecar/connections/local";
 import {
@@ -119,26 +119,6 @@ describe("viewProviders/newResources.ts", () => {
             directConnectionRow.environments[0],
             TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
           );
-        });
-      });
-
-      describe("getEnvironments", () => {
-        let loaderGetEnvironmentsStub: sinon.SinonStub;
-
-        beforeEach(() => {
-          loaderGetEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
-        });
-
-        it("calls loader.getEnvironments with deepRefresh=false", async () => {
-          await directConnectionRow.getEnvironments();
-          sinon.assert.calledOnceWithExactly(loaderGetEnvironmentsStub, false);
-        });
-
-        it("returns the environments from the loader", async () => {
-          const expectedEnvironments = [TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR];
-          loaderGetEnvironmentsStub.resolves(expectedEnvironments);
-          const environments = await directConnectionRow.getEnvironments();
-          assert.deepStrictEqual(environments, expectedEnvironments);
         });
       });
     });
@@ -348,6 +328,15 @@ describe("viewProviders/newResources.ts", () => {
 
   describe("LocalConnectionRow", () => {
     let localConnectionRow: LocalConnectionRow;
+    let localLoader = LocalResourceLoader.getInstance();
+
+    // TEST_LOCAL_ENVIRONMENT doesn't have Kafka or Schema Registry configured,
+    // so make a version that does for connected-state testing.
+    const TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR = new LocalEnvironment({
+      ...TEST_LOCAL_ENVIRONMENT,
+      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+    });
 
     beforeEach(() => {
       localConnectionRow = new LocalConnectionRow();
@@ -374,20 +363,61 @@ describe("viewProviders/newResources.ts", () => {
       // w/o a connection ...
       assert.strictEqual(localConnectionRow.status, "(Not Running)");
 
-      // TEST_LOCAL_ENVIRONMENT doesn't have Kafka or Schema Registry configured,
-      // so we create a new one with those properties set.
-      const LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR = new LocalEnvironment({
-        ...TEST_LOCAL_ENVIRONMENT,
-        kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
-        schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
-      });
-
       // ... and with a fully fleshed out connection
-      localConnectionRow.environments.push(LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+      localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
       assert.strictEqual(
         localConnectionRow.status,
-        LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR.kafkaClusters[0].uri!,
+        TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR.kafkaClusters[0].uri!,
       );
+    });
+
+    describe("ConnectionRow methods via LocalConnectionRow", () => {
+      describe("getEnvironments", () => {
+        let loaderGetEnvironmentsStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          loaderGetEnvironmentsStub = sandbox.stub(localLoader, "getEnvironments").resolves([]);
+        });
+
+        it("calls loader.getEnvironments with deepRefresh=false", async () => {
+          await localConnectionRow.getEnvironments();
+          sinon.assert.calledOnceWithExactly(loaderGetEnvironmentsStub, false);
+        });
+
+        it("returns the environments from the loader", async () => {
+          const expectedEnvironments = [TEST_LOCAL_ENVIRONMENT];
+          loaderGetEnvironmentsStub.resolves(expectedEnvironments);
+          const environments = await localConnectionRow.getEnvironments();
+          assert.deepStrictEqual(environments, expectedEnvironments);
+        });
+      });
+
+      describe("getTreeItem", () => {
+        it("when connected", () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          const treeItem = localConnectionRow.getTreeItem();
+          assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
+          assert.strictEqual(treeItem.contextValue, "local-container-connected");
+          assert.strictEqual(treeItem.id, `${TEST_LOCAL_ENVIRONMENT.connectionId}-connected`);
+        });
+
+        const notConnectedTestCases: Array<[string, LocalEnvironment | undefined]> = [
+          ["when not connected, no environment", undefined],
+          ["when not connected, empty environment", TEST_LOCAL_ENVIRONMENT],
+        ];
+
+        for (const [label, environment] of notConnectedTestCases) {
+          it(label, () => {
+            if (environment) {
+              localConnectionRow.environments.push(environment);
+            }
+            const treeItem = localConnectionRow.getTreeItem();
+            assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.None);
+            assert.strictEqual(treeItem.contextValue, "local-container");
+            assert.strictEqual(treeItem.id, `${TEST_LOCAL_ENVIRONMENT.connectionId}`);
+          });
+        }
+      });
     });
 
     describe("refresh", () => {
