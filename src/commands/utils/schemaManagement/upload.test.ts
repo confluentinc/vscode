@@ -52,7 +52,7 @@ import {
   validateNewSubject,
 } from "./upload";
 
-describe.only("commands/utils/schemaManagement/upload.ts", function () {
+describe("commands/utils/schemaManagement/upload.ts", function () {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
