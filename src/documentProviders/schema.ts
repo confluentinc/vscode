@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { ResourceDocumentProvider } from ".";
 import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
-import { getLanguageTypes, Schema, type SchemaType } from "../models/schema";
+import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
 import { getSidecar } from "../sidecar";
 
 export const SCHEMA_URI_SCHEME = "confluent.schema";
@@ -37,7 +37,7 @@ export async function fetchSchemaBody(schema: Schema, prettified: boolean = true
     schema.schemaRegistryId,
     schema.connectionId,
   );
-  const schemaResp: SchemaString = await client.getSchema({ id: Number(schema.id) });
+  const schemaResp: SchemaString = await client.getSchema({ id: parseInt(schema.id, 10) });
   const schemaDefinition = prettified ? prettifySchemaDefinition(schemaResp) : schemaResp.schema;
   if (!schemaDefinition) {
     throw new Error("Failed to load schema definition; it may be empty or invalid.");
@@ -50,13 +50,17 @@ export async function fetchSchemaBody(schema: Schema, prettified: boolean = true
  * @param schemaResp The schema response object from the Schema Registry REST API
  * @returns The prettified schema definition, or undefined if the schema content is empty or invalid
  */
-function prettifySchemaDefinition(schemaResp: SchemaString): string | undefined {
+export function prettifySchemaDefinition(schemaResp: SchemaString): string | undefined {
   let schemaDefinition = schemaResp.schema;
   if (!schemaDefinition) {
     return undefined;
   }
-  // Avro schemas show up as `schemaType: undefined` in the response
-  if (schemaResp.schemaType === "JSON" || schemaResp.schemaType === undefined) {
+  // Avro schemas typically show up as `schemaType: undefined` in the response, but we'll
+  // also check for "AVRO" explicitly
+  if (
+    schemaResp.schemaType === undefined ||
+    [SchemaType.Avro, SchemaType.Json].includes(schemaResp.schemaType as SchemaType)
+  ) {
     try {
       // it's already JSON-stringified, so parse and re-stringify with pretty-printing
       schemaDefinition = JSON.stringify(JSON.parse(schemaDefinition), null, 2);
@@ -71,27 +75,26 @@ function prettifySchemaDefinition(schemaResp: SchemaString): string | undefined 
  * Convert a {@link Schema} to a URI and render via the {@link SchemaDocumentProvider} as a read-
  * only document in a new editor tab.
  */
-export async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEditor> {
+export async function openReadOnlySchemaDocument(schema: Schema): Promise<vscode.TextEditor> {
   const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
-  const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
+  const editor: vscode.TextEditor = await vscode.window.showTextDocument(uri, { preview: false });
 
-  await setEditorLanguageForSchema(textDoc, schema.type);
+  await setLanguageForSchemaEditor(editor, schema.type);
 
-  return textDoc;
+  return editor;
 }
 
 /**
  * Possibly set the language of the editor's document based on the schema.
  * Depends on what languages the user has installed.
  */
-export async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: SchemaType) {
-  const installedLanguages = await vscode.languages.getLanguages();
-
-  const languageTypes = getLanguageTypes(type);
+export async function setLanguageForSchemaEditor(editor: vscode.TextEditor, type: SchemaType) {
+  const installedLanguages: string[] = await vscode.languages.getLanguages();
+  const languageTypes: string[] = getLanguageTypes(type);
 
   for (const language of languageTypes) {
-    if (installedLanguages.indexOf(language) !== -1) {
-      vscode.languages.setTextDocumentLanguage(textDoc.document, language);
+    if (installedLanguages.includes(language)) {
+      await vscode.languages.setTextDocumentLanguage(editor.document, language);
       logger.debug(`Set document language to "${language}"`);
       return;
     } else {

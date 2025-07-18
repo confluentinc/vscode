@@ -3,9 +3,9 @@ import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/sidecar";
 import {
   fetchSchemaBody,
-  loadOrCreateSchemaViewer,
+  openReadOnlySchemaDocument,
   SCHEMA_URI_SCHEME,
-  setEditorLanguageForSchema,
+  setLanguageForSchemaEditor,
 } from "../documentProviders/schema";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
 import { logError } from "../errors";
@@ -87,7 +87,7 @@ export async function viewLocallyCommand(schema: Schema) {
       title: `Loading schema "${schema.subject}" v${schema.version}...`,
     },
     async () => {
-      await loadOrCreateSchemaViewer(schema);
+      await openReadOnlySchemaDocument(schema);
     },
   );
 }
@@ -124,7 +124,7 @@ export async function createSchemaCommand() {
 
   // set the language mode based on the schema type
   const editor = await vscode.window.showTextDocument(document.uri, { preview: false });
-  await setEditorLanguageForSchema(editor, chosenSchemaType);
+  await setLanguageForSchemaEditor(editor, chosenSchemaType);
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */
@@ -180,7 +180,7 @@ export async function openLatestSchemasCommand(topic: KafkaTopic) {
     },
     async () => {
       const promises = highestVersionedSchemas.map((schema) => {
-        loadOrCreateSchemaViewer(schema);
+        openReadOnlySchemaDocument(schema);
       });
       await Promise.all(promises);
     },
@@ -225,7 +225,7 @@ export async function evolveSchemaCommand(schema: Schema) {
   const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
 
   // Finally, set the language of the editor based on the schema type.
-  await setEditorLanguageForSchema(editor, schema.type);
+  await setLanguageForSchemaEditor(editor, schema.type);
 
   // The user can edit, then either save to disk or to use the 'cloud upload' button
   // to upload to the schema registry. Because of the query string in the URI,
