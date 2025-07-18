@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed (post-1.5 cut)
+
+- Only send the rarer / harder to explain sidecar startup errors to Sentry, so as
+to lower oncall spiking. Log any startup reason to Segment for tracking, however.
+
+## (pre-1.5 cut)
+
 ### Added
 
 - On Confluent Cloud topics, context menu now offers the option to "Query with Flink SQL"
