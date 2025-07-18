@@ -17,7 +17,7 @@ import {
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
-import { IconNames } from "../constants";
+import { IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { DirectEnvironment, LocalEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
@@ -26,6 +26,7 @@ import {
   CCloudConnectionRow,
   DirectConnectionRow,
   LocalConnectionRow,
+  NewResourceViewProvider,
   SingleEnvironmentConnectionRow,
 } from "./newResources";
 
@@ -42,6 +43,76 @@ describe("viewProviders/newResources.ts", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("NewResourceViewProvider", () => {
+    let provider: NewResourceViewProvider;
+
+    beforeEach(() => {
+      provider = new NewResourceViewProvider();
+      // would have been called if we obtained through getInstance().
+      provider["initialize"]();
+    });
+
+    describe("loadAndStoreConnection(), refreshConnection()", () => {
+      let localConnectionRow: LocalConnectionRow;
+      let rowRefreshStub: sinon.SinonStub;
+      let repaintStub: sinon.SinonStub;
+
+      beforeEach(async () => {
+        // populate with local row only
+        localConnectionRow = new LocalConnectionRow();
+        rowRefreshStub = sandbox.stub(localConnectionRow, "refresh").resolves();
+        repaintStub = sandbox.stub(provider as any, "repaint");
+      });
+
+      for (const insertBeforeRefresh of [true, false]) {
+        it(`loadAndStoreConnection(connection, ${insertBeforeRefresh})`, async () => {
+          assert.strictEqual(localConnectionRow.ordering, -1, "initial row ordering");
+          await provider.loadAndStoreConnection(localConnectionRow, insertBeforeRefresh);
+
+          sandbox.assert.calledOnce(rowRefreshStub);
+          // incremented during storeConnection() call.
+          assert.strictEqual(localConnectionRow.ordering, 0, "after insert row ordering");
+
+          sandbox.assert.calledOnce(repaintStub);
+        });
+      }
+
+      describe("refreshConnection()", async () => {
+        let loggerWarnStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          loggerWarnStub = sandbox.stub(provider.logger, "warn");
+        });
+
+        it("connection not found, logs warning and no repaint", async () => {
+          const connectionId = "non-existent-connection-id" as ConnectionId;
+
+          await provider.refreshConnection(connectionId);
+
+          sinon.assert.calledOnce(loggerWarnStub);
+          sinon.assert.calledWith(loggerWarnStub, "No connection row found for connectionId", {
+            connectionId,
+          });
+          sinon.assert.notCalled(repaintStub);
+        });
+
+        it("connection found, calls its refresh(), then repaints", async () => {
+          await provider.loadAndStoreConnection(localConnectionRow, true);
+          // Both of these stubs are called during loadAndStoreConnection(), so reset.
+          rowRefreshStub.resetHistory();
+          repaintStub.resetHistory();
+
+          // refresh a connection that exists.
+          await provider.refreshConnection(LOCAL_CONNECTION_ID);
+
+          sinon.assert.notCalled(loggerWarnStub);
+          sinon.assert.calledOnce(rowRefreshStub);
+          sinon.assert.calledOnce(repaintStub);
+        });
+      });
+    });
   });
 
   describe("DirectConnectionRow", () => {

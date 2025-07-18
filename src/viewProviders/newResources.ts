@@ -466,25 +466,25 @@ export class NewResourceViewProvider
     // upon ccloud connection state changes.
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       this.logger.debug("ccloudConnected event fired", { connected });
-      void this.refreshConnection(CCLOUD_CONNECTION_ID, true);
+      this.refreshConnection(CCLOUD_CONNECTION_ID, true);
     });
 
     // Local connection needs two different observers, one for local Kafka and one for local Schema Registry.
     const localKafkaConnectedSub: Disposable = localKafkaConnected.event((connected: boolean) => {
       this.logger.debug("localKafkaConnected event fired", { connected });
-      void this.refreshConnection(LOCAL_CONNECTION_ID, true);
+      this.refreshConnection(LOCAL_CONNECTION_ID, true);
     });
     const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
       (connected: boolean) => {
         this.logger.debug("localSchemaRegistryConnected event fired", { connected });
-        void this.refreshConnection(LOCAL_CONNECTION_ID, true);
+        this.refreshConnection(LOCAL_CONNECTION_ID, true);
       },
     );
 
     // Watch for direct connections being added/removed, call into our handler.
     const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(() => {
       this.logger.debug("directConnectionsChanged event fired");
-      void this.reconcileDirectConnections();
+      this.reconcileDirectConnections();
     });
 
     // Watch for (direct) connections going 'stable', which will happen
@@ -493,7 +493,7 @@ export class NewResourceViewProvider
     // connection.
     const connectionUsableSub: Disposable = connectionStable.event((id: ConnectionId) => {
       this.logger.debug("connectionStable event fired, refreshing connection", { id });
-      void this.refreshConnection(id, true);
+      this.refreshConnection(id, true);
     });
 
     // watch for (direct) connections going disconnected (but not deleted)
@@ -501,7 +501,7 @@ export class NewResourceViewProvider
     const connectionDisconnectedSub: Disposable = connectionDisconnected.event(
       (id: ConnectionId) => {
         this.logger.debug("connectionDisconnected event fired, refreshing connection", { id });
-        void this.refreshConnection(id, true);
+        this.refreshConnection(id, true);
       },
     );
 
@@ -629,7 +629,7 @@ export class NewResourceViewProvider
     // if empty map, kick of initialization, but return empty array
     if (this.connections.size === 0) {
       this.logger.debug("No connections found, initializing connections");
-      void this.lazyInitializeConnections();
+      this.lazyInitializeConnections(); // kicks off async initialization
       return [];
     }
 
@@ -694,10 +694,13 @@ export class NewResourceViewProvider
   }
 
   async loadAndStoreConnection(
+    /** The row to insert */
     connectionRow: AnyConnectionRow,
     insertBeforeRefresh: boolean,
   ): Promise<void> {
     if (insertBeforeRefresh) {
+      // Codepath for local, ccloud rows whose core treeitem attributes
+      // (name, etc.) are known before the initial refresh.
       this.logger.debug("Storing connection row before initial refresh", {
         connectionId: connectionRow.connectionId,
       });
@@ -711,7 +714,9 @@ export class NewResourceViewProvider
       });
 
       if (!insertBeforeRefresh) {
-        // If we didn't insert the connection row before the refresh, do so now.
+        // Codepath for direct connections, where we don't know the name, icon, etc.
+        // until after the initial refresh (and if we tried to make a TreeItem
+        // before the refresh, an error would be raised).
         this.logger.debug("Storing connection row now that initial refresh has completed", {
           connectionId: connectionRow.connectionId,
         });
