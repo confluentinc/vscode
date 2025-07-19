@@ -412,6 +412,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+        "title": "Set Private Network Endpoint(s)",
+        "icon": "$(confluent-environment)",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.resources.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -1306,6 +1312,10 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -1679,6 +1689,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+          "when": "view == confluent-resources && viewItem =~ /.*ccloud-environment/",
           "group": "z_openInCloud"
         },
         {
