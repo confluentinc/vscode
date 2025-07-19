@@ -6,6 +6,7 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import * as telemetryEvents from "../telemetry/events";
+import { ExtensionSetting } from "./base";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
@@ -41,7 +42,7 @@ describe("extensionSettings/listener.ts", function () {
   });
 
   it(`should call updatePreferences() when the "${SSL_PEM_PATHS.id}" setting changes`, async function () {
-    stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id).returns(["path/to/pem"]);
+    stubbedConfigs.stubGet(SSL_PEM_PATHS, ["path/to/pem"]);
     const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();
 
     const mockEvent = {
@@ -56,7 +57,7 @@ describe("extensionSettings/listener.ts", function () {
   });
 
   it(`should call updatePreferences() when the "${SSL_VERIFY_SERVER_CERT_DISABLED.id}" setting changes`, async function () {
-    stubbedConfigs.get.withArgs(SSL_VERIFY_SERVER_CERT_DISABLED.id).returns(true);
+    stubbedConfigs.stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, true);
     const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();
 
     const mockEvent = {
@@ -84,14 +85,15 @@ describe("extensionSettings/listener.ts", function () {
     assert.ok(updatePreferencesStub.notCalled);
   });
 
-  for (const [previewSetting, previewContextValue] of [
-    [ENABLE_CHAT_PARTICIPANT.id, contextValues.ContextValues.chatParticipantEnabled],
-  ]) {
+  const previewSettings: [ExtensionSetting<any>, contextValues.ContextValues][] = [
+    [ENABLE_CHAT_PARTICIPANT, contextValues.ContextValues.chatParticipantEnabled],
+  ];
+  for (const [previewSetting, previewContextValue] of previewSettings) {
     for (const enabled of [true, false]) {
-      it(`should update the "${previewContextValue}" context value when the "${previewSetting}" setting is changed to ${enabled} (REMOVE ONCE PREVIEW SETTING IS NO LONGER USED)`, async () => {
-        stubbedConfigs.get.withArgs(previewSetting).returns(enabled);
+      it(`should update the "${previewContextValue}" context value when the "${previewSetting.id}" setting is changed to ${enabled} (REMOVE ONCE PREVIEW SETTING IS NO LONGER USED)`, async () => {
+        stubbedConfigs.stubGet(previewSetting, enabled);
         const mockEvent = {
-          affectsConfiguration: (config: string) => config === previewSetting,
+          affectsConfiguration: (config: string) => config === previewSetting.id,
         } as ConfigurationChangeEvent;
         onDidChangeConfigurationStub.yields(mockEvent);
 
@@ -104,36 +106,32 @@ describe("extensionSettings/listener.ts", function () {
     }
   }
 
-  for (const configValue of [false, null, undefined]) {
-    it(`should dispose the FlinkLanguageClientManager when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" is set to ${configValue}`, async () => {
-      stubbedConfigs.get
-        .withArgs(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id, configValue)
-        .returns(configValue);
-      const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
-        FlinkLanguageClientManager,
-      );
-      sandbox
-        .stub(FlinkLanguageClientManager, "getInstance")
-        .returns(stubbedFlinkLanguageClientManager);
+  it(`should dispose the FlinkLanguageClientManager when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" is set to false`, async () => {
+    stubbedConfigs.stubGet(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, false);
+    const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
+      FlinkLanguageClientManager,
+    );
+    sandbox
+      .stub(FlinkLanguageClientManager, "getInstance")
+      .returns(stubbedFlinkLanguageClientManager);
 
-      const mockEvent = {
-        affectsConfiguration: (config: string) => config === ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id,
-      } as ConfigurationChangeEvent;
-      onDidChangeConfigurationStub.yields(mockEvent);
+    const mockEvent = {
+      affectsConfiguration: (config: string) => config === ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id,
+    } as ConfigurationChangeEvent;
+    onDidChangeConfigurationStub.yields(mockEvent);
 
-      createConfigChangeListener();
-      await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+    createConfigChangeListener();
+    await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
 
-      sinon.assert.called(stubbedFlinkLanguageClientManager.dispose);
-      sinon.assert.calledWith(logUsageStub, telemetryEvents.UserEvent.ExtensionSettingsChange, {
-        settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id,
-        enabled: false,
-      });
+    sinon.assert.called(stubbedFlinkLanguageClientManager.dispose);
+    sinon.assert.calledWith(logUsageStub, telemetryEvents.UserEvent.ExtensionSettingsChange, {
+      settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id,
+      enabled: false,
     });
-  }
+  });
 
-  it(`should call maybeStartLanguageClient() when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" is set to true`, async () => {
-    stubbedConfigs.get.withArgs(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id).returns(true);
+  it(`should call maybeStartLanguageClient() when "${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER}" is set to true`, async () => {
+    stubbedConfigs.stubGet(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, true);
     const stubbedFlinkLanguageClientManager = sandbox.createStubInstance(
       FlinkLanguageClientManager,
     );

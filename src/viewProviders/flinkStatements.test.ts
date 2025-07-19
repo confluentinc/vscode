@@ -120,11 +120,10 @@ describe("FlinkStatementsViewProvider", () => {
       const nonterminalPollingConcurrency = 1;
       const nonterminalPollingFrequency = 2;
       const nonterminalStatementsToPoll = 300;
-      stubbedConfigs.configure({
-        [STATEMENT_POLLING_CONCURRENCY.id]: nonterminalPollingConcurrency,
-        [STATEMENT_POLLING_FREQUENCY_SECONDS.id]: nonterminalPollingFrequency,
-        [STATEMENT_POLLING_LIMIT.id]: nonterminalStatementsToPoll,
-      });
+      stubbedConfigs
+        .stubGet(STATEMENT_POLLING_CONCURRENCY, nonterminalPollingConcurrency)
+        .stubGet(STATEMENT_POLLING_FREQUENCY_SECONDS, nonterminalPollingFrequency)
+        .stubGet(STATEMENT_POLLING_LIMIT, nonterminalStatementsToPoll);
 
       viewProvider.logTelemetry(totalStatements, nonTerminalStatements);
 
@@ -152,11 +151,13 @@ describe("FlinkStatementsViewProvider", () => {
       const nonTerminalStatements = 3053;
       viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
 
-      stubbedConfigs.configure({
-        [STATEMENT_POLLING_CONCURRENCY.id]: STATEMENT_POLLING_CONCURRENCY.defaultValue,
-        [STATEMENT_POLLING_FREQUENCY_SECONDS.id]: STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
-        [STATEMENT_POLLING_LIMIT.id]: STATEMENT_POLLING_LIMIT.defaultValue,
-      });
+      stubbedConfigs
+        .stubGet(STATEMENT_POLLING_CONCURRENCY, STATEMENT_POLLING_CONCURRENCY.defaultValue)
+        .stubGet(
+          STATEMENT_POLLING_FREQUENCY_SECONDS,
+          STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+        )
+        .stubGet(STATEMENT_POLLING_LIMIT, STATEMENT_POLLING_LIMIT.defaultValue);
 
       viewProvider.logTelemetry(totalStatements, nonTerminalStatements);
 

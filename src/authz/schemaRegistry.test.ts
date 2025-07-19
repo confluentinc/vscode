@@ -140,7 +140,7 @@ describe("authz.schemaRegistry", function () {
 
   // showNoSchemaAccessWarningNotification() tests
   it("showNoSchemaAccessWarningNotification() should show warning if warnings are enabled", function () {
-    stubbedConfigs.get.withArgs(SCHEMA_RBAC_WARNINGS_ENABLED.id).returns(true);
+    stubbedConfigs.stubGet(SCHEMA_RBAC_WARNINGS_ENABLED, true);
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
@@ -148,7 +148,7 @@ describe("authz.schemaRegistry", function () {
   });
 
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
-    stubbedConfigs.get.withArgs(SCHEMA_RBAC_WARNINGS_ENABLED.id).returns(false);
+    stubbedConfigs.stubGet(SCHEMA_RBAC_WARNINGS_ENABLED, false);
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
