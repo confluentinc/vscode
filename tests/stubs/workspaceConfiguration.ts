@@ -28,10 +28,22 @@ export class StubbedWorkspaceConfiguration implements StubbedWorkspaceConfigurat
   }
 
   /**
-   * Stubs the {@linkcode get} method to return a specific value for a given setting and return this to allow chaining. (This uses the
-   * {@linkcode ExtensionSetting.id id} when performing the {@linkcode WorkspaceConfiguration.get} call.)
-   * @param setting The {@link ExtensionSetting} to stub.
-   * @param value The value to return for the `setting`.
+   * Configures the {@linkcode get} stub to return a specific value for a given setting.
+   *
+   * @param setting The {@link ExtensionSetting} instance to stub. Must have an `id` property.
+   * @param value The value to return for the given setting.
+   * @returns this {@link StubbedWorkspaceConfiguration} instance for chaining.
+   *
+   * ---
+   *
+   * @example
+   * ```ts
+   * stubbedConfigs.stubGet(LOCAL_KAFKA_IMAGE, "confluentinc/cp-kafka");
+   * ```
+   * Which is equivalent to:
+   * ```ts
+   * stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE.id, sinon.match.any).returns("confluentinc/cp-kafka");
+   * ```
    */
   stubGet<T>(setting: ExtensionSetting<T>, value: T): StubbedWorkspaceConfiguration {
     // use `match.any` to allow an optional second argument (for the default value)
