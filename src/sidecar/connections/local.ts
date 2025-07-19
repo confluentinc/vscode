@@ -12,15 +12,15 @@ import {
 } from "../../clients/docker";
 import { Connection, ConnectionSpec } from "../../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
-import {
-  getLocalKafkaImageName,
-  getLocalKafkaImageTag,
-  getLocalSchemaRegistryImageName,
-  getLocalSchemaRegistryImageTag,
-  isDockerAvailable,
-} from "../../docker/configs";
+import { isDockerAvailable } from "../../docker/configs";
 import { MANAGED_CONTAINER_LABEL } from "../../docker/constants";
 import { getContainersForImage } from "../../docker/containers";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
+} from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 const logger = new Logger("sidecar.connections.local");
 
@@ -122,8 +122,8 @@ export async function getLocalResourceContainers(
 export async function getLocalKafkaContainers(
   options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
 ): Promise<ContainerSummary[]> {
-  const imageRepo: string = getLocalKafkaImageName();
-  const imageTag: string = getLocalKafkaImageTag();
+  const imageRepo: string = LOCAL_KAFKA_IMAGE.value;
+  const imageTag: string = LOCAL_KAFKA_IMAGE_TAG.value;
   return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 
@@ -134,8 +134,8 @@ export async function getLocalKafkaContainers(
 export async function getLocalSchemaRegistryContainers(
   options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
 ): Promise<ContainerSummary[]> {
-  const imageRepo: string = getLocalSchemaRegistryImageName();
-  const imageTag: string = getLocalSchemaRegistryImageTag();
+  const imageRepo: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
+  const imageTag: string = LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value;
   return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 

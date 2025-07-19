@@ -17,7 +17,6 @@ import {
   LanguageModelToolCallPart,
   LanguageModelToolResultPart,
   lm,
-  workspace,
 } from "vscode";
 import { logError } from "../errors";
 import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
@@ -95,9 +94,7 @@ export async function chatHandler(
     return { metadata: { modelInfo } };
   }
 
-  const shouldSendErrorData: boolean = workspace
-    .getConfiguration()
-    .get(CHAT_SEND_ERROR_DATA, false);
+  const shouldSendErrorData: boolean = CHAT_SEND_ERROR_DATA.value;
 
   // non-command request
   try {
@@ -264,9 +261,7 @@ export async function handleChatMessage(
     });
     const previousMessageCount: number = messages.length;
     // also check user/workspace settings to see if we can send tool call data with telemetry
-    const shouldSendToolCallData: boolean = workspace
-      .getConfiguration()
-      .get(CHAT_SEND_TOOL_CALL_DATA, false);
+    const shouldSendToolCallData: boolean = CHAT_SEND_TOOL_CALL_DATA.value;
 
     for await (const fragment of response.stream) {
       if (token.isCancellationRequested) {

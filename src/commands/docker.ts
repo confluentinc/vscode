@@ -186,11 +186,7 @@ export async function addDockerPath() {
   const path: Uri = newDockerUris[0];
 
   if (path.fsPath.endsWith("sock") || path.fsPath.endsWith("docker_engine")) {
-    const configs: WorkspaceConfiguration = workspace.getConfiguration();
-
-    //getting the paths instead of searching their env for it
-
-    configs.update(LOCAL_DOCKER_SOCKET_PATH, path.fsPath, true);
+    await LOCAL_DOCKER_SOCKET_PATH.update(path.fsPath, true);
   } else {
     window.showErrorMessage(
       "Docker socket path not added. Please select a .sock or a docker_engine file.",
