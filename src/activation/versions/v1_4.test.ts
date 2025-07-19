@@ -1,16 +1,16 @@
 import * as sinon from "sinon";
 import { commands } from "vscode";
 
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import { EXTENSION_ID } from "../../constants";
 import { SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS } from "../../extensionSettings/constants";
 import * as notifications from "../../notifications";
-import * as utils from "./utils";
 import { FLINK_PREVIEW_MESSAGE, showFlinkPreviewNotification } from "./v1_4";
 
 describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let canShowNewOrUpdatedExtensionNotificationsStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let showInfoNotificationWithButtonsStub: sinon.SinonStub;
   let executeCommandStub: sinon.SinonStub;
 
@@ -18,10 +18,7 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
     sandbox = sinon.createSandbox();
 
     // helper stubs
-    canShowNewOrUpdatedExtensionNotificationsStub = sandbox.stub(
-      utils,
-      "canShowNewOrUpdatedExtensionNotifications",
-    );
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     showInfoNotificationWithButtonsStub = sandbox.stub(
       notifications,
       "showInfoNotificationWithButtons",
@@ -36,11 +33,11 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
   });
 
   it("should show a notification when canShowNewOrUpdatedExtensionNotifications returns true", () => {
-    canShowNewOrUpdatedExtensionNotificationsStub.returns(true);
+    stubbedConfigs.stubGet(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS, true);
 
     showFlinkPreviewNotification();
 
-    sinon.assert.calledOnce(canShowNewOrUpdatedExtensionNotificationsStub);
+    sinon.assert.calledOnce(stubbedConfigs.get);
     sinon.assert.calledOnceWithExactly(showInfoNotificationWithButtonsStub, FLINK_PREVIEW_MESSAGE, {
       "Open Flink Settings": sinon.match.func,
       "Change Notification Settings": sinon.match.func,
@@ -48,18 +45,18 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
   });
 
   it("should not show a notification when canShowNewOrUpdatedExtensionNotifications returns false", () => {
-    canShowNewOrUpdatedExtensionNotificationsStub.returns(false);
+    stubbedConfigs.stubGet(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS, false);
 
     showFlinkPreviewNotification();
 
-    sinon.assert.calledOnce(canShowNewOrUpdatedExtensionNotificationsStub);
+    sinon.assert.calledOnce(stubbedConfigs.get);
     sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
     // also shouldn't execute any commands
     sinon.assert.notCalled(executeCommandStub);
   });
 
   it("should execute the correct command when the 'Open Flink Settings' button is clicked", async () => {
-    canShowNewOrUpdatedExtensionNotificationsStub.returns(true);
+    stubbedConfigs.stubGet(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS, true);
     executeCommandStub.resolves();
 
     showFlinkPreviewNotification();
@@ -77,7 +74,7 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
   });
 
   it("should execute the correct command when the 'Change Notification Settings' button is clicked", async () => {
-    canShowNewOrUpdatedExtensionNotificationsStub.returns(true);
+    stubbedConfigs.stubGet(SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS, true);
     executeCommandStub.resolves();
 
     showFlinkPreviewNotification();
