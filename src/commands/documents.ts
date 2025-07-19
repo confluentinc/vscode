@@ -1,16 +1,13 @@
-import { commands, Disposable, Uri, workspace, WorkspaceConfiguration } from "vscode";
+import { commands, Disposable, Uri } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { uriMetadataSet } from "../emitters";
 import {
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
+  NeverAskAlways,
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
-import {
-  updateDefaultFlinkDatabaseId,
-  updateDefaultFlinkPoolId,
-} from "../extensionSettings/updates";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -22,9 +19,6 @@ import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("commands.documents");
-
-/** Possible values for user settings controlling whether or not to update the default Flink resource IDs. */
-export type NeverAskAlways = "never" | "ask" | "always";
 
 export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CCloudKafkaCluster) {
   if (!(uri instanceof Uri)) {
@@ -58,8 +52,7 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CC
   );
   uriMetadataSet.fire(uri);
 
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const defaultPoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
+  const defaultPoolId: string = FLINK_CONFIG_COMPUTE_POOL.value;
   if (defaultPoolId === pool.id) {
     // don't ask if the default pool ID is already set to the selected pool ID
     return;
@@ -67,27 +60,24 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CC
 
   // check user settings to see if we should ask to update the default compute pool ID or
   // just do it automatically. (if set to "never" or any other value, we won't ask and won't do it)
-  const shouldUpdateDefaultPoolId: NeverAskAlways = config.get(
-    UPDATE_DEFAULT_POOL_ID_FROM_LENS,
-    "ask",
-  );
+  const shouldUpdateDefaultPoolId: NeverAskAlways = UPDATE_DEFAULT_POOL_ID_FROM_LENS.value;
   if (shouldUpdateDefaultPoolId === "ask") {
     await showInfoNotificationWithButtons(
       `Set default Flink compute pool to "${pool.id}" ("${pool.name}")?`,
       {
         Yes: async () => {
-          await updateDefaultFlinkPoolId(pool);
+          await FLINK_CONFIG_COMPUTE_POOL.update(pool.id, true);
         },
         "Change Notification Settings": () => {
           void commands.executeCommand(
             "workbench.action.openSettings",
-            `@id:${UPDATE_DEFAULT_POOL_ID_FROM_LENS}`,
+            `@id:${UPDATE_DEFAULT_POOL_ID_FROM_LENS.id}`,
           );
         },
       },
     );
   } else if (shouldUpdateDefaultPoolId === "always") {
-    await updateDefaultFlinkPoolId(pool);
+    await FLINK_CONFIG_COMPUTE_POOL.update(pool.id, true);
   }
 }
 
@@ -124,8 +114,7 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
   );
   uriMetadataSet.fire(uri);
 
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
+  const defaultDatabaseId: string = FLINK_CONFIG_DATABASE.value;
   if (defaultDatabaseId === database.id) {
     // don't ask if the default database ID is already set to the selected database ID
     return;
@@ -133,27 +122,24 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
 
   // check user settings to see if we should ask to update the default compute pool ID or
   // just do it automatically. (if set to "never" or any other value, we won't ask and won't do it)
-  const shouldUpdateDefaultDatabaseId: NeverAskAlways = config.get(
-    UPDATE_DEFAULT_DATABASE_FROM_LENS,
-    "ask",
-  );
+  const shouldUpdateDefaultDatabaseId: NeverAskAlways = UPDATE_DEFAULT_DATABASE_FROM_LENS.value;
   if (shouldUpdateDefaultDatabaseId === "ask") {
     await showInfoNotificationWithButtons(
       `Set default Flink database to "${database.id}" ("${database.name}")?`,
       {
         Yes: async () => {
-          await updateDefaultFlinkDatabaseId(database as CCloudKafkaCluster);
+          await FLINK_CONFIG_DATABASE.update(database.id, true);
         },
         "Change Notification Settings": () => {
           void commands.executeCommand(
             "workbench.action.openSettings",
-            `@id:${UPDATE_DEFAULT_DATABASE_FROM_LENS}`,
+            `@id:${UPDATE_DEFAULT_DATABASE_FROM_LENS.id}`,
           );
         },
       },
     );
   } else if (shouldUpdateDefaultDatabaseId === "always") {
-    await updateDefaultFlinkDatabaseId(database as CCloudKafkaCluster);
+    await FLINK_CONFIG_DATABASE.update(database.id, true);
   }
 }
 

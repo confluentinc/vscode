@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { commands, window, workspace } from "vscode";
+import { commands, window } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import {
   TEST_BROKER_CONFIGS,
   TEST_CANCELLATION_TOKEN,
@@ -16,16 +17,11 @@ import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../../extensionSettings/constants";
 import * as notifications from "../../notifications";
 import * as local from "../../sidecar/connections/local";
-import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
-import {
-  DEFAULT_DOCKER_NETWORK,
-  DEFAULT_KAFKA_IMAGE_REPO,
-  DEFAULT_KAFKA_IMAGE_TAG,
-  LocalResourceKind,
-} from "../constants";
+import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import * as dockerContainers from "../containers";
 import * as ports from "../ports";
 import { brokerConfigsToRestBootstrapServers } from "./confluent-local";
@@ -45,7 +41,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   // vscode stubs
   let showErrorMessageStub: sinon.SinonStub;
   let executeCommandStub: sinon.SinonStub;
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   // docker/containers.ts wrapper function stubs
   let createContainerStub: sinon.SinonStub;
@@ -74,17 +70,12 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
     executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
-    // this should probably live in a separate test helper file
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    const configMap = {
-      [LOCAL_KAFKA_IMAGE]: DEFAULT_KAFKA_IMAGE_REPO,
-      [LOCAL_KAFKA_IMAGE_TAG]: DEFAULT_KAFKA_IMAGE_TAG,
-      [LOCAL_DOCKER_SOCKET_PATH]: DEFAULT_UNIX_SOCKET_PATH,
-      // add others as needed
-    };
-    getConfigurationStub.returns({
-      get: sandbox.stub().callsFake((arg) => configMap[arg]),
-    });
+
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+    stubbedConfigs
+      .stubGet(LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE.defaultValue)
+      .stubGet(LOCAL_KAFKA_IMAGE_TAG, LOCAL_KAFKA_IMAGE_TAG.defaultValue)
+      .stubGet(LOCAL_DOCKER_SOCKET_PATH, LOCAL_DOCKER_SOCKET_PATH.defaultValue);
 
     // assume no running containers matching this workflow image for most tests
     getContainersForImageStub = sandbox
@@ -132,9 +123,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
   it("start() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
-    });
+    stubbedConfigs.stubGet(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, customTag);
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
@@ -220,7 +209,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
     assert.ok(
       showErrorMessageStub.calledOnceWith(
-        `No running Kafka containers found for image "${DEFAULT_KAFKA_IMAGE_REPO}:${DEFAULT_KAFKA_IMAGE_TAG}". Please start Kafka and try again.`,
+        `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
         START_KAFKA_BUTTON,
         IMAGE_SETTINGS_BUTTON,
       ),
@@ -253,7 +242,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     assert.ok(fetchAndFilterKafkaContainersStub.calledOnce);
     assert.ok(
       showErrorMessageStub.calledOnceWith(
-        `No running Kafka containers found for image "${DEFAULT_KAFKA_IMAGE_REPO}:${DEFAULT_KAFKA_IMAGE_TAG}". Please start Kafka and try again.`,
+        `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
         START_KAFKA_BUTTON,
         IMAGE_SETTINGS_BUTTON,
       ),
@@ -261,7 +250,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     assert.ok(
       executeCommandStub.calledOnceWith(
         "workbench.action.openSettings",
-        `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+        `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
       ),
     );
     // bailing here
@@ -314,9 +303,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
   it("stop() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
-    });
+    stubbedConfigs.stubGet(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, customTag);
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 

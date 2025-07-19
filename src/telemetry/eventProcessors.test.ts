@@ -1,18 +1,19 @@
 import { type Event } from "@sentry/node";
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { env, workspace } from "vscode";
+import { env } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { observabilityContext } from "../context/observability";
 import { checkTelemetrySettings, includeObservabilityContext } from "./eventProcessors";
 
 describe("Sentry user settings check", () => {
   let sandbox: sinon.SinonSandbox;
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let isTelemetryEnabledStub: sinon.SinonStub;
 
   before(() => {
     sandbox = sinon.createSandbox();
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     isTelemetryEnabledStub = sandbox.stub(env, "isTelemetryEnabled");
   });
 
@@ -29,9 +30,7 @@ describe("Sentry user settings check", () => {
 
   it("should return null when telemetry level is 'off'", () => {
     isTelemetryEnabledStub.value(true);
-    getConfigurationStub.returns({
-      get: (key: string) => (key === "telemetry.telemetryLevel" ? "off" : undefined),
-    });
+    stubbedConfigs.get.withArgs("telemetry.telemetryLevel").returns("off");
     const event = { message: "Test event" } as Event;
     const result = checkTelemetrySettings(event);
     assert.strictEqual(result, null);
@@ -39,9 +38,7 @@ describe("Sentry user settings check", () => {
 
   it("should return the event when telemetry level is not 'off'", () => {
     isTelemetryEnabledStub.value(true);
-    getConfigurationStub.returns({
-      get: (key: string) => (key === "telemetry.telemetryLevel" ? "all" : undefined),
-    });
+    stubbedConfigs.get.withArgs("telemetry.telemetryLevel").returns("all");
     const event = { message: "Test event" } as Event;
     const result = checkTelemetrySettings(event);
     assert.deepStrictEqual(result, event);
