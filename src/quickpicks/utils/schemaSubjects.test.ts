@@ -228,7 +228,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
 
   it(`should return ${SubjectNameStrategy.TOPIC_NAME} strategy when "${USE_TOPIC_NAME_STRATEGY.id}" is enabled`, async () => {
     // `useTopicNameStrategy` enabled
-    stubbedConfigs.get.withArgs(USE_TOPIC_NAME_STRATEGY.id).returns(true);
+    stubbedConfigs.stubGet(USE_TOPIC_NAME_STRATEGY, true);
 
     const result = await getSubjectNameStrategy(TEST_LOCAL_KAFKA_TOPIC, "key");
 
@@ -238,7 +238,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
 
   it(`should prompt for strategy when "${USE_TOPIC_NAME_STRATEGY.id}" is disabled`, async () => {
     // `useTopicNameStrategy` disabled
-    stubbedConfigs.get.withArgs(USE_TOPIC_NAME_STRATEGY.id).returns(false);
+    stubbedConfigs.stubGet(USE_TOPIC_NAME_STRATEGY, false);
     subjectNameStrategyQuickPickStub.resolves(SubjectNameStrategy.RECORD_NAME);
 
     const result = await getSubjectNameStrategy(TEST_LOCAL_KAFKA_TOPIC, "key");
@@ -253,7 +253,7 @@ describe("quickpicks/utils/schemaSubjects.ts getSubjectNameStrategy()", () => {
 
   it("should return `undefined` when subjectNameStrategyQuickPick returns undefined", async () => {
     // `useTopicNameStrategy` disabled
-    stubbedConfigs.get.withArgs(USE_TOPIC_NAME_STRATEGY.id).returns(false);
+    stubbedConfigs.stubGet(USE_TOPIC_NAME_STRATEGY, false);
     subjectNameStrategyQuickPickStub.resolves(undefined);
 
     const result = await getSubjectNameStrategy(TEST_LOCAL_KAFKA_TOPIC, "key");

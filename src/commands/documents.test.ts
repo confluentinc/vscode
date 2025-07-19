@@ -29,7 +29,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
   let flinkComputePoolQuickPickStub: sinon.SinonStub;
   let uriMetadataSetFireStub: sinon.SinonStub;
-  let updateDefaultFlinkPoolIdStub: sinon.SinonStub;
+  let flinkConfigComputePoolUpdateStub: sinon.SinonStub;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
 
   let stubbedConfigs: StubbedWorkspaceConfiguration;
@@ -45,7 +45,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
       "flinkComputePoolQuickPick",
     );
     uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
-    updateDefaultFlinkPoolIdStub = sandbox.stub(FLINK_CONFIG_COMPUTE_POOL, "update").resolves();
+    flinkConfigComputePoolUpdateStub = sandbox.stub(FLINK_CONFIG_COMPUTE_POOL, "update").resolves();
     // assume the user is signed in to CCloud for most tests
     hasCCloudAuthSessionStub = sandbox
       .stub(ccloudConnections, "hasCCloudAuthSession")
@@ -54,10 +54,9 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     // vscode stubs
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     // no updates or notifications for most tests
-    stubbedConfigs.configure({
-      [UPDATE_DEFAULT_POOL_ID_FROM_LENS.id]: "never",
-      [UPDATE_DEFAULT_DATABASE_FROM_LENS.id]: "never",
-    });
+    stubbedConfigs
+      .stubGet(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "never")
+      .stubGet(UPDATE_DEFAULT_DATABASE_FROM_LENS, "never");
 
     showInfoMessageStub = sandbox.stub(window, "showInformationMessage");
   });
@@ -118,7 +117,7 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
 
   for (const notificationSetting of ["never", "always"]) {
     it(`should not show a notification to update the value of "${FLINK_CONFIG_COMPUTE_POOL.id}" if the user setting is "${notificationSetting}"`, async () => {
-      stubbedConfigs.get.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS.id).returns(notificationSetting);
+      stubbedConfigs.stubGet(UPDATE_DEFAULT_POOL_ID_FROM_LENS, notificationSetting);
       // simulate user selecting a compute pool
       flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
 
@@ -128,36 +127,35 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
       // automatically update the default pool ID if the user setting is "always"
       // otherwise, do nothing
       if (notificationSetting === "always") {
-        sinon.assert.calledOnce(updateDefaultFlinkPoolIdStub);
+        sinon.assert.calledOnce(flinkConfigComputePoolUpdateStub);
         sinon.assert.calledWithExactly(
-          updateDefaultFlinkPoolIdStub,
-          TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          flinkConfigComputePoolUpdateStub,
+          TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+          true,
         );
       } else {
-        sinon.assert.notCalled(updateDefaultFlinkPoolIdStub);
+        sinon.assert.notCalled(flinkConfigComputePoolUpdateStub);
       }
     });
   }
 
   it(`should not show a notification to update the value of "${FLINK_CONFIG_COMPUTE_POOL.id}" if the default pool ID matches the set pool ID`, async () => {
     // "ask" doesn't matter here, but it's the most direct way to ensure a notification would appear
-    stubbedConfigs.get.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS.id).returns("ask");
+    stubbedConfigs.stubGet(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "ask");
     // simulate user selecting a compute pool
     flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     // ...and the default pool ID set to the just-selected pool ID
-    stubbedConfigs.get
-      .withArgs(FLINK_CONFIG_COMPUTE_POOL.id)
-      .returns(TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+    stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
     // user dismisses the notification (default behavior)
 
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.notCalled(showInfoMessageStub);
-    sinon.assert.notCalled(updateDefaultFlinkPoolIdStub);
+    sinon.assert.notCalled(flinkConfigComputePoolUpdateStub);
   });
 
   it(`should show a notification to update the value of "${FLINK_CONFIG_COMPUTE_POOL.id}" if the user setting is 'ask'`, async () => {
-    stubbedConfigs.get.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS.id).returns("ask");
+    stubbedConfigs.stubGet(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "ask");
     // simulate user selecting a compute pool
     flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     // user dismisses the notification (default behavior)
@@ -165,11 +163,11 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.calledOnce(showInfoMessageStub);
-    sinon.assert.notCalled(updateDefaultFlinkPoolIdStub);
+    sinon.assert.notCalled(flinkConfigComputePoolUpdateStub);
   });
 
   it(`should show a notification to update the value of "${FLINK_CONFIG_COMPUTE_POOL.id}" if the user setting is 'ask' and update the default when the user clicks 'yes'`, async () => {
-    stubbedConfigs.get.withArgs(UPDATE_DEFAULT_POOL_ID_FROM_LENS.id).returns("ask");
+    stubbedConfigs.stubGet(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "ask");
     // simulate user selecting a compute pool
     flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     // and clicking "Yes" on the notification to update the default pool ID
@@ -178,8 +176,12 @@ describe("commands/documents.ts setCCloudComputePoolForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.calledOnce(showInfoMessageStub);
-    sinon.assert.calledOnce(updateDefaultFlinkPoolIdStub);
-    sinon.assert.calledWithExactly(updateDefaultFlinkPoolIdStub, TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    sinon.assert.calledOnce(flinkConfigComputePoolUpdateStub);
+    sinon.assert.calledWithExactly(
+      flinkConfigComputePoolUpdateStub,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      true,
+    );
   });
 });
 
@@ -191,7 +193,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
   let flinkDatabaseQuickpickStub: sinon.SinonStub;
   let uriMetadataSetFireStub: sinon.SinonStub;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
-  let updateDefaultDatabaseIdStub: sinon.SinonStub;
+  let flinkConfigDatabaseUpdateStub: sinon.SinonStub;
 
   let stubbedConfigs: StubbedWorkspaceConfiguration;
   let showInfoMessageStub: sinon.SinonStub;
@@ -207,7 +209,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     );
     flinkDatabaseQuickpickStub = sandbox.stub(flinkDatabaseQuickpick, "flinkDatabaseQuickpick");
     uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
-    updateDefaultDatabaseIdStub = sandbox.stub(FLINK_CONFIG_DATABASE, "update").resolves();
+    flinkConfigDatabaseUpdateStub = sandbox.stub(FLINK_CONFIG_DATABASE, "update").resolves();
     // assume the user is signed in to CCloud for most tests
     hasCCloudAuthSessionStub = sandbox
       .stub(ccloudConnections, "hasCCloudAuthSession")
@@ -215,10 +217,9 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
 
     // vscode stubs
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-    stubbedConfigs.configure({
-      [UPDATE_DEFAULT_POOL_ID_FROM_LENS.id]: "never",
-      [UPDATE_DEFAULT_DATABASE_FROM_LENS.id]: "never",
-    });
+    stubbedConfigs
+      .stubGet(UPDATE_DEFAULT_POOL_ID_FROM_LENS, "never")
+      .stubGet(UPDATE_DEFAULT_DATABASE_FROM_LENS, "never");
 
     showInfoMessageStub = sandbox.stub(window, "showInformationMessage");
   });
@@ -299,9 +300,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
 
   for (const notificationSetting of ["never", "always"]) {
     it(`should not show a notification to update the value of "${FLINK_CONFIG_DATABASE.id}" if the user setting is "${notificationSetting}"`, async () => {
-      stubbedConfigs.get
-        .withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS.id)
-        .returns(notificationSetting);
+      stubbedConfigs.stubGet(UPDATE_DEFAULT_DATABASE_FROM_LENS, notificationSetting);
       // simulate user selecting a compute pool and database
       flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
@@ -312,32 +311,36 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
       // automatically update the default database ID if the user setting is "always"
       // otherwise, do nothing
       if (notificationSetting === "always") {
-        sinon.assert.calledOnce(updateDefaultDatabaseIdStub);
-        sinon.assert.calledWithExactly(updateDefaultDatabaseIdStub, TEST_CCLOUD_KAFKA_CLUSTER);
+        sinon.assert.calledOnce(flinkConfigDatabaseUpdateStub);
+        sinon.assert.calledWithExactly(
+          flinkConfigDatabaseUpdateStub,
+          TEST_CCLOUD_KAFKA_CLUSTER.id,
+          true,
+        );
       } else {
-        sinon.assert.notCalled(updateDefaultDatabaseIdStub);
+        sinon.assert.notCalled(flinkConfigDatabaseUpdateStub);
       }
     });
   }
 
   it(`should not show a notification to update the value of "${FLINK_CONFIG_DATABASE.id}" if the default database ID matches the set database ID`, async () => {
     // "ask" doesn't matter here, but it's the most direct way to ensure a notification would appear
-    stubbedConfigs.get.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS.id).returns("ask");
+    stubbedConfigs.stubGet(UPDATE_DEFAULT_DATABASE_FROM_LENS, "ask");
     // simulate user selecting a compute pool and database
     flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
     // ...and the default database ID set to the just-selected database ID
-    stubbedConfigs.get.withArgs(FLINK_CONFIG_DATABASE.id).returns(TEST_CCLOUD_KAFKA_CLUSTER.id);
+    stubbedConfigs.stubGet(FLINK_CONFIG_DATABASE, TEST_CCLOUD_KAFKA_CLUSTER.id);
     // user dismisses the notification (default behavior)
 
     await setCCloudDatabaseForUriCommand(testUri);
 
     sinon.assert.notCalled(showInfoMessageStub);
-    sinon.assert.notCalled(updateDefaultDatabaseIdStub);
+    sinon.assert.notCalled(flinkConfigDatabaseUpdateStub);
   });
 
   it(`should show a notification to update the value of "${FLINK_CONFIG_DATABASE.id}" if the user setting is 'ask'`, async () => {
-    stubbedConfigs.get.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS.id).returns("ask");
+    stubbedConfigs.stubGet(UPDATE_DEFAULT_DATABASE_FROM_LENS, "ask");
     // simulate user selecting a compute pool and database
     flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
@@ -346,11 +349,11 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudDatabaseForUriCommand(testUri);
 
     sinon.assert.calledOnce(showInfoMessageStub);
-    sinon.assert.notCalled(updateDefaultDatabaseIdStub);
+    sinon.assert.notCalled(flinkConfigDatabaseUpdateStub);
   });
 
   it(`should show a notification to update the value of "${FLINK_CONFIG_DATABASE.id}" if the user setting is 'ask' and update the default when the user clicks 'yes'`, async () => {
-    stubbedConfigs.get.withArgs(UPDATE_DEFAULT_DATABASE_FROM_LENS.id).returns("ask");
+    stubbedConfigs.stubGet(UPDATE_DEFAULT_DATABASE_FROM_LENS, "ask");
     // simulate user selecting a compute pool and database
     flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
@@ -360,8 +363,12 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudDatabaseForUriCommand(testUri);
 
     sinon.assert.calledOnce(showInfoMessageStub);
-    sinon.assert.calledOnce(updateDefaultDatabaseIdStub);
-    sinon.assert.calledWithExactly(updateDefaultDatabaseIdStub, TEST_CCLOUD_KAFKA_CLUSTER);
+    sinon.assert.calledOnce(flinkConfigDatabaseUpdateStub);
+    sinon.assert.calledWithExactly(
+      flinkConfigDatabaseUpdateStub,
+      TEST_CCLOUD_KAFKA_CLUSTER.id,
+      true,
+    );
   });
 });
 

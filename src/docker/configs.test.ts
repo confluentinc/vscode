@@ -39,7 +39,7 @@ describe("docker/configs functions", function () {
 
   it("getSocketPath() should return socket path from user settings", function () {
     const stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-    stubbedConfigs.get.withArgs(LOCAL_DOCKER_SOCKET_PATH.id).returns("/custom/path/docker.sock");
+    stubbedConfigs.stubGet(LOCAL_DOCKER_SOCKET_PATH, "/custom/path/docker.sock");
 
     const path: string = configs.getSocketPath();
 
