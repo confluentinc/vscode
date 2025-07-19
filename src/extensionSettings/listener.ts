@@ -14,7 +14,7 @@ import {
 } from "./constants";
 import { updatePreferences } from "./sidecarSync";
 
-const logger = new Logger("preferences.listener");
+const logger = new Logger("extensionSettings.listener");
 
 /** Any settings that require syncing with the sidecar's preferences API. */
 export const PREFERENCES_SYNC_SETTINGS = [
