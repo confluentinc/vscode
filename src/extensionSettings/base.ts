@@ -60,7 +60,7 @@ export class ExtensionSetting<T> {
   get value(): T {
     const result = workspace.getConfiguration().get<T>(this.id, this.defaultValue);
     logger.info(this.id, { value: result });
-    return result;
+    return result ?? this.defaultValue;
   }
 
   async update(value: T, global?: boolean): Promise<void> {
