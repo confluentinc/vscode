@@ -13,7 +13,12 @@ import {
   showErrorNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
-import { KRB5_CONFIG_PATH, SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
+import {
+  CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
+  KRB5_CONFIG_PATH,
+  SSL_PEM_PATHS,
+  SSL_VERIFY_SERVER_CERT_DISABLED,
+} from "./constants";
 
 const logger = new Logger("preferences.sidecarSync");
 
@@ -25,11 +30,13 @@ export function loadPreferencesFromWorkspaceConfig(): PreferencesSpec {
   const pemPaths: string[] = SSL_PEM_PATHS.value;
   const trustAllCerts: boolean = SSL_VERIFY_SERVER_CERT_DISABLED.value;
   const krb5ConfigPath: string = KRB5_CONFIG_PATH.value;
+  const privateNetworkEndpoints: Record<string, string> = CCLOUD_PRIVATE_NETWORK_ENDPOINTS.value;
   return {
     tls_pem_paths: pemPaths,
     trust_all_certificates: trustAllCerts,
     kerberos_config_file_path: krb5ConfigPath,
-  };
+    private_network_endpoints: privateNetworkEndpoints,
+  } as any;
 }
 
 /** Update the sidecar's preferences API with the current user settings. */
