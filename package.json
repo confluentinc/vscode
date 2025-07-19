@@ -782,6 +782,14 @@
             "default": false,
             "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
           },
+          "confluent.cloud.privateNetworkEndpoints": {
+            "type": "object",
+            "default": {},
+            "description": "Configure private network endpoints for specific Confluent Cloud environments. Each entry maps an environment ID to its corresponding private endpoints.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "confluent.ssl.pemPaths": {
             "type": "array",
             "items": {
