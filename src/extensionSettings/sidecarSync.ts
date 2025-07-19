@@ -20,7 +20,7 @@ import {
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
 
-const logger = new Logger("preferences.sidecarSync");
+const logger = new Logger("extensionSettings.sidecarSync");
 
 /**
  * Load the current preferences API related values from the workspace configuration / user settings.
