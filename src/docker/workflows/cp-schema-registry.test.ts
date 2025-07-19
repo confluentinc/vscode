@@ -17,6 +17,7 @@ import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../../extensionSettings/constants";
 import * as notifications from "../../notifications";
 import * as local from "../../sidecar/connections/local";
@@ -69,13 +70,13 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
     executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
-    // this should probably live in a separate test helper file
+
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-    stubbedConfigs.configure({
-      [LOCAL_KAFKA_IMAGE.id]: LOCAL_KAFKA_IMAGE.defaultValue,
-      [LOCAL_KAFKA_IMAGE_TAG.id]: LOCAL_KAFKA_IMAGE_TAG.defaultValue,
-      [LOCAL_DOCKER_SOCKET_PATH.id]: LOCAL_DOCKER_SOCKET_PATH.defaultValue,
-    });
+    stubbedConfigs
+      .stubGet(LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE.defaultValue)
+      .stubGet(LOCAL_KAFKA_IMAGE_TAG, LOCAL_KAFKA_IMAGE_TAG.defaultValue)
+      .stubGet(LOCAL_DOCKER_SOCKET_PATH, LOCAL_DOCKER_SOCKET_PATH.defaultValue);
+
     // assume no running containers matching this workflow image for most tests
     getContainersForImageStub = sandbox
       .stub(dockerContainers, "getContainersForImage")
@@ -122,7 +123,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
   it("start() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE_TAG.id).returns(customTag);
+    stubbedConfigs.stubGet(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, customTag);
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
@@ -302,7 +303,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
   it("stop() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE_TAG.id).returns(customTag);
+    stubbedConfigs.stubGet(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, customTag);
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 

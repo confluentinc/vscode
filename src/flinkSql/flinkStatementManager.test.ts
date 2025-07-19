@@ -40,21 +40,21 @@ describe("flinkStatementManager.ts", () => {
 
     async function setWorkspacePollingFrequencySetting(value: number): Promise<void> {
       // Set up the current workspace settings polling frequency
-      stubbedConfigs.get.withArgs(STATEMENT_POLLING_FREQUENCY_SECONDS.id).returns(value);
+      stubbedConfigs.stubGet(STATEMENT_POLLING_FREQUENCY_SECONDS, value);
       // Now simulate the event that would be fired when the configuration changes
       await driveConfigChangeListener(STATEMENT_POLLING_FREQUENCY_SECONDS.id);
     }
 
     async function setWorkspacePollingLimitSetting(value: number): Promise<void> {
       // Set up the current workspace settings polling frequency max statements to poll
-      stubbedConfigs.get.withArgs(STATEMENT_POLLING_LIMIT.id).returns(value);
+      stubbedConfigs.stubGet(STATEMENT_POLLING_LIMIT, value);
       // Now simulate the event that would be fired when the configuration changes
       await driveConfigChangeListener(STATEMENT_POLLING_LIMIT.id);
     }
 
     async function setWorkspacePollingConcurrencySetting(value: number): Promise<void> {
-      // Set up the current workspace settings polling concurrenct
-      stubbedConfigs.get.withArgs(STATEMENT_POLLING_CONCURRENCY.id).returns(value);
+      // Set up the current workspace settings polling concurrency
+      stubbedConfigs.stubGet(STATEMENT_POLLING_CONCURRENCY, value);
       // Now simulate the event that would be fired when the configuration changes
       await driveConfigChangeListener(STATEMENT_POLLING_CONCURRENCY.id);
     }
@@ -78,11 +78,13 @@ describe("flinkStatementManager.ts", () => {
       onDidChangeConfigurationStub.returns({ dispose: () => {} });
 
       stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-      stubbedConfigs.configure({
-        [STATEMENT_POLLING_FREQUENCY_SECONDS.id]: STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
-        [STATEMENT_POLLING_LIMIT.id]: STATEMENT_POLLING_LIMIT.defaultValue,
-        [STATEMENT_POLLING_CONCURRENCY.id]: STATEMENT_POLLING_CONCURRENCY.defaultValue,
-      });
+      stubbedConfigs
+        .stubGet(
+          STATEMENT_POLLING_FREQUENCY_SECONDS,
+          STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+        )
+        .stubGet(STATEMENT_POLLING_LIMIT, STATEMENT_POLLING_LIMIT.defaultValue)
+        .stubGet(STATEMENT_POLLING_CONCURRENCY, STATEMENT_POLLING_CONCURRENCY.defaultValue);
 
       // Be sure to get ahold of a new instance of the FlinkStatementManager
       FlinkStatementManager["instance"] = undefined;
@@ -109,7 +111,7 @@ describe("flinkStatementManager.ts", () => {
       });
 
       it("Should fix concurrency to be at least 1", () => {
-        stubbedConfigs.get.withArgs(STATEMENT_POLLING_CONCURRENCY.id).returns(0);
+        stubbedConfigs.stubGet(STATEMENT_POLLING_CONCURRENCY, 0);
 
         const config = FlinkStatementManager.getConfiguration();
 
@@ -117,7 +119,7 @@ describe("flinkStatementManager.ts", () => {
       });
 
       it("Should fix polling frequency to be at least 0", () => {
-        stubbedConfigs.get.withArgs(STATEMENT_POLLING_FREQUENCY_SECONDS.id).returns(-1);
+        stubbedConfigs.stubGet(STATEMENT_POLLING_FREQUENCY_SECONDS, -1);
 
         const config = FlinkStatementManager.getConfiguration();
 
@@ -128,7 +130,7 @@ describe("flinkStatementManager.ts", () => {
       });
 
       it("Should fix max statements to poll to be at least 1", () => {
-        stubbedConfigs.get.withArgs(STATEMENT_POLLING_LIMIT.id).returns(0);
+        stubbedConfigs.stubGet(STATEMENT_POLLING_LIMIT, 0);
 
         const config = FlinkStatementManager.getConfiguration();
 
