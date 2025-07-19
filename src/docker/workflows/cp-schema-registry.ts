@@ -9,16 +9,15 @@ import {
   HostConfig,
 } from "../../clients/docker";
 import { localSchemaRegistryConnected } from "../../emitters";
-import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../extensionSettings/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
+} from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getLocalResourceContainers, updateLocalConnection } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
-import {
-  getLocalKafkaImageName,
-  getLocalKafkaImageTag,
-  getLocalSchemaRegistryImageTag,
-} from "../configs";
 import { LocalResourceKind } from "../constants";
 import {
   createContainer,
@@ -67,7 +66,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.imageTag = getLocalSchemaRegistryImageTag();
+    this.imageTag = LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value;
 
     // already handles logging + updating the progress notification
     await this.checkForImage(this.imageRepo, this.imageTag);
@@ -108,7 +107,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
           } else if (selection === IMAGE_SETTINGS_BUTTON) {
             commands.executeCommand(
               "workbench.action.openSettings",
-              `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+              `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
             );
             this.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
               buttonLabel: IMAGE_SETTINGS_BUTTON,
@@ -160,7 +159,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.imageTag = getLocalSchemaRegistryImageTag();
+    this.imageTag = LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value;
 
     const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
       this.imageRepo,
@@ -218,8 +217,8 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return [];
     }
 
-    const kafkaImageRepo: string = getLocalKafkaImageName();
-    const kafkaImageTag: string = getLocalKafkaImageTag();
+    const kafkaImageRepo: string = LOCAL_KAFKA_IMAGE.value;
+    const kafkaImageTag: string = LOCAL_KAFKA_IMAGE_TAG.value;
 
     // TODO(shoup): update this for direct connections
     // TEMPORARY: this will go away once we start working with direct connections

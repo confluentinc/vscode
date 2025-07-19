@@ -1,4 +1,4 @@
-import { commands, workspace, WorkspaceConfiguration } from "vscode";
+import { commands } from "vscode";
 import {
   Preferences,
   PreferencesResourceApi,
@@ -13,14 +13,7 @@ import {
   showErrorNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
-import {
-  DEFAULT_KRB5_CONFIG_PATH,
-  DEFAULT_SSL_PEM_PATHS,
-  DEFAULT_TRUST_ALL_CERTIFICATES,
-  KRB5_CONFIG_PATH,
-  SSL_PEM_PATHS,
-  SSL_VERIFY_SERVER_CERT_DISABLED,
-} from "./constants";
+import { KRB5_CONFIG_PATH, SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
 
 const logger = new Logger("preferences.sidecarSync");
 
@@ -29,15 +22,9 @@ const logger = new Logger("preferences.sidecarSync");
  * @returns {PreferencesSpec} The current preferences.
  */
 export function loadPreferencesFromWorkspaceConfig(): PreferencesSpec {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-
-  const pemPaths: string[] = configs.get(SSL_PEM_PATHS, DEFAULT_SSL_PEM_PATHS);
-  const trustAllCerts: boolean = configs.get(
-    SSL_VERIFY_SERVER_CERT_DISABLED,
-    DEFAULT_TRUST_ALL_CERTIFICATES,
-  );
-  const krb5ConfigPath: string = configs.get(KRB5_CONFIG_PATH, DEFAULT_KRB5_CONFIG_PATH);
-
+  const pemPaths: string[] = SSL_PEM_PATHS.value;
+  const trustAllCerts: boolean = SSL_VERIFY_SERVER_CERT_DISABLED.value;
+  const krb5ConfigPath: string = KRB5_CONFIG_PATH.value;
   return {
     tls_pem_paths: pemPaths,
     trust_all_certificates: trustAllCerts,
@@ -83,7 +70,7 @@ export async function updatePreferences() {
                   "Update Settings": () =>
                     commands.executeCommand(
                       "workbench.action.openSettings",
-                      `@id:${SSL_PEM_PATHS}`,
+                      `@id:${SSL_PEM_PATHS.id}`,
                     ),
                   ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
                 };

@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Uri, window, workspace } from "vscode";
+import { Uri, window } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
@@ -204,14 +205,12 @@ describe("commands/docker.ts orderWorkflows()", () => {
 describe("commands/docker.ts addDockerPath()", () => {
   let sandbox: sinon.SinonSandbox;
   let showOpenDialogStub: sinon.SinonStub;
-  let getConfigurationStub: sinon.SinonStub;
-  let updateConfigStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showOpenDialogStub = sandbox.stub(window, "showOpenDialog");
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    updateConfigStub = sandbox.stub();
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
   });
 
   afterEach(() => {
@@ -222,15 +221,17 @@ describe("commands/docker.ts addDockerPath()", () => {
     it(`should show open dialog and update config if file with a proper extension (${filename}) is selected`, async () => {
       const URI = { fsPath: `path/to/${filename}` } as Uri;
       showOpenDialogStub.resolves([URI]);
-      getConfigurationStub.returns({
-        get: sandbox.stub().returns([]),
-        update: updateConfigStub,
-      });
+
       await addDockerPath();
 
-      assert.ok(showOpenDialogStub.calledOnce);
-      assert.ok(updateConfigStub.calledOnce);
-      assert.ok(updateConfigStub.calledOnceWith(LOCAL_DOCKER_SOCKET_PATH, URI.fsPath, true));
+      sinon.assert.calledOnce(showOpenDialogStub);
+      sinon.assert.calledOnce(stubbedConfigs.update);
+      sinon.assert.calledOnceWithExactly(
+        stubbedConfigs.update,
+        LOCAL_DOCKER_SOCKET_PATH.id,
+        URI.fsPath,
+        true,
+      );
     });
   }
 
@@ -239,22 +240,17 @@ describe("commands/docker.ts addDockerPath()", () => {
 
     await addDockerPath();
 
-    assert.ok(showOpenDialogStub.calledOnce);
-    assert.ok(updateConfigStub.notCalled);
+    sinon.assert.calledOnce(showOpenDialogStub);
+    sinon.assert.notCalled(stubbedConfigs.update);
   });
 
   it("should not update config if invalid file is selected", async () => {
     const uri = { fsPath: "path/to/file.txt" } as Uri;
     showOpenDialogStub.resolves([uri]);
 
-    getConfigurationStub.returns({
-      get: sandbox.stub().returns([]),
-      update: updateConfigStub,
-    });
-
     await addDockerPath();
 
-    assert.ok(showOpenDialogStub.calledOnce);
-    assert.ok(updateConfigStub.notCalled);
+    sinon.assert.calledOnce(showOpenDialogStub);
+    sinon.assert.notCalled(stubbedConfigs.update);
   });
 });

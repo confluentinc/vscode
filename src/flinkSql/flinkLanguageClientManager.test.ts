@@ -2,6 +2,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL,
@@ -21,7 +22,7 @@ import { FlinkLanguageClientManager } from "./flinkLanguageClientManager";
 
 describe("FlinkLanguageClientManager", () => {
   let sandbox: sinon.SinonSandbox;
-  let configStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
   let flinkManager: FlinkLanguageClientManager;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
@@ -31,11 +32,7 @@ describe("FlinkLanguageClientManager", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     FlinkLanguageClientManager["instance"] = null;
-    configStub = sandbox.stub(vscode.workspace, "getConfiguration");
-    const configMock = {
-      get: sandbox.stub(),
-    };
-    configStub.returns(configMock);
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     hasCCloudAuthSessionStub = sandbox.stub(ccloud, "hasCCloudAuthSession");
     hasCCloudAuthSessionStub.returns(false);
     ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
@@ -68,50 +65,36 @@ describe("FlinkLanguageClientManager", () => {
 
   describe("validateFlinkSettings", () => {
     it("should return false when computePoolId is missing", async () => {
-      // Set up mocks -> no default Flink settings set
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("");
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("");
-      configStub.returns(configMock);
+      // no default Flink settings set
+      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, "").stubGet(FLINK_CONFIG_DATABASE, "");
 
       const result = await flinkManager.validateFlinkSettings(null);
       assert.strictEqual(result, false);
     });
 
     it("should return false when compute pool is invalid", async () => {
-      // Set up mocks -> invalid default compute pool
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("invalid-pool-id");
-      configStub.returns(configMock);
+      // invalid default compute pool
+      stubbedConfigs
+        .stubGet(FLINK_CONFIG_COMPUTE_POOL, "invalid-pool-id")
+        .stubGet(FLINK_CONFIG_DATABASE, "");
 
       const result = await flinkManager.validateFlinkSettings("invalid-pool-id");
       assert.strictEqual(result, false);
     });
 
     it("should return true when compute pool is valid", async () => {
-      // Set up mocks -> valid default compute pool
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      configStub.returns(configMock);
+      // valid default compute pool
+      stubbedConfigs
+        .stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID)
+        .stubGet(FLINK_CONFIG_DATABASE, "");
 
       const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-
       assert.strictEqual(result, true);
     });
 
     it("should check resources availability when compute pool is set", async () => {
-      // Set up mocks to indicate valid default Flink settings
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      configStub.returns(configMock);
+      // valid default Flink settings
+      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
 
       const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       assert.strictEqual(result, true);
@@ -122,10 +105,7 @@ describe("FlinkLanguageClientManager", () => {
     const testUri = vscode.Uri.parse("file:///test.flink.sql");
 
     it("should return null for all settings if not configured", async () => {
-      const configMock = {
-        get: sandbox.stub().returns(null),
-      };
-      configStub.returns(configMock);
+      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, "").stubGet(FLINK_CONFIG_DATABASE, "");
       resourceManagerStub.getUriMetadata.resolves(undefined);
 
       const settings = await flinkManager.getFlinkSqlSettings(testUri);
@@ -138,12 +118,9 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should return configs from workspace if set and uri metadata is undefined", async () => {
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("config-pool-id");
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("config-db-id");
-      configStub.returns(configMock);
+      stubbedConfigs
+        .stubGet(FLINK_CONFIG_COMPUTE_POOL, "config-pool-id")
+        .stubGet(FLINK_CONFIG_DATABASE, "config-db-id");
       resourceManagerStub.getUriMetadata.resolves(undefined);
 
       const settings = await flinkManager.getFlinkSqlSettings(testUri);
@@ -157,12 +134,10 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should return db and catalog names with settings if found", async () => {
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("test-db");
-      configStub.returns(configMock);
+      stubbedConfigs
+        .stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID)
+        .stubGet(FLINK_CONFIG_DATABASE, "test-db");
+      resourceManagerStub.getUriMetadata.resolves(undefined);
 
       // Mock the getCatalogDatabaseFromMetadata function to return catalog and database names
       getCatalogDatabaseFromMetadataStub.resolves({
@@ -181,13 +156,9 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should prioritize URI metadata over workspace config settings", async () => {
-      const configMock = {
-        get: sandbox.stub(),
-      };
-      configMock.get.withArgs(FLINK_CONFIG_COMPUTE_POOL).returns("config-pool");
-      configMock.get.withArgs(FLINK_CONFIG_DATABASE).returns("config-db");
-      configStub.returns(configMock);
-
+      stubbedConfigs
+        .stubGet(FLINK_CONFIG_COMPUTE_POOL, "config-pool")
+        .stubGet(FLINK_CONFIG_DATABASE, "config-db");
       resourceManagerStub.getUriMetadata.resolves({
         flinkComputePoolId: "metadata-pool",
         flinkDatabaseId: "metadata-db",

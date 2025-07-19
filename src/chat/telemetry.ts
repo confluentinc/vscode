@@ -1,9 +1,4 @@
-import {
-  ChatResultFeedback,
-  ChatResultFeedbackKind,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { ChatResultFeedback, ChatResultFeedbackKind } from "vscode";
 import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { ToolCallMetadata } from "./tools/types";
@@ -31,15 +26,14 @@ export function sanitizeFeedbackResult(result: CustomChatResult): Record<string,
     newResult.modelInfo = modelInfo;
   }
 
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
   // check if the user is opting in to sending error data
-  const shouldSendErrorData: boolean = config.get(CHAT_SEND_ERROR_DATA, false);
+  const shouldSendErrorData: boolean = CHAT_SEND_ERROR_DATA.value;
   if (shouldSendErrorData) {
     newResult.errorDetails = result.errorDetails;
   }
 
   // check if the user is opting in to sending tool call inputs and tool result contents
-  const shouldSendToolCallData: boolean = config.get(CHAT_SEND_TOOL_CALL_DATA, false);
+  const shouldSendToolCallData: boolean = CHAT_SEND_TOOL_CALL_DATA.value;
   if (shouldSendToolCallData) {
     newResult.toolsCalled = result.metadata?.toolsCalled;
   }
