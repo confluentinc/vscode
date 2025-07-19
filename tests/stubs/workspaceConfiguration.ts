@@ -1,5 +1,6 @@
-import { SinonSandbox, SinonStub } from "sinon";
+import { match, SinonSandbox, SinonStub } from "sinon";
 import { workspace, WorkspaceConfiguration } from "vscode";
+import { ExtensionSetting } from "../../src/extensionSettings/base";
 
 /**
  * The {@link WorkspaceConfiguration} interface, where all methods are replaced with {@link SinonStub stubs}.
@@ -27,12 +28,14 @@ export class StubbedWorkspaceConfiguration implements StubbedWorkspaceConfigurat
   }
 
   /**
-   * Configures multiple configuration values that will be returned by the `get` method.
-   * @param settings A record/map of setting keys to their return values.
+   * Stubs the {@linkcode get} method to return a specific value for a given setting and return this to allow chaining. (This uses the
+   * {@linkcode ExtensionSetting.id id} when performing the {@linkcode WorkspaceConfiguration.get} call.)
+   * @param setting The {@link ExtensionSetting} to stub.
+   * @param value The value to return for the `setting`.
    */
-  configure(settings: Record<string, any>): void {
-    for (const [key, value] of Object.entries(settings)) {
-      this.get.withArgs(key).returns(value);
-    }
+  stubGet<T>(setting: ExtensionSetting<T>, value: T): StubbedWorkspaceConfiguration {
+    // use `match.any` to allow an optional second argument (for the default value)
+    this.get.withArgs(setting.id, match.any).returns(value);
+    return this;
   }
 }
