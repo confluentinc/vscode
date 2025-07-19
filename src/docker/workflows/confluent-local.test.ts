@@ -63,9 +63,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
 
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-    stubbedConfigs.configure({
-      [LOCAL_DOCKER_SOCKET_PATH.id]: DEFAULT_UNIX_SOCKET_PATH,
-    });
+    stubbedConfigs.stubGet(LOCAL_DOCKER_SOCKET_PATH, DEFAULT_UNIX_SOCKET_PATH);
 
     // assume no running containers matching this workflow image for most tests
     getContainersForImageStub = sandbox
@@ -107,7 +105,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
   it("start() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag);
+    stubbedConfigs.stubGet(LOCAL_KAFKA_IMAGE_TAG, customTag);
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
@@ -217,7 +215,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
   it("stop() should get the imageTag from workspace configuration", async () => {
     const customTag = "7.0.0";
-    stubbedConfigs.get.withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag);
+    stubbedConfigs.stubGet(LOCAL_KAFKA_IMAGE_TAG, customTag);
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 

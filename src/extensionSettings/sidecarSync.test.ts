@@ -51,11 +51,10 @@ describe("extensionSettings/sidecarSync.ts", function () {
 
   it("loadDefaultPreferences() should load default preferences from the workspace configuration", async function () {
     // default values, no user changes
-    stubbedConfigs.configure({
-      [SSL_PEM_PATHS.id]: SSL_PEM_PATHS.defaultValue,
-      [SSL_VERIFY_SERVER_CERT_DISABLED.id]: SSL_VERIFY_SERVER_CERT_DISABLED.defaultValue,
-      [KRB5_CONFIG_PATH.id]: KRB5_CONFIG_PATH.defaultValue,
-    });
+    stubbedConfigs
+      .stubGet(SSL_PEM_PATHS, SSL_PEM_PATHS.defaultValue)
+      .stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, SSL_VERIFY_SERVER_CERT_DISABLED.defaultValue)
+      .stubGet(KRB5_CONFIG_PATH, KRB5_CONFIG_PATH.defaultValue);
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
@@ -71,11 +70,10 @@ describe("extensionSettings/sidecarSync.ts", function () {
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
     const krb5Config = "path/to/custom/krb5.conf";
-    stubbedConfigs.configure({
-      [SSL_PEM_PATHS.id]: tlsPemPaths,
-      [SSL_VERIFY_SERVER_CERT_DISABLED.id]: trustAllCerts,
-      [KRB5_CONFIG_PATH.id]: krb5Config,
-    });
+    stubbedConfigs
+      .stubGet(SSL_PEM_PATHS, tlsPemPaths)
+      .stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, trustAllCerts)
+      .stubGet(KRB5_CONFIG_PATH, krb5Config);
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
@@ -91,11 +89,10 @@ describe("extensionSettings/sidecarSync.ts", function () {
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
     const krb5Config = "path/to/custom/krb5.conf";
-    stubbedConfigs.configure({
-      [SSL_PEM_PATHS.id]: tlsPemPaths,
-      [SSL_VERIFY_SERVER_CERT_DISABLED.id]: trustAllCerts,
-      [KRB5_CONFIG_PATH.id]: krb5Config,
-    });
+    stubbedConfigs
+      .stubGet(SSL_PEM_PATHS, tlsPemPaths)
+      .stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, trustAllCerts)
+      .stubGet(KRB5_CONFIG_PATH, krb5Config);
 
     const fakePreferences: Preferences = {
       api_version: "gateway/v1",

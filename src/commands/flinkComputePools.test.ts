@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
@@ -12,22 +13,14 @@ describe("configureFlinkDefaults command", () => {
   let sandbox: sinon.SinonSandbox;
   let flinkComputePoolQuickPickStub: sinon.SinonStub;
   let flinkDatabaseQuickpickStub: sinon.SinonStub;
-  // We use this to stub the getConfiguration().update() method, see below
-  let getConfigurationStub: sinon.SinonStub; // eslint-disable-line @typescript-eslint/no-unused-vars
-  let updateStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
   let showInformationMessageStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     flinkComputePoolQuickPickStub = sandbox.stub(quickpicks, "flinkComputePoolQuickPick");
     flinkDatabaseQuickpickStub = sandbox.stub(kafkaQuickpicks, "flinkDatabaseQuickpick");
-    updateStub = sandbox.stub();
-    getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration").returns({
-      update: updateStub,
-      get: sandbox.stub().callsFake((section: string, defaultValue?: unknown) => defaultValue),
-      has: sandbox.stub(),
-      inspect: sandbox.stub(),
-    });
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     showInformationMessageStub = sandbox
       .stub(vscode.window, "showInformationMessage")
       .resolves(undefined);
@@ -42,7 +35,7 @@ describe("configureFlinkDefaults command", () => {
 
     await commandsModule.configureFlinkDefaults();
 
-    assert.ok(updateStub.notCalled);
+    assert.ok(stubbedConfigs.update.notCalled);
     assert.ok(flinkDatabaseQuickpickStub.notCalled);
   });
 
@@ -53,13 +46,13 @@ describe("configureFlinkDefaults command", () => {
     await commandsModule.configureFlinkDefaults();
 
     sinon.assert.calledWithExactly(
-      updateStub,
+      stubbedConfigs.update,
       FLINK_CONFIG_COMPUTE_POOL.id,
       TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
       true,
     );
     sinon.assert.calledWithExactly(
-      updateStub,
+      stubbedConfigs.update,
       FLINK_CONFIG_DATABASE.id,
       TEST_CCLOUD_KAFKA_CLUSTER.id,
       true,

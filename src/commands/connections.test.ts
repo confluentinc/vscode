@@ -207,7 +207,7 @@ Sign out from this extension?`,
     it(`should add paths to existing paths in the "${SSL_PEM_PATHS.id}" setting`, async function () {
       const uri = { fsPath: "path/to/file.pem" } as Uri;
       showOpenDialogStub.resolves([uri]);
-      stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id).returns(["existing/path.pem"]);
+      stubbedConfigs.stubGet(SSL_PEM_PATHS, ["existing/path.pem"]);
 
       await connections.addSSLPemPathCommand();
 
@@ -674,7 +674,7 @@ Sign out from this extension?`,
     });
 
     it(`should return paths if they exists in the "${SSL_PEM_PATHS.id}" setting`, function () {
-      stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id, []).returns(["path/to/file.pem"]);
+      stubbedConfigs.stubGet(SSL_PEM_PATHS, ["path/to/file.pem"]);
 
       const result = connections.getSSLPemPaths();
 
@@ -682,7 +682,7 @@ Sign out from this extension?`,
     });
 
     it(`should return an empty array if the value of the "${SSL_PEM_PATHS.id}" setting is empty`, function () {
-      stubbedConfigs.get.withArgs(SSL_PEM_PATHS.id, []).returns([]);
+      stubbedConfigs.stubGet(SSL_PEM_PATHS, []);
 
       const result = connections.getSSLPemPaths();
 
@@ -690,9 +690,7 @@ Sign out from this extension?`,
     });
 
     it("should only return valid .pem paths and not other string values", function () {
-      stubbedConfigs.get
-        .withArgs(SSL_PEM_PATHS.id, [])
-        .returns(["path/to/file.pem", "invalid/path", ""]);
+      stubbedConfigs.stubGet(SSL_PEM_PATHS, ["path/to/file.pem", "invalid/path", ""]);
 
       const result = connections.getSSLPemPaths();
 

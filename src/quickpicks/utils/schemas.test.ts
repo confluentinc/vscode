@@ -89,7 +89,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
 
   it("should use schemaVersionQuickPick when `allowOlderVersions` is true", async () => {
     // allowOlderVersions setting enabled
-    stubbedConfigs.get.withArgs(ALLOW_OLDER_SCHEMA_VERSIONS.id, false).returns(true);
+    stubbedConfigs.stubGet(ALLOW_OLDER_SCHEMA_VERSIONS, true);
     // user selects the schema version quick pick
     schemaVersionQuickPickStub.resolves(TEST_LOCAL_SCHEMA);
 
@@ -109,7 +109,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
 
   it("should throw an error when user cancels schema version selection", async () => {
     // allowOlderVersions setting enabled
-    stubbedConfigs.get.withArgs(ALLOW_OLDER_SCHEMA_VERSIONS.id, false).returns(true);
+    stubbedConfigs.stubGet(ALLOW_OLDER_SCHEMA_VERSIONS, true);
     // user cancels the schema version quick pick
     schemaVersionQuickPickStub.resolves(undefined);
 
