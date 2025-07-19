@@ -124,7 +124,7 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
 
       const setting = new ExtensionSetting(settingId, fakeSectionTitle as any);
       const expectedValue = false;
-      stubbedConfigs.get.withArgs(settingId, defaultValue).returns(expectedValue);
+      stubbedConfigs.stubGet(setting, expectedValue);
 
       const actualValue = setting.value;
 
@@ -132,28 +132,27 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
       sinon.assert.calledOnceWithExactly(stubbedConfigs.get, settingId, defaultValue);
     });
 
-    it("should return default value when workspace configuration is undefined", () => {
-      const settingId = "test.boolean.undefined";
-      const defaultValue = true;
+    it("should return the default value if the workspace configuration returns null", () => {
+      const settingId = "test.null.setting";
+      const defaultValue = "default-value";
       fakeSection.properties = {
         [settingId]: {
-          type: "boolean",
+          type: "string",
           default: defaultValue,
-          description: "A test boolean setting that returns undefined",
+          description: "A test string setting that does not allow null",
         },
       };
 
-      const setting = new ExtensionSetting(settingId, fakeSectionTitle as any);
-
-      stubbedConfigs.get.withArgs(settingId, defaultValue).returns(undefined);
+      const setting = new ExtensionSetting<string>(settingId, fakeSectionTitle as any);
+      stubbedConfigs.stubGet(setting, null);
 
       const actualValue = setting.value;
 
-      assert.strictEqual(actualValue, undefined);
+      assert.strictEqual(actualValue, defaultValue);
       sinon.assert.calledOnceWithExactly(stubbedConfigs.get, settingId, defaultValue);
     });
 
-    it("should handle typed settings correctly", () => {
+    it("should handle string settings correctly", () => {
       const settingId = "test.string.setting";
       const defaultValue = "";
       fakeSection.properties = {
@@ -166,7 +165,27 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
 
       const setting = new ExtensionSetting<string>(settingId, fakeSectionTitle as any);
       const expectedValue = "test-pool-id";
-      stubbedConfigs.get.withArgs(settingId, defaultValue).returns(expectedValue);
+      stubbedConfigs.stubGet(setting, expectedValue);
+
+      const actualValue = setting.value;
+
+      assert.strictEqual(actualValue, expectedValue);
+    });
+
+    it("should handle number settings correctly", () => {
+      const settingId = "test.number.setting";
+      const defaultValue = 0;
+      fakeSection.properties = {
+        [settingId]: {
+          type: "number",
+          default: defaultValue,
+          description: "A test number setting",
+        },
+      };
+
+      const setting = new ExtensionSetting<number>(settingId, fakeSectionTitle as any);
+      const expectedValue = 42;
+      stubbedConfigs.stubGet(setting, expectedValue);
 
       const actualValue = setting.value;
 
@@ -186,7 +205,7 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
 
       const setting = new ExtensionSetting<boolean>(settingId, fakeSectionTitle as any);
       const expectedValue = true;
-      stubbedConfigs.get.withArgs(settingId, defaultValue).returns(expectedValue);
+      stubbedConfigs.stubGet(setting, expectedValue);
 
       const actualValue = setting.value;
 
@@ -207,7 +226,7 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
 
       const setting = new ExtensionSetting<string[]>(settingId, fakeSectionTitle as any);
       const expectedValue = ["/path/to/cert1.pem", "/path/to/cert2.pem"];
-      stubbedConfigs.get.withArgs(settingId, defaultValue).returns(expectedValue);
+      stubbedConfigs.stubGet(setting, expectedValue);
 
       const actualValue = setting.value;
 
@@ -230,11 +249,31 @@ describe("extensionSettings/base.ts ExtensionSetting", function () {
         fakeSectionTitle as any,
       );
       const expectedValue = { foo: "bar,baz" };
-      stubbedConfigs.get.withArgs(settingId, defaultValue).returns(expectedValue);
+      stubbedConfigs.stubGet(setting, expectedValue);
 
       const actualValue = setting.value;
 
       assert.deepStrictEqual(actualValue, expectedValue);
+    });
+
+    it("should handle nullable settings correctly", () => {
+      const settingId = "test.nullable.setting";
+      const defaultValue = null;
+      fakeSection.properties = {
+        [settingId]: {
+          type: "string",
+          default: defaultValue,
+          description: "A test nullable setting",
+        },
+      };
+
+      const setting = new ExtensionSetting<string | null>(settingId, fakeSectionTitle as any);
+      const expectedValue = null;
+      stubbedConfigs.stubGet(setting, expectedValue);
+
+      const actualValue = setting.value;
+
+      assert.strictEqual(actualValue, expectedValue);
     });
   });
 });
