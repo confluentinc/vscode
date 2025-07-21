@@ -222,6 +222,12 @@ class DirectConnectFormViewModel extends ViewModel {
             inputName: "kafka_cluster.ssl.enabled",
             inputValue: false,
           });
+        } else if (input.value.includes("https")) {
+          this.kafkaSslEnabled(true);
+          await post("UpdateSpecValue", {
+            inputName: "kafka_cluster.ssl.enabled",
+            inputValue: true,
+          });
         }
         break;
       case "schema_registry.uri":
@@ -232,6 +238,12 @@ class DirectConnectFormViewModel extends ViewModel {
           await post("UpdateSpecValue", {
             inputName: "schema_registry.ssl.enabled",
             inputValue: false,
+          });
+        } else if (input.value.includes("https")) {
+          this.schemaSslEnabled(true);
+          await post("UpdateSpecValue", {
+            inputName: "schema_registry.ssl.enabled",
+            inputValue: true,
           });
         }
         break;
