@@ -74,7 +74,7 @@ export class DirectConnectionManager {
       async ({ key }: SecretStorageChangeEvent) => {
         // watch for any cross-workspace (or self-made) direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
-          await this.handleDirectConnectionsChanged();
+          await this.handleSecretStoreDirectConnectionsChanged();
         }
       },
     );
@@ -86,7 +86,7 @@ export class DirectConnectionManager {
    * Handle changes made to the direct connections in the SecretStorage, either from other
    * workspaces or changes that this workspace just performed.
    */
-  private async handleDirectConnectionsChanged(): Promise<void> {
+  private async handleSecretStoreDirectConnectionsChanged(): Promise<void> {
     const connections: DirectConnectionsById = await getResourceManager().getDirectConnections();
 
     // Ensure all DirectResourceLoader instances are up to date.

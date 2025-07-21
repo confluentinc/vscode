@@ -17,7 +17,13 @@ import {
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
-import { IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import {
+  ccloudConnected,
+  directConnectionsChanged,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
 import { DirectEnvironment, LocalEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
@@ -111,6 +117,42 @@ describe("viewProviders/newResources.ts", () => {
           sinon.assert.calledOnce(rowRefreshStub);
           sinon.assert.calledOnce(repaintStub);
         });
+      });
+    });
+
+    describe("setCustomEventListeners()", () => {
+      let refreshConnectionStub: sinon.SinonStub;
+      let reconcileDirectConnectionsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        refreshConnectionStub = sandbox.stub(provider, "refreshConnection");
+        reconcileDirectConnectionsStub = sandbox.stub(
+          provider as any,
+          "reconcileDirectConnections", //private method.
+        );
+      });
+
+      it("Refreshes ccloud connection when ccloudConnected event is fired", () => {
+        ccloudConnected.fire(true);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, CCLOUD_CONNECTION_ID, true);
+      });
+
+      it("Refreshes local connection when localKafkaConnected event is fired", () => {
+        localKafkaConnected.fire(true);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+
+      it("Refreshes local connection when localSchemaRegistryConnected event is fired", () => {
+        localSchemaRegistryConnected.fire(true);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+
+      it("Reconciles direct connections when directConnectionsChanged event is fired", () => {
+        directConnectionsChanged.fire();
+        sinon.assert.calledOnce(reconcileDirectConnectionsStub);
       });
     });
   });
