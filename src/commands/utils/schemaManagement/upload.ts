@@ -13,6 +13,7 @@ import { Logger } from "../../../logging";
 import { Schema, SchemaType, Subject } from "../../../models/schema";
 import { type SchemaRegistry } from "../../../models/schemaRegistry";
 import { type KafkaTopic } from "../../../models/topic";
+import { showErrorNotificationWithButtons } from "../../../notifications";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks/schemas";
 import { getSidecar } from "../../../sidecar";
 import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
@@ -22,13 +23,7 @@ import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 const logger = new Logger("commands.utils.schemaManagement.upload");
 
 /** Get the latest schema from a subject, possibly fetching from the schema registry if needed. */
-export async function determineLatestSchema(callpoint: string, subject: Subject): Promise<Schema> {
-  if (!(subject instanceof Subject)) {
-    const msg = `${callpoint} called with invalid argument type`;
-    logger.error(msg, subject);
-    throw new Error(msg);
-  }
-
+export async function determineLatestSchema(subject: Subject): Promise<Schema> {
   if (subject.schemas) {
     // Is already carrying schemas (as from when the subject coming from topics view)
     return subject.schemas[0];
@@ -205,18 +200,17 @@ export async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
     (d) => d.severity === vscode.DiagnosticSeverity.Error,
   );
   if (errorDiagnostics.length > 0) {
-    const doView = await vscode.window.showErrorMessage(
+    void showErrorNotificationWithButtons(
       errorDiagnostics.length === 1
         ? "The schema document has an error."
         : "The schema document has errors.",
-      errorDiagnostics.length === 1 ? "View Error" : "View Errors",
+      {
+        [errorDiagnostics.length === 1 ? "View Error" : "View Errors"]: async () =>
+          // Focus the problems panel. We don't know of any way to further focus on
+          // this specific file's errors, so just focus the whole panel.
+          await vscode.commands.executeCommand("workbench.panel.markers.view.focus"),
+      },
     );
-
-    if (doView) {
-      // Focus the problems panel. We don't know of any way to further focus on
-      // this specific file's errors, so just focus the whole panel.
-      vscode.commands.executeCommand("workbench.panel.markers.view.focus");
-    }
     return true;
   }
 
@@ -531,8 +525,8 @@ export async function getNewlyRegisteredVersion(
 ): Promise<number> {
   // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
   // (may take a few times / pauses if the request is served by a read replica that doesn't yet know about the schema we just registered, sigh.)
+  let subjectVersionPairs: SubjectVersion[] = [];
   for (let attempt = 0; attempt < 5; attempt++) {
-    let subjectVersionPairs: SubjectVersion[] | undefined;
     try {
       subjectVersionPairs = await schemasApi.getVersions({ id: schemaId });
     } catch (e) {
@@ -547,7 +541,7 @@ export async function getNewlyRegisteredVersion(
       }
     }
 
-    for (const pair of subjectVersionPairs!) {
+    for (const pair of subjectVersionPairs) {
       if (pair.subject === subject) {
         // This is the version number used for the subject we just bound it to.
         return pair.version!;

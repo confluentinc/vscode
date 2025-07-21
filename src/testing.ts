@@ -25,7 +25,7 @@ export async function run() {
         testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
         mochaFile: resultFilePath,
         useFullSuiteTitle: true,
-        rootSuiteTitle: "Tests",
+        rootSuiteTitle: `${version}:`,
       },
     },
   });
