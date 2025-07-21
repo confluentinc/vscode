@@ -175,6 +175,73 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaStatusMessage(undefined);
   }
 
+  /**
+   * Clears all Kafka-related fields in the connection spec
+   */
+  async clearKafka() {
+    // Reset the UI state for Kafka
+    this.kafkaBootstrapServers("");
+    this.kafkaState(undefined);
+    this.kafkaErrorMessage(undefined);
+
+    // Clear the bootstrap servers in the spec
+    await post("UpdateSpecValue", {
+      inputName: "kafka_cluster.bootstrap_servers",
+      inputValue: "",
+    });
+
+    // Reset the Kafka auth type to None
+    await post("SaveFormAuthType", {
+      inputName: "kafka_cluster.auth_type",
+      inputValue: "None" as SupportedAuthTypes,
+    });
+    this.kafkaAuthType("None");
+
+    // Reset SSL settings to defaults
+    this.kafkaSslEnabled(true);
+    await post("UpdateSpecValue", {
+      inputName: "kafka_cluster.ssl.enabled",
+      inputValue: true,
+    });
+
+    // Reset the connection spec in the UI
+    this.spec(await post("GetConnectionSpec", {}));
+  }
+
+  /**
+   * Clears all Schema Registry-related fields in the connection spec
+   */
+  async clearSchemaRegistry() {
+    // Reset the UI state for Schema Registry
+    this.schemaUri("");
+    this.schemaState(undefined);
+    this.schemaErrorMessage(undefined);
+
+    // Clear the Schema Registry URL in the spec
+    await post("UpdateSpecValue", {
+      inputName: "schema_registry.uri",
+      inputValue: "",
+    });
+
+    // Reset the Schema Registry auth type to None
+    // TODO when this is reset by "clear" action, we should remove all related spec values in directConnect.ts
+    await post("SaveFormAuthType", {
+      inputName: "schema_registry.auth_type",
+      inputValue: "None" as SupportedAuthTypes,
+    });
+    this.schemaAuthType("None");
+
+    // Reset SSL settings to defaults
+    this.schemaSslEnabled(true);
+    await post("UpdateSpecValue", {
+      inputName: "schema_registry.ssl.enabled",
+      inputValue: true,
+    });
+
+    // Reset the connection spec in the UI
+    this.spec(await post("GetConnectionSpec", {}));
+  }
+
   async getFile(detail: { inputId: string }) {
     const newPath = await post("GetFilePath", detail);
     if (newPath) this.spec(await post("GetConnectionSpec", {}));
