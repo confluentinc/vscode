@@ -85,6 +85,10 @@ export class DirectConnectionManager {
   /**
    * Handle changes made to the direct connections in the SecretStorage, either from other
    * workspaces or changes that this workspace just performed.
+   *
+   * Reconciles the registered direct connection loaders with the current
+   * direct connections in the SecretStorage, then fires the `directConnectionsChanged`
+   * event.
    */
   private async handleSecretStoreDirectConnectionsChanged(): Promise<void> {
     const connections: DirectConnectionsById = await getResourceManager().getDirectConnections();
@@ -107,6 +111,7 @@ export class DirectConnectionManager {
     // (may have been reconfigured, e.g. new kafka cluster or schema registry, or improved)
     for (const id of connections.keys()) {
       if (!existingDirectLoadersById.has(id)) {
+        // Create a and register a new DirectResourceLoader for this connection ID.
         this.initResourceLoader(id);
       } else {
         // Get this preexisting loader to purge its cache, so it can re-fetch the latest resources. The
@@ -114,6 +119,10 @@ export class DirectConnectionManager {
         // the spelling of which. Alas we don't know if this connection was changed at all when
         // we get the change event, so we have to be conservative and purge the caches of any
         // existing direct loaders.
+
+        // (Thought: If a DirectLoader were to snapshot the connection spec at construction or
+        //  coarse resource loading time, then we would have the old spec version to compare
+        //  against and could then only purge the cache if the spec changed.)
         const existingLoader = existingDirectLoadersById.get(id)!;
         await existingLoader.reset();
       }
