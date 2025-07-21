@@ -9,6 +9,7 @@ import {
 } from "vscode";
 import { ContextValues } from "../context/values";
 import {
+  ccloudAuthSessionInvalidated,
   currentFlinkStatementsResourceChanged,
   flinkStatementDeleted,
   flinkStatementSearchSet,
@@ -86,7 +87,14 @@ export class FlinkStatementsViewProvider
       },
     );
 
-    return [statementChangedSub, statementDeletedSub];
+    // Listen for auth session invalidation to clear the view
+    const authInvalidatedSub: Disposable = ccloudAuthSessionInvalidated.event(() => {
+      this.resourcesInTreeView.clear();
+      this.statementManager.clearClient(this.managerClientId);
+      this._onDidChangeTreeData.fire();
+    });
+
+    return [statementChangedSub, statementDeletedSub, authInvalidatedSub];
   }
 
   /**
@@ -111,25 +119,44 @@ export class FlinkStatementsViewProvider
       await this.withProgress(
         "Loading Flink statements...",
         async () => {
-          // Fetch statements, remember them, and indicate to the view that we have new data.
-          const statements = await loader.getFlinkStatements(this.resource!);
-          const nonTerminalStatements: FlinkStatement[] = [];
-          statements.forEach((r: FlinkStatement) => {
-            this.resourcesInTreeView.set(r.id, r);
-            if (!r.isTerminal) {
-              nonTerminalStatements.push(r);
+          try {
+            // Fetch statements, remember them, and indicate to the view that we have new data.
+            const statements = await loader.getFlinkStatements(this.resource!);
+            const nonTerminalStatements: FlinkStatement[] = [];
+            statements.forEach((r: FlinkStatement) => {
+              this.resourcesInTreeView.set(r.id, r);
+              if (!r.isTerminal) {
+                nonTerminalStatements.push(r);
+              }
+            });
+
+            if (nonTerminalStatements.length > 0) {
+              // Set up to monitor the statements for changes.
+              this.statementManager.register(this.managerClientId, nonTerminalStatements);
             }
-          });
 
-          if (nonTerminalStatements.length > 0) {
-            // Set up to monitor the statements for changes.
-            this.statementManager.register(this.managerClientId, nonTerminalStatements);
+            this.logTelemetry(statements.length, nonTerminalStatements.length);
+
+            // inform the view that we have new toplevel data.
+            this._onDidChangeTreeData.fire();
+          } catch (error) {
+            this.logger.error("Failed to load Flink statements", error);
+
+            // Check if this is an auth error (401 Unauthorized)
+            if (error && typeof error === "object" && "response" in error) {
+              const responseError = error as any;
+              if (
+                responseError.response?.status === 401 ||
+                (responseError.name === "ResponseError" &&
+                  responseError.response?.statusText === "Unauthorized")
+              ) {
+                // Signal that the auth session is invalid
+                ccloudAuthSessionInvalidated.fire();
+              }
+            }
+
+            throw error;
           }
-
-          this.logTelemetry(statements.length, nonTerminalStatements.length);
-
-          // inform the view that we have new toplevel data.
-          this._onDidChangeTreeData.fire();
         },
         false,
       );
