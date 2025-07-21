@@ -1,6 +1,7 @@
-import { TreeDataProvider, TreeItem } from "vscode";
+import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentFlinkArtifactsPoolChanged } from "../emitters";
+import { ccloudAuthSessionInvalidated, currentFlinkArtifactsPoolChanged } from "../emitters";
+import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { ParentedBaseViewProvider } from "./base";
@@ -15,35 +16,62 @@ export class FlinkArtifactsViewProvider
 
   parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
   parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
+  private _artifacts: FlinkArtifact[] = [];
 
-  searchContextValue = ContextValues.flinkArtifactsSearchApplied;
+  protected setCustomEventListeners(): Disposable[] {
+    // Listen for auth session invalidation to clear the view
+    const authInvalidatedSub: Disposable = ccloudAuthSessionInvalidated.event(() => {
+      this._artifacts = [];
+      this._onDidChangeTreeData.fire();
+    });
 
-  getChildren(): FlinkArtifact[] {
-    const children: FlinkArtifact[] = [];
+    return [authInvalidatedSub];
+  }
+
+  getChildren(element?: FlinkArtifact): FlinkArtifact[] {
     if (!this.computePool) {
-      return children;
+      return [];
+    }
+    return this.filterChildren(element, this._artifacts);
+  }
+
+  async refresh(): Promise<void> {
+    this._artifacts = [];
+
+    if (this.computePool) {
+      // Immediately inform the view that we (temporarily) have no data so it will clear.
+      this._onDidChangeTreeData.fire();
+
+      await this.withProgress(
+        "Loading Flink artifacts...",
+        async () => {
+          try {
+            const loader = CCloudResourceLoader.getInstance();
+            this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
+          } catch (error) {
+            this.logger.error("Failed to load Flink artifacts", { error });
+
+            // Check if this is an auth error (401 Unauthorized)
+            if (error && typeof error === "object" && "response" in error) {
+              const responseError = error as any;
+              if (
+                responseError.response?.status === 401 ||
+                (responseError.name === "ResponseError" &&
+                  responseError.response?.statusText === "Unauthorized")
+              ) {
+                // Signal that the auth session is invalid
+                ccloudAuthSessionInvalidated.fire();
+              }
+            }
+
+            throw error;
+          }
+        },
+        false,
+      );
     }
 
-    const pool: CCloudFlinkComputePool = this.computePool;
-
-    // TODO: replace this with real data -- this should not require any pool-specific filtering,
-    // but use the environment, provider, and region from the pool
-    const numArtifacts = Math.floor(Math.random() * 10) + 1;
-    for (let i = 0; i < numArtifacts; i++) {
-      const fakeArtifact = new FlinkArtifact({
-        connectionId: pool.connectionId,
-        connectionType: pool.connectionType,
-        environmentId: pool.environmentId,
-        id: `artifact${i + 1}`,
-        name: `artifact${i + 1}-${pool.name}`,
-        description: `Test artifact #${i + 1}`,
-        provider: pool.provider,
-        region: pool.region,
-      });
-      children.push(fakeArtifact);
-    }
-
-    return this.filterChildren(undefined, children);
+    this._onDidChangeTreeData.fire();
   }
 
   getTreeItem(element: FlinkArtifact): TreeItem {
