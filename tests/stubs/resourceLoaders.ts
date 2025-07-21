@@ -100,6 +100,8 @@ export function getStubbedCCloudResourceLoader(
 ): SinonStubbedInstance<CCloudResourceLoader> {
   const stubbedLoader: SinonStubbedInstance<CCloudResourceLoader> =
     sandbox.createStubInstance(CCloudResourceLoader);
+  // Add stub for the new getFlinkArtifacts method
+  stubbedLoader.getFlinkArtifacts = sandbox.stub();
   // stub the static methods to return the stubbed instance
   sandbox.stub(CCloudResourceLoader, "getInstance").returns(stubbedLoader);
   configureResourceLoaderMethods(sandbox, stubbedLoader, CCLOUD_CONNECTION_ID);

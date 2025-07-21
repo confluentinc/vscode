@@ -428,7 +428,7 @@
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "false"
+        "enablement": "true"
       },
       {
         "command": "confluent.statements.refresh",
@@ -1005,8 +1005,7 @@
           "id": "confluent-flink-artifacts",
           "name": "Flink Artifacts",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "when": "false"
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-support",
