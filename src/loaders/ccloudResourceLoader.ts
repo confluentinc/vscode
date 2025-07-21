@@ -355,28 +355,50 @@ async function loadArtifactsForProviderRegion(
 
   const flinkArtifacts: FlinkArtifact[] = [];
 
-  try {
-    const restResult = await artifactsClient.listArtifactV1FlinkArtifacts({
-      cloud: queryable.provider,
-      region: queryable.region,
-      environment: queryable.environmentId,
-      page_size: 100, // max page size
-    });
+  const request = {
+    cloud: queryable.provider,
+    region: queryable.region,
+    environment: queryable.environmentId,
+    page_size: 100, // max page size
+    page_token: "", // start with the first page
+  };
 
-    // Convert each Flink artifact from the REST API representation to our codebase model.
-    for (const restArtifact of restResult.data) {
-      const artifact = restFlinkArtifactToModel(restArtifact, queryable);
-      flinkArtifacts.push(artifact);
+  let needMore: boolean = true;
+
+  while (needMore) {
+    try {
+      const restResult = await artifactsClient.listArtifactV1FlinkArtifacts(request);
+
+      // Convert each Flink artifact from the REST API representation to our codebase model.
+      for (const restArtifact of restResult.data) {
+        const artifact = restFlinkArtifactToModel(restArtifact, queryable);
+        flinkArtifacts.push(artifact);
+      }
+
+      // If this wasn't the last page, update the request to get the next page.
+      if (restResult.metadata.next) {
+        // `restResult.metadata.next` will be a full URL like "https://.../artifacts?page_token=UvmDWOB1iwfAIBPj6EYb"
+        // Must extract the page token from the URL.
+        const nextUrl = new URL(restResult.metadata.next);
+        const pageToken = nextUrl.searchParams.get("page_token");
+        if (!pageToken) {
+          // Should never happen, but just in case.
+          logger.error("No page token found in next URL.");
+          needMore = false;
+        } else {
+          request.page_token = pageToken;
+        }
+      } else {
+        // No more pages to fetch.
+        needMore = false;
+      }
+    } catch (error) {
+      logger.error(`Error loading Flink artifacts from ${queryable.provider}-${queryable.region}`, {
+        error,
+      });
+      // Re-throw to be handled by executeInWorkerPool
+      throw error;
     }
-
-    // TODO: Handle pagination if needed (similar to statements implementation)
-    // For now, we're only getting the first page
-  } catch (error) {
-    logger.error(`Error loading Flink artifacts from ${queryable.provider}-${queryable.region}`, {
-      error,
-    });
-    // Re-throw to be handled by executeInWorkerPool
-    throw error;
   }
 
   return flinkArtifacts;

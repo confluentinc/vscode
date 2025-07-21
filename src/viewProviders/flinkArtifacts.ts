@@ -1,10 +1,6 @@
-import { Disposable, EventEmitter, TreeDataProvider, TreeItem } from "vscode";
+import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import {
-  ccloudAuthSessionInvalidated,
-  currentFlinkArtifactsPoolChanged,
-  flinkArtifactsSearchSet,
-} from "../emitters";
+import { ccloudAuthSessionInvalidated, currentFlinkArtifactsPoolChanged } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -20,10 +16,6 @@ export class FlinkArtifactsViewProvider
 
   parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
   parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
-
-  searchContextValue = ContextValues.flinkArtifactsSearchApplied;
-  searchChangedEmitter: EventEmitter<string | null> = flinkArtifactsSearchSet;
-
   private _artifacts: FlinkArtifact[] = [];
 
   protected setCustomEventListeners(): Disposable[] {
