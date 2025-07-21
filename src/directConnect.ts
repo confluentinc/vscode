@@ -18,12 +18,12 @@ import { SupportedAuthTypes } from "./directConnections/types";
 import { directConnectionsChanged } from "./emitters";
 import { DEFAULT_KRB5_CONFIG_PATH, KRB5_CONFIG_PATH } from "./extensionSettings/constants";
 import { ConnectionId } from "./models/resource";
+import { showInfoNotificationWithButtons } from "./notifications";
 import { CustomConnectionSpec, getResourceManager } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, TestResponse, post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
-import { showInfoNotificationWithButtons } from "./notifications";
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
@@ -73,7 +73,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   // Listen to changes in connections and close the form if the connection no longer exists
   // Only needed for edit/update forms, not for new connections
   let connectionChangesListener: Disposable | null = null;
-  if (action && connection) {
+  if (action === "update" && connection) {
     connectionChangesListener = directConnectionsChanged.event(async () => {
       await handleConnectionChange(connection, directConnectForm);
     });
@@ -109,12 +109,12 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     } else {
       result.success = true;
       // save and close the form
+      directConnectForm.dispose();
       await showInfoNotificationWithButtons(`New Connection Created`, {
         "Edit Connection": () => {
           commands.executeCommand("confluent.connections.direct.edit", newConnection.id);
         },
       });
-      directConnectForm.dispose();
     }
     return result;
   }
