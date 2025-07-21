@@ -20,11 +20,18 @@ import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import {
   ccloudConnected,
+  connectionDisconnected,
+  connectionStable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
 } from "../emitters";
-import { CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader } from "../loaders";
+import {
+  CCloudResourceLoader,
+  DirectResourceLoader,
+  LocalResourceLoader,
+  ResourceLoader,
+} from "../loaders";
 import { DirectEnvironment, LocalEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
@@ -153,6 +160,158 @@ describe("viewProviders/newResources.ts", () => {
       it("Reconciles direct connections when directConnectionsChanged event is fired", () => {
         directConnectionsChanged.fire();
         sinon.assert.calledOnce(reconcileDirectConnectionsStub);
+      });
+
+      it("Refreshes direct connection when connectionStable event is fired", () => {
+        const connectionId = "test-direct-connection-id" as ConnectionId;
+        connectionStable.fire(connectionId);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
+      });
+
+      it("Refreshes direct connection when connectionDisconnected event is fired", () => {
+        const connectionId = "test-direct-connection-id" as ConnectionId;
+        connectionDisconnected.fire(connectionId);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
+      });
+    });
+
+    describe("reconcileDirectConnections()", () => {
+      let resourceLoadersDirectLoadersStub: sinon.SinonStub;
+      let providerLoadAndStoreConnectionStub: sinon.SinonStub;
+      let providerRepaintStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Set up so that we start with a provider that has no direct connections,
+        // that will have been initialized with no direct loaders.
+
+        resourceLoadersDirectLoadersStub = sandbox
+          .stub(ResourceLoader, "directLoaders")
+          .returns([]);
+
+        providerLoadAndStoreConnectionStub = sandbox
+          .stub(provider, "loadAndStoreConnection")
+          .resolves();
+
+        providerRepaintStub = sandbox.stub(provider as any, "repaint");
+      });
+
+      it("Adds new DirectResourceLoaders when needed", async () => {
+        // Simulate a new one existing...
+        const newDirectLoader = new DirectResourceLoader(
+          "test-adds-direct-connection-row" as ConnectionId,
+        );
+        resourceLoadersDirectLoadersStub.returns([newDirectLoader]);
+
+        await provider["reconcileDirectConnections"]();
+
+        // Should have called this.loadAndStoreConnection() for the new direct connection.
+        sinon.assert.calledOnce(providerLoadAndStoreConnectionStub);
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(DirectConnectionRow),
+          false, // insertBeforeRefresh
+        );
+        // And should have refreshed the view.
+        sinon.assert.calledOnce(providerRepaintStub);
+      });
+
+      it("Removes DirectConnectionRows that no longer have loaders", async () => {
+        // For simplicity, remove all connection rows (ccloud, local) before
+        // adding in a single DirectConnectionRow which should get removed
+        // during reconciliation.
+        // provider["connections"].clear();
+
+        // Simulate a DirectResourceLoader that no longer exists.
+        const deleted_id = "test-deleted-direct-connection-row" as ConnectionId;
+        const removedDirectLoader = new DirectResourceLoader(deleted_id);
+
+        provider["connections"].set(deleted_id, new DirectConnectionRow(removedDirectLoader));
+
+        resourceLoadersDirectLoadersStub.returns([]);
+
+        await provider["reconcileDirectConnections"]();
+
+        // Should have removed the connection row for the removed loader.
+        assert.strictEqual(provider["connections"].size, 0);
+        // And repainted toplevel.
+        sinon.assert.calledOnce(providerRepaintStub);
+      });
+    });
+
+    describe("repaint()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      });
+
+      it("toplevel repaint", () => {
+        provider["repaint"]();
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, undefined);
+      });
+
+      it("repaint a specific connection row", () => {
+        const connectionId = "test-connection-id" as ConnectionId;
+        const connectionRow = new DirectConnectionRow(new DirectResourceLoader(connectionId));
+        provider["repaint"](connectionRow);
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, connectionRow);
+      });
+    });
+
+    describe("lazyInitializeConnections()", () => {
+      let resourceLoadersDirectLoadersStub: sinon.SinonStub;
+      let providerLoadAndStoreConnectionStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Set up so that we start with a provider that has no direct connections,
+        // that will have been initialized with no direct loaders.
+        resourceLoadersDirectLoadersStub = sandbox
+          .stub(ResourceLoader, "directLoaders")
+          .returns([]);
+
+        providerLoadAndStoreConnectionStub = sandbox
+          .stub(provider, "loadAndStoreConnection")
+          .resolves();
+      });
+
+      it("class loadAndStoreConnection for LocalConnectionRow, CCloudConnectionRow", async () => {
+        await provider["lazyInitializeConnections"]();
+
+        // Should have called this.loadAndStoreConnection() twice: once for LocalConnectionRow and once for CCloudConnectionRow.
+        sinon.assert.calledTwice(providerLoadAndStoreConnectionStub);
+
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(LocalConnectionRow),
+          true, // insertBeforeRefresh
+        );
+
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(CCloudConnectionRow),
+          true, // insertBeforeRefresh
+        );
+      });
+
+      it("calls loadAndStoreConnection for each DirectResourceLoader", async () => {
+        resourceLoadersDirectLoadersStub.returns([
+          new DirectResourceLoader("test-direct-connection-id" as ConnectionId),
+        ]);
+
+        await provider["lazyInitializeConnections"]();
+
+        // Should have called this.loadAndStoreConnection() for the new direct connection.
+        // (as well as the implicit Local and CCloud rows).
+        sinon.assert.calledThrice(providerLoadAndStoreConnectionStub);
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(DirectConnectionRow),
+          false, // insertBeforeRefresh
+        );
       });
     });
   });

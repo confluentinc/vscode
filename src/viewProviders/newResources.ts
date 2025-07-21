@@ -587,17 +587,9 @@ export class NewResourceViewProvider
     });
   }
 
-  /** Repaint this node in the treeview. */
+  /** Repaint this node in the treeview. Pass nothing if wanting a toplevel repaint.*/
   private repaint(object: NewResourceViewProviderData | undefined = undefined): void {
-    if (object) {
-      this.logger.debug("Repainting specific child", {
-        object: object.constructor.name,
-      });
-      this._onDidChangeTreeData.fire(object);
-    } else {
-      this.logger.debug("Repainting whole view");
-      this._onDidChangeTreeData.fire();
-    }
+    this._onDidChangeTreeData.fire(object);
   }
 
   /**
