@@ -106,6 +106,11 @@ export class ErrorResponseMiddleware implements Middleware {
         return;
       }
 
+      // Special case: Handle Flink artifacts API authentication errors more specifically
+      if (context.response.status === 401 && /artifact\/v1\/flink-artifacts/.test(context.url)) {
+        logger.error("Unauthorized access to Flink artifacts API - authentication required");
+      }
+
       const requestLogString = contextToRequestLogString(context);
       const responseLogString = await contextToResponseLogString(context);
 

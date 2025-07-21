@@ -39,6 +39,10 @@ export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 export const flinkStatementUpdated = new vscode.EventEmitter<FlinkStatement>();
 /** Fired when a FlinkStatementManager-monitored statement 404s ccloud-side. */
 export const flinkStatementDeleted = new vscode.EventEmitter<FlinkStatementId>();
+/** Fired when Flink artifacts are updated or refreshed. */
+export const flinkArtifactsUpdated = new vscode.EventEmitter<void>();
+/** Fired when Flink artifacts fail to load due to authentication or other errors. */
+export const flinkArtifactsLoadFailed = new vscode.EventEmitter<Error>();
 
 export type EventChangeType = "added" | "deleted";
 
@@ -127,6 +131,8 @@ export const topicSearchSet = new vscode.EventEmitter<string | null>();
 export const schemaSearchSet = new vscode.EventEmitter<string | null>();
 /** The user set/unset a filter for the Flink Statements view. */
 export const flinkStatementSearchSet = new vscode.EventEmitter<string | null>();
+/** The user set/unset a filter for the Flink Artifacts view. */
+export const flinkArtifactsSearchSet = new vscode.EventEmitter<string | null>();
 
 export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 

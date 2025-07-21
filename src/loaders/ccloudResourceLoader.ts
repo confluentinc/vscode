@@ -9,6 +9,7 @@ import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
@@ -237,6 +238,38 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       }
     }
   }
+
+  /**
+   * Query the Flink artifacts for the given CCloud environment + provider-region.
+   * @returns The Flink artifacts for the given environment + provider-region.
+   * @param resource The CCloud compute pool or environment to get the Flink artifacts for.
+   */
+  public async getFlinkArtifacts(
+    resource: CCloudEnvironment | CCloudFlinkComputePool,
+  ): Promise<FlinkArtifact[]> {
+    const queryables: IFlinkQueryable[] = await this.determineFlinkQueryables(resource);
+    const handle = await getSidecar();
+
+    // For each provider-region pair, get the Flink artifacts with reasonable concurrency.
+    const concurrentResults: ExecutionResult<FlinkArtifact[]>[] = await executeInWorkerPool(
+      (queryable: IFlinkQueryable) => loadArtifactsForProviderRegion(handle, queryable),
+      queryables,
+      { maxWorkers: 5 },
+    );
+
+    logger.debug(`getFlinkArtifacts() loaded ${concurrentResults.length} provider-region pairs`);
+
+    // Assemble the results into a single array of Flink artifacts.
+    const flinkArtifacts: FlinkArtifact[] = [];
+
+    // extract will raise first error if any error was encountered.
+    const blocks: FlinkArtifact[][] = extract(concurrentResults);
+    for (const block of blocks) {
+      flinkArtifacts.push(...block);
+    }
+
+    return flinkArtifacts;
+  }
 }
 
 /**
@@ -303,4 +336,67 @@ async function loadStatementsForProviderRegion(
   }
 
   return flinkStatements;
+}
+
+/**
+ * Load artifacts for a single provider/region
+ * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
+ *  via executeInWorkerPool())
+ */
+async function loadArtifactsForProviderRegion(
+  handle: SidecarHandle,
+  queryable: IFlinkQueryable,
+): Promise<FlinkArtifact[]> {
+  const artifactsClient = handle.getFlinkArtifactsApi();
+
+  logger.debug(
+    `getFlinkArtifacts() requesting from ${queryable.provider}-${queryable.region} for environment ${queryable.environmentId}`,
+  );
+
+  const flinkArtifacts: FlinkArtifact[] = [];
+
+  try {
+    const restResult = await artifactsClient.listArtifactV1FlinkArtifacts({
+      cloud: queryable.provider,
+      region: queryable.region,
+      environment: queryable.environmentId,
+      page_size: 100, // max page size
+    });
+
+    // Convert each Flink artifact from the REST API representation to our codebase model.
+    for (const restArtifact of restResult.data) {
+      const artifact = restFlinkArtifactToModel(restArtifact, queryable);
+      flinkArtifacts.push(artifact);
+    }
+
+    // TODO: Handle pagination if needed (similar to statements implementation)
+    // For now, we're only getting the first page
+  } catch (error) {
+    logger.error(`Error loading Flink artifacts from ${queryable.provider}-${queryable.region}`, {
+      error,
+    });
+    // Re-throw to be handled by executeInWorkerPool
+    throw error;
+  }
+
+  return flinkArtifacts;
+}
+
+/**
+ * Convert a REST API Flink artifact representation to our codebase model.
+ * @param restArtifact The REST API artifact representation
+ * @param queryable The queryable context containing connection and environment info
+ * @returns FlinkArtifact model instance
+ */
+function restFlinkArtifactToModel(restArtifact: any, queryable: IFlinkQueryable): FlinkArtifact {
+  return new FlinkArtifact({
+    connectionId: CCLOUD_CONNECTION_ID,
+    connectionType: ConnectionType.Ccloud,
+    environmentId: queryable.environmentId,
+    id: restArtifact.id,
+    name: restArtifact.display_name || restArtifact.id,
+    description: restArtifact.description || "",
+    provider: restArtifact.cloud,
+    region: restArtifact.region,
+  });
 }
