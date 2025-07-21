@@ -547,7 +547,7 @@ export async function getNewlyRegisteredVersion(
       }
     }
 
-    for (const pair of subjectVersionPairs!) {
+    for (const pair of subjectVersionPairs) {
       if (pair.subject === subject) {
         // This is the version number used for the subject we just bound it to.
         return pair.version!;
