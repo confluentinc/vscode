@@ -90,7 +90,16 @@
               <span data-text="this.kafkaStatusMessage()"></span>
             </div>
           </template>
-          <h2 class="form-section-heading">Kafka Cluster</h2>
+          <div class="section-header-container">
+            <h2 class="form-section-heading">Kafka Cluster</h2>
+            <button
+              type="button"
+              class="button secondary compact"
+              data-on-click="this.clearKafka()"
+            >
+              Clear Kafka® cluster details
+            </button>
+          </div>
           <div class="input-container">
             <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
             <input
@@ -180,7 +189,16 @@
               <span data-text="this.schemaStatusMessage()"></span>
             </div>
           </template>
-          <h2 class="form-section-heading">Schema Registry</h2>
+          <div class="section-header-container">
+            <h2 class="form-section-heading">Schema Registry</h2>
+            <button
+              type="button"
+              class="button secondary compact"
+              data-on-click="this.clearSchemaRegistry()"
+            >
+              Clear Schema Registry details
+            </button>
+          </div>
           <div class="input-container">
             <label for="schema_registry.uri" class="label">URL</label>
             <input
@@ -351,6 +369,18 @@
         flex: 0 0 60px;
         padding: 4px 2px;
         font-size: smaller;
+      }
+      /* Section header with button styling */
+      .section-header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .button.compact {
+        padding: 4px 8px;
+        font-size: 12px;
+        height: auto;
       }
     </style>
   </body>
