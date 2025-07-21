@@ -216,13 +216,13 @@ class DirectConnectFormViewModel extends ViewModel {
       case "kafka_cluster.bootstrap_servers":
         this.kafkaBootstrapServers(input.value);
         // if localhost, uncheck SSL
-        if (input.value.includes("localhost")) {
+        if (input.value.includes("localhost") || input.value.startsWith("http:")) {
           this.kafkaSslEnabled(false);
           await post("UpdateSpecValue", {
             inputName: "kafka_cluster.ssl.enabled",
             inputValue: false,
           });
-        } else if (input.value.includes("https")) {
+        } else if (input.value.startsWith("https:")) {
           this.kafkaSslEnabled(true);
           await post("UpdateSpecValue", {
             inputName: "kafka_cluster.ssl.enabled",
@@ -233,13 +233,13 @@ class DirectConnectFormViewModel extends ViewModel {
       case "schema_registry.uri":
         this.schemaUri(input.value);
         // if localhost, uncheck SSL
-        if (input.value.includes("localhost")) {
+        if (input.value.includes("localhost") || input.value.startsWith("http:")) {
           this.schemaSslEnabled(false);
           await post("UpdateSpecValue", {
             inputName: "schema_registry.ssl.enabled",
             inputValue: false,
           });
-        } else if (input.value.includes("https")) {
+        } else if (input.value.startsWith("https:")) {
           this.schemaSslEnabled(true);
           await post("UpdateSpecValue", {
             inputName: "schema_registry.ssl.enabled",
