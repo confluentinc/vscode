@@ -106,5 +106,9 @@ export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER =
   prefix + "flink.enableConfluentCloudLanguageServer";
 export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT = true;
 
+/** Whether or not to enable Flink Artifacts functionality including the artifacts view. */
+export const ENABLE_FLINK_ARTIFACTS = prefix + "flink.enableFlinkArtifacts";
+export const ENABLE_FLINK_ARTIFACTS_DEFAULT = false;
+
 /** Whether or not to enable the `@Confluent` chat participant and associated tools. */
 export const ENABLE_CHAT_PARTICIPANT = prefix + "experimental.enableChatParticipant";
