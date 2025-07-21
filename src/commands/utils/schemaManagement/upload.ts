@@ -23,13 +23,7 @@ import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 const logger = new Logger("commands.utils.schemaManagement.upload");
 
 /** Get the latest schema from a subject, possibly fetching from the schema registry if needed. */
-export async function determineLatestSchema(callpoint: string, subject: Subject): Promise<Schema> {
-  if (!(subject instanceof Subject)) {
-    const msg = `${callpoint} called with invalid argument type`;
-    logger.error(msg, subject);
-    throw new Error(msg);
-  }
-
+export async function determineLatestSchema(subject: Subject): Promise<Schema> {
   if (subject.schemas) {
     // Is already carrying schemas (as from when the subject coming from topics view)
     return subject.schemas[0];

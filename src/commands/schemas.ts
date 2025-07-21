@@ -192,7 +192,7 @@ export async function viewLatestLocallyCommand(subject: Subject) {
   if (!(subject instanceof Subject)) {
     return;
   }
-  const schema: Schema = await determineLatestSchema("viewLatestLocallyCommand", subject);
+  const schema: Schema = await determineLatestSchema(subject);
   await viewLocallyCommand(schema);
 }
 
@@ -238,7 +238,7 @@ export async function evolveSchemaSubjectCommand(subject: Subject) {
   if (!(subject instanceof Subject)) {
     return;
   }
-  const schema: Schema = await determineLatestSchema("evolveSchemaSubjectCommand", subject);
+  const schema: Schema = await determineLatestSchema(subject);
   await evolveSchemaCommand(schema);
 }
 

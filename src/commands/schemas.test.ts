@@ -300,11 +300,7 @@ describe("commands/schemas.ts", function () {
 
       await schemas.viewLatestLocallyCommand(TEST_CCLOUD_SUBJECT);
 
-      sinon.assert.calledOnceWithExactly(
-        determineLatestSchemaStub,
-        "viewLatestLocallyCommand",
-        TEST_CCLOUD_SUBJECT,
-      );
+      sinon.assert.calledOnceWithExactly(determineLatestSchemaStub, TEST_CCLOUD_SUBJECT);
       // only check that we didn't exit from viewLocallyCommand early, since the tests for the
       // viewLocallyCommand() function already cover the rest of the logic
       sinon.assert.calledOnce(withProgressStub);
@@ -388,11 +384,7 @@ describe("commands/schemas.ts", function () {
 
       await schemas.evolveSchemaSubjectCommand(TEST_CCLOUD_SUBJECT);
 
-      sinon.assert.calledOnceWithExactly(
-        determineLatestSchemaStub,
-        "evolveSchemaSubjectCommand",
-        TEST_CCLOUD_SUBJECT,
-      );
+      sinon.assert.calledOnceWithExactly(determineLatestSchemaStub, TEST_CCLOUD_SUBJECT);
       // only check that we didn't exit from evolveSchemaCommand early, since the tests for the
       // evolveSchemaCommand() function already cover the rest of the logic
       sinon.assert.calledOnceWithExactly(fetchSchemaBodyStub, TEST_CCLOUD_SCHEMA);

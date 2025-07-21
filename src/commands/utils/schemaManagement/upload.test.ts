@@ -94,7 +94,8 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
     });
 
     it("should return first Schema from a Subject carrying Schemas", async () => {
-      const result = await determineLatestSchema("test", TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+      const result = await determineLatestSchema(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+
       assert.strictEqual(result, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0]);
     });
 
@@ -104,16 +105,9 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
 
       stubbedLoader.getSchemasForSubject.resolves([expectedSchema]);
 
-      const result = await determineLatestSchema("test", subject);
+      const result = await determineLatestSchema(subject);
 
       assert.strictEqual(result, expectedSchema);
-    });
-
-    it("should throw error for invalid argument type", async () => {
-      await assert.rejects(
-        async () => await determineLatestSchema("test", {} as Subject),
-        /called with invalid argument type/,
-      );
     });
   });
 
