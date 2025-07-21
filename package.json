@@ -1281,7 +1281,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.connections.setKrb5ConfigPath",
+          "command": "confluent.resources.scaffold",
           "when": "false"
         },
         {
