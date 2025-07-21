@@ -1,250 +1,313 @@
+import { ObservableScope } from "inertial";
+import * as vscode from "vscode";
+import { registerCommandWithLogging } from ".";
 import {
-  Disposable,
-  EventEmitter,
-  TreeDataProvider,
-  TreeItem,
-  Uri,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
-import { ContextValues } from "../context/values";
-import {
-  currentFlinkStatementsResourceChanged,
-  flinkStatementDeleted,
-  flinkStatementSearchSet,
-  flinkStatementUpdated,
-} from "../emitters";
-import {
-  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-  DEFAULT_STATEMENT_POLLING_LIMIT,
-  STATEMENT_POLLING_CONCURRENCY,
-  STATEMENT_POLLING_FREQUENCY_SECONDS,
-  STATEMENT_POLLING_LIMIT,
-} from "../extensionSettings/constants";
-import { FlinkStatementManager } from "../flinkSql/flinkStatementManager";
-import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { CCloudEnvironment } from "../models/environment";
+  FLINKSTATEMENT_URI_SCHEME,
+  FlinkStatementDocumentProvider,
+} from "../documentProviders/flinkStatement";
+import { extractResponseBody, isResponseError, logError } from "../errors";
+import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
+import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
-import { logUsage, UserEvent } from "../telemetry/events";
-import { ParentedBaseViewProvider } from "./base";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { showErrorNotificationWithButtons } from "../notifications";
+import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
+import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
+import { uriQuickpick } from "../quickpicks/uris";
+import { getSidecar } from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
+import { ResourceManager } from "../storage/resourceManager";
+import { UserEvent, logUsage } from "../telemetry/events";
+import { getEditorOrFileContents } from "../utils/file";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
+import { handleWebviewMessage } from "../webview/comms/comms";
+import {
+  FlinkSpecProperties,
+  FlinkStatementWebviewPanelCache,
+  IFlinkStatementSubmitParameters,
+  determineFlinkStatementName,
+  localTimezoneOffset,
+  submitFlinkStatement,
+  waitForStatementRunning,
+} from "./utils/flinkStatements";
+
+const logger = new Logger("commands.flinkStatements");
+
+/** View the SQL statement portion of a FlinkStatement in a read-only document. */
+export async function viewStatementSqlCommand(statement: FlinkStatement): Promise<void> {
+  if (!statement) {
+    logger.error("viewStatementSqlCommand", "statement is undefined");
+    return;
+  }
+
+  if (!(statement instanceof FlinkStatement)) {
+    logger.error("viewStatementSqlCommand", "statement is not an instance of FlinkStatement");
+    return;
+  }
+
+  const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
+
+  // make sure any relevant metadata for the Uri is set
+  const rm = ResourceManager.getInstance();
+  await rm.setUriMetadata(uri, {
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: statement.computePoolId,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: statement.database,
+  });
+
+  const doc = await vscode.workspace.openTextDocument(uri);
+  vscode.languages.setTextDocumentLanguage(doc, "flinksql");
+  await vscode.window.showTextDocument(doc, { preview: false });
+}
 
 /**
- * View controller for Flink statements. Can be assigned to track either
- * a single compute cluster, or a CCloud environment.
+ * Submit a Flink statement to a Flink cluster.
  *
- * If set to a CCloud environment, will show all of the statements
- * across all of the provider+region pairs that we find Flinkable
- * within the environment. See {@link CCloudResourceLoader.getFlinkStatements} for
- * the specifics.
- *
- * */
-export class FlinkStatementsViewProvider
-  extends ParentedBaseViewProvider<CCloudFlinkComputePool | CCloudEnvironment, FlinkStatement>
-  implements TreeDataProvider<FlinkStatement>
-{
-  readonly kind = "statements";
-  loggerName = "viewProviders.flinkStatements";
-  viewId = "confluent-flink-statements";
+ * The flow of the command is as follows:
+ *  1) (If no `uri` is passed): show a quickpick to **choose a Flink SQL document**,
+ *     preferring the current foreground editor
+ *  2) Create **statement name** (auto-generated from template pattern, but user can override)
+ *  3) (If no `pool` is passed): show a quickpick to **choose a Flink compute pool** to send the statement
+ *  4) (if no `database` is passed): show a quickpick to **choose a database** (Kafka cluster) to
+ *     submit along with the **catalog name** (the environment, inferable from the chosen database).
+ *  5) Submit!
+ *  6) Show error notification for any submission errors.
+ *  7) Refresh the statements view if the view is focused on the chosen compute pool.
+ *  8) If the statement is viewable, wait for it to be in the RUNNING phase and show results.
+ */
+export async function submitFlinkStatementCommand(
+  uri?: vscode.Uri,
+  pool?: CCloudFlinkComputePool,
+  database?: CCloudKafkaCluster,
+): Promise<void> {
+  const funcLogger = logger.withCallpoint("submitFlinkStatementCommand");
 
-  parentResourceChangedEmitter = currentFlinkStatementsResourceChanged;
-  parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
-
-  searchContextValue = ContextValues.flinkStatementsSearchApplied;
-  searchChangedEmitter: EventEmitter<string | null> = flinkStatementSearchSet;
-
-  // Map of resource id string -> resource currently in the tree view.
-  private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
-
-  managerClientId = "FlinkStatementsViewProvider";
-  private statementManager = FlinkStatementManager.getInstance();
-
-  protected setCustomEventListeners(): Disposable[] {
-    const statementChangedSub: Disposable = flinkStatementUpdated.event(
-      (statement: FlinkStatement) => {
-        // Update the statement in the view.
-        const existingStatement = this.resourcesInTreeView.get(statement.id);
-        if (existingStatement) {
-          existingStatement.update(statement);
-          this._onDidChangeTreeData.fire(existingStatement);
-        }
-      },
-    );
-
-    const statementDeletedSub: Disposable = flinkStatementDeleted.event(
-      (statementId: FlinkStatementId) => {
-        // Remove the statement from the view. It is known to no longer exist.
-        const existingStatement = this.resourcesInTreeView.get(statementId);
-        if (existingStatement) {
-          this.resourcesInTreeView.delete(statementId);
-          // inform the view that toplevel has changed. Sigh, no API to indicate that
-          // a specific item has been removed?
-          this._onDidChangeTreeData.fire();
-        }
-      },
-    );
-
-    return [statementChangedSub, statementDeletedSub];
+  // 1. Choose the document with the SQL to submit
+  const uriSchemes = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
+  const languageIds = ["plaintext", FLINK_SQL_LANGUAGE_ID, "sql"];
+  const fileFilters = {
+    "FlinkSQL files": [...FLINK_SQL_FILE_EXTENSIONS, ".sql"],
+  };
+  const validUriProvided: boolean = uri instanceof vscode.Uri && uriSchemes.includes(uri.scheme);
+  const statementBodyUri: vscode.Uri | undefined = validUriProvided
+    ? uri
+    : await uriQuickpick(uriSchemes, languageIds, fileFilters);
+  if (!statementBodyUri) {
+    funcLogger.debug("User canceled the URI quickpick");
+    return;
   }
 
-  /**
-   * Reload all statements in the view. This is a deep refresh, meaning
-   * that it will clear the view and reload all statements from the
-   * compute cluster / environment.
-   *
-   * @returns A promise that resolves when the refresh is complete.
-   */
-  async refresh(): Promise<void> {
-    // Out with any existing subjects.
-    this.resourcesInTreeView.clear();
-    this.statementManager.clearClient(this.managerClientId);
+  const document = await getEditorOrFileContents(statementBodyUri);
+  const statement = document.content;
 
-    if (this.resource !== null) {
-      // Immediately inform the view that we (temporarily) have no data so it will clear.
-      this._onDidChangeTreeData.fire();
+  // 2. Choose the statement name
+  const statementName = await determineFlinkStatementName();
 
-      // And set up to deep refresh.
-      const loader = ResourceLoader.getInstance(this.resource.connectionId) as CCloudResourceLoader;
+  // 3. Choose the Flink cluster to send to
+  const computePool: CCloudFlinkComputePool | undefined =
+    pool instanceof CCloudFlinkComputePool ? pool : await flinkComputePoolQuickPick();
+  if (!computePool) {
+    funcLogger.debug("User canceled the compute pool quickpick");
+    return;
+  }
 
-      await this.withProgress(
-        "Loading Flink statements...",
-        async () => {
-          // Fetch statements, remember them, and indicate to the view that we have new data.
-          const statements = await loader.getFlinkStatements(this.resource!);
-          const nonTerminalStatements: FlinkStatement[] = [];
-          statements.forEach((r: FlinkStatement) => {
-            this.resourcesInTreeView.set(r.id, r);
-            if (!r.isTerminal) {
-              nonTerminalStatements.push(r);
-            }
-          });
+  // 4. Choose the current / default database for the expression to be evaluated against.
+  // (a kafka cluster in the same provider/region as the compute pool)
+  const validDatabaseProvided: boolean =
+    database instanceof CCloudKafkaCluster &&
+    database.provider === computePool.provider &&
+    database.region === computePool.region;
+  const currentDatabaseKafkaCluster: KafkaCluster | undefined = validDatabaseProvided
+    ? database
+    : await flinkDatabaseQuickpick(computePool);
+  if (!currentDatabaseKafkaCluster) {
+    funcLogger.debug("User canceled the default database quickpick");
+    return;
+  }
+  const currentDatabase = currentDatabaseKafkaCluster.name;
 
-          if (nonTerminalStatements.length > 0) {
-            // Set up to monitor the statements for changes.
-            this.statementManager.register(this.managerClientId, nonTerminalStatements);
-          }
+  // 5. Prep to submit, submit.
+  const submission: IFlinkStatementSubmitParameters = {
+    statement,
+    statementName,
+    computePool,
+    properties: new FlinkSpecProperties({
+      currentDatabase,
+      currentCatalog: currentDatabaseKafkaCluster.environmentId,
+      localTimezone: localTimezoneOffset(),
+    }),
+  };
 
-          this.logTelemetry(statements.length, nonTerminalStatements.length);
+  try {
+    const restResponse = await submitFlinkStatement(submission);
+    const newStatement = restFlinkStatementToModel(restResponse, computePool);
 
-          // inform the view that we have new toplevel data.
-          this._onDidChangeTreeData.fire();
-        },
-        false,
+    if (newStatement.status.phase === Phase.FAILED) {
+      // Immediate failure of the statement. User gave us something
+      // bad, like perhaps a bad table / column name, etc..
+
+      logUsage(UserEvent.FlinkStatementAction, {
+        action: "submit_failure",
+        compute_pool_id: computePool.id,
+        failure_reason: newStatement.status.detail,
+      });
+
+      // limit the error message content so the notification isn't hidden automatically
+      await showErrorNotificationWithButtons(
+        `Error submitting statement: ${newStatement.status.detail?.slice(0, 500)}`,
       );
-    } else {
-      // No resource selected, so just inform the view that we have no data.
-      // (this.resourcesInTreeView has already been cleared.)
-      this._onDidChangeTreeData.fire();
+      return;
     }
-  }
 
-  /**
-   * Show and select a single statement in the view.
-   * Async because asking the tree view to reveal a statement is async, and we need to await it
-   * to ensure it doesn't throw an error.
-   *
-   * @throws Error if the statement is not found in the view.
-   * @param statementId The id of the statement to focus.
-   *
-   **/
-  async focus(statementId: string): Promise<void> {
-    const logger = this.logger.withCallpoint("focus()");
-
-    // Find the statement in the tree view.
-    const existingStatement = this.resourcesInTreeView.get(statementId);
-    if (existingStatement) {
-      // If the statement is already in the view, just focus it.
-      try {
-        logger.debug(`Focusing statement ${existingStatement.id} in the view`);
-        await this.treeView.reveal(existingStatement, { focus: true, select: true });
-        return;
-      } catch (e) {
-        this.logger.error("Error focusing statement in view", e);
-        throw e;
-      }
-    } else {
-      logger.error("Could not find statement in the view", statementId);
-      throw new Error(`Could not find statement ${statementId} in the view`);
-    }
-  }
-
-  getChildren(): FlinkStatement[] {
-    const children: FlinkStatement[] = Array.from(this.resourcesInTreeView.values());
-
-    // Sort by statement creation time descending.
-    children.sort((a: FlinkStatement, b: FlinkStatement) => {
-      // These really should never be undefined, but just in case.
-      if (a.createdAt === undefined || b.createdAt === undefined) {
-        return 0;
-      }
-
-      return b.createdAt.valueOf() - a.createdAt.valueOf();
+    logUsage(UserEvent.FlinkStatementAction, {
+      action: "submit_success",
+      sql_kind: newStatement.sqlKind,
+      compute_pool_id: computePool.id,
     });
 
-    return this.filterChildren(undefined, children);
-  }
+    // Refresh the statements view onto the compute pool in question,
+    // which will then show the new statement.
 
-  /**
-   * Return the parent of any element. This is always null, as we are not
-   * showing a tree of statements within a parent.
-   * Required by the TreeDataProvider interface if we want to use .reveal().
-   */
-  getParent(): null {
-    return null;
-  }
+    // Focus the new statement in the view.
+    const statementsView = FlinkStatementsViewProvider.getInstance();
 
-  getTreeItem(element: FlinkStatement): TreeItem {
-    let treeItem = new FlinkStatementTreeItem(element);
-    if (this.itemSearchString) {
-      if (itemMatchesSearch(element, this.itemSearchString)) {
-        // special URI scheme to decorate the tree item with a dot to the right of the label,
-        // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = Uri.parse(
-          `${SEARCH_DECORATION_URI_SCHEME}:/${element.searchableText()}`,
-        );
-      }
-      // no need to handle collapsible state adjustments here
-    }
-    return treeItem;
-  }
+    // Cause the view to refresh on the compute pool in question,
+    // and then focus the new statement. Statement will probably be in 'Pending' state.
+    await statementsView.setParentResource(computePool);
+    // (Will wait for the refresh to complete.)
+    await statementsView.focus(newStatement.id);
 
-  get computePool(): CCloudFlinkComputePool | null {
-    if (this.resource instanceof CCloudFlinkComputePool) {
-      return this.resource;
-    }
-
-    // if either focused on an entire environement or nothing at all, return null.
-    return null;
-  }
-
-  /**
-   * Log telemetry for the number of statements loaded into the view.
-   * @param totalStatements The total number of statements in the view.
-   * @param nonTerminalStatements The number of non-terminal statements in the view.
-   */
-  logTelemetry(totalStatements: number, nonTerminalStatements: number): void {
-    const configs: WorkspaceConfiguration = workspace.getConfiguration();
-    logUsage(UserEvent.FlinkStatementViewStatistics, {
-      // What resource was just loaded. Will be one or the other.
-      compute_pool_id: this.computePool?.id,
-      environment_id: this.resource instanceof CCloudEnvironment ? this.resource.id : undefined,
-
-      // stats about how many statements / kinds we have.
-      statement_count: totalStatements,
-      non_terminal_statement_count: nonTerminalStatements,
-      terminal_statement_count: totalStatements - nonTerminalStatements,
-
-      // user's settings for polling the non-terminal statements, germane
-      // to compare against the above.
-      nonterminal_polling_concurrency:
-        configs.get<number>(STATEMENT_POLLING_CONCURRENCY) ?? DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-      nonterminal_polling_frequency:
-        configs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS) ??
-        DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-      nonterminal_statements_to_poll:
-        configs.get<number>(STATEMENT_POLLING_LIMIT) ?? DEFAULT_STATEMENT_POLLING_LIMIT,
+    // Wait for the statement to start running, then open the results view.
+    // Show a progress indicator over the Flink Statements view while we wait.
+    await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
+      await waitForStatementRunning(newStatement);
+      await openFlinkStatementResultsView(newStatement);
     });
+
+    // Refresh the statements view again to show the new state of the statement.
+    // (This is a whole empty + reload of view data, so have to wait until it's done.
+    //  before we can focus our new statement.)
+    await statementsView.refresh();
+    // Focus again, but don't need to wait for it.
+    void statementsView.focus(newStatement.id);
+  } catch (err) {
+    if (isResponseError(err) && err.response.status === 400) {
+      // Usually a bad SQL statement.
+      // The error string should be JSON, have 'errors' as an array of objs with 'details' human readable messages.
+      const objFromResponse = await extractResponseBody(err);
+      let errorMessages: string;
+      if (objFromResponse && typeof objFromResponse === "object" && "errors" in objFromResponse) {
+        const responseErrors: { errors: [{ detail: string }] } = objFromResponse;
+        logger.error(JSON.stringify(responseErrors, null, 2));
+        errorMessages = responseErrors.errors.map((e: { detail: string }) => e.detail).join("\n");
+      } else {
+        // will be the raw error string. Wacky we couldn't parse it. Flink backend change?
+        errorMessages = objFromResponse;
+
+        // Log in Sentry and logger (we invite the user to open logs / file issue in
+        // showErrorNotificationWithButtons(), so good for them to see this in the logs.)
+        logError(err, `Unparseable 400 response submitting statement: ${errorMessages}`, {
+          extra: {
+            errorMessages,
+            statementLength: statement.length,
+            computePoolId: computePool.id,
+            currentDatabase,
+            statementName,
+          },
+        });
+      }
+      await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
+    } else {
+      // wasn't a 400 ResponseError. So who knows? We don't expect this to happen.
+      logError(err, "Submit Flink statement unexpected error", {
+        extra: {
+          statementLength: statement.length,
+          computePoolId: computePool.id,
+          currentDatabase,
+          statementName,
+        },
+      });
+      await showErrorNotificationWithButtons(`Error submitting statement: ${err}`);
+    }
   }
+}
+
+/** Max number of statement results rows to display. */
+const DEFAULT_RESULT_LIMIT = 100_000;
+/** Cache of statement result webviews by env/statement name. */
+const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
+
+/**
+ * Handles the display of Flink statement results in a webview panel.
+ * Creates or finds an existing panel, sets up the results manager and message handler.
+ *
+ * @param statement - The Flink statement to display results for
+ */
+async function openFlinkStatementResultsView(statement: FlinkStatement | undefined) {
+  if (!statement) return;
+
+  if (!(statement instanceof FlinkStatement)) {
+    logger.error("handleFlinkStatementResults", "statement is not an instance of FlinkStatement");
+    return;
+  }
+
+  const [panel, cached] = statementResultsViewCache.getPanelForStatement(statement);
+  if (cached) {
+    // Existing panel for this statement found, just reveal it.
+    panel.reveal();
+    return;
+  }
+
+  const os = ObservableScope();
+
+  /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
+  const panelActive = os.produce(true, (value, signal) => {
+    const disposed = panel.onDidDispose(() => value(false));
+    const changedState = panel.onDidChangeViewState(() => value(panel.visible));
+    signal.onabort = () => {
+      disposed.dispose();
+      changedState.dispose();
+    };
+  });
+
+  /** Notify an active webview only after flushing the rest of updates. */
+  const notifyUI = () => {
+    queueMicrotask(() => {
+      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+    });
+  };
+
+  const sidecar = await getSidecar();
+  const resultsManager = new FlinkStatementResultsManager(
+    os,
+    statement,
+    sidecar,
+    notifyUI,
+    DEFAULT_RESULT_LIMIT,
+  );
+
+  // Handle messages from the webview and delegate to the results manager
+  const handler = handleWebviewMessage(panel.webview, (...args) => {
+    let result;
+    // handleMessage() may end up reassigning many signals, so do
+    // so in a batch.
+    os.batch(() => (result = resultsManager.handleMessage(...args)));
+    return result;
+  });
+
+  panel.onDidDispose(() => {
+    resultsManager.dispose();
+    handler.dispose();
+    os.dispose();
+  });
+}
+
+export function registerFlinkStatementCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
+    registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
+    // Different naming scheme due to legacy telemetry reasons.
+    registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
+  ];
 }
