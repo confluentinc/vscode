@@ -8,8 +8,6 @@ import {
   Position,
   Range,
   TextDocument,
-  workspace,
-  WorkspaceConfiguration,
 } from "vscode";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
@@ -155,8 +153,7 @@ export async function getComputePoolFromMetadata(
   metadata: UriMetadata | undefined,
   envs: CCloudEnvironment[],
 ): Promise<CCloudFlinkComputePool | undefined> {
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const defaultComputePoolId: string | undefined = config.get(FLINK_CONFIG_COMPUTE_POOL);
+  const defaultComputePoolId: string | undefined = FLINK_CONFIG_COMPUTE_POOL.value;
   // clearing will set the metadata to `null`, so we'll only fall back to the default value if
   // the metadata is `undefined` (not set at all)
   let computePoolString: string | null | undefined =
@@ -211,8 +208,7 @@ export async function getCatalogDatabaseFromMetadata(
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
 
-  const config: WorkspaceConfiguration = workspace.getConfiguration();
-  const defaultDatabaseId: string | undefined = config.get(FLINK_CONFIG_DATABASE);
+  const defaultDatabaseId: string | undefined = FLINK_CONFIG_DATABASE.value;
   // clearing will set the metadata to `null`, so we'll only fall back to the default value if
   // the metadata is `undefined` (not set at all)
   let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
