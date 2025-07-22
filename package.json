@@ -383,6 +383,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.refreshConnection",
+        "icon": "$(sync)",
+        "title": "Refresh Connection",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.kafka-clusters.item.rename",
         "icon": "$(pencil)",
         "title": "Rename Kafka Cluster",
@@ -969,7 +975,7 @@
         "command": "confluent.resources.search",
         "key": "ctrl+f",
         "mac": "cmd+f",
-        "when": "focusedView == confluent-resources"
+        "when": "focusedView == confluent-resources || focusedView == new-confluent-resources"
       },
       {
         "command": "confluent.topics.search",
@@ -1004,6 +1010,11 @@
         {
           "id": "confluent-resources",
           "name": "Resources",
+          "icon": "$(confluent-logo)"
+        },
+        {
+          "id": "new-confluent-resources",
+          "name": "New Resources",
           "icon": "$(confluent-logo)"
         },
         {
@@ -1045,7 +1056,17 @@
         "when": "!confluent.resourceSearchApplied"
       },
       {
+        "view": "new-confluent-resources",
+        "contents": "No resources found.",
+        "when": "!confluent.resourceSearchApplied"
+      },
+      {
         "view": "confluent-resources",
+        "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
+        "when": "confluent.resourceSearchApplied"
+      },
+      {
+        "view": "new-confluent-resources",
         "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
         "when": "confluent.resourceSearchApplied"
       },
@@ -1173,6 +1194,10 @@
         },
         {
           "command": "confluent.kafka-clusters.item.rename",
+          "when": "false"
+        },
+        {
+          "command": "confluent.resources.refreshConnection",
           "when": "false"
         },
         {
@@ -1344,17 +1369,17 @@
       "view/title": [
         {
           "command": "confluent.resources.search",
-          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && !confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.resources.search.clear",
-          "when": "view == confluent-resources && confluent.resourceSearchApplied",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.connections.direct",
-          "when": "view == confluent-resources",
+          "when": "(view == confluent-resources || view == new-confluent-resources)",
           "group": "navigation@2"
         },
         {
@@ -1490,13 +1515,18 @@
           "group": "2_copy@3"
         },
         {
+          "command": "confluent.resources.refreshConnection",
+          "when": "view == new-confluent-resources && viewItem =~ /.*-container.*/",
+          "group": "inline"
+        },
+        {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
           "group": "inline"
         },
         {
           "command": "confluent.docker.stopLocalResources",
-          "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
           "group": "inline"
         },
         {
@@ -1521,17 +1551,17 @@
         },
         {
           "command": "confluent.connections.direct.delete",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@3"
         },
         {
           "command": "confluent.connections.direct.edit",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@2"
         },
         {
           "command": "confluent.connections.direct.export",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@1"
         },
         {
@@ -1551,12 +1581,12 @@
         },
         {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
-          "when": "view == confluent-resources && viewItem == flinkable-ccloud-environment",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && viewItem == flinkable-ccloud-environment",
           "group": "1_flink@1"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
-          "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && viewItem =~ /.*-kafka-cluster.*/",
           "group": "2_copy@3"
         },
         {
@@ -1600,7 +1630,7 @@
         },
         {
           "command": "confluent.schemas.upload",
-          "when": "view == confluent-resources && viewItem =~ /.*-schema-registry/",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && viewItem =~ /.*-schema-registry/",
           "group": "inline@1"
         },
         {
@@ -1635,7 +1665,7 @@
         },
         {
           "command": "confluent.topics.create",
-          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
+          "when": "(view == confluent-resources || view == new-confluent-resources) && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
           "group": "topics"
         },
         {

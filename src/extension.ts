@@ -28,6 +28,7 @@ import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
+import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
@@ -68,6 +69,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
+import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { closeFormattedSidecarLogStream, SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
 import { WebsocketManager } from "./sidecar/websocketManager";
@@ -82,6 +84,7 @@ import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/base";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
@@ -180,12 +183,18 @@ async function _activateExtension(
   await getSidecar();
   logger.info("Sidecar ready for use.");
 
+  // Rehydrate sidecar with local + any direct connections from the secret storage. Do this before
+  // setting up the resource view provider.
+  await rehydrateConnections();
+
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
   const resourceViewProvider = ResourceViewProvider.getInstance();
+  const newResourceViewProvider = NewResourceViewProvider.getInstance();
+
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
@@ -193,6 +202,7 @@ async function _activateExtension(
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     ...resourceViewProvider.disposables,
+    ...newResourceViewProvider.disposables,
     ...topicViewProvider.disposables,
     ...schemasViewProvider.disposables,
     ...supportViewProvider.disposables,
@@ -237,6 +247,7 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
+    ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
 
@@ -342,6 +353,7 @@ async function setupContextValues() {
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
     "confluent-resources",
+    "new-confluent-resources",
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",
@@ -552,4 +564,44 @@ export function deactivate() {
     logStream.end();
   }
   console.info("Extension deactivated");
+}
+
+/**
+ * Rehydrate the direct connections from the secret storage at startup time, informing
+ * the sidecar about them.
+ *
+ * Also go ahead and create the local connection in the sidecar if it doesn't exist yet
+ * (as would be the case if opening a second workspace talking to the sidecar).
+ */
+export async function rehydrateConnections(): Promise<void> {
+  const createConnectionPromises = [
+    // Rehydrate the direct connections from secret storage.
+    async () => {
+      try {
+        await DirectConnectionManager.getInstance().rehydrateConnections();
+      } catch (error) {
+        logger.error("Failed to rehydrate direct connections", { error });
+      }
+    },
+    // Create the local connection if it doesn't exist yet.
+    // (Must happen before we try to GraphQL query it, for instance.)
+    async () => {
+      if (!(await getLocalConnection())) {
+        try {
+          await createLocalConnection();
+        } catch (error) {
+          logger.error("Failed to create local connection for rehydration", { error });
+        }
+      }
+    },
+    // Do not need to pre-create the distinquished ccloud connection, as its creation is
+    // explicitly handled in the auth provider, and no codepath should try to GraphQL query
+    // it unless hasCCloudAuthSession() is true, which will only be the case if the
+    // ccloud connection exists and is valid.
+  ];
+
+  const results = await Promise.all(createConnectionPromises.map((fn) => fn()));
+  logger.info("Rehydrated direct connections and created local connection if needed", {
+    results,
+  });
 }

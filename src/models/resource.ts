@@ -1,5 +1,6 @@
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { IdItem } from "./main";
 
 /** A uniquely-branded string-type for a connection ID. */
 export type ConnectionId = string & { readonly brand: unique symbol };
@@ -122,4 +123,10 @@ export function isSearchable(item: any): item is ISearchable {
 export interface ISchemaRegistryResource extends IResourceBase {
   readonly environmentId: EnvironmentId;
   readonly schemaRegistryId: string;
+}
+
+/** Resources with IDs which are in-place updateable given a reference to same class */
+export interface IUpdatableResource extends IResourceBase, IdItem {
+  /** Update this resource in-place. */
+  update(resource: this): void;
 }
