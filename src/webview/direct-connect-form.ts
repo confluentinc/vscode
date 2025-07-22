@@ -207,11 +207,17 @@ class DirectConnectFormViewModel extends ViewModel {
       case "schema_registry.uri":
         this.schemaUri(input.value);
         // if localhost, uncheck SSL
-        if (input.value.includes("localhost")) {
+        if (input.value.includes("localhost") || input.value.startsWith("http:")) {
           this.schemaSslEnabled(false);
           await post("UpdateSpecValue", {
             inputName: "schema_registry.ssl.enabled",
             inputValue: false,
+          });
+        } else if (input.value.startsWith("https:")) {
+          this.schemaSslEnabled(true);
+          await post("UpdateSpecValue", {
+            inputName: "schema_registry.ssl.enabled",
+            inputValue: true,
           });
         }
         break;
