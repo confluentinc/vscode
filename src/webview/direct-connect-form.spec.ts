@@ -276,6 +276,52 @@ test("changes the checkbox for ssl to false if localhost", async ({ execute, pag
     "schema_registry.uri": "http://localhost:8081",
   });
 });
+test("changes schema registry ssl checkbox based on uri scheme", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    // redispatching because the page already exists for some time
+    // before we actually import the view model application
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill out basic form data
+  await page.fill("input[name=name]", "Test Connection");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
+
+  // Test http:// URL - should disable SSL
+  await page.fill("input[name='schema_registry.uri']", "http://example.com:8081");
+  // Click to make sure URI blurs
+  await page.click("p:has-text('TLS Configuration')");
+
+  let schemaSslCheckbox = page.locator("input[type=checkbox][name='schema_registry.ssl.enabled']");
+  await expect(schemaSslCheckbox).not.toBeChecked();
+
+  // Test https:// URL - should enable SSL
+  await page.fill("input[name='schema_registry.uri']", "https://example.com:8081");
+  // Click to make sure URI blurs
+  await page.click("p:has-text('TLS Configuration')");
+
+  schemaSslCheckbox = page.locator("input[type=checkbox][name='schema_registry.ssl.enabled']");
+  await expect(schemaSslCheckbox).toBeChecked();
+
+  // Test localhost URL - should disable SSL
+  await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
+  // Click to make sure URI blurs
+  await page.click("p:has-text('TLS Configuration')");
+
+  schemaSslCheckbox = page.locator("input[type=checkbox][name='schema_registry.ssl.enabled']");
+  await expect(schemaSslCheckbox).not.toBeChecked();
+});
 test("submits the form with empty trust/key stores as defaults when ssl enabled", async ({
   execute,
   page,
