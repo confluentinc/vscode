@@ -1,13 +1,8 @@
 import * as assert from "assert";
 import { randomUUID } from "crypto";
 import * as sinon from "sinon";
-import {
-  ChatErrorDetails,
-  LanguageModelTextPart,
-  LanguageModelToolCallPart,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { ChatErrorDetails, LanguageModelTextPart, LanguageModelToolCallPart } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { CHAT_SEND_ERROR_DATA, CHAT_SEND_TOOL_CALL_DATA } from "../extensionSettings/constants";
 import { sanitizeFeedbackResult } from "./telemetry";
 import { TextOnlyToolResultPart } from "./tools/base";
@@ -30,18 +25,11 @@ const fakeErrorDetails: ChatErrorDetails = { message: "Uh oh" };
 
 describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
   let sandbox: sinon.SinonSandbox;
-  let getConfigStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    getConfigStub = sandbox.stub();
-    sandbox.stub(workspace, "getConfiguration").returns({
-      get: getConfigStub,
-      update: sandbox.stub(),
-      has: sandbox.stub(),
-      inspect: sandbox.stub(),
-    } as unknown as WorkspaceConfiguration);
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
   });
 
   afterEach(() => {
@@ -50,8 +38,7 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
 
   it("should always include modelInfo", () => {
     // not sending any error details or tool call inputs/contents
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, false).stubGet(CHAT_SEND_TOOL_CALL_DATA, false);
 
     const result: CustomChatResult = {
       errorDetails: fakeErrorDetails,
@@ -71,8 +58,7 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
 
   it("should include modelInfo even if 'capabilities' is undefined", () => {
     // not sending any error details or tool call inputs/contents
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, false).stubGet(CHAT_SEND_TOOL_CALL_DATA, false);
 
     const modelInfoWithoutCapabilities = {
       ...fakeModelInfo,
@@ -96,8 +82,7 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
 
   it("should return an empty result when no configuration options are enabled", () => {
     // not sending any error details or tool call inputs/contents
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, false).stubGet(CHAT_SEND_TOOL_CALL_DATA, false);
 
     const toolNames = ["tool1", "tool2"];
     const toolMetadatas: ToolCallMetadata[] = toolNames.map((toolName) =>
@@ -120,10 +105,9 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
     });
   });
 
-  it(`should include error details when "${CHAT_SEND_ERROR_DATA}" is enabled`, () => {
+  it(`should include error details when "${CHAT_SEND_ERROR_DATA.id}" is enabled`, () => {
     // sending error details but not tool call inputs/contents
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(true);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, true).stubGet(CHAT_SEND_TOOL_CALL_DATA, false);
 
     const toolNames = ["tool1", "tool2"];
     const toolMetadatas: ToolCallMetadata[] = toolNames.map((toolName) =>
@@ -146,9 +130,8 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
     });
   });
 
-  it(`should include 'toolsCalled' content when "${CHAT_SEND_TOOL_CALL_DATA}" is enabled`, () => {
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(true);
+  it(`should include 'toolsCalled' content when "${CHAT_SEND_TOOL_CALL_DATA.id}" is enabled`, () => {
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, false).stubGet(CHAT_SEND_TOOL_CALL_DATA, true);
 
     const toolNames = ["tool1", "tool2"];
     const toolMetadatas: ToolCallMetadata[] = toolNames.map((toolName) =>
@@ -174,8 +157,7 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
 
   it("should not include tool call fields when 'toolsCalled' is undefined", () => {
     // not sending any error details or tool call inputs/contents
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(false);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(false);
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, false).stubGet(CHAT_SEND_TOOL_CALL_DATA, false);
 
     const result: CustomChatResult = {
       errorDetails: fakeErrorDetails,
@@ -193,10 +175,9 @@ describe("chat/telemetry.ts sanitizeFeedbackResult", () => {
     });
   });
 
-  it(`should include all fields when both "${CHAT_SEND_ERROR_DATA}" and "${CHAT_SEND_TOOL_CALL_DATA}" are enabled`, () => {
+  it(`should include all fields when both "${CHAT_SEND_ERROR_DATA.id}" and "${CHAT_SEND_TOOL_CALL_DATA.id}" are enabled`, () => {
     // sending error details and tool call inputs/contents
-    getConfigStub.withArgs(CHAT_SEND_ERROR_DATA).returns(true);
-    getConfigStub.withArgs(CHAT_SEND_TOOL_CALL_DATA).returns(true);
+    stubbedConfigs.stubGet(CHAT_SEND_ERROR_DATA, true).stubGet(CHAT_SEND_TOOL_CALL_DATA, true);
 
     const toolNames = ["tool1", "tool2"];
     const toolMetadatas: ToolCallMetadata[] = toolNames.map((toolName) =>

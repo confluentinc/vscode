@@ -2,7 +2,8 @@ import { accessSync, writeFileSync } from "fs";
 import { join } from "path";
 import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { Tail } from "tail";
-import { commands, LogOutputChannel, Uri, window, workspace } from "vscode";
+import { commands, LogOutputChannel, Uri, window } from "vscode";
+import { SHOW_SIDECAR_EXCEPTIONS } from "../extensionSettings/constants";
 import {
   LOGFILE_ROTATION_INTERVAL,
   Logger,
@@ -178,18 +179,15 @@ function createLogTailer(): Tail | undefined {
     const line: string = data.toString();
     const errorMatch = line.match(regex);
     if (errorMatch) {
-      const config = workspace.getConfiguration();
-      const notifySidecarExceptions = config.get(
-        "confluent.debugging.showSidecarExceptions",
-        false,
-      );
+      const notifySidecarExceptions: boolean = SHOW_SIDECAR_EXCEPTIONS.value;
       if (notifySidecarExceptions) {
-        showErrorNotificationWithButtons(`[Debugging] Sidecar error: ${errorMatch[2]}`, {
-          "Open Sidecar Logs": () => commands.executeCommand("confluent.showSidecarOutputChannel"),
-          "Open Settings": () =>
-            commands.executeCommand(
+        void showErrorNotificationWithButtons(`[Debugging] Sidecar error: ${errorMatch[2]}`, {
+          "Open Sidecar Logs": async () =>
+            await commands.executeCommand("confluent.showSidecarOutputChannel"),
+          "Open Settings": async () =>
+            await commands.executeCommand(
               "workbench.action.openSettings",
-              "@id:confluent.debugging.showSidecarExceptions",
+              `@id:${SHOW_SIDECAR_EXCEPTIONS.id}`,
             ),
         });
       }
