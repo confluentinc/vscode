@@ -348,7 +348,7 @@ async function loadArtifactsForProviderRegion(
   handle: SidecarHandle,
   queryable: IFlinkQueryable,
 ): Promise<FlinkArtifact[]> {
-  const artifactsClient = handle.getFlinkArtifactsApi();
+  const artifactsClient = handle.getFlinkArtifactsApi(queryable);
 
   logger.debug(
     `getFlinkArtifacts() requesting from ${queryable.provider}-${queryable.region} for environment ${queryable.environmentId}`,
