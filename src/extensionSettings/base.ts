@@ -1,16 +1,13 @@
 import { extensions, workspace } from "vscode";
 import { EXTENSION_ID } from "../constants";
-import { Logger } from "../logging";
 
-const logger = new Logger("extensionSettings.base");
-
-export interface ExtensionConfigurations {
+export interface ExtensionConfiguration {
   title: string;
   properties: { [key: string]: any };
 }
 
 /** @see https://code.visualstudio.com/api/references/contribution-points#contributes.configuration */
-const CONFIGURATION: ExtensionConfigurations[] =
+const CONFIGURATION: ExtensionConfiguration[] =
   extensions.getExtension(EXTENSION_ID)!.packageJSON.contributes.configuration;
 
 /** Each "title" section under `contributes.configuration` in package.json */
@@ -37,7 +34,7 @@ export class ExtensionSetting<T> {
   ) {}
 
   /** Get the configuration section for this setting based on its title. */
-  get configSection(): ExtensionConfigurations {
+  get configSection(): ExtensionConfiguration {
     const section = CONFIGURATION.find((config) => config.title === this.sectionTitle);
     if (!section) {
       throw new Error(`Configuration section "${this.sectionTitle}" not found.`);
@@ -59,7 +56,6 @@ export class ExtensionSetting<T> {
   /** Get the **current** default/user/workspace value of this setting. */
   get value(): T {
     const result = workspace.getConfiguration().get<T>(this.id, this.defaultValue);
-    logger.info(this.id, { value: result });
     return result ?? this.defaultValue;
   }
 

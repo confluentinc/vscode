@@ -3,15 +3,15 @@ import sinon from "sinon";
 import { extensions } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { EXTENSION_ID } from "../constants";
-import { type ExtensionConfigurations, ExtensionSetting, SettingsSection } from "./base";
+import { type ExtensionConfiguration, ExtensionSetting, SettingsSection } from "./base";
 
 describe("extensionSettings/base.ts ExtensionSetting", function () {
   let sandbox: sinon.SinonSandbox;
   let stubbedConfigs: StubbedWorkspaceConfiguration;
 
-  let configurationSections: ExtensionConfigurations[];
+  let configurationSections: ExtensionConfiguration[];
   const fakeSectionTitle = "Test Section";
-  let fakeSection: ExtensionConfigurations;
+  let fakeSection: ExtensionConfiguration;
 
   before(() => {
     const extension = extensions.getExtension(EXTENSION_ID);

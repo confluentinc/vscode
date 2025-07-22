@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { extensions } from "vscode";
 import { EXTENSION_ID } from "../constants";
-import { ExtensionConfigurations } from "./base";
+import { ExtensionConfiguration } from "./base";
 import {
   ALLOW_OLDER_SCHEMA_VERSIONS,
   CHAT_SEND_ERROR_DATA,
@@ -29,7 +29,7 @@ import {
 } from "./constants";
 
 describe("extensionSettings/constants.ts", function () {
-  let configurationSections: ExtensionConfigurations[];
+  let configurationSections: ExtensionConfiguration[];
 
   before(() => {
     const extension = extensions.getExtension(EXTENSION_ID);
@@ -40,7 +40,7 @@ describe("extensionSettings/constants.ts", function () {
   });
 
   /** Helper function to find the `contributes.configuration` section for a given setting */
-  function getSectionForSetting(settingId: string): ExtensionConfigurations | undefined {
+  function getSectionForSetting(settingId: string): ExtensionConfiguration | undefined {
     return configurationSections.find(
       (section) => section.properties && Object.keys(section.properties).includes(settingId),
     );
@@ -48,7 +48,7 @@ describe("extensionSettings/constants.ts", function () {
 
   describe("individual ExtensionSetting instances", () => {
     it("should set the correct section and default value for USE_TOPIC_NAME_STRATEGY", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         USE_TOPIC_NAME_STRATEGY.id,
       );
       assert.ok(section);
@@ -61,7 +61,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for ALLOW_OLDER_SCHEMA_VERSIONS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         ALLOW_OLDER_SCHEMA_VERSIONS.id,
       );
       assert.ok(section);
@@ -74,7 +74,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.id,
       );
       assert.ok(section);
@@ -88,7 +88,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for SHOW_SIDECAR_EXCEPTIONS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         SHOW_SIDECAR_EXCEPTIONS.id,
       );
       assert.ok(section);
@@ -101,9 +101,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for KRB5_CONFIG_PATH", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
-        KRB5_CONFIG_PATH.id,
-      );
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(KRB5_CONFIG_PATH.id);
       assert.ok(section);
       assert.strictEqual(KRB5_CONFIG_PATH.sectionTitle, section.title);
 
@@ -114,7 +112,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for LOCAL_DOCKER_SOCKET_PATH", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         LOCAL_DOCKER_SOCKET_PATH.id,
       );
       assert.ok(section);
@@ -127,7 +125,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for LOCAL_KAFKA_IMAGE", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         LOCAL_KAFKA_IMAGE.id,
       );
       assert.ok(section);
@@ -140,7 +138,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for LOCAL_KAFKA_IMAGE_TAG", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         LOCAL_KAFKA_IMAGE_TAG.id,
       );
       assert.ok(section);
@@ -153,7 +151,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for LOCAL_SCHEMA_REGISTRY_IMAGE_TAG", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.id,
       );
       assert.ok(section);
@@ -166,7 +164,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for SCHEMA_RBAC_WARNINGS_ENABLED", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         SCHEMA_RBAC_WARNINGS_ENABLED.id,
       );
       assert.ok(section);
@@ -179,7 +177,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for SSL_PEM_PATHS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(SSL_PEM_PATHS.id);
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(SSL_PEM_PATHS.id);
       assert.ok(section);
       assert.strictEqual(SSL_PEM_PATHS.sectionTitle, section.title);
 
@@ -190,7 +188,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for SSL_VERIFY_SERVER_CERT_DISABLED", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         SSL_VERIFY_SERVER_CERT_DISABLED.id,
       );
       assert.ok(section);
@@ -203,7 +201,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for FLINK_CONFIG_COMPUTE_POOL", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         FLINK_CONFIG_COMPUTE_POOL.id,
       );
       assert.ok(section);
@@ -216,7 +214,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for FLINK_CONFIG_DATABASE", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         FLINK_CONFIG_DATABASE.id,
       );
       assert.ok(section);
@@ -229,7 +227,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for UPDATE_DEFAULT_POOL_ID_FROM_LENS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         UPDATE_DEFAULT_POOL_ID_FROM_LENS.id,
       );
       assert.ok(section);
@@ -242,7 +240,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for UPDATE_DEFAULT_DATABASE_FROM_LENS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         UPDATE_DEFAULT_DATABASE_FROM_LENS.id,
       );
       assert.ok(section);
@@ -255,7 +253,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for STATEMENT_POLLING_FREQUENCY_SECONDS", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         STATEMENT_POLLING_FREQUENCY_SECONDS.id,
       );
       assert.ok(section);
@@ -268,7 +266,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for STATEMENT_POLLING_LIMIT", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         STATEMENT_POLLING_LIMIT.id,
       );
       assert.ok(section);
@@ -281,7 +279,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for STATEMENT_POLLING_CONCURRENCY", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         STATEMENT_POLLING_CONCURRENCY.id,
       );
       assert.ok(section);
@@ -294,7 +292,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id,
       );
       assert.ok(section);
@@ -307,7 +305,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for CHAT_SEND_ERROR_DATA", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         CHAT_SEND_ERROR_DATA.id,
       );
       assert.ok(section);
@@ -320,7 +318,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for CHAT_SEND_TOOL_CALL_DATA", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         CHAT_SEND_TOOL_CALL_DATA.id,
       );
       assert.ok(section);
@@ -333,7 +331,7 @@ describe("extensionSettings/constants.ts", function () {
     });
 
     it("should set the correct section and default value for ENABLE_CHAT_PARTICIPANT", () => {
-      const section: ExtensionConfigurations | undefined = getSectionForSetting(
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
         ENABLE_CHAT_PARTICIPANT.id,
       );
       assert.ok(section);
