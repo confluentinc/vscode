@@ -103,6 +103,8 @@ test("renders form html correctly", async ({ page }) => {
 
   const authSchema = page.locator("select[name='schema_registry.auth_type']");
   await expect(authSchema).not.toBe(null);
+  const authSchemaOptions = await authSchema.locator("option").all();
+  await expect(authSchemaOptions.length).toBe(4); // None, Basic, API, OAuth
 });
 test("renders form with existing connection spec values (for edit/import)", async ({
   execute,
