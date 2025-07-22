@@ -50,7 +50,6 @@ import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
-  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT,
 } from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
 import { updatePreferences } from "./extensionSettings/sidecarSync";
@@ -266,11 +265,8 @@ async function _activateExtension(
     ...documentProviders,
   );
 
-  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   // if the Flink CCloud language server setting is enabled, get the client manager ready for use
-  if (
-    config.get(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER, ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER_DEFAULT)
-  ) {
+  if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
     const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
     context.subscriptions.push(flinkLanguageClientManager);
   }
@@ -336,10 +332,9 @@ async function _activateExtension(
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
   // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
-  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const chatParticipantEnabled = setContextValue(
     ContextValues.chatParticipantEnabled,
-    config.get(ENABLE_CHAT_PARTICIPANT, true),
+    ENABLE_CHAT_PARTICIPANT.value,
   );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);

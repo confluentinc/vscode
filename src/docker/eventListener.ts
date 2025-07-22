@@ -9,23 +9,18 @@ import {
 } from "../clients/docker";
 import { ContextValues, setContextValue } from "../context/values";
 import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
+import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
 import { resourceViewWithProgress } from "../viewProviders/newResources";
-import {
-  defaultRequestInit,
-  getLocalKafkaImageName,
-  getLocalSchemaRegistryImageName,
-  isDockerAvailable,
-} from "./configs";
-import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
+import { defaultRequestInit, isDockerAvailable } from "./configs";
 
 const logger = new Logger("docker.eventListener");
 
 const EVENT_FILTERS = {
   type: ["container", "image"],
-  images: [DEFAULT_KAFKA_IMAGE_REPO],
+  images: [LOCAL_KAFKA_IMAGE.defaultValue],
 };
 /** The log line to watch for before considering the container fully started and discoverable. */
 export const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
@@ -288,8 +283,8 @@ export class EventListener {
     const eventTime: number = event.time ? event.time : new Date().getTime();
 
     // first, make sure it's an image we support tracking for updates in the Resources view
-    const kafkaImage = getLocalKafkaImageName();
-    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+    const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
+    const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
     const isManagedImage =
       imageName.startsWith(kafkaImage) || imageName.startsWith(schemaRegistryImage);
     if (!isManagedImage) {
@@ -311,7 +306,8 @@ export class EventListener {
     // then if it's an image that requires a specific log line to appear before it's fully ready, wait
     // for that log line to appear before considering the container fully started
     const needToWaitForLog =
-      imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO) || imageName.startsWith(schemaRegistryImage);
+      imageName.startsWith(LOCAL_KAFKA_IMAGE.defaultValue) ||
+      imageName.startsWith(LOCAL_SCHEMA_REGISTRY_IMAGE.defaultValue);
     if (needToWaitForLog) {
       // when the `confluent-local` container starts, it should show the following log line once it's ready:
       // "Server started, listening for requests..."
@@ -353,8 +349,8 @@ export class EventListener {
     }
     logger.debug(`container 'die' event for image: ${imageName}`);
 
-    const kafkaImage = getLocalKafkaImageName();
-    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+    const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
+    const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
 
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, false);

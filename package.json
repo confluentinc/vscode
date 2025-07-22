@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-17",
+  "version": "1.6.0-18",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -752,17 +752,37 @@
     ],
     "configuration": [
       {
-        "title": "Confluent",
+        "title": "General",
+        "properties": {
+          "confluent.debugging.showSidecarExceptions": {
+            "type": "boolean",
+            "default": false,
+            "description": "Alert on sidecar process exceptions"
+          },
+          "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
+          },
+          "confluent.topic.produceMessages.schemas.allowOlderVersions": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
+          },
+          "confluent.showNewVersionNotifications": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
+          }
+        }
+      },
+      {
+        "title": "Confluent Cloud",
         "properties": {
           "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
             "type": "boolean",
             "default": true,
             "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
-          },
-          "confluent.debugging.showSidecarExceptions": {
-            "type": "boolean",
-            "default": false,
-            "description": "Alert on sidecar process exceptions"
           },
           "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
             "type": "boolean",
@@ -776,7 +796,22 @@
             },
             "default": [],
             "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent Cloud. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)\n\n_NOTE: This is only used for the main Confluent Cloud connection, and does not apply to custom/'direct' connections._"
-          },
+          }
+        }
+      },
+      {
+        "title": "Connections",
+        "properties": {
+          "confluent.krb5ConfigPath": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Path to the `krb5.conf` file to use for Kerberos authentication in direct connections. This setting is used when connecting to Kafka clusters that require Kerberos authentication. (You can also use the [\"Set Kerberos krb5.conf Path\" command](command:confluent.connections.setKrb5ConfigPath).)"
+          }
+        }
+      },
+      {
+        "title": "Local",
+        "properties": {
           "confluent.localDocker.socketPath": {
             "type": "string",
             "default": "",
@@ -795,30 +830,18 @@
             "default": "latest",
             "description": "Docker image tag to use when starting a local Kafka container"
           },
+          "confluent.localDocker.schemaRegistryImageRepo": {
+            "type": "string",
+            "enum": [
+              "confluentinc/cp-schema-registry"
+            ],
+            "default": "confluentinc/cp-schema-registry",
+            "description": "Docker image repo to use when starting a local Schema Registry container"
+          },
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
             "default": "latest",
-            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
-          },
-          "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
-          },
-          "confluent.topic.produceMessages.schemas.allowOlderVersions": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
-          },
-          "confluent.krb5ConfigPath": {
-            "type": "string",
-            "default": "",
-            "markdownDescription": "Path to the `krb5.conf` file to use for Kerberos authentication in direct connections. This setting is used when connecting to Kafka clusters that require Kerberos authentication. (You can also use the [\"Set Kerberos krb5.conf Path\" command](command:confluent.connections.setKrb5ConfigPath).)"
-          },
-          "confluent.showNewVersionNotifications": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
+            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
           }
         }
       },

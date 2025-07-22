@@ -1,6 +1,5 @@
-import { MarkdownString, workspace } from "vscode";
+import { MarkdownString } from "vscode";
 import { ContainerInspectResponse } from "../../clients/docker";
-import { DEFAULT_KAFKA_IMAGE_REPO, DEFAULT_SCHEMA_REGISTRY_REPO } from "../../docker/constants";
 import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
 
 function appendPortMappings(summary: MarkdownString, container: ContainerInspectResponse): void {
@@ -50,10 +49,8 @@ export function summarizeLocalDockerContainer(container: ContainerInspectRespons
   const containerName = container.Name?.replace("/", "") ?? "";
   const summary = new MarkdownString().appendMarkdown(`## "${containerName}"`);
 
-  const config = workspace.getConfiguration();
-  const kafkaImageRepo: string = config.get(LOCAL_KAFKA_IMAGE) ?? DEFAULT_KAFKA_IMAGE_REPO;
-  const schemaRegistryImageRepo: string =
-    config.get(LOCAL_SCHEMA_REGISTRY_IMAGE) ?? DEFAULT_SCHEMA_REGISTRY_REPO;
+  const kafkaImageRepo: string = LOCAL_KAFKA_IMAGE.value;
+  const schemaRegistryImageRepo: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
 
   const image: string | undefined = container.Config?.Image;
 

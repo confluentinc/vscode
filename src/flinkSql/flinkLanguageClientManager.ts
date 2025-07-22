@@ -7,7 +7,6 @@ import {
   Uri,
   window,
   workspace,
-  WorkspaceConfiguration,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
@@ -289,10 +288,9 @@ export class FlinkLanguageClientManager implements Disposable {
     const rm = ResourceManager.getInstance();
     const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(uri);
     // If not, does the workspace have a default set?
-    const config: WorkspaceConfiguration = workspace.getConfiguration();
     // Set to whichever one wins!
-    computePoolId = uriMetadata?.flinkComputePoolId ?? config.get(FLINK_CONFIG_COMPUTE_POOL, null);
-    currentDatabaseId = uriMetadata?.flinkDatabaseId ?? config.get(FLINK_CONFIG_DATABASE, null);
+    computePoolId = uriMetadata?.flinkComputePoolId ?? (FLINK_CONFIG_COMPUTE_POOL.value || null);
+    currentDatabaseId = uriMetadata?.flinkDatabaseId ?? (FLINK_CONFIG_DATABASE.value || null);
 
     // Look up the cluster & db name if we have a database id
     if (currentDatabaseId) {

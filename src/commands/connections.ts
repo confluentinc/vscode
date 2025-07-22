@@ -1,4 +1,4 @@
-import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
+import { Disposable, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCCloudAuthSession } from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
@@ -98,13 +98,12 @@ export async function addSSLPemPathCommand() {
     },
   });
 
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  const paths: string[] = configs.get(SSL_PEM_PATHS, []);
+  const paths: string[] = SSL_PEM_PATHS.value;
   if (newPemUris && newPemUris.length > 0) {
     const newPemPath: string = newPemUris[0].fsPath;
     if (newPemPath.endsWith(".pem")) {
       paths.push(newPemPath);
-      configs.update(SSL_PEM_PATHS, paths, true);
+      await SSL_PEM_PATHS.update(paths, true);
       // no notification here since the setting will update in real-time when an item is added
     } else {
       // shouldn't be possible to get here since we restrict the file types in the dialog, but we
@@ -307,8 +306,7 @@ export async function setKrb5ConfigPathCommand() {
   if (uris && uris.length > 0) {
     const selectedPath = uris[0].fsPath;
     if (selectedPath.endsWith(".conf")) {
-      const config = workspace.getConfiguration();
-      await config.update(KRB5_CONFIG_PATH, selectedPath, true);
+      await KRB5_CONFIG_PATH.update(selectedPath, true);
       window.showInformationMessage(`Kerberos config path set to: ${selectedPath}`);
     } else {
       window.showErrorMessage("No file selected. Please select a krb5.conf file.");
@@ -337,8 +335,7 @@ export function registerConnectionCommands(): Disposable[] {
 
 /** Get the path(s) of the SSL/TLS PEM file(s) based on the user's configuration. */
 export function getSSLPemPaths(): string[] {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  const paths: string[] = configs.get(SSL_PEM_PATHS, []);
+  const paths: string[] = SSL_PEM_PATHS.value;
   // filter out paths that are empty strings or don't end with .pem since the user can manually edit
   // the setting if they don't go through the `addSSLPEMPath` command
   return paths.filter((path) => path && path.endsWith(".pem"));
