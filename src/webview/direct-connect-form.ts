@@ -179,33 +179,34 @@ class DirectConnectFormViewModel extends ViewModel {
    * Clears all Kafka-related fields in the connection spec
    */
   async clearKafka() {
-    // Reset the UI state for Kafka
-    this.kafkaBootstrapServers("");
-    this.kafkaState(undefined);
-    this.kafkaErrorMessage(undefined);
+    // Reset the any test results or status messages
+    this.resetTestResults();
 
-    // Clear the bootstrap servers in the spec
+    this.kafkaBootstrapServers("");
+    this.kafkaSslConfig({});
+    this.kafkaCreds(undefined);
+    // Clear the bootstrap servers in the spec which will negate other fields when saving I HOPE??
     await post("UpdateSpecValue", {
       inputName: "kafka_cluster.bootstrap_servers",
       inputValue: "",
     });
 
-    // Reset the Kafka auth type to None
-    await post("SaveFormAuthType", {
-      inputName: "kafka_cluster.auth_type",
-      inputValue: "None" as SupportedAuthTypes,
-    });
-    this.kafkaAuthType("None");
+    // // Reset the Kafka auth type to None
+    // await post("SaveFormAuthType", {
+    //   inputName: "kafka_cluster.auth_type",
+    //   inputValue: "None" as SupportedAuthTypes,
+    // });
+    // this.kafkaAuthType("None");
 
-    // Reset SSL settings to defaults
-    this.kafkaSslEnabled(true);
-    await post("UpdateSpecValue", {
-      inputName: "kafka_cluster.ssl.enabled",
-      inputValue: true,
-    });
+    // // Reset SSL settings to defaults
+    // this.kafkaSslEnabled(true);
+    // await post("UpdateSpecValue", {
+    //   inputName: "kafka_cluster.ssl.enabled",
+    //   inputValue: true,
+    // });
 
-    // Reset the connection spec in the UI
-    this.spec(await post("GetConnectionSpec", {}));
+    // // Reset the connection spec in the UI
+    // this.spec(await post("GetConnectionSpec", {}));
   }
 
   /**

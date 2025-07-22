@@ -297,6 +297,11 @@ export function getConnectionSpecFromFormData(
     if (!resources[namespace]) continue;
     // We only want to create the objects in spec if required fields exist
     const kafkaValid = formData["kafka_cluster.bootstrap_servers"];
+    if (namespace === "kafka_cluster" && !kafkaValid) {
+      console.log("Removing kafka_cluster; bootstrap_servers not provided.");
+      setValueAtPath(spec, "kafka_cluster", undefined);
+      continue; // Skip further processing for this namespace if not valid
+    }
     const schemaValid = formData["schema_registry.uri"];
     if (
       (namespace === "kafka_cluster" && kafkaValid) ||
