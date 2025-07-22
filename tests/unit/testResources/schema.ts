@@ -1,6 +1,10 @@
 import { Schema, SchemaType, Subject, SubjectWithSchemas } from "../../../src/models/schema";
-import { TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY } from "./schemaRegistry";
-import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "./topic";
+import {
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_DIRECT_SCHEMA_REGISTRY,
+  TEST_LOCAL_SCHEMA_REGISTRY,
+} from "./schemaRegistry";
+import { TEST_CCLOUD_KAFKA_TOPIC, TEST_DIRECT_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "./topic";
 
 export const TEST_CCLOUD_SCHEMA = Schema.create({
   id: "100001",
@@ -99,4 +103,39 @@ export const TEST_LOCAL_SUBJECT_WITH_SCHEMAS = new Subject(
   TEST_LOCAL_SUBJECT.environmentId,
   TEST_LOCAL_SUBJECT.schemaRegistryId,
   [TEST_LOCAL_SCHEMA_REVISED, TEST_LOCAL_SCHEMA],
+);
+
+export const TEST_DIRECT_SCHEMA = Schema.create({
+  id: "101",
+  subject: `${TEST_DIRECT_KAFKA_TOPIC.name}-value`,
+  version: 1,
+  type: SchemaType.Avro,
+  schemaRegistryId: TEST_DIRECT_SCHEMA_REGISTRY.id,
+  environmentId: TEST_DIRECT_SCHEMA_REGISTRY.environmentId,
+  connectionId: TEST_DIRECT_SCHEMA_REGISTRY.connectionId,
+  connectionType: TEST_DIRECT_SCHEMA_REGISTRY.connectionType,
+  isHighestVersion: false,
+});
+
+export const TEST_DIRECT_SCHEMA_REVISED = Schema.create({
+  ...TEST_DIRECT_SCHEMA,
+  id: "102",
+  version: 2,
+  isHighestVersion: true,
+});
+
+export const TEST_DIRECT_KEY_SCHEMA = Schema.create({
+  ...TEST_DIRECT_SCHEMA,
+  id: "103",
+  subject: `${TEST_DIRECT_KAFKA_TOPIC.name}-key`,
+  isHighestVersion: true,
+});
+
+export const TEST_DIRECT_SUBJECT: Subject = TEST_DIRECT_SCHEMA.subjectObject();
+export const TEST_DIRECT_SUBJECT_WITH_SCHEMAS = new Subject(
+  TEST_DIRECT_SUBJECT.name,
+  TEST_DIRECT_SUBJECT.connectionId,
+  TEST_DIRECT_SUBJECT.environmentId,
+  TEST_DIRECT_SUBJECT.schemaRegistryId,
+  [TEST_DIRECT_SCHEMA_REVISED, TEST_DIRECT_SCHEMA],
 );

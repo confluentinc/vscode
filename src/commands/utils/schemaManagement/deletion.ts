@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import { Schema, Subject } from "../../models/schema";
+import { Schema, Subject } from "../../../models/schema";
 
 /**
  * Determine the prompt to show when deleting a schema version.

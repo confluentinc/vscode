@@ -1,10 +1,10 @@
-import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { isCCloud } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
+import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 
 const logger = new Logger("authz.schemaRegistry");
@@ -106,22 +106,14 @@ export async function determineAccessFromResponseError(response: Response): Prom
  * by updating the setting.
  * */
 export function showNoSchemaAccessWarningNotification(): void {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  const warningsEnabled: boolean = configs.get(SCHEMA_RBAC_WARNINGS_ENABLED, true);
+  const warningsEnabled: boolean = SCHEMA_RBAC_WARNINGS_ENABLED.value;
   if (!warningsEnabled) {
     logger.warn("user is missing schema access, but warning notifications are disabled");
     return;
   }
 
-  const dismissButton = "Don't Show Again";
-  window
-    .showWarningMessage(
-      "You do not have permission to access schema(s) for this topic. Messages will still appear, but may not be deserializeable.",
-      dismissButton,
-    )
-    .then((value: string | undefined) => {
-      if (value === dismissButton) {
-        configs.update(SCHEMA_RBAC_WARNINGS_ENABLED, false, true);
-      }
-    });
+  showWarningNotificationWithButtons(
+    "You do not have permission to access schema(s) for this topic. Messages will still appear, but may not be deserializeable.",
+    { "Don't Show Again": async () => await SCHEMA_RBAC_WARNINGS_ENABLED.update(false, true) },
+  );
 }

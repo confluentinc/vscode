@@ -668,41 +668,44 @@ export async function testRun() {
   const vscodeVersion = process.env.VSCODE_VERSION || (isInsiders ? "insiders" : "stable");
   console.info(`Starting test runner for VS Code ${vscodeVersion}...`);
 
-  await runTests({
-    version: vscodeVersion,
-    extensionDevelopmentPath: resolve(DESTINATION),
-    extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
-    extensionTestsEnv: {
-      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-      FGREP: testFilter,
-    },
-    launchArgs: [
-      "--no-sandbox",
-      "--profile-temp",
-      "--skip-release-notes",
-      "--skip-welcome",
-      "--disable-gpu",
-      "--disable-updates",
-      "--disable-workspace-trust",
-      "--disable-extensions",
-    ],
-  });
-  if (reportCoverage) {
-    let coverageMap = libCoverage.createCoverageMap();
-    let sourceMapStore = libSourceMaps.createSourceMapStore();
-    coverageMap.merge(JSON.parse(await readFile("./coverage.json")));
-    let data = await sourceMapStore.transformCoverage(coverageMap);
-    let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
-    let context = libReport.createContext({ coverageMap: data });
-    report.execute(context);
-    // create interactive HTML report for local runs
-    let htmlReport = reports.create("html", {
-      dir: "./coverage/html",
-      verbose: true,
+  try {
+    await runTests({
+      version: vscodeVersion,
+      extensionDevelopmentPath: resolve(DESTINATION),
+      extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
+      extensionTestsEnv: {
+        // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
+        FGREP: testFilter,
+      },
+      launchArgs: [
+        "--no-sandbox",
+        "--profile-temp",
+        "--skip-release-notes",
+        "--skip-welcome",
+        "--disable-gpu",
+        "--disable-updates",
+        "--disable-workspace-trust",
+        "--disable-extensions",
+      ],
     });
-    htmlReport.execute(context);
-    // clean up temp file used for coverage reporting
-    await unlink("./coverage.json");
+  } finally {
+    if (reportCoverage) {
+      let coverageMap = libCoverage.createCoverageMap();
+      let sourceMapStore = libSourceMaps.createSourceMapStore();
+      coverageMap.merge(JSON.parse(await readFile("./coverage.json")));
+      let data = await sourceMapStore.transformCoverage(coverageMap);
+      let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
+      let context = libReport.createContext({ coverageMap: data });
+      report.execute(context);
+      // create interactive HTML report for local runs
+      let htmlReport = reports.create("html", {
+        dir: "./coverage/html",
+        verbose: true,
+      });
+      htmlReport.execute(context);
+      // clean up temp file used for coverage reporting
+      await unlink("./coverage.json");
+    }
   }
   // runTests() will throw an error if tests failed, otherwise report happy execution
   return 0;

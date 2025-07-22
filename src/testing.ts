@@ -20,9 +20,12 @@ export async function run() {
     reporter: "mocha-multi-reporters",
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
+      // see https://www.npmjs.com/package/mocha-junit-reporter
       mochaJunitReporterReporterOptions: {
         testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
         mochaFile: resultFilePath,
+        useFullSuiteTitle: true,
+        rootSuiteTitle: `${version}:`,
       },
     },
   });
@@ -40,7 +43,6 @@ export async function run() {
   // mocha.suite.beforeEach("Global individual setup", globalBeforeEach);
 
   const failures = await new Promise<number>((resolve) => mocha.run(resolve));
-  if (failures > 0) throw new Error(`${failures} tests failed.`);
   // @ts-expect-error __coverage__ is what istanbul uses for storing coverage data
   const coverageData = global.__coverage__ ?? null;
   if (coverageData != null) {
@@ -48,6 +50,7 @@ export async function run() {
     const coverageFilePath = join(projectRoot, "coverage.json");
     await writeFile(coverageFilePath, JSON.stringify(coverageData));
   }
+  if (failures > 0) throw new Error(`${failures} tests failed.`);
 }
 
 async function globalBeforeAll() {

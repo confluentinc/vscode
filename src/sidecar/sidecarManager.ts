@@ -37,8 +37,8 @@ import {
   killSidecar,
   normalizedSidecarPath,
   pause,
-  showSidecarStartupErrorMessage,
   spawn,
+  triageSidecarStartupError,
   wasConnRefused,
 } from "./utils";
 
@@ -192,23 +192,7 @@ export class SidecarManager {
       );
     } catch (e) {
       // This is the only place we show sidecar startup issues to the user.
-
-      // Ensure the error was logged to the error logger and Sentry.
-      if (e instanceof SidecarFatalError) {
-        logError(e, "Sidecar startup SidecarFatalError", {
-          extra: {
-            reason: e.reason,
-          },
-        });
-      } else {
-        logError(e, "Sidecar startup error", {
-          extra: {
-            reason: "Unknown",
-          },
-        });
-      }
-
-      void showSidecarStartupErrorMessage(e);
+      void triageSidecarStartupError(e);
 
       throw e;
     } finally {
