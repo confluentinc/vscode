@@ -8,8 +8,10 @@ import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManag
 import * as telemetryEvents from "../telemetry/events";
 import { ExtensionSetting } from "./base";
 import {
+  CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  KRB5_CONFIG_PATH,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
@@ -71,7 +73,37 @@ describe("extensionSettings/listener.ts", function () {
     sinon.assert.called(updatePreferencesStub);
   });
 
-  it(`should not call updatePreferences() if config change does not affect "${SSL_PEM_PATHS.id}" or "${SSL_VERIFY_SERVER_CERT_DISABLED.id}"`, async function () {
+  it(`should call updatePreferences() when the "${KRB5_CONFIG_PATH.id}" setting changes`, async function () {
+    stubbedConfigs.stubGet(KRB5_CONFIG_PATH, "path/to/krb5.conf");
+    const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();
+
+    const mockEvent = {
+      affectsConfiguration: (config: string) => config === KRB5_CONFIG_PATH.id,
+    } as ConfigurationChangeEvent;
+    onDidChangeConfigurationStub.yields(mockEvent);
+
+    createConfigChangeListener();
+    await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+
+    sinon.assert.called(updatePreferencesStub);
+  });
+
+  it(`should call updatePreferences() when the "${CCLOUD_PRIVATE_NETWORK_ENDPOINTS.id}" setting changes`, async function () {
+    stubbedConfigs.stubGet(CCLOUD_PRIVATE_NETWORK_ENDPOINTS, { env1: "endpoint1" });
+    const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();
+
+    const mockEvent = {
+      affectsConfiguration: (config: string) => config === CCLOUD_PRIVATE_NETWORK_ENDPOINTS.id,
+    } as ConfigurationChangeEvent;
+    onDidChangeConfigurationStub.yields(mockEvent);
+
+    createConfigChangeListener();
+    await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+
+    sinon.assert.called(updatePreferencesStub);
+  });
+
+  it(`should not call updatePreferences() if a config change does not affect a preferences API related setting"`, async function () {
     const updatePreferencesStub = sandbox.stub(updates, "updatePreferences");
 
     const mockEvent = {
