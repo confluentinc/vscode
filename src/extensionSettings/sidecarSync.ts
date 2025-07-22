@@ -30,13 +30,35 @@ export function loadPreferencesFromWorkspaceConfig(): PreferencesSpec {
   const pemPaths: string[] = SSL_PEM_PATHS.value;
   const trustAllCerts: boolean = SSL_VERIFY_SERVER_CERT_DISABLED.value;
   const krb5ConfigPath: string = KRB5_CONFIG_PATH.value;
-  const privateNetworkEndpoints: Record<string, string> = CCLOUD_PRIVATE_NETWORK_ENDPOINTS.value;
+  const privateNetworkEndpoints: Record<string, string[]> = splitPrivateNetworkEndpoints(
+    CCLOUD_PRIVATE_NETWORK_ENDPOINTS.value,
+  );
   return {
     tls_pem_paths: pemPaths,
     trust_all_certificates: trustAllCerts,
     kerberos_config_file_path: krb5ConfigPath,
-    private_network_endpoints: privateNetworkEndpoints,
+    flink_private_endpoints: privateNetworkEndpoints,
   } as any;
+}
+
+// shoup: we should move this somewhere else if we have to handle a similar conversion elsewhere
+/**
+ * Convert a private network endpoints `Record<string, string>` into a `Record<string, string[]>`
+ * by splitting the values on commas and trimming whitespace.
+ */
+export function splitPrivateNetworkEndpoints(
+  privateNetworkEndpointsRaw: Record<string, string>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const key in privateNetworkEndpointsRaw) {
+    const value = privateNetworkEndpointsRaw[key];
+    // separate by commas, trim whitespace, and filter out empty strings
+    result[key] = value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return result;
 }
 
 /** Update the sidecar's preferences API with the current user settings. */
