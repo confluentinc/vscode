@@ -4,6 +4,7 @@ import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
@@ -96,7 +97,7 @@ describe("FlinkArtifactsViewProvider", () => {
     const mockArtifacts = [
       new FlinkArtifact({
         connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
-        connectionType: "ccloud" as any,
+        connectionType: "ccloud" as ConnectionType.Ccloud,
         environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
         id: "artifact1",
         name: "Test Artifact 1",

@@ -1,5 +1,6 @@
 import { Disposable } from "vscode";
 
+import { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
 import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
@@ -410,7 +411,10 @@ async function loadArtifactsForProviderRegion(
  * @param queryable The queryable context containing connection and environment info
  * @returns FlinkArtifact model instance
  */
-function restFlinkArtifactToModel(restArtifact: any, queryable: IFlinkQueryable): FlinkArtifact {
+function restFlinkArtifactToModel(
+  restArtifact: ArtifactV1FlinkArtifactListDataInner,
+  queryable: IFlinkQueryable,
+): FlinkArtifact {
   return new FlinkArtifact({
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,

@@ -427,8 +427,7 @@
         "command": "confluent.artifacts.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
-        "category": "Confluent: Flink Artifacts",
-        "enablement": "true"
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.statements.refresh",

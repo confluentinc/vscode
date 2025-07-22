@@ -1,6 +1,7 @@
 import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
 import { ccloudAuthSessionInvalidated, currentFlinkArtifactsPoolChanged } from "../emitters";
+import { isResponseError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -52,16 +53,9 @@ export class FlinkArtifactsViewProvider
             this.logger.error("Failed to load Flink artifacts", { error });
 
             // Check if this is an auth error (401 Unauthorized)
-            if (error && typeof error === "object" && "response" in error) {
-              const responseError = error as any;
-              if (
-                responseError.response?.status === 401 ||
-                (responseError.name === "ResponseError" &&
-                  responseError.response?.statusText === "Unauthorized")
-              ) {
-                // Signal that the auth session is invalid
-                ccloudAuthSessionInvalidated.fire();
-              }
+            if (isResponseError(error) && error.response.status === 401) {
+              // Signal that the auth session is invalid
+              ccloudAuthSessionInvalidated.fire();
             }
 
             throw error;
