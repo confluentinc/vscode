@@ -7,6 +7,7 @@ import {
   CHAT_SEND_ERROR_DATA,
   CHAT_SEND_TOOL_CALL_DATA,
   ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK_ARTIFACTS,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
@@ -341,6 +342,19 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(ENABLE_CHAT_PARTICIPANT.defaultValue !== undefined);
       assert.strictEqual(ENABLE_CHAT_PARTICIPANT.defaultValue, expectedDefault);
       assert.ok(ENABLE_CHAT_PARTICIPANT.value !== undefined);
+    });
+
+    it("should set the correct section and default value for ENABLE_FLINK_ARTIFACTS", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        ENABLE_FLINK_ARTIFACTS.id,
+      );
+      assert.ok(section);
+      assert.strictEqual(ENABLE_FLINK_ARTIFACTS.sectionTitle, section.title);
+
+      const expectedDefault = section.properties[ENABLE_FLINK_ARTIFACTS.id].default;
+      assert.ok(ENABLE_FLINK_ARTIFACTS.defaultValue !== undefined);
+      assert.strictEqual(ENABLE_FLINK_ARTIFACTS.defaultValue, expectedDefault);
+      assert.ok(ENABLE_FLINK_ARTIFACTS.value !== undefined);
     });
   });
 });
