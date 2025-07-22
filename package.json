@@ -794,6 +794,16 @@
             "default": "latest",
             "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
           },
+          "confluent.localDocker.medusaImageRepo": {
+            "type": "string",
+            "default": "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa",
+            "description": "Docker image repo to use when starting a local Medusa container"
+          },
+          "confluent.localDocker.medusaImageTag": {
+            "type": "string",
+            "default": "a736fae",
+            "description": "Docker image tag to use when starting a local Medusa container"
+          },
           "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
             "type": "boolean",
             "default": true,

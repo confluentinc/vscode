@@ -7,6 +7,8 @@ import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_MEDUSA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../extensionSettings/constants";
@@ -14,6 +16,8 @@ import { Logger } from "../logging";
 import {
   DEFAULT_KAFKA_IMAGE_REPO,
   DEFAULT_KAFKA_IMAGE_TAG,
+  DEFAULT_MEDUSA_IMAGE_REPO,
+  DEFAULT_MEDUSA_IMAGE_TAG,
   DEFAULT_SCHEMA_REGISTRY_REPO,
   DEFAULT_SCHEMA_REGISTRY_TAG,
 } from "./constants";
@@ -48,6 +52,18 @@ export function getLocalKafkaImageName(): string {
 export function getLocalKafkaImageTag(): string {
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
   return configs.get(LOCAL_KAFKA_IMAGE_TAG, DEFAULT_KAFKA_IMAGE_TAG);
+}
+
+/** Get the local Medusa image name based on user settings. */
+export function getLocalMedusaImageName(): string {
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  return configs.get(LOCAL_MEDUSA_IMAGE, DEFAULT_MEDUSA_IMAGE_REPO);
+}
+
+/** Get the local Medusa image tag based on user settings. */
+export function getLocalMedusaImageTag(): string {
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  return configs.get(LOCAL_MEDUSA_IMAGE_TAG, DEFAULT_MEDUSA_IMAGE_TAG);
 }
 
 /** Get the local Schema Registry image name based on user settings. */

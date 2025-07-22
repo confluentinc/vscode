@@ -33,6 +33,8 @@ export const LOCAL_KAFKA_IMAGE = prefix + "localDocker.kafkaImageRepo";
 export const LOCAL_KAFKA_IMAGE_TAG = prefix + "localDocker.kafkaImageTag";
 export const LOCAL_SCHEMA_REGISTRY_IMAGE = prefix + "localDocker.schemaRegistryImageRepo";
 export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = prefix + "localDocker.schemaRegistryImageTag";
+export const LOCAL_MEDUSA_IMAGE = prefix + "localDocker.medusaImageRepo";
+export const LOCAL_MEDUSA_IMAGE_TAG = prefix + "localDocker.medusaImageTag";
 
 /** Whether to use `TopicNameStrategy` by default for producing messages to a topic.
  * When disabled, will prompt the user to select a subject name strategy. */

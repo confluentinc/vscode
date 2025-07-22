@@ -80,6 +80,14 @@ export async function runWorkflowWithProgress(
       return;
     }
   }
+  if (resources.includes(LocalResourceKind.Medusa)) {
+    try {
+      subworkflows.push(LocalResourceWorkflow.getMedusaWorkflow());
+    } catch (error) {
+      logger.error("error getting Medusa workflow:", error);
+      return;
+    }
+  }
   // add logic for looking up other resources' workflows here
 
   if (subworkflows.length === 0) {

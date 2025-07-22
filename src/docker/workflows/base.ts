@@ -4,7 +4,11 @@ import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { logUsage, UserEvent } from "../../telemetry/events";
-import { getLocalKafkaImageName, getLocalSchemaRegistryImageName } from "../configs";
+import {
+  getLocalKafkaImageName,
+  getLocalMedusaImageName,
+  getLocalSchemaRegistryImageName,
+} from "../configs";
 import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
@@ -62,6 +66,8 @@ export abstract class LocalResourceWorkflow {
         return LocalResourceWorkflow.getKafkaWorkflow();
       case LocalResourceKind.SchemaRegistry:
         return LocalResourceWorkflow.getSchemaRegistryWorkflow();
+      case LocalResourceKind.Medusa:
+        return LocalResourceWorkflow.getMedusaWorkflow();
       default:
         throw new Error(`No workflow available for resource kind: ${kind}`);
     }
@@ -87,6 +93,19 @@ export abstract class LocalResourceWorkflow {
       LocalResourceWorkflow.workflowRegistry.get(imageRepo);
     if (!workflow) {
       const errorMsg = `Unsupported Schema Registry image repo: ${imageRepo}`;
+      window.showErrorMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+    return workflow;
+  }
+
+  /** Get the Medusa workflow. */
+  public static getMedusaWorkflow(): LocalResourceWorkflow {
+    const imageRepo: string = getLocalMedusaImageName();
+    const workflow: LocalResourceWorkflow | undefined =
+      LocalResourceWorkflow.workflowRegistry.get(imageRepo);
+    if (!workflow) {
+      const errorMsg = `Unsupported Medusa image repo: ${imageRepo}`;
       window.showErrorMessage(errorMsg);
       throw new Error(errorMsg);
     }

@@ -4,6 +4,8 @@ import { ContextValues, getContextValue } from "../context/values";
 import {
   getLocalKafkaImageName,
   getLocalKafkaImageTag,
+  getLocalMedusaImageName,
+  getLocalMedusaImageTag,
   getLocalSchemaRegistryImageName,
   getLocalSchemaRegistryImageTag,
 } from "../docker/configs";
@@ -59,6 +61,21 @@ export async function localResourcesQuickPick(
   // start workflow or if local Schema Registry is already running and this is the stop workflow
   if ((starting && !schemaRegistryAvailable) || (schemaRegistryAvailable && !starting)) {
     items.push(schemaRegistryItem);
+  }
+
+  const medusaRepoTag = `${getLocalMedusaImageName()}:${getLocalMedusaImageTag()}`;
+  const medusaItem: QuickPickItem = {
+    label: LocalResourceKind.Medusa,
+    iconPath: new ThemeIcon("server"),
+    description: medusaRepoTag,
+    detail: "A local Medusa service instance",
+    buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Configure Medusa Docker Image` }],
+  };
+  // For now, always show Medusa option since we don't have context tracking yet
+  // TODO: Add proper context tracking for Medusa availability
+  const medusaAvailable: boolean = getContextValue(ContextValues.localMedusaAvailable) === true;
+  if ((starting && !medusaAvailable) || (medusaAvailable && !starting)) {
+    items.push(medusaItem);
   }
 
   logger.debug("showing local resource quickpick", {
