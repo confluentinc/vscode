@@ -215,9 +215,25 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "kafka_cluster.bootstrap_servers":
         this.kafkaBootstrapServers(input.value);
+        // if localhost, uncheck SSL
+        if (input.value.includes("localhost")) {
+          this.kafkaSslEnabled(false);
+          await post("UpdateSpecValue", {
+            inputName: "kafka_cluster.ssl.enabled",
+            inputValue: false,
+          });
+        }
         break;
       case "schema_registry.uri":
         this.schemaUri(input.value);
+        // if localhost, uncheck SSL
+        if (input.value.includes("localhost")) {
+          this.schemaSslEnabled(false);
+          await post("UpdateSpecValue", {
+            inputName: "schema_registry.ssl.enabled",
+            inputValue: false,
+          });
+        }
         break;
       default:
         console.info(`No side effects for input update: ${input.name}`);
