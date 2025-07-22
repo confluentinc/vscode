@@ -200,7 +200,7 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
   // Fill out the form with dummy data & submit
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
-  await page.fill("input[name='schema_registry.uri']", "http://fakehost:8081");
+  await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.click("input[type=submit][value='Save']");
 
   // Check if the form submission was successful
@@ -220,7 +220,7 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
-    "schema_registry.uri": "http://fakehost:8081",
+    "schema_registry.uri": "https://fakehost:8081",
   });
 });
 test("changes the checkbox for ssl to false if localhost", async ({ execute, page }) => {
@@ -346,7 +346,7 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
   // Fill out the form with dummy data
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
-  await page.fill("input[name='schema_registry.uri']", "http://fakehost:8081");
+  await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
 
   // Submit and check the form data
@@ -367,7 +367,7 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
-    "schema_registry.uri": "http://fakehost:8081",
+    "schema_registry.uri": "https://fakehost:8081",
   });
 });
 test("submits the form with namespaced TLS config fields when filled", async ({
@@ -698,7 +698,7 @@ test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ ex
   await page.fill("input[name='kafka_cluster.credentials.ccloud_identity_pool_id']", "pool-xyz789");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   await page.check("input[type=checkbox][name='schema_registry.ssl.enabled']");
-  await page.fill("input[name='schema_registry.uri']", "http://fakehost:8081");
+  await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.selectOption("select[name='schema_registry.auth_type']", "OAuth");
   await page.fill(
     "input[name='schema_registry.credentials.tokens_url']",
@@ -739,7 +739,7 @@ test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ ex
     "kafka_cluster.credentials.scope": "kafka-cluster",
     "kafka_cluster.credentials.tokens_url": "https://auth-provider.example/oauth2/token",
     "kafka_cluster.ssl.enabled": "true",
-    "schema_registry.uri": "http://fakehost:8081",
+    "schema_registry.uri": "https://fakehost:8081",
     "schema_registry.auth_type": "OAuth",
     "schema_registry.ssl.enabled": "true",
     "schema_registry.credentials.scope": "kafka-cluster",
@@ -972,7 +972,7 @@ test("submits ssl verify_hostname as false when unchecked", async ({ execute, pa
 
   await page.fill("input[name=name]", "SSL Verify Test");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
-  await page.fill("input[name='schema_registry.uri']", "http://fakehost:8081");
+  await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
 
   await page.click("p:has-text('TLS Configuration')");
   await page.uncheck("input[name='kafka_cluster.ssl.verify_hostname']");
@@ -1009,7 +1009,7 @@ test("submits ssl.enabled as false when unchecked", async ({ execute, page }) =>
   // Fill in basic form data
   await page.fill("input[name=name]", "SSL Disabled Test");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
-  await page.fill("input[name='schema_registry.uri']", "http://fakehost:8081");
+  await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
 
   // Ensure SSL is unchecked for both Kafka and Schema Registry
   await page.uncheck("input[name='kafka_cluster.ssl.enabled']");
@@ -1046,7 +1046,7 @@ test("submits default types for keystore and truststore", async ({ execute, page
   // Fill in basic form data
   await page.fill("input[name=name]", "SSL Disabled Test");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
-  await page.fill("input[name='schema_registry.uri']", "http://fakehost:8081");
+  await page.fill("input[name='schema_registry.uri']", "https://fakehost:8081");
   await page.click("p:has-text('TLS Configuration')");
   await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
@@ -1088,7 +1088,7 @@ const SPEC_SAMPLE = {
     },
   },
   schema_registry: {
-    uri: "http://fakehost:8081",
+    uri: "https://fakehost:8081",
     ssl: {
       enabled: true,
     },
