@@ -22,7 +22,7 @@ import {
 import * as updates from "./sidecarSync";
 import { loadPreferencesFromWorkspaceConfig } from "./sidecarSync";
 
-describe.only("extensionSettings/sidecarSync.ts", function () {
+describe("extensionSettings/sidecarSync.ts", function () {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(function () {
