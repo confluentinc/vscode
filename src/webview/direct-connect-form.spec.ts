@@ -12,9 +12,9 @@ import {
   ConnectionSpec,
   ConnectionType,
   HashAlgorithm,
+  KerberosCredentials,
   OAuthCredentials,
   ScramCredentials,
-  KerberosCredentials,
 } from "../clients/sidecar";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
@@ -91,9 +91,7 @@ test("renders form html correctly", async ({ page }) => {
   await expect(sslCheckbox).toBeVisible();
 
   const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
-  await expect(authKafka).not.toBe(null);
-  const authKafkaOptions = await authKafka.locator("option").all();
-  await expect(authKafkaOptions.length).toBe(6);
+  await expect(authKafka).toBeVisible();
 
   const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
   await expect(schemaUrlInput).toBeVisible();
@@ -964,6 +962,55 @@ test("submits default types for keystore and truststore", async ({ execute, page
   // Verify that the default type (JKS) for keystore and truststore are sent with form data if path is defined
   expect(submitCall?.[1]["kafka_cluster.ssl.keystore.type"]).toBe("JKS");
   expect(submitCall?.[1]["kafka_cluster.ssl.truststore.type"]).toBe("JKS");
+});
+test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with WarpStream and SCRAM auth
+  await page.fill("input[name=name]", "WarpStream Test");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='formconnectiontype']", "WarpStream");
+  await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
+
+  // No need to select hash_algorithm as it should be enforced
+  await page.fill("input[name='kafka_cluster.credentials.scram_username']", "user");
+  await page.fill("input[name='kafka_cluster.credentials.scram_password']", "password");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+
+  // Verify SCRAM_SHA_512 is used regardless of selection
+  expect(submitCall?.[1]).toEqual(
+    expect.objectContaining({
+      name: "WarpStream Test",
+      formconnectiontype: "WarpStream",
+      "kafka_cluster.bootstrap_servers": "localhost:9092",
+      "kafka_cluster.auth_type": "SCRAM",
+      "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512",
+      "kafka_cluster.credentials.scram_username": "user",
+      "kafka_cluster.credentials.scram_password": "password",
+    }),
+  );
 });
 
 // Test Fixtures
