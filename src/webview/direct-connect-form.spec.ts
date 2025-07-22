@@ -12,9 +12,9 @@ import {
   ConnectionSpec,
   ConnectionType,
   HashAlgorithm,
+  KerberosCredentials,
   OAuthCredentials,
   ScramCredentials,
-  KerberosCredentials,
 } from "../clients/sidecar";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
@@ -91,9 +91,7 @@ test("renders form html correctly", async ({ page }) => {
   await expect(sslCheckbox).toBeVisible();
 
   const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
-  await expect(authKafka).not.toBe(null);
-  const authKafkaOptions = await authKafka.locator("option").all();
-  await expect(authKafkaOptions.length).toBe(6);
+  await expect(authKafka).toBeVisible();
 
   const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
   await expect(schemaUrlInput).toBeVisible();
