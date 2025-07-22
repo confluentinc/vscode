@@ -26,6 +26,14 @@ semaphore:
         - name: TEST_SUITE
           required: false
           description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
+    - name: upload-prerelease-vsix-files
+      branch: main
+      pipeline_file: ".semaphore/multi-arch-packaging.yml"
+      parameters:
+        - name: COMMIT_SHA
+          required: true
+          description: |
+            The commit SHA to create the release and tag from, must be a valid SHA/tag/branch.
 sonarqube:
   enable: false
 make:
