@@ -359,6 +359,7 @@ export class SidecarHandle {
     const config = new FlinkArtifactsConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
+        ...this.defaultClientConfigParams.headers,
         [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
       },
     });
