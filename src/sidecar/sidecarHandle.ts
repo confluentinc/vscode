@@ -407,6 +407,8 @@ export class SidecarHandle {
 
   // === END OF OPENAPI CLIENT METHODS ===
 
+  // Cache of GraphQL query promises to avoid concurrent duplicate requests.
+  private graphQlQueryPromises: Map<string, Promise<Response>> = new Map();
   /**
    * Make a GraphQL request to the sidecar via fetch.
    *
@@ -415,27 +417,41 @@ export class SidecarHandle {
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
-    connectionId?: string,
-    // Mark second parameter as optional if Variables is an empty object type
+    connectionId: string,
+    // Mark third parameter as optional if Variables is an empty object type
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
   ): Promise<Result> {
-    let headers: Headers;
-    if (connectionId) {
-      headers = new Headers({
+    let requestPromise: Promise<Response>;
+    const pendingPromiseCacheKey = `${connectionId}:${print(query)}`;
+    if (!this.graphQlQueryPromises.has(pendingPromiseCacheKey)) {
+      // Go ahead and create a new request promise and put into the pending promise cache.
+      const headers = new Headers({
         ...this.defaultClientConfigParams.headers,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       });
+
+      requestPromise = fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query: print(query), variables }),
+      });
+
+      this.graphQlQueryPromises.set(pendingPromiseCacheKey, requestPromise);
     } else {
-      headers = new Headers(this.defaultClientConfigParams.headers);
+      logger.debug(`Using cached GraphQL request for a query for: ${connectionId}`);
+      // Use the cached
+      requestPromise = this.graphQlQueryPromises.get(pendingPromiseCacheKey)!;
     }
 
-    const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query: print(query), variables }),
-    });
-    const payload = await response.json();
+    const response = await requestPromise;
+
+    // No longer in-flight, so remove the promise from cache. Any calls started subsequently will
+    // create a new request promise
+    this.graphQlQueryPromises.delete(pendingPromiseCacheKey);
+
+    // Must clone before consuming the response, as the response body can only be consumed once.
+    const payload = await response.clone().json();
 
     if (!payload.data) {
       let errorString: string;
