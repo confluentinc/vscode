@@ -1,8 +1,8 @@
 import { ObservableScope } from "inertial";
 import {
-  type KerberosCredentials,
   type ApiKeyAndSecret,
   type BasicCredentials,
+  type KerberosCredentials,
   type OAuthCredentials,
   type ScramCredentials,
 } from "../clients/sidecar";
@@ -54,6 +54,13 @@ export class AuthCredentials extends HTMLElement {
 
   getInputId(name: string) {
     return this.identifier() + ".credentials." + name;
+  }
+  getHashAlgorithm() {
+    // Default to SCRAM_SHA_256 unless WarpStream, which uses SCRAM_SHA_512
+    return this.connectionType() === "WarpStream"
+      ? "SCRAM_SHA_512"
+      : // @ts-expect-error the creds could be of any Credentials type
+        this.creds()?.hash_algorithm ?? "SCRAM_SHA_256";
   }
 
   // Add all initial form values to the form data, including defaults
@@ -228,8 +235,9 @@ export class AuthCredentials extends HTMLElement {
               required
               data-attr-id="this.getInputId('hash_algorithm')"
               data-attr-name="this.getInputId('hash_algorithm')"
-              data-value="this.creds()?.hash_algorithm ?? 'SCRAM_SHA_256'"
               data-on-input="this.updateValue(event)"
+              data-value="this.getHashAlgorithm()"
+              data-attr-disabled="this.connectionType() === 'WarpStream'"
             >
               <option value="SCRAM_SHA_256">SCRAM_SHA_256</option>
               <option value="SCRAM_SHA_512">SCRAM_SHA_512</option>
