@@ -115,7 +115,7 @@ class DirectConnectFormViewModel extends ViewModel {
   });
 
   /** Get valid auth types based on form connection type */
-  getValidAuthTypes = this.derive(() => {
+  getValidKafkaAuthTypes = this.derive(() => {
     switch (this.platformType()) {
       case "Confluent Cloud":
         return allAuthOptions.filter((auth) => ["API", "SCRAM", "OAuth"].includes(auth.value));
