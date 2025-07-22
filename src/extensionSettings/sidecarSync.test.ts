@@ -12,7 +12,12 @@ import {
 import * as errors from "../errors";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
-import { KRB5_CONFIG_PATH, SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
+import {
+  CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
+  KRB5_CONFIG_PATH,
+  SSL_PEM_PATHS,
+  SSL_VERIFY_SERVER_CERT_DISABLED,
+} from "./constants";
 import * as updates from "./sidecarSync";
 import { loadPreferencesFromWorkspaceConfig } from "./sidecarSync";
 
@@ -54,7 +59,8 @@ describe("extensionSettings/sidecarSync.ts", function () {
     stubbedConfigs
       .stubGet(SSL_PEM_PATHS, SSL_PEM_PATHS.defaultValue)
       .stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, SSL_VERIFY_SERVER_CERT_DISABLED.defaultValue)
-      .stubGet(KRB5_CONFIG_PATH, KRB5_CONFIG_PATH.defaultValue);
+      .stubGet(KRB5_CONFIG_PATH, KRB5_CONFIG_PATH.defaultValue)
+      .stubGet(CCLOUD_PRIVATE_NETWORK_ENDPOINTS, CCLOUD_PRIVATE_NETWORK_ENDPOINTS.defaultValue);
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
@@ -62,6 +68,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
       tls_pem_paths: SSL_PEM_PATHS.defaultValue,
       trust_all_certificates: SSL_VERIFY_SERVER_CERT_DISABLED.defaultValue,
       kerberos_config_file_path: KRB5_CONFIG_PATH.defaultValue,
+      private_network_endpoints: CCLOUD_PRIVATE_NETWORK_ENDPOINTS.defaultValue,
     });
   });
 
@@ -70,10 +77,15 @@ describe("extensionSettings/sidecarSync.ts", function () {
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
     const krb5Config = "path/to/custom/krb5.conf";
+    const privateNetworkEndpoints: Record<string, string> = {
+      env1: "endpoint1",
+      env2: "endpoint2",
+    };
     stubbedConfigs
       .stubGet(SSL_PEM_PATHS, tlsPemPaths)
       .stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, trustAllCerts)
-      .stubGet(KRB5_CONFIG_PATH, krb5Config);
+      .stubGet(KRB5_CONFIG_PATH, krb5Config)
+      .stubGet(CCLOUD_PRIVATE_NETWORK_ENDPOINTS, privateNetworkEndpoints);
 
     const result: PreferencesSpec = loadPreferencesFromWorkspaceConfig();
 
@@ -81,6 +93,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
       kerberos_config_file_path: krb5Config,
       tls_pem_paths: tlsPemPaths,
       trust_all_certificates: trustAllCerts,
+      private_network_endpoints: privateNetworkEndpoints,
     });
   });
 
@@ -89,10 +102,15 @@ describe("extensionSettings/sidecarSync.ts", function () {
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
     const krb5Config = "path/to/custom/krb5.conf";
+    const privateNetworkEndpoints: Record<string, string> = {
+      env1: "endpoint1",
+      env2: "endpoint2",
+    };
     stubbedConfigs
       .stubGet(SSL_PEM_PATHS, tlsPemPaths)
       .stubGet(SSL_VERIFY_SERVER_CERT_DISABLED, trustAllCerts)
-      .stubGet(KRB5_CONFIG_PATH, krb5Config);
+      .stubGet(KRB5_CONFIG_PATH, krb5Config)
+      .stubGet(CCLOUD_PRIVATE_NETWORK_ENDPOINTS, privateNetworkEndpoints);
 
     const fakePreferences: Preferences = {
       api_version: "gateway/v1",
@@ -101,7 +119,8 @@ describe("extensionSettings/sidecarSync.ts", function () {
         kerberos_config_file_path: krb5Config,
         tls_pem_paths: tlsPemPaths,
         trust_all_certificates: trustAllCerts,
-      },
+        private_network_endpoints: privateNetworkEndpoints,
+      } as any,
     };
     mockClient.gatewayV1PreferencesPut.resolves(fakePreferences);
 
