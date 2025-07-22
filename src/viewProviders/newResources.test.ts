@@ -1,12 +1,14 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { MarkdownString, TreeItemCollapsibleState } from "vscode";
+import { MarkdownString, TreeItem, TreeItemCollapsibleState, window } from "vscode";
 import * as environmentModels from "../../src/models/environment";
 import * as notifications from "../../src/notifications";
 import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../../src/sidecar/connections/local";
 import {
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_DIRECT_ENVIRONMENT,
   TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
@@ -14,6 +16,7 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
@@ -32,14 +35,25 @@ import {
   LocalResourceLoader,
   ResourceLoader,
 } from "../loaders";
-import { DirectEnvironment, LocalEnvironment } from "../models/environment";
+import {
+  CCloudEnvironment,
+  DirectEnvironment,
+  EnvironmentTreeItem,
+  LocalEnvironment,
+} from "../models/environment";
+import { FlinkComputePoolTreeItem } from "../models/flinkComputePool";
+import { KafkaClusterTreeItem } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
+import { SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import {
+  AnyConnectionRow,
   CCloudConnectionRow,
   DirectConnectionRow,
   LocalConnectionRow,
+  mergeUpdates,
   NewResourceViewProvider,
+  resourceViewWithProgress,
   SingleEnvironmentConnectionRow,
 } from "./newResources";
 
@@ -56,264 +70,6 @@ describe("viewProviders/newResources.ts", () => {
 
   afterEach(() => {
     sandbox.restore();
-  });
-
-  describe("NewResourceViewProvider", () => {
-    let provider: NewResourceViewProvider;
-
-    beforeEach(() => {
-      provider = new NewResourceViewProvider();
-      // would have been called if we obtained through getInstance().
-      provider["initialize"]();
-    });
-
-    describe("loadAndStoreConnection(), refreshConnection()", () => {
-      let localConnectionRow: LocalConnectionRow;
-      let rowRefreshStub: sinon.SinonStub;
-      let repaintStub: sinon.SinonStub;
-
-      beforeEach(async () => {
-        // populate with local row only
-        localConnectionRow = new LocalConnectionRow();
-        rowRefreshStub = sandbox.stub(localConnectionRow, "refresh").resolves();
-        repaintStub = sandbox.stub(provider as any, "repaint");
-      });
-
-      for (const insertBeforeRefresh of [true, false]) {
-        it(`loadAndStoreConnection(connection, ${insertBeforeRefresh})`, async () => {
-          assert.strictEqual(localConnectionRow.ordering, -1, "initial row ordering");
-          await provider.loadAndStoreConnection(localConnectionRow, insertBeforeRefresh);
-
-          sandbox.assert.calledOnce(rowRefreshStub);
-          // incremented during storeConnection() call.
-          assert.strictEqual(localConnectionRow.ordering, 0, "after insert row ordering");
-
-          sandbox.assert.calledOnce(repaintStub);
-        });
-      }
-
-      describe("refreshConnection()", async () => {
-        let loggerWarnStub: sinon.SinonStub;
-
-        beforeEach(() => {
-          loggerWarnStub = sandbox.stub(provider.logger, "warn");
-        });
-
-        it("connection not found, logs warning and no repaint", async () => {
-          const connectionId = "non-existent-connection-id" as ConnectionId;
-
-          await provider.refreshConnection(connectionId);
-
-          sinon.assert.calledOnce(loggerWarnStub);
-          sinon.assert.calledWith(loggerWarnStub, "No connection row found for connectionId", {
-            connectionId,
-          });
-          sinon.assert.notCalled(repaintStub);
-        });
-
-        it("connection found, calls its refresh(), then repaints", async () => {
-          await provider.loadAndStoreConnection(localConnectionRow, true);
-          // Both of these stubs are called during loadAndStoreConnection(), so reset.
-          rowRefreshStub.resetHistory();
-          repaintStub.resetHistory();
-
-          // refresh a connection that exists.
-          await provider.refreshConnection(LOCAL_CONNECTION_ID);
-
-          sinon.assert.notCalled(loggerWarnStub);
-          sinon.assert.calledOnce(rowRefreshStub);
-          sinon.assert.calledOnce(repaintStub);
-        });
-      });
-    });
-
-    describe("setCustomEventListeners()", () => {
-      let refreshConnectionStub: sinon.SinonStub;
-      let reconcileDirectConnectionsStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        refreshConnectionStub = sandbox.stub(provider, "refreshConnection");
-        reconcileDirectConnectionsStub = sandbox.stub(
-          provider as any,
-          "reconcileDirectConnections", //private method.
-        );
-      });
-
-      it("Refreshes ccloud connection when ccloudConnected event is fired", () => {
-        ccloudConnected.fire(true);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, CCLOUD_CONNECTION_ID, true);
-      });
-
-      it("Refreshes local connection when localKafkaConnected event is fired", () => {
-        localKafkaConnected.fire(true);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
-      });
-
-      it("Refreshes local connection when localSchemaRegistryConnected event is fired", () => {
-        localSchemaRegistryConnected.fire(true);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
-      });
-
-      it("Reconciles direct connections when directConnectionsChanged event is fired", () => {
-        directConnectionsChanged.fire();
-        sinon.assert.calledOnce(reconcileDirectConnectionsStub);
-      });
-
-      it("Refreshes direct connection when connectionStable event is fired", () => {
-        const connectionId = "test-direct-connection-id" as ConnectionId;
-        connectionStable.fire(connectionId);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
-      });
-
-      it("Refreshes direct connection when connectionDisconnected event is fired", () => {
-        const connectionId = "test-direct-connection-id" as ConnectionId;
-        connectionDisconnected.fire(connectionId);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
-      });
-    });
-
-    describe("reconcileDirectConnections()", () => {
-      let resourceLoadersDirectLoadersStub: sinon.SinonStub;
-      let providerLoadAndStoreConnectionStub: sinon.SinonStub;
-      let providerRepaintStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        // Set up so that we start with a provider that has no direct connections,
-        // that will have been initialized with no direct loaders.
-
-        resourceLoadersDirectLoadersStub = sandbox
-          .stub(ResourceLoader, "directLoaders")
-          .returns([]);
-
-        providerLoadAndStoreConnectionStub = sandbox
-          .stub(provider, "loadAndStoreConnection")
-          .resolves();
-
-        providerRepaintStub = sandbox.stub(provider as any, "repaint");
-      });
-
-      it("Adds new DirectResourceLoaders when needed", async () => {
-        // Simulate a new one existing...
-        const newDirectLoader = new DirectResourceLoader(
-          "test-adds-direct-connection-row" as ConnectionId,
-        );
-        resourceLoadersDirectLoadersStub.returns([newDirectLoader]);
-
-        await provider["reconcileDirectConnections"]();
-
-        // Should have called this.loadAndStoreConnection() for the new direct connection.
-        sinon.assert.calledOnce(providerLoadAndStoreConnectionStub);
-        sinon.assert.calledWith(
-          providerLoadAndStoreConnectionStub,
-          sinon.match.instanceOf(DirectConnectionRow),
-          false, // insertBeforeRefresh
-        );
-        // And should have refreshed the view.
-        sinon.assert.calledOnce(providerRepaintStub);
-      });
-
-      it("Removes DirectConnectionRows that no longer have loaders", async () => {
-        // For simplicity, remove all connection rows (ccloud, local) before
-        // adding in a single DirectConnectionRow which should get removed
-        // during reconciliation.
-        // provider["connections"].clear();
-
-        // Simulate a DirectResourceLoader that no longer exists.
-        const deleted_id = "test-deleted-direct-connection-row" as ConnectionId;
-        const removedDirectLoader = new DirectResourceLoader(deleted_id);
-
-        provider["connections"].set(deleted_id, new DirectConnectionRow(removedDirectLoader));
-
-        resourceLoadersDirectLoadersStub.returns([]);
-
-        await provider["reconcileDirectConnections"]();
-
-        // Should have removed the connection row for the removed loader.
-        assert.strictEqual(provider["connections"].size, 0);
-        // And repainted toplevel.
-        sinon.assert.calledOnce(providerRepaintStub);
-      });
-    });
-
-    describe("repaint()", () => {
-      let onDidChangeTreeDataFireStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
-      });
-
-      it("toplevel repaint", () => {
-        provider["repaint"]();
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, undefined);
-      });
-
-      it("repaint a specific connection row", () => {
-        const connectionId = "test-connection-id" as ConnectionId;
-        const connectionRow = new DirectConnectionRow(new DirectResourceLoader(connectionId));
-        provider["repaint"](connectionRow);
-        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
-        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, connectionRow);
-      });
-    });
-
-    describe("lazyInitializeConnections()", () => {
-      let resourceLoadersDirectLoadersStub: sinon.SinonStub;
-      let providerLoadAndStoreConnectionStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        // Set up so that we start with a provider that has no direct connections,
-        // that will have been initialized with no direct loaders.
-        resourceLoadersDirectLoadersStub = sandbox
-          .stub(ResourceLoader, "directLoaders")
-          .returns([]);
-
-        providerLoadAndStoreConnectionStub = sandbox
-          .stub(provider, "loadAndStoreConnection")
-          .resolves();
-      });
-
-      it("class loadAndStoreConnection for LocalConnectionRow, CCloudConnectionRow", async () => {
-        await provider["lazyInitializeConnections"]();
-
-        // Should have called this.loadAndStoreConnection() twice: once for LocalConnectionRow and once for CCloudConnectionRow.
-        sinon.assert.calledTwice(providerLoadAndStoreConnectionStub);
-
-        sinon.assert.calledWith(
-          providerLoadAndStoreConnectionStub,
-          sinon.match.instanceOf(LocalConnectionRow),
-          true, // insertBeforeRefresh
-        );
-
-        sinon.assert.calledWith(
-          providerLoadAndStoreConnectionStub,
-          sinon.match.instanceOf(CCloudConnectionRow),
-          true, // insertBeforeRefresh
-        );
-      });
-
-      it("calls loadAndStoreConnection for each DirectResourceLoader", async () => {
-        resourceLoadersDirectLoadersStub.returns([
-          new DirectResourceLoader("test-direct-connection-id" as ConnectionId),
-        ]);
-
-        await provider["lazyInitializeConnections"]();
-
-        // Should have called this.loadAndStoreConnection() for the new direct connection.
-        // (as well as the implicit Local and CCloud rows).
-        sinon.assert.calledThrice(providerLoadAndStoreConnectionStub);
-        sinon.assert.calledWith(
-          providerLoadAndStoreConnectionStub,
-          sinon.match.instanceOf(DirectConnectionRow),
-          false, // insertBeforeRefresh
-        );
-      });
-    });
   });
 
   describe("DirectConnectionRow", () => {
@@ -396,6 +152,13 @@ describe("viewProviders/newResources.ts", () => {
             directConnectionRow.environments[0],
             TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
           );
+        });
+
+        it("searchableText doesn't vomit", async () => {
+          // Refine this test later on.
+          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
+          await directConnectionRow.refresh();
+          assert.strictEqual(directConnectionRow.name, directConnectionRow.searchableText());
         });
       });
     });
@@ -848,6 +611,474 @@ describe("viewProviders/newResources.ts", () => {
           assert.strictEqual(ccloudConnectionRow.environments.length, 0);
         });
       });
+    });
+  });
+
+  describe("NewResourceViewProvider", () => {
+    let provider: NewResourceViewProvider;
+
+    beforeEach(() => {
+      provider = new NewResourceViewProvider();
+      // would have been called if we obtained through getInstance().
+      provider["initialize"]();
+    });
+
+    describe("loadAndStoreConnection(), refreshConnection()", () => {
+      let localConnectionRow: LocalConnectionRow;
+      let rowRefreshStub: sinon.SinonStub;
+      let repaintStub: sinon.SinonStub;
+
+      beforeEach(async () => {
+        // populate with local row only
+        localConnectionRow = new LocalConnectionRow();
+        rowRefreshStub = sandbox.stub(localConnectionRow, "refresh").resolves();
+        repaintStub = sandbox.stub(provider as any, "repaint");
+      });
+
+      for (const insertBeforeRefresh of [true, false]) {
+        it(`loadAndStoreConnection(connection, ${insertBeforeRefresh})`, async () => {
+          assert.strictEqual(localConnectionRow.ordering, -1, "initial row ordering");
+          await provider.loadAndStoreConnection(localConnectionRow, insertBeforeRefresh);
+
+          sandbox.assert.calledOnce(rowRefreshStub);
+          // incremented during storeConnection() call.
+          assert.strictEqual(localConnectionRow.ordering, 0, "after insert row ordering");
+
+          sandbox.assert.calledOnce(repaintStub);
+        });
+      }
+
+      describe("refreshConnection()", async () => {
+        let loggerWarnStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          loggerWarnStub = sandbox.stub(provider.logger, "warn");
+        });
+
+        it("connection not found, logs warning and no repaint", async () => {
+          const connectionId = "non-existent-connection-id" as ConnectionId;
+
+          await provider.refreshConnection(connectionId);
+
+          sinon.assert.calledOnce(loggerWarnStub);
+          sinon.assert.calledWith(loggerWarnStub, "No connection row found for connectionId", {
+            connectionId,
+          });
+          sinon.assert.notCalled(repaintStub);
+        });
+
+        it("connection found, calls its refresh(), then repaints", async () => {
+          await provider.loadAndStoreConnection(localConnectionRow, true);
+          // Both of these stubs are called during loadAndStoreConnection(), so reset.
+          rowRefreshStub.resetHistory();
+          repaintStub.resetHistory();
+
+          // refresh a connection that exists.
+          await provider.refreshConnection(LOCAL_CONNECTION_ID);
+
+          sinon.assert.notCalled(loggerWarnStub);
+          sinon.assert.calledOnce(rowRefreshStub);
+          sinon.assert.calledOnce(repaintStub);
+        });
+      });
+    });
+
+    describe("setCustomEventListeners()", () => {
+      let refreshConnectionStub: sinon.SinonStub;
+      let reconcileDirectConnectionsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        refreshConnectionStub = sandbox.stub(provider, "refreshConnection");
+        reconcileDirectConnectionsStub = sandbox.stub(
+          provider as any,
+          "reconcileDirectConnections", //private method.
+        );
+      });
+
+      it("Refreshes ccloud connection when ccloudConnected event is fired", () => {
+        ccloudConnected.fire(true);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, CCLOUD_CONNECTION_ID, true);
+      });
+
+      it("Refreshes local connection when localKafkaConnected event is fired", () => {
+        localKafkaConnected.fire(true);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+
+      it("Refreshes local connection when localSchemaRegistryConnected event is fired", () => {
+        localSchemaRegistryConnected.fire(true);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
+      });
+
+      it("Reconciles direct connections when directConnectionsChanged event is fired", () => {
+        directConnectionsChanged.fire();
+        sinon.assert.calledOnce(reconcileDirectConnectionsStub);
+      });
+
+      it("Refreshes direct connection when connectionStable event is fired", () => {
+        const connectionId = "test-direct-connection-id" as ConnectionId;
+        connectionStable.fire(connectionId);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
+      });
+
+      it("Refreshes direct connection when connectionDisconnected event is fired", () => {
+        const connectionId = "test-direct-connection-id" as ConnectionId;
+        connectionDisconnected.fire(connectionId);
+        sinon.assert.calledOnce(refreshConnectionStub);
+        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
+      });
+    });
+
+    describe("reconcileDirectConnections()", () => {
+      let resourceLoadersDirectLoadersStub: sinon.SinonStub;
+      let providerLoadAndStoreConnectionStub: sinon.SinonStub;
+      let providerRepaintStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Set up so that we start with a provider that has no direct connections,
+        // that will have been initialized with no direct loaders.
+
+        resourceLoadersDirectLoadersStub = sandbox
+          .stub(ResourceLoader, "directLoaders")
+          .returns([]);
+
+        providerLoadAndStoreConnectionStub = sandbox
+          .stub(provider, "loadAndStoreConnection")
+          .resolves();
+
+        providerRepaintStub = sandbox.stub(provider as any, "repaint");
+      });
+
+      it("Adds new DirectResourceLoaders when needed", async () => {
+        // Simulate a new one existing...
+        const newDirectLoader = new DirectResourceLoader(
+          "test-adds-direct-connection-row" as ConnectionId,
+        );
+        resourceLoadersDirectLoadersStub.returns([newDirectLoader]);
+
+        await provider["reconcileDirectConnections"]();
+
+        // Should have called this.loadAndStoreConnection() for the new direct connection.
+        sinon.assert.calledOnce(providerLoadAndStoreConnectionStub);
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(DirectConnectionRow),
+          false, // insertBeforeRefresh
+        );
+        // And should have refreshed the view.
+        sinon.assert.calledOnce(providerRepaintStub);
+      });
+
+      it("Removes DirectConnectionRows that no longer have loaders", async () => {
+        // For simplicity, remove all connection rows (ccloud, local) before
+        // adding in a single DirectConnectionRow which should get removed
+        // during reconciliation.
+        // provider["connections"].clear();
+
+        // Simulate a DirectResourceLoader that no longer exists.
+        const deleted_id = "test-deleted-direct-connection-row" as ConnectionId;
+        const removedDirectLoader = new DirectResourceLoader(deleted_id);
+
+        provider["connections"].set(deleted_id, new DirectConnectionRow(removedDirectLoader));
+
+        resourceLoadersDirectLoadersStub.returns([]);
+
+        await provider["reconcileDirectConnections"]();
+
+        // Should have removed the connection row for the removed loader.
+        assert.strictEqual(provider["connections"].size, 0);
+        // And repainted toplevel.
+        sinon.assert.calledOnce(providerRepaintStub);
+      });
+    });
+
+    describe("repaint()", () => {
+      let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      });
+
+      it("toplevel repaint", () => {
+        provider["repaint"]();
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, undefined);
+      });
+
+      it("repaint a specific connection row", () => {
+        const connectionId = "test-connection-id" as ConnectionId;
+        const connectionRow = new DirectConnectionRow(new DirectResourceLoader(connectionId));
+        provider["repaint"](connectionRow);
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, connectionRow);
+      });
+    });
+
+    describe("lazyInitializeConnections()", () => {
+      let resourceLoadersDirectLoadersStub: sinon.SinonStub;
+      let providerLoadAndStoreConnectionStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Set up so that we start with a provider that has no direct connections,
+        // that will have been initialized with no direct loaders.
+        resourceLoadersDirectLoadersStub = sandbox
+          .stub(ResourceLoader, "directLoaders")
+          .returns([]);
+
+        providerLoadAndStoreConnectionStub = sandbox
+          .stub(provider, "loadAndStoreConnection")
+          .resolves();
+      });
+
+      it("class loadAndStoreConnection for LocalConnectionRow, CCloudConnectionRow", async () => {
+        await provider["lazyInitializeConnections"]();
+
+        // Should have called this.loadAndStoreConnection() twice: once for LocalConnectionRow and once for CCloudConnectionRow.
+        sinon.assert.calledTwice(providerLoadAndStoreConnectionStub);
+
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(LocalConnectionRow),
+          true, // insertBeforeRefresh
+        );
+
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(CCloudConnectionRow),
+          true, // insertBeforeRefresh
+        );
+      });
+
+      it("calls loadAndStoreConnection for each DirectResourceLoader", async () => {
+        resourceLoadersDirectLoadersStub.returns([
+          new DirectResourceLoader("test-direct-connection-id" as ConnectionId),
+        ]);
+
+        await provider["lazyInitializeConnections"]();
+
+        // Should have called this.loadAndStoreConnection() for the new direct connection.
+        // (as well as the implicit Local and CCloud rows).
+        sinon.assert.calledThrice(providerLoadAndStoreConnectionStub);
+        sinon.assert.calledWith(
+          providerLoadAndStoreConnectionStub,
+          sinon.match.instanceOf(DirectConnectionRow),
+          false, // insertBeforeRefresh
+        );
+      });
+    });
+
+    describe("getChildren()", () => {
+      let lazyInitializeConnectionsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        lazyInitializeConnectionsStub = sandbox
+          .stub(provider as any, "lazyInitializeConnections")
+          .resolves();
+      });
+
+      function setChildren(children: Array<AnyConnectionRow>) {
+        // Set the connections directly, as if they were already loaded.
+        provider["connections"].clear();
+        for (const child of children) {
+          provider["connections"].set(child.connectionId, child);
+        }
+      }
+
+      function assignDefaultChildren(): Array<AnyConnectionRow> {
+        const defaultChildren = [new LocalConnectionRow(), new CCloudConnectionRow()];
+
+        setChildren(defaultChildren);
+        return defaultChildren;
+      }
+
+      it("kicks off lazy initialization of connections when no existing children and called with undefined.", () => {
+        const children = provider.getChildren(undefined);
+        assert.strictEqual(children.length, 0); // no connections yet.
+        sinon.assert.calledOnce(lazyInitializeConnectionsStub);
+      });
+
+      it("returns toplevel children when asked after lazy initialization has assigned", () => {
+        const expectedChildren = assignDefaultChildren();
+
+        const children = provider.getChildren(undefined);
+        assert.deepStrictEqual(children, expectedChildren);
+      });
+
+      it("Returns children of a specific connection row", () => {
+        assignDefaultChildren();
+        const expectedLocalChildren = [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY];
+
+        const localConnectionRow = new LocalConnectionRow();
+        const localRowChildrenStub = sandbox
+          .stub(localConnectionRow, "getChildren")
+          .returns(expectedLocalChildren);
+
+        const childrenOfRow = provider.getChildren(localConnectionRow);
+        assert.deepStrictEqual(childrenOfRow, expectedLocalChildren);
+        sinon.assert.calledOnce(localRowChildrenStub);
+      });
+
+      const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+        schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+      });
+
+      const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR_AND_FLINK = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+        schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
+
+      for (const testCase of [
+        {
+          label: "returns empty array when no children in environment",
+          environment: TEST_CCLOUD_ENVIRONMENT,
+          expectedChildren: [],
+        },
+        {
+          label: "returns Kafka clusters and Schema Registry when set",
+          environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR,
+          expectedChildren: [TEST_CCLOUD_KAFKA_CLUSTER, TEST_CCLOUD_SCHEMA_REGISTRY],
+        },
+        {
+          label: "returns Kafka clusters, Schema Registry and Flink Compute Pools when all set",
+          environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR_AND_FLINK,
+          expectedChildren: [
+            TEST_CCLOUD_KAFKA_CLUSTER,
+            TEST_CCLOUD_SCHEMA_REGISTRY,
+            TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          ],
+        },
+      ]) {
+        it(`Returns proper children of a ccloud environment: ${testCase.label}`, () => {
+          assignDefaultChildren();
+
+          const children = provider.getChildren(testCase.environment);
+          assert.deepStrictEqual(children, testCase.expectedChildren);
+        });
+      }
+
+      for (const neverHasChildren of [
+        TEST_CCLOUD_KAFKA_CLUSTER,
+        TEST_CCLOUD_SCHEMA_REGISTRY,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      ]) {
+        it(`Returns empty array for objects which should never have children: ${neverHasChildren.name}`, () => {
+          assignDefaultChildren();
+
+          const children = provider.getChildren(neverHasChildren);
+          assert.deepStrictEqual(children, []);
+        });
+      }
+
+      it("Raises error when called with an unsupported element type", () => {
+        assignDefaultChildren();
+
+        assert.throws(() => {
+          provider.getChildren({} as any);
+        }, /Unhandled element/);
+      });
+    });
+
+    describe("getTreeItem()", () => {
+      for (const testCase of [
+        {
+          label: "ConnectionRow",
+          element: new LocalConnectionRow(),
+          expectedType: TreeItem, // a ConnectionRow's getTreeItem() returns a bare TreeItem.
+        },
+        {
+          label: "CCloudEnvironent",
+          element: TEST_CCLOUD_ENVIRONMENT,
+          expectedType: EnvironmentTreeItem,
+        },
+        {
+          label: "LocalKafkaCluster",
+          element: TEST_LOCAL_KAFKA_CLUSTER,
+          expectedType: KafkaClusterTreeItem,
+        },
+        {
+          label: "CCloudSchemaRegistry",
+          element: TEST_CCLOUD_SCHEMA_REGISTRY,
+          expectedType: SchemaRegistryTreeItem,
+        },
+        {
+          label: "FlinkComputePool",
+          element: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          expectedType: FlinkComputePoolTreeItem,
+        },
+      ]) {
+        it(`returns TreeItem for ${testCase.label}`, () => {
+          const treeItem = provider.getTreeItem(testCase.element);
+          assert.ok(treeItem instanceof testCase.expectedType);
+        });
+      }
+
+      it("throws when called with an unsupported element type", () => {
+        assert.throws(() => {
+          provider.getTreeItem({} as any);
+        }, /Unhandled element/);
+      });
+    });
+  });
+
+  describe("mergeUpdates()", () => {
+    it("Updates original array with new and updated items", () => {
+      const localEnvUpdateStub = sandbox.stub(TEST_LOCAL_ENVIRONMENT, "update");
+      const original = [TEST_LOCAL_ENVIRONMENT];
+      const updates = [TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT];
+
+      // Updates original in place.
+      mergeUpdates(original, updates);
+
+      assert.strictEqual(original.length, 2);
+      assert.strictEqual(original[0], TEST_LOCAL_ENVIRONMENT);
+      assert.strictEqual(original[1], TEST_CCLOUD_ENVIRONMENT);
+      sinon.assert.calledOnce(localEnvUpdateStub); // got called to update itself given reference to same id element in new array.
+      sinon.assert.calledWithExactly(localEnvUpdateStub, TEST_LOCAL_ENVIRONMENT);
+    });
+    it("Removes from original array any items not found in the new array", () => {
+      const original = [TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT];
+      const updates = [original[0]]; // keep first.
+
+      // Updates original in place.
+      mergeUpdates(original, updates);
+
+      assert.strictEqual(original.length, 1);
+      assert.strictEqual(original[0], TEST_LOCAL_ENVIRONMENT);
+    });
+  });
+
+  describe("resourceViewWithProgress()", () => {
+    let instance: NewResourceViewProvider;
+    let newResourceswithProgressStub: sinon.SinonStub;
+    let windowWithProgressStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      instance = new NewResourceViewProvider();
+      sandbox.stub(NewResourceViewProvider, "getInstance").returns(instance);
+
+      newResourceswithProgressStub = sandbox.stub(instance, "withProgress");
+      windowWithProgressStub = sandbox.stub(window, "withProgress");
+    });
+
+    it("calls both withProgress() and NewResourceViewProvider.withProgress()", async () => {
+      const promise = resourceViewWithProgress("title", async () => {
+        // Simulate some work.
+        return "done";
+      });
+
+      sinon.assert.calledOnce(newResourceswithProgressStub);
+      sinon.assert.calledOnce(windowWithProgressStub);
+
+      const result = await promise;
+      assert.strictEqual(result, "done");
     });
   });
 });

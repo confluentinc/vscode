@@ -618,42 +618,31 @@ export class NewResourceViewProvider
       element: element ? element.constructor.name : "undefined",
     });
 
-    // if empty map, kick of initialization, but return empty array
-    if (this.connections.size === 0) {
-      this.logger.debug("No connections found, initializing connections");
-      this.lazyInitializeConnections(); // kicks off async initialization
-      return [];
-    }
-
     if (!element) {
+      if (this.connections.size === 0) {
+        // kicks off async initialization task. When done,
+        // it will signal to repaint the view.
+        this.lazyInitializeConnections();
+
+        // but we have no children at this time.
+        return [];
+      }
+
+      // otherwise we have some connection rows, so return them.
       return this.getToplevelChildren();
     }
 
     if (element instanceof ConnectionRow) {
       // Defer to the ConnectionRow implementation to determine direct children.
+
+      // LocalConnectionRow and DirectConnectionRow handle 'eliding' their
+      // environments and return Kafka clusters and schema registries directly.
+      // Only CCloudConnectionRow returns (ccloud) environments.
       return element.getChildren();
     }
 
-    if (element instanceof Environment) {
-      this.logger.debug("Getting children for Environment", { environmentId: element.id });
-      const children: NewResourceViewProviderData[] = [];
-      if (element.kafkaClusters) {
-        this.logger.debug("Adding Kafka clusters to children", {
-          kafkaClusters: element.kafkaClusters.length,
-        });
-        children.push(...element.kafkaClusters);
-      }
-      if (element.schemaRegistry) {
-        this.logger.debug("Adding Schema Registry to children");
-        children.push(element.schemaRegistry);
-      }
-      if (element instanceof CCloudEnvironment && element.flinkComputePools) {
-        this.logger.debug("Adding Flink Compute Pools to children", {
-          flinkComputePools: element.flinkComputePools.length,
-        });
-        children.push(...element.flinkComputePools);
-      }
-      return children;
+    if (element instanceof CCloudEnvironment) {
+      return element.children as ConnectionRowChildren[];
     }
 
     if (
