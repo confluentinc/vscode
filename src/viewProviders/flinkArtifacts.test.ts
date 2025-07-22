@@ -1,10 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window } from "vscode";
+import { CancellationToken, Progress, window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
@@ -49,7 +50,9 @@ describe("FlinkArtifactsViewProvider", () => {
         .stub(window, "withProgress")
         .callsFake((_, callback) => {
           // Call the callback immediately with a resolved promise
-          return Promise.resolve(callback({} as any, {} as any));
+          const mockProgress = {} as Progress<unknown>;
+          const mockToken = {} as CancellationToken;
+          return Promise.resolve(callback(mockProgress, mockToken));
         });
 
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
@@ -90,6 +93,66 @@ describe("FlinkArtifactsViewProvider", () => {
       sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
       sinon.assert.calledWith(stubbedLoader.getFlinkArtifacts, resource);
       assert.deepStrictEqual(viewProvider["_artifacts"], mockArtifacts);
+    });
+
+    it("should handle 401 auth errors and fire auth session invalidated", async () => {
+      const windowWithProgressStub = sandbox
+        .stub(window, "withProgress")
+        .callsFake((_, callback) => {
+          // Call the callback immediately with a resolved promise
+          const mockProgress = {} as Progress<unknown>;
+          const mockToken = {} as CancellationToken;
+          return Promise.resolve(callback(mockProgress, mockToken));
+        });
+
+      const authInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
+      const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      viewProvider["resource"] = resource;
+
+      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
+        getStubbedCCloudResourceLoader(sandbox);
+
+      const authError = createResponseError(401, "Unauthorized", "test");
+      stubbedLoader.getFlinkArtifacts.rejects(authError);
+
+      await assert.rejects(async () => {
+        await viewProvider.refresh();
+      });
+
+      sinon.assert.calledOnce(windowWithProgressStub);
+      sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
+      sinon.assert.calledOnce(authInvalidatedFireStub);
+      assert.deepStrictEqual(viewProvider["_artifacts"], []);
+    });
+
+    it("should handle non-401 errors without firing auth session invalidated", async () => {
+      const windowWithProgressStub = sandbox
+        .stub(window, "withProgress")
+        .callsFake((_, callback) => {
+          // Call the callback immediately with a resolved promise
+          const mockProgress = {} as Progress<unknown>;
+          const mockToken = {} as CancellationToken;
+          return Promise.resolve(callback(mockProgress, mockToken));
+        });
+
+      const authInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
+      const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      viewProvider["resource"] = resource;
+
+      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
+        getStubbedCCloudResourceLoader(sandbox);
+
+      const serverError = createResponseError(500, "Internal Server Error", "test");
+      stubbedLoader.getFlinkArtifacts.rejects(serverError);
+
+      await assert.rejects(async () => {
+        await viewProvider.refresh();
+      });
+
+      sinon.assert.calledOnce(windowWithProgressStub);
+      sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
+      sinon.assert.notCalled(authInvalidatedFireStub);
+      assert.deepStrictEqual(viewProvider["_artifacts"], []);
     });
   });
 
