@@ -11,15 +11,15 @@ import {
 } from "../clients/docker";
 import * as contextValues from "../context/values";
 import { localKafkaConnected } from "../emitters";
+import { LOCAL_KAFKA_IMAGE } from "../extensionSettings/constants";
 import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
-import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
 import { EventListener, SystemEventMessage } from "./eventListener";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",
   Type: EventMessageTypeEnum.Container,
-  Actor: { Attributes: { image: DEFAULT_KAFKA_IMAGE_REPO } },
+  Actor: { Attributes: { image: LOCAL_KAFKA_IMAGE.defaultValue } },
 };
 
 describe("docker/eventListener.ts EventListener methods", function () {

@@ -1,8 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window, workspace } from "vscode";
+import { window } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
-import { LOCAL_KAFKA_IMAGE } from "../../extensionSettings/constants";
+import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import * as dockerContainers from "../containers";
 import * as dockerImages from "../images";
@@ -192,7 +193,7 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
 
   // vscode stubs
   let showErrorMessageStub: sinon.SinonStub;
-  let getConfigurationStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   before(() => {
     registerLocalResourceWorkflows();
@@ -202,18 +203,16 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
     sandbox = sinon.createSandbox();
 
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it(`getKafkaWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_KAFKA_IMAGE}" config`, async () => {
+  it(`getKafkaWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_KAFKA_IMAGE.id}" setting`, async () => {
     const unsupportedImageRepo = "unsupported/image-name";
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(unsupportedImageRepo),
-    });
+    stubbedConfigs.stubGet(LOCAL_KAFKA_IMAGE, unsupportedImageRepo);
 
     assert.throws(
       LocalResourceWorkflow.getKafkaWorkflow,
@@ -222,21 +221,17 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
     assert.ok(showErrorMessageStub.calledOnce);
   });
 
-  it(`getKafkaWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE}" config`, async () => {
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(ConfluentLocalWorkflow.imageRepo),
-    });
+  it(`getKafkaWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE.id}" setting`, async () => {
+    stubbedConfigs.stubGet(LOCAL_KAFKA_IMAGE, ConfluentLocalWorkflow.imageRepo);
 
     const workflow = LocalResourceWorkflow.getKafkaWorkflow();
 
     assert.ok(workflow instanceof ConfluentLocalWorkflow);
   });
 
-  it(`getSchemaRegistryWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_KAFKA_IMAGE}" config`, async () => {
+  it(`getSchemaRegistryWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_SCHEMA_REGISTRY_IMAGE.id}" setting`, async () => {
     const unsupportedImageRepo = "unsupported/image-name";
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(unsupportedImageRepo),
-    });
+    stubbedConfigs.stubGet(LOCAL_SCHEMA_REGISTRY_IMAGE, unsupportedImageRepo);
 
     assert.throws(
       LocalResourceWorkflow.getSchemaRegistryWorkflow,
@@ -245,10 +240,8 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
     assert.ok(showErrorMessageStub.calledOnce);
   });
 
-  it(`getSchemaRegistryWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE}" config`, async () => {
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(ConfluentLocalWorkflow.imageRepo),
-    });
+  it(`getSchemaRegistryWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_SCHEMA_REGISTRY_IMAGE.id}" setting`, async () => {
+    stubbedConfigs.stubGet(LOCAL_SCHEMA_REGISTRY_IMAGE, ConfluentLocalWorkflow.imageRepo);
 
     const workflow = LocalResourceWorkflow.getSchemaRegistryWorkflow();
 
