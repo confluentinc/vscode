@@ -51,6 +51,7 @@ import { Logger } from "../logging";
 import { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
+  CCLOUD_ENV_ID_HEADER,
   CCLOUD_PROVIDER_HEADER,
   CCLOUD_REGION_HEADER,
   CLUSTER_ID_HEADER,
@@ -399,6 +400,7 @@ export class SidecarHandle {
   public constructFlinkDataPlaneClientHeaders(providerRegion: IEnvProviderRegion): HTTPHeaders {
     return {
       ...this.defaultClientConfigParams.headers,
+      [CCLOUD_ENV_ID_HEADER]: providerRegion.environmentId,
       [CCLOUD_PROVIDER_HEADER]: providerRegion.provider,
       [CCLOUD_REGION_HEADER]: providerRegion.region,
       [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
