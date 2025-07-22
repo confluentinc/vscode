@@ -38,6 +38,11 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
     showFlinkPreviewNotification();
 
     sinon.assert.calledOnce(stubbedConfigs.get);
+    sinon.assert.calledOnceWithExactly(
+      stubbedConfigs.get,
+      SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.id,
+      SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.defaultValue,
+    );
     sinon.assert.calledOnceWithExactly(showInfoNotificationWithButtonsStub, FLINK_PREVIEW_MESSAGE, {
       "Open Flink Settings": sinon.match.func,
       "Change Notification Settings": sinon.match.func,
@@ -50,6 +55,11 @@ describe("activation/versions/v1_4.ts showFlinkPreviewNotification()", () => {
     showFlinkPreviewNotification();
 
     sinon.assert.calledOnce(stubbedConfigs.get);
+    sinon.assert.calledOnceWithExactly(
+      stubbedConfigs.get,
+      SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.id,
+      SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS.defaultValue,
+    );
     sinon.assert.notCalled(showInfoNotificationWithButtonsStub);
     // also shouldn't execute any commands
     sinon.assert.notCalled(executeCommandStub);

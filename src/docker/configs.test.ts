@@ -46,6 +46,11 @@ describe("docker/configs functions", function () {
     // normalized to adjust slashes for Windows vs Unix
     assert.strictEqual(path, normalize("/custom/path/docker.sock"));
     sinon.assert.calledOnce(stubbedConfigs.get);
+    sinon.assert.calledOnceWithExactly(
+      stubbedConfigs.get,
+      LOCAL_DOCKER_SOCKET_PATH.id,
+      LOCAL_DOCKER_SOCKET_PATH.defaultValue,
+    );
   });
 
   it("defaultRequestInit() should set the dispatcher as an Agent", async function () {
