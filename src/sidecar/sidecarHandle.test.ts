@@ -205,8 +205,8 @@ describe("sidecarHandle Flink API method tests", () => {
     assert.strictEqual(api.constructor.name, "StatementsSqlV1Api");
   });
 
-  it("getFlinkArtifactsApi() should return a FlinkArtifactsApi instance given no args.", async () => {
-    const api = handle.getFlinkArtifactsApi();
+  it("getFlinkArtifactsApi() should return a FlinkArtifactsApi instance given a provider region", async () => {
+    const api = handle.getFlinkArtifactsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     assert.strictEqual(api.constructor.name, "FlinkArtifactsArtifactV1Api");
   });
 
