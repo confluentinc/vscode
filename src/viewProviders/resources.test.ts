@@ -66,8 +66,9 @@ describe("ResourceViewProvider methods", () => {
   });
 
   afterEach(() => {
+    provider.dispose(); // clean up provider disposables
+    ResourceViewProvider["instance"] = null; // reset singleton instance
     sandbox.restore();
-    ResourceViewProvider["instance"] = null;
   });
 
   for (const resource of [
@@ -128,6 +129,20 @@ describe("ResourceViewProvider methods", () => {
 
     assert.strictEqual(provider.environmentsMap.size, 1);
     assert.ok(provider.environmentsMap.has(TEST_DIRECT_ENVIRONMENT.id));
+  });
+
+  describe("dispose()", function () {
+    it("should dispose of all .disposables", () => {
+      const disposable1 = { dispose: sandbox.stub() };
+      const disposable2 = { dispose: sandbox.stub() };
+      provider.disposables.push(disposable1, disposable2);
+
+      provider.dispose();
+
+      sinon.assert.calledOnce(disposable1.dispose);
+      sinon.assert.calledOnce(disposable2.dispose);
+      assert.strictEqual(provider.disposables.length, 0);
+    });
   });
 });
 

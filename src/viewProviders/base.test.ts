@@ -78,9 +78,10 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    provider.dispose();
     // reset singleton instances between tests
     BaseViewProvider["instanceMap"].clear();
+    sandbox.restore();
   });
 
   describe("getInstance()", () => {
@@ -329,6 +330,20 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
         title: "Test Progress",
         cancellable: false,
       });
+    });
+  });
+
+  describe("dispose()", function () {
+    it("should dispose of all .disposables", () => {
+      const disposable1 = { dispose: sandbox.stub() };
+      const disposable2 = { dispose: sandbox.stub() };
+      provider.disposables.push(disposable1, disposable2);
+
+      provider.dispose();
+
+      sinon.assert.calledOnce(disposable1.dispose);
+      sinon.assert.calledOnce(disposable2.dispose);
+      assert.strictEqual(provider.disposables.length, 0);
     });
   });
 });
