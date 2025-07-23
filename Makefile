@@ -129,6 +129,7 @@ ifeq ($(IS_WINDOWS),true)
 else
 	EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
 	export EXECUTABLE_PATH := ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH)
+endif
 
 # Skip download if the executable already exists and is executable
 SKIP_DOWNLOAD_EXECUTABLE := $(shell [ -x $(EXECUTABLE_DOWNLOAD_PATH) ] && echo true || echo false)
