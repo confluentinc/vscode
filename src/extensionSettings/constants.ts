@@ -145,6 +145,12 @@ export const STATEMENT_POLLING_CONCURRENCY = new ExtensionSetting<number>(
 
 // ===== COPILOT CONFIGS =====
 
+/** Whether or not to enable Flink Artifacts functionality including the artifacts view. */
+export const ENABLE_FLINK_ARTIFACTS = new ExtensionSetting<boolean>(
+  "confluent.flink.enableFlinkArtifacts",
+  SettingsSection.FLINK,
+);
+
 /** Whether or not to enable the `@Confluent` chat participant and associated tools. */
 export const ENABLE_CHAT_PARTICIPANT = new ExtensionSetting<boolean>(
   "confluent.experimental.enableChatParticipant",

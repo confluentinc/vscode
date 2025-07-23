@@ -8,6 +8,15 @@ import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatem
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError } from "../../tests/unit/testUtils";
 import {
+  ArtifactV1FlinkArtifactList,
+  ArtifactV1FlinkArtifactListApiVersionEnum,
+  ArtifactV1FlinkArtifactListDataInner,
+  ArtifactV1FlinkArtifactListDataInnerApiVersionEnum,
+  ArtifactV1FlinkArtifactListDataInnerKindEnum,
+  ArtifactV1FlinkArtifactListKindEnum,
+  FlinkArtifactsArtifactV1Api,
+} from "../clients/flinkArtifacts";
+import {
   GetSqlv1Statement200Response,
   SqlV1StatementList,
   SqlV1StatementListApiVersionEnum,
@@ -336,4 +345,100 @@ describe("CCloudResourceLoader", () => {
       );
     });
   });
+
+  describe("getFlinkArtifacts", () => {
+    let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+
+    beforeEach(() => {
+      // stub the sidecar getFlinkArtifactsApi API
+      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        sandbox.createStubInstance(sidecar.SidecarHandle);
+      flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+      mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
+      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+    });
+
+    it("should handle zero artifacts to list", async () => {
+      // Simulate zero available artifacts.
+      const mockResponse = makeFakeListArtifactsResponse(false, 0);
+
+      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      assert.strictEqual(artifacts.length, 0);
+      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+
+      // Test the args passed to the API.
+      const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
+      assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
+      assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
+      assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
+      assert.strictEqual(args.page_size, 100);
+      assert.strictEqual(args.page_token, "");
+    });
+
+    it("should handle one page of artifacts", async () => {
+      // Simulate one page of artifacts.
+      const mockResponse = makeFakeListArtifactsResponse(false, 3);
+
+      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      assert.strictEqual(artifacts.length, 3);
+      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+
+    it("should handle multiple pages of artifacts", async () => {
+      // Simulate multiple pages of artifacts.
+      const mockResponse = makeFakeListArtifactsResponse(true, 3);
+      const mockResponse2 = makeFakeListArtifactsResponse(false, 2);
+      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts
+        .onFirstCall()
+        .resolves(mockResponse)
+        .onSecondCall()
+        .resolves(mockResponse2);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      assert.strictEqual(artifacts.length, 5);
+      sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+
+    /** Make a fake list flink artifacts API response with requested artifact count and indicating next page available. */
+    function makeFakeListArtifactsResponse(
+      hasNextPage: boolean,
+      artifactCount: number,
+    ): ArtifactV1FlinkArtifactList {
+      const artifacts: ArtifactV1FlinkArtifactListDataInner[] = [];
+
+      for (let i = 0; i < artifactCount; i++) {
+        artifacts.push({
+          api_version: ArtifactV1FlinkArtifactListDataInnerApiVersionEnum.ArtifactV1,
+          kind: ArtifactV1FlinkArtifactListDataInnerKindEnum.FlinkArtifact,
+          id: `artifact-${i}`,
+          metadata: {
+            created_at: new Date(),
+            updated_at: new Date(),
+            self: undefined, // self link is not used in tests
+          },
+          cloud: "aws",
+          region: "us-east-1",
+          environment: "env-12345",
+          display_name: `Test Artifact ${i}`,
+          description: `Test artifact description ${i}`,
+          content_format: "JAR",
+          runtime_language: "JAVA",
+        });
+      }
+
+      const maybeNextPageLink: string = hasNextPage ? "https://foo.com/?page_token=foonly" : "";
+      return {
+        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
+        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
+        metadata: {
+          next: maybeNextPageLink,
+        },
+        data: new Set(artifacts),
+      };
+    }
+  }); // getFlinkArtifacts
 });
