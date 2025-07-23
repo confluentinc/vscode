@@ -143,7 +143,7 @@ ifeq ($(SKIP_DOWNLOAD_EXECUTABLE),true)
 	@echo "Skipping download of sidecar executable since it already exists at $(EXECUTABLE_DOWNLOAD_PATH)"
 else
 	mkdir -p bin && \
-	echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
+	echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION): $(EXECUTABLE_DOWNLOAD_PATH)"; \
 	curl --fail -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
 	chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
 	if [ $$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) -lt 1048576 ]; then \
