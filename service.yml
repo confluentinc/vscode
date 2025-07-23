@@ -26,9 +26,9 @@ semaphore:
         - name: TEST_SUITE
           required: false
           description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
-    - name: upload-prerelease-vsix-files
+    - name: prerelease-multi-arch-packaging
       branch: main
-      pipeline_file: ".semaphore/multi-arch-packaging.yml"
+      pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
       parameters:
         - name: COMMIT_SHA
           required: true
