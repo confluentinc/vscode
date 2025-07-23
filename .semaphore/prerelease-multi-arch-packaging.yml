@@ -35,6 +35,7 @@ blocks:
                 linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
                 win32-x64)   export SIDECAR_OS_ARCH=windows-amd64 ;;
                 *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
+              esac
             - make download-sidecar-executable
             - make download-third-party-notices-sidecar || true
             - npx gulp bundle
