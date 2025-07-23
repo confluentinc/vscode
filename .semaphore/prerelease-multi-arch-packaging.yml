@@ -1,0 +1,56 @@
+version: v1.0
+name: prerelease-multi-arch-packaging
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+blocks:
+  - name: "Package VSIX Files"
+    task:
+      prologue:
+        commands:
+          - checkout
+          - git fetch --all
+          - git checkout $COMMIT_SHA
+          - make ci-bin-sem-cache-restore
+          - . vault-setup
+          - make install-dependencies
+      jobs:
+        - name: "Package VSIX Files"
+          matrix:
+            - env_var: TARGET
+              values:
+                - darwin-x64
+                - darwin-arm64
+                - linux-x64
+                - linux-arm64
+                - win32-x64
+          commands:
+            - |
+              case "$TARGET" in
+                darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
+                darwin-arm64) export SIDECAR_OS_ARCH=macos-arm64 ;;
+                linux-x64)   export SIDECAR_OS_ARCH=linux-amd64 ;;
+                linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
+                win32-x64)   export SIDECAR_OS_ARCH=windows-amd64 ;;
+                *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
+            - make download-sidecar-executable
+            - make download-third-party-notices-sidecar || true
+            - npx gulp bundle
+            - VSIX_FILE=$(find out/ -name "*.vsix")
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
+
+  - name: "Upload Prerelease VSIX Files to GitHub"
+    dependencies:
+      - "Package VSIX Files"
+    task:
+      jobs:
+        - name: "Upload Prerelease VSIX Files"
+          commands:
+            - artifact pull workflow packaged-vsix-files/
+            - |
+              VERSION=$(cat .versions/next.txt)
+              PRERELEASE_TAG="v${VERSION}-pre"
+              for vsix in packaged-vsix-files/*.vsix; do
+                gh release upload "$PRERELEASE_TAG" "$vsix" --clobber
+              done
