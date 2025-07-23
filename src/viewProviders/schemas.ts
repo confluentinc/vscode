@@ -145,8 +145,7 @@ export class SchemasViewProvider
 
   private static instance: SchemasViewProvider | null = null;
 
-  // Public only for testing purposes.
-  constructor() {
+  private constructor() {
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
       throw new ExtensionContextNotSetError("SchemasViewProvider");
@@ -164,6 +163,12 @@ export class SchemasViewProvider
       SchemasViewProvider.instance = new SchemasViewProvider();
     }
     return SchemasViewProvider.instance;
+  }
+
+  /** Deregister event listeners, etc. */
+  dispose(): void {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
   }
 
   /** Convenience method to revert this view to its original state. */

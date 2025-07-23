@@ -240,6 +240,10 @@ describe("SchemasViewProvider event handlers", () => {
   });
 
   afterEach(() => {
+    // Deregister this single-shot instance's event listeners, otherwise hilarity may
+    // ensue in other tests that still actually the real events.
+    provider.dispose();
+    // Restore the sandbox to clean up stubs
     sandbox.restore();
   });
 
