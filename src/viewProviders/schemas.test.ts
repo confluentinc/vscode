@@ -223,7 +223,6 @@ describe("SchemasViewProvider search behavior", () => {
 describe("SchemasViewProvider event handlers", () => {
   let provider: SchemasViewProvider;
   let sandbox: sinon.SinonSandbox;
-  let clock: sinon.SinonFakeTimers;
   let resetStub: sinon.SinonStub;
 
   before(async () => {
@@ -232,7 +231,6 @@ describe("SchemasViewProvider event handlers", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    clock = sandbox.useFakeTimers(Date.now());
 
     provider = new SchemasViewProvider();
     resetStub = sandbox.stub(provider, "reset");
@@ -243,10 +241,15 @@ describe("SchemasViewProvider event handlers", () => {
   });
 
   describe("environmentChangedHandler", () => {
-    it("Firing environmentChanged + deleted should call reset()", async () => {
-      const resetFake = sandbox.fake();
-      sandbox.replace(provider, "reset", resetFake);
+    let updateTreeViewDescriptionStub: sinon.SinonStub;
+    let refreshStub: sinon.SinonStub;
 
+    beforeEach(() => {
+      updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
+      refreshStub = sandbox.stub(provider, "refresh");
+    });
+
+    it("Firing environmentChanged + deleted should call reset()", async () => {
       // Be set to a SR within the environment being deleted
       provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
@@ -254,30 +257,22 @@ describe("SchemasViewProvider event handlers", () => {
       provider.environmentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
 
       // Should have called .reset()
-      assert.ok(resetFake.calledOnce);
+      assert.ok(resetStub.calledOnce);
     });
 
     it("Firing environmentChanged + misc change should not call reset(), should call updateTreeViewDescription + refresh", async () => {
-      const resetFake = sandbox.fake();
-      const updateTreeViewDescriptionFake = sandbox.fake();
-      const refreshFake = sandbox.fake();
-
-      sandbox.replace(provider, "reset", resetFake);
-      sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
-      sandbox.replace(provider, "refresh", refreshFake);
-
       // Be set to a SR within the environment being deleted
       provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
       // simulate firing the event
-      provider.environmentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
+      await provider.environmentChangedHandler({
+        id: TEST_LOCAL_ENVIRONMENT_ID,
+        wasDeleted: false,
+      });
 
-      // Need to pause an iota to get the refresh to be called, is after first await in the block.
-      await clock.tickAsync(100);
-
-      assert.ok(resetFake.notCalled);
-      assert.ok(updateTreeViewDescriptionFake.calledOnce);
-      assert.ok(refreshFake.calledOnce);
+      sinon.assert.notCalled(resetStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      sinon.assert.calledOnce(refreshStub);
     });
 
     for (const currentRegistry of [TEST_LOCAL_SCHEMA_REGISTRY, null]) {
@@ -323,7 +318,7 @@ describe("SchemasViewProvider event handlers", () => {
         provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
         // Call the handler with true or false, should not matter.
-        await provider.ccloudConnectedHandler(true);
+        await provider.ccloudConnectedHandler(connected);
 
         // Should not have called .reset()
         assert.ok(resetStub.notCalled);
@@ -357,7 +352,7 @@ describe("SchemasViewProvider event handlers", () => {
         provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
 
         // Call the handler with true or false, should not matter.
-        await provider.localSchemaRegistryConnectedHandler(true);
+        await provider.localSchemaRegistryConnectedHandler(connected);
 
         // Should not have called .reset()
         assert.ok(resetStub.notCalled);
