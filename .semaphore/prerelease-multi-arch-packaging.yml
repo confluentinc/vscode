@@ -13,7 +13,6 @@ blocks:
           - checkout
           - git fetch --all
           - git checkout $COMMIT_SHA
-          - make ci-bin-sem-cache-restore
           - . vault-setup
           - make install-dependencies
       jobs:
