@@ -6,7 +6,6 @@ agent:
 
 blocks:
   - name: "Package VSIX Files"
-    dependencies: ["Checkout and Prepare"]
     task:
       prologue:
         commands:
