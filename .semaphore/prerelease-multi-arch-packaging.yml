@@ -18,9 +18,6 @@ blocks:
           - make install-dependencies
       jobs:
         - name: "Package VSIX Files"
-          agent:
-            machine:
-              type: s1-prod-macos-13-5-amd64
           matrix:
             - env_var: TARGET
               values:
