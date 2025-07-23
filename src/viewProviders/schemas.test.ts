@@ -13,7 +13,6 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ContextValues, getContextValue } from "../context/values";
 import {
   currentSchemaRegistryChanged,
-  environmentChanged,
   schemaSearchSet,
   schemaSubjectChanged,
   SchemaVersionChangeEvent,
@@ -434,62 +433,44 @@ describe("SchemasViewProvider schemaVersionsChanged event", () => {
   }
 });
 
-describe("SchemasViewProvider environmentChanged handler", () => {
+describe("SchemasViewProvider event handlers", () => {
   let provider: SchemasViewProvider;
   let sandbox: sinon.SinonSandbox;
   let clock: sinon.SinonFakeTimers;
+  let resetStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
-    provider = SchemasViewProvider.getInstance();
   });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     clock = sandbox.useFakeTimers(Date.now());
+
+    provider = new SchemasViewProvider();
+    resetStub = sandbox.stub(provider, "reset");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("Firing environmentChanged + deleted should call reset()", async () => {
-    const resetFake = sandbox.fake();
-    sandbox.replace(provider, "reset", resetFake);
+  describe("environmentChangedHandler", () => {
+    it("Firing environmentChanged + deleted should call reset()", async () => {
+      const resetFake = sandbox.fake();
+      sandbox.replace(provider, "reset", resetFake);
 
-    // Be set to a SR within the environment being deleted
-    provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
-    // fire the event
-    environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
+      // Be set to a SR within the environment being deleted
+      provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
-    // Should have called .reset()
-    assert.ok(resetFake.calledOnce);
-  });
+      // simulate firing the event
+      provider.environentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
 
-  it("Firing environmentChanged + misc change should not call reset(), should call updateTreeViewDescription + refresh", async () => {
-    const resetFake = sandbox.fake();
-    const updateTreeViewDescriptionFake = sandbox.fake();
-    const refreshFake = sandbox.fake();
+      // Should have called .reset()
+      assert.ok(resetFake.calledOnce);
+    });
 
-    sandbox.replace(provider, "reset", resetFake);
-    sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
-    sandbox.replace(provider, "refresh", refreshFake);
-
-    // Be set to a SR within the environment being deleted
-    provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
-    // fire the event
-    environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
-
-    // Need to pause an iota to get the refresh to be called, is after first await in the block.
-    await clock.tickAsync(100);
-
-    assert.ok(resetFake.notCalled);
-    assert.ok(updateTreeViewDescriptionFake.calledOnce);
-    assert.ok(refreshFake.calledOnce);
-  });
-
-  for (const currentRegistry of [TEST_LOCAL_SCHEMA_REGISTRY, null]) {
-    it(`Firing environmentChanged when SR set a ${currentRegistry?.environmentId} environment SR and event is for other env should do nothing`, () => {
+    it("Firing environmentChanged + misc change should not call reset(), should call updateTreeViewDescription + refresh", async () => {
       const resetFake = sandbox.fake();
       const updateTreeViewDescriptionFake = sandbox.fake();
       const refreshFake = sandbox.fake();
@@ -498,19 +479,321 @@ describe("SchemasViewProvider environmentChanged handler", () => {
       sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
       sandbox.replace(provider, "refresh", refreshFake);
 
-      // Be set to a SR NOT within the environment being updated, or null.
-      provider.schemaRegistry = currentRegistry;
+      // Be set to a SR within the environment being deleted
+      provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
-      // fire the event against some other environment.
-      environmentChanged.fire({
-        id: TEST_CCLOUD_ENVIRONMENT_ID,
-        wasDeleted: false,
+      // simulate firing the event
+      provider.environentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
+
+      // Need to pause an iota to get the refresh to be called, is after first await in the block.
+      await clock.tickAsync(100);
+
+      assert.ok(resetFake.notCalled);
+      assert.ok(updateTreeViewDescriptionFake.calledOnce);
+      assert.ok(refreshFake.calledOnce);
+    });
+
+    for (const currentRegistry of [TEST_LOCAL_SCHEMA_REGISTRY, null]) {
+      it(`Firing environmentChanged when SR set a ${currentRegistry?.environmentId} environment SR and event is for other env should do nothing`, () => {
+        const resetFake = sandbox.fake();
+        const updateTreeViewDescriptionFake = sandbox.fake();
+        const refreshFake = sandbox.fake();
+
+        sandbox.replace(provider, "reset", resetFake);
+        sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
+        sandbox.replace(provider, "refresh", refreshFake);
+
+        // Be set to a SR NOT within the environment being updated, or null.
+        provider.schemaRegistry = currentRegistry;
+
+        // Call the event handler against some other environment.
+        provider.environentChangedHandler({
+          id: TEST_CCLOUD_ENVIRONMENT_ID,
+          wasDeleted: false,
+        });
+
+        // Should not have called any of these
+        assert.ok(resetFake.notCalled);
+        assert.ok(updateTreeViewDescriptionFake.notCalled);
+        assert.ok(refreshFake.notCalled);
+      });
+    }
+  });
+
+  describe("ccloudConnectedHandler", () => {
+    for (const connected of [true, false]) {
+      it(`does nothing if no registry set, connected: ${connected}`, async () => {
+        provider.schemaRegistry = null;
+
+        // Call the handler with true or false, should not matter.
+        await provider.ccloudConnectedHandler(connected);
+
+        // Should not have called .reset()
+        assert.ok(resetStub.notCalled);
       });
 
-      // Should not have called any of these
-      assert.ok(resetFake.notCalled);
-      assert.ok(updateTreeViewDescriptionFake.notCalled);
-      assert.ok(refreshFake.notCalled);
+      it(`Should not reset if not viewing a CCloud schema registry, connected: ${connected}`, async () => {
+        provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+
+        // Call the handler with true or false, should not matter.
+        await provider.ccloudConnectedHandler(true);
+
+        // Should not have called .reset()
+        assert.ok(resetStub.notCalled);
+      });
+
+      it(`Should reset if viewing a CCloud schema registry and connected state changes, connected: ${connected}`, async () => {
+        provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+        // Call the handler with true or false, should not matter.
+        await provider.ccloudConnectedHandler(connected);
+
+        // Should have called .reset()
+        assert.ok(resetStub.calledOnce);
+      });
+    }
+  });
+
+  describe("localSchemaRegistryConnectedHandler", () => {
+    for (const connected of [true, false]) {
+      it(`does nothing if no registry set, connected: ${connected}`, async () => {
+        provider.schemaRegistry = null;
+
+        // Call the handler with true or false, should not matter.
+        await provider.localSchemaRegistryConnectedHandler(connected);
+
+        // Should not have called .reset()
+        assert.ok(resetStub.notCalled);
+      });
+
+      it(`Should not reset if not viewing a local schema registry, connected: ${connected}`, async () => {
+        provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+        // Call the handler with true or false, should not matter.
+        await provider.localSchemaRegistryConnectedHandler(true);
+
+        // Should not have called .reset()
+        assert.ok(resetStub.notCalled);
+      });
+
+      it(`Should reset if viewing a local schema registry and connected state changes, connected: ${connected}`, async () => {
+        provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+
+        // Call the handler with true or false, should not matter.
+        await provider.localSchemaRegistryConnectedHandler(connected);
+
+        // Should have called .reset()
+        assert.ok(resetStub.calledOnce);
+      });
+    }
+  });
+
+  describe("currentSchemaRegistryChangedHandler", () => {
+    for (const newRegistry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
+      it(`should call setSchemaRegistry() with new registry: ${newRegistry?.id}`, async () => {
+        const setSchemaRegistryStub = sandbox.stub(provider, "setSchemaRegistry");
+
+        // Call the handler with the new registry
+        await provider.currentSchemaRegistryChangedHandler(newRegistry);
+
+        // Should have called .setSchemaRegistry() with the new registry
+        assert.ok(setSchemaRegistryStub.calledOnce);
+        assert.ok(setSchemaRegistryStub.calledWith(newRegistry));
+      });
+    }
+  });
+
+  describe("schemaSearchSetHandler", () => {
+    let setSearchStub: sinon.SinonStub;
+    let refreshStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      setSearchStub = sandbox.stub(provider, "setSearch");
+      refreshStub = sandbox.stub(provider, "refresh");
     });
-  }
+
+    for (const maybeSearchString of ["foo", null]) {
+      it(`should call setSearch() with search string: ${maybeSearchString}`, async () => {
+        // Call the handler with the search string
+        await provider.schemaSearchSetHandler(maybeSearchString);
+
+        assert.strictEqual(
+          provider.searchStringSetCount,
+          maybeSearchString === null ? 0 : 1,
+          "setSearchStringCount should have been incremented if search string is not null",
+        );
+
+        // Should have called .setSearch() with the search string
+        sinon.assert.calledOnce(setSearchStub);
+        sinon.assert.calledWith(setSearchStub, maybeSearchString);
+        // ... and refresh()
+        sinon.assert.calledOnce(refreshStub);
+      });
+    }
+  });
+
+  describe("schemaSubjectChangedHandler", () => {
+    let refreshStub: sinon.SinonStub;
+    let subjectsInTreeView: Map<string, Subject>;
+
+    beforeEach(() => {
+      refreshStub = sandbox.stub(provider, "refresh");
+      subjectsInTreeView = provider["subjectsInTreeView"];
+      subjectsInTreeView.clear();
+    });
+
+    it("should call refresh() when subject is deleted", async () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      // and this subject is in the map
+      subjectsInTreeView.set(TEST_CCLOUD_SUBJECT.name, TEST_CCLOUD_SUBJECT);
+
+      const event: SubjectChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT,
+        change: "deleted",
+      };
+      await provider.schemaSubjectChangedHandler(event);
+
+      // Should have removed from the map
+      assert.strictEqual(subjectsInTreeView.size, 0);
+
+      // Should have called .refresh()
+      assert.ok(refreshStub.calledOnce);
+    });
+
+    it("should call refresh() when subject is added", async () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      // and this subject is in the map
+      subjectsInTreeView.set(TEST_CCLOUD_SUBJECT.name, TEST_CCLOUD_SUBJECT);
+
+      const event: SubjectChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+        change: "added",
+      };
+      await provider.schemaSubjectChangedHandler(event);
+
+      // Should have added to the map
+      assert.strictEqual(subjectsInTreeView.size, 1);
+      assert.deepStrictEqual(
+        subjectsInTreeView.get(TEST_CCLOUD_SUBJECT.name),
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+      );
+
+      // Should have called .refresh()
+      assert.ok(refreshStub.calledOnce);
+    });
+
+    it("Does nothing if not viewing a schema registry", async () => {
+      // set to be viewing no schema registry
+      provider.schemaRegistry = null;
+
+      const event: SubjectChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT,
+        change: "deleted",
+      };
+      await provider.schemaSubjectChangedHandler(event);
+
+      // Should not have called .refresh()
+      assert.ok(refreshStub.notCalled);
+    });
+
+    it("Does nothing if viewing a different schema registry", async () => {
+      // set to be viewing a different schema registry
+      provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+
+      const event: SubjectChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT,
+        change: "deleted",
+      };
+      await provider.schemaSubjectChangedHandler(event);
+
+      // Should not have called .refresh()
+      assert.ok(refreshStub.notCalled);
+    });
+  });
+
+  describe("schemaVersionsChangedHandler", () => {
+    let onDidChangeTreeDataFireStub: sinon.SinonStub;
+    let subjectsInTreeView: Map<string, Subject>;
+
+    beforeEach(() => {
+      onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+      subjectsInTreeView = provider["subjectsInTreeView"];
+    });
+
+    it("should update subject in map and fire event when schema version added", async () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectObject();
+      scratchSubject.schemas = null;
+
+      // and this subject is in the map and has no loaded schemas
+      subjectsInTreeView.set(scratchSubject.name, scratchSubject);
+
+      const updatedSubject = TEST_CCLOUD_SUBJECT_WITH_SCHEMAS;
+
+      const event: SchemaVersionChangeEvent = {
+        subject: updatedSubject,
+        change: "added",
+      };
+      await provider.schemaVersionsChangedHandler(event);
+
+      // Should have reset the schemas in the subject in the map
+      assert.strictEqual(subjectsInTreeView.size, 1);
+      const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
+      assert.strictEqual(subjectFromMap, scratchSubject);
+      assert.deepEqual(subjectFromMap.schemas, updatedSubject.schemas);
+
+      // Should have fired with the subject
+      assert.ok(onDidChangeTreeDataFireStub.calledOnce);
+      assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
+    });
+
+    it("Does nothing if not viewing a schema registry", async () => {
+      // set to be viewing no schema registry
+      provider.schemaRegistry = null;
+
+      const event: SchemaVersionChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+        change: "deleted",
+      };
+      await provider.schemaVersionsChangedHandler(event);
+
+      // Should not have called .refresh()
+      assert.ok(onDidChangeTreeDataFireStub.notCalled);
+    });
+
+    it("Does nothing if viewing a different schema registry", async () => {
+      // set to be viewing a different schema registry
+      provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+
+      const event: SchemaVersionChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+        change: "deleted",
+      };
+      await provider.schemaVersionsChangedHandler(event);
+
+      // Should not have called .refresh()
+      assert.ok(onDidChangeTreeDataFireStub.notCalled);
+    });
+
+    it("Does nothing if subject not in map", async () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      const event: SchemaVersionChangeEvent = {
+        subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+        change: "deleted",
+      };
+      await provider.schemaVersionsChangedHandler(event);
+
+      // Should not have called .refresh() or changed the map
+      assert.ok(onDidChangeTreeDataFireStub.notCalled);
+      assert.strictEqual(subjectsInTreeView.size, 0);
+    });
+  });
 });
