@@ -115,13 +115,24 @@ endif
 
 IDE_SIDECAR_VERSION = $(shell cat .versions/ide-sidecar.txt)
 IDE_SIDECAR_VERSION_NO_V := $(call version_no_v,$(IDE_SIDECAR_VERSION))
-EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
-
-# Skip download if the executable already exists and is executable
-SKIP_DOWNLOAD_EXECUTABLE := $(shell [ -x $(EXECUTABLE_DOWNLOAD_PATH) ] && echo true || echo false)
 
 # Get the OS and architecture combination for the sidecar executable
 SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')" )
+
+# Check if we're targeting the Windows sidecar executable from a non-Windows agent
+# (currently only done in `.semaphore/prerelease-multi-arch-packaging.yml` since the pipeline at
+# `.semaphore/multi-arch-packaging.yml` uses `scripts/windows/download-sidecar-executable.ps1`)
+IS_WINDOWS = $(shell echo "$(SIDECAR_OS_ARCH)" | grep -q 'win32' && echo true || echo false)
+ifeq ($(IS_WINDOWS),true)
+	EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner.exe
+	export EXECUTABLE_PATH := ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH).exe
+else
+	EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
+	export EXECUTABLE_PATH := ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH)
+endif
+
+# Skip download if the executable already exists and is executable
+SKIP_DOWNLOAD_EXECUTABLE := $(shell [ -x $(EXECUTABLE_DOWNLOAD_PATH) ] && echo true || echo false)
 
 IDE_SIDECAR_REPO := confluentinc/ide-sidecar
 
@@ -133,17 +144,16 @@ ifeq ($(SKIP_DOWNLOAD_EXECUTABLE),true)
 	@echo "Skipping download of sidecar executable since it already exists at $(EXECUTABLE_DOWNLOAD_PATH)"
 else
 	mkdir -p bin && \
-	echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
-	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
-		curl --fail -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
-		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-		if [ $$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) -lt 1048576 ]; then \
-				echo "Error: Downloaded sidecar executable is too small (< 1MB), likely corrupted or failed download" >&2; \
-				cat $(EXECUTABLE_DOWNLOAD_PATH) | head -20 >&2; \
-				rm -f $(EXECUTABLE_DOWNLOAD_PATH); \
-				exit 1; \
-		fi && \
-		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH) ($$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) bytes)";
+	echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION): $(EXECUTABLE_DOWNLOAD_PATH)"; \
+	curl --fail -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
+	chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
+	if [ $$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) -lt 1048576 ]; then \
+			echo "Error: Downloaded sidecar executable is too small (< 1MB), likely corrupted or failed download" >&2; \
+			cat $(EXECUTABLE_DOWNLOAD_PATH) | head -20 >&2; \
+			rm -f $(EXECUTABLE_DOWNLOAD_PATH); \
+			exit 1; \
+	fi && \
+	echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH) ($$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) bytes)";
 endif
 
 # Downloads the THIRD_PARTY_NOTICES.txt file from the latest release of ide-sidecar as THIRD_PARTY_NOTICES_IDE_SIDECAR.txt
