@@ -2,12 +2,12 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
-import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
 describe("FlinkArtifactsViewProvider", () => {
@@ -62,25 +62,21 @@ describe("FlinkArtifactsViewProvider", () => {
         getStubbedCCloudResourceLoader(sandbox);
 
       const mockArtifacts = [
-        new FlinkArtifact({
+        createFlinkArtifact({
           connectionId: resource.connectionId,
           connectionType: resource.connectionType,
           environmentId: resource.environmentId,
           id: "artifact1",
           name: "Test Artifact 1",
           description: "Test artifact description",
-          provider: "aws",
-          region: "us-east-1",
         }),
-        new FlinkArtifact({
+        createFlinkArtifact({
           connectionId: resource.connectionId,
           connectionType: resource.connectionType,
           environmentId: resource.environmentId,
           id: "artifact2",
           name: "Test Artifact 2",
           description: "Another test artifact",
-          provider: "aws",
-          region: "us-east-1",
         }),
       ];
 
@@ -158,15 +154,13 @@ describe("FlinkArtifactsViewProvider", () => {
 
   it("returns artifacts when compute pool is selected", () => {
     const mockArtifacts = [
-      new FlinkArtifact({
+      createFlinkArtifact({
         connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
         connectionType: ConnectionType.Ccloud,
         environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
         id: "artifact1",
         name: "Test Artifact 1",
         description: "Test artifact description",
-        provider: "aws",
-        region: "us-east-1",
       }),
     ];
 
