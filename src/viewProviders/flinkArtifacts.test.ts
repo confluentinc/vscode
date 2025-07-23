@@ -4,10 +4,12 @@ import { CancellationToken, Progress, window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
+import { ConnectedState } from "../clients/sidecar";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
+import { getResourceManager } from "../storage/resourceManager";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
 describe("FlinkArtifactsViewProvider", () => {
@@ -106,13 +108,18 @@ describe("FlinkArtifactsViewProvider", () => {
         });
 
       const authInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
+
+      // Mock the resource manager to return a failed state
+      const resourceManagerStub = sandbox.stub(getResourceManager(), "getCCloudState");
+      resourceManagerStub.resolves(ConnectedState.Failed);
+
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       viewProvider["resource"] = resource;
 
       const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
         getStubbedCCloudResourceLoader(sandbox);
 
-      const authError = createResponseError(401, "Unauthorized", "test");
+      const authError = createResponseError(401, "Unauthorized", "{}");
       stubbedLoader.getFlinkArtifacts.rejects(authError);
 
       await assert.rejects(async () => {
@@ -121,6 +128,7 @@ describe("FlinkArtifactsViewProvider", () => {
 
       sinon.assert.calledOnce(windowWithProgressStub);
       sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
+      sinon.assert.calledOnce(resourceManagerStub);
       sinon.assert.calledOnce(authInvalidatedFireStub);
       assert.deepStrictEqual(viewProvider["_artifacts"], []);
     });

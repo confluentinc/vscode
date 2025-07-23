@@ -452,6 +452,7 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),
+    FlinkArtifactsViewProvider.getInstance(),
   ];
 }
 

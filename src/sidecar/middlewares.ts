@@ -6,7 +6,11 @@ import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
-import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import {
+  CCLOUD_PROVIDER_HEADER,
+  CCLOUD_REGION_HEADER,
+  SIDECAR_CONNECTION_ID_HEADER,
+} from "./constants";
 
 const logger = new Logger("sidecar.middlewares");
 
@@ -142,6 +146,7 @@ export class CCloudAuthStatusMiddleware implements Middleware {
 
   /**
    * Handle the various states that can be returned by the sidecar for the current CCloud connection.
+   * Made public to allow reuse by other components that need to handle auth status.
    *
    * - If the status is `EXPIRED`, block the request and show a progress notification until we
    *  see a status change (to a non-transient state like `SUCCESS` or `FAILED`/`NONE`) from the
@@ -149,7 +154,7 @@ export class CCloudAuthStatusMiddleware implements Middleware {
    * - If the status is `NONE` or `FAILED`, invalidate the current CCloud auth session to prompt
    *  the user to sign in again.
    */
-  async handleCCloudAuthStatus(status: ConnectedState): Promise<void> {
+  public async handleCCloudAuthStatus(status: ConnectedState): Promise<void> {
     if (status !== ConnectedState.Expired) {
       // resolve any open progress notification if we see a non-`EXPIRED` state
       stableCCloudConnectedState.fire();
@@ -218,6 +223,21 @@ function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined)
   // coerce to Headers object since HeadersInit doesn't have .has()/.get() methods
   headers = new Headers(headers);
   return (
+    headers.has(SIDECAR_CONNECTION_ID_HEADER) &&
+    headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
+  );
+}
+
+/** Check if headers include Flink data plane headers, indicating a Flink artifact request. */
+function hasFlinkDataPlaneHeaders(headers: HeadersInit | Headers | undefined): boolean {
+  if (!headers) {
+    return false;
+  }
+  // coerce to Headers object since HeadersInit doesn't have .has()/.get() methods
+  headers = new Headers(headers);
+  return (
+    headers.has(CCLOUD_PROVIDER_HEADER) &&
+    headers.has(CCLOUD_REGION_HEADER) &&
     headers.has(SIDECAR_CONNECTION_ID_HEADER) &&
     headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
   );

@@ -1,7 +1,5 @@
 import { Disposable, TreeDataProvider, TreeItem } from "vscode";
-import { ContextValues } from "../context/values";
-import { ccloudAuthSessionInvalidated, currentFlinkArtifactsPoolChanged } from "../emitters";
-import { isResponseError } from "../errors";
+import { currentFlinkArtifactsPoolChanged } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -15,18 +13,14 @@ export class FlinkArtifactsViewProvider
   loggerName = "viewProviders.flinkArtifacts";
   viewId = "confluent-flink-artifacts";
 
-  parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
-  parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
   private _artifacts: FlinkArtifact[] = [];
 
   protected setCustomEventListeners(): Disposable[] {
-    // Listen for auth session invalidation to clear the view
-    const authInvalidatedSub: Disposable = ccloudAuthSessionInvalidated.event(() => {
-      this._artifacts = [];
-      this._onDidChangeTreeData.fire();
+    const poolChangedSub = currentFlinkArtifactsPoolChanged.event(async (pool) => {
+      await this.setParentResource(pool);
     });
 
-    return [authInvalidatedSub];
+    return [poolChangedSub];
   }
 
   getChildren(element?: FlinkArtifact): FlinkArtifact[] {
@@ -50,14 +44,7 @@ export class FlinkArtifactsViewProvider
             const loader = CCloudResourceLoader.getInstance();
             this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
           } catch (error) {
-            this.logger.error("Failed to load Flink artifacts", { error });
-
-            // Check if this is an auth error (401 Unauthorized)
-            if (isResponseError(error) && error.response.status === 401) {
-              // Signal that the auth session is invalid
-              ccloudAuthSessionInvalidated.fire();
-            }
-
+            this.logger.error("Error refreshing Flink artifacts", error);
             throw error;
           }
         },
