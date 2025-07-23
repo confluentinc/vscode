@@ -17,7 +17,7 @@ import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -402,6 +402,14 @@ function sidecar() {
   // we may be building for Windows from a non-Windows machine, in which case we'll have the .exe
   if (IS_WINDOWS || process.env.TARGET === "win32-x64") {
     sidecarFilename = `${sidecarFilename}.exe`;
+  }
+  console.log(`Copying sidecar executable ${sidecarFilename} to ${DESTINATION}/bin/`, {
+    is_windows: IS_WINDOWS,
+    target: process.env.TARGET,
+  });
+  const sidecarPath = join("bin", sidecarFilename);
+  if (!existsSync(sidecarPath)) {
+    throw new Error(`Sidecar executable ${sidecarFilename} not found in bin/ directory.`);
   }
 
   return [
