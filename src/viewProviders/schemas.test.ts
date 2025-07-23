@@ -251,7 +251,7 @@ describe("SchemasViewProvider event handlers", () => {
       provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
       // simulate firing the event
-      provider.environentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
+      provider.environmentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
 
       // Should have called .reset()
       assert.ok(resetFake.calledOnce);
@@ -270,7 +270,7 @@ describe("SchemasViewProvider event handlers", () => {
       provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
       // simulate firing the event
-      provider.environentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
+      provider.environmentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
 
       // Need to pause an iota to get the refresh to be called, is after first await in the block.
       await clock.tickAsync(100);
@@ -294,7 +294,7 @@ describe("SchemasViewProvider event handlers", () => {
         provider.schemaRegistry = currentRegistry;
 
         // Call the event handler against some other environment.
-        provider.environentChangedHandler({
+        provider.environmentChangedHandler({
           id: TEST_CCLOUD_ENVIRONMENT_ID,
           wasDeleted: false,
         });

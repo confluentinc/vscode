@@ -334,7 +334,7 @@ export class SchemasViewProvider
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const environmentChangedSub: vscode.Disposable = environmentChanged.event(
-      this.environentChangedHandler.bind(this),
+      this.environmentChangedHandler.bind(this),
     );
 
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event(
@@ -372,7 +372,7 @@ export class SchemasViewProvider
     ];
   }
 
-  async environentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
+  async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
     if (this.schemaRegistry && this.schemaRegistry.environmentId === envEvent.id) {
       if (!envEvent.wasDeleted) {
         logger.debug(
