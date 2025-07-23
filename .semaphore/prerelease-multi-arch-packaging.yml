@@ -33,7 +33,7 @@ blocks:
                 darwin-arm64) export SIDECAR_OS_ARCH=macos-arm64 ;;
                 linux-x64)   export SIDECAR_OS_ARCH=linux-amd64 ;;
                 linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
-                win32-x64)   export SIDECAR_OS_ARCH=windows-amd64 ;;
+                win32-x64)   export SIDECAR_OS_ARCH=windows-x64 ;;
                 *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
               esac
             - make download-sidecar-executable
