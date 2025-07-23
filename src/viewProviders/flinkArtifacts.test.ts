@@ -160,7 +160,7 @@ describe("FlinkArtifactsViewProvider", () => {
     const mockArtifacts = [
       new FlinkArtifact({
         connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
-        connectionType: "ccloud" as ConnectionType.Ccloud,
+        connectionType: ConnectionType.Ccloud,
         environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
         id: "artifact1",
         name: "Test Artifact 1",
