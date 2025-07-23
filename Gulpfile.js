@@ -397,7 +397,12 @@ function pkgjson() {
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
+
+  let sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
+  // we may be building for Windows from a non-Windows machine, in which case we'll have the .exe
+  if (IS_WINDOWS || process.env.TARGET === "win32-x64") {
+    sidecarFilename = `${sidecarFilename}.exe`;
+  }
 
   return [
     virtual({
