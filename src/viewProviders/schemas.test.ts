@@ -232,9 +232,9 @@ describe("SchemasViewProvider event handlers", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // The class is a singleton with private constructor, but we
+    // @ts-expect-error The class is a singleton with private constructor, but we
     // want to have a fresh instance for each test.
-    provider = new (SchemasViewProvider as any)();
+    provider = new SchemasViewProvider();
 
     resetStub = sandbox.stub(provider, "reset");
   });
