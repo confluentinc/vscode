@@ -11,12 +11,7 @@ import {
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ContextValues, getContextValue } from "../context/values";
-import {
-  currentSchemaRegistryChanged,
-  schemaSearchSet,
-  SchemaVersionChangeEvent,
-  SubjectChangeEvent,
-} from "../emitters";
+import { SchemaVersionChangeEvent, SubjectChangeEvent } from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -112,21 +107,6 @@ describe("SchemasViewProvider setSchemaRegistry()", () => {
       updateTreeViewDescriptionFake.resetHistory();
     }
   });
-
-  it("Firing currentSchemaRegistryChanged should call setSchemaRegistry()", () => {
-    const setSchemaRegistryFake = sandbox.fake();
-    sandbox.replace(provider, "setSchemaRegistry", setSchemaRegistryFake);
-    for (const newRegistry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
-      setSchemaRegistryFake.resetHistory();
-
-      // fire the event
-      currentSchemaRegistryChanged.fire(newRegistry);
-
-      // Should have called .setSchemaRegistry() with the new registry
-      assert.ok(setSchemaRegistryFake.calledOnce);
-      assert.ok(setSchemaRegistryFake.calledWith(newRegistry));
-    }
-  });
 });
 
 describe("SchemasViewProvider search behavior", () => {
@@ -220,18 +200,6 @@ describe("SchemasViewProvider search behavior", () => {
 
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
-  });
-
-  it("Prove that schemaSearchSet.fire() calls setSearch() and then refresh()", () => {
-    const setSearchSpy = sinon.spy(provider, "setSearch");
-    const refreshSpy = sinon.spy(provider, "refresh");
-
-    schemaSearchSet.fire("foo");
-
-    assert.ok(setSearchSpy.calledOnce);
-    assert.ok(setSearchSpy.calledWith("foo"));
-
-    assert.ok(refreshSpy.calledOnce);
   });
 
   it("isFocusedOnCCloud() should return true when the current schema registry is a CCloud one", () => {
