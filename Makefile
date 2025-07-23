@@ -122,7 +122,7 @@ SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 
 # Check if we're targeting the Windows sidecar executable from a non-Windows agent
 # (currently only done in `.semaphore/prerelease-multi-arch-packaging.yml` since the pipeline at
 # `.semaphore/multi-arch-packaging.yml` uses `scripts/windows/download-sidecar-executable.ps1`)
-IS_WINDOWS = $(shell echo "$(SIDECAR_OS_ARCH)" | grep -q 'win32' && echo true || echo false)
+IS_WINDOWS = $(shell echo "$(SIDECAR_OS_ARCH)" | grep -q 'windows' && echo true || echo false)
 ifeq ($(IS_WINDOWS),true)
 	EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner.exe
 	export EXECUTABLE_PATH := ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH).exe
