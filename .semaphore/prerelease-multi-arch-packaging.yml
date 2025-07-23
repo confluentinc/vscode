@@ -4,13 +4,17 @@ agent:
   machine:
     type: s1-prod-ubuntu24-04-amd64-1
 
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+
 blocks:
   - name: "Package VSIX Files"
     dependencies: []
     task:
       prologue:
         commands:
-          - checkout
           - git fetch --all
           - git checkout $COMMIT_SHA
           - . vault-setup
