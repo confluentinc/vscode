@@ -13,6 +13,7 @@ import {
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import * as contextValues from "../context/values";
 import { environmentChanged, topicSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/loaderUtils";
@@ -284,4 +285,174 @@ describe("TopicViewProvider environmentChanged handler", () => {
       assert.ok(refreshFake.notCalled);
     });
   }
+});
+
+describe("TopicViewProvider event handlers", () => {
+  let provider: TopicViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let resetStub: sinon.SinonStub;
+  let refreshStub: sinon.SinonStub;
+  let updateTreeViewDescriptionStub: sinon.SinonStub;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    provider = new TopicViewProvider();
+    resetStub = sandbox.stub(provider, "reset");
+    refreshStub = sandbox.stub(provider, "refresh");
+    updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  describe("environmentChangedHander", () => {
+    beforeEach(() => {
+      // default to viewing kafka cluster in local environment
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+    });
+
+    it("should call reset() when environment is deleted", async () => {
+      await provider.environmentChangedHander({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
+      sinon.assert.calledOnce(resetStub);
+      sinon.assert.notCalled(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(refreshStub);
+    });
+
+    it("should call updateTreeViewDescription() and refresh() when environment is changed but not deleted", async () => {
+      await provider.environmentChangedHander({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
+      sinon.assert.notCalled(resetStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      sinon.assert.calledOnce(refreshStub);
+    });
+
+    it("should not call any methods when the event is for a different environment", async () => {
+      await provider.environmentChangedHander({
+        id: TEST_CCLOUD_ENVIRONMENT_ID,
+        wasDeleted: false,
+      });
+      sinon.assert.notCalled(resetStub);
+      sinon.assert.notCalled(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(refreshStub);
+    });
+
+    it("should not call any methods when no cluster is set", async () => {
+      provider.kafkaCluster = null;
+      await provider.environmentChangedHander({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
+      sinon.assert.notCalled(resetStub);
+      sinon.assert.notCalled(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(refreshStub);
+    });
+  });
+
+  describe("ccloudConnectedHandler", () => {
+    for (const nowConnected of [true, false]) {
+      it(`should call reset() when initially connected to CCloud and connected event: ${nowConnected}`, () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a CCloud context
+        provider.ccloudConnectedHandler(nowConnected);
+        sinon.assert.calledOnce(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+
+      it(`should not call any methods when looking at a non-CCloud cluster and connected event: ${nowConnected}`, () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a non-CCloud context
+        provider.ccloudConnectedHandler(nowConnected);
+        sinon.assert.notCalled(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+
+      it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, () => {
+        provider.kafkaCluster = null; // No cluster set
+        provider.ccloudConnectedHandler(nowConnected);
+        sinon.assert.notCalled(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+    }
+  });
+
+  describe("localKafkaConnectedHandler", () => {
+    for (const nowConnected of [true, false]) {
+      it(`should call reset() when initially connected to local Kafka and connected event: ${nowConnected}`, () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a local context
+        provider.localKafkaConnectedHandler(nowConnected);
+        sinon.assert.calledOnce(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+
+      it(`should not call any methods when looking at a non-local cluster and connected event: ${nowConnected}`, () => {
+        provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a non-local context
+        provider.localKafkaConnectedHandler(nowConnected);
+        sinon.assert.notCalled(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+
+      it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, () => {
+        provider.kafkaCluster = null; // No cluster set
+        provider.localKafkaConnectedHandler(nowConnected);
+        sinon.assert.notCalled(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+    }
+  });
+
+  describe("currentKafkaClusterChangedHandler", () => {
+    let setSearchStub: sinon.SinonStub;
+    let setContextValueStub: sinon.SinonStub;
+    beforeEach(() => {
+      setSearchStub = sandbox.stub(provider, "setSearch");
+      setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+    });
+
+    it("should do nothing when current cluster is null and called with null", async () => {
+      await provider.currentKafkaClusterChangedHandler(null);
+      sinon.assert.notCalled(resetStub);
+      sinon.assert.notCalled(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(refreshStub);
+      sinon.assert.notCalled(setSearchStub);
+    });
+
+    it("should do nothing when called with the same cluster", async () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      await provider.currentKafkaClusterChangedHandler(TEST_LOCAL_KAFKA_CLUSTER);
+      sinon.assert.notCalled(resetStub);
+      sinon.assert.notCalled(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(refreshStub);
+      sinon.assert.notCalled(setSearchStub);
+    });
+
+    it("should only call reset() when edging from having cluster set to no cluster", async () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      await provider.currentKafkaClusterChangedHandler(null);
+      sinon.assert.calledOnce(resetStub);
+      sinon.assert.notCalled(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(refreshStub);
+      sinon.assert.notCalled(setSearchStub);
+    });
+
+    it("should handle switching clusters correctly", async () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      await provider.currentKafkaClusterChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
+      assert.deepEqual(provider.kafkaCluster, TEST_CCLOUD_KAFKA_CLUSTER);
+
+      sinon.assert.calledOnce(setContextValueStub);
+      sinon.assert.calledWith(
+        setContextValueStub,
+        contextValues.ContextValues.kafkaClusterSelected,
+        true,
+      );
+      sinon.assert.calledOnce(setSearchStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      sinon.assert.calledOnce(refreshStub);
+    });
+  });
 });
