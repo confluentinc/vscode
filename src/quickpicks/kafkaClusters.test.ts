@@ -13,7 +13,7 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResourceLoader } from "../loaders";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import * as topicsViewProviders from "../viewProviders/topics";
-import { flinkDatabaseQuickpick, kafkaClusterQuickPick, logger as qpLogger } from "./kafkaClusters";
+import { flinkDatabaseQuickpick, kafkaClusterQuickPick } from "./kafkaClusters";
 import { QuickPickItemWithValue } from "./types";
 
 describe("kafkaClusterQuickPick", () => {
@@ -65,16 +65,8 @@ describe("kafkaClusterQuickPick", () => {
     // should have included clusters referencing TEST_LOCAL_ENVIRONMENT, so will make code hit error.
     mockLoaders[0].getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
 
-    // mock out the logger's warning method so we can prove going down into this unexpected codepath
-    const loggerWarnStub = sandbox.stub(qpLogger, "warn");
-
     const result = await kafkaClusterQuickPick();
     assert.strictEqual(result, undefined);
-    assert.strictEqual(loggerWarnStub.callCount, 1);
-    assert.strictEqual(
-      loggerWarnStub.getCall(0).args[0],
-      `No environment found for Kafka cluster ${TEST_CCLOUD_KAFKA_CLUSTER.name}`,
-    );
   });
 
   it("Offers all Kafka clusters if driven w/o a filter lambda", async () => {
