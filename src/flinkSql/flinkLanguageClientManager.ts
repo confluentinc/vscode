@@ -24,6 +24,7 @@ import { SIDECAR_PORT } from "../sidecar/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { DisposableCollection } from "../utils/disposables";
 import { initializeLanguageClient } from "./languageClient";
 import {
   clearFlinkSQLLanguageServerOutputChannel,
@@ -44,9 +45,8 @@ export interface FlinkSqlSettings {
  * - Fetches and manages information about the active Editor's Flink compute pool resources
  * - Manages Flink SQL Language Client lifecycle & related settings
  */
-export class FlinkLanguageClientManager implements Disposable {
+export class FlinkLanguageClientManager extends DisposableCollection {
   private static instance: FlinkLanguageClientManager | null = null;
-  private disposables: Disposable[] = [];
   private languageClient: LanguageClient | null = null;
   private lastWebSocketUrl: string | null = null;
   private lastDocUri: Uri | null = null;
@@ -65,6 +65,7 @@ export class FlinkLanguageClientManager implements Disposable {
   }
 
   private constructor() {
+    super();
     // make sure we dispose the output channel when the manager is disposed
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
@@ -645,8 +646,7 @@ export class FlinkLanguageClientManager implements Disposable {
 
   public async dispose(): Promise<void> {
     await this.cleanupLanguageClient();
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
+    super.dispose();
     this.openFlinkSqlDocuments.clear();
     FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
     clearFlinkSQLLanguageServerOutputChannel();

@@ -30,6 +30,7 @@ import {
 } from "./storage/resourceManager";
 import { getSecretStorage } from "./storage/utils";
 import { logUsage, UserEvent } from "./telemetry/events";
+import { DisposableCollection } from "./utils/disposables";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
 
@@ -43,14 +44,11 @@ const logger = new Logger("directConnectManager");
  * - deleting connections through actions on the Resources view
  * - firing events when the connection list changes or a specific connection is updated/deleted
  */
-export class DirectConnectionManager {
-  /** Disposables belonging to this class to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: Disposable[] = [];
-
+export class DirectConnectionManager extends DisposableCollection {
   // singleton instance to prevent multiple listeners and single source of connection management
   private static instance: DirectConnectionManager | null = null;
   private constructor() {
+    super();
     const context = getExtensionContext();
     if (!context) {
       // need access to SecretStorage to manage connection secrets
