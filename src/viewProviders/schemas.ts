@@ -155,7 +155,7 @@ export class SchemasViewProvider
 
     const listeners: vscode.Disposable[] = this.setEventListeners();
 
-    this.disposables = [this.treeView, ...listeners];
+    this.disposables = [this.treeView, this._onDidChangeTreeData, ...listeners];
   }
 
   static getInstance(): SchemasViewProvider {

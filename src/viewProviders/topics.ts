@@ -26,7 +26,6 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
-import { amqplibIntegration } from "@sentry/node";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -40,8 +39,9 @@ export class TopicViewProvider
   implements vscode.TreeDataProvider<TopicViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "topics";
+
   /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
+   * cleaned up on extension (or test case) deactivation. */
   disposables: vscode.Disposable[] = [];
 
   private _onDidChangeTreeData: vscode.EventEmitter<TopicViewProviderData | undefined | void> =
@@ -83,9 +83,7 @@ export class TopicViewProvider
 
   private static instance: TopicViewProvider | null = null;
 
-  // public for testing purposes, all main codebase callers
-  // should use `TopicViewProvider.getInstance()` to get the singleton instance.
-  constructor() {
+  private constructor() {
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
       throw new ExtensionContextNotSetError("TopicViewProvider");
@@ -96,7 +94,13 @@ export class TopicViewProvider
 
     const listeners: vscode.Disposable[] = this.setEventListeners();
 
-    this.disposables.push(this.treeView, ...listeners);
+    this.disposables.push(this.treeView, this._onDidChangeTreeData, ...listeners);
+  }
+
+  // To be replaced by upcoming base class @shoup.
+  dispose(): void {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
   }
 
   static getInstance(): TopicViewProvider {
@@ -236,55 +240,19 @@ export class TopicViewProvider
       this.currentKafkaClusterChangedHandler.bind(this),
     );
 
-    XXX pick up here Thurs AM
-    gulp test -t 'TopicViewProvider event handlers'
-
-    
     const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
-      (searchString: string | null) => {
-        logger.debug("topicSearchSet event fired, refreshing", { searchString });
-        // mainly captures the last state of the search internals to see if search was adjusted after
-        // a previous search was used, or if this is the first time search is being used
-        if (searchString !== null) {
-          // used to group search events without sending the search string itself
-          this.searchStringSetCount++;
-        }
-        logUsage(UserEvent.ViewSearchAction, {
-          status: `search string ${searchString ? "set" : "cleared"}`,
-          view: "Topics",
-          searchStringSetCount: this.searchStringSetCount,
-          hadExistingSearchString: this.itemSearchString !== null,
-          lastFilteredItemCount: this.searchMatches.size,
-          lastTotalItemCount: this.totalItemCount,
-        });
-        this.setSearch(searchString);
-        this.refresh();
-      },
+      this.topicSearchSetHandler.bind(this),
     );
 
-    const subjectChangeHandler = (event: SubjectChangeEvent | SchemaVersionChangeEvent) => {
-      const [subject, change] = [event.subject, event.change];
-
-      if (this.kafkaCluster?.environmentId === subject.environmentId) {
-        logger.debug(
-          `A schema subject ${change} in the environment being viewed, refreshing toplevel`,
-          {
-            subject: subject.name,
-          },
-        );
-
-        // Toplevel repaint.
-        this.refresh();
-      }
-    };
-
     // A schema subject was added or removed.
-    const schemaSubjectChangedSub: vscode.Disposable =
-      schemaSubjectChanged.event(subjectChangeHandler);
+    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
+      this.subjectChangeHandler.bind(this),
+    );
 
     // A schema version was added or removed.
-    const schemaVersionsChangedSub: vscode.Disposable =
-      schemaVersionsChanged.event(subjectChangeHandler);
+    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
+      this.subjectChangeHandler.bind(this),
+    );
 
     return [
       environmentChangedSub,
@@ -362,6 +330,42 @@ export class TopicViewProvider
       setContextValue(ContextValues.kafkaClusterSelected, true);
       this.setSearch(null); // reset search when cluster changes
       await this.updateTreeViewDescription();
+      this.refresh();
+    }
+  }
+
+  topicSearchSetHandler(searchString: string | null): void {
+    logger.debug("topicSearchSet event fired, refreshing", { searchString });
+    // mainly captures the last state of the search internals to see if search was adjusted after
+    // a previous search was used, or if this is the first time search is being used
+    if (searchString !== null) {
+      // used to group search events without sending the search string itself
+      this.searchStringSetCount++;
+    }
+    logUsage(UserEvent.ViewSearchAction, {
+      status: `search string ${searchString ? "set" : "cleared"}`,
+      view: "Topics",
+      searchStringSetCount: this.searchStringSetCount,
+      hadExistingSearchString: this.itemSearchString !== null,
+      lastFilteredItemCount: this.searchMatches.size,
+      lastTotalItemCount: this.totalItemCount,
+    });
+    this.setSearch(searchString);
+    this.refresh();
+  }
+
+  subjectChangeHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): void {
+    const [subject, change] = [event.subject, event.change];
+
+    if (this.kafkaCluster?.environmentId === subject.environmentId) {
+      logger.debug(
+        `A schema subject ${change} in the environment being viewed, refreshing toplevel`,
+        {
+          subject: subject.name,
+        },
+      );
+
+      // Toplevel repaint.
       this.refresh();
     }
   }
