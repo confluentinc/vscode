@@ -97,7 +97,7 @@ describe("TopicViewProvider", () => {
       ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
     });
 
-    it("does noting when no cluster is set", async () => {
+    it("does nothing when no cluster is set", async () => {
       provider.kafkaCluster = null;
       await provider.updateTreeViewDescription();
       assert.strictEqual(getDescription(), initialDescription);
@@ -284,14 +284,14 @@ describe("TopicViewProvider", () => {
       updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
     });
 
-    describe("environmentChangedHander", () => {
+    describe("environmentChangedHandler", () => {
       beforeEach(() => {
         // default to viewing kafka cluster in local environment
         provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
       });
 
       it("should call reset() when environment is deleted", async () => {
-        await provider.environmentChangedHander({
+        await provider.environmentChangedHandler({
           id: TEST_LOCAL_ENVIRONMENT_ID,
           wasDeleted: true,
         });
@@ -301,7 +301,7 @@ describe("TopicViewProvider", () => {
       });
 
       it("should call updateTreeViewDescription() and refresh() when environment is changed but not deleted", async () => {
-        await provider.environmentChangedHander({
+        await provider.environmentChangedHandler({
           id: TEST_LOCAL_ENVIRONMENT_ID,
           wasDeleted: false,
         });
@@ -311,7 +311,7 @@ describe("TopicViewProvider", () => {
       });
 
       it("should not call any methods when the event is for a different environment", async () => {
-        await provider.environmentChangedHander({
+        await provider.environmentChangedHandler({
           id: TEST_CCLOUD_ENVIRONMENT_ID,
           wasDeleted: false,
         });
@@ -322,7 +322,7 @@ describe("TopicViewProvider", () => {
 
       it("should not call any methods when no cluster is set", async () => {
         provider.kafkaCluster = null;
-        await provider.environmentChangedHander({
+        await provider.environmentChangedHandler({
           id: TEST_LOCAL_ENVIRONMENT_ID,
           wasDeleted: false,
         });

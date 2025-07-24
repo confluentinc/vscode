@@ -233,7 +233,7 @@ export class TopicViewProvider
   /** Set up event listeners for this view provider. */
   setEventListeners(): Disposable[] {
     const environmentChangedSub: Disposable = environmentChanged.event(
-      this.environmentChangedHander.bind(this),
+      this.environmentChangedHandler.bind(this),
     );
 
     const ccloudConnectedSub: Disposable = ccloudConnected.event(
@@ -273,7 +273,7 @@ export class TopicViewProvider
     ];
   }
 
-  async environmentChangedHander(envEvent: EnvironmentChangeEvent): Promise<void> {
+  async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
     if (this.kafkaCluster && this.kafkaCluster.environmentId === envEvent.id) {
       if (!envEvent.wasDeleted) {
         logger.debug(
