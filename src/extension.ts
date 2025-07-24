@@ -80,8 +80,9 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/base";
-import { FlinkArtifactsViewProvider, toggleViewMode } from "./viewProviders/flinkArtifacts";
+import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { FlinkSwitchableViewProvider } from "./viewProviders/flinkSwitchableViewProvider";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
@@ -190,6 +191,7 @@ async function _activateExtension(
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const artifactsViewProvider = FlinkArtifactsViewProvider.getInstance();
+  const flinkViewProvider = new FlinkSwitchableViewProvider();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProvider,
@@ -198,6 +200,7 @@ async function _activateExtension(
     supportViewProvider,
     statementsViewProvider,
     artifactsViewProvider,
+    flinkViewProvider,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
@@ -235,6 +238,9 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    registerCommandWithLogging("confluent.flink.toggleViewMode", () => {
+      flinkViewProvider.toggleMode();
+    }),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
   ];
@@ -308,7 +314,6 @@ async function _activateExtension(
     vscode.languages.registerCodeLensProvider("flinksql", provider),
     provider,
   );
-  registerCommandWithLogging("confluent.flink.toggleUnifiedView", toggleViewMode);
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
