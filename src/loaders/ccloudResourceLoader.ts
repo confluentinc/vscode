@@ -21,7 +21,6 @@ import { getSidecar, SidecarHandle } from "../sidecar";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
-import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
@@ -78,7 +77,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       }
     });
 
-    ResourceLoader.disposables.push(ccloudConnectedSub);
+    this.disposables.push(ccloudConnectedSub);
   }
 
   /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */

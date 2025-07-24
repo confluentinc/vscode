@@ -96,8 +96,9 @@ describe("flinkStatementManager.ts", () => {
     });
 
     afterEach(() => {
-      sandbox.restore();
+      instance.dispose();
       FlinkStatementManager["instance"] = undefined;
+      sandbox.restore();
     });
 
     describe("getConfiguration()", () => {

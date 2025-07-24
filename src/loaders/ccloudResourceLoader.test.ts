@@ -49,8 +49,9 @@ describe("CCloudResourceLoader", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    loader.dispose();
     CCloudResourceLoader["instance"] = null; // Reset singleton instance
+    sandbox.restore();
   });
 
   describe("getFlinkStatements", () => {
