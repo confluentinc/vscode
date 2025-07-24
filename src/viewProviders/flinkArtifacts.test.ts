@@ -6,7 +6,9 @@ import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifac
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
+import * as errors from "../errors";
 import { CCloudResourceLoader } from "../loaders";
+import * as notifications from "../notifications";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
 describe("FlinkArtifactsViewProvider", () => {
@@ -36,11 +38,8 @@ describe("FlinkArtifactsViewProvider", () => {
 
     beforeEach(() => {
       changeFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
-      logErrorStub = sandbox.stub(require("../errors"), "logError");
-      showErrorNotificationStub = sandbox.stub(
-        require("../notifications"),
-        "showErrorNotificationWithButtons",
-      );
+      logErrorStub = sandbox.stub(errors, "logError");
+      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     });
 
     it("clears when no resource is selected", async () => {
@@ -55,7 +54,6 @@ describe("FlinkArtifactsViewProvider", () => {
       const windowWithProgressStub = sandbox
         .stub(window, "withProgress")
         .callsFake((_, callback) => {
-          // Call the callback immediately with a resolved promise
           const mockProgress = {} as Progress<unknown>;
           const mockToken = {} as CancellationToken;
           return Promise.resolve(callback(mockProgress, mockToken));
@@ -117,11 +115,10 @@ describe("FlinkArtifactsViewProvider", () => {
     });
 
     describe("error handling", () => {
-      let windowWithProgressStub: sinon.SinonStub;
       let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
       beforeEach(() => {
-        windowWithProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
+        sandbox.stub(window, "withProgress").callsFake((_, callback) => {
           const mockProgress = {} as Progress<unknown>;
           const mockToken = {} as CancellationToken;
           return Promise.resolve(callback(mockProgress, mockToken));
@@ -140,7 +137,7 @@ describe("FlinkArtifactsViewProvider", () => {
         };
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        sandbox.stub(require("../errors"), "isResponseError").returns(true);
+        sandbox.stub(errors, "isResponseError").returns(true);
 
         try {
           await viewProvider.refresh();
@@ -168,7 +165,7 @@ describe("FlinkArtifactsViewProvider", () => {
         };
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        sandbox.stub(require("../errors"), "isResponseError").returns(true);
+        sandbox.stub(errors, "isResponseError").returns(true);
 
         try {
           await viewProvider.refresh();
@@ -191,7 +188,7 @@ describe("FlinkArtifactsViewProvider", () => {
         const mockError = new Error("Network connection failed");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        sandbox.stub(require("../errors"), "isResponseError").returns(false);
+        sandbox.stub(errors, "isResponseError").returns(false);
 
         try {
           await viewProvider.refresh();
@@ -219,7 +216,7 @@ describe("FlinkArtifactsViewProvider", () => {
         };
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        sandbox.stub(require("../errors"), "isResponseError").returns(true);
+        sandbox.stub(errors, "isResponseError").returns(true);
 
         try {
           await viewProvider.refresh();
@@ -239,9 +236,8 @@ describe("FlinkArtifactsViewProvider", () => {
         const mockError = new Error("Test error");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        sandbox.stub(require("../errors"), "isResponseError").returns(false);
+        sandbox.stub(errors, "isResponseError").returns(false);
 
-        // Set some initial artifacts
         viewProvider["_artifacts"] = [
           createFlinkArtifact({
             connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
