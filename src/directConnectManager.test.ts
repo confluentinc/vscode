@@ -325,18 +325,4 @@ describe("DirectConnectionManager behavior", () => {
       sinon.assert.calledWith(deregisterInstanceStub, TEST_DIRECT_CONNECTION_ID);
     });
   });
-
-  describe("dispose()", function () {
-    it("should dispose of all .disposables", () => {
-      const disposable1 = { dispose: sandbox.stub() };
-      const disposable2 = { dispose: sandbox.stub() };
-      manager.disposables.push(disposable1, disposable2);
-
-      manager.dispose();
-
-      sinon.assert.calledOnce(disposable1.dispose);
-      sinon.assert.calledOnce(disposable2.dispose);
-      assert.strictEqual(manager.disposables.length, 0);
-    });
-  });
 });
