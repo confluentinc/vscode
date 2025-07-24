@@ -60,6 +60,11 @@ export class DirectConnectionManager {
     this.disposables.push(...listeners);
   }
 
+  dispose() {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
   static getInstance(): DirectConnectionManager {
     if (!DirectConnectionManager.instance) {
       DirectConnectionManager.instance = new DirectConnectionManager();

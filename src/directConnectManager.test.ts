@@ -52,6 +52,8 @@ describe("DirectConnectionManager behavior", () => {
   let stubbedConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
   let waitForConnectionToBeStableStub: sinon.SinonStub;
 
+  let manager: DirectConnectionManager;
+
   before(async () => {
     // DirectConnectionManager requires the extension context to be set
     await getTestExtensionContext();
@@ -79,9 +81,12 @@ describe("DirectConnectionManager behavior", () => {
     waitForConnectionToBeStableStub = sandbox
       .stub(watcher, "waitForConnectionToBeStable")
       .resolves(TEST_DIRECT_CONNECTION);
+
+    manager = DirectConnectionManager.getInstance();
   });
 
   afterEach(async () => {
+    manager.dispose();
     // reset the singleton instance
     DirectConnectionManager["instance"] = null;
     // wipe out any stored connections
@@ -96,7 +101,7 @@ describe("DirectConnectionManager behavior", () => {
     const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
     tryToCreateConnectionStub.resolves(createdConnection);
 
-    const result = await DirectConnectionManager.getInstance().createConnection({
+    const result = await manager.createConnection({
       kafka_cluster: testSpec.kafka_cluster,
       schema_registry: testSpec.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
@@ -117,7 +122,7 @@ describe("DirectConnectionManager behavior", () => {
     testSpec.schema_registry = undefined;
     const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
     tryToCreateConnectionStub.resolves(createdConnection);
-    const result = await DirectConnectionManager.getInstance().createConnection({
+    const result = await manager.createConnection({
       kafka_cluster: testSpec.kafka_cluster,
       schema_registry: testSpec.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
@@ -140,7 +145,7 @@ describe("DirectConnectionManager behavior", () => {
       spec: PLAIN_LOCAL_KAFKA_SR_SPEC,
     });
 
-    const result = await DirectConnectionManager.getInstance().createConnection({
+    const result = await manager.createConnection({
       id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
       kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
       schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
@@ -159,7 +164,7 @@ describe("DirectConnectionManager behavior", () => {
   it("createConnection() should not store the new connection spec if the sidecar response is unsuccessful", async () => {
     tryToCreateConnectionStub.rejects(new ResponseError(new Response("oh no", { status: 500 })));
 
-    const result = await DirectConnectionManager.getInstance().createConnection({
+    const result = await manager.createConnection({
       kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
       schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
@@ -180,7 +185,7 @@ describe("DirectConnectionManager behavior", () => {
       ...TEST_DIRECT_CONNECTION,
       spec: PLAIN_LOCAL_KAFKA_SR_SPEC,
     });
-    const result = await DirectConnectionManager.getInstance().createConnection(
+    const result = await manager.createConnection(
       {
         kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
         schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
@@ -209,7 +214,7 @@ describe("DirectConnectionManager behavior", () => {
     };
     tryToUpdateConnectionStub.resolves({ ...TEST_DIRECT_CONNECTION, spec: updatedSpec });
 
-    await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+    await manager.updateConnection(updatedSpec);
 
     assert.ok(tryToUpdateConnectionStub.calledOnce);
     const storedConnections: DirectConnectionsById =
@@ -233,7 +238,7 @@ describe("DirectConnectionManager behavior", () => {
     };
     tryToUpdateConnectionStub.rejects(new ResponseError(new Response("oh no", { status: 500 })));
 
-    await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+    await manager.updateConnection(updatedSpec);
 
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
@@ -251,7 +256,7 @@ describe("DirectConnectionManager behavior", () => {
     // stub the sidecar not knowing about it
     stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(fakeConnectionsList);
 
-    await DirectConnectionManager.getInstance().rehydrateConnections();
+    await manager.rehydrateConnections();
 
     assert.ok(tryToCreateConnectionStub.calledOnce);
     const args = tryToCreateConnectionStub.getCall(0).args;
@@ -277,7 +282,7 @@ describe("DirectConnectionManager behavior", () => {
     };
     stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(connectionsList);
 
-    await DirectConnectionManager.getInstance().rehydrateConnections();
+    await manager.rehydrateConnections();
 
     assert.ok(tryToCreateConnectionStub.notCalled);
   });
@@ -289,7 +294,7 @@ describe("DirectConnectionManager behavior", () => {
 
     beforeEach(() => {
       // Can only be done after the extension context is set.
-      directConnectionManager = DirectConnectionManager.getInstance();
+      directConnectionManager = manager;
     });
 
     it("should handle if getDirectConnection(id) returned null", async () => {
@@ -318,6 +323,20 @@ describe("DirectConnectionManager behavior", () => {
 
       sinon.assert.calledOnce(deregisterInstanceStub);
       sinon.assert.calledWith(deregisterInstanceStub, TEST_DIRECT_CONNECTION_ID);
+    });
+  });
+
+  describe("dispose()", function () {
+    it("should dispose of all .disposables", () => {
+      const disposable1 = { dispose: sandbox.stub() };
+      const disposable2 = { dispose: sandbox.stub() };
+      manager.disposables.push(disposable1, disposable2);
+
+      manager.dispose();
+
+      sinon.assert.calledOnce(disposable1.dispose);
+      sinon.assert.calledOnce(disposable2.dispose);
+      assert.strictEqual(manager.disposables.length, 0);
     });
   });
 });
