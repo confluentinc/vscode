@@ -19,6 +19,7 @@ import { IdItem } from "../models/main";
 import { EnvironmentId, IResourceBase, isCCloud, ISearchable } from "../models/resource";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { titleCase } from "../utils";
+import { BaseDisposableManager } from "../utils/disposables";
 import { filterItems, itemMatchesSearch } from "./search";
 
 /** View providers offering our common refresh() pattern. */
@@ -35,15 +36,12 @@ type BaseViewProviderData = IResourceBase & IdItem & ISearchable & { environment
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class BaseViewProvider<T extends BaseViewProviderData>
+  extends BaseDisposableManager
   implements TreeDataProvider<T>, RefreshableTreeViewProvider
 {
   abstract loggerName: string;
   abstract readonly kind: string;
   logger!: Logger;
-
-  /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: Disposable[] = [];
 
   protected _onDidChangeTreeData: EventEmitter<T | undefined | void> = new EventEmitter<
     T | undefined | void
@@ -83,6 +81,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
   // NOTE: this is usually private/protected with a singleton pattern, but needs to be public for
   // the subclasses to be called with .getInstance() properly
   public constructor() {
+    super();
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
       throw new ExtensionContextNotSetError(this.constructor.name);

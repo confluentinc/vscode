@@ -144,6 +144,7 @@ describe("SchemasViewProvider search behavior", () => {
   });
 
   afterEach(() => {
+    provider.dispose();
     SchemasViewProvider["instance"] = null;
   });
 

@@ -59,8 +59,9 @@ describe("FlinkLanguageClientManager", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    flinkManager.dispose();
     FlinkLanguageClientManager["instance"] = null;
+    sandbox.restore();
   });
 
   describe("validateFlinkSettings", () => {

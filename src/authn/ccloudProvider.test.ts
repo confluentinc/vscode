@@ -83,6 +83,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   });
 
   afterEach(() => {
+    authProvider.dispose();
     // reset the singleton instance between tests
     ConfluentCloudAuthProvider["instance"] = null;
     sandbox.restore();
@@ -391,6 +392,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
   });
 
   afterEach(() => {
+    authProvider.dispose();
     // reset the singleton instance between tests
     ConfluentCloudAuthProvider["instance"] = null;
     sandbox.restore();

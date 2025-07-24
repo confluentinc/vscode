@@ -24,6 +24,7 @@ import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
+import { BaseDisposableManager } from "../utils/disposables";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { AuthCallbackEvent } from "./types";
 
@@ -62,11 +63,10 @@ const logger = new Logger("authn.ccloudProvider");
  * only way we get back to `NONE` is by deleting the connection entirely and recreating a new one
  * (with a new `sign_in_uri`), which should only be done by the user signing out.
  */
-export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
-  /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: vscode.Disposable[] = [];
-
+export class ConfluentCloudAuthProvider
+  extends BaseDisposableManager
+  implements vscode.AuthenticationProvider
+{
   // tells VS Code which sessions have been added, removed, or changed for this extension instance
   // NOTE: does not trigger cross-workspace events
   private _onDidChangeSessions =
@@ -84,6 +84,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private static instance: ConfluentCloudAuthProvider | null = null;
   // private to enforce singleton pattern and avoid attempting to re-register the auth provider
   private constructor() {
+    super();
     const context: vscode.ExtensionContext = getExtensionContext();
     if (!context) {
       // extension context required for keeping up with secrets changes
