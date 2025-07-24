@@ -38,7 +38,7 @@ export function loadPreferencesFromWorkspaceConfig(): PreferencesSpec {
     trust_all_certificates: trustAllCerts,
     kerberos_config_file_path: krb5ConfigPath,
     flink_private_endpoints: privateNetworkEndpoints,
-  } as any;
+  };
 }
 
 // shoup: we should move this somewhere else if we have to handle a similar conversion elsewhere
