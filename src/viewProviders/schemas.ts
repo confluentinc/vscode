@@ -1,4 +1,13 @@
-import * as vscode from "vscode";
+import {
+  Disposable,
+  Event,
+  EventEmitter,
+  TreeDataProvider,
+  TreeItem,
+  TreeView,
+  Uri,
+  window,
+} from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
@@ -36,13 +45,13 @@ type SchemasViewProviderData = Subject | Schema;
 
 export class SchemasViewProvider
   extends DisposableCollection
-  implements vscode.TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
+  implements TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "schemas";
 
-  private _onDidChangeTreeData: vscode.EventEmitter<SchemasViewProviderData | undefined | void> =
-    new vscode.EventEmitter<SchemasViewProviderData | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<SchemasViewProviderData | undefined | void> =
+  private _onDidChangeTreeData: EventEmitter<SchemasViewProviderData | undefined | void> =
+    new EventEmitter<SchemasViewProviderData | undefined | void>();
+  readonly onDidChangeTreeData: Event<SchemasViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
   // Map of subject string -> subject object currently in the tree view.
@@ -53,7 +62,7 @@ export class SchemasViewProvider
    * in the schema registry.
    */
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    await vscode.window.withProgress(
+    await window.withProgress(
       {
         location: { viewId: this.viewId },
         title: "Loading subject...",
@@ -93,7 +102,7 @@ export class SchemasViewProvider
    * @param newSchemas - The new array of schemas to update the subject with.
    */
   async updateSubjectSchemas(subjectString: string, newSchemas: Schema[] | null): Promise<void> {
-    await vscode.window.withProgress(
+    await window.withProgress(
       {
         location: { viewId: this.viewId },
         title: `Loading ${subjectString}...`,
@@ -127,7 +136,7 @@ export class SchemasViewProvider
   }
 
   readonly viewId: string = "confluent-schemas";
-  private treeView: vscode.TreeView<SchemasViewProviderData>;
+  private treeView: TreeView<SchemasViewProviderData>;
   /** The parent of the focused Schema Registry.  */
   public environment: Environment | null = null;
   /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
@@ -151,11 +160,11 @@ export class SchemasViewProvider
       throw new ExtensionContextNotSetError("SchemasViewProvider");
     }
 
-    this.treeView = vscode.window.createTreeView(this.viewId, { treeDataProvider: this });
+    this.treeView = window.createTreeView(this.viewId, { treeDataProvider: this });
 
-    const listeners: vscode.Disposable[] = this.setEventListeners();
+    const listeners: Disposable[] = this.setEventListeners();
 
-    this.disposables = [this.treeView, ...listeners];
+    this.disposables.push(this.treeView, this._onDidChangeTreeData, ...listeners);
   }
 
   static getInstance(): SchemasViewProvider {
@@ -207,8 +216,8 @@ export class SchemasViewProvider
   }
 
   // we're not handling just `Schema` here since we may be expanding a container tree item
-  getTreeItem(element: SchemasViewProviderData): vscode.TreeItem {
-    let treeItem: vscode.TreeItem;
+  getTreeItem(element: SchemasViewProviderData): TreeItem {
+    let treeItem: TreeItem;
 
     if (element instanceof Subject) {
       treeItem = new SubjectTreeItem(element);
@@ -221,7 +230,7 @@ export class SchemasViewProvider
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = vscode.Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
       }
       treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
     }
@@ -331,32 +340,32 @@ export class SchemasViewProvider
   }
 
   /** Set up event listeners for this view provider. */
-  setEventListeners(): vscode.Disposable[] {
-    const environmentChangedSub: vscode.Disposable = environmentChanged.event(
+  setEventListeners(): Disposable[] {
+    const environmentChangedSub: Disposable = environmentChanged.event(
       this.environmentChangedHandler.bind(this),
     );
 
-    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event(
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(
       this.ccloudConnectedHandler.bind(this),
     );
 
-    const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
+    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
       this.localSchemaRegistryConnectedHandler.bind(this),
     );
 
-    const currentSchemaRegistryChangedSub: vscode.Disposable = currentSchemaRegistryChanged.event(
+    const currentSchemaRegistryChangedSub: Disposable = currentSchemaRegistryChanged.event(
       this.currentSchemaRegistryChangedHandler.bind(this),
     );
 
-    const schemaSearchSetSub: vscode.Disposable = schemaSearchSet.event(
+    const schemaSearchSetSub: Disposable = schemaSearchSet.event(
       this.schemaSearchSetHandler.bind(this),
     );
 
-    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
+    const schemaSubjectChangedSub: Disposable = schemaSubjectChanged.event(
       this.schemaSubjectChangedHandler.bind(this),
     );
 
-    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
+    const schemaVersionsChangedSub: Disposable = schemaVersionsChanged.event(
       this.schemaVersionsChangedHandler.bind(this),
     );
 
