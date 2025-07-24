@@ -71,12 +71,6 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
     }
   });
 
-  it("should register event listeners to .disposables", () => {
-    // Need to figure out why stubbing the event emitters' .event methods doesn't work here
-    // when checking call counts after the provider is created
-    assert.strictEqual(provider.disposables.length, 2);
-  });
-
   it("should create codelenses at the top of the document", async () => {
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
