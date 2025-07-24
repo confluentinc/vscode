@@ -80,7 +80,7 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/base";
-import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
+import { FlinkArtifactsViewProvider, toggleViewMode } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -308,6 +308,7 @@ async function _activateExtension(
     vscode.languages.registerCodeLensProvider("flinksql", provider),
     provider,
   );
+  registerCommandWithLogging("confluent.flink.toggleUnifiedView", toggleViewMode);
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();

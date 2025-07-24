@@ -741,6 +741,12 @@
         "command": "confluent.flink.statements.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Flink Statements View"
+      },
+      {
+        "command": "confluent.flink.toggleUnifiedView",
+        "icon": "$(code)",
+        "title": "Toggle Unified View",
+        "category": "Confluent: Flink Unified View"
       }
     ],
     "configuration": [
@@ -1482,6 +1488,11 @@
           "command": "confluent.artifacts.flink-compute-pool.select",
           "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
           "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.toggleUnifiedView",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
