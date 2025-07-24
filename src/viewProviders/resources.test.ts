@@ -316,8 +316,9 @@ describe("ResourceViewProvider context value updates", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    provider.dispose();
     ResourceViewProvider["instance"] = null;
+    sandbox.restore();
   });
 
   it("getTreeItem() should update context values correctly when a direct environment has no resources", async () => {
@@ -490,7 +491,10 @@ describe("ResourceViewProvider search behavior", () => {
   });
 
   afterEach(() => {
+    provider.dispose();
     ResourceViewProvider["instance"] = null;
+
+    CCloudResourceLoader.dispose();
     CCloudResourceLoader["instance"] = null;
 
     sandbox.restore();
