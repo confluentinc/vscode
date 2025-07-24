@@ -21,6 +21,7 @@ import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { DisposableCollection } from "../utils/disposables";
 import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -34,12 +35,10 @@ const logger = new Logger("viewProviders.schemas");
 type SchemasViewProviderData = Subject | Schema;
 
 export class SchemasViewProvider
+  extends DisposableCollection
   implements vscode.TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "schemas";
-  /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: vscode.Disposable[] = [];
 
   private _onDidChangeTreeData: vscode.EventEmitter<SchemasViewProviderData | undefined | void> =
     new vscode.EventEmitter<SchemasViewProviderData | undefined | void>();
@@ -146,6 +145,7 @@ export class SchemasViewProvider
   private static instance: SchemasViewProvider | null = null;
 
   private constructor() {
+    super();
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
       throw new ExtensionContextNotSetError("SchemasViewProvider");
@@ -163,12 +163,6 @@ export class SchemasViewProvider
       SchemasViewProvider.instance = new SchemasViewProvider();
     }
     return SchemasViewProvider.instance;
-  }
-
-  /** Deregister event listeners, etc. */
-  dispose(): void {
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
   }
 
   /** Convenience method to revert this view to its original state. */

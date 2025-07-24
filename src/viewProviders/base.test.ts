@@ -78,9 +78,10 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    provider.dispose();
     // reset singleton instances between tests
     BaseViewProvider["instanceMap"].clear();
+    sandbox.restore();
   });
 
   describe("getInstance()", () => {
@@ -113,7 +114,7 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
     it("should include custom event listeners in disposables", () => {
       // one for the custom event listener, and any implemented in the base class as part of the
       // private `setEventListeners` method
-      assert.ok(provider.disposables.length > 1);
+      assert.ok(provider["disposables"].length > 1);
       assert.ok(provider.setCustomEventListenersCalled);
     });
 
