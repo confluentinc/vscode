@@ -1,4 +1,13 @@
-import * as vscode from "vscode";
+import {
+  Disposable,
+  Event,
+  EventEmitter,
+  TreeDataProvider,
+  TreeItem,
+  TreeView,
+  Uri,
+  window,
+} from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
@@ -38,13 +47,13 @@ type TopicViewProviderData = KafkaTopic | Subject | Schema;
 
 export class TopicViewProvider
   extends DisposableCollection
-  implements vscode.TreeDataProvider<TopicViewProviderData>, RefreshableTreeViewProvider
+  implements TreeDataProvider<TopicViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "topics";
 
-  private _onDidChangeTreeData: vscode.EventEmitter<TopicViewProviderData | undefined | void> =
-    new vscode.EventEmitter<TopicViewProviderData | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<TopicViewProviderData | undefined | void> =
+  private _onDidChangeTreeData: EventEmitter<TopicViewProviderData | undefined | void> =
+    new EventEmitter<TopicViewProviderData | undefined | void>();
+  readonly onDidChangeTreeData: Event<TopicViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
   private forceDeepRefresh: boolean = false;
@@ -64,7 +73,7 @@ export class TopicViewProvider
     this._onDidChangeTreeData.fire();
   }
 
-  private treeView: vscode.TreeView<TopicViewProviderData>;
+  private treeView: TreeView<TopicViewProviderData>;
   /** The parent of the focused Kafka cluster.  */
   public environment: Environment | null = null;
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
@@ -89,9 +98,9 @@ export class TopicViewProvider
     }
     // instead of calling `.registerTreeDataProvider`, we're creating a TreeView to dynamically
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
-    this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
+    this.treeView = window.createTreeView("confluent-topics", { treeDataProvider: this });
 
-    const listeners: vscode.Disposable[] = this.setEventListeners();
+    const listeners: Disposable[] = this.setEventListeners();
 
     this.disposables.push(this.treeView, this._onDidChangeTreeData, ...listeners);
   }
@@ -118,8 +127,8 @@ export class TopicViewProvider
     this.refresh();
   }
 
-  getTreeItem(element: TopicViewProviderData): vscode.TreeItem {
-    let treeItem: vscode.TreeItem;
+  getTreeItem(element: TopicViewProviderData): TreeItem {
+    let treeItem: TreeItem;
     if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
     } else if (element instanceof Subject) {
@@ -133,7 +142,7 @@ export class TopicViewProvider
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = vscode.Uri.parse(
+        treeItem.resourceUri = Uri.parse(
           `${SEARCH_DECORATION_URI_SCHEME}:/${element.searchableText()}`,
         );
       }
@@ -170,7 +179,7 @@ export class TopicViewProvider
         } catch (err) {
           logger.error("Error fetching topics for cluster", this.kafkaCluster, err);
           if (err instanceof TopicFetchError) {
-            vscode.window.showErrorMessage(
+            window.showErrorMessage(
               `Failed to list topics for cluster "${this.kafkaCluster.name}": ${err.message}`,
             );
           }
@@ -222,34 +231,34 @@ export class TopicViewProvider
   }
 
   /** Set up event listeners for this view provider. */
-  setEventListeners(): vscode.Disposable[] {
-    const environmentChangedSub: vscode.Disposable = environmentChanged.event(
+  setEventListeners(): Disposable[] {
+    const environmentChangedSub: Disposable = environmentChanged.event(
       this.environmentChangedHander.bind(this),
     );
 
-    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event(
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(
       this.ccloudConnectedHandler.bind(this),
     );
 
-    const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
+    const localKafkaConnectedSub: Disposable = localKafkaConnected.event(
       this.localKafkaConnectedHandler.bind(this),
     );
 
-    const currentKafkaClusterChangedSub: vscode.Disposable = currentKafkaClusterChanged.event(
+    const currentKafkaClusterChangedSub: Disposable = currentKafkaClusterChanged.event(
       this.currentKafkaClusterChangedHandler.bind(this),
     );
 
-    const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
+    const topicSearchSetSub: Disposable = topicSearchSet.event(
       this.topicSearchSetHandler.bind(this),
     );
 
     // A schema subject was added or removed. Shared handler.
-    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
+    const schemaSubjectChangedSub: Disposable = schemaSubjectChanged.event(
       this.subjectChangeHandler.bind(this),
     );
 
     // A schema version was added or removed. Shared handler.
-    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
+    const schemaVersionsChangedSub: Disposable = schemaVersionsChanged.event(
       this.subjectChangeHandler.bind(this),
     );
 
