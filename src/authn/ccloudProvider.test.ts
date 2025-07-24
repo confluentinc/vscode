@@ -83,6 +83,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   });
 
   afterEach(() => {
+    authProvider.dispose();
     // reset the singleton instance between tests
     ConfluentCloudAuthProvider["instance"] = null;
     sandbox.restore();
@@ -351,6 +352,20 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
       assert.strictEqual(result.success, success);
     });
   }
+
+  describe("dispose()", function () {
+    it("should dispose of all .disposables", () => {
+      const disposable1 = { dispose: sandbox.stub() };
+      const disposable2 = { dispose: sandbox.stub() };
+      authProvider.disposables.push(disposable1, disposable2);
+
+      authProvider.dispose();
+
+      sinon.assert.calledOnce(disposable1.dispose);
+      sinon.assert.calledOnce(disposable2.dispose);
+      assert.strictEqual(authProvider.disposables.length, 0);
+    });
+  });
 });
 
 describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () => {
@@ -391,6 +406,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
   });
 
   afterEach(() => {
+    authProvider.dispose();
     // reset the singleton instance between tests
     ConfluentCloudAuthProvider["instance"] = null;
     sandbox.restore();

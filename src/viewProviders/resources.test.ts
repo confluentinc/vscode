@@ -66,8 +66,9 @@ describe("ResourceViewProvider methods", () => {
   });
 
   afterEach(() => {
+    provider.dispose(); // clean up provider disposables
+    ResourceViewProvider["instance"] = null; // reset singleton instance
     sandbox.restore();
-    ResourceViewProvider["instance"] = null;
   });
 
   for (const resource of [
@@ -128,6 +129,20 @@ describe("ResourceViewProvider methods", () => {
 
     assert.strictEqual(provider.environmentsMap.size, 1);
     assert.ok(provider.environmentsMap.has(TEST_DIRECT_ENVIRONMENT.id));
+  });
+
+  describe("dispose()", function () {
+    it("should dispose of all .disposables", () => {
+      const disposable1 = { dispose: sandbox.stub() };
+      const disposable2 = { dispose: sandbox.stub() };
+      provider.disposables.push(disposable1, disposable2);
+
+      provider.dispose();
+
+      sinon.assert.calledOnce(disposable1.dispose);
+      sinon.assert.calledOnce(disposable2.dispose);
+      assert.strictEqual(provider.disposables.length, 0);
+    });
   });
 });
 
@@ -301,8 +316,9 @@ describe("ResourceViewProvider context value updates", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    provider.dispose();
     ResourceViewProvider["instance"] = null;
+    sandbox.restore();
   });
 
   it("getTreeItem() should update context values correctly when a direct environment has no resources", async () => {
@@ -475,7 +491,10 @@ describe("ResourceViewProvider search behavior", () => {
   });
 
   afterEach(() => {
+    provider.dispose();
     ResourceViewProvider["instance"] = null;
+
+    CCloudResourceLoader.dispose();
     CCloudResourceLoader["instance"] = null;
 
     sandbox.restore();

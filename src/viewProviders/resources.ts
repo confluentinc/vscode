@@ -158,6 +158,11 @@ export class ResourceViewProvider
     return ResourceViewProvider.instance;
   }
 
+  dispose() {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
   async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
     let treeItem: vscode.TreeItem;
     if (element instanceof Environment) {

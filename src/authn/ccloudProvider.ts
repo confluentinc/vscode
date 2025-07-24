@@ -102,6 +102,11 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     return ConfluentCloudAuthProvider.instance;
   }
 
+  dispose() {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
   /**
    * Create a CCloud connection with the sidecar if one doesn't already exist, then start the
    * browser-based authentication flow.
