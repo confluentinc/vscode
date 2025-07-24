@@ -15,7 +15,6 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
-import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connection";
 import {
   createTestSubject,
   createTestTopicData,
@@ -790,45 +789,5 @@ describe("ResourceLoader::getInstance()", () => {
         return (err as Error).message.startsWith("Unknown connectionId");
       },
     );
-  });
-});
-
-describe("ResourceLoader::dispose()", function () {
-  let sandbox: sinon.SinonSandbox;
-
-  beforeEach(function () {
-    sandbox = sinon.createSandbox();
-  });
-
-  afterEach(function () {
-    sandbox.restore();
-  });
-
-  for (const loader of [CCloudResourceLoader, LocalResourceLoader]) {
-    it(`should dispose of all ${loader.name}.disposables`, () => {
-      const disposable1 = { dispose: sandbox.stub() };
-      const disposable2 = { dispose: sandbox.stub() };
-
-      const loaderInstance = loader.getInstance();
-      loaderInstance.disposables.push(disposable1, disposable2);
-      loaderInstance.dispose();
-
-      sinon.assert.calledOnce(disposable1.dispose);
-      sinon.assert.calledOnce(disposable2.dispose);
-      assert.strictEqual(loaderInstance.disposables.length, 0);
-    });
-  }
-
-  it("should dispose of all DirectResourceLoader.disposables", () => {
-    const disposable1 = { dispose: sandbox.stub() };
-    const disposable2 = { dispose: sandbox.stub() };
-
-    const directLoader = new DirectResourceLoader(TEST_DIRECT_CONNECTION_ID);
-    directLoader.disposables.push(disposable1, disposable2);
-    directLoader.dispose();
-
-    sinon.assert.calledOnce(disposable1.dispose);
-    sinon.assert.calledOnce(disposable2.dispose);
-    assert.strictEqual(directLoader.disposables.length, 0);
   });
 });

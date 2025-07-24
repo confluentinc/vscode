@@ -13,5 +13,5 @@ export function constructResourceLoaderSingletons(): Disposable[] {
   const localLoader = LocalResourceLoader.getInstance();
   ResourceLoader.registerInstance(LOCAL_CONNECTION_ID, localLoader);
 
-  return [...ccloudLoader.disposables, ...localLoader.disposables];
+  return [ccloudLoader, localLoader];
 }

@@ -13,8 +13,8 @@ describe("utils/disposables.ts BaseDisposableManager", function () {
 
     const disposable1 = { dispose: sinon.spy() };
     const disposable2 = { dispose: sinon.spy() };
-    manager.disposables.push(disposable1);
-    manager.disposables.push(disposable2);
+    manager["disposables"].push(disposable1);
+    manager["disposables"].push(disposable2);
 
     manager.dispose();
 

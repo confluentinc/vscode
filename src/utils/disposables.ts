@@ -5,7 +5,7 @@ import { Disposable } from "vscode";
  * This class implements the `dispose` method to clean up all registered disposables.
  */
 export abstract class BaseDisposableManager implements Disposable {
-  disposables: Disposable[] = [];
+  protected disposables: Disposable[] = [];
 
   dispose(): void {
     this.disposables.forEach((disposable) => disposable.dispose());
