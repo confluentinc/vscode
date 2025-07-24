@@ -40,7 +40,8 @@ compatible clusters within Visual Studio Code.
 - Variable and function names should be self-documenting to reduce the need for inline comments
 - Keep functions small and follow the single-responsibility principle
 - Follow VS Code extension API patterns for commands, tree providers, quickpicks, and webviews
-- Keep track of and handle `vscode.Disposable` resources properly to avoid memory leaks
+- Do not use `vscode.Disposable`, instead, use `Disposable` to manage disposables in extension code
+  and test this using a detached instance via a singleton with private constructor.
 - Use existing ResourceLoader and ResourceManager patterns rather than creating new data fetching
   approaches
 - Use VS Code's configuration API for user settings
