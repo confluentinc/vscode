@@ -5,7 +5,6 @@ import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoader
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
@@ -63,20 +62,12 @@ describe("FlinkArtifactsViewProvider", () => {
 
       const mockArtifacts = [
         createFlinkArtifact({
-          connectionId: resource.connectionId,
-          connectionType: resource.connectionType,
-          environmentId: resource.environmentId,
           id: "artifact1",
           name: "Test Artifact 1",
-          description: "Test artifact description",
         }),
         createFlinkArtifact({
-          connectionId: resource.connectionId,
-          connectionType: resource.connectionType,
-          environmentId: resource.environmentId,
           id: "artifact2",
           name: "Test Artifact 2",
-          description: "Another test artifact",
         }),
       ];
 
@@ -155,12 +146,8 @@ describe("FlinkArtifactsViewProvider", () => {
   it("returns artifacts when compute pool is selected", () => {
     const mockArtifacts = [
       createFlinkArtifact({
-        connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
-        connectionType: ConnectionType.Ccloud,
-        environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
         id: "artifact1",
         name: "Test Artifact 1",
-        description: "Test artifact description",
       }),
     ];
 
