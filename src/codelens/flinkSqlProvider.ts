@@ -20,17 +20,17 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
+import { BaseDisposableManager } from "../utils/disposables";
 
 const logger = new Logger("codelens.flinkSqlProvider");
 
-export class FlinkSqlCodelensProvider implements CodeLensProvider {
-  disposables: Disposable[] = [];
-
+export class FlinkSqlCodelensProvider extends BaseDisposableManager implements CodeLensProvider {
   // controls refreshing the available codelenses
   private _onDidChangeCodeLenses: EventEmitter<void> = new EventEmitter<void>();
   readonly onDidChangeCodeLenses: Event<void> = this._onDidChangeCodeLenses.event;
 
   private constructor() {
+    super();
     // refresh/update all codelenses for documents visible in the workspace when any of these fire
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       logger.debug("ccloudConnected event fired, updating codelenses", { connected });
@@ -50,11 +50,6 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
       FlinkSqlCodelensProvider.instance = new FlinkSqlCodelensProvider();
     }
     return FlinkSqlCodelensProvider.instance;
-  }
-
-  dispose() {
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
   }
 
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
