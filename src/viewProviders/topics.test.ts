@@ -158,28 +158,28 @@ describe("TopicViewProvider", () => {
       assert.strictEqual(provider["treeView"].message, undefined);
     });
 
-    it("getTreeItem() should set the resourceUri of topic items whose name matches the search string", async () => {
+    it("getTreeItem() should set the resourceUri of topic items whose name matches the search string", () => {
       // Topic name matches the search string
       provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
 
-      const treeItem = await provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
+      const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
 
       assert.ok(treeItem instanceof KafkaTopicTreeItem);
       assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
     });
 
-    it("getTreeItem() should set the resourceUri of schema subject containers whose subject matches the search string", async () => {
+    it("getTreeItem() should set the resourceUri of schema subject containers whose subject matches the search string", () => {
       // Schema ID matches the search string
       provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
 
-      const treeItem = await provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+      const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
 
       assert.ok(treeItem instanceof SubjectTreeItem);
       assert.ok(treeItem.resourceUri);
       assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
     });
 
-    it("getTreeItem() should expand topic items when their schemas match search", async () => {
+    it("getTreeItem() should expand topic items when their schemas match search", () => {
       const topic = KafkaTopic.create({
         ...TEST_CCLOUD_KAFKA_TOPIC,
         children: [TEST_CCLOUD_SUBJECT],
@@ -187,12 +187,12 @@ describe("TopicViewProvider", () => {
       // Schema subject matches search
       provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
 
-      const treeItem = await provider.getTreeItem(topic);
+      const treeItem = provider.getTreeItem(topic);
 
       assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
     });
 
-    it("getTreeItem() should collapse topic items when schemas exist but don't match search", async () => {
+    it("getTreeItem() should collapse topic items when schemas exist but don't match search", () => {
       const topic = KafkaTopic.create({
         ...TEST_CCLOUD_KAFKA_TOPIC,
         children: [TEST_CCLOUD_SUBJECT],
@@ -200,7 +200,7 @@ describe("TopicViewProvider", () => {
       // Search string doesn't match topic or schema
       provider.topicSearchSetHandler("non-matching-search");
 
-      const treeItem = await provider.getTreeItem(topic);
+      const treeItem = provider.getTreeItem(topic);
 
       assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
     });
