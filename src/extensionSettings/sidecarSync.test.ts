@@ -161,7 +161,7 @@ describe("extensionSettings/sidecarSync.ts", function () {
           tls_pem_paths: tlsPemPaths,
           trust_all_certificates: trustAllCerts,
           flink_private_endpoints: updates.splitPrivateNetworkEndpoints(privateNetworkEndpoints),
-        } as any,
+        },
       };
       stubbedPreferencesResourceApi.gatewayV1PreferencesPut.resolves(fakePreferences);
 
