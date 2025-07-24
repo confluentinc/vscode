@@ -25,9 +25,10 @@ describe("FlinkArtifactsViewProvider", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    viewProvider.dispose();
     // reset singleton instances between tests
     FlinkArtifactsViewProvider["instanceMap"].clear();
+    sandbox.restore();
   });
 
   describe("refresh()", () => {

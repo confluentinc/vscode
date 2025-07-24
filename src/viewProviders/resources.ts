@@ -59,6 +59,7 @@ import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { BaseDisposableManager } from "../utils/disposables";
 import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -85,12 +86,10 @@ type ResourceViewProviderData =
   | DirectResources;
 
 export class ResourceViewProvider
+  extends BaseDisposableManager
   implements vscode.TreeDataProvider<ResourceViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind: string = "resources";
-  /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: vscode.Disposable[] = [];
 
   private _onDidChangeTreeData = new vscode.EventEmitter<
     ResourceViewProviderData | undefined | void
@@ -136,6 +135,7 @@ export class ResourceViewProvider
   private static instance: ResourceViewProvider | null = null;
 
   private constructor() {
+    super();
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
       throw new ExtensionContextNotSetError("ResourceViewProvider");

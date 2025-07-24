@@ -7,8 +7,11 @@ import { LocalResourceLoader } from "./localResourceLoader";
 /** Construct and register the singleton resource loaders so they may register their event listeners and
  * so that ResourceLoader.getInstance() will find them. */
 export function constructResourceLoaderSingletons(): Disposable[] {
-  ResourceLoader.registerInstance(CCLOUD_CONNECTION_ID, CCloudResourceLoader.getInstance());
-  ResourceLoader.registerInstance(LOCAL_CONNECTION_ID, LocalResourceLoader.getInstance());
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+  ResourceLoader.registerInstance(CCLOUD_CONNECTION_ID, ccloudLoader);
 
-  return ResourceLoader.getDisposables();
+  const localLoader = LocalResourceLoader.getInstance();
+  ResourceLoader.registerInstance(LOCAL_CONNECTION_ID, localLoader);
+
+  return [ccloudLoader, localLoader];
 }
