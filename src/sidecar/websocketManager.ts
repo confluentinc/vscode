@@ -4,6 +4,7 @@ import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
+import { BaseDisposableManager } from "../utils/disposables";
 import { Message, MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 const logger = new Logger("websocketManager");
@@ -11,7 +12,7 @@ const logger = new Logger("websocketManager");
 /** Type describing message handler callbacks to whom received messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
-export class WebsocketManager implements Disposable {
+export class WebsocketManager extends BaseDisposableManager {
   static instance: WebsocketManager | null = null;
 
   static getInstance(): WebsocketManager {
@@ -31,10 +32,10 @@ export class WebsocketManager implements Disposable {
    *  @see {@link subscribe()}, {@link once()}, and {@link deliverToCallbacks()} methods.
    */
   private messageRouter: NodeEventEmitter;
-  private disposables: Disposable[] = [];
   private peerWorkspaceCount = 0;
 
   private constructor() {
+    super();
     // Set up a NodeJS EventEmitter to route received websocket messages to the appropriate async handlers
     // based on the message type.
     this.messageRouter = constructMessageRouter();
@@ -246,11 +247,6 @@ export class WebsocketManager implements Disposable {
     // );
 
     this.messageRouter.emit(messageType, message);
-  }
-
-  public dispose(): void {
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
   }
 
   /** Parse/deserialize a message received from websocket into a Message<T> or die trying **/
