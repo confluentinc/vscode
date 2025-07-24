@@ -9,7 +9,7 @@ import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
-describe.only("FlinkArtifactsViewProvider", () => {
+describe("FlinkArtifactsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let viewProvider: FlinkArtifactsViewProvider;
 
