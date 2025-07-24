@@ -791,3 +791,29 @@ describe("ResourceLoader::getInstance()", () => {
     );
   });
 });
+
+describe("ResourceLoader::dispose()", function () {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  for (const loader of [CCloudResourceLoader, DirectResourceLoader, LocalResourceLoader]) {
+    it(`should dispose of all ${loader.name}.disposables`, () => {
+      const disposable1 = { dispose: sandbox.stub() };
+      const disposable2 = { dispose: sandbox.stub() };
+
+      loader.getDisposables().push(disposable1, disposable2);
+      loader.dispose();
+
+      sinon.assert.calledOnce(disposable1.dispose);
+      sinon.assert.calledOnce(disposable2.dispose);
+      assert.strictEqual(loader.getDisposables().length, 0);
+    });
+  }
+});

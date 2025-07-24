@@ -42,6 +42,11 @@ export abstract class ResourceLoader implements IResourceBase {
     return ResourceLoader.disposables;
   }
 
+  static dispose() {
+    ResourceLoader.disposables.forEach((d) => d.dispose());
+    ResourceLoader.disposables = [];
+  }
+
   // Map of connectionId to ResourceLoader instance.
   private static registry: Map<ConnectionId, ResourceLoader> = new Map();
 
