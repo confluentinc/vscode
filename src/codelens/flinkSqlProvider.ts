@@ -20,11 +20,11 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 
 const logger = new Logger("codelens.flinkSqlProvider");
 
-export class FlinkSqlCodelensProvider extends BaseDisposableManager implements CodeLensProvider {
+export class FlinkSqlCodelensProvider extends DisposableCollection implements CodeLensProvider {
   // controls refreshing the available codelenses
   private _onDidChangeCodeLenses: EventEmitter<void> = new EventEmitter<void>();
   readonly onDidChangeCodeLenses: Event<void> = this._onDidChangeCodeLenses.event;

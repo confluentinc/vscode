@@ -19,7 +19,7 @@ import { IdItem } from "../models/main";
 import { EnvironmentId, IResourceBase, isCCloud, ISearchable } from "../models/resource";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { titleCase } from "../utils";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { filterItems, itemMatchesSearch } from "./search";
 
 /** View providers offering our common refresh() pattern. */
@@ -36,7 +36,7 @@ type BaseViewProviderData = IResourceBase & IdItem & ISearchable & { environment
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class BaseViewProvider<T extends BaseViewProviderData>
-  extends BaseDisposableManager
+  extends DisposableCollection
   implements TreeDataProvider<T>, RefreshableTreeViewProvider
 {
   abstract loggerName: string;

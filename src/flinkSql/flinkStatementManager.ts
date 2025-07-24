@@ -8,7 +8,7 @@ import {
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { IntervalPoller } from "../utils/timing";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 
@@ -37,7 +37,7 @@ export type FlinkStatementManagerConfiguration = {
  * Emits an event onto `flinkStatementUpdated` whenever a nonterminal statement is updated, and
  * an event onto `flinkStatementDeleted` whenever a nonterminal statement is deleted.
  * */
-export class FlinkStatementManager extends BaseDisposableManager {
+export class FlinkStatementManager extends DisposableCollection {
   private static instance: FlinkStatementManager | undefined = undefined;
 
   static getInstance(): FlinkStatementManager {

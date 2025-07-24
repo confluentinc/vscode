@@ -1,10 +1,6 @@
 import { Disposable } from "vscode";
 
-/**
- * A base class for managing a collection of {@link Disposable disposables}.
- * This class implements the `dispose` method to clean up all registered disposables.
- */
-export abstract class BaseDisposableManager implements Disposable {
+export abstract class DisposableCollection implements Disposable {
   protected disposables: Disposable[] = [];
 
   dispose(): void {

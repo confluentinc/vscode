@@ -59,7 +59,7 @@ import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -86,7 +86,7 @@ type ResourceViewProviderData =
   | DirectResources;
 
 export class ResourceViewProvider
-  extends BaseDisposableManager
+  extends DisposableCollection
   implements vscode.TreeDataProvider<ResourceViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind: string = "resources";

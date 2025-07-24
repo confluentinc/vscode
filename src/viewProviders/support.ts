@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 
 export class SupportViewProvider
-  extends BaseDisposableManager
+  extends DisposableCollection
   implements vscode.TreeDataProvider<vscode.TreeItem>
 {
   constructor() {

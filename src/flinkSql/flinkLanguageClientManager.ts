@@ -24,7 +24,7 @@ import { SIDECAR_PORT } from "../sidecar/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { initializeLanguageClient } from "./languageClient";
 import {
   clearFlinkSQLLanguageServerOutputChannel,
@@ -45,7 +45,7 @@ export interface FlinkSqlSettings {
  * - Fetches and manages information about the active Editor's Flink compute pool resources
  * - Manages Flink SQL Language Client lifecycle & related settings
  */
-export class FlinkLanguageClientManager extends BaseDisposableManager {
+export class FlinkLanguageClientManager extends DisposableCollection {
   private static instance: FlinkLanguageClientManager | null = null;
   private languageClient: LanguageClient | null = null;
   private lastWebSocketUrl: string | null = null;

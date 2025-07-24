@@ -1,15 +1,15 @@
 import * as sinon from "sinon";
-import { BaseDisposableManager } from "./disposables";
+import { DisposableCollection } from "./disposables";
 
-class TestDisposableManager extends BaseDisposableManager {
+class TestDisposableCollection extends DisposableCollection {
   dispose(): void {
     super.dispose();
   }
 }
 
-describe("utils/disposables.ts BaseDisposableManager", function () {
+describe("utils/disposables.ts DisposableCollection", function () {
   it("should dispose all registered disposables", function () {
-    const manager = new TestDisposableManager();
+    const manager = new TestDisposableCollection();
 
     const disposable1 = { dispose: sinon.spy() };
     const disposable2 = { dispose: sinon.spy() };

@@ -23,7 +23,7 @@ import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -37,7 +37,7 @@ const logger = new Logger("viewProviders.topics");
 type TopicViewProviderData = KafkaTopic | Subject | Schema;
 
 export class TopicViewProvider
-  extends BaseDisposableManager
+  extends DisposableCollection
   implements vscode.TreeDataProvider<TopicViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "topics";

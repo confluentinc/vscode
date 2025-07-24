@@ -11,7 +11,7 @@ import { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { DirectResourceLoader } from "./directResourceLoader";
 import { fetchSchemasForSubject, fetchSubjects } from "./loaderUtils";
 
@@ -26,7 +26,7 @@ const logger = new Logger("resourceLoader");
  *
  * Generic class over the concrete {@link EnvironmentType}
  */
-export abstract class ResourceLoader extends BaseDisposableManager implements IResourceBase {
+export abstract class ResourceLoader extends DisposableCollection implements IResourceBase {
   /** The connectionId for this resource loader. */
   public abstract connectionId: ConnectionId;
   /** The parent connectionType for this resource loader. */

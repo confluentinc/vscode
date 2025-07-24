@@ -24,7 +24,7 @@ import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { AuthCallbackEvent } from "./types";
 
@@ -64,7 +64,7 @@ const logger = new Logger("authn.ccloudProvider");
  * (with a new `sign_in_uri`), which should only be done by the user signing out.
  */
 export class ConfluentCloudAuthProvider
-  extends BaseDisposableManager
+  extends DisposableCollection
   implements vscode.AuthenticationProvider
 {
   // tells VS Code which sessions have been added, removed, or changed for this extension instance

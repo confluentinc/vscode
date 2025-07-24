@@ -4,7 +4,7 @@ import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import { BaseDisposableManager } from "../utils/disposables";
+import { DisposableCollection } from "../utils/disposables";
 import { Message, MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 const logger = new Logger("websocketManager");
@@ -12,7 +12,7 @@ const logger = new Logger("websocketManager");
 /** Type describing message handler callbacks to whom received messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
-export class WebsocketManager extends BaseDisposableManager {
+export class WebsocketManager extends DisposableCollection {
   static instance: WebsocketManager | null = null;
 
   static getInstance(): WebsocketManager {

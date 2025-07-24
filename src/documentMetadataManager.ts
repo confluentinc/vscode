@@ -3,7 +3,7 @@ import { FLINKSTATEMENT_URI_SCHEME } from "./documentProviders/flinkStatement";
 import { Logger } from "./logging";
 import { getResourceManager } from "./storage/resourceManager";
 import { UriMetadataMap } from "./storage/types";
-import { BaseDisposableManager } from "./utils/disposables";
+import { DisposableCollection } from "./utils/disposables";
 
 const logger = new Logger("documentMetadataManager");
 
@@ -11,7 +11,7 @@ const logger = new Logger("documentMetadataManager");
 const SUPPORTED_URI_SCHEMES = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
 
 /** Manager for VS Code {@link TextDocument}s that tracks metadata across document lifecycle events */
-export class DocumentMetadataManager extends BaseDisposableManager {
+export class DocumentMetadataManager extends DisposableCollection {
   private resourceManager = getResourceManager();
 
   private constructor() {
