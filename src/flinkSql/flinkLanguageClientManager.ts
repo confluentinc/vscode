@@ -646,8 +646,7 @@ export class FlinkLanguageClientManager extends BaseDisposableManager {
 
   public async dispose(): Promise<void> {
     await this.cleanupLanguageClient();
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
+    super.dispose();
     this.openFlinkSqlDocuments.clear();
     FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
     clearFlinkSQLLanguageServerOutputChannel();

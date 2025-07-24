@@ -8,6 +8,7 @@ import {
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
+import { BaseDisposableManager } from "../utils/disposables";
 import { IntervalPoller } from "../utils/timing";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 
@@ -36,7 +37,7 @@ export type FlinkStatementManagerConfiguration = {
  * Emits an event onto `flinkStatementUpdated` whenever a nonterminal statement is updated, and
  * an event onto `flinkStatementDeleted` whenever a nonterminal statement is deleted.
  * */
-export class FlinkStatementManager {
+export class FlinkStatementManager extends BaseDisposableManager {
   private static instance: FlinkStatementManager | undefined = undefined;
 
   static getInstance(): FlinkStatementManager {
@@ -103,11 +104,6 @@ export class FlinkStatementManager {
    */
   private configuration: FlinkStatementManagerConfiguration;
 
-  /**
-   * List of disposables to clean up when we are done.
-   */
-  private disposables: Disposable[];
-
   /** Is polling configured at all? */
   isEnabled(): boolean {
     return this.configuration.pollingFrequency > 0;
@@ -119,6 +115,7 @@ export class FlinkStatementManager {
   }
 
   private constructor() {
+    super();
     this.configuration = FlinkStatementManager.getConfiguration();
     // May be undefined if polling is disabled.
     this.poller = this.resetPoller();
@@ -137,8 +134,7 @@ export class FlinkStatementManager {
       this.poller.dispose();
     }
     this.monitoredStatements.clear();
-    this.disposables.forEach((disposable) => disposable.dispose());
-    this.disposables = [];
+    super.dispose();
   }
 
   /**
