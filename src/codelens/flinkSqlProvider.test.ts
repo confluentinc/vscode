@@ -25,6 +25,7 @@ const testUri = Uri.parse("file:///test/file.sql");
 
 describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
   let sandbox: sinon.SinonSandbox;
+  let provider: FlinkSqlCodelensProvider;
   let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
@@ -49,10 +50,11 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
 
     hasCCloudAuthSessionStub = sandbox.stub(ccloud, "hasCCloudAuthSession").returns(true);
 
-    FlinkSqlCodelensProvider["instance"] = null;
+    provider = FlinkSqlCodelensProvider.getInstance();
   });
 
   afterEach(async () => {
+    provider.dispose();
     FlinkSqlCodelensProvider["instance"] = null;
     sandbox.restore();
     // clean up any stored metadata
@@ -60,21 +62,22 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
   });
 
   it("should create only one instance of FlinkSqlCodelensProvider", () => {
-    const instance1 = FlinkSqlCodelensProvider.getInstance();
-    const instance2 = FlinkSqlCodelensProvider.getInstance();
-    assert.strictEqual(instance1, instance2);
+    const provider2 = FlinkSqlCodelensProvider.getInstance();
+
+    try {
+      assert.strictEqual(provider, provider2);
+    } finally {
+      provider2.dispose();
+    }
   });
 
   it("should register event listeners to .disposables", () => {
-    const provider = FlinkSqlCodelensProvider.getInstance();
-
     // Need to figure out why stubbing the event emitters' .event methods doesn't work here
     // when checking call counts after the provider is created
     assert.strictEqual(provider.disposables.length, 2);
   });
 
   it("should create codelenses at the top of the document", async () => {
-    const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
     const expectedRange = new Range(new Position(0, 0), new Position(0, 0));
@@ -87,7 +90,6 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
     // simulate no CCloud auth session
     hasCCloudAuthSessionStub.returns(false);
 
-    const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
     assert.strictEqual(codeLenses.length, 1);
@@ -109,7 +111,6 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
       });
       ccloudLoaderStub.getEnvironments.resolves([envWithoutPool]);
 
-      const provider = FlinkSqlCodelensProvider.getInstance();
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
       assert.strictEqual(codeLenses.length, 3);
@@ -153,7 +154,6 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
       });
       ccloudLoaderStub.getEnvironments.resolves([envWithoutPool]);
 
-      const provider = FlinkSqlCodelensProvider.getInstance();
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
       assert.strictEqual(codeLenses.length, 3);
@@ -200,7 +200,6 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
 
-    const provider = FlinkSqlCodelensProvider.getInstance();
     const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
     assert.strictEqual(codeLenses.length, 4);

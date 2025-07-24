@@ -26,6 +26,11 @@ export class DocumentMetadataManager {
     return DocumentMetadataManager.instance;
   }
 
+  dispose() {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
   private registerEventListeners() {
     this.disposables.push(
       workspace.onDidOpenTextDocument(this.handleDocumentOpen, this),

@@ -52,6 +52,11 @@ export class FlinkSqlCodelensProvider implements CodeLensProvider {
     return FlinkSqlCodelensProvider.instance;
   }
 
+  dispose() {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
     const codeLenses: CodeLens[] = [];
 

@@ -115,6 +115,12 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
     return BaseViewProvider.instanceMap.get(className) as U;
   }
 
+  /** Dispose of this view provider and its tracked {@linkcode disposables}. Mainly used in tests. */
+  dispose(): void {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
   /** Set up event listeners for this view provider. */
   protected setEventListeners(): Disposable[] {
     const disposables: Disposable[] = [];
