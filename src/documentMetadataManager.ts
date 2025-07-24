@@ -1,8 +1,9 @@
-import { Disposable, TextDocument, Uri, workspace } from "vscode";
+import { TextDocument, Uri, workspace } from "vscode";
 import { FLINKSTATEMENT_URI_SCHEME } from "./documentProviders/flinkStatement";
 import { Logger } from "./logging";
 import { getResourceManager } from "./storage/resourceManager";
 import { UriMetadataMap } from "./storage/types";
+import { BaseDisposableManager } from "./utils/disposables";
 
 const logger = new Logger("documentMetadataManager");
 
@@ -10,11 +11,11 @@ const logger = new Logger("documentMetadataManager");
 const SUPPORTED_URI_SCHEMES = ["file", "untitled", FLINKSTATEMENT_URI_SCHEME];
 
 /** Manager for VS Code {@link TextDocument}s that tracks metadata across document lifecycle events */
-export class DocumentMetadataManager {
+export class DocumentMetadataManager extends BaseDisposableManager {
   private resourceManager = getResourceManager();
-  disposables: Disposable[] = [];
 
   private constructor() {
+    super();
     this.registerEventListeners();
   }
 
@@ -24,11 +25,6 @@ export class DocumentMetadataManager {
       DocumentMetadataManager.instance = new DocumentMetadataManager();
     }
     return DocumentMetadataManager.instance;
-  }
-
-  dispose() {
-    this.disposables.forEach((d) => d.dispose());
-    this.disposables = [];
   }
 
   private registerEventListeners() {
