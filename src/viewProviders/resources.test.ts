@@ -480,7 +480,7 @@ describe("ResourceViewProvider search behavior", () => {
     provider.dispose();
     ResourceViewProvider["instance"] = null;
 
-    CCloudResourceLoader.dispose();
+    ccloudLoader.dispose();
     CCloudResourceLoader["instance"] = null;
 
     sandbox.restore();

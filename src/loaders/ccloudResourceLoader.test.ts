@@ -49,7 +49,7 @@ describe("CCloudResourceLoader", () => {
   });
 
   afterEach(() => {
-    CCloudResourceLoader.dispose();
+    loader.dispose();
     CCloudResourceLoader["instance"] = null; // Reset singleton instance
     sandbox.restore();
   });
