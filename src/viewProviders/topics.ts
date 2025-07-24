@@ -244,12 +244,12 @@ export class TopicViewProvider
       this.topicSearchSetHandler.bind(this),
     );
 
-    // A schema subject was added or removed.
+    // A schema subject was added or removed. Shared handler.
     const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
       this.subjectChangeHandler.bind(this),
     );
 
-    // A schema version was added or removed.
+    // A schema version was added or removed. Shared handler.
     const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
       this.subjectChangeHandler.bind(this),
     );

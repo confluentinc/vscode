@@ -1,7 +1,10 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { SinonStubbedInstance } from "sinon";
 import { TreeItemCollapsibleState, window } from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
+  TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -17,6 +20,8 @@ import * as contextValues from "../context/values";
 import { EventChangeType, SubjectChangeEvent } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/loaderUtils";
+import { CCloudEnvironment } from "../models/environment";
+import { EnvironmentId } from "../models/resource";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import * as telemetryEvents from "../telemetry/events";
@@ -44,7 +49,7 @@ describe("TopicViewProvider", () => {
     sandbox.restore();
   });
 
-  describe("TopicViewProvider methods", () => {
+  describe("getTreeItem()", () => {
     it("getTreeItem() should return a SchemaTreeItem for a Schema instance", () => {
       const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA);
       assert.ok(treeItem instanceof SchemaTreeItem);
@@ -59,7 +64,9 @@ describe("TopicViewProvider", () => {
       const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
       assert.ok(treeItem instanceof SubjectTreeItem);
     });
+  });
 
+  describe("isFocusedOnCCloud()", () => {
     it("isFocusedOnCCloud() should return true when the cluster is a CCloud one", () => {
       provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
       assert.strictEqual(provider.isFocusedOnCCloud(), true);
@@ -73,6 +80,66 @@ describe("TopicViewProvider", () => {
     it("isFocusedOnCCloud() should return false when the cluster is null", () => {
       provider.kafkaCluster = null;
       assert.strictEqual(provider.isFocusedOnCCloud(), false);
+    });
+  });
+
+  describe("updateTreeViewDescription()", () => {
+    const initialDescription = "Initial description";
+
+    let ccloudLoader: SinonStubbedInstance<CCloudResourceLoader>;
+
+    function getDescription(): string | undefined {
+      return provider["treeView"].description;
+    }
+
+    beforeEach(() => {
+      provider["treeView"].description = initialDescription;
+      ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
+    });
+
+    it("does noting when no cluster is set", async () => {
+      provider.kafkaCluster = null;
+      await provider.updateTreeViewDescription();
+      assert.strictEqual(getDescription(), initialDescription);
+    });
+
+    it("sets to mix of cluster name and environment name when cluster is set", async () => {
+      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
+
+      // Wire up ccloudLoader.getEnvironments to return two environments, one of which is the parent environment.
+      const parentEnvironment = {
+        ...TEST_CCLOUD_ENVIRONMENT,
+        name: "Test Env Name",
+      } as CCloudEnvironment;
+
+      const testEnvironments = [
+        {
+          ...TEST_CCLOUD_ENVIRONMENT,
+          id: "some other env" as EnvironmentId,
+          name: "Test Environment",
+        },
+        parentEnvironment,
+      ] as CCloudEnvironment[];
+
+      ccloudLoader.getEnvironments.resolves(testEnvironments);
+
+      await provider.updateTreeViewDescription();
+
+      assert.strictEqual(
+        getDescription(),
+        `${parentEnvironment.name} | ${TEST_CCLOUD_KAFKA_CLUSTER.name}`,
+      );
+    });
+
+    it("sets to cluster name when no parent environment is found", async () => {
+      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
+
+      // Wire up ccloudLoader.getEnvironments to return an empty array, hitting warning case.
+      ccloudLoader.getEnvironments.resolves([]);
+
+      await provider.updateTreeViewDescription();
+
+      assert.strictEqual(getDescription(), TEST_CCLOUD_KAFKA_CLUSTER.name);
     });
   });
 
