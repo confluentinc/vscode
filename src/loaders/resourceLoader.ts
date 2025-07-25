@@ -1,4 +1,3 @@
-import { Disposable } from "vscode";
 import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { isResponseError, logError } from "../errors";
@@ -12,6 +11,7 @@ import { KafkaTopic } from "../models/topic";
 import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+import { DisposableCollection } from "../utils/disposables";
 import { DirectResourceLoader } from "./directResourceLoader";
 import { fetchSchemasForSubject, fetchSubjects } from "./loaderUtils";
 
@@ -26,21 +26,11 @@ const logger = new Logger("resourceLoader");
  *
  * Generic class over the concrete {@link EnvironmentType}
  */
-export abstract class ResourceLoader implements IResourceBase {
+export abstract class ResourceLoader extends DisposableCollection implements IResourceBase {
   /** The connectionId for this resource loader. */
   public abstract connectionId: ConnectionId;
   /** The parent connectionType for this resource loader. */
   public abstract connectionType: ConnectionType;
-
-  /** Disposables belonging to all instances of ResourceLoader to be added to the extension
-   * context during activation, cleaned up on extension deactivation.
-   */
-  protected static disposables: Disposable[] = [];
-
-  /**  Return all known long lived disposables for extension cleanup. */
-  public static getDisposables(): Disposable[] {
-    return ResourceLoader.disposables;
-  }
 
   // Map of connectionId to ResourceLoader instance.
   private static registry: Map<ConnectionId, ResourceLoader> = new Map();

@@ -11,7 +11,7 @@ import { CCloudResourceLoader } from "../loaders";
 import * as notifications from "../notifications";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
-describe("FlinkArtifactsViewProvider", () => {
+describe.only("FlinkArtifactsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let viewProvider: FlinkArtifactsViewProvider;
 
@@ -26,20 +26,27 @@ describe("FlinkArtifactsViewProvider", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    viewProvider.dispose();
     // reset singleton instances between tests
     FlinkArtifactsViewProvider["instanceMap"].clear();
+    sandbox.restore();
   });
 
   describe("refresh()", () => {
     let changeFireStub: sinon.SinonStub;
     let logErrorStub: sinon.SinonStub;
     let showErrorNotificationStub: sinon.SinonStub;
+    let windowWithProgressStub: sinon.SinonStub;
 
     beforeEach(() => {
       changeFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
       logErrorStub = sandbox.stub(errors, "logError");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+      windowWithProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
+        const mockProgress = {} as Progress<unknown>;
+        const mockToken = {} as CancellationToken;
+        return Promise.resolve(callback(mockProgress, mockToken));
+      });
     });
 
     it("clears when no resource is selected", async () => {
@@ -51,14 +58,6 @@ describe("FlinkArtifactsViewProvider", () => {
     });
 
     it("fetches new artifacts when a resource is selected", async () => {
-      const windowWithProgressStub = sandbox
-        .stub(window, "withProgress")
-        .callsFake((_, callback) => {
-          const mockProgress = {} as Progress<unknown>;
-          const mockToken = {} as CancellationToken;
-          return Promise.resolve(callback(mockProgress, mockToken));
-        });
-
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       viewProvider["resource"] = resource;
 
@@ -118,12 +117,6 @@ describe("FlinkArtifactsViewProvider", () => {
       let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
       beforeEach(() => {
-        sandbox.stub(window, "withProgress").callsFake((_, callback) => {
-          const mockProgress = {} as Progress<unknown>;
-          const mockToken = {} as CancellationToken;
-          return Promise.resolve(callback(mockProgress, mockToken));
-        });
-
         viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
         stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
       });
@@ -139,12 +132,9 @@ describe("FlinkArtifactsViewProvider", () => {
 
         sandbox.stub(errors, "isResponseError").returns(true);
 
-        try {
+        await assert.rejects(async () => {
           await viewProvider.refresh();
-          assert.fail("Expected error to be thrown");
-        } catch (error) {
-          assert.strictEqual(error, mockError);
-        }
+        }, mockError);
 
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
@@ -167,12 +157,9 @@ describe("FlinkArtifactsViewProvider", () => {
 
         sandbox.stub(errors, "isResponseError").returns(true);
 
-        try {
+        await assert.rejects(async () => {
           await viewProvider.refresh();
-          assert.fail("Expected error to be thrown");
-        } catch (error) {
-          assert.strictEqual(error, mockError);
-        }
+        }, mockError);
 
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
@@ -190,12 +177,9 @@ describe("FlinkArtifactsViewProvider", () => {
 
         sandbox.stub(errors, "isResponseError").returns(false);
 
-        try {
+        await assert.rejects(async () => {
           await viewProvider.refresh();
-          assert.fail("Expected error to be thrown");
-        } catch (error) {
-          assert.strictEqual(error, mockError);
-        }
+        }, mockError);
 
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
@@ -218,12 +202,9 @@ describe("FlinkArtifactsViewProvider", () => {
 
         sandbox.stub(errors, "isResponseError").returns(true);
 
-        try {
+        await assert.rejects(async () => {
           await viewProvider.refresh();
-          assert.fail("Expected error to be thrown");
-        } catch (error) {
-          assert.strictEqual(error, mockError);
-        }
+        }, mockError);
 
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
@@ -249,12 +230,9 @@ describe("FlinkArtifactsViewProvider", () => {
           }),
         ];
 
-        try {
+        await assert.rejects(async () => {
           await viewProvider.refresh();
-          assert.fail("Expected error to be thrown");
-        } catch (error) {
-          assert.strictEqual(error, mockError);
-        }
+        }, mockError);
 
         // Artifacts should be cleared at the start of refresh
         assert.deepStrictEqual(viewProvider["_artifacts"], []);

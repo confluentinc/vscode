@@ -9,23 +9,30 @@ import { UriMetadataMap } from "./storage/types";
 describe("documentMetadataManager.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+  let manager: DocumentMetadataManager;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
+
+    manager = DocumentMetadataManager.getInstance();
   });
 
   afterEach(() => {
+    manager.dispose();
     DocumentMetadataManager["instance"] = null;
     sandbox.restore();
   });
 
   it("should create only one instance of DocumentMetadataManager", () => {
-    const instance1 = DocumentMetadataManager.getInstance();
-    const instance2 = DocumentMetadataManager.getInstance();
-    assert.strictEqual(instance1, instance2);
+    const manager2 = DocumentMetadataManager.getInstance();
+    try {
+      assert.strictEqual(manager, manager2);
+    } finally {
+      manager2.dispose();
+    }
   });
 
   it("should register document lifecycle event handlers when instantiated", () => {
@@ -33,6 +40,9 @@ describe("documentMetadataManager.ts", () => {
     const onDidSaveTextDocumentSpy = sandbox.spy(workspace, "onDidSaveTextDocument");
     const onDidCloseTextDocumentSpy = sandbox.spy(workspace, "onDidCloseTextDocument");
 
+    // ensure we start fresh with a new constructor call
+    manager.dispose();
+    DocumentMetadataManager["instance"] = null;
     DocumentMetadataManager.getInstance();
 
     assert.ok(onDidOpenTextDocumentSpy.calledOnce);
@@ -48,8 +58,7 @@ describe("documentMetadataManager.ts", () => {
       uri: Uri.parse("untitled:test.sql"),
     } as unknown as TextDocument;
 
-    const dmm = DocumentMetadataManager.getInstance();
-    await dmm["handleDocumentSave"](fakeUntitledDoc);
+    await manager["handleDocumentSave"](fakeUntitledDoc);
 
     sinon.assert.notCalled(stubResourceManager.getAllUriMetadata);
   });
@@ -76,8 +85,7 @@ describe("documentMetadataManager.ts", () => {
     metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
     stubResourceManager.getAllUriMetadata.resolves(metadataMap);
 
-    const dmm = DocumentMetadataManager.getInstance();
-    await dmm["handleDocumentSave"](fakeFileDoc);
+    await manager["handleDocumentSave"](fakeFileDoc);
 
     // migration should have happened by setting the metadata for the file document and deleting the
     // metadata for the untitled document
@@ -107,8 +115,7 @@ describe("documentMetadataManager.ts", () => {
     metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
     stubResourceManager.getAllUriMetadata.resolves(metadataMap);
 
-    const dmm = DocumentMetadataManager.getInstance();
-    await dmm["handleDocumentSave"](fakeFileDoc);
+    await manager["handleDocumentSave"](fakeFileDoc);
 
     // migration should have happened by setting the metadata for the file document and deleting the
     // metadata for the untitled document
@@ -137,8 +144,7 @@ describe("documentMetadataManager.ts", () => {
     metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
     stubResourceManager.getAllUriMetadata.resolves(metadataMap);
 
-    const dmm = DocumentMetadataManager.getInstance();
-    await dmm["handleDocumentSave"](fakeFileDoc);
+    await manager["handleDocumentSave"](fakeFileDoc);
 
     // migration should not have happened
     assert.ok(stubResourceManager.setUriMetadata.notCalled);
