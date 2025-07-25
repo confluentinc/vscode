@@ -80,7 +80,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
 
   // NOTE: this is usually private/protected with a singleton pattern, but needs to be public for
   // the subclasses to be called with .getInstance() properly
-  public constructor() {
+  constructor() {
     super();
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
@@ -97,7 +97,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
     this.logger = new Logger(this.loggerName);
     this.treeView = window.createTreeView(this.viewId, { treeDataProvider: this });
     const listeners: Disposable[] = this.setEventListeners();
-    this.disposables = [this.treeView, ...listeners];
+    this.disposables.push(this.treeView, ...listeners);
   }
 
   /** Map to store instances of subclasses so they don't have to implement their own singleton patterns. */

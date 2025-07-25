@@ -610,7 +610,6 @@ describe("viewProviders/newResources.ts", () => {
     let provider: NewResourceViewProvider;
 
     beforeEach(() => {
-      //@ts-expect-error constructor is private, but we are testing the class directly.
       provider = new NewResourceViewProvider();
 
       // would have been called if we obtained through getInstance().
@@ -1024,16 +1023,20 @@ describe("viewProviders/newResources.ts", () => {
   });
 
   describe("resourceViewWithProgress()", () => {
-    let instance: NewResourceViewProvider;
+    let provider: NewResourceViewProvider;
     let newResourceswithProgressStub: sinon.SinonStub;
     let windowWithProgressStub: sinon.SinonStub;
 
     beforeEach(() => {
-      instance = new NewResourceViewProvider();
-      sandbox.stub(NewResourceViewProvider, "getInstance").returns(instance);
+      provider = new NewResourceViewProvider();
+      sandbox.stub(NewResourceViewProvider, "getInstance").returns(provider);
 
-      newResourceswithProgressStub = sandbox.stub(instance, "withProgress");
+      newResourceswithProgressStub = sandbox.stub(provider, "withProgress");
       windowWithProgressStub = sandbox.stub(window, "withProgress");
+    });
+
+    afterEach(() => {
+      provider.dispose();
     });
 
     it("calls both withProgress() and NewResourceViewProvider.withProgress()", async () => {

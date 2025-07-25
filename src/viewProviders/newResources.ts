@@ -436,12 +436,6 @@ export class NewResourceViewProvider
   private readonly connections: Map<ConnectionId, AnyConnectionRow> = new Map();
   private connectionIndex: number = 0;
 
-  // Class is a singleton, so private constructor, use NewResourceViewProvider.getInstance()
-  // to get the official instance.
-  private constructor() {
-    super();
-  }
-
   public async refreshConnection(connectionId: ConnectionId, deepRefresh = true): Promise<void> {
     await this.withProgress("Refreshing connection ...", async () => {
       this.logger.debug("Refreshing connection", { connectionId });
