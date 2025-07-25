@@ -26,12 +26,10 @@ export class FlinkArtifactsViewProvider
     }
     return this.filterChildren(element, this._artifacts);
   }
-
   async refresh(): Promise<void> {
     this._artifacts = [];
 
     if (this.computePool) {
-      // Immediately inform the view that we (temporarily) have no data so it will clear.
       this._onDidChangeTreeData.fire();
 
       await this.withProgress(
@@ -41,28 +39,52 @@ export class FlinkArtifactsViewProvider
             const loader = CCloudResourceLoader.getInstance();
             this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
           } catch (error) {
-            logError(error, "Failed to load Flink artifacts");
+            let showNotification = false;
+            let message = "Failed to load Flink artifacts.";
 
-            // Check for HTTP error status codes and show user notifications
             if (isResponseError(error)) {
               const status = error.response.status;
+              // Only show notifications for error status codes
               if (status >= 400 && status < 600) {
-                let errorMessage = "Failed to load Flink artifacts.";
-
-                if (status >= 400 && status < 500) {
-                  errorMessage += " Please check your permissions and try again.";
-                } else if (status >= 500) {
-                  errorMessage +=
-                    " The service is temporarily unavailable. Please try again later.";
+                showNotification = true;
+                switch (status) {
+                  case 401:
+                    message = "Authentication required to load Flink artifacts.";
+                    break;
+                  case 403:
+                    message =
+                      "Failed to load Flink artifacts. Please check your permissions and try again.";
+                    break;
+                  case 404:
+                    message = "Flink artifacts not found for this compute pool.";
+                    break;
+                  case 429:
+                    message = "Too many requests. Please try again later.";
+                    break;
+                  case 503:
+                    message =
+                      "Failed to load Flink artifacts. The service is temporarily unavailable. Please try again later.";
+                    break;
+                  default:
+                    message = "Failed to load Flink artifacts due to an unexpected error.";
+                    break;
                 }
-
-                await showErrorNotificationWithButtons(errorMessage);
               }
+              logError(error, "Failed to load Flink artifacts");
+            } else if (error instanceof Error) {
+              message =
+                "Failed to load Flink artifacts. Please check your connection and try again.";
+              showNotification = true;
+              logError(error, "Failed to load Flink artifacts");
             } else {
-              // For non-HTTP errors (network issues, etc.)
-              await showErrorNotificationWithButtons(
-                "Failed to load Flink artifacts. Please check your connection and try again.",
-              );
+              message =
+                "Failed to load Flink artifacts. Please check your connection and try again.";
+              showNotification = true;
+              logError(error, "Failed to load Flink artifacts");
+            }
+
+            if (showNotification) {
+              await showErrorNotificationWithButtons(message);
             }
 
             throw error;
