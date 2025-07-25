@@ -8,6 +8,7 @@ import {
   Configuration as FlinkComputePoolsConfiguration,
 } from "../clients/flinkComputePool";
 
+import { createHash } from "crypto";
 import {
   FlinkArtifactsArtifactV1Api,
   Configuration as FlinkArtifactsConfiguration,
@@ -68,6 +69,12 @@ import {
 import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecarHandle");
+
+/** Shape of objects returned from a GraphQL response's .json(). The data portion will vary per the request.*/
+interface GraphQLResponse {
+  data?: any;
+  errors?: Array<{ message: string }>;
+}
 
 /**
  * A short-term handle to a running, handshaken sidecar process.
@@ -405,35 +412,79 @@ export class SidecarHandle {
 
   // === END OF OPENAPI CLIENT METHODS ===
 
+  // Cache of GraphQL query promises to avoid concurrent duplicate requests.
+  private graphQlQueryPromises: Map<string, Promise<GraphQLResponse>> = new Map();
+
   /**
    * Make a GraphQL request to the sidecar via fetch.
    *
    * NOTE: This uses the GraphQL schema in `src/graphql/sidecar.graphql` to generate the types for
    * the query and variables via the `gql.tada` package.
+   *
+   * If multiple requests are made with the same query and connectionId concurrently, only the first
+   * one will be sent to the sidecar, and subsequent requests will wait for the first one to resolve.
+   * All such concurrent requests will return the same result.
+   *
+   * Any Error raised by the fetch() call will be propagated to the caller.
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
-    connectionId?: string,
-    // Mark second parameter as optional if Variables is an empty object type
+    connectionId: string,
+    // Mark third parameter as optional if Variables is an empty object type
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
   ): Promise<Result> {
-    let headers: Headers;
-    if (connectionId) {
-      headers = new Headers({
+    let fetchAndExtractPromise: Promise<GraphQLResponse>;
+
+    // Do we already have an in-flight promise for this qconnectionId/query?
+    const queryHash = createHash("md5").update(print(query)).digest("hex");
+    const variablesHash = variables
+      ? createHash("md5").update(JSON.stringify(variables)).digest("hex")
+      : "no-vars";
+    const pendingPromiseCacheKey = `${connectionId}:${queryHash}:${variablesHash}`;
+
+    if (!this.graphQlQueryPromises.has(pendingPromiseCacheKey)) {
+      // Go ahead and create a new request promise and put into the pending promise cache.
+      const headers = new Headers({
         ...this.defaultClientConfigParams.headers,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       });
+
+      /** Construct a single new promise to make the query, then parse the json response. */
+      const fetchAndExtractResponsePayload = async (): Promise<GraphQLResponse> => {
+        const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ query: print(query), variables }),
+        });
+
+        // Consume the response body to extract the JSON payload exactly once.
+        return (await response.json()) as GraphQLResponse;
+      };
+
+      fetchAndExtractPromise = fetchAndExtractResponsePayload();
+
+      this.graphQlQueryPromises.set(pendingPromiseCacheKey, fetchAndExtractPromise);
     } else {
-      headers = new Headers(this.defaultClientConfigParams.headers);
+      // Refer to the cached in-flight promise instead of redundantly
+      // asking sidecar to do the same work.
+      logger.debug(`Using cached GraphQL request for a query for: ${connectionId}`);
+      fetchAndExtractPromise = this.graphQlQueryPromises.get(pendingPromiseCacheKey)!;
     }
 
-    const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query: print(query), variables }),
-    });
-    const payload = await response.json();
+    let payload: GraphQLResponse;
+
+    // The fetch() call driven by the promise may raise an error, so be sure to clear
+    // the promise from the cache regardless of whether it succeeds or fails.
+    try {
+      payload = await fetchAndExtractPromise;
+    } finally {
+      // Regardless of whether the request succeeded or failed, we remove the promise from the cache.
+
+      // No longer in-flight, so remove the promise from cache. Any calls started subsequently will
+      // create a new request promise.
+      this.graphQlQueryPromises.delete(pendingPromiseCacheKey);
+    }
 
     if (!payload.data) {
       let errorString: string;
