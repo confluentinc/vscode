@@ -70,8 +70,8 @@ import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecarHandle");
 
-/** Shape of objects returned from a GraphQL response's .json(). The data portion will vary per the request.*/
-interface GraphQLResponse {
+/** Shape of objects returned from a GraphQL response's .json(). The data portion will vary per the request. */
+export interface GraphQLResponse {
   data?: any;
   errors?: Array<{ message: string }>;
 }
