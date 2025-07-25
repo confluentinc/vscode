@@ -11,6 +11,9 @@ export const SIDECAR_CONNECTION_ID_HEADER: string = "x-connection-id";
 /** Header used to specify a given (Kafka, Schema Registry, etc) cluster ID, if applicable */
 export const CLUSTER_ID_HEADER: string = "x-cluster-id";
 
+/** Header used to specify the Confluent Cloud environment, if applicable */
+export const CCLOUD_ENV_ID_HEADER: string = "x-ccloud-env-id";
+
 /** Header used to specify which cloud provider */
 export const CCLOUD_PROVIDER_HEADER: string = "x-ccloud-provider";
 
