@@ -72,7 +72,7 @@ export async function waitForConnectionToBeStable(
   }
 
   logger.debug(
-    `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
+    `waitForConnectionToBeStable(): connection ${id} is stable after ${Date.now() - startTime}ms, returning`,
   );
   await reportUsableState(connection);
 
