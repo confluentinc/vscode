@@ -1,25 +1,23 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window, workspace, WorkspaceConfiguration } from "vscode";
+import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
-  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-  DEFAULT_STATEMENT_POLLING_LIMIT,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
+import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 describe("FlinkStatementsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
@@ -38,9 +36,10 @@ describe("FlinkStatementsViewProvider", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    viewProvider.dispose();
     // reset singleton instances between tests
     FlinkStatementsViewProvider["instanceMap"].clear();
+    sandbox.restore();
   });
 
   describe("refresh()", () => {
@@ -103,51 +102,29 @@ describe("FlinkStatementsViewProvider", () => {
     });
   });
 
-  /** Subset of workspace configs */
-  type PollingConfigs = {
-    nonterminalPollingFrequency: number | undefined;
-    nonterminalPollingConcurrency: number | undefined;
-    nonterminalStatementsToPoll: number | undefined;
-  };
-
   describe("logTelemetry()", () => {
     let logUsageStub: sinon.SinonStub;
-    let pollingConfigs: PollingConfigs;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
 
     beforeEach(() => {
-      // default to user not having any of our germane configs set at all.
-      pollingConfigs = {
-        nonterminalPollingFrequency: undefined,
-        nonterminalPollingConcurrency: undefined,
-        nonterminalStatementsToPoll: undefined,
-      };
-
       logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
-      sandbox.stub(workspace, "getConfiguration").returns({
-        get: (param: string) => {
-          if (param === STATEMENT_POLLING_CONCURRENCY) {
-            return pollingConfigs.nonterminalPollingConcurrency;
-          }
-          if (param === STATEMENT_POLLING_FREQUENCY_SECONDS) {
-            return pollingConfigs.nonterminalPollingFrequency;
-          }
-          if (param === STATEMENT_POLLING_LIMIT) {
-            return pollingConfigs.nonterminalStatementsToPoll;
-          }
-          return undefined;
-        },
-      } as WorkspaceConfiguration);
+      // default to user not having any custom settings
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     });
 
-    it("logs telemetry with compute_pool_id and default configs", () => {
+    it("logs telemetry with compute_pool_id and custom configs", () => {
       const totalStatements = 3;
       const nonTerminalStatements = 1;
       viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
 
       // Terrible custom configs.
-      pollingConfigs.nonterminalPollingConcurrency = 1;
-      pollingConfigs.nonterminalPollingFrequency = 2;
-      pollingConfigs.nonterminalStatementsToPoll = 300;
+      const nonterminalPollingConcurrency = 1;
+      const nonterminalPollingFrequency = 2;
+      const nonterminalStatementsToPoll = 300;
+      stubbedConfigs
+        .stubGet(STATEMENT_POLLING_CONCURRENCY, nonterminalPollingConcurrency)
+        .stubGet(STATEMENT_POLLING_FREQUENCY_SECONDS, nonterminalPollingFrequency)
+        .stubGet(STATEMENT_POLLING_LIMIT, nonterminalStatementsToPoll);
 
       viewProvider.logTelemetry(totalStatements, nonTerminalStatements);
 
@@ -163,23 +140,29 @@ describe("FlinkStatementsViewProvider", () => {
           non_terminal_statement_count: nonTerminalStatements,
           terminal_statement_count: totalStatements - nonTerminalStatements,
 
-          // Should have called with all the defaults, since this user
-          // smells like not having set any of the polling configs.
-          nonterminal_polling_concurrency: pollingConfigs.nonterminalPollingConcurrency,
-          nonterminal_polling_frequency: pollingConfigs.nonterminalPollingFrequency,
-          nonterminal_statements_to_poll: pollingConfigs.nonterminalStatementsToPoll,
+          nonterminal_polling_concurrency: nonterminalPollingConcurrency,
+          nonterminal_polling_frequency: nonterminalPollingFrequency,
+          nonterminal_statements_to_poll: nonterminalStatementsToPoll,
         },
       );
     });
 
-    it("logs telemetry with environment_id and custom configs", () => {
+    it("logs telemetry with environment_id and default configs", () => {
       const totalStatements = 7011;
       const nonTerminalStatements = 3053;
       viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
+
+      stubbedConfigs
+        .stubGet(STATEMENT_POLLING_CONCURRENCY, STATEMENT_POLLING_CONCURRENCY.defaultValue)
+        .stubGet(
+          STATEMENT_POLLING_FREQUENCY_SECONDS,
+          STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+        )
+        .stubGet(STATEMENT_POLLING_LIMIT, STATEMENT_POLLING_LIMIT.defaultValue);
+
       viewProvider.logTelemetry(totalStatements, nonTerminalStatements);
 
       sinon.assert.calledOnce(logUsageStub);
-
       sinon.assert.calledWith(
         logUsageStub,
         telemetryEvents.UserEvent.FlinkStatementViewStatistics,
@@ -193,9 +176,9 @@ describe("FlinkStatementsViewProvider", () => {
 
           // Should have called with all the defaults, since this user
           // smells like not having set any of the polling configs.
-          nonterminal_polling_concurrency: DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-          nonterminal_polling_frequency: DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-          nonterminal_statements_to_poll: DEFAULT_STATEMENT_POLLING_LIMIT,
+          nonterminal_polling_concurrency: STATEMENT_POLLING_CONCURRENCY.defaultValue,
+          nonterminal_polling_frequency: STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+          nonterminal_statements_to_poll: STATEMENT_POLLING_LIMIT.defaultValue,
         },
       );
     });

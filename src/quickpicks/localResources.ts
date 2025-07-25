@@ -1,18 +1,12 @@
 import { commands, QuickPickItem, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
-import {
-  getLocalKafkaImageName,
-  getLocalKafkaImageTag,
-  getLocalMedusaImageName,
-  getLocalMedusaImageTag,
-  getLocalSchemaRegistryImageName,
-  getLocalSchemaRegistryImageTag,
-} from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import {
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_MEDUSA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../extensionSettings/constants";
@@ -29,7 +23,7 @@ export async function localResourcesQuickPick(
 ): Promise<LocalResourceKind[]> {
   const items: QuickPickItem[] = [];
 
-  const kafkaRepoTag = `${getLocalKafkaImageName()}:${getLocalKafkaImageTag()}`;
+  const kafkaRepoTag = `${LOCAL_KAFKA_IMAGE.value}:${LOCAL_KAFKA_IMAGE_TAG.value}`;
   const kafkaItem: QuickPickItem = {
     label: LocalResourceKind.Kafka,
     iconPath: new ThemeIcon(IconNames.KAFKA_CLUSTER),
@@ -45,7 +39,7 @@ export async function localResourcesQuickPick(
     items.push(kafkaItem);
   }
 
-  const schemaRegistryRepoTag = `${getLocalSchemaRegistryImageName()}:${getLocalSchemaRegistryImageTag()}`;
+  const schemaRegistryRepoTag = `${LOCAL_SCHEMA_REGISTRY_IMAGE.value}:${LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value}`;
   const schemaRegistryItem: QuickPickItem = {
     label: LocalResourceKind.SchemaRegistry,
     iconPath: new ThemeIcon(IconNames.SCHEMA_REGISTRY),
@@ -63,7 +57,7 @@ export async function localResourcesQuickPick(
     items.push(schemaRegistryItem);
   }
 
-  const medusaRepoTag = `${getLocalMedusaImageName()}:${getLocalMedusaImageTag()}`;
+  const medusaRepoTag = `${LOCAL_MEDUSA_IMAGE.value}:${LOCAL_MEDUSA_IMAGE_TAG.value}`;
   const medusaItem: QuickPickItem = {
     label: LocalResourceKind.Medusa,
     iconPath: new ThemeIcon("server"),
@@ -126,13 +120,13 @@ export async function localResourcesQuickPick(
         // open Settings and filter to the Kafka image repo+tag settings
         commands.executeCommand(
           "workbench.action.openSettings",
-          `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+          `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
         );
       } else if (button.tooltip?.includes(LocalResourceKind.SchemaRegistry)) {
         // open Settings and filter to the Schema Registry image repo+tag settings
         commands.executeCommand(
           "workbench.action.openSettings",
-          `@id:${LOCAL_SCHEMA_REGISTRY_IMAGE} @id:${LOCAL_SCHEMA_REGISTRY_IMAGE_TAG}`,
+          `@id:${LOCAL_SCHEMA_REGISTRY_IMAGE.id} @id:${LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.id}`,
         );
       }
     },

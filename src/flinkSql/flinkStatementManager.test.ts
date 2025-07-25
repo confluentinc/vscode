@@ -2,13 +2,11 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ConfigurationChangeEvent } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
-  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-  DEFAULT_STATEMENT_POLLING_LIMIT,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
@@ -19,7 +17,6 @@ import { IntervalPoller } from "../utils/timing";
 import * as workerPool from "../utils/workerPool";
 import {
   FlinkStatementManager,
-  FlinkStatementManagerConfiguration,
   MonitoredStatement,
   MonitoredStatements,
 } from "./flinkStatementManager";
@@ -36,39 +33,30 @@ describe("flinkStatementManager.ts", () => {
     let sandbox: sinon.SinonSandbox;
 
     let instance: FlinkStatementManager;
-    let testConfigState: FlinkStatementManagerConfiguration;
-    let configStub: sinon.SinonStub;
+    let stubbedConfigs: StubbedWorkspaceConfiguration;
     let onDidChangeConfigurationStub: sinon.SinonStub;
     let resetPoller: () => IntervalPoller | void;
     let monitoredStatements: MonitoredStatements;
 
-    function resetConfiguration(): FlinkStatementManagerConfiguration {
-      return {
-        pollingFrequency: DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-        maxStatementsToPoll: DEFAULT_STATEMENT_POLLING_LIMIT,
-        concurrency: DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-      };
-    }
-
     async function setWorkspacePollingFrequencySetting(value: number): Promise<void> {
       // Set up the current workspace settings polling frequency
-      testConfigState.pollingFrequency = value;
+      stubbedConfigs.stubGet(STATEMENT_POLLING_FREQUENCY_SECONDS, value);
       // Now simulate the event that would be fired when the configuration changes
-      await driveConfigChangeListener(STATEMENT_POLLING_FREQUENCY_SECONDS);
+      await driveConfigChangeListener(STATEMENT_POLLING_FREQUENCY_SECONDS.id);
     }
 
     async function setWorkspacePollingLimitSetting(value: number): Promise<void> {
       // Set up the current workspace settings polling frequency max statements to poll
-      testConfigState.maxStatementsToPoll = value;
+      stubbedConfigs.stubGet(STATEMENT_POLLING_LIMIT, value);
       // Now simulate the event that would be fired when the configuration changes
-      await driveConfigChangeListener(STATEMENT_POLLING_LIMIT);
+      await driveConfigChangeListener(STATEMENT_POLLING_LIMIT.id);
     }
 
     async function setWorkspacePollingConcurrencySetting(value: number): Promise<void> {
-      // Set up the current workspace settings polling concurrenct
-      testConfigState.concurrency = value;
+      // Set up the current workspace settings polling concurrency
+      stubbedConfigs.stubGet(STATEMENT_POLLING_CONCURRENCY, value);
       // Now simulate the event that would be fired when the configuration changes
-      await driveConfigChangeListener(STATEMENT_POLLING_CONCURRENCY);
+      await driveConfigChangeListener(STATEMENT_POLLING_CONCURRENCY.id);
     }
 
     async function driveConfigChangeListener(configName: string): Promise<void> {
@@ -88,25 +76,15 @@ describe("flinkStatementManager.ts", () => {
       sandbox = sinon.createSandbox();
       onDidChangeConfigurationStub = sandbox.stub(vscode.workspace, "onDidChangeConfiguration");
       onDidChangeConfigurationStub.returns({ dispose: () => {} });
-      testConfigState = resetConfiguration();
 
-      // Fake implementation of workspace.getConfiguration
-      const configMock = {
-        get: sandbox.fake((configName: string) => {
-          switch (configName) {
-            case STATEMENT_POLLING_FREQUENCY_SECONDS:
-              return testConfigState.pollingFrequency;
-            case STATEMENT_POLLING_LIMIT:
-              return testConfigState.maxStatementsToPoll;
-            case STATEMENT_POLLING_CONCURRENCY:
-              return testConfigState.concurrency;
-            default:
-              throw new Error(`Unknown config name: ${configName}`);
-          }
-        }),
-      };
-      configStub = sandbox.stub(vscode.workspace, "getConfiguration");
-      configStub.returns(configMock);
+      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+      stubbedConfigs
+        .stubGet(
+          STATEMENT_POLLING_FREQUENCY_SECONDS,
+          STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+        )
+        .stubGet(STATEMENT_POLLING_LIMIT, STATEMENT_POLLING_LIMIT.defaultValue)
+        .stubGet(STATEMENT_POLLING_CONCURRENCY, STATEMENT_POLLING_CONCURRENCY.defaultValue);
 
       // Be sure to get ahold of a new instance of the FlinkStatementManager
       FlinkStatementManager["instance"] = undefined;
@@ -118,32 +96,46 @@ describe("flinkStatementManager.ts", () => {
     });
 
     afterEach(() => {
-      sandbox.restore();
+      instance.dispose();
       FlinkStatementManager["instance"] = undefined;
+      sandbox.restore();
     });
 
     describe("getConfiguration()", () => {
       it("should return the configuration object", () => {
         const config = FlinkStatementManager.getConfiguration();
-        assert.deepStrictEqual(config, testConfigState);
+        assert.deepStrictEqual(config, {
+          pollingFrequency: STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+          maxStatementsToPoll: STATEMENT_POLLING_LIMIT.defaultValue,
+          concurrency: STATEMENT_POLLING_CONCURRENCY.defaultValue,
+        });
       });
 
       it("Should fix concurrency to be at least 1", () => {
-        testConfigState.concurrency = 0;
+        stubbedConfigs.stubGet(STATEMENT_POLLING_CONCURRENCY, 0);
+
         const config = FlinkStatementManager.getConfiguration();
-        assert.strictEqual(config.concurrency, DEFAULT_STATEMENT_POLLING_CONCURRENCY);
+
+        assert.strictEqual(config.concurrency, STATEMENT_POLLING_CONCURRENCY.defaultValue);
       });
 
       it("Should fix polling frequency to be at least 0", () => {
-        testConfigState.pollingFrequency = -1;
+        stubbedConfigs.stubGet(STATEMENT_POLLING_FREQUENCY_SECONDS, -1);
+
         const config = FlinkStatementManager.getConfiguration();
-        assert.strictEqual(config.pollingFrequency, DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS);
+
+        assert.strictEqual(
+          config.pollingFrequency,
+          STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue,
+        );
       });
 
       it("Should fix max statements to poll to be at least 1", () => {
-        testConfigState.maxStatementsToPoll = 0;
+        stubbedConfigs.stubGet(STATEMENT_POLLING_LIMIT, 0);
+
         const config = FlinkStatementManager.getConfiguration();
-        assert.strictEqual(config.maxStatementsToPoll, DEFAULT_STATEMENT_POLLING_LIMIT);
+
+        assert.strictEqual(config.maxStatementsToPoll, STATEMENT_POLLING_LIMIT.defaultValue);
       });
     }); // getConfiguration
 

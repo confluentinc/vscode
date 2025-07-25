@@ -8,11 +8,11 @@ import {
   HostConfig,
 } from "../../clients/docker";
 import { LOCAL_MEDUSA_INTERNAL_PORT } from "../../constants";
+import { LOCAL_MEDUSA_IMAGE, LOCAL_MEDUSA_IMAGE_TAG } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getLocalResourceContainers } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
-import { getLocalMedusaImageName, getLocalMedusaImageTag } from "../configs";
 import { createContainer } from "../containers";
 import { createNetwork } from "../networks";
 import { findFreePort } from "../ports";
@@ -52,7 +52,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.imageTag = getLocalMedusaImageTag();
+    this.imageTag = LOCAL_MEDUSA_IMAGE_TAG.value;
 
     // already handles logging + updating the progress notification
     await this.checkForImage(this.imageRepo, this.imageTag);
@@ -101,7 +101,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.imageTag = getLocalMedusaImageTag();
+    this.imageTag = LOCAL_MEDUSA_IMAGE_TAG.value;
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
     const existingContainers: ContainerSummary[] = await getLocalResourceContainers(
@@ -178,7 +178,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
   }
 
   get imageRepo(): string {
-    return getLocalMedusaImageName();
+    return LOCAL_MEDUSA_IMAGE.value;
   }
 
   get imageRepoTag(): string {

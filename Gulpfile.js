@@ -17,7 +17,7 @@ import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -397,7 +397,20 @@ function pkgjson() {
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
+
+  let sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
+  // we may be building for Windows from a non-Windows machine, in which case we'll have the .exe
+  if (IS_WINDOWS || process.env.TARGET === "win32-x64") {
+    sidecarFilename = `${sidecarFilename}.exe`;
+  }
+  console.log(`Copying sidecar executable ${sidecarFilename} to ${DESTINATION}/bin/`, {
+    is_windows: IS_WINDOWS,
+    target: process.env.TARGET,
+  });
+  const sidecarPath = join("bin", sidecarFilename);
+  if (!existsSync(sidecarPath)) {
+    throw new Error(`Sidecar executable ${sidecarFilename} not found in bin/ directory.`);
+  }
 
   return [
     virtual({
@@ -668,41 +681,44 @@ export async function testRun() {
   const vscodeVersion = process.env.VSCODE_VERSION || (isInsiders ? "insiders" : "stable");
   console.info(`Starting test runner for VS Code ${vscodeVersion}...`);
 
-  await runTests({
-    version: vscodeVersion,
-    extensionDevelopmentPath: resolve(DESTINATION),
-    extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
-    extensionTestsEnv: {
-      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-      FGREP: testFilter,
-    },
-    launchArgs: [
-      "--no-sandbox",
-      "--profile-temp",
-      "--skip-release-notes",
-      "--skip-welcome",
-      "--disable-gpu",
-      "--disable-updates",
-      "--disable-workspace-trust",
-      "--disable-extensions",
-    ],
-  });
-  if (reportCoverage) {
-    let coverageMap = libCoverage.createCoverageMap();
-    let sourceMapStore = libSourceMaps.createSourceMapStore();
-    coverageMap.merge(JSON.parse(await readFile("./coverage.json")));
-    let data = await sourceMapStore.transformCoverage(coverageMap);
-    let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
-    let context = libReport.createContext({ coverageMap: data });
-    report.execute(context);
-    // create interactive HTML report for local runs
-    let htmlReport = reports.create("html", {
-      dir: "./coverage/html",
-      verbose: true,
+  try {
+    await runTests({
+      version: vscodeVersion,
+      extensionDevelopmentPath: resolve(DESTINATION),
+      extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
+      extensionTestsEnv: {
+        // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
+        FGREP: testFilter,
+      },
+      launchArgs: [
+        "--no-sandbox",
+        "--profile-temp",
+        "--skip-release-notes",
+        "--skip-welcome",
+        "--disable-gpu",
+        "--disable-updates",
+        "--disable-workspace-trust",
+        "--disable-extensions",
+      ],
     });
-    htmlReport.execute(context);
-    // clean up temp file used for coverage reporting
-    await unlink("./coverage.json");
+  } finally {
+    if (reportCoverage) {
+      let coverageMap = libCoverage.createCoverageMap();
+      let sourceMapStore = libSourceMaps.createSourceMapStore();
+      coverageMap.merge(JSON.parse(await readFile("./coverage.json")));
+      let data = await sourceMapStore.transformCoverage(coverageMap);
+      let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
+      let context = libReport.createContext({ coverageMap: data });
+      report.execute(context);
+      // create interactive HTML report for local runs
+      let htmlReport = reports.create("html", {
+        dir: "./coverage/html",
+        verbose: true,
+      });
+      htmlReport.execute(context);
+      // clean up temp file used for coverage reporting
+      await unlink("./coverage.json");
+    }
   }
   // runTests() will throw an error if tests failed, otherwise report happy execution
   return 0;

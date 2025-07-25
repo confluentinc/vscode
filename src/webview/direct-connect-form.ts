@@ -19,7 +19,14 @@ addEventListener("DOMContentLoaded", () => {
   applyBindings(ui, os, vm);
   vm.setupEnterKeyHandler();
 });
-
+const allAuthOptions: Array<{ label: string; value: SupportedAuthTypes }> = [
+  { label: "None", value: "None" },
+  { label: "Username & Password (SASL/PLAIN)", value: "Basic" },
+  { label: "API Credentials (SASL/PLAIN)", value: "API" },
+  { label: "SASL/SCRAM", value: "SCRAM" },
+  { label: "SASL/OAUTHBEARER", value: "OAuth" },
+  { label: "Kerberos (SASL/GSSAPI)", value: "Kerberos" },
+];
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
@@ -106,6 +113,19 @@ class DirectConnectFormViewModel extends ViewModel {
   schemaSslConfig = this.derive(() => {
     return this.spec()?.schema_registry?.ssl || {};
   });
+
+  /** Get valid auth types based on form connection type */
+  getValidKafkaAuthTypes = this.derive(() => {
+    switch (this.platformType()) {
+      case "Confluent Cloud":
+        return allAuthOptions.filter((auth) => ["API", "SCRAM", "OAuth"].includes(auth.value));
+      case "WarpStream":
+        return allAuthOptions.filter((auth) => ["Basic", "SCRAM"].includes(auth.value));
+      default:
+        return allAuthOptions;
+    }
+  });
+
   /** Form State */
   message = this.signal("");
   success = this.signal(false);
@@ -195,9 +215,31 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "kafka_cluster.bootstrap_servers":
         this.kafkaBootstrapServers(input.value);
+        // if localhost, uncheck SSL
+        if (input.value.includes("localhost")) {
+          this.kafkaSslEnabled(false);
+          await post("UpdateSpecValue", {
+            inputName: "kafka_cluster.ssl.enabled",
+            inputValue: false,
+          });
+        }
         break;
       case "schema_registry.uri":
         this.schemaUri(input.value);
+        // if localhost, uncheck SSL
+        if (input.value.includes("localhost") || input.value.startsWith("http:")) {
+          this.schemaSslEnabled(false);
+          await post("UpdateSpecValue", {
+            inputName: "schema_registry.ssl.enabled",
+            inputValue: false,
+          });
+        } else if (input.value.startsWith("https:")) {
+          this.schemaSslEnabled(true);
+          await post("UpdateSpecValue", {
+            inputName: "schema_registry.ssl.enabled",
+            inputValue: true,
+          });
+        }
         break;
       default:
         console.info(`No side effects for input update: ${input.name}`);
@@ -253,6 +295,14 @@ class DirectConnectFormViewModel extends ViewModel {
       this.message("Please fill in all required fields correctly");
       this.loading(false);
       return;
+    }
+
+    if (
+      data["formconnectiontype"] === "WarpStream" &&
+      data["kafka_cluster.auth_type"] === "SCRAM"
+    ) {
+      // Enforce SCRAM_SHA_512 for WarpStream in the data; that's all WarpStream supports
+      data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
     }
 
     if (data["formconnectiontype"] === "Confluent Cloud") {

@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
+import { DisposableCollection } from "../utils/disposables";
 
-export class SupportViewProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
-  /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: vscode.Disposable[] = [];
-
+export class SupportViewProvider
+  extends DisposableCollection
+  implements vscode.TreeDataProvider<vscode.TreeItem>
+{
   constructor() {
+    super();
     // register to the Support view
     const provider: vscode.Disposable = vscode.window.registerTreeDataProvider(
       "confluent-support",

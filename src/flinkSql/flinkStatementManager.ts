@@ -1,9 +1,6 @@
-import { ConfigurationChangeEvent, Disposable, WorkspaceConfiguration, workspace } from "vscode";
+import { ConfigurationChangeEvent, Disposable, workspace } from "vscode";
 import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
-  DEFAULT_STATEMENT_POLLING_CONCURRENCY,
-  DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS,
-  DEFAULT_STATEMENT_POLLING_LIMIT,
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
@@ -11,6 +8,7 @@ import {
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkStatement, FlinkStatementId } from "../models/flinkStatement";
+import { DisposableCollection } from "../utils/disposables";
 import { IntervalPoller } from "../utils/timing";
 import { executeInWorkerPool, extract } from "../utils/workerPool";
 
@@ -39,7 +37,7 @@ export type FlinkStatementManagerConfiguration = {
  * Emits an event onto `flinkStatementUpdated` whenever a nonterminal statement is updated, and
  * an event onto `flinkStatementDeleted` whenever a nonterminal statement is deleted.
  * */
-export class FlinkStatementManager {
+export class FlinkStatementManager extends DisposableCollection {
   private static instance: FlinkStatementManager | undefined = undefined;
 
   static getInstance(): FlinkStatementManager {
@@ -50,34 +48,29 @@ export class FlinkStatementManager {
   }
 
   static getConfiguration(): FlinkStatementManagerConfiguration {
-    const configs: WorkspaceConfiguration = workspace.getConfiguration();
-    let concurrency =
-      configs.get<number>(STATEMENT_POLLING_CONCURRENCY) ?? DEFAULT_STATEMENT_POLLING_CONCURRENCY;
-    let pollingFrequency =
-      configs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS) ??
-      DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS;
-    let maxStatementsToPoll =
-      configs.get<number>(STATEMENT_POLLING_LIMIT) ?? DEFAULT_STATEMENT_POLLING_LIMIT;
+    let concurrency: number = STATEMENT_POLLING_CONCURRENCY.value;
+    let pollingFrequency: number = STATEMENT_POLLING_FREQUENCY_SECONDS.value;
+    let maxStatementsToPoll: number = STATEMENT_POLLING_LIMIT.value;
 
     if (concurrency < 1) {
       logger.error(
-        `Invalid concurrency: ${concurrency}. Resetting to ${DEFAULT_STATEMENT_POLLING_CONCURRENCY}.`,
+        `Invalid concurrency: ${concurrency}. Resetting to ${STATEMENT_POLLING_CONCURRENCY.defaultValue}.`,
       );
-      concurrency = DEFAULT_STATEMENT_POLLING_CONCURRENCY;
+      concurrency = STATEMENT_POLLING_CONCURRENCY.defaultValue;
     }
 
     if (pollingFrequency < 0) {
       logger.error(
-        `Invalid polling frequency: ${pollingFrequency}. Resetting to ${DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS}.`,
+        `Invalid polling frequency: ${pollingFrequency}. Resetting to ${STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue}.`,
       );
-      pollingFrequency = DEFAULT_STATEMENT_POLLING_FREQUENCY_SECONDS;
+      pollingFrequency = STATEMENT_POLLING_FREQUENCY_SECONDS.defaultValue;
     }
 
     if (maxStatementsToPoll < 1) {
       logger.error(
-        `Invalid max statement to poll: ${maxStatementsToPoll}. Resetting to ${DEFAULT_STATEMENT_POLLING_LIMIT}.`,
+        `Invalid max statement to poll: ${maxStatementsToPoll}. Resetting to ${STATEMENT_POLLING_LIMIT.defaultValue}.`,
       );
-      maxStatementsToPoll = DEFAULT_STATEMENT_POLLING_LIMIT;
+      maxStatementsToPoll = STATEMENT_POLLING_LIMIT.defaultValue;
     }
     return {
       concurrency,
@@ -111,11 +104,6 @@ export class FlinkStatementManager {
    */
   private configuration: FlinkStatementManagerConfiguration;
 
-  /**
-   * List of disposables to clean up when we are done.
-   */
-  private disposables: Disposable[];
-
   /** Is polling configured at all? */
   isEnabled(): boolean {
     return this.configuration.pollingFrequency > 0;
@@ -127,6 +115,7 @@ export class FlinkStatementManager {
   }
 
   private constructor() {
+    super();
     this.configuration = FlinkStatementManager.getConfiguration();
     // May be undefined if polling is disabled.
     this.poller = this.resetPoller();
@@ -145,8 +134,7 @@ export class FlinkStatementManager {
       this.poller.dispose();
     }
     this.monitoredStatements.clear();
-    this.disposables.forEach((disposable) => disposable.dispose());
-    this.disposables = [];
+    super.dispose();
   }
 
   /**
@@ -199,26 +187,23 @@ export class FlinkStatementManager {
   private createConfigChangeListener(): Disposable {
     // NOTE: this fires from any VS Code configuration, not just configs from our extension
     return workspace.onDidChangeConfiguration(async (event: ConfigurationChangeEvent) => {
-      // get the latest workspace configs after the event fired
-      const workspaceConfigs: WorkspaceConfiguration = workspace.getConfiguration();
-
-      if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS)) {
-        const newFrequency = workspaceConfigs.get<number>(STATEMENT_POLLING_FREQUENCY_SECONDS)!;
+      if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS.id)) {
+        const newFrequency: number = STATEMENT_POLLING_FREQUENCY_SECONDS.value;
         this.configuration.pollingFrequency = newFrequency;
         logger.debug(`Polling frequency changed to ${newFrequency}`);
         this.poller = this.resetPoller();
         return;
       }
 
-      if (event.affectsConfiguration(STATEMENT_POLLING_LIMIT)) {
-        const newLimit = workspaceConfigs.get<number>(STATEMENT_POLLING_LIMIT)!;
+      if (event.affectsConfiguration(STATEMENT_POLLING_LIMIT.id)) {
+        const newLimit: number = STATEMENT_POLLING_LIMIT.value;
         this.configuration.maxStatementsToPoll = newLimit;
         logger.debug(`Max statement to poll changed to ${newLimit}`);
         return;
       }
 
-      if (event.affectsConfiguration(STATEMENT_POLLING_CONCURRENCY)) {
-        const newConcurrency = workspaceConfigs.get<number>(STATEMENT_POLLING_CONCURRENCY)!;
+      if (event.affectsConfiguration(STATEMENT_POLLING_CONCURRENCY.id)) {
+        const newConcurrency: number = STATEMENT_POLLING_CONCURRENCY.value;
         this.configuration.concurrency = newConcurrency;
         logger.debug(`Polling concurrency changed to ${newConcurrency}`);
       }

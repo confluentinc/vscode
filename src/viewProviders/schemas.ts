@@ -1,4 +1,13 @@
-import * as vscode from "vscode";
+import {
+  Disposable,
+  Event,
+  EventEmitter,
+  TreeDataProvider,
+  TreeItem,
+  TreeView,
+  Uri,
+  window,
+} from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
@@ -21,6 +30,7 @@ import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { DisposableCollection } from "../utils/disposables";
 import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -34,16 +44,14 @@ const logger = new Logger("viewProviders.schemas");
 type SchemasViewProviderData = Subject | Schema;
 
 export class SchemasViewProvider
-  implements vscode.TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
+  extends DisposableCollection
+  implements TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "schemas";
-  /** Disposables belonging to this provider to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: vscode.Disposable[] = [];
 
-  private _onDidChangeTreeData: vscode.EventEmitter<SchemasViewProviderData | undefined | void> =
-    new vscode.EventEmitter<SchemasViewProviderData | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<SchemasViewProviderData | undefined | void> =
+  private _onDidChangeTreeData: EventEmitter<SchemasViewProviderData | undefined | void> =
+    new EventEmitter<SchemasViewProviderData | undefined | void>();
+  readonly onDidChangeTreeData: Event<SchemasViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
   // Map of subject string -> subject object currently in the tree view.
@@ -54,7 +62,7 @@ export class SchemasViewProvider
    * in the schema registry.
    */
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    await vscode.window.withProgress(
+    await window.withProgress(
       {
         location: { viewId: this.viewId },
         title: "Loading subject...",
@@ -94,7 +102,7 @@ export class SchemasViewProvider
    * @param newSchemas - The new array of schemas to update the subject with.
    */
   async updateSubjectSchemas(subjectString: string, newSchemas: Schema[] | null): Promise<void> {
-    await vscode.window.withProgress(
+    await window.withProgress(
       {
         location: { viewId: this.viewId },
         title: `Loading ${subjectString}...`,
@@ -128,7 +136,7 @@ export class SchemasViewProvider
   }
 
   readonly viewId: string = "confluent-schemas";
-  private treeView: vscode.TreeView<SchemasViewProviderData>;
+  private treeView: TreeView<SchemasViewProviderData>;
   /** The parent of the focused Schema Registry.  */
   public environment: Environment | null = null;
   /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
@@ -144,17 +152,19 @@ export class SchemasViewProvider
   totalItemCount: number = 0;
 
   private static instance: SchemasViewProvider | null = null;
+
   private constructor() {
+    super();
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
       throw new ExtensionContextNotSetError("SchemasViewProvider");
     }
 
-    this.treeView = vscode.window.createTreeView(this.viewId, { treeDataProvider: this });
+    this.treeView = window.createTreeView(this.viewId, { treeDataProvider: this });
 
-    const listeners: vscode.Disposable[] = this.setEventListeners();
+    const listeners: Disposable[] = this.setEventListeners();
 
-    this.disposables = [this.treeView, ...listeners];
+    this.disposables.push(this.treeView, this._onDidChangeTreeData, ...listeners);
   }
 
   static getInstance(): SchemasViewProvider {
@@ -206,8 +216,8 @@ export class SchemasViewProvider
   }
 
   // we're not handling just `Schema` here since we may be expanding a container tree item
-  getTreeItem(element: SchemasViewProviderData): vscode.TreeItem {
-    let treeItem: vscode.TreeItem;
+  getTreeItem(element: SchemasViewProviderData): TreeItem {
+    let treeItem: TreeItem;
 
     if (element instanceof Subject) {
       treeItem = new SubjectTreeItem(element);
@@ -220,7 +230,7 @@ export class SchemasViewProvider
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = vscode.Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
       }
       treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
     }
@@ -330,152 +340,33 @@ export class SchemasViewProvider
   }
 
   /** Set up event listeners for this view provider. */
-  setEventListeners(): vscode.Disposable[] {
-    const environmentChangedSub: vscode.Disposable = environmentChanged.event(
-      async (envEvent: EnvironmentChangeEvent) => {
-        if (this.schemaRegistry && this.schemaRegistry.environmentId === envEvent.id) {
-          if (!envEvent.wasDeleted) {
-            logger.debug(
-              "environmentChanged event fired with matching SR env ID, updating view description",
-              {
-                envEvent,
-              },
-            );
-            await this.updateTreeViewDescription();
-            await this.refresh();
-          } else {
-            logger.debug(
-              "environmentChanged deletion event fired with matching SR env ID, resetting view",
-              {
-                envEvent,
-              },
-            );
-            // environment was deleted, reset the view
-            await this.reset();
-          }
-        }
-      },
+  setEventListeners(): Disposable[] {
+    const environmentChangedSub: Disposable = environmentChanged.event(
+      this.environmentChangedHandler.bind(this),
     );
 
-    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event(
-      async (connected: boolean) => {
-        if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
-          // any transition of CCloud connection state should reset the tree view
-          // if we were previously looking at a ccloud-based SR.
-          logger.debug("ccloudConnected event fired while set to a CC-based SR, resetting", {
-            connected,
-          });
-          await this.reset();
-        }
-      },
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(
+      this.ccloudConnectedHandler.bind(this),
     );
 
-    const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
-      async (connected: boolean) => {
-        if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
-          logger.debug(
-            "localSchemaRegistryConnected event fired while set to local SR, resetting",
-            { connected },
-          );
-          // any transition of local schema registry connection state should reset the tree view
-          await this.reset();
-        }
-      },
+    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
+      this.localSchemaRegistryConnectedHandler.bind(this),
     );
 
-    const currentSchemaRegistryChangedSub: vscode.Disposable = currentSchemaRegistryChanged.event(
-      async (schemaRegistry: SchemaRegistry | null) => {
-        // User has either selected a (probably different) SR to view, or has closed
-        // a connection to a SR (null). React accordingly.
-        logger.debug("currentSchemaRegistryChanged event fired");
-        await this.setSchemaRegistry(schemaRegistry);
-      },
+    const currentSchemaRegistryChangedSub: Disposable = currentSchemaRegistryChanged.event(
+      this.currentSchemaRegistryChangedHandler.bind(this),
     );
 
-    const schemaSearchSetSub: vscode.Disposable = schemaSearchSet.event(
-      (searchString: string | null) => {
-        logger.debug("schemaSearchSet event fired, refreshing", { searchString });
-        // mainly captures the last state of the search internals to see if search was adjusted after
-        // a previous search was used, or if this is the first time search is being used
-        if (searchString !== null) {
-          // used to group search events without sending the search string itself
-          this.searchStringSetCount++;
-        }
-        logUsage(UserEvent.ViewSearchAction, {
-          status: `search string ${searchString ? "set" : "cleared"}`,
-          view: "Schemas",
-          searchStringSetCount: this.searchStringSetCount,
-          hadExistingSearchString: this.itemSearchString !== null,
-          lastFilteredItemCount: this.searchMatches.size,
-          lastTotalItemCount: this.totalItemCount,
-        });
-        this.setSearch(searchString);
-        this.refresh();
-      },
+    const schemaSearchSetSub: Disposable = schemaSearchSet.event(
+      this.schemaSearchSetHandler.bind(this),
     );
 
-    // A subject was added or removed.
-    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
-      (event: SubjectChangeEvent) => {
-        // A subject was added or deleted. Refresh toplevel view if we're looking at
-        // the same schema registry.
-        const [subject, change] = [event.subject, event.change];
-
-        if (this.schemaRegistry?.id === subject.schemaRegistryId) {
-          logger.debug(`A subject ${change} in the registry being viewed, refreshing toplevel`, {
-            subject: subject.name,
-          });
-
-          if (change === "deleted") {
-            this.subjectsInTreeView.delete(subject.name);
-          } else {
-            // Otherwise, add it to the map. It will be carrying the new known single
-            // schema within its `.schemas`
-            this.subjectsInTreeView.set(subject.name, subject);
-          }
-          // Toplevel repaint.
-          this.refresh();
-        }
-      },
+    const schemaSubjectChangedSub: Disposable = schemaSubjectChanged.event(
+      this.schemaSubjectChangedHandler.bind(this),
     );
 
-    // A schema version was added or removed, but the subject remains and has
-    // at least one schema version.
-    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
-      (event: SchemaVersionChangeEvent) => {
-        // A schema version was added or deleted. Refresh the subject if we're looking at
-        // the same schema registry.
-        const [updatedSubject, change] = [event.subject, event.change];
-        if (this.schemaRegistry?.id === updatedSubject.schemaRegistryId) {
-          logger.debug(
-            `A schema version ${change} in the registry being viewed, refreshing subject`,
-            { subject: updatedSubject.name },
-          );
-
-          // find the subject in the tree view and refresh just that subtree
-          // Blow away the schemas in the cached subject, so that they will be
-          // refetched when the subject is expanded, then either showing an added
-          // schema or removing the deleted schema from the child treeitems.
-          const existingSubject = this.subjectsInTreeView.get(updatedSubject.name);
-
-          if (existingSubject) {
-            // If the event carried a new schemas array (already fetched), then use that, otherwise
-            // just set the schemas to null to force a refresh.
-
-            // Merge the new schemas into the subject's schemas, keeping existing in common,
-            // possibly deleting some, possible adding new ones.
-            existingSubject.mergeSchemas(updatedSubject.schemas);
-
-            // Now get the treeview to realize that the subject's getChildren() will
-            // be different, so it needs to repaint the subject.
-            logger.debug(
-              `Firing change to subject, now has ${existingSubject.schemas!.length} schemas`,
-            );
-            // Repaint the subject in the tree view.
-            this._onDidChangeTreeData.fire(existingSubject);
-          }
-        }
-      },
+    const schemaVersionsChangedSub: Disposable = schemaVersionsChanged.event(
+      this.schemaVersionsChangedHandler.bind(this),
     );
 
     return [
@@ -487,6 +378,139 @@ export class SchemasViewProvider
       schemaSubjectChangedSub,
       schemaVersionsChangedSub,
     ];
+  }
+
+  async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
+    if (this.schemaRegistry && this.schemaRegistry.environmentId === envEvent.id) {
+      if (!envEvent.wasDeleted) {
+        logger.debug(
+          "environmentChanged event fired with matching SR env ID, updating view description",
+          {
+            envEvent,
+          },
+        );
+        await this.updateTreeViewDescription();
+        await this.refresh();
+      } else {
+        logger.debug(
+          "environmentChanged deletion event fired with matching SR env ID, resetting view",
+          {
+            envEvent,
+          },
+        );
+        // environment was deleted, reset the view
+        await this.reset();
+      }
+    }
+  }
+
+  async ccloudConnectedHandler(connected: boolean): Promise<void> {
+    if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
+      // any transition of CCloud connection state should reset the tree view
+      // if we were previously looking at a ccloud-based SR.
+      logger.debug("ccloudConnected event fired while set to a CC-based SR, resetting", {
+        connected,
+      });
+      await this.reset();
+    }
+  }
+
+  async localSchemaRegistryConnectedHandler(connected: boolean): Promise<void> {
+    if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
+      logger.debug("localSchemaRegistryConnected event fired while set to local SR, resetting", {
+        connected,
+      });
+      // any transition of local schema registry connection state should reset the tree view
+      await this.reset();
+    }
+  }
+
+  async currentSchemaRegistryChangedHandler(schemaRegistry: SchemaRegistry | null): Promise<void> {
+    // User has either selected a (probably different) SR to view, or has closed
+    // a connection to a SR (null). React accordingly.
+    logger.debug("currentSchemaRegistryChanged event fired");
+    await this.setSchemaRegistry(schemaRegistry);
+  }
+
+  async schemaSearchSetHandler(searchString: string | null): Promise<void> {
+    logger.debug("schemaSearchSet event fired, refreshing", { searchString });
+    // mainly captures the last state of the search internals to see if search was adjusted after
+    // a previous search was used, or if this is the first time search is being used
+    if (searchString !== null) {
+      // used to group search events without sending the search string itself
+      this.searchStringSetCount++;
+    }
+    logUsage(UserEvent.ViewSearchAction, {
+      status: `search string ${searchString ? "set" : "cleared"}`,
+      view: "Schemas",
+      searchStringSetCount: this.searchStringSetCount,
+      hadExistingSearchString: this.itemSearchString !== null,
+      lastFilteredItemCount: this.searchMatches.size,
+      lastTotalItemCount: this.totalItemCount,
+    });
+    this.setSearch(searchString);
+    await this.refresh();
+  }
+
+  /** Handler for event firing when a schema registry *subject* has been created or deleted */
+  async schemaSubjectChangedHandler(event: SubjectChangeEvent): Promise<void> {
+    // A subject was added or deleted. Refresh toplevel view if we're looking at
+    // the same schema registry.
+    const [subject, change] = [event.subject, event.change];
+
+    if (this.schemaRegistry?.id === subject.schemaRegistryId) {
+      logger.debug(`A subject ${change} in the registry being viewed, refreshing toplevel`, {
+        subject: subject.name,
+      });
+
+      if (change === "deleted") {
+        this.subjectsInTreeView.delete(subject.name);
+      } else {
+        // Otherwise, add it to the map. It will be carrying the new known single
+        // schema within its `.schemas`
+        this.subjectsInTreeView.set(subject.name, subject);
+      }
+      // Toplevel repaint.
+      await this.refresh();
+    }
+  }
+
+  /**
+   * A schema version was added or removed, but the subject remains and has
+   * at least one schema version.
+   */
+  async schemaVersionsChangedHandler(event: SchemaVersionChangeEvent): Promise<void> {
+    // A schema version was added or deleted. Refresh the subject if we're looking at
+    // the same schema registry.
+    const [updatedSubject, change] = [event.subject, event.change];
+    if (this.schemaRegistry?.id === updatedSubject.schemaRegistryId) {
+      logger.debug(`A schema version ${change} in the registry being viewed, refreshing subject`, {
+        subject: updatedSubject.name,
+      });
+
+      // find the subject in the tree view and refresh just that subtree
+      // Blow away the schemas in the cached subject, so that they will be
+      // refetched when the subject is expanded, then either showing an added
+      // schema or removing the deleted schema from the child treeitems.
+      const existingSubject = this.subjectsInTreeView.get(updatedSubject.name);
+
+      if (existingSubject) {
+        // If the event carried a new schemas array (already fetched), then use that, otherwise
+        // just set the schemas to null to force a refresh.
+
+        // Merge the new schemas into the subject's schemas, keeping existing in common,
+        // possibly deleting some, possible adding new ones.
+        existingSubject.mergeSchemas(updatedSubject.schemas);
+
+        // Now get the treeview to realize that the subject's getChildren() will
+        // be different, so it needs to repaint the subject.
+        logger.debug(
+          `Firing change to subject, now has ${existingSubject.schemas!.length} schemas`,
+        );
+        // Repaint the subject in the tree view.
+        this._onDidChangeTreeData.fire(existingSubject);
+      }
+    }
   }
 
   /**

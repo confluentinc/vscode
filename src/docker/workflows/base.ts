@@ -1,14 +1,14 @@
 import { CancellationToken, Progress, ProgressLocation, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+} from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { logUsage, UserEvent } from "../../telemetry/events";
-import {
-  getLocalKafkaImageName,
-  getLocalMedusaImageName,
-  getLocalSchemaRegistryImageName,
-} from "../configs";
 import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
@@ -75,7 +75,7 @@ export abstract class LocalResourceWorkflow {
 
   /** Get the Kafka workflow based on the user-configured image repo setting. */
   static getKafkaWorkflow(): LocalResourceWorkflow {
-    const imageRepo: string = getLocalKafkaImageName();
+    const imageRepo: string = LOCAL_KAFKA_IMAGE.value;
     const workflow: LocalResourceWorkflow | undefined =
       LocalResourceWorkflow.workflowRegistry.get(imageRepo);
     if (!workflow) {
@@ -88,7 +88,7 @@ export abstract class LocalResourceWorkflow {
 
   /** Get the Schema Registry workflow based on the user-configured image repo setting. */
   public static getSchemaRegistryWorkflow(): LocalResourceWorkflow {
-    const imageRepo: string = getLocalSchemaRegistryImageName();
+    const imageRepo: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
     const workflow: LocalResourceWorkflow | undefined =
       LocalResourceWorkflow.workflowRegistry.get(imageRepo);
     if (!workflow) {
@@ -101,7 +101,7 @@ export abstract class LocalResourceWorkflow {
 
   /** Get the Medusa workflow. */
   public static getMedusaWorkflow(): LocalResourceWorkflow {
-    const imageRepo: string = getLocalMedusaImageName();
+    const imageRepo: string = LOCAL_MEDUSA_IMAGE.value;
     const workflow: LocalResourceWorkflow | undefined =
       LocalResourceWorkflow.workflowRegistry.get(imageRepo);
     if (!workflow) {
