@@ -612,8 +612,6 @@ export async function rehydrateConnections(): Promise<void> {
     // ccloud connection exists and is valid.
   ];
 
-  const results = await Promise.all(createConnectionPromises.map((fn) => fn()));
-  logger.info("Rehydrated direct connections and created local connection if needed", {
-    results,
-  });
+  await Promise.all(createConnectionPromises.map((fn) => fn()));
+  logger.info("Rehydrated direct connections and created local connection if needed");
 }
