@@ -11,7 +11,7 @@ import { CCloudResourceLoader } from "../loaders";
 import * as notifications from "../notifications";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
-describe.only("FlinkArtifactsViewProvider", () => {
+describe("FlinkArtifactsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let viewProvider: FlinkArtifactsViewProvider;
 
