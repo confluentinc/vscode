@@ -63,10 +63,11 @@ describe("extensionSettings/sidecarSync.ts", function () {
       const tlsPemPaths: string[] = ["path/to/custom.pem"];
       const trustAllCerts = true;
       const krb5Config = "path/to/custom/krb5.conf";
+      const envs = ["env1 (Test Environment 1)", "env2 (Test Environment 2)"];
       const endpoints: string[] = ["endpoint1a,endpoint1b ", "endpoint2"];
       const privateNetworkEndpoints: Record<string, string> = {
-        env1: endpoints[0],
-        env2: endpoints[1],
+        [envs[0]]: endpoints[0],
+        [envs[1]]: endpoints[1],
       };
       stubbedConfigs
         .stubGet(SSL_PEM_PATHS, tlsPemPaths)
@@ -111,6 +112,19 @@ describe("extensionSettings/sidecarSync.ts", function () {
 
       assert.deepStrictEqual(result, {
         env1: ["endpoint1b"],
+        env2: ["endpoint2"],
+      });
+    });
+
+    it("should split env IDs from names in keys", function () {
+      const rawEndpoints: Record<string, string> = {
+        "env1 (Test Environment 1)": "endpoint1a, endpoint1b",
+        "env2 (Test Environment 2)": "endpoint2",
+      };
+      const result = updates.splitPrivateNetworkEndpoints(rawEndpoints);
+
+      assert.deepStrictEqual(result, {
+        env1: ["endpoint1a", "endpoint1b"],
         env2: ["endpoint2"],
       });
     });
