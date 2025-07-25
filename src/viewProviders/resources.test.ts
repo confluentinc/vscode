@@ -472,8 +472,6 @@ describe("ResourceViewProvider search behavior", () => {
     sandbox.stub(ccloudLoader, "getSchemaRegistryForEnvironmentId").resolves();
 
     provider = ResourceViewProvider.getInstance();
-    // skip any direct connection rehydration behavior for these tests
-    provider["rehydratedDirectConnections"] = true;
   });
 
   afterEach(() => {

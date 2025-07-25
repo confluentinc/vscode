@@ -1,4 +1,3 @@
-import { window } from "vscode";
 import {
   ApiResponse,
   ContainerApi,
@@ -14,6 +13,7 @@ import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../extensionSett
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
+import { resourceViewWithProgress } from "../viewProviders/newResources";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
 
 const logger = new Logger("docker.eventListener");
@@ -317,15 +317,12 @@ export class EventListener {
       });
       // show loader in the Resources view while we wait for the correct log line to appear
       // TODO: also update status bar item once it's available
-      await window.withProgress(
-        {
-          location: { viewId: "confluent-resources" },
-          title: "Waiting for local resources to be ready...",
-        },
-        async () => {
-          started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
-        },
-      );
+
+      // Show progress in both old and new Resources view
+      await resourceViewWithProgress("Waiting for local resources to be ready...", async () => {
+        started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
+      });
+
       logger.debug("done waiting for container log line", {
         started,
         stringToInclude: SERVER_STARTED_LOG_LINE,

@@ -10,6 +10,7 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
+import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -110,7 +111,9 @@ describe("Refreshable views tests", () => {
     const seenKinds = new Set<string>();
     const seenViewProviderConstructorNames = new Set<string>();
 
-    const refreshableViewProviders = getRefreshableViewProviders();
+    const refreshableViewProviders = getRefreshableViewProviders(
+      NewResourceViewProvider.getInstance(),
+    );
 
     assert.strictEqual(
       refreshableViewProviders.length,

@@ -4,9 +4,6 @@ import * as sinon from "sinon";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 
-import * as localConnections from "../sidecar/connections/local";
-
-import { TEST_LOCAL_CONNECTION } from "../../tests/unit/testResources/connection";
 import { SidecarHandle } from "../sidecar";
 import { getLocalResources } from "./local";
 
@@ -14,54 +11,16 @@ describe("local.ts getLocalResources()", () => {
   let sandbox: sinon.SinonSandbox;
   let sidecarStub: sinon.SinonStubbedInstance<SidecarHandle>;
 
-  let getLocalConnectionStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     sidecarStub = getSidecarStub(sandbox);
     showErrorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
-
-    getLocalConnectionStub = sandbox
-      .stub(localConnections, "getLocalConnection")
-      .resolves(TEST_LOCAL_CONNECTION);
   });
 
   afterEach(() => {
     sandbox.restore();
-  });
-
-  it("creates a local connection if none exists", async () => {
-    // rerrange to smell like a local connection doesn't yet exist
-    getLocalConnectionStub.resolves(undefined);
-
-    const createLocalConnectionStub = sandbox
-      .stub(localConnections, "createLocalConnection")
-      .resolves(TEST_LOCAL_CONNECTION);
-
-    sidecarStub.query.resolves({ resources: [] });
-
-    await getLocalResources();
-
-    sinon.assert.calledOnce(createLocalConnectionStub);
-    sinon.assert.calledOnce(getLocalConnectionStub);
-    sinon.assert.notCalled(showErrorNotificationStub);
-  });
-
-  it("handles error creating local connection", async () => {
-    // rerrange to smell like a local connection doesn't yet exist
-    getLocalConnectionStub.resolves(undefined);
-    // and then stub the createLocalConnection to throw an error
-    const createLocalConnectionStub = sandbox
-      .stub(localConnections, "createLocalConnection")
-      .rejects(new Error("Failed to create local connection"));
-
-    const result = await getLocalResources();
-    assert.deepStrictEqual(result, []);
-
-    sinon.assert.calledOnce(createLocalConnectionStub);
-    sinon.assert.calledOnce(getLocalConnectionStub);
-    sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   it("returns empty array ans shows notification if error making graphql call", async () => {

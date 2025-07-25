@@ -7,22 +7,9 @@ import { EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
-import { createLocalConnection, getLocalConnection } from "../sidecar/connections/local";
 
 export async function getLocalResources(): Promise<LocalEnvironment[]> {
   let envs: LocalEnvironment[] = [];
-
-  // this is a bit odd, but we need to have a local "connection" to the sidecar before we can query
-  // it for local Kafka clusters, so check if we have a connection first
-  if (!(await getLocalConnection())) {
-    try {
-      await createLocalConnection();
-    } catch {
-      // error should be caught+logged in createLocalConnection
-      // TODO: window.showErrorMessage here? might get noisy since this is triggered from refreshes
-      return envs;
-    }
-  }
 
   const query = graphql(`
     query localConnections {

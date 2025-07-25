@@ -31,6 +31,7 @@ import {
   isCCloud,
   isDirect,
   ISearchable,
+  IUpdatableResource,
 } from "./resource";
 import {
   CCloudSchemaRegistry,
@@ -45,7 +46,7 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment implements IResourceBase, ISearchable {
+export abstract class Environment implements IResourceBase, ISearchable, IUpdatableResource {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
@@ -148,7 +149,9 @@ export class CCloudEnvironment extends Environment {
     } else {
       this.schemaRegistry = undefined;
     }
-    this.flinkComputePools = props.flinkComputePools;
+    this.flinkComputePools = props.flinkComputePools.map((pool) =>
+      pool instanceof CCloudFlinkComputePool ? pool : new CCloudFlinkComputePool(pool),
+    );
   }
 
   get ccloudUrl(): string {
@@ -261,6 +264,16 @@ export class DirectEnvironment extends Environment {
     }
   }
 
+  /**
+   * Compare provided `kafkaClusters` against `kafkaConfigured` and `schemaRegistry` against
+   * `schemaRegistryConfigured` to determine whether or not expected resources are missing
+   */
+  checkForMissingResources(): { missingKafka: boolean; missingSR: boolean } {
+    const missingKafka: boolean = this.kafkaConfigured && !this.kafkaClusters.length;
+    const missingSR: boolean = this.schemaRegistryConfigured && !this.schemaRegistry;
+    return { missingKafka, missingSR };
+  }
+
   searchableText(): string {
     // same as Environment, but `id` isn't used since it isn't visible in the UI
     return this.name;
@@ -307,7 +320,6 @@ export class LocalEnvironment extends Environment {
           ? props.schemaRegistry
           : LocalSchemaRegistry.create(props.schemaRegistry);
     }
-    this.schemaRegistry = props.schemaRegistry;
   }
 }
 
@@ -377,7 +389,9 @@ export class EnvironmentTreeItem extends TreeItem {
     if (this.resource.isLoading) {
       this.iconPath = new ThemeIcon(IconNames.LOADING);
     } else if (isDirect(resource)) {
-      const { missingKafka, missingSR } = checkForMissingResources(resource);
+      const { missingKafka, missingSR } = (
+        resource as DirectEnvironment
+      ).checkForMissingResources();
       if (missingKafka || missingSR) {
         this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
       }
@@ -386,16 +400,7 @@ export class EnvironmentTreeItem extends TreeItem {
   }
 }
 
-/** Compare provided `kafkaClusters` against `kafkaConfigured` and `schemaRegistry` against
- * `schemaRegistryConfigured` to determine whether or not expected resources are missing, */
-function checkForMissingResources(resource: Environment) {
-  const directEnv = resource as DirectEnvironment;
-  const missingKafka: boolean = directEnv.kafkaConfigured && !directEnv.kafkaClusters.length;
-  const missingSR: boolean = directEnv.schemaRegistryConfigured && !directEnv.schemaRegistry;
-  return { missingKafka, missingSR };
-}
-
-function createEnvironmentTooltip(resource: Environment): MarkdownString {
+export function createEnvironmentTooltip(resource: Environment): MarkdownString {
   let resourceLabel = "Environment";
   const isDirectResource = isDirect(resource);
   if (isDirectResource) {
@@ -424,7 +429,7 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
     // properties, but in the event we didn't get those websocket events (e.g. new workspace),
     // we can check to see if they're just "missing" based on the expected configuration(s)
     const directEnv = resource as DirectEnvironment;
-    const { missingKafka, missingSR } = checkForMissingResources(resource);
+    const { missingKafka, missingSR } = directEnv.checkForMissingResources();
 
     const failedResources = [];
     const missingResources = [];

@@ -8,7 +8,6 @@ import {
 } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
-import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
@@ -98,8 +97,6 @@ export class ResourceViewProvider
 
   /** Did the user use the 'refresh' button / command to force a deep refresh of the tree? */
   private forceDeepRefresh: boolean = false;
-  /** Have we informed the sidecar of any direct connections saved in secret storage? */
-  private rehydratedDirectConnections: boolean = false;
 
   /**
    * {@link Environment}s managed by this provider, stored by their environment IDs.
@@ -190,13 +187,6 @@ export class ResourceViewProvider
   }
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
-    // if this is the first time we're loading the Resources view items, ensure we've told the sidecar
-    // about any direct connections before the GraphQL queries kick off
-    if (!this.rehydratedDirectConnections) {
-      await DirectConnectionManager.getInstance().rehydrateConnections();
-      this.rehydratedDirectConnections = true;
-    }
-
     let children: ResourceViewProviderData[] = [];
 
     if (element) {

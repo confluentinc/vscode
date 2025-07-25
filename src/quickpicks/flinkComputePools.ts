@@ -9,6 +9,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
 import { showInfoNotificationWithButtons } from "../notifications";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
+import { resourceViewWithProgress } from "../viewProviders/newResources";
 import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.flinkComputePools");
@@ -18,6 +19,14 @@ const logger = new Logger("quickpicks.flinkComputePools");
 export async function flinkComputePoolQuickPickWithViewProgress(
   viewId: "confluent-resources" | "confluent-flink-statements" | "confluent-flink-artifacts",
 ): Promise<CCloudFlinkComputePool | undefined> {
+  if (viewId === "confluent-resources") {
+    // May be referring to either / both old or new resources view.
+    // based on settings (eventually)
+    return await resourceViewWithProgress("Loading Flink compute pools...", () =>
+      flinkComputePoolQuickPick(),
+    );
+  }
+
   return await window.withProgress(
     {
       location: { viewId },
