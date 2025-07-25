@@ -34,6 +34,11 @@ semaphore:
           required: true
           description: |
             The commit SHA to create the release and tag from, must be a valid SHA/tag/branch.
+    - name: scheduled-prerelease-multi-arch-packaging
+      branch: main
+      pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
+      scheduled: true
+      at: "10 4 * * *" # Every day at 04:10 UTC
 sonarqube:
   enable: false
 make:
