@@ -1,17 +1,17 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
-import { ResponseError } from "vscode-languageclient";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { ResponseError } from "../clients/flinkArtifacts";
 import * as errors from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import * as notifications from "../notifications";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
-describe("FlinkArtifactsViewProvider", () => {
+describe.only("FlinkArtifactsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let viewProvider: FlinkArtifactsViewProvider;
 
@@ -31,6 +31,15 @@ describe("FlinkArtifactsViewProvider", () => {
     FlinkArtifactsViewProvider["instanceMap"].clear();
     sandbox.restore();
   });
+
+  function createMockResponse(status?: number, statusText: string = ""): Response {
+    return {
+      status: status ?? undefined,
+      statusText,
+      json: async () => ({}),
+      // Add any other properties/methods your code or ResponseError expects
+    } as Response;
+  }
 
   describe("refresh()", () => {
     let changeFireStub: sinon.SinonStub;
@@ -110,7 +119,8 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 4xx HTTP errors with appropriate message", async () => {
-        const mockError = new ResponseError(403, "Forbidden");
+        const mockResponse = createMockResponse(400, "Bad Request");
+        const mockError = new ResponseError(mockResponse, "Bad Request");
 
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
@@ -124,12 +134,14 @@ describe("FlinkArtifactsViewProvider", () => {
         sinon.assert.calledOnce(showErrorNotificationStub);
         sinon.assert.calledWith(
           showErrorNotificationStub,
-          "Failed to load Flink artifacts. Please check your permissions and try again.",
+          "Failed to load Flink artifacts due to an unexpected error.",
         );
       });
 
       it("should handle 5xx HTTP errors with appropriate message", async () => {
-        const mockError = new ResponseError(503, "Service Unavailable");
+        const mockResponse = createMockResponse(503, "Service Unavailable");
+        const mockError = new ResponseError(mockResponse, "Service Unavailable");
+
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -147,7 +159,7 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle non-HTTP errors with generic message", async () => {
-        const mockError = new Error("Network connection failed");
+        const mockError = new Error("Failed to load Flink artifacts");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -165,7 +177,8 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should not show error notification for HTTP status outside 400-599 range", async () => {
-        const mockError = new Error("oh no");
+        const mockResponse = createMockResponse(undefined, "oh no");
+        const mockError = new ResponseError(mockResponse, "oh no");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -180,7 +193,8 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should clear artifacts and fire change events on error", async () => {
-        const mockError = new Error("Test error");
+        const mockResponse = createMockResponse(undefined, "Test error");
+        const mockError = new ResponseError(mockResponse, "Test error");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         viewProvider["_artifacts"] = [
@@ -199,6 +213,82 @@ describe("FlinkArtifactsViewProvider", () => {
 
         // Should fire change event once at start to clear (error prevents final fire call)
         sinon.assert.calledOnce(changeFireStub);
+      });
+
+      it("should handle 401 HTTP error with authentication message", async () => {
+        const mockResponse = createMockResponse(401, "Unauthorized");
+        const mockError = new ResponseError(mockResponse, "Unauthorized");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Authentication required to load Flink artifacts.",
+        );
+      });
+
+      it("should handle 404 HTTP error with not found message", async () => {
+        const mockResponse = createMockResponse(404, "Not Found");
+        const mockError = new ResponseError(mockResponse, "Not Found");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Flink artifacts not found for this compute pool.",
+        );
+      });
+
+      it("should handle 429 HTTP error with rate limit message", async () => {
+        const mockResponse = createMockResponse(429, "Too Many Requests");
+        const mockError = new ResponseError(mockResponse, "Too Many Requests");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Too many requests. Please try again later.",
+        );
+      });
+
+      it("should handle unknown HTTP error with default message", async () => {
+        const mockResponse = createMockResponse(418, "I'm a teapot");
+        const mockError = new ResponseError(mockResponse, "I'm a teapot");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts due to an unexpected error.",
+        );
       });
     });
   });
