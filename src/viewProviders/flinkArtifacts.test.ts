@@ -32,15 +32,6 @@ describe.only("FlinkArtifactsViewProvider", () => {
     sandbox.restore();
   });
 
-  function createMockResponse(status?: number, statusText: string = ""): Response {
-    return {
-      status: status ?? undefined,
-      statusText,
-      json: async () => ({}),
-      // Add any other properties/methods your code or ResponseError expects
-    } as Response;
-  }
-
   describe("refresh()", () => {
     let changeFireStub: sinon.SinonStub;
     let logErrorStub: sinon.SinonStub;
@@ -119,8 +110,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 4xx HTTP errors with appropriate message", async () => {
-        const mockResponse = createMockResponse(400, "Bad Request");
-        const mockError = new ResponseError(mockResponse, "Bad Request");
+        const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
 
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
@@ -139,8 +129,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 5xx HTTP errors with appropriate message", async () => {
-        const mockResponse = createMockResponse(503, "Service Unavailable");
-        const mockError = new ResponseError(mockResponse, "Service Unavailable");
+        const mockError = new ResponseError(new Response("Service unavailable", { status: 503 }));
 
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
@@ -177,8 +166,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should not show error notification for HTTP status outside 400-599 range", async () => {
-        const mockResponse = createMockResponse(undefined, "oh no");
-        const mockError = new ResponseError(mockResponse, "oh no");
+        const mockError = new ResponseError(new Response("oh no", { status: 300 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -193,8 +181,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should clear artifacts and fire change events on error", async () => {
-        const mockResponse = createMockResponse(undefined, "Test error");
-        const mockError = new ResponseError(mockResponse, "Test error");
+        const mockError = new ResponseError(new Response("test error", { status: undefined }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         viewProvider["_artifacts"] = [
@@ -216,8 +203,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 401 HTTP error with authentication message", async () => {
-        const mockResponse = createMockResponse(401, "Unauthorized");
-        const mockError = new ResponseError(mockResponse, "Unauthorized");
+        const mockError = new ResponseError(new Response("Unauthorized", { status: 401 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -235,8 +221,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 404 HTTP error with not found message", async () => {
-        const mockResponse = createMockResponse(404, "Not Found");
-        const mockError = new ResponseError(mockResponse, "Not Found");
+        const mockError = new ResponseError(new Response("Not found", { status: 404 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -254,8 +239,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 429 HTTP error with rate limit message", async () => {
-        const mockResponse = createMockResponse(429, "Too Many Requests");
-        const mockError = new ResponseError(mockResponse, "Too Many Requests");
+        const mockError = new ResponseError(new Response("Too many requests", { status: 429 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -273,8 +257,7 @@ describe.only("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle unknown HTTP error with default message", async () => {
-        const mockResponse = createMockResponse(418, "I'm a teapot");
-        const mockError = new ResponseError(mockResponse, "I'm a teapot");
+        const mockError = new ResponseError(new Response("I'm a teapot", { status: 418 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
