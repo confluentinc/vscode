@@ -1,10 +1,11 @@
-import { Disposable, TreeDataProvider, TreeItem } from "vscode";
+import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { ccloudAuthSessionInvalidated, currentFlinkArtifactsPoolChanged } from "../emitters";
-import { isResponseError } from "../errors";
+import { currentFlinkArtifactsPoolChanged } from "../emitters";
+import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { ParentedBaseViewProvider } from "./base";
 
 export class FlinkArtifactsViewProvider
@@ -18,16 +19,6 @@ export class FlinkArtifactsViewProvider
   parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
   parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
   private _artifacts: FlinkArtifact[] = [];
-
-  protected setCustomEventListeners(): Disposable[] {
-    // Listen for auth session invalidation to clear the view
-    const authInvalidatedSub: Disposable = ccloudAuthSessionInvalidated.event(() => {
-      this._artifacts = [];
-      this._onDidChangeTreeData.fire();
-    });
-
-    return [authInvalidatedSub];
-  }
 
   getChildren(element?: FlinkArtifact): FlinkArtifact[] {
     if (!this.computePool) {
@@ -50,12 +41,28 @@ export class FlinkArtifactsViewProvider
             const loader = CCloudResourceLoader.getInstance();
             this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
           } catch (error) {
-            this.logger.error("Failed to load Flink artifacts", { error });
+            logError(error, "Failed to load Flink artifacts");
 
-            // Check if this is an auth error (401 Unauthorized)
-            if (isResponseError(error) && error.response.status === 401) {
-              // Signal that the auth session is invalid
-              ccloudAuthSessionInvalidated.fire();
+            // Check for HTTP error status codes and show user notifications
+            if (isResponseError(error)) {
+              const status = error.response.status;
+              if (status >= 400 && status < 600) {
+                let errorMessage = "Failed to load Flink artifacts.";
+
+                if (status >= 400 && status < 500) {
+                  errorMessage += " Please check your permissions and try again.";
+                } else if (status >= 500) {
+                  errorMessage +=
+                    " The service is temporarily unavailable. Please try again later.";
+                }
+
+                await showErrorNotificationWithButtons(errorMessage);
+              }
+            } else {
+              // For non-HTTP errors (network issues, etc.)
+              await showErrorNotificationWithButtons(
+                "Failed to load Flink artifacts. Please check your connection and try again.",
+              );
             }
 
             throw error;
