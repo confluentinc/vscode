@@ -1,11 +1,18 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
+import { CCLOUD_PRIVATE_NETWORK_ENDPOINTS } from "../extensionSettings/constants";
 import { CCloudEnvironment } from "../models/environment";
-import { flinkCcloudEnvironmentQuickPick } from "../quickpicks/environments";
+import { showInfoNotificationWithButtons } from "../notifications";
+import {
+  ccloudEnvironmentQuickPick,
+  flinkCcloudEnvironmentQuickPick,
+} from "../quickpicks/environments";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
-async function setFlinkStatementsEnvironmentCommand(item?: CCloudEnvironment): Promise<void> {
+export async function setFlinkStatementsEnvironmentCommand(
+  item?: CCloudEnvironment,
+): Promise<void> {
   // ensure whatever was passed in is a CCloudEnvironment; if not, prompt the user to pick one
   const env: CCloudEnvironment | undefined =
     item instanceof CCloudEnvironment
@@ -26,11 +33,52 @@ async function setFlinkStatementsEnvironmentCommand(item?: CCloudEnvironment): P
   await vscode.commands.executeCommand("confluent-flink-statements.focus");
 }
 
+/** Sets the private network endpoint(s) for a specific Confluent Cloud environment. */
+export async function setPrivateNetworkEndpointCommand(item?: CCloudEnvironment): Promise<void> {
+  let env: CCloudEnvironment | undefined =
+    item instanceof CCloudEnvironment ? item : await ccloudEnvironmentQuickPick();
+  if (!env) {
+    return;
+  }
+
+  const existingPrivateEndpoints: Record<string, string> = CCLOUD_PRIVATE_NETWORK_ENDPOINTS.value;
+  const newEndpointsValue: string | undefined = await vscode.window.showInputBox({
+    title: "Set Private Network Endpoint(s)",
+    prompt: `Enter private network endpoint(s) for environment "${env.name}" (${env.id}), separated by commas.`,
+    placeHolder: "endpoint1,endpoint2",
+    value: existingPrivateEndpoints[env.id] ?? "",
+    ignoreFocusOut: true,
+  });
+  if (newEndpointsValue === undefined) {
+    return;
+  }
+
+  existingPrivateEndpoints[env.id] = newEndpointsValue.trim();
+  await CCLOUD_PRIVATE_NETWORK_ENDPOINTS.update(existingPrivateEndpoints, true);
+
+  void showInfoNotificationWithButtons(
+    `Private network endpoint(s) for environment "${env.name}" (${env.id}) set to "${newEndpointsValue}"`,
+    {
+      ["Change For Environment"]: async () => await setPrivateNetworkEndpointCommand(env),
+      ["View Settings"]: async () => {
+        await vscode.commands.executeCommand(
+          "workbench.action.openSettings",
+          `@id:${CCLOUD_PRIVATE_NETWORK_ENDPOINTS.id}`,
+        );
+      },
+    },
+  );
+}
+
 export function registerEnvironmentCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging(
       "confluent.resources.ccloudenvironment.viewflinkstatements",
       setFlinkStatementsEnvironmentCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+      setPrivateNetworkEndpointCommand,
     ),
   ];
 }

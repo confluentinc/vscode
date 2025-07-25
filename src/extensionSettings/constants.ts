@@ -53,6 +53,14 @@ export const SSL_VERIFY_SERVER_CERT_DISABLED = new ExtensionSetting<boolean>(
   "confluent.debugging.sslTls.serverCertificateVerificationDisabled",
   SettingsSection.CCLOUD,
 );
+/**
+ * Configure private network endpoints for specific Confluent Cloud environments.
+ * Each entry maps an environment ID to its corresponding private endpoints.
+ */
+export const CCLOUD_PRIVATE_NETWORK_ENDPOINTS = new ExtensionSetting<Record<string, string>>(
+  "confluent.cloud.privateNetworkEndpoints",
+  SettingsSection.CCLOUD,
+);
 /** Array of string paths pointing to .pem files in the current environment for SSL/TLS. */
 export const SSL_PEM_PATHS = new ExtensionSetting<string[]>(
   "confluent.ssl.pemPaths",
