@@ -429,8 +429,8 @@ export class NewResourceViewProvider
   extends BaseViewProvider<NewResourceViewProviderData>
   implements TreeDataProvider<NewResourceViewProviderData>
 {
-  readonly kind = "new-resources";
-  readonly viewId = "new-confluent-resources";
+  readonly kind = "resources";
+  readonly viewId = "confluent-resources";
   readonly loggerName = "viewProviders.newResources";
 
   private readonly connections: Map<ConnectionId, AnyConnectionRow> = new Map();

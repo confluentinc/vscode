@@ -50,6 +50,7 @@ import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  USE_NEW_RESOURCES_VIEW_PROVIDER,
 } from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
 import { updatePreferences } from "./extensionSettings/sidecarSync";
@@ -192,8 +193,16 @@ async function _activateExtension(
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
-  const resourceViewProvider = ResourceViewProvider.getInstance();
-  const newResourceViewProvider = NewResourceViewProvider.getInstance();
+
+  // There can be only one resources view provider ...
+  let resourceViewProviderInstance: ResourceViewProvider | NewResourceViewProvider;
+  if (USE_NEW_RESOURCES_VIEW_PROVIDER.value) {
+    logger.info("Using new resources view provider");
+    resourceViewProviderInstance = NewResourceViewProvider.getInstance();
+  } else {
+    logger.info("Using legacy resources view provider");
+    resourceViewProviderInstance = ResourceViewProvider.getInstance();
+  }
 
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
@@ -201,8 +210,7 @@ async function _activateExtension(
   const artifactsViewProvider = FlinkArtifactsViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
-    resourceViewProvider,
-    newResourceViewProvider,
+    resourceViewProviderInstance,
     topicViewProvider,
     schemasViewProvider,
     supportViewProvider,
@@ -216,7 +224,7 @@ async function _activateExtension(
 
   // Register refresh commands for our refreshable resource view providers.
   const refreshCommands: vscode.Disposable[] = [];
-  for (const instance of getRefreshableViewProviders()) {
+  for (const instance of getRefreshableViewProviders(resourceViewProviderInstance)) {
     refreshCommands.push(
       registerCommandWithLogging(`confluent.${instance.kind}.refresh`, (): boolean => {
         instance.refresh(true);
@@ -456,15 +464,19 @@ async function setupFeatureFlags(): Promise<void> {
 }
 
 /** Return view provider + name fragment pairs for auto-registering refresh() commands. */
-export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
+export function getRefreshableViewProviders(
+  resourcesViewProviderInstance: ResourceViewProvider | NewResourceViewProvider,
+): RefreshableTreeViewProvider[] {
   // When adding a new view provider pair, also update the test
   // mentioning "viewProviderNameFragments" in extension.test.ts.
-  return [
-    ResourceViewProvider.getInstance(),
+  const refreshables = [
+    resourcesViewProviderInstance,
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),
   ];
+
+  return refreshables;
 }
 
 /**
