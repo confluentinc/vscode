@@ -51,9 +51,10 @@ export function splitPrivateNetworkEndpoints(
 ): Record<string, string[]> {
   const result: Record<string, string[]> = {};
   for (const key in privateNetworkEndpointsRaw) {
+    const envId = key.split(" (")[0]; // e.g., "env-id (env-name)"
     const value = privateNetworkEndpointsRaw[key];
     // separate by commas, trim whitespace, and filter out empty strings
-    result[key] = value
+    result[envId] = value
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);

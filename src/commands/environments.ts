@@ -42,18 +42,19 @@ export async function setPrivateNetworkEndpointCommand(item?: CCloudEnvironment)
   }
 
   const existingPrivateEndpoints: Record<string, string> = CCLOUD_PRIVATE_NETWORK_ENDPOINTS.value;
+  const envKey = `${env.id} (${env.name})`;
   const newEndpointsValue: string | undefined = await vscode.window.showInputBox({
     title: "Set Private Network Endpoint(s)",
     prompt: `Enter private network endpoint(s) for environment "${env.name}" (${env.id}), separated by commas.`,
     placeHolder: "endpoint1,endpoint2",
-    value: existingPrivateEndpoints[env.id] ?? "",
+    value: existingPrivateEndpoints[envKey] ?? "",
     ignoreFocusOut: true,
   });
   if (newEndpointsValue === undefined) {
     return;
   }
 
-  existingPrivateEndpoints[env.id] = newEndpointsValue.trim();
+  existingPrivateEndpoints[envKey] = newEndpointsValue.trim();
   await CCLOUD_PRIVATE_NETWORK_ENDPOINTS.update(existingPrivateEndpoints, true);
 
   void showInfoNotificationWithButtons(
