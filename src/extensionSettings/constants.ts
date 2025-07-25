@@ -99,6 +99,11 @@ export const LOCAL_MEDUSA_IMAGE_TAG = new ExtensionSetting<string>(
   "confluent.localDocker.medusaImageTag",
   SettingsSection.LOCAL,
 );
+/** Whether or not to enable Medusa container functionality. */
+export const ENABLE_MEDUSA_CONTAINER = new ExtensionSetting<boolean>(
+  "confluent.localDocker.enableMedusaContainer",
+  SettingsSection.LOCAL,
+);
 
 // ===== FLINK CONFIGS =====
 

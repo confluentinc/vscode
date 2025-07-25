@@ -841,6 +841,14 @@
             "default": "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa",
             "description": "Docker image repo to use when starting a local Medusa container"
           },
+          "confluent.localDocker.enableMedusaContainer": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Enable Medusa container functionality for local development and testing.",
+            "tags": [
+              "preview"
+            ]
+          },
           "confluent.localDocker.medusaImageTag": {
             "type": "string",
             "default": "a736fae",

@@ -3,6 +3,7 @@ import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { LocalResourceKind } from "../docker/constants";
 import {
+  ENABLE_MEDUSA_CONTAINER,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
   LOCAL_MEDUSA_IMAGE,
@@ -69,7 +70,10 @@ export async function localResourcesQuickPick(
   // TODO: Add proper context tracking for Medusa availability
   const medusaAvailable: boolean = getContextValue(ContextValues.localMedusaAvailable) === true;
   if ((starting && !medusaAvailable) || (medusaAvailable && !starting)) {
-    items.push(medusaItem);
+    // Only show Medusa option if the feature setting is enabled
+    if (ENABLE_MEDUSA_CONTAINER.value) {
+      items.push(medusaItem);
+    }
   }
 
   logger.debug("showing local resource quickpick", {
