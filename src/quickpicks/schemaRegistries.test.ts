@@ -68,6 +68,7 @@ describe("quickpicks/schemaRegistries.ts schemaRegistryQuickPick()", function ()
   });
 
   afterEach(function () {
+    schemasViewProvider.dispose();
     SchemasViewProvider["instance"] = null;
     sandbox.restore();
   });

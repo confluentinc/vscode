@@ -201,13 +201,13 @@ async function _activateExtension(
   const artifactsViewProvider = FlinkArtifactsViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
-    ...resourceViewProvider.disposables,
-    ...newResourceViewProvider.disposables,
-    ...topicViewProvider.disposables,
-    ...schemasViewProvider.disposables,
-    ...supportViewProvider.disposables,
-    ...statementsViewProvider.disposables,
-    ...artifactsViewProvider.disposables,
+    resourceViewProvider,
+    newResourceViewProvider,
+    topicViewProvider,
+    schemasViewProvider,
+    supportViewProvider,
+    statementsViewProvider,
+    artifactsViewProvider,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
@@ -290,7 +290,7 @@ async function _activateExtension(
   ConnectionStateWatcher.getInstance();
 
   const directConnectionManager = DirectConnectionManager.getInstance();
-  context.subscriptions.push(...directConnectionManager.disposables);
+  context.subscriptions.push(directConnectionManager);
 
   // ensure our diagnostic collection(s) are cleared when the extension is deactivated
   context.subscriptions.push(JSON_DIAGNOSTIC_COLLECTION);
@@ -312,12 +312,12 @@ async function _activateExtension(
   context.subscriptions.push(getCCloudStatusBarItem());
 
   const docManager = DocumentMetadataManager.getInstance();
-  context.subscriptions.push(...docManager.disposables);
+  context.subscriptions.push(docManager);
 
   const provider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider("flinksql", provider),
-    ...provider.disposables,
+    provider,
   );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
@@ -519,7 +519,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   }
 
   logger.info("Confluent Cloud auth provider registered");
-  return [providerDisposable, ...provider.disposables];
+  return [providerDisposable, provider];
 }
 
 /** Set up the document providers for custom URI schemes. */

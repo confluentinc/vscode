@@ -355,12 +355,10 @@ export class SidecarHandle {
   }
 
   /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link FlinkArtifactsArtifactV1Api} client instance */
-  public getFlinkArtifactsApi(): FlinkArtifactsArtifactV1Api {
+  public getFlinkArtifactsApi(providerRegion: IEnvProviderRegion): FlinkArtifactsArtifactV1Api {
     const config = new FlinkArtifactsConfiguration({
       ...this.defaultClientConfigParams,
-      headers: {
-        [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
-      },
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
     });
     return new FlinkArtifactsArtifactV1Api(config);
   }

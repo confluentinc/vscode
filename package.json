@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-20",
+  "version": "1.6.0-28",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -433,8 +433,7 @@
         "command": "confluent.artifacts.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
-        "category": "Confluent: Flink Artifacts",
-        "enablement": "false"
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.statements.refresh",
@@ -856,6 +855,15 @@
               "preview"
             ]
           },
+          "confluent.flink.enableFlinkArtifacts": {
+            "type": "boolean",
+            "default": false,
+            "order": 1,
+            "markdownDescription": "Enable Flink Artifacts functionality including the artifacts view and related features for managing Flink artifacts in Confluent Cloud. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
+            "tags": [
+              "preview"
+            ]
+          },
           "confluent.flink.computePoolId": {
             "type": "string",
             "default": "",
@@ -1037,10 +1045,13 @@
         },
         {
           "id": "confluent-flink-artifacts",
-          "name": "Flink Artifacts",
+          "name": "Flink Artifacts (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "false"
+          "when": "config.confluent.flink.enableFlinkArtifacts",
+          "tags": [
+            "preview"
+          ]
         },
         {
           "id": "confluent-support",
@@ -1133,17 +1144,17 @@
       {
         "view": "confluent-flink-artifacts",
         "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
-        "when": "!confluent.ccloudConnectionAvailable"
+        "when": "config.confluent.flink.enableFlinkArtifacts && !confluent.ccloudConnectionAvailable"
       },
       {
         "view": "confluent-flink-artifacts",
         "contents": "No Flink compute pool selected. Click below to get started.\n[Select Flink Compute Pool](command:confluent.artifacts.flink-compute-pool.select)",
-        "when": "confluent.ccloudConnectionAvailable && !confluent.flinkArtifactsPoolSelected"
+        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && !confluent.flinkArtifactsPoolSelected"
       },
       {
         "view": "confluent-flink-artifacts",
         "contents": "No Flink artifacts found.",
-        "when": "confluent.ccloudConnectionAvailable && confluent.flinkArtifactsPoolSelected"
+        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkArtifactsPoolSelected"
       }
     ],
     "menus": {
@@ -1494,7 +1505,7 @@
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
           "group": "navigation@1"
         }
       ],

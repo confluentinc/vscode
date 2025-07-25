@@ -10,6 +10,7 @@ describe("LocalResourceLoader", () => {
   });
 
   afterEach(() => {
+    loader.dispose();
     LocalResourceLoader["instance"] = null; // Reset singleton instance
   });
 
