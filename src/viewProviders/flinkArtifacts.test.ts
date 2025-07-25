@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
+import { ResponseError } from "vscode-languageclient";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
@@ -109,15 +110,9 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 4xx HTTP errors with appropriate message", async () => {
-        const mockError = {
-          response: {
-            status: 403,
-            statusText: "Forbidden",
-          },
-        };
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+        const mockError = new ResponseError(403, "Forbidden");
 
-        sandbox.stub(errors, "isResponseError").returns(true);
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
           await viewProvider.refresh();
@@ -134,15 +129,8 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 5xx HTTP errors with appropriate message", async () => {
-        const mockError = {
-          response: {
-            status: 503,
-            statusText: "Service Unavailable",
-          },
-        };
+        const mockError = new ResponseError(503, "Service Unavailable");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        sandbox.stub(errors, "isResponseError").returns(true);
 
         await assert.rejects(async () => {
           await viewProvider.refresh();
@@ -162,8 +150,6 @@ describe("FlinkArtifactsViewProvider", () => {
         const mockError = new Error("Network connection failed");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        sandbox.stub(errors, "isResponseError").returns(false);
-
         await assert.rejects(async () => {
           await viewProvider.refresh();
         }, mockError);
@@ -179,15 +165,8 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should not show error notification for HTTP status outside 400-599 range", async () => {
-        const mockError = {
-          response: {
-            status: 200, // Successful status that somehow threw an error
-            statusText: "OK",
-          },
-        };
+        const mockError = new Error("oh no");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        sandbox.stub(errors, "isResponseError").returns(true);
 
         await assert.rejects(async () => {
           await viewProvider.refresh();
@@ -203,8 +182,6 @@ describe("FlinkArtifactsViewProvider", () => {
       it("should clear artifacts and fire change events on error", async () => {
         const mockError = new Error("Test error");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        sandbox.stub(errors, "isResponseError").returns(false);
 
         viewProvider["_artifacts"] = [
           createFlinkArtifact({
