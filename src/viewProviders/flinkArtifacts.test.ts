@@ -1,12 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
+import { ResponseError } from "vscode-languageclient";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ccloudAuthSessionInvalidated } from "../emitters";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import * as errors from "../errors";
 import { CCloudResourceLoader } from "../loaders";
+import * as notifications from "../notifications";
 import { FlinkArtifactsViewProvider } from "./flinkArtifacts";
 
 describe("FlinkArtifactsViewProvider", () => {
@@ -32,9 +34,19 @@ describe("FlinkArtifactsViewProvider", () => {
 
   describe("refresh()", () => {
     let changeFireStub: sinon.SinonStub;
+    let logErrorStub: sinon.SinonStub;
+    let showErrorNotificationStub: sinon.SinonStub;
+    let windowWithProgressStub: sinon.SinonStub;
 
     beforeEach(() => {
       changeFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
+      logErrorStub = sandbox.stub(errors, "logError");
+      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+      windowWithProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
+        const mockProgress = {} as Progress<unknown>;
+        const mockToken = {} as CancellationToken;
+        return Promise.resolve(callback(mockProgress, mockToken));
+      });
     });
 
     it("clears when no resource is selected", async () => {
@@ -46,15 +58,6 @@ describe("FlinkArtifactsViewProvider", () => {
     });
 
     it("fetches new artifacts when a resource is selected", async () => {
-      const windowWithProgressStub = sandbox
-        .stub(window, "withProgress")
-        .callsFake((_, callback) => {
-          // Call the callback immediately with a resolved promise
-          const mockProgress = {} as Progress<unknown>;
-          const mockToken = {} as CancellationToken;
-          return Promise.resolve(callback(mockProgress, mockToken));
-        });
-
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       viewProvider["resource"] = resource;
 
@@ -83,79 +86,120 @@ describe("FlinkArtifactsViewProvider", () => {
       assert.deepStrictEqual(viewProvider["_artifacts"], mockArtifacts);
     });
 
-    it("should handle 401 auth errors and fire auth session invalidated", async () => {
-      const windowWithProgressStub = sandbox
-        .stub(window, "withProgress")
-        .callsFake((_, callback) => {
-          // Call the callback immediately with a resolved promise
-          const mockProgress = {} as Progress<unknown>;
-          const mockToken = {} as CancellationToken;
-          return Promise.resolve(callback(mockProgress, mockToken));
-        });
+    it("returns artifacts when compute pool is selected", () => {
+      const mockArtifacts = [
+        createFlinkArtifact({
+          id: "artifact1",
+          name: "Test Artifact 1",
+        }),
+      ];
 
-      const authInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
-      const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      viewProvider["resource"] = resource;
+      viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      viewProvider["_artifacts"] = mockArtifacts;
 
-      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
-        getStubbedCCloudResourceLoader(sandbox);
-
-      const authError = createResponseError(401, "Unauthorized", "test");
-      stubbedLoader.getFlinkArtifacts.rejects(authError);
-
-      await assert.rejects(async () => {
-        await viewProvider.refresh();
-      });
-
-      sinon.assert.calledOnce(windowWithProgressStub);
-      sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
-      sinon.assert.calledOnce(authInvalidatedFireStub);
-      assert.deepStrictEqual(viewProvider["_artifacts"], []);
+      const children = viewProvider.getChildren();
+      assert.deepStrictEqual(children, mockArtifacts);
     });
 
-    it("should handle non-401 errors without firing auth session invalidated", async () => {
-      const windowWithProgressStub = sandbox
-        .stub(window, "withProgress")
-        .callsFake((_, callback) => {
-          // Call the callback immediately with a resolved promise
-          const mockProgress = {} as Progress<unknown>;
-          const mockToken = {} as CancellationToken;
-          return Promise.resolve(callback(mockProgress, mockToken));
-        });
+    describe("error handling", () => {
+      let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
-      const authInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
-      const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      viewProvider["resource"] = resource;
-
-      const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
-        getStubbedCCloudResourceLoader(sandbox);
-
-      const serverError = createResponseError(500, "Internal Server Error", "test");
-      stubbedLoader.getFlinkArtifacts.rejects(serverError);
-
-      await assert.rejects(async () => {
-        await viewProvider.refresh();
+      beforeEach(() => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+        stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
       });
 
-      sinon.assert.calledOnce(windowWithProgressStub);
-      sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
-      sinon.assert.notCalled(authInvalidatedFireStub);
-      assert.deepStrictEqual(viewProvider["_artifacts"], []);
+      it("should handle 4xx HTTP errors with appropriate message", async () => {
+        const mockError = new ResponseError(403, "Forbidden");
+
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts. Please check your permissions and try again.",
+        );
+      });
+
+      it("should handle 5xx HTTP errors with appropriate message", async () => {
+        const mockError = new ResponseError(503, "Service Unavailable");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts. The service is temporarily unavailable. Please try again later.",
+        );
+      });
+
+      it("should handle non-HTTP errors with generic message", async () => {
+        const mockError = new Error("Network connection failed");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts. Please check your connection and try again.",
+        );
+      });
+
+      it("should not show error notification for HTTP status outside 400-599 range", async () => {
+        const mockError = new Error("oh no");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        // Should not show error notification for non-error HTTP status
+        sinon.assert.notCalled(showErrorNotificationStub);
+      });
+
+      it("should clear artifacts and fire change events on error", async () => {
+        const mockError = new Error("Test error");
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        viewProvider["_artifacts"] = [
+          createFlinkArtifact({
+            id: "artifact1",
+            name: "Initial Artifact",
+          }),
+        ];
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        // Artifacts should be cleared at the start of refresh
+        assert.deepStrictEqual(viewProvider["_artifacts"], []);
+
+        // Should fire change event once at start to clear (error prevents final fire call)
+        sinon.assert.calledOnce(changeFireStub);
+      });
     });
-  });
-
-  it("returns artifacts when compute pool is selected", () => {
-    const mockArtifacts = [
-      createFlinkArtifact({
-        id: "artifact1",
-        name: "Test Artifact 1",
-      }),
-    ];
-
-    viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-    viewProvider["_artifacts"] = mockArtifacts;
-
-    const children = viewProvider.getChildren();
-    assert.deepStrictEqual(children, mockArtifacts);
   });
 });
