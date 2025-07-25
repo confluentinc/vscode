@@ -110,8 +110,85 @@ describe("FlinkArtifactsViewProvider", () => {
       });
 
       it("should handle 4xx HTTP errors with appropriate message", async () => {
-        const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
+        // Use a 431 status, which is not explicitly handled in the switch statement,
+        // so it should use the default message: "Failed to load Flink artifacts due to an unexpected error."
+        const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts due to an unexpected error.",
+        );
+      });
+      it("should handle 4xx HTTP errors with appropriate message", async () => {
+        // Use a 431 status, which is not explicitly handled in the switch statement,
+        // so it should use the default message: "Failed to load Flink artifacts due to an unexpected error."
+        const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts due to an unexpected error.",
+        );
+      });
+      it("should handle 4xx HTTP errors with appropriate message", async () => {
+        // Use a 431 status, which is not explicitly handled in the switch statement,
+        // so it should use the default message: "Failed to load Flink artifacts due to an unexpected error."
+        const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts due to an unexpected error.",
+        );
+      });
+      it("should handle 4xx HTTP errors with appropriate message", async () => {
+        // Use a 431 status, which is not explicitly handled in the switch statement,
+        // so it should use the default message: "Failed to load Flink artifacts due to an unexpected error."
+        const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts due to an unexpected error.",
+        );
+      });
+      it("should handle 4xx HTTP errors with appropriate message", async () => {
+        // Use a 431 status, which is not explicitly handled in the switch statement,
+        // so it should use the default message: "Failed to load Flink artifacts due to an unexpected error."
+        const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(async () => {
@@ -253,6 +330,24 @@ describe("FlinkArtifactsViewProvider", () => {
         sinon.assert.calledWith(
           showErrorNotificationStub,
           "Too many requests. Please try again later.",
+        );
+      });
+
+      it("should handle 400 HTTP error with check request message", async () => {
+        const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.calledOnce(showErrorNotificationStub);
+        sinon.assert.calledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts. Please check your request and try again.",
         );
       });
 

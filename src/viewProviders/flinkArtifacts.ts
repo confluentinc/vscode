@@ -48,6 +48,10 @@ export class FlinkArtifactsViewProvider
               if (status >= 400 && status < 600) {
                 showNotification = true;
                 switch (status) {
+                  case 400:
+                    message =
+                      "Failed to load Flink artifacts. Please check your request and try again.";
+                    break;
                   case 401:
                     message = "Authentication required to load Flink artifacts.";
                     break;
@@ -84,7 +88,7 @@ export class FlinkArtifactsViewProvider
             }
 
             if (showNotification) {
-              await showErrorNotificationWithButtons(message);
+              void showErrorNotificationWithButtons(message);
             }
 
             throw error;
