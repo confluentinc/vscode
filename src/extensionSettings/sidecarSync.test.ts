@@ -128,6 +128,19 @@ describe("extensionSettings/sidecarSync.ts", function () {
         env2: ["endpoint2"],
       });
     });
+
+    it("should handle keys without parentheses", function () {
+      const rawEndpoints: Record<string, string> = {
+        "env1 (Test Environment 1)": "endpoint1a, endpoint1b",
+        env2: "endpoint2", // maybe old, maybe manually entered/edited
+      };
+      const result = updates.splitPrivateNetworkEndpoints(rawEndpoints);
+
+      assert.deepStrictEqual(result, {
+        env1: ["endpoint1a", "endpoint1b"],
+        env2: ["endpoint2"],
+      });
+    });
   });
 
   describe("updatePreferences()", function () {
