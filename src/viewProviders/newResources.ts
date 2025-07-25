@@ -97,7 +97,7 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
    *                    to perform a deep refresh (e.g. re-fetch all resources) or a shallow refresh
    *                    (e.g. use cached resources).
    */
-  async refresh(deepRefresh: boolean = false): Promise<void> {
+  async refresh(deepRefresh = true): Promise<void> {
     this.logger.debug("Refreshing", { deepRefresh });
 
     const refreshedEnvironments: ET[] = await this.getEnvironments(deepRefresh);
@@ -265,7 +265,7 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
    * Refresh the ccloud connection row. Handles the organization aspect
    * here, defers to super().refresh() to handle environments.
    */
-  override async refresh(deepRefresh: boolean = false): Promise<void> {
+  override async refresh(deepRefresh: boolean): Promise<void> {
     // Also get the current organization from the loader.
     this.logger.debug("Refreshing CCloudConnectionRow", { deepRefresh });
 
@@ -394,7 +394,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
     return new MarkdownString("Local Kafka clusters discoverable at port `8082` are shown here.");
   }
 
-  override async refresh(deepRefresh: boolean = false): Promise<void> {
+  override async refresh(deepRefresh: boolean): Promise<void> {
     this.logger.debug("Refreshing LocalConnectionRow", { deepRefresh });
 
     if (this.needUpdateLocalConnection) {
@@ -436,16 +436,15 @@ export class NewResourceViewProvider
   private readonly connections: Map<ConnectionId, AnyConnectionRow> = new Map();
   private connectionIndex: number = 0;
 
-  constructor() {
+  // Class is a singleton, so private constructor, use NewResourceViewProvider.getInstance()
+  // to get the official instance.
+  private constructor() {
     super();
   }
 
-  public async refreshConnection(
-    connectionId: ConnectionId,
-    deepRefresh: boolean = false,
-  ): Promise<void> {
+  public async refreshConnection(connectionId: ConnectionId, deepRefresh = true): Promise<void> {
     await this.withProgress("Refreshing connection ...", async () => {
-      this.logger.debug("Refreshing connection", { connectionId, deepRefresh });
+      this.logger.debug("Refreshing connection", { connectionId });
 
       const connectionRow = this.connections.get(connectionId);
       if (!connectionRow) {
@@ -453,7 +452,9 @@ export class NewResourceViewProvider
         return;
       }
 
+      // Always do a deep refresh of this connection.
       await connectionRow.refresh(deepRefresh);
+
       this.logger.debug("Connection row refreshed, signaling row repaint.");
       this.repaint(connectionRow);
     });
@@ -464,45 +465,35 @@ export class NewResourceViewProvider
 
     // CCloud connection observer driving auto-refreshes of the CCloud connection
     // upon ccloud connection state changes.
-    const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
-      this.logger.debug("ccloudConnected event fired", { connected });
-      this.refreshConnection(CCLOUD_CONNECTION_ID, true);
-    });
-
-    // Local connection needs two different observers, one for local Kafka and one for local Schema Registry.
-    const localKafkaConnectedSub: Disposable = localKafkaConnected.event((connected: boolean) => {
-      this.logger.debug("localKafkaConnected event fired", { connected });
-      this.refreshConnection(LOCAL_CONNECTION_ID, true);
-    });
-    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
-      (connected: boolean) => {
-        this.logger.debug("localSchemaRegistryConnected event fired", { connected });
-        this.refreshConnection(LOCAL_CONNECTION_ID, true);
-      },
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(
+      this.ccloudConnectedEventHandler.bind(this),
     );
 
-    // Watch for direct connections being added/removed, call into our handler.
-    const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(() => {
-      this.logger.debug("directConnectionsChanged event fired");
-      this.reconcileDirectConnections();
-    });
+    // Local connection needs two different observers, one for local Kafka and one for local Schema Registry.
+    const localKafkaConnectedSub: Disposable = localKafkaConnected.event(
+      this.localConnectedEventHandler.bind(this),
+    );
+
+    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
+      this.localConnectedEventHandler.bind(this),
+    );
+
+    // Watch for direct connections being added/removed, call to reconcile all direct connections.
+    const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(
+      this.reconcileDirectConnections.bind(this),
+    );
 
     // Watch for (direct) connections going 'stable', which will happen
-    // when they get created and settled. Should remove from set
-    // driving our throbber indicating something loading, then reload this
-    // connection.
-    const connectionUsableSub: Disposable = connectionStable.event((id: ConnectionId) => {
-      this.logger.debug("connectionStable event fired, refreshing connection", { id });
-      this.refreshConnection(id, true);
-    });
+    // when they get created and settled. Refresh the event-provided connection id.
+    const connectionUsableSub: Disposable = connectionStable.event(
+      this.refreshConnection.bind(this),
+    );
 
     // watch for (direct) connections going disconnected (but not deleted)
     // (will happen, say, if sidecar can no longer get at direct connection Kafka cluster)
+    // Refresh the event-provided connection id.
     const connectionDisconnectedSub: Disposable = connectionDisconnected.event(
-      (id: ConnectionId) => {
-        this.logger.debug("connectionDisconnected event fired, refreshing connection", { id });
-        this.refreshConnection(id, true);
-      },
+      this.refreshConnection.bind(this),
     );
 
     return [
@@ -513,6 +504,18 @@ export class NewResourceViewProvider
       connectionUsableSub,
       connectionDisconnectedSub,
     ];
+  }
+
+  async ccloudConnectedEventHandler(): Promise<void> {
+    // Refresh the CCloud connection row when the ccloudConnected event is fired,
+    // regardless of if edging to connected or disconnected state.
+    await this.refreshConnection(CCLOUD_CONNECTION_ID, true);
+  }
+
+  async localConnectedEventHandler(): Promise<void> {
+    // Refresh the local connection row when either local Kafka or local Schema Registry
+    // connection state changes.
+    await this.refreshConnection(LOCAL_CONNECTION_ID, true);
   }
 
   /**
@@ -689,7 +692,7 @@ export class NewResourceViewProvider
     }
 
     // Kick off the initial fetching for this connection.
-    await connectionRow.refresh().then(() => {
+    await connectionRow.refresh(false).then(() => {
       this.logger.debug("New connection row back from initial refresh", {
         connectionId: connectionRow.connectionId,
       });

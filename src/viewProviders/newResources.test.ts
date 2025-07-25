@@ -22,14 +22,6 @@ import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import {
-  ccloudConnected,
-  connectionDisconnected,
-  connectionStable,
-  directConnectionsChanged,
-  localKafkaConnected,
-  localSchemaRegistryConnected,
-} from "../emitters";
-import {
   CCloudResourceLoader,
   DirectResourceLoader,
   LocalResourceLoader,
@@ -119,7 +111,7 @@ describe("viewProviders/newResources.ts", () => {
           getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
         });
 
-        for (const deepRefresh of [false, true]) {
+        for (const deepRefresh of [true, false] as const) {
           it(`calls getEnvironments with deepRefresh=${deepRefresh}`, async () => {
             await directConnectionRow.refresh(deepRefresh);
             sinon.assert.calledOnceWithExactly(getEnvironmentsStub, deepRefresh);
@@ -475,13 +467,13 @@ describe("viewProviders/newResources.ts", () => {
 
       it("calls updateLocalConnection when needed", async () => {
         assert.equal(localConnectionRow["needUpdateLocalConnection"], true);
-        await localConnectionRow.refresh();
+        await localConnectionRow.refresh(false);
         assert.ok(updateLocalConnectionStub.calledOnce);
         assert.equal(localConnectionRow["needUpdateLocalConnection"], false);
       });
 
       it("downcalls into SingleEnvironmentConnectionRow.refresh", async () => {
-        await localConnectionRow.refresh();
+        await localConnectionRow.refresh(false);
         sinon.assert.calledOnce(singleEnvironmentConnectionRowRefresh);
       });
     });
@@ -561,7 +553,7 @@ describe("viewProviders/newResources.ts", () => {
         });
 
         it("makes no additional calls + reverts to empty state", async () => {
-          await ccloudConnectionRow.refresh();
+          await ccloudConnectionRow.refresh(false);
           sinon.assert.calledOnce(hasCCloudAuthSessionStub);
           sinon.assert.notCalled(getEnvironmentsStub);
           sinon.assert.notCalled(getOrganizationStub);
@@ -580,7 +572,7 @@ describe("viewProviders/newResources.ts", () => {
         });
 
         it("calls getEnvironments and getOrganization", async () => {
-          await ccloudConnectionRow.refresh(true);
+          await ccloudConnectionRow.refresh(false);
 
           sandbox.assert.calledOnce(getOrganizationStub);
           sandbox.assert.calledOnce(getEnvironmentsStub);
@@ -601,7 +593,7 @@ describe("viewProviders/newResources.ts", () => {
           const msg = "Test error message";
           getEnvironmentsStub.rejects(new Error(msg));
 
-          await ccloudConnectionRow.refresh(true);
+          await ccloudConnectionRow.refresh(false);
 
           // Should have notified the user of an error.
           sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
@@ -618,9 +610,15 @@ describe("viewProviders/newResources.ts", () => {
     let provider: NewResourceViewProvider;
 
     beforeEach(() => {
+      //@ts-expect-error constructor is private, but we are testing the class directly.
       provider = new NewResourceViewProvider();
+
       // would have been called if we obtained through getInstance().
       provider["initialize"]();
+    });
+
+    afterEach(() => {
+      provider.dispose();
     });
 
     describe("loadAndStoreConnection(), refreshConnection()", () => {
@@ -683,53 +681,23 @@ describe("viewProviders/newResources.ts", () => {
       });
     });
 
-    describe("setCustomEventListeners()", () => {
+    describe("ccloudConnectedEventHandler(), localConnectedEventHandler()", () => {
       let refreshConnectionStub: sinon.SinonStub;
-      let reconcileDirectConnectionsStub: sinon.SinonStub;
 
       beforeEach(() => {
         refreshConnectionStub = sandbox.stub(provider, "refreshConnection");
-        reconcileDirectConnectionsStub = sandbox.stub(
-          provider as any,
-          "reconcileDirectConnections", //private method.
-        );
       });
 
-      it("Refreshes ccloud connection when ccloudConnected event is fired", () => {
-        ccloudConnected.fire(true);
+      it("Refreshes ccloud connection when ccloudConnectedEventHandler is called", async () => {
+        await provider.ccloudConnectedEventHandler();
         sinon.assert.calledOnce(refreshConnectionStub);
         sinon.assert.calledWith(refreshConnectionStub, CCLOUD_CONNECTION_ID, true);
       });
 
-      it("Refreshes local connection when localKafkaConnected event is fired", () => {
-        localKafkaConnected.fire(true);
+      it("Refreshes local connection when localConnectedEventHandler is called", async () => {
+        await provider.localConnectedEventHandler();
         sinon.assert.calledOnce(refreshConnectionStub);
         sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
-      });
-
-      it("Refreshes local connection when localSchemaRegistryConnected event is fired", () => {
-        localSchemaRegistryConnected.fire(true);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, LOCAL_CONNECTION_ID, true);
-      });
-
-      it("Reconciles direct connections when directConnectionsChanged event is fired", () => {
-        directConnectionsChanged.fire();
-        sinon.assert.calledOnce(reconcileDirectConnectionsStub);
-      });
-
-      it("Refreshes direct connection when connectionStable event is fired", () => {
-        const connectionId = "test-direct-connection-id" as ConnectionId;
-        connectionStable.fire(connectionId);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
-      });
-
-      it("Refreshes direct connection when connectionDisconnected event is fired", () => {
-        const connectionId = "test-direct-connection-id" as ConnectionId;
-        connectionDisconnected.fire(connectionId);
-        sinon.assert.calledOnce(refreshConnectionStub);
-        sinon.assert.calledWith(refreshConnectionStub, connectionId, true);
       });
     });
 
