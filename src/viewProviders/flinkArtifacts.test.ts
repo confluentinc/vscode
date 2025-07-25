@@ -5,7 +5,6 @@ import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoader
 import { createFlinkArtifact } from "../../tests/unit/testResources/flinkArtifact";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import * as errors from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import * as notifications from "../notifications";
@@ -66,20 +65,12 @@ describe("FlinkArtifactsViewProvider", () => {
 
       const mockArtifacts = [
         createFlinkArtifact({
-          connectionId: resource.connectionId,
-          connectionType: resource.connectionType,
-          environmentId: resource.environmentId,
           id: "artifact1",
           name: "Test Artifact 1",
-          description: "Test artifact description",
         }),
         createFlinkArtifact({
-          connectionId: resource.connectionId,
-          connectionType: resource.connectionType,
-          environmentId: resource.environmentId,
           id: "artifact2",
           name: "Test Artifact 2",
-          description: "Another test artifact",
         }),
       ];
 
@@ -97,12 +88,8 @@ describe("FlinkArtifactsViewProvider", () => {
     it("returns artifacts when compute pool is selected", () => {
       const mockArtifacts = [
         createFlinkArtifact({
-          connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
-          connectionType: ConnectionType.Ccloud,
-          environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
           id: "artifact1",
           name: "Test Artifact 1",
-          description: "Test artifact description",
         }),
       ];
 
@@ -221,12 +208,8 @@ describe("FlinkArtifactsViewProvider", () => {
 
         viewProvider["_artifacts"] = [
           createFlinkArtifact({
-            connectionId: TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
-            connectionType: ConnectionType.Ccloud,
-            environmentId: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
             id: "artifact1",
             name: "Initial Artifact",
-            description: "Should be cleared on error",
           }),
         ];
 
