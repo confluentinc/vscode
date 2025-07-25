@@ -177,7 +177,7 @@ describe("commands/environments.ts", () => {
         stubbedConfigs.update,
         CCLOUD_PRIVATE_NETWORK_ENDPOINTS.id,
         {
-          [TEST_CCLOUD_ENVIRONMENT.id]: fakeEndpoints,
+          [`${TEST_CCLOUD_ENVIRONMENT.id} (${TEST_CCLOUD_ENVIRONMENT.name})`]: fakeEndpoints,
         },
         true,
       );
@@ -195,7 +195,8 @@ describe("commands/environments.ts", () => {
 
     it(`should not replace existing endpoints for other environments when updating "${CCLOUD_PRIVATE_NETWORK_ENDPOINTS.id}"`, async () => {
       const existingEndpoints = {
-        env1: "existing.endpoint1,existing.endpoint2",
+        [`${TEST_CCLOUD_ENVIRONMENT.id} (${TEST_CCLOUD_ENVIRONMENT.name})`]:
+          "existing.endpoint1,existing.endpoint2",
       };
       stubbedConfigs.stubGet(CCLOUD_PRIVATE_NETWORK_ENDPOINTS, existingEndpoints);
 
@@ -207,7 +208,7 @@ describe("commands/environments.ts", () => {
         CCLOUD_PRIVATE_NETWORK_ENDPOINTS.id,
         {
           ...existingEndpoints,
-          [TEST_CCLOUD_ENVIRONMENT.id]: fakeEndpoints,
+          [`${TEST_CCLOUD_ENVIRONMENT.id} (${TEST_CCLOUD_ENVIRONMENT.name})`]: fakeEndpoints,
         },
         true,
       );
