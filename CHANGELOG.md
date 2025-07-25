@@ -4,8 +4,14 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-- Only send the rarer / harder to explain sidecar startup errors to Sentry, so as to lower oncall
-  spiking. Log any startup reason to Segment for tracking, however.
+### Added
+
+- New "Set Private Network Endpoint(s)" command for configuring private network endpoints for a
+  specific CCloud environment.
+
+### Changed
+
+- Telemetry updates to only send less common sidecar startup errors to Sentry.
 
 ## 1.5.0
 
