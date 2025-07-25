@@ -375,7 +375,13 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalSchemaRegistry,
   LocalResourceLoader
 > {
-  /** Is this the first time refresh() is called,  */
+  /**
+   * Is this the first time refresh() is called?
+   *
+   * If so, then be sure to try to discern if there's a local
+   * Schema Registry running at all, then to update the local connection
+   * (and sidecar).
+   */
   private needUpdateLocalConnection = true;
 
   constructor() {
