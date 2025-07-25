@@ -1,4 +1,13 @@
-import * as vscode from "vscode";
+import {
+  Disposable,
+  Event,
+  EventEmitter,
+  TreeDataProvider,
+  TreeItem,
+  TreeView,
+  Uri,
+  window,
+} from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
@@ -38,13 +47,13 @@ type TopicViewProviderData = KafkaTopic | Subject | Schema;
 
 export class TopicViewProvider
   extends DisposableCollection
-  implements vscode.TreeDataProvider<TopicViewProviderData>, RefreshableTreeViewProvider
+  implements TreeDataProvider<TopicViewProviderData>, RefreshableTreeViewProvider
 {
   readonly kind = "topics";
 
-  private _onDidChangeTreeData: vscode.EventEmitter<TopicViewProviderData | undefined | void> =
-    new vscode.EventEmitter<TopicViewProviderData | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<TopicViewProviderData | undefined | void> =
+  private _onDidChangeTreeData: EventEmitter<TopicViewProviderData | undefined | void> =
+    new EventEmitter<TopicViewProviderData | undefined | void>();
+  readonly onDidChangeTreeData: Event<TopicViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
   private forceDeepRefresh: boolean = false;
@@ -64,7 +73,7 @@ export class TopicViewProvider
     this._onDidChangeTreeData.fire();
   }
 
-  private treeView: vscode.TreeView<TopicViewProviderData>;
+  private treeView: TreeView<TopicViewProviderData>;
   /** The parent of the focused Kafka cluster.  */
   public environment: Environment | null = null;
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
@@ -80,6 +89,7 @@ export class TopicViewProvider
   totalItemCount: number = 0;
 
   private static instance: TopicViewProvider | null = null;
+
   private constructor() {
     super();
     if (!getExtensionContext()) {
@@ -88,11 +98,17 @@ export class TopicViewProvider
     }
     // instead of calling `.registerTreeDataProvider`, we're creating a TreeView to dynamically
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
-    this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
+    this.treeView = window.createTreeView("confluent-topics", { treeDataProvider: this });
 
-    const listeners: vscode.Disposable[] = this.setEventListeners();
+    const listeners: Disposable[] = this.setEventListeners();
 
-    this.disposables.push(this.treeView, ...listeners);
+    this.disposables.push(this.treeView, this._onDidChangeTreeData, ...listeners);
+  }
+
+  // To be replaced by upcoming base class @shoup.
+  dispose(): void {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
   }
 
   static getInstance(): TopicViewProvider {
@@ -111,8 +127,8 @@ export class TopicViewProvider
     this.refresh();
   }
 
-  getTreeItem(element: TopicViewProviderData): vscode.TreeItem {
-    let treeItem: vscode.TreeItem;
+  getTreeItem(element: TopicViewProviderData): TreeItem {
+    let treeItem: TreeItem;
     if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
     } else if (element instanceof Subject) {
@@ -126,7 +142,7 @@ export class TopicViewProvider
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view
-        treeItem.resourceUri = vscode.Uri.parse(
+        treeItem.resourceUri = Uri.parse(
           `${SEARCH_DECORATION_URI_SCHEME}:/${element.searchableText()}`,
         );
       }
@@ -163,7 +179,7 @@ export class TopicViewProvider
         } catch (err) {
           logger.error("Error fetching topics for cluster", this.kafkaCluster, err);
           if (err instanceof TopicFetchError) {
-            vscode.window.showErrorMessage(
+            window.showErrorMessage(
               `Failed to list topics for cluster "${this.kafkaCluster.name}": ${err.message}`,
             );
           }
@@ -215,121 +231,36 @@ export class TopicViewProvider
   }
 
   /** Set up event listeners for this view provider. */
-  setEventListeners(): vscode.Disposable[] {
-    const environmentChangedSub: vscode.Disposable = environmentChanged.event(
-      async (envEvent: EnvironmentChangeEvent) => {
-        if (this.kafkaCluster && this.kafkaCluster.environmentId === envEvent.id) {
-          if (!envEvent.wasDeleted) {
-            logger.debug(
-              "environmentChanged event fired with matching Kafka cluster env ID, updating view description",
-              {
-                envEvent,
-              },
-            );
-            await this.updateTreeViewDescription();
-            this.refresh();
-          } else {
-            logger.debug(
-              "environmentChanged deletion event fired with matching Kafka cluster env ID, resetting view",
-              {
-                envEvent,
-              },
-            );
-            this.reset();
-          }
-        }
-      },
+  setEventListeners(): Disposable[] {
+    const environmentChangedSub: Disposable = environmentChanged.event(
+      this.environmentChangedHandler.bind(this),
     );
 
-    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
-      if (this.kafkaCluster && isCCloud(this.kafkaCluster)) {
-        // any transition of CCloud connection state should reset the tree view if we're focused on
-        // a CCloud Kafka Cluster
-        logger.debug(
-          "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
-          { connected },
-        );
-        this.reset();
-      }
-    });
-
-    const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
-      (connected: boolean) => {
-        if (this.kafkaCluster && isLocal(this.kafkaCluster)) {
-          // any transition of local resource availability should reset the tree view if we're focused
-          // on a local Kafka cluster
-          logger.debug(
-            "Resetting topics view due to localKafkaConnected event and currently focused on a local cluster",
-            { connected },
-          );
-          this.reset();
-        }
-      },
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(
+      this.ccloudConnectedHandler.bind(this),
     );
 
-    const currentKafkaClusterChangedSub: vscode.Disposable = currentKafkaClusterChanged.event(
-      async (cluster: KafkaCluster | null) => {
-        logger.debug(
-          `currentKafkaClusterChanged event fired, ${cluster ? "refreshing" : "resetting"}.`,
-          { cluster },
-        );
-        this.setSearch(null); // reset search when cluster changes
-        if (!cluster) {
-          this.reset();
-        } else {
-          setContextValue(ContextValues.kafkaClusterSelected, true);
-          this.kafkaCluster = cluster;
-          await this.updateTreeViewDescription();
-          this.refresh();
-        }
-      },
+    const localKafkaConnectedSub: Disposable = localKafkaConnected.event(
+      this.localKafkaConnectedHandler.bind(this),
     );
 
-    const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
-      (searchString: string | null) => {
-        logger.debug("topicSearchSet event fired, refreshing", { searchString });
-        // mainly captures the last state of the search internals to see if search was adjusted after
-        // a previous search was used, or if this is the first time search is being used
-        if (searchString !== null) {
-          // used to group search events without sending the search string itself
-          this.searchStringSetCount++;
-        }
-        logUsage(UserEvent.ViewSearchAction, {
-          status: `search string ${searchString ? "set" : "cleared"}`,
-          view: "Topics",
-          searchStringSetCount: this.searchStringSetCount,
-          hadExistingSearchString: this.itemSearchString !== null,
-          lastFilteredItemCount: this.searchMatches.size,
-          lastTotalItemCount: this.totalItemCount,
-        });
-        this.setSearch(searchString);
-        this.refresh();
-      },
+    const currentKafkaClusterChangedSub: Disposable = currentKafkaClusterChanged.event(
+      this.currentKafkaClusterChangedHandler.bind(this),
     );
 
-    const subjectChangeHandler = (event: SubjectChangeEvent | SchemaVersionChangeEvent) => {
-      const [subject, change] = [event.subject, event.change];
+    const topicSearchSetSub: Disposable = topicSearchSet.event(
+      this.topicSearchSetHandler.bind(this),
+    );
 
-      if (this.kafkaCluster?.environmentId === subject.environmentId) {
-        logger.debug(
-          `A schema subject ${change} in the environment being viewed, refreshing toplevel`,
-          {
-            subject: subject.name,
-          },
-        );
+    // A schema subject was added or removed. Shared handler.
+    const schemaSubjectChangedSub: Disposable = schemaSubjectChanged.event(
+      this.subjectChangeHandler.bind(this),
+    );
 
-        // Toplevel repaint.
-        this.refresh();
-      }
-    };
-
-    // A schema subject was added or removed.
-    const schemaSubjectChangedSub: vscode.Disposable =
-      schemaSubjectChanged.event(subjectChangeHandler);
-
-    // A schema version was added or removed.
-    const schemaVersionsChangedSub: vscode.Disposable =
-      schemaVersionsChanged.event(subjectChangeHandler);
+    // A schema version was added or removed. Shared handler.
+    const schemaVersionsChangedSub: Disposable = schemaVersionsChanged.event(
+      this.subjectChangeHandler.bind(this),
+    );
 
     return [
       environmentChangedSub,
@@ -340,6 +271,111 @@ export class TopicViewProvider
       schemaSubjectChangedSub,
       schemaVersionsChangedSub,
     ];
+  }
+
+  async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
+    if (this.kafkaCluster && this.kafkaCluster.environmentId === envEvent.id) {
+      if (!envEvent.wasDeleted) {
+        logger.debug(
+          "environmentChanged event fired with matching Kafka cluster env ID, updating view description",
+          {
+            envEvent,
+          },
+        );
+        await this.updateTreeViewDescription();
+        this.refresh();
+      } else {
+        logger.debug(
+          "environmentChanged deletion event fired with matching Kafka cluster env ID, resetting view",
+          {
+            envEvent,
+          },
+        );
+        this.reset();
+      }
+    }
+  }
+
+  ccloudConnectedHandler(connected: boolean): void {
+    if (this.kafkaCluster && isCCloud(this.kafkaCluster)) {
+      // any transition of CCloud connection state should reset the tree view if we're focused on
+      // a CCloud Kafka Cluster
+      logger.debug(
+        "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
+        { connected },
+      );
+      this.reset();
+    }
+  }
+
+  localKafkaConnectedHandler(connected: boolean): void {
+    if (this.kafkaCluster && isLocal(this.kafkaCluster)) {
+      // any transition of local resource availability should reset the tree view if we're focused
+      // on a local Kafka cluster
+      logger.debug(
+        "Resetting topics view due to localKafkaConnected event and currently focused on a local cluster",
+        { connected },
+      );
+      this.reset();
+    }
+  }
+
+  async currentKafkaClusterChangedHandler(cluster: KafkaCluster | null): Promise<void> {
+    if (!cluster && this.kafkaCluster) {
+      logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting view", {
+        currentCluster: this.kafkaCluster,
+      });
+      // Edging from a focused Kafka cluster to no cluster selected.
+      this.reset();
+    } else if (cluster && this.kafkaCluster?.id !== cluster.id) {
+      logger.debug("currentKafkaClusterChanged event fired with new cluster, updating view", {
+        currentCluster: this.kafkaCluster,
+        newCluster: cluster,
+      });
+      // Edging from one focused Kafka cluster to another.
+      this.kafkaCluster = cluster;
+
+      setContextValue(ContextValues.kafkaClusterSelected, true);
+      this.setSearch(null); // reset search when cluster changes
+      await this.updateTreeViewDescription();
+      this.refresh();
+    }
+  }
+
+  topicSearchSetHandler(searchString: string | null): void {
+    logger.debug("topicSearchSet event fired, refreshing", { searchString });
+    // mainly captures the last state of the search internals to see if search was adjusted after
+    // a previous search was used, or if this is the first time search is being used
+    if (searchString !== null) {
+      // used to group search events without sending the search string itself
+      this.searchStringSetCount++;
+    }
+    logUsage(UserEvent.ViewSearchAction, {
+      status: `search string ${searchString ? "set" : "cleared"}`,
+      view: "Topics",
+      searchStringSetCount: this.searchStringSetCount,
+      hadExistingSearchString: this.itemSearchString !== null,
+      lastFilteredItemCount: this.searchMatches.size,
+      lastTotalItemCount: this.totalItemCount,
+    });
+    this.setSearch(searchString);
+    this.refresh();
+  }
+
+  subjectChangeHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): void {
+    const [subject, change] = [event.subject, event.change];
+
+    if (this.kafkaCluster?.environmentId === subject.environmentId) {
+      logger.debug(
+        `A schema subject ${change} in the environment being viewed, refreshing toplevel`,
+        {
+          subject: subject.name,
+        },
+      );
+
+      // Toplevel repaint.
+      this.refresh();
+    }
   }
 
   /** Update the tree view description to show the currently-focused Kafka cluster's parent env
