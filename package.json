@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-30",
+  "version": "1.6.0-31",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -412,6 +412,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+        "title": "Set Private Network Endpoint(s)",
+        "icon": "$(confluent-environment)",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.resources.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -781,6 +787,14 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
+          },
+          "confluent.cloud.privateNetworkEndpoints": {
+            "type": "object",
+            "default": {},
+            "description": "Configure private network endpoints for specific Confluent Cloud environments. Each entry maps an environment ID to its corresponding private endpoints.",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "confluent.ssl.pemPaths": {
             "type": "array",
@@ -1309,6 +1323,10 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -1682,6 +1700,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+          "when": "view == confluent-resources && viewItem =~ /.*ccloud-environment/",
           "group": "z_openInCloud"
         },
         {
