@@ -421,29 +421,29 @@ export class SidecarHandle {
    * NOTE: This uses the GraphQL schema in `src/graphql/sidecar.graphql` to generate the types for
    * the query and variables via the `gql.tada` package.
    *
-   * If multiple requests are made with the same query and connectionId concurrently, only the first
-   * one will be sent to the sidecar, and subsequent requests will wait for the first one to resolve.
+   * If multiple requests are made with the same connectionId/query/variables concurrently, only the first
+   * one will be sent to the sidecar, and subsequent concurrent requests will wait for the fetch to resolve.
    * All such concurrent requests will return the same result.
    *
    * Any Error raised by the fetch() call will be propagated to the caller.
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
-    connectionId: string,
+    connectionId: ConnectionId,
     // Mark third parameter as optional if Variables is an empty object type
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
   ): Promise<Result> {
     let fetchAndExtractPromise: Promise<GraphQLResponse>;
 
-    // Do we already have an in-flight promise for this qconnectionId/query?
-    const queryHash = createHash("md5").update(print(query)).digest("hex");
-    const variablesHash = variables
-      ? createHash("md5").update(JSON.stringify(variables)).digest("hex")
-      : "no-vars";
-    const pendingPromiseCacheKey = `${connectionId}:${queryHash}:${variablesHash}`;
+    // Do we already have an in-flight promise for this connectionId/query/variables combination?
+    const queryCacheKey = createHash("md5")
+      .update(connectionId)
+      .update(print(query))
+      .update(JSON.stringify(variables || "no-vars"))
+      .digest("hex");
 
-    if (!this.graphQlQueryPromises.has(pendingPromiseCacheKey)) {
+    if (!this.graphQlQueryPromises.has(queryCacheKey)) {
       // Go ahead and create a new request promise and put into the pending promise cache.
       const headers = new Headers({
         ...this.defaultClientConfigParams.headers,
@@ -464,12 +464,12 @@ export class SidecarHandle {
 
       fetchAndExtractPromise = fetchAndExtractResponsePayload();
 
-      this.graphQlQueryPromises.set(pendingPromiseCacheKey, fetchAndExtractPromise);
+      this.graphQlQueryPromises.set(queryCacheKey, fetchAndExtractPromise);
     } else {
       // Refer to the cached in-flight promise instead of redundantly
       // asking sidecar to do the same work.
       logger.debug(`Using cached GraphQL request for a query for: ${connectionId}`);
-      fetchAndExtractPromise = this.graphQlQueryPromises.get(pendingPromiseCacheKey)!;
+      fetchAndExtractPromise = this.graphQlQueryPromises.get(queryCacheKey)!;
     }
 
     let payload: GraphQLResponse;
@@ -483,7 +483,7 @@ export class SidecarHandle {
 
       // No longer in-flight, so remove the promise from cache. Any calls started subsequently will
       // create a new request promise.
-      this.graphQlQueryPromises.delete(pendingPromiseCacheKey);
+      this.graphQlQueryPromises.delete(queryCacheKey);
     }
 
     if (!payload.data) {
