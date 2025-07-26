@@ -1,6 +1,7 @@
 import { LocalResourceWorkflow } from "./base";
 import { ConfluentLocalWorkflow } from "./confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "./cp-schema-registry";
+import { MedusaWorkflow } from "./medusa";
 
 /**
  * Register all available local resource workflow implementations with the base class registry.
@@ -13,6 +14,9 @@ export function registerLocalResourceWorkflows(): void {
 
   // Schema Registry workflows
   LocalResourceWorkflow.registerWorkflow(ConfluentPlatformSchemaRegistryWorkflow.getInstance());
+
+  // Medusa workflows
+  LocalResourceWorkflow.registerWorkflow(MedusaWorkflow.getInstance());
 
   // TODO: Add other resource kinds here
 }
