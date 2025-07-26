@@ -48,7 +48,7 @@ export async function selectPoolForStatementsViewCommand(item?: CCloudFlinkCompu
   const pool: CCloudFlinkComputePool | undefined =
     item instanceof CCloudFlinkComputePool
       ? item
-      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink-statements");
+      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink");
 
   if (!pool) {
     // user canceled the quickpick
@@ -56,7 +56,7 @@ export async function selectPoolForStatementsViewCommand(item?: CCloudFlinkCompu
   }
 
   // Focus the Flink Statements view to make sure it is visible.
-  commands.executeCommand("confluent-flink-statements.focus");
+  commands.executeCommand("confluent-flink.focus");
 
   // Inform the Flink Statements view that the user has selected a new compute pool, and wait
   // for the view to load the new pool's statements.
@@ -70,12 +70,12 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
   const pool: CCloudFlinkComputePool | undefined =
     item instanceof CCloudFlinkComputePool
       ? item
-      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink-artifacts");
+      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink");
   if (!pool) {
     return;
   }
   currentFlinkArtifactsPoolChanged.fire(pool);
-  commands.executeCommand("confluent-flink-artifacts.focus");
+  commands.executeCommand("confluent-flink.focus");
 }
 
 /**
