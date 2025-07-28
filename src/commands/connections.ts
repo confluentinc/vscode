@@ -19,6 +19,7 @@ import {
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { readFile, writeFile } from "../utils/fsWrappers";
+import { DirectConnectionRow } from "../viewProviders/newResources";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
@@ -168,8 +169,8 @@ export async function createNewDirectConnectionCommand() {
   }
 }
 
-export async function deleteDirectConnectionCommand(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
+export async function deleteDirectConnectionCommand(item: DirectEnvironment | DirectConnectionRow) {
+  if (!(item instanceof DirectEnvironment || item instanceof DirectConnectionRow)) {
     return;
   }
 
@@ -194,11 +195,18 @@ export async function deleteDirectConnectionCommand(item: DirectEnvironment) {
 export async function editDirectConnectionCommand(item: ConnectionId | DirectEnvironment) {
   // if the user clicked on the "Edit" button in the Resources view, the item will be a DirectEnvironment
   // otherwise, this was triggered via the commands API and should have been passed a ConnectionId arg
-  if (!(item instanceof DirectEnvironment || typeof item === "string")) {
+  if (
+    !(
+      item instanceof DirectConnectionRow ||
+      item instanceof DirectEnvironment ||
+      typeof item === "string"
+    )
+  ) {
     return;
   }
 
-  const connectionId = item instanceof DirectEnvironment ? item.connectionId : item;
+  const connectionId = typeof item === "string" ? item : item.connectionId;
+
   // look up the associated ConnectionSpec
   const spec: CustomConnectionSpec | null =
     await getResourceManager().getDirectConnection(connectionId);
@@ -213,8 +221,8 @@ export async function editDirectConnectionCommand(item: ConnectionId | DirectEnv
   openDirectConnectionForm(spec);
 }
 
-export async function exportDirectConnectionCommand(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
+export async function exportDirectConnectionCommand(item: DirectEnvironment | DirectConnectionRow) {
+  if (!(item instanceof DirectEnvironment || item instanceof DirectConnectionRow)) {
     return;
   }
 
