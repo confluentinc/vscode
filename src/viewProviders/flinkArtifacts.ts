@@ -1,4 +1,5 @@
 import { TreeDataProvider, TreeItem } from "vscode";
+import { ModelError } from "../clients/flinkArtifacts";
 import { ContextValues } from "../context/values";
 import { currentFlinkArtifactsPoolChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
@@ -44,6 +45,21 @@ export class FlinkArtifactsViewProvider
 
             if (isResponseError(error)) {
               const status = error.response.status;
+
+              let errorBody: string = await error.response.clone().text();
+              try {
+                const { errors } = await error.response.clone().json();
+                if (Array.isArray(errors) && errors.length) {
+                  errorBody = errors
+                    .map((data: ModelError) => data.detail ?? "")
+                    .filter(Boolean)
+                    .join("; ");
+                }
+              } catch (err) {
+                this.logger.debug("Failed to parse error response as JSON", err);
+                // ignore JSON parsing errors and use the raw text
+              }
+
               // Only show notifications for error status codes
               if (status >= 400 && status < 600) {
                 showNotification = true;

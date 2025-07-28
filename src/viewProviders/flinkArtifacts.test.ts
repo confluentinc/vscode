@@ -128,6 +128,7 @@ describe("FlinkArtifactsViewProvider", () => {
           "Failed to load Flink artifacts due to an unexpected error.",
         );
       });
+
       it("should handle 5xx HTTP errors with appropriate message", async () => {
         const mockError = new ResponseError(new Response("Service unavailable", { status: 503 }));
 
