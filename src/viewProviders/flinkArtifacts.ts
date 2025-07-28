@@ -45,7 +45,6 @@ export class FlinkArtifactsViewProvider
 
             if (isResponseError(error)) {
               const status = error.response.status;
-
               let errorBody: string = await error.response.clone().text();
               try {
                 const { errors } = await error.response.clone().json();
@@ -59,7 +58,6 @@ export class FlinkArtifactsViewProvider
                 this.logger.debug("Failed to parse error response as JSON", err);
                 // ignore JSON parsing errors and use the raw text
               }
-
               // Only show notifications for error status codes
               if (status >= 400 && status < 600) {
                 showNotification = true;
