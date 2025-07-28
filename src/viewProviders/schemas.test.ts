@@ -564,7 +564,7 @@ describe("SchemasViewProvider", () => {
     });
 
     // Define test cases as corresponding pairs of
-    // [event emitter name, topics view provider handler method name]
+    // [event emitter name, view provider handler method name]
     const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof SchemasViewProvider]> = [
       ["environmentChanged", "environmentChangedHandler"],
       ["ccloudConnected", "ccloudConnectedHandler"],
