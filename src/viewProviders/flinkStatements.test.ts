@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
@@ -14,7 +15,7 @@ import {
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
-import { FlinkStatement, Phase } from "../models/flinkStatement";
+import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -404,6 +405,128 @@ describe("FlinkStatementsViewProvider", () => {
       viewProvider["resource"] = computePool;
       const result = viewProvider.computePool;
       assert.strictEqual(result, computePool);
+    });
+  });
+
+  describe("setCustomEventListeners() wires the proper handler methods to the proper event emitters", () => {
+    let emitterStubs: StubbedEventEmitters;
+
+    beforeEach(() => {
+      // Stub all event emitters in the emitters module
+      emitterStubs = eventEmitterStubs(sandbox);
+    });
+
+    // Define test cases as corresponding pairs of
+    // [event emitter name, view provider handler method name]
+    const handlerEmitterPairs: Array<
+      [keyof typeof emitterStubs, keyof FlinkStatementsViewProvider]
+    > = [
+      ["flinkStatementUpdated", "flinkStatementUpdatedHandler"],
+      ["flinkStatementDeleted", "flinkStatementDeletedHandler"],
+    ];
+
+    handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+      it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+        // Create stub for the handler method
+        const handlerStub = sandbox.stub(viewProvider, handlerMethodName);
+
+        // Re-invoke setCustomEventListeners() to capture emitter .event() stub calls
+        // @ts-expect-error protected method
+        viewProvider.setCustomEventListeners();
+
+        // Verify emitter exists in stubs
+        assert.ok(emitterStubs[emitterName], `${emitterName} emitter should be available in stubs`);
+
+        // Verify the emitter's event method was called
+        sinon.assert.calledOnce(emitterStubs[emitterName].event);
+
+        // Capture the handler function that was registered
+        const registeredHandler = emitterStubs[emitterName].event.firstCall.args[0];
+
+        // Call the registered handler
+        registeredHandler();
+
+        // Verify the expected method stub was called,
+        // proving that the expected handler was registered
+        // to the expected emitter.
+        sinon.assert.calledOnce(handlerStub);
+      });
+    });
+  });
+
+  describe("custom event handlers", () => {
+    let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      onDidChangeTreeDataFireStub = sandbox.stub(viewProvider["_onDidChangeTreeData"], "fire");
+    });
+
+    describe("flinkStatementUpdatedHandler()", () => {
+      it("updates existing statement in resourcesInTreeView", () => {
+        const statement = createFlinkStatement({
+          name: "test-statement",
+          updatedAt: new Date("2025-01-02"),
+        });
+        resourcesInTreeView.set(statement.id, statement);
+
+        const updatedStatement = createFlinkStatement({
+          name: "test-statement",
+          updatedAt: new Date("2025-01-03"), //updated.
+        });
+
+        viewProvider.flinkStatementUpdatedHandler(updatedStatement);
+
+        // Should have updated the within-tree-view statement.
+        const existingStatement = resourcesInTreeView.get(statement.id);
+        assert.strictEqual(existingStatement?.updatedAt?.toISOString(), "2025-01-03T00:00:00.000Z");
+
+        // Should have indicated to repaint this single statement.
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.calledWith(onDidChangeTreeDataFireStub, existingStatement);
+      });
+
+      it("does not update if statement not in resourcesInTreeView", () => {
+        const statement = createFlinkStatement({
+          name: "not-in-view-statement",
+          updatedAt: new Date("2025-01-02"),
+        });
+
+        viewProvider.flinkStatementUpdatedHandler(statement);
+
+        assert.strictEqual(resourcesInTreeView.size, 0);
+
+        // Should not have fired the repaint event.
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
+    });
+
+    describe("flinkStatementDeletedHandler()", () => {
+      it("removes existing statement from resourcesInTreeView", () => {
+        const statement = createFlinkStatement({
+          name: "test-statement",
+        });
+        resourcesInTreeView.set(statement.id, statement);
+
+        viewProvider.flinkStatementDeletedHandler(statement.id);
+
+        // Should have removed the statement from the map.
+        assert.strictEqual(resourcesInTreeView.size, 0);
+
+        // Should have indicated to repaint the top-level view.
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.calledWith(onDidChangeTreeDataFireStub);
+      });
+
+      it("does nothing if statement not in resourcesInTreeView", () => {
+        const nonExistentStatementId = "non-existent-statement-id" as FlinkStatementId;
+        viewProvider.flinkStatementDeletedHandler(nonExistentStatementId);
+
+        // Should not have changed the map.
+        assert.strictEqual(resourcesInTreeView.size, 0);
+
+        // Should not have fired the repaint event.
+        sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+      });
     });
   });
 });

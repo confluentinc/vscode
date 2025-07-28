@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { SinonStubbedInstance } from "sinon";
 import { TreeItemCollapsibleState, window } from "vscode";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -497,6 +498,54 @@ describe("TopicViewProvider", () => {
           sinon.assert.calledOnce(refreshStub);
         });
       }
+    });
+  });
+
+  describe("setEventListeners() wires the proper handler methods to the proper event emitters", () => {
+    let emitterStubs: StubbedEventEmitters;
+
+    beforeEach(() => {
+      // Stub all event emitters in the emitters module
+      emitterStubs = eventEmitterStubs(sandbox);
+    });
+
+    // Define test cases as corresponding pairs of
+    // [event emitter name, view provider handler method name]
+    const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof TopicViewProvider]> = [
+      ["environmentChanged", "environmentChangedHandler"],
+      ["ccloudConnected", "ccloudConnectedHandler"],
+      ["localKafkaConnected", "localKafkaConnectedHandler"],
+      ["currentKafkaClusterChanged", "currentKafkaClusterChangedHandler"],
+      ["topicSearchSet", "topicSearchSetHandler"],
+      ["schemaSubjectChanged", "subjectChangeHandler"],
+      ["schemaVersionsChanged", "subjectChangeHandler"],
+    ];
+
+    handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+      it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+        // Create stub for the handler method
+        const handlerStub = sandbox.stub(provider, handlerMethodName);
+
+        // Re-invoke setEventListeners() to capture emitter .event() stub calls
+        provider.setEventListeners();
+
+        // Verify emitter exists in stubs
+        assert.ok(emitterStubs[emitterName], `${emitterName} emitter should be available in stubs`);
+
+        // Verify the emitter's event method was called
+        sinon.assert.calledOnce(emitterStubs[emitterName].event);
+
+        // Capture the handler function that was registered
+        const registeredHandler = emitterStubs[emitterName].event.firstCall.args[0];
+
+        // Call the registered handler
+        registeredHandler();
+
+        // Verify the expected method stub was called,
+        // proving that the expected handler was registered
+        // to the expected emitter.
+        sinon.assert.calledOnce(handlerStub);
+      });
     });
   });
 });
