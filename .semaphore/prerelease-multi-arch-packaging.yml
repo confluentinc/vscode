@@ -16,7 +16,11 @@ blocks:
       prologue:
         commands:
           - git fetch --all
-          - git checkout $COMMIT_SHA
+          - |
+              if [ -z "$COMMIT_SHA" ]; then
+                COMMIT_SHA=$(git rev-parse HEAD)
+              fi
+              git checkout "$COMMIT_SHA"
           - . vault-setup
           - make install-dependencies
       jobs:
