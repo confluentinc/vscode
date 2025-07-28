@@ -529,14 +529,12 @@ describe("TopicViewProvider", () => {
         // Re-invoke setEventListeners() to capture emitter .event() stub calls
         provider.setEventListeners();
 
-        // Verify emitter exists in stubs
-        assert.ok(emitterStubs[emitterName], `${emitterName} emitter should be available in stubs`);
-
+        const emitterStub = emitterStubs[emitterName]!;
         // Verify the emitter's event method was called
-        sinon.assert.calledOnce(emitterStubs[emitterName].event);
+        sinon.assert.calledOnce(emitterStub.event);
 
         // Capture the handler function that was registered
-        const registeredHandler = emitterStubs[emitterName].event.firstCall.args[0];
+        const registeredHandler = emitterStub.event.firstCall.args[0];
 
         // Call the registered handler
         registeredHandler();
