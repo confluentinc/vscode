@@ -341,42 +341,14 @@ export class SchemasViewProvider
 
   /** Set up event listeners for this view provider. */
   setEventListeners(): Disposable[] {
-    const environmentChangedSub: Disposable = environmentChanged.event(
-      this.environmentChangedHandler.bind(this),
-    );
-
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(
-      this.ccloudConnectedHandler.bind(this),
-    );
-
-    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
-      this.localSchemaRegistryConnectedHandler.bind(this),
-    );
-
-    const currentSchemaRegistryChangedSub: Disposable = currentSchemaRegistryChanged.event(
-      this.currentSchemaRegistryChangedHandler.bind(this),
-    );
-
-    const schemaSearchSetSub: Disposable = schemaSearchSet.event(
-      this.schemaSearchSetHandler.bind(this),
-    );
-
-    const schemaSubjectChangedSub: Disposable = schemaSubjectChanged.event(
-      this.schemaSubjectChangedHandler.bind(this),
-    );
-
-    const schemaVersionsChangedSub: Disposable = schemaVersionsChanged.event(
-      this.schemaVersionsChangedHandler.bind(this),
-    );
-
     return [
-      environmentChangedSub,
-      ccloudConnectedSub,
-      localSchemaRegistryConnectedSub,
-      currentSchemaRegistryChangedSub,
-      schemaSearchSetSub,
-      schemaSubjectChangedSub,
-      schemaVersionsChangedSub,
+      environmentChanged.event(this.environmentChangedHandler.bind(this)),
+      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
+      localSchemaRegistryConnected.event(this.localSchemaRegistryConnectedHandler.bind(this)),
+      currentSchemaRegistryChanged.event(this.currentSchemaRegistryChangedHandler.bind(this)),
+      schemaSearchSet.event(this.schemaSearchSetHandler.bind(this)),
+      schemaSubjectChanged.event(this.schemaSubjectChangedHandler.bind(this)),
+      schemaVersionsChanged.event(this.schemaVersionsChangedHandler.bind(this)),
     ];
   }
 
