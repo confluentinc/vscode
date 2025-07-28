@@ -18,10 +18,10 @@ export async function getPresignedUploadUrl(
       provider: request.cloud,
       region: request.region,
     };
-    const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
+    const presignedClient = sidecarHandle.getFlinkPresignedUrlsApi(providerRegion);
 
     // Wrap the request as required by the OpenAPI client
-    const urlResponse = await artifactsClient.presignedUploadUrlArtifactV1PresignedUrl({
+    const urlResponse = await presignedClient.presignedUploadUrlArtifactV1PresignedUrl({
       PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
     });
     return urlResponse;

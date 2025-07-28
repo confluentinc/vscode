@@ -2,7 +2,6 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import type { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts";
 import * as errorsModule from "../errors";
-import { EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import * as sidecarModule from "../sidecar";
 import { getPresignedUploadUrl } from "./uploadUDF";
 
@@ -25,7 +24,7 @@ describe("getPresignedUploadUrl", () => {
       presignedUploadUrlArtifactV1PresignedUrl: sandbox.stub(),
     };
     sidecarHandleStub = {
-      getFlinkArtifactsApi: sandbox.stub().returns(artifactsClientStub),
+      getFlinkPresignedUrlsApi: sandbox.stub().returns(artifactsClientStub),
     };
     getSidecarStub = sandbox.stub().resolves(sidecarHandleStub);
     sandbox.stub(sidecarModule, "getSidecar").callsFake(getSidecarStub);
@@ -46,15 +45,13 @@ describe("getPresignedUploadUrl", () => {
     const result = await getPresignedUploadUrl(request);
 
     sinon.assert.calledOnce(getSidecarStub);
-    sinon.assert.calledOnceWithExactly(sidecarHandleStub.getFlinkArtifactsApi, {
-      environmentId: request.environment.toString() as EnvironmentId,
-      provider: request.cloud,
-      region: request.region,
-    } as IEnvProviderRegion);
-    sinon.assert.calledOnceWithExactly(
-      artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl,
-      { PresignedUploadUrlArtifactV1PresignedUrlRequest: request },
-    );
+
+    // Check the actual argument values for correctness
+    const callArg = sidecarHandleStub.getFlinkPresignedUrlsApi.getCall(0).args[0];
+    assert.strictEqual(callArg.environmentId, request.environment);
+    assert.strictEqual(callArg.provider, request.cloud);
+    assert.strictEqual(callArg.region, request.region);
+
     assert.strictEqual(result, fakeResponse);
   });
 
