@@ -6,7 +6,6 @@ import {
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
-  window,
 } from "vscode";
 import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
@@ -758,35 +757,4 @@ export function mergeUpdates(
       existing.push(updatedResource);
     }
   }
-}
-
-/**
- * While there are two different resource view providers, provide
- * a single API to get both (or either, if / when are settings-flagged)
- * to throb. When only new resources view exists, then replace
- * this with newResourcesView.withProgress().
- **/
-export async function resourceViewWithProgress<T>(
-  title: string,
-  task: () => Promise<T>,
-): Promise<T> {
-  // Start the task running ...
-  const runningTask = task();
-
-  // If new resources view is enabled, throb it waiting on the running task promise.
-  // (conditions to test which view(s) to throb are TBD)
-  const newResourcesView = NewResourceViewProvider.getInstance();
-  void newResourcesView.withProgress(title, () => runningTask);
-
-  // Likewise with old resources view.
-  void window.withProgress(
-    {
-      // the old view
-      location: { viewId: "confluent-resources" },
-      title,
-    },
-    () => runningTask,
-  );
-
-  return runningTask;
 }

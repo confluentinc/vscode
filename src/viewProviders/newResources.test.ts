@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { MarkdownString, TreeItem, TreeItemCollapsibleState, window } from "vscode";
+import { MarkdownString, TreeItem, TreeItemCollapsibleState } from "vscode";
 import * as environmentModels from "../../src/models/environment";
 import * as notifications from "../../src/notifications";
 import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
@@ -45,7 +45,6 @@ import {
   LocalConnectionRow,
   mergeUpdates,
   NewResourceViewProvider,
-  resourceViewWithProgress,
   SingleEnvironmentConnectionRow,
 } from "./newResources";
 
@@ -1019,37 +1018,6 @@ describe("viewProviders/newResources.ts", () => {
 
       assert.strictEqual(original.length, 1);
       assert.strictEqual(original[0], TEST_LOCAL_ENVIRONMENT);
-    });
-  });
-
-  describe("resourceViewWithProgress()", () => {
-    let provider: NewResourceViewProvider;
-    let newResourceswithProgressStub: sinon.SinonStub;
-    let windowWithProgressStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      provider = new NewResourceViewProvider();
-      sandbox.stub(NewResourceViewProvider, "getInstance").returns(provider);
-
-      newResourceswithProgressStub = sandbox.stub(provider, "withProgress");
-      windowWithProgressStub = sandbox.stub(window, "withProgress");
-    });
-
-    afterEach(() => {
-      provider.dispose();
-    });
-
-    it("calls both withProgress() and NewResourceViewProvider.withProgress()", async () => {
-      const promise = resourceViewWithProgress("title", async () => {
-        // Simulate some work.
-        return "done";
-      });
-
-      sinon.assert.calledOnce(newResourceswithProgressStub);
-      sinon.assert.calledOnce(windowWithProgressStub);
-
-      const result = await promise;
-      assert.strictEqual(result, "done");
     });
   });
 });

@@ -31,7 +31,6 @@ import {
 import { getSecretStorage } from "./storage/utils";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { DisposableCollection } from "./utils/disposables";
-import { resourceViewWithProgress } from "./viewProviders/newResources";
 
 const logger = new Logger("directConnectManager");
 
@@ -271,8 +270,6 @@ export class DirectConnectionManager extends DisposableCollection {
     update: boolean = false,
     dryRun: boolean = false,
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
-    const title = `${update ? "Updating" : "Creating"} connection ...`;
-
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
 
@@ -285,18 +282,27 @@ export class DirectConnectionManager extends DisposableCollection {
         : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
       if (!dryRun) {
-        await resourceViewWithProgress(title, async () => {
-          await window.withProgress(
-            {
-              location: ProgressLocation.Notification,
-              title: `Waiting for "${spec.name}" to be usable...`,
-            },
-            async () => {
-              await waitForConnectionToBeStable(connectionId);
-              logger.debug(`Connection "${spec.name}" is now stable and usable.`);
-            },
-          );
-        });
+        // Show "new connection loading" progress activity in both the resources view and a notification.
+        const title = `${update ? "Updating" : "Creating"} connection ...`;
+
+        await window.withProgress(
+          {
+            location: { viewId: "confluent-resources" },
+            title,
+          },
+          async () => {
+            await window.withProgress(
+              {
+                location: ProgressLocation.Notification,
+                title: title,
+              },
+              async () => {
+                await waitForConnectionToBeStable(connectionId);
+                logger.debug(`Connection "${spec.name}" is now stable and usable.`);
+              },
+            );
+          },
+        );
       }
     } catch (error) {
       // logging happens in the above call
