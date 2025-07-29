@@ -77,7 +77,6 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   implements IResourceBase, IdItem, ISearchable
 {
   logger: Logger;
-  ordering: number = -1; // Will be reset when the connection is stored.
   readonly environments: ET[];
 
   constructor(
@@ -439,7 +438,6 @@ export class NewResourceViewProvider
   readonly loggerName = "viewProviders.newResources";
 
   private readonly connections: Map<ConnectionId, AnyConnectionRow> = new Map();
-  private connectionIndex: number = 0;
 
   public async refreshConnection(connectionId: ConnectionId, deepRefresh = true): Promise<void> {
     await this.withProgress("Refreshing connection ...", async () => {
@@ -712,14 +710,38 @@ export class NewResourceViewProvider
   }
 
   private storeConnection(connectionRow: AnyConnectionRow): void {
-    connectionRow.ordering = this.connectionIndex++;
     this.connections.set(connectionRow.connectionId, connectionRow);
   }
 
   private getToplevelChildren(): AnyConnectionRow[] {
     const connections = [...this.connections.values()];
-    connections.sort((a, b) => a.ordering - b.ordering);
+
+    this.sortConnections(connections);
+
     return connections;
+  }
+
+  private sortConnections(connections: AnyConnectionRow[]): void {
+    connections.sort((a, b) => {
+      // 1. CCloudConnectionRow should come first
+      if (a instanceof CCloudConnectionRow) {
+        return -1;
+      }
+      if (b instanceof CCloudConnectionRow) {
+        return 1;
+      }
+
+      // 2. LocalConnectionRow should come second
+      if (a instanceof LocalConnectionRow) {
+        return -1;
+      }
+      if (b instanceof LocalConnectionRow) {
+        return 1;
+      }
+
+      // 3. Otherwise, DirectConnectionRow instances should be ordered by name
+      return a.name.localeCompare(b.name);
+    });
   }
 }
 
