@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { MarkdownString, TreeItem, TreeItemCollapsibleState } from "vscode";
-import * as contextvalues from "../../src/context/values";
+import * as contextValues from "../../src/context/values";
 import * as environmentModels from "../../src/models/environment";
 import * as notifications from "../../src/notifications";
 import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
@@ -465,7 +465,7 @@ describe("viewProviders/newResources.ts", () => {
           "refresh",
         );
 
-        setContextValueStub = sandbox.stub(contextvalues, "setContextValue");
+        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
       });
 
       it("calls updateLocalConnection when needed", async () => {
@@ -486,13 +486,13 @@ describe("viewProviders/newResources.ts", () => {
 
           sinon.assert.calledWith(
             setContextValueStub,
-            contextvalues.ContextValues.localKafkaClusterAvailable,
+            contextValues.ContextValues.localKafkaClusterAvailable,
             false,
           );
 
           sinon.assert.calledWith(
             setContextValueStub,
-            contextvalues.ContextValues.localSchemaRegistryAvailable,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
             false,
           );
         });
@@ -502,7 +502,7 @@ describe("viewProviders/newResources.ts", () => {
           await localConnectionRow.refresh(false);
           sinon.assert.calledWith(
             setContextValueStub,
-            contextvalues.ContextValues.localKafkaClusterAvailable,
+            contextValues.ContextValues.localKafkaClusterAvailable,
             true,
           );
         });
@@ -512,7 +512,7 @@ describe("viewProviders/newResources.ts", () => {
           await localConnectionRow.refresh(false);
           sinon.assert.calledWith(
             setContextValueStub,
-            contextvalues.ContextValues.localKafkaClusterAvailable,
+            contextValues.ContextValues.localKafkaClusterAvailable,
             false,
           );
         });
@@ -522,7 +522,7 @@ describe("viewProviders/newResources.ts", () => {
           await localConnectionRow.refresh(false);
           sinon.assert.calledWith(
             setContextValueStub,
-            contextvalues.ContextValues.localSchemaRegistryAvailable,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
             true,
           );
         });
@@ -532,7 +532,7 @@ describe("viewProviders/newResources.ts", () => {
           await localConnectionRow.refresh(false);
           sinon.assert.calledWith(
             setContextValueStub,
-            contextvalues.ContextValues.localSchemaRegistryAvailable,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
             false,
           );
         });
