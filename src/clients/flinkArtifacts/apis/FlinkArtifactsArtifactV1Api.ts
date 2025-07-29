@@ -12,29 +12,29 @@
  * Do not edit the class manually.
  */
 
+import * as runtime from "../runtime";
 import type {
   ArtifactV1FlinkArtifact,
   ArtifactV1FlinkArtifactList,
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
+  Failure,
   GetArtifactV1FlinkArtifact200Response,
-  PresignedUploadUrlArtifactV1PresignedUrl200Response,
-  PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../models/index";
 import {
-  ArtifactV1FlinkArtifactListFromJSON,
+  ArtifactV1FlinkArtifactFromJSON,
   ArtifactV1FlinkArtifactToJSON,
+  ArtifactV1FlinkArtifactListFromJSON,
+  ArtifactV1FlinkArtifactListToJSON,
   CreateArtifactV1FlinkArtifact201ResponseFromJSON,
+  CreateArtifactV1FlinkArtifact201ResponseToJSON,
+  CreateArtifactV1FlinkArtifactRequestFromJSON,
   CreateArtifactV1FlinkArtifactRequestToJSON,
+  FailureFromJSON,
+  FailureToJSON,
   GetArtifactV1FlinkArtifact200ResponseFromJSON,
-  PresignedUploadUrlArtifactV1PresignedUrl200ResponseFromJSON,
-  PresignedUploadUrlArtifactV1PresignedUrlRequestToJSON,
+  GetArtifactV1FlinkArtifact200ResponseToJSON,
 } from "../models/index";
-import * as runtime from "../runtime";
-
-export interface PresignedUploadUrlArtifactV1PresignedUrlOperationRequest {
-  PresignedUploadUrlArtifactV1PresignedUrlRequest?: PresignedUploadUrlArtifactV1PresignedUrlRequest;
-}
 
 export interface CreateArtifactV1FlinkArtifactOperationRequest {
   cloud: string;
@@ -76,62 +76,6 @@ export interface UpdateArtifactV1FlinkArtifactRequest {
  *
  */
 export class FlinkArtifactsArtifactV1Api extends runtime.BaseAPI {
-  /**
-   * Request a presigned upload URL to upload a Flink Artifact archive.
-   */
-  async presignedUploadUrlArtifactV1PresignedUrlRaw(
-    requestParameters: PresignedUploadUrlArtifactV1PresignedUrlOperationRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<PresignedUploadUrlArtifactV1PresignedUrl200Response>> {
-    const headerParameters: runtime.HTTPHeaders = {};
-    headerParameters["Content-Type"] = "application/json";
-
-    if (
-      this.configuration &&
-      (this.configuration.username !== undefined || this.configuration.password !== undefined)
-    ) {
-      headerParameters["Authorization"] =
-        "Basic " + btoa(this.configuration.username + ":" + this.configuration.password);
-    }
-    if (this.configuration && this.configuration.accessToken) {
-      // oauth required
-      headerParameters["Authorization"] = await this.configuration.accessToken(
-        "confluent-sts-access-token",
-        [],
-      );
-    }
-
-    const response = await this.request(
-      {
-        path: `/artifact/v1/presigned-upload-url`,
-        method: "POST",
-        headers: headerParameters,
-        body: PresignedUploadUrlArtifactV1PresignedUrlRequestToJSON(
-          requestParameters["PresignedUploadUrlArtifactV1PresignedUrlRequest"],
-        ),
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      PresignedUploadUrlArtifactV1PresignedUrl200ResponseFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Request a presigned upload URL to upload a Flink Artifact archive.
-   */
-  async presignedUploadUrlArtifactV1PresignedUrl(
-    requestParameters: PresignedUploadUrlArtifactV1PresignedUrlOperationRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<PresignedUploadUrlArtifactV1PresignedUrl200Response> {
-    const response = await this.presignedUploadUrlArtifactV1PresignedUrlRaw(
-      requestParameters,
-      initOverrides,
-    );
-    return await response.value();
-  }
-
   /**
    * [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)  Make a request to create a flink artifact.
    * Create a new Flink Artifact.
