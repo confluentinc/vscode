@@ -641,6 +641,12 @@ describe("viewProviders/newResources.ts", () => {
           ["connectionDisconnected", "refreshConnection"],
         ];
 
+      it("setCustomEventListeners should return the expected number of listeners", () => {
+        // @ts-expect-error protected method
+        const listeners = provider.setCustomEventListeners();
+        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+      });
+
       handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
         it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
           // Create stub for the handler method
