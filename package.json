@@ -273,6 +273,10 @@
     ],
     "commands": [
       {
+        "command": "confluent.uploadUDF",
+        "title": "Confluent: Upload UDF"
+      },
+      {
         "command": "confluent.connections.ccloud.signIn",
         "icon": "$(sign-in)",
         "title": "Sign in to Confluent Cloud",
