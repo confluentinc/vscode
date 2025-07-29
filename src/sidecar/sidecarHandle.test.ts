@@ -373,7 +373,7 @@ describe("sidecarHandle sandbox tests", () => {
     });
 
     // If the response is not ok, and is not of expected graphql response shape, gets handled.
-    it("should reject promise and clear cache on non-ok response", async () => {
+    it("variant two: should reject promise and clear cache on non-ok response", async () => {
       fetchStub.resolves({
         json: async () => ({}),
       } as Response);

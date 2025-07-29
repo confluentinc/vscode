@@ -12,6 +12,9 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Telemetry updates to only send less common sidecar startup errors to Sentry.
+- The Resources view has been reimplemented, allowing for independently concurrent initialization of
+  each connection, as well as allowing individual connection refreshing. Users may opt-out of the
+  new implementation by unchecking the 'New Resources View' setting.
 
 ## 1.5.0
 
