@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { MarkdownString, TreeItem, TreeItemCollapsibleState } from "vscode";
+import * as contextValues from "../../src/context/values";
 import * as environmentModels from "../../src/models/environment";
 import * as notifications from "../../src/notifications";
 import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
@@ -454,6 +455,7 @@ describe("viewProviders/newResources.ts", () => {
     describe("refresh", () => {
       let updateLocalConnectionStub: sinon.SinonStub;
       let singleEnvironmentConnectionRowRefresh: sinon.SinonStub;
+      let setContextValueStub: sinon.SinonStub;
 
       beforeEach(() => {
         updateLocalConnectionStub = sandbox.stub(sidecarLocalConnections, "updateLocalConnection");
@@ -462,6 +464,8 @@ describe("viewProviders/newResources.ts", () => {
           SingleEnvironmentConnectionRow.prototype,
           "refresh",
         );
+
+        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
       });
 
       it("calls updateLocalConnection when needed", async () => {
@@ -474,6 +478,64 @@ describe("viewProviders/newResources.ts", () => {
       it("downcalls into SingleEnvironmentConnectionRow.refresh", async () => {
         await localConnectionRow.refresh(false);
         sinon.assert.calledOnce(singleEnvironmentConnectionRowRefresh);
+      });
+
+      describe("context value setting", () => {
+        it("sets both localSchemaRegistryAvailable and localKafkaClusterAvailable to false when environment is not set", async () => {
+          await localConnectionRow.refresh(false);
+
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
+          );
+
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            false,
+          );
+        });
+
+        it("sets localKafkaClusterAvailable context value when Kafka cluster is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            true,
+          );
+        });
+
+        it("sets localKafkaClusterAvailable context value to false when no Kafka cluster is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
+          );
+        });
+
+        it("sets localSchemaRegistryAvailable context value when Schema Registry is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            true,
+          );
+        });
+
+        it("sets localSchemaRegistryAvailable context value to false when no Schema Registry is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            false,
+          );
+        });
       });
     });
   });
