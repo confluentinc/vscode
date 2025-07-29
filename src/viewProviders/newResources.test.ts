@@ -851,7 +851,7 @@ describe("viewProviders/newResources.ts", () => {
       }
 
       function assignDefaultChildren(): Array<AnyConnectionRow> {
-        const defaultChildren = [new LocalConnectionRow(), new CCloudConnectionRow()];
+        const defaultChildren = [new CCloudConnectionRow(), new LocalConnectionRow()];
 
         setChildren(defaultChildren);
         return defaultChildren;
