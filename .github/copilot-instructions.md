@@ -70,7 +70,7 @@ compatible clusters within Visual Studio Code.
 - We use the `vscode.EventEmitter` class for event handling in the extension, with toplevel event
   emitters and associated event types defined in `src/emitters.ts`.
 - Classes with event handlers must declare distinct methods for each event type they handle, and register the `.bind(this)` of each handler method to the corresponding event emitter within a `setEventHandlers()` method, which returns the array of disposables for the event handlers.
-- Classes with event handlers must implement the `vscode.Disposable` interface, and should directly or indirectly have a  `dispose()` method to unregister all event handlers when the object is no longer needed. When possible, use base class `DisposableCollection` to manage the collection of disposables and to implement the `dispose()` method.
+- Classes with event handlers must implement the `vscode.Disposable` interface, and should directly or indirectly have a `dispose()` method to unregister all event handlers when the object is no longer needed. When possible, use base class `DisposableCollection` to manage the collection of disposables and to implement the `dispose()` method.
 
 # Testing
 
@@ -78,10 +78,11 @@ This VS Code extension uses the Mocha BDD interface with "sinon" and "assert" pa
 testing, and Playwright for functional/e2e testing.
 
 - Use descriptive test names that explain the expected behavior with the "should" prefix
-- Group related tests using `describe` blocks for better organization. Toplevel `describe` blocks
-  should represent the feature or module being tested, and include the let for the sinon sandbox to use for the entire file's tests, and include the beforeEach and afterEach hooks
-  to set up and tear down the sandbox. Individual describe blocks for each method tested, then with one or more `it` blocks for each test case.
-- Use `beforeEach` and `afterEach` hooks to set up and tear down test
+- Group related tests using `describe` blocks for better organization
+   - Toplevel `describe` blocks should represent the feature or module being tested, and declare the sinon `sandbox` variable to use for the entire file's tests, and include the beforeEach and afterEach hooks to set up and tear down the sandbox.
+   - Make individual interior `describe` blocks for each method tested, containing one or more `it` blocks for each test case for the method.
+- Use `beforeEach` and `afterEach` hooks to set up and tear down test sandbox, event handlers, and
+  other necessary state.
 - Always use a `SinonSandbox` instance when setting up stubs, spies, or fakes to ensure proper
   cleanup
 - Use sinon Assert API for assertions involving stubs, spies, or fakes (e.g.,
@@ -93,5 +94,5 @@ testing, and Playwright for functional/e2e testing.
     missing
 - Test files should be placed adjacent to source files with `.test.ts` suffix
 - Mock/stub external dependencies and API calls in unit tests to isolate the unit of work
-- Tests over event handling must avoid calling the event's `fire` method directly to avoid unstubbed side-effects from unrelated registered handlers.  Instead, test individual event handler methods directly, and use the emitter stubbing fixture `test/stubs/emitters.ts::eventEmitterStubs()` to stub all event emitters to then prove that the proper event handlers are registered for the proper events.
-- afterEach for tests which cause the creation of objects which register event handlers should call the `dispose` method on the object in afterEach() to ensure that all event handlers are unregistered, so that when separate tests run there will not be unintended side-effects.
+- Tests over event handling must avoid calling the event's `fire` method directly to avoid unstubbed side-effects from unrelated registered handlers.  Instead, test individual event handler methods directly, and use the emitter stubbing fixture `test/stubs/emitters.ts::eventEmitterStubs()` to stub all event emitters to then prove that the proper event handlers are registered for the proper events
+- `afterEach` for tests over objects which register event handlers must call the `dispose` method on the object in `afterEach` to ensure that all event handlers are unregistered
