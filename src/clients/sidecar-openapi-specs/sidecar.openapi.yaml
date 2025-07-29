@@ -933,15 +933,15 @@ components:
     HealthResponse:
       type: object
       properties:
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
           - UP
           - DOWN
           type: string
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/HealthCheck"
     HealthCheck:
       type: object
       properties:
@@ -950,11 +950,11 @@ components:
           - UP
           - DOWN
           type: string
+        name:
+          type: string
         data:
           type: object
           nullable: true
-        name:
-          type: string
 paths:
   /:
     get:
@@ -1421,7 +1421,7 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
 info:
   title: Confluent ide-sidecar API
-  version: 0.225.0
+  version: 0.226.0
   description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
   termsOfService: Your terms here
   contact:
