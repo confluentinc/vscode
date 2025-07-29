@@ -69,7 +69,7 @@ compatible clusters within Visual Studio Code.
 
 - We use the `vscode.EventEmitter` class for event handling in the extension, with toplevel event
   emitters and associated event types defined in `src/emitters.ts`.
-- Classes with event handlers such as view providers must declare distinct methods for each event type they handle, and only register the `.bind(this)` of each method in a `setEventHandlers()` method that is called by the constructor. The array of resulting event handler registration disposables should be returned from the `setEventHandlers()` method.
+- Classes with event handlers must declare distinct methods for each event type they handle, and register the `.bind(this)` of each handler method to the corresponding event emitter within a `setEventHandlers()` method, which returns the array of disposables for the event handlers.
 - Classes with event handlers must implement the `vscode.Disposable` interface, and should directly or indirectly have a  `dispose()` method to unregister all event handlers when the object is no longer needed. When possible, use base class `DisposableCollection` to manage the collection of disposables and to implement the `dispose()` method.
 
 # Testing
