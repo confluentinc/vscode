@@ -51,31 +51,41 @@ export class FlinkStatementsViewProvider
   private statementManager = FlinkStatementManager.getInstance();
 
   protected setCustomEventListeners(): Disposable[] {
-    const statementChangedSub: Disposable = flinkStatementUpdated.event(
-      (statement: FlinkStatement) => {
-        // Update the statement in the view.
-        const existingStatement = this.resourcesInTreeView.get(statement.id);
-        if (existingStatement) {
-          existingStatement.update(statement);
-          this._onDidChangeTreeData.fire(existingStatement);
-        }
-      },
-    );
+    return [
+      flinkStatementUpdated.event(this.flinkStatementUpdatedHandler.bind(this)),
+      flinkStatementDeleted.event(this.flinkStatementDeletedHandler.bind(this)),
+    ];
+  }
 
-    const statementDeletedSub: Disposable = flinkStatementDeleted.event(
-      (statementId: FlinkStatementId) => {
-        // Remove the statement from the view. It is known to no longer exist.
-        const existingStatement = this.resourcesInTreeView.get(statementId);
-        if (existingStatement) {
-          this.resourcesInTreeView.delete(statementId);
-          // inform the view that toplevel has changed. Sigh, no API to indicate that
-          // a specific item has been removed?
-          this._onDidChangeTreeData.fire();
-        }
-      },
-    );
+  /**
+   * Handle when flinkStatementUpdated is fired by updating
+   * our cached statement in the view (if it exists) and
+   * informing the view that it has changed.
+   */
+  flinkStatementUpdatedHandler(statement: FlinkStatement): void {
+    // Update the statement in the view.
+    const existingStatement = this.resourcesInTreeView.get(statement.id);
+    if (existingStatement) {
+      existingStatement.update(statement);
+      this._onDidChangeTreeData.fire(existingStatement);
+    }
+  }
 
-    return [statementChangedSub, statementDeletedSub];
+  /**
+   * Handle when flinkStatementDeleted is fired by removing
+   * the statement from the view if it exists, and informing the view
+   * to repaint the toplevel.
+   * @param statementId The statement known to no longer exist.
+   */
+  flinkStatementDeletedHandler(statementId: FlinkStatementId): void {
+    // Remove the statement from the view. It is known to no longer exist.
+    const existingStatement = this.resourcesInTreeView.get(statementId);
+    if (existingStatement) {
+      this.resourcesInTreeView.delete(statementId); // remove it from the map
+      // inform the view that toplevel has changed. Sigh, no API to indicate
+      // that a specific item has been removed?
+      this._onDidChangeTreeData.fire();
+    }
   }
 
   /**

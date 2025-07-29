@@ -232,44 +232,14 @@ export class TopicViewProvider
 
   /** Set up event listeners for this view provider. */
   setEventListeners(): Disposable[] {
-    const environmentChangedSub: Disposable = environmentChanged.event(
-      this.environmentChangedHandler.bind(this),
-    );
-
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(
-      this.ccloudConnectedHandler.bind(this),
-    );
-
-    const localKafkaConnectedSub: Disposable = localKafkaConnected.event(
-      this.localKafkaConnectedHandler.bind(this),
-    );
-
-    const currentKafkaClusterChangedSub: Disposable = currentKafkaClusterChanged.event(
-      this.currentKafkaClusterChangedHandler.bind(this),
-    );
-
-    const topicSearchSetSub: Disposable = topicSearchSet.event(
-      this.topicSearchSetHandler.bind(this),
-    );
-
-    // A schema subject was added or removed. Shared handler.
-    const schemaSubjectChangedSub: Disposable = schemaSubjectChanged.event(
-      this.subjectChangeHandler.bind(this),
-    );
-
-    // A schema version was added or removed. Shared handler.
-    const schemaVersionsChangedSub: Disposable = schemaVersionsChanged.event(
-      this.subjectChangeHandler.bind(this),
-    );
-
     return [
-      environmentChangedSub,
-      ccloudConnectedSub,
-      localKafkaConnectedSub,
-      currentKafkaClusterChangedSub,
-      topicSearchSetSub,
-      schemaSubjectChangedSub,
-      schemaVersionsChangedSub,
+      environmentChanged.event(this.environmentChangedHandler.bind(this)),
+      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
+      localKafkaConnected.event(this.localKafkaConnectedHandler.bind(this)),
+      currentKafkaClusterChanged.event(this.currentKafkaClusterChangedHandler.bind(this)),
+      topicSearchSet.event(this.topicSearchSetHandler.bind(this)),
+      schemaSubjectChanged.event(this.subjectChangeHandler.bind(this)),
+      schemaVersionsChanged.event(this.subjectChangeHandler.bind(this)),
     ];
   }
 

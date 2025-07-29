@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-32",
+  "version": "1.6.0-35",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -386,6 +386,12 @@
         "command": "confluent.resources.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.resources.refreshConnection",
+        "icon": "$(sync)",
+        "title": "Refresh Connection",
         "category": "Confluent: Resources"
       },
       {
@@ -778,6 +784,11 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
+          },
+          "confluent.experimental.useNewResourcesViewProvider": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Use the new resources view provider for displaying resources in the Confluent extension. This is an experimental feature and may change in future releases.\n\n---\n\n⚠️ **WARNING**: This setting is experimental and may not be fully functional or stable. Must restart extensions for change to take effect."
           }
         }
       },
@@ -1207,6 +1218,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.refreshConnection",
+          "when": "false"
+        },
+        {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
         },
@@ -1379,12 +1394,12 @@
       "view/title": [
         {
           "command": "confluent.resources.search",
-          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
+          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && !confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.resources.search.clear",
-          "when": "view == confluent-resources && confluent.resourceSearchApplied",
+          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
@@ -1394,7 +1409,7 @@
         },
         {
           "command": "confluent.resources.refresh",
-          "when": "view == confluent-resources",
+          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources",
           "group": "navigation@3"
         },
         {
@@ -1525,6 +1540,11 @@
           "group": "2_copy@3"
         },
         {
+          "command": "confluent.resources.refreshConnection",
+          "when": "config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "group": "inline"
+        },
+        {
           "command": "confluent.docker.startLocalResources",
           "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
           "group": "inline"
@@ -1556,17 +1576,17 @@
         },
         {
           "command": "confluent.connections.direct.delete",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@3"
         },
         {
           "command": "confluent.connections.direct.edit",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@2"
         },
         {
           "command": "confluent.connections.direct.export",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
           "group": "inline@1"
         },
         {
