@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { PresignedUploadUrlArtifactV1PresignedUrl200Response } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
-import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
+import {
+  PresignedUploadUrlArtifactV1PresignedUrl200Response,
+  PresignedUploadUrlArtifactV1PresignedUrlRequest,
+} from "../clients/flinkArtifacts/models";
 import { logError } from "../errors";
 import { EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { getSidecar } from "../sidecar";
@@ -15,6 +17,7 @@ export interface UDFUploadParams {
   cloud: string;
   region: string;
   artifactName: string;
+  fileFormat: string;
 }
 
 export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
@@ -35,6 +38,14 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     vscode.window.showWarningMessage("Upload UDF cancelled: Cloud provider is required.");
     return undefined;
   }
+  const fileFormat = await vscode.window.showQuickPick(["zip", "jar"], {
+    placeHolder: "Select the file format for the UDF",
+  });
+  if (!fileFormat) {
+    vscode.window.showWarningMessage("Upload UDF cancelled: File format is required.");
+    return undefined;
+  }
+
   const region = await vscode.window.showInputBox({
     prompt: "Enter the region for the UDF upload",
     ignoreFocusOut: true,
@@ -55,7 +66,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  return { environment, cloud, region, artifactName };
+  return { environment, cloud, region, artifactName, fileFormat };
 }
 
 /**
@@ -98,7 +109,7 @@ export async function uploadUDFCommand(): Promise<void> {
       cloud: params.cloud,
       region: params.region,
       id: params.artifactName,
-      content_format: "zip", // or another valid format as required by your API
+      content_format: params.fileFormat,
     };
 
     // Call the API
