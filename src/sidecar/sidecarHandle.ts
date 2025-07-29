@@ -12,6 +12,7 @@ import { createHash } from "crypto";
 import {
   FlinkArtifactsArtifactV1Api,
   Configuration as FlinkArtifactsConfiguration,
+  PresignedUrlsArtifactV1Api,
 } from "../clients/flinkArtifacts";
 import {
   Configuration as FlinkSqlConfiguration,
@@ -380,6 +381,15 @@ export class SidecarHandle {
       },
     });
     return new ComputePoolsFcpmV2Api(config);
+  }
+
+  /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link PresignedUrlsArtifactV1Api} client instance */
+  public getFlinkPresignedUrlsApi(providerRegion: IEnvProviderRegion): PresignedUrlsArtifactV1Api {
+    const config = new FlinkArtifactsConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
+    });
+    return new PresignedUrlsArtifactV1Api(config);
   }
 
   /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
