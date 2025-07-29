@@ -5,6 +5,7 @@ import * as environmentModels from "../../src/models/environment";
 import * as notifications from "../../src/notifications";
 import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../../src/sidecar/connections/local";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -617,6 +618,55 @@ describe("viewProviders/newResources.ts", () => {
 
     afterEach(() => {
       provider.dispose();
+    });
+
+    describe("setEventListeners() wires the proper handler methods to the proper event emitters", () => {
+      let emitterStubs: StubbedEventEmitters;
+
+      beforeEach(() => {
+        // Stub all event emitters in the emitters module
+        emitterStubs = eventEmitterStubs(sandbox);
+      });
+
+      // Define test cases as corresponding pairs of
+      // [event emitter name, view provider handler method name]
+      const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof NewResourceViewProvider]> =
+        [
+          ["ccloudConnected", "ccloudConnectedEventHandler"],
+          ["localKafkaConnected", "localConnectedEventHandler"],
+          ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+          // @ts-expect-error references private method.
+          ["directConnectionsChanged", "reconcileDirectConnections"],
+          ["connectionStable", "refreshConnection"],
+          ["connectionDisconnected", "refreshConnection"],
+        ];
+
+      handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+        it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+          // Create stub for the handler method
+          const handlerStub = sandbox.stub(provider, handlerMethodName);
+
+          // Re-invoke setCustomEventListeners() to capture emitter .event() stub calls
+          // @ts-expect-error calling protected method.
+          provider.setCustomEventListeners();
+
+          const emitterStub = emitterStubs[emitterName]!;
+
+          // Verify the emitter's event method was called
+          sinon.assert.calledOnce(emitterStub.event);
+
+          // Capture the handler function that was registered
+          const registeredHandler = emitterStub.event.firstCall.args[0];
+
+          // Call the registered handler
+          registeredHandler();
+
+          // Verify the expected method stub was called,
+          // proving that the expected handler was registered
+          // to the expected emitter.
+          sinon.assert.calledOnce(handlerStub);
+        });
+      });
     });
 
     describe("loadAndStoreConnection(), refreshConnection()", () => {
