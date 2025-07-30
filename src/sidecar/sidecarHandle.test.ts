@@ -6,6 +6,7 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
 import { SIDECAR_PROCESS_ID_HEADER } from "./constants";
@@ -392,5 +393,42 @@ describe("sidecarHandle sandbox tests", () => {
       sinon.assert.calledOnce(fetchStub);
       assert.strictEqual(handle["graphQlQueryPromises"].size, 0); // cache should be empty
     });
+
+    const testCases: Array<[string, { message: string }[]]> = [
+      [
+        'GraphQL query returned data but also an error: "Some error occurred"',
+        [{ message: "Some error occurred" }],
+      ],
+      [
+        'GraphQL query returned data but also 2 errors: "Error one" (and 1 more)',
+        [{ message: "Error one" }, { message: "Error two" }],
+      ],
+    ];
+
+    for (const [message, errors] of testCases) {
+      it(`should return data but also show warning if response has both data and ${errors.length} error(s)`, async () => {
+        const responseWithErrors: GraphQLResponse = {
+          data: {
+            ccloudConnectionById: { organizations: [{ id: "123", name: "foo", current: true }] },
+          },
+          errors: errors,
+        };
+
+        fetchStub.resolves({
+          ok: true,
+          json: async () => responseWithErrors,
+        } as Response);
+
+        const showWarningNotificationWithButtonsStub = sandbox.stub(
+          notifications,
+          "showWarningNotificationWithButtons",
+        );
+
+        const result = await handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
+        assert.deepStrictEqual(result, responseWithErrors.data);
+        sinon.assert.calledOnceWithExactly(showWarningNotificationWithButtonsStub, message);
+        assert.strictEqual(handle["graphQlQueryPromises"].size, 0); // cache should be empty
+      });
+    }
   });
 });
