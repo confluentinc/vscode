@@ -262,11 +262,12 @@ export abstract class ParentedBaseViewProvider<
   environment: Environment | null = null;
 
   /**
-   * Optional {@link EventEmitter} to listen for when this view provider's parent
+   * Required {@link EventEmitter} to listen for when this view provider's parent
    * {@linkcode resource} is set/unset. This is used in order to control the tree view description,
    * context value, and search string updates internally.
    */
-  parentResourceChangedEmitter?: EventEmitter<P | null>;
+  parentResourceChangedEmitter!: EventEmitter<P | null>;
+
   /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
   parentResourceChangedContextValue?: ContextValues;
 
@@ -303,14 +304,12 @@ export abstract class ParentedBaseViewProvider<
   protected setEventListeners(): Disposable[] {
     const disposables: Disposable[] = super.setEventListeners();
 
-    disposables.push(ccloudConnected.event(this.ccloudConnectedHandler.bind(this)));
-
-    if (this.parentResourceChangedEmitter) {
-      // Only bind this event handler if the the concrete subclass has a parentResourceChangedEmitter defined.
-      disposables.push(
-        this.parentResourceChangedEmitter.event(this.parentResourceChangedHandler.bind(this)),
-      );
-    }
+    disposables.push(
+      // If parent resource was ccloud-based, and if ccloud auth status changes, reset the view.
+      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
+      // When the parent resource changes (actual event emitter varying per subclass), capture and react to it.
+      this.parentResourceChangedEmitter.event(this.setParentResource.bind(this)),
+    );
 
     return disposables;
   }
@@ -323,12 +322,6 @@ export abstract class ParentedBaseViewProvider<
       this.logger.debug("ccloudConnected event fired, resetting view", { connected });
       void this.reset();
     }
-  }
-
-  /** Event handler for when the parent resource has changed: call setParentResource() with it */
-  parentResourceChangedHandler(resource: P | null): void {
-    this.logger.debug("parentResourceChanged event fired, setting parent resource", { resource });
-    void this.setParentResource(resource);
   }
 
   async reset(): Promise<void> {

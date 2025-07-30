@@ -620,7 +620,7 @@ describe("viewProviders/newResources.ts", () => {
       provider.dispose();
     });
 
-    describe("setEventListeners() wires the proper handler methods to the proper event emitters", () => {
+    describe("setEventListeners() + setCustomEventListeners() event emitter wiring tests", () => {
       let emitterStubs: StubbedEventEmitters;
 
       beforeEach(() => {
@@ -632,6 +632,7 @@ describe("viewProviders/newResources.ts", () => {
       // [event emitter name, view provider handler method name]
       const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof NewResourceViewProvider]> =
         [
+          // Those set in NewResourceViewProvider::setCustomEventListeners()
           ["ccloudConnected", "ccloudConnectedEventHandler"],
           ["localKafkaConnected", "localConnectedEventHandler"],
           ["localSchemaRegistryConnected", "localConnectedEventHandler"],
@@ -639,11 +640,13 @@ describe("viewProviders/newResources.ts", () => {
           ["directConnectionsChanged", "reconcileDirectConnections"],
           ["connectionStable", "refreshConnection"],
           ["connectionDisconnected", "refreshConnection"],
+          // No searchChangedEmitter wired in (yet), so BaseViewProvider::setEventListeners()
+          // doesn't yet contribute anything.
         ];
 
-      it("setCustomEventListeners should return the expected number of listeners", () => {
+      it("setEventListeners() + setCustomEventListeners() should return the expected number of listeners", () => {
         // @ts-expect-error protected method
-        const listeners = provider.setCustomEventListeners();
+        const listeners = provider.setEventListeners();
         assert.strictEqual(listeners.length, handlerEmitterPairs.length);
       });
 
@@ -652,9 +655,9 @@ describe("viewProviders/newResources.ts", () => {
           // Create stub for the handler method
           const handlerStub = sandbox.stub(provider, handlerMethodName);
 
-          // Re-invoke setCustomEventListeners() to capture emitter .event() stub calls
+          // Re-invoke setEventListeners() to capture emitter .event() stub calls
           // @ts-expect-error calling protected method.
-          provider.setCustomEventListeners();
+          provider.setEventListeners();
 
           const emitterStub = emitterStubs[emitterName]!;
 

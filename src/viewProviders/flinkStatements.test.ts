@@ -426,14 +426,14 @@ describe("FlinkStatementsViewProvider", () => {
       ["flinkStatementDeleted", "flinkStatementDeletedHandler"],
       // Wired by ParentedBaseViewProvider::setEventListeners()
       ["ccloudConnected", "ccloudConnectedHandler"],
-      ["currentFlinkStatementsResourceChanged", "parentResourceChangedHandler"],
+      ["currentFlinkStatementsResourceChanged", "setParentResource"],
       // Wired by BaseViewProvider::setEventListeners() because FlinkStatementsViewProvider assigns searchChangedEmitter
       ["flinkStatementSearchSet", "setSearch"],
     ];
 
-    it("setCustomEventListeners should return the expected number of listeners", () => {
+    it("setEventListeners should return the expected number of listeners", () => {
       // @ts-expect-error protected method
-      const listeners = viewProvider.setCustomEventListeners();
+      const listeners = viewProvider.setEventListeners();
       assert.strictEqual(listeners.length, handlerEmitterPairs.length);
     });
 

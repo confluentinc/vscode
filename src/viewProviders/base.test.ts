@@ -340,9 +340,11 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
-    // reset singleton instances between tests
+    // cleanup + reset singleton instances between tests
+    provider.dispose();
     BaseViewProvider["instanceMap"].clear();
+
+    sandbox.restore();
   });
 
   describe("event listeners", () => {
@@ -476,6 +478,12 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
     it("Should be called when parentResourceChangedEmitter fires", () => {
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       const setParentResourceStub = sandbox.stub(provider, "setParentResource");
+
+      // call setEventListeners() again so that
+      // it will register setParentResourceStub as the handler.
+      // @ts-expect-error protected method call.
+      provider.setEventListeners();
+
       provider.parentResourceChangedEmitter.fire(resource);
       sinon.assert.calledOnce(setParentResourceStub);
       sinon.assert.calledWith(setParentResourceStub, resource);
