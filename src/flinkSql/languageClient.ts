@@ -38,10 +38,37 @@ export async function initializeLanguageClient(
     return null;
   }
   return new Promise((resolve, reject) => {
+    let serverReadyState: "initializing" | "ready" | "connected" | "error" | "closed" =
+      "initializing";
     const ws = new WebSocket(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
+    ws.onmessage = async (event) => {
+      logger.debug("WebSocket message received", event.data);
+      // Sidecar sends "OK"  message once connection to Flink SQL language server is established
+      if (event.data === "OK") {
+        logger.debug("WebSocket connection established, creating language client");
+        serverReadyState = "ready";
+        try {
+          if (serverReadyState === "ready") {
+            const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
+            serverReadyState = "connected";
+            resolve(client);
+          }
+        } catch (e) {
+          serverReadyState = "error";
+          let msg = "Error while creating FlinkSQL language server";
+          logError(e, msg, {
+            extra: {
+              wsUrl: url,
+            },
+          });
+          reject(e);
+        }
+      }
+    };
     ws.onerror = (error) => {
+      serverReadyState = "error";
       let msg = "WebSocket error connecting to Flink SQL language server.";
       logError(error, msg, {
         extra: {
@@ -52,107 +79,9 @@ export async function initializeLanguageClient(
     };
     ws.onopen = async () => {
       logger.debug("WebSocket connection opened");
-      try {
-        const transport = new WebsocketTransport(ws);
-        const serverOptions = () => {
-          return Promise.resolve(transport);
-        };
-        const clientOptions: LanguageClientOptions = {
-          documentSelector: [
-            { language: "flinksql" },
-            { scheme: "untitled", language: "flinksql" },
-            { pattern: "**/*.flink.sql" },
-          ],
-          outputChannel: getFlinkSQLLanguageServerOutputChannel(),
-          progressOnInitialization: true,
-          diagnosticCollectionName: FLINK_DIAGNOSTIC_COLLECTION_NAME,
-          middleware: {
-            sendRequest: async (type, params, token, next) => {
-              // CCloud Flink SQL Server does not support multiline completions atm, so we need to convert ranges to single-line & back
-              if (
-                typeof type === "object" &&
-                type.method &&
-                type.method === "textDocument/completion"
-              ) {
-                if (params && (params as any).position && (params as any).textDocument?.uri) {
-                  const uri = (params as any).textDocument.uri;
-                  const document = vscode.workspace.textDocuments.find(
-                    (doc) => doc.uri.toString() === uri,
-                  );
-                  if (document) {
-                    const originalPosition = (params as any).position;
-                    // 1. on the way out, convert position to {line: 0}
-                    (params as any).position = convertToSingleLinePosition(
-                      document,
-                      new vscode.Position(originalPosition.line, originalPosition.character),
-                    );
-                    // 2. grab the completion items so we can adapt them
-                    const result: any = await next(type, params, token);
-                    return adaptCompletionItems(result, document);
-                  }
-                }
-              }
-
-              return next(type, params, token);
-            },
-          },
-          initializationFailedHandler: (error) => {
-            let msg = "Language client initialization failed";
-            logError(error, msg, {
-              extra: {
-                wsUrl: url,
-              },
-            });
-            return true; // Don't send the user an error, we are handling it
-          },
-          errorHandler: {
-            error: (error: Error, message: Message): ErrorHandlerResult => {
-              let msg = "Language client error handler invoked.";
-              logError(error, msg, {
-                extra: {
-                  wsUrl: url,
-                },
-              });
-              return {
-                action: ErrorAction.Continue,
-                message: `${message ?? error.message}`,
-                handled: true, // Don't send the user an error, we are handling it
-              };
-            },
-            closed: () => {
-              let msg = "Language client connection closed by the client's error handler";
-              logger.warn(msg);
-              onWebSocketDisconnect();
-              return {
-                action: CloseAction.Restart,
-                handled: true, // Don't send the user an error, we are handling it
-              };
-            },
-          },
-        };
-
-        const languageClient = new LanguageClient(
-          "confluent.flinksqlLanguageServer",
-          "ConfluentFlinkSQL",
-          serverOptions,
-          clientOptions,
-        );
-
-        await languageClient.start();
-        logger.debug("FlinkSQL Language Server started");
-        languageClient.setTrace(Trace.Compact);
-        resolve(languageClient);
-      } catch (e) {
-        let msg = "Error while starting FlinkSQL language server";
-        logError(e, msg, {
-          extra: {
-            wsUrl: url,
-          },
-        });
-        reject(e);
-      }
     };
     ws.onclose = async (event) => {
+      serverReadyState = "closed";
       const reason = event.reason || "Unknown reason";
       const code = event.code;
       logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
@@ -172,6 +101,105 @@ export async function initializeLanguageClient(
       }
     };
   });
+}
+
+/**
+ * Creates and initializes a LanguageClient from an established WebSocket connection
+ * @param ws The open WebSocket connection to the language server
+ * @param url The URL of the language server (for error reporting)
+ * @param onWebSocketDisconnect Callback for WebSocket disconnection events
+ * @returns A promise that resolves to the initialized language client
+ */
+async function createLanguageClientFromWebsocket(
+  ws: WebSocket,
+  url: string,
+  onWebSocketDisconnect: () => void,
+): Promise<LanguageClient> {
+  const transport = new WebsocketTransport(ws);
+  const serverOptions = () => {
+    return Promise.resolve(transport);
+  };
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [
+      { language: "flinksql" },
+      { scheme: "untitled", language: "flinksql" },
+      { pattern: "**/*.flink.sql" },
+    ],
+    outputChannel: getFlinkSQLLanguageServerOutputChannel(),
+    progressOnInitialization: true,
+    diagnosticCollectionName: FLINK_DIAGNOSTIC_COLLECTION_NAME,
+    middleware: {
+      sendRequest: async (type, params, token, next) => {
+        // CCloud Flink SQL Server does not support multiline completions atm, so we need to convert ranges to single-line & back
+        if (typeof type === "object" && type.method && type.method === "textDocument/completion") {
+          if (params && (params as any).position && (params as any).textDocument?.uri) {
+            const uri = (params as any).textDocument.uri;
+            const document = vscode.workspace.textDocuments.find(
+              (doc) => doc.uri.toString() === uri,
+            );
+            if (document) {
+              const originalPosition = (params as any).position;
+              // 1. on the way out, convert position to {line: 0}
+              (params as any).position = convertToSingleLinePosition(
+                document,
+                new vscode.Position(originalPosition.line, originalPosition.character),
+              );
+              // 2. grab the completion items so we can adapt them
+              const result: any = await next(type, params, token);
+              return adaptCompletionItems(result, document);
+            }
+          }
+        }
+
+        return next(type, params, token);
+      },
+    },
+    initializationFailedHandler: (error) => {
+      let msg = "Language client initialization failed";
+      logError(error, msg, {
+        extra: {
+          wsUrl: url,
+        },
+      });
+      return true; // Don't send the user an error, we are handling it
+    },
+    errorHandler: {
+      error: (error: Error, message: Message): ErrorHandlerResult => {
+        let msg = "Language client error handler invoked.";
+        logError(error, msg, {
+          extra: {
+            wsUrl: url,
+          },
+        });
+        return {
+          action: ErrorAction.Continue,
+          message: `${message ?? error.message}`,
+          handled: true, // Don't send the user an error, we are handling it
+        };
+      },
+      closed: () => {
+        let msg = "Language client connection closed by the client's error handler";
+        logger.warn(msg);
+        onWebSocketDisconnect();
+        return {
+          action: CloseAction.Restart,
+          handled: true, // Don't send the user an error, we are handling it
+        };
+      },
+    },
+  };
+
+  const languageClient = new LanguageClient(
+    "confluent.flinksqlLanguageServer",
+    "ConfluentFlinkSQL",
+    serverOptions,
+    clientOptions,
+  );
+
+  await languageClient.start();
+  logger.debug("FlinkSQL Language Server started");
+  languageClient.setTrace(Trace.Compact);
+  return languageClient;
 }
 
 /** Helper to convert vscode.Position to always have {line: 0...},
