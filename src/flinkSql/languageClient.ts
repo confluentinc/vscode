@@ -41,6 +41,25 @@ export async function initializeLanguageClient(
     const ws = new WebSocket(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
+    ws.onmessage = async (event) => {
+      logger.debug("WebSocket message received", event.data);
+      // Sidecar sends "OK"  message once connection to Flink SQL language server is established
+      if (event.data === "OK") {
+        logger.debug("WebSocket connection established, creating language client");
+        try {
+          const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
+          resolve(client);
+        } catch (e) {
+          let msg = "Error while creating FlinkSQL language server";
+          logError(e, msg, {
+            extra: {
+              wsUrl: url,
+            },
+          });
+          reject(e);
+        }
+      }
+    };
     ws.onerror = (error) => {
       let msg = "WebSocket error connecting to Flink SQL language server.";
       logError(error, msg, {
@@ -52,18 +71,6 @@ export async function initializeLanguageClient(
     };
     ws.onopen = async () => {
       logger.debug("WebSocket connection opened");
-      try {
-        const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
-        resolve(client);
-      } catch (e) {
-        let msg = "Error while creating FlinkSQL language server";
-        logError(e, msg, {
-          extra: {
-            wsUrl: url,
-          },
-        });
-        reject(e);
-      }
     };
     ws.onclose = async (event) => {
       const reason = event.reason || "Unknown reason";
