@@ -38,6 +38,8 @@ export async function initializeLanguageClient(
     return null;
   }
   return new Promise((resolve, reject) => {
+    let serverReadyState: "initializing" | "ready" | "connected" | "error" | "closed" =
+      "initializing";
     const ws = new WebSocket(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
@@ -46,10 +48,15 @@ export async function initializeLanguageClient(
       // Sidecar sends "OK"  message once connection to Flink SQL language server is established
       if (event.data === "OK") {
         logger.debug("WebSocket connection established, creating language client");
+        serverReadyState = "ready";
         try {
-          const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
-          resolve(client);
+          if (serverReadyState === "ready") {
+            const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
+            serverReadyState = "connected";
+            resolve(client);
+          }
         } catch (e) {
+          serverReadyState = "error";
           let msg = "Error while creating FlinkSQL language server";
           logError(e, msg, {
             extra: {
@@ -61,6 +68,7 @@ export async function initializeLanguageClient(
       }
     };
     ws.onerror = (error) => {
+      serverReadyState = "error";
       let msg = "WebSocket error connecting to Flink SQL language server.";
       logError(error, msg, {
         extra: {
@@ -73,6 +81,7 @@ export async function initializeLanguageClient(
       logger.debug("WebSocket connection opened");
     };
     ws.onclose = async (event) => {
+      serverReadyState = "closed";
       const reason = event.reason || "Unknown reason";
       const code = event.code;
       logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
