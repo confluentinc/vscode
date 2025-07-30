@@ -9,6 +9,7 @@ import {
 } from "vscode";
 import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
   connectionDisconnected,
@@ -77,7 +78,6 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   implements IResourceBase, IdItem, ISearchable
 {
   logger: Logger;
-  ordering: number = -1; // Will be reset when the connection is stored.
   readonly environments: ET[];
 
   constructor(
@@ -414,6 +414,15 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
     }
 
     await super.refresh(deepRefresh);
+
+    // update UI context values based on whether or not we have local resources available.
+    await Promise.all([
+      setContextValue(ContextValues.localKafkaClusterAvailable, this.kafkaCluster !== undefined),
+      setContextValue(
+        ContextValues.localSchemaRegistryAvailable,
+        this.schemaRegistry !== undefined,
+      ),
+    ]);
   }
 
   get status(): string {
@@ -439,7 +448,6 @@ export class NewResourceViewProvider
   readonly loggerName = "viewProviders.newResources";
 
   private readonly connections: Map<ConnectionId, AnyConnectionRow> = new Map();
-  private connectionIndex: number = 0;
 
   public async refreshConnection(connectionId: ConnectionId, deepRefresh = true): Promise<void> {
     await this.withProgress("Refreshing connection ...", async () => {
@@ -460,57 +468,29 @@ export class NewResourceViewProvider
   }
 
   protected setCustomEventListeners(): Disposable[] {
-    this.logger.debug("Setting up custom event listeners");
-
-    // CCloud connection observer driving auto-refreshes of the CCloud connection
-    // upon ccloud connection state changes.
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(
-      this.ccloudConnectedEventHandler.bind(this),
-    );
-
-    // Local connection needs two different observers, one for local Kafka and one for local Schema Registry.
-    const localKafkaConnectedSub: Disposable = localKafkaConnected.event(
-      this.localConnectedEventHandler.bind(this),
-    );
-
-    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
-      this.localConnectedEventHandler.bind(this),
-    );
-
-    // Watch for direct connections being added/removed, call to reconcile all direct connections.
-    const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(
-      this.reconcileDirectConnections.bind(this),
-    );
-
-    // Watch for (direct) connections going 'stable', which will happen
-    // when they get created and settled. Refresh the event-provided connection id.
-    const connectionUsableSub: Disposable = connectionStable.event(
-      this.refreshConnection.bind(this),
-    );
-
-    // watch for (direct) connections going disconnected (but not deleted)
-    // (will happen, say, if sidecar can no longer get at direct connection Kafka cluster)
-    // Refresh the event-provided connection id.
-    const connectionDisconnectedSub: Disposable = connectionDisconnected.event(
-      this.refreshConnection.bind(this),
-    );
-
     return [
-      ccloudConnectedSub,
-      localKafkaConnectedSub,
-      localSchemaRegistryConnectedSub,
-      directConnectionsChangedSub,
-      connectionUsableSub,
-      connectionDisconnectedSub,
+      ccloudConnected.event(this.ccloudConnectedEventHandler.bind(this)),
+      localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
+      localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
+      directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
+      connectionStable.event(this.refreshConnection.bind(this)),
+      connectionDisconnected.event(this.refreshConnection.bind(this)),
     ];
   }
 
+  /**
+   * Refresh the ccloud connection row when the ccloudConnected event is fired.
+   */
   async ccloudConnectedEventHandler(): Promise<void> {
     // Refresh the CCloud connection row when the ccloudConnected event is fired,
     // regardless of if edging to connected or disconnected state.
     await this.refreshConnection(CCLOUD_CONNECTION_ID, true);
   }
 
+  /**
+   * Refresh the local connection row when either local Kafka or local Schema Registry
+   * connection state changes.
+   */
   async localConnectedEventHandler(): Promise<void> {
     // Refresh the local connection row when either local Kafka or local Schema Registry
     // connection state changes.
@@ -712,14 +692,38 @@ export class NewResourceViewProvider
   }
 
   private storeConnection(connectionRow: AnyConnectionRow): void {
-    connectionRow.ordering = this.connectionIndex++;
     this.connections.set(connectionRow.connectionId, connectionRow);
   }
 
   private getToplevelChildren(): AnyConnectionRow[] {
     const connections = [...this.connections.values()];
-    connections.sort((a, b) => a.ordering - b.ordering);
+
+    this.sortConnections(connections);
+
     return connections;
+  }
+
+  private sortConnections(connections: AnyConnectionRow[]): void {
+    connections.sort((a, b) => {
+      // 1. CCloudConnectionRow should come first
+      if (a instanceof CCloudConnectionRow) {
+        return -1;
+      }
+      if (b instanceof CCloudConnectionRow) {
+        return 1;
+      }
+
+      // 2. LocalConnectionRow should come second
+      if (a instanceof LocalConnectionRow) {
+        return -1;
+      }
+      if (b instanceof LocalConnectionRow) {
+        return 1;
+      }
+
+      // 3. Otherwise, DirectConnectionRow instances should be ordered by name
+      return a.name.localeCompare(b.name);
+    });
   }
 }
 

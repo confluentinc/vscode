@@ -521,6 +521,11 @@ describe("TopicViewProvider", () => {
       ["schemaVersionsChanged", "subjectChangeHandler"],
     ];
 
+    it("setEventListeners should return the expected number of listeners", () => {
+      const listeners = provider.setEventListeners();
+      assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+    });
+
     handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
       it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
         // Create stub for the handler method

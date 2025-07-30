@@ -1,10 +1,12 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { MarkdownString, TreeItem, TreeItemCollapsibleState } from "vscode";
+import * as contextValues from "../../src/context/values";
 import * as environmentModels from "../../src/models/environment";
 import * as notifications from "../../src/notifications";
 import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../../src/sidecar/connections/local";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -454,6 +456,7 @@ describe("viewProviders/newResources.ts", () => {
     describe("refresh", () => {
       let updateLocalConnectionStub: sinon.SinonStub;
       let singleEnvironmentConnectionRowRefresh: sinon.SinonStub;
+      let setContextValueStub: sinon.SinonStub;
 
       beforeEach(() => {
         updateLocalConnectionStub = sandbox.stub(sidecarLocalConnections, "updateLocalConnection");
@@ -462,6 +465,8 @@ describe("viewProviders/newResources.ts", () => {
           SingleEnvironmentConnectionRow.prototype,
           "refresh",
         );
+
+        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
       });
 
       it("calls updateLocalConnection when needed", async () => {
@@ -474,6 +479,64 @@ describe("viewProviders/newResources.ts", () => {
       it("downcalls into SingleEnvironmentConnectionRow.refresh", async () => {
         await localConnectionRow.refresh(false);
         sinon.assert.calledOnce(singleEnvironmentConnectionRowRefresh);
+      });
+
+      describe("context value setting", () => {
+        it("sets both localSchemaRegistryAvailable and localKafkaClusterAvailable to false when environment is not set", async () => {
+          await localConnectionRow.refresh(false);
+
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
+          );
+
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            false,
+          );
+        });
+
+        it("sets localKafkaClusterAvailable context value when Kafka cluster is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            true,
+          );
+        });
+
+        it("sets localKafkaClusterAvailable context value to false when no Kafka cluster is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
+          );
+        });
+
+        it("sets localSchemaRegistryAvailable context value when Schema Registry is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            true,
+          );
+        });
+
+        it("sets localSchemaRegistryAvailable context value to false when no Schema Registry is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            false,
+          );
+        });
       });
     });
   });
@@ -619,6 +682,61 @@ describe("viewProviders/newResources.ts", () => {
       provider.dispose();
     });
 
+    describe("setEventListeners() wires the proper handler methods to the proper event emitters", () => {
+      let emitterStubs: StubbedEventEmitters;
+
+      beforeEach(() => {
+        // Stub all event emitters in the emitters module
+        emitterStubs = eventEmitterStubs(sandbox);
+      });
+
+      // Define test cases as corresponding pairs of
+      // [event emitter name, view provider handler method name]
+      const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof NewResourceViewProvider]> =
+        [
+          ["ccloudConnected", "ccloudConnectedEventHandler"],
+          ["localKafkaConnected", "localConnectedEventHandler"],
+          ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+          // @ts-expect-error references private method.
+          ["directConnectionsChanged", "reconcileDirectConnections"],
+          ["connectionStable", "refreshConnection"],
+          ["connectionDisconnected", "refreshConnection"],
+        ];
+
+      it("setCustomEventListeners should return the expected number of listeners", () => {
+        // @ts-expect-error protected method
+        const listeners = provider.setCustomEventListeners();
+        assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+      });
+
+      handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+        it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+          // Create stub for the handler method
+          const handlerStub = sandbox.stub(provider, handlerMethodName);
+
+          // Re-invoke setCustomEventListeners() to capture emitter .event() stub calls
+          // @ts-expect-error calling protected method.
+          provider.setCustomEventListeners();
+
+          const emitterStub = emitterStubs[emitterName]!;
+
+          // Verify the emitter's event method was called
+          sinon.assert.calledOnce(emitterStub.event);
+
+          // Capture the handler function that was registered
+          const registeredHandler = emitterStub.event.firstCall.args[0];
+
+          // Call the registered handler
+          registeredHandler();
+
+          // Verify the expected method stub was called,
+          // proving that the expected handler was registered
+          // to the expected emitter.
+          sinon.assert.calledOnce(handlerStub);
+        });
+      });
+    });
+
     describe("loadAndStoreConnection(), refreshConnection()", () => {
       let localConnectionRow: LocalConnectionRow;
       let rowRefreshStub: sinon.SinonStub;
@@ -633,13 +751,9 @@ describe("viewProviders/newResources.ts", () => {
 
       for (const insertBeforeRefresh of [true, false]) {
         it(`loadAndStoreConnection(connection, ${insertBeforeRefresh})`, async () => {
-          assert.strictEqual(localConnectionRow.ordering, -1, "initial row ordering");
           await provider.loadAndStoreConnection(localConnectionRow, insertBeforeRefresh);
 
           sandbox.assert.calledOnce(rowRefreshStub);
-          // incremented during storeConnection() call.
-          assert.strictEqual(localConnectionRow.ordering, 0, "after insert row ordering");
-
           sandbox.assert.calledOnce(repaintStub);
         });
       }
@@ -855,7 +969,7 @@ describe("viewProviders/newResources.ts", () => {
       }
 
       function assignDefaultChildren(): Array<AnyConnectionRow> {
-        const defaultChildren = [new LocalConnectionRow(), new CCloudConnectionRow()];
+        const defaultChildren = [new CCloudConnectionRow(), new LocalConnectionRow()];
 
         setChildren(defaultChildren);
         return defaultChildren;
@@ -949,6 +1063,37 @@ describe("viewProviders/newResources.ts", () => {
         assert.throws(() => {
           provider.getChildren({} as any);
         }, /Unhandled element/);
+      });
+    });
+
+    describe("sortConnections()", () => {
+      it("sorts ccloud first, then local, then direct connections by name", () => {
+        const ccloudConnectionRow = new CCloudConnectionRow();
+        const localConnectionRow = new LocalConnectionRow();
+        const directConnectionRowA = new DirectConnectionRow(
+          new DirectResourceLoader("test-direct-connection-A" as ConnectionId),
+        );
+        sandbox.stub(directConnectionRowA, "name").get(() => "A Direct Connection");
+
+        const directConnectionRowB = new DirectConnectionRow(
+          new DirectResourceLoader("test-direct-connection-B" as ConnectionId),
+        );
+        sandbox.stub(directConnectionRowB, "name").get(() => "B Direct Connection");
+
+        // Initially in opposite order.
+        const connections = [
+          directConnectionRowB,
+          directConnectionRowA,
+          localConnectionRow,
+          ccloudConnectionRow,
+        ];
+
+        provider["sortConnections"](connections);
+        assert.deepStrictEqual(
+          connections,
+          [ccloudConnectionRow, localConnectionRow, directConnectionRowA, directConnectionRowB],
+          "Connections should be sorted by type and name",
+        );
       });
     });
 
