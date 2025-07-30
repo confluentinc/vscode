@@ -9,6 +9,7 @@ import {
 } from "vscode";
 import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
   connectionDisconnected,
@@ -414,6 +415,15 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
     }
 
     await super.refresh(deepRefresh);
+
+    // update UI context values based on whether or not we have local resources available.
+    await Promise.all([
+      setContextValue(ContextValues.localKafkaClusterAvailable, this.kafkaCluster !== undefined),
+      setContextValue(
+        ContextValues.localSchemaRegistryAvailable,
+        this.schemaRegistry !== undefined,
+      ),
+    ]);
   }
 
   get status(): string {
