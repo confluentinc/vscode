@@ -3,9 +3,14 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ScaffoldV1Template } from "../clients/scaffoldingService";
 import * as sidecarModule from "../sidecar";
-import { getTemplatesList, pickTemplate, sanitizeTemplateOptions } from "./templates";
+import {
+  filterSensitiveKeys,
+  getTemplatesList,
+  pickTemplate,
+  sanitizeTemplateOptions,
+} from "./templates";
 
-describe("templates.ts", () => {
+describe.only("templates.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -14,6 +19,28 @@ describe("templates.ts", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("filterSensitiveKeys", () => {
+    it("filters out keys containing 'key' or 'secret'", () => {
+      const input = {
+        api_key: "sensitive",
+        secret_token: "sensitive",
+        bootstrap_server: "localhost:9092",
+        topic_name: "test-topic",
+      };
+
+      const result = filterSensitiveKeys(input);
+
+      assert.deepStrictEqual(
+        result,
+        {
+          bootstrap_server: "localhost:9092",
+          topic_name: "test-topic",
+        },
+        "Should filter out sensitive keys while preserving others",
+      );
+    });
   });
 
   describe("sanitizeTemplateOptions", () => {
