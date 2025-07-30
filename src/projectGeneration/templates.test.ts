@@ -10,7 +10,7 @@ import {
   sanitizeTemplateOptions,
 } from "./templates";
 
-describe.only("templates.ts", () => {
+describe("templates.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
