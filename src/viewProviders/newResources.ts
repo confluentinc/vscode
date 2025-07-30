@@ -460,57 +460,29 @@ export class NewResourceViewProvider
   }
 
   protected setCustomEventListeners(): Disposable[] {
-    this.logger.debug("Setting up custom event listeners");
-
-    // CCloud connection observer driving auto-refreshes of the CCloud connection
-    // upon ccloud connection state changes.
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(
-      this.ccloudConnectedEventHandler.bind(this),
-    );
-
-    // Local connection needs two different observers, one for local Kafka and one for local Schema Registry.
-    const localKafkaConnectedSub: Disposable = localKafkaConnected.event(
-      this.localConnectedEventHandler.bind(this),
-    );
-
-    const localSchemaRegistryConnectedSub: Disposable = localSchemaRegistryConnected.event(
-      this.localConnectedEventHandler.bind(this),
-    );
-
-    // Watch for direct connections being added/removed, call to reconcile all direct connections.
-    const directConnectionsChangedSub: Disposable = directConnectionsChanged.event(
-      this.reconcileDirectConnections.bind(this),
-    );
-
-    // Watch for (direct) connections going 'stable', which will happen
-    // when they get created and settled. Refresh the event-provided connection id.
-    const connectionUsableSub: Disposable = connectionStable.event(
-      this.refreshConnection.bind(this),
-    );
-
-    // watch for (direct) connections going disconnected (but not deleted)
-    // (will happen, say, if sidecar can no longer get at direct connection Kafka cluster)
-    // Refresh the event-provided connection id.
-    const connectionDisconnectedSub: Disposable = connectionDisconnected.event(
-      this.refreshConnection.bind(this),
-    );
-
     return [
-      ccloudConnectedSub,
-      localKafkaConnectedSub,
-      localSchemaRegistryConnectedSub,
-      directConnectionsChangedSub,
-      connectionUsableSub,
-      connectionDisconnectedSub,
+      ccloudConnected.event(this.ccloudConnectedEventHandler.bind(this)),
+      localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
+      localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
+      directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
+      connectionStable.event(this.refreshConnection.bind(this)),
+      connectionDisconnected.event(this.refreshConnection.bind(this)),
     ];
   }
 
+  /**
+   * Refresh the ccloud connection row when the ccloudConnected event is fired.
+   */
   async ccloudConnectedEventHandler(): Promise<void> {
     // Refresh the CCloud connection row when the ccloudConnected event is fired,
     // regardless of if edging to connected or disconnected state.
     await this.refreshConnection(CCLOUD_CONNECTION_ID, true);
   }
 
+  /**
+   * Refresh the local connection row when either local Kafka or local Schema Registry
+   * connection state changes.
+   */
   async localConnectedEventHandler(): Promise<void> {
     // Refresh the local connection row when either local Kafka or local Schema Registry
     // connection state changes.
