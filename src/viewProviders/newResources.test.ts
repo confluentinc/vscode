@@ -751,13 +751,9 @@ describe("viewProviders/newResources.ts", () => {
 
       for (const insertBeforeRefresh of [true, false]) {
         it(`loadAndStoreConnection(connection, ${insertBeforeRefresh})`, async () => {
-          assert.strictEqual(localConnectionRow.ordering, -1, "initial row ordering");
           await provider.loadAndStoreConnection(localConnectionRow, insertBeforeRefresh);
 
           sandbox.assert.calledOnce(rowRefreshStub);
-          // incremented during storeConnection() call.
-          assert.strictEqual(localConnectionRow.ordering, 0, "after insert row ordering");
-
           sandbox.assert.calledOnce(repaintStub);
         });
       }
@@ -973,7 +969,7 @@ describe("viewProviders/newResources.ts", () => {
       }
 
       function assignDefaultChildren(): Array<AnyConnectionRow> {
-        const defaultChildren = [new LocalConnectionRow(), new CCloudConnectionRow()];
+        const defaultChildren = [new CCloudConnectionRow(), new LocalConnectionRow()];
 
         setChildren(defaultChildren);
         return defaultChildren;
@@ -1067,6 +1063,37 @@ describe("viewProviders/newResources.ts", () => {
         assert.throws(() => {
           provider.getChildren({} as any);
         }, /Unhandled element/);
+      });
+    });
+
+    describe("sortConnections()", () => {
+      it("sorts ccloud first, then local, then direct connections by name", () => {
+        const ccloudConnectionRow = new CCloudConnectionRow();
+        const localConnectionRow = new LocalConnectionRow();
+        const directConnectionRowA = new DirectConnectionRow(
+          new DirectResourceLoader("test-direct-connection-A" as ConnectionId),
+        );
+        sandbox.stub(directConnectionRowA, "name").get(() => "A Direct Connection");
+
+        const directConnectionRowB = new DirectConnectionRow(
+          new DirectResourceLoader("test-direct-connection-B" as ConnectionId),
+        );
+        sandbox.stub(directConnectionRowB, "name").get(() => "B Direct Connection");
+
+        // Initially in opposite order.
+        const connections = [
+          directConnectionRowB,
+          directConnectionRowA,
+          localConnectionRow,
+          ccloudConnectionRow,
+        ];
+
+        provider["sortConnections"](connections);
+        assert.deepStrictEqual(
+          connections,
+          [ccloudConnectionRow, localConnectionRow, directConnectionRowA, directConnectionRowB],
+          "Connections should be sorted by type and name",
+        );
       });
     });
 
