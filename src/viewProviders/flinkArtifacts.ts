@@ -72,10 +72,6 @@ export class FlinkArtifactsViewProvider
         }
       }
       logError(error, "Failed to load Flink artifacts");
-    } else if (error instanceof Error) {
-      message = "Failed to load Flink artifacts. Please check your connection and try again.";
-      showNotification = true;
-      logError(error, "Failed to load Flink artifacts");
     } else {
       message = "Failed to load Flink artifacts. Please check your connection and try again.";
       showNotification = true;
