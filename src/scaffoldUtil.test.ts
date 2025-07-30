@@ -1,0 +1,24 @@
+import * as assert from "assert";
+import { filterSensitiveKeys } from "./scaffoldUtil";
+
+describe("filterSensitiveKeys", () => {
+  it("filters out keys containing 'key' or 'secret'", () => {
+    const input = {
+      api_key: "sensitive",
+      secret_token: "sensitive",
+      bootstrap_server: "localhost:9092",
+      topic_name: "test-topic",
+    };
+
+    const result = filterSensitiveKeys(input);
+
+    assert.deepStrictEqual(
+      result,
+      {
+        bootstrap_server: "localhost:9092",
+        topic_name: "test-topic",
+      },
+      "Should filter out sensitive keys while preserving others",
+    );
+  });
+});
