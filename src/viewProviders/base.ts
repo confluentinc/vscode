@@ -116,22 +116,17 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
 
   /** Set up event listeners for this view provider. */
   protected setEventListeners(): Disposable[] {
-    const disposables: Disposable[] = [];
+    const disposables: Disposable[] = this.setCustomEventListeners();
 
-    const searchChangedSub: Disposable | undefined = this.searchChangedEmitter?.event(
-      (searchString: string | null) => {
-        this.setSearch(searchString);
-      },
-    );
-    if (searchChangedSub) {
-      disposables.push(searchChangedSub);
+    if (this.searchChangedEmitter) {
+      // Only bind setSearch() as an event handler if the concrete subclass has a searchChangedEmitter defined.
+      disposables.push(this.searchChangedEmitter.event(this.setSearch.bind(this)));
     }
 
-    disposables.push(...this.setCustomEventListeners());
     return disposables;
   }
 
-  /** Optional method for subclasses to provide their own event listeners. */
+  /** Optional method for subclasses to override and provide their own event listeners. */
   protected setCustomEventListeners(): Disposable[] {
     return [];
   }
@@ -308,31 +303,32 @@ export abstract class ParentedBaseViewProvider<
   protected setEventListeners(): Disposable[] {
     const disposables: Disposable[] = super.setEventListeners();
 
-    const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
-      this.handleCCloudConnectionChange(connected);
-    });
-    disposables.push(ccloudConnectedSub);
+    disposables.push(ccloudConnected.event(this.ccloudConnectedHandler.bind(this)));
 
     if (this.parentResourceChangedEmitter) {
-      const parentResourceChangedSub: Disposable = this.parentResourceChangedEmitter.event(
-        async (resource: P | null) => {
-          await this.setParentResource(resource);
-        },
+      // Only bind this event handler if the the concrete subclass has a parentResourceChangedEmitter defined.
+      disposables.push(
+        this.parentResourceChangedEmitter.event(this.parentResourceChangedHandler.bind(this)),
       );
-      disposables.push(parentResourceChangedSub);
     }
 
     return disposables;
   }
 
-  /** Callback for  */
-  handleCCloudConnectionChange(connected: boolean) {
-    if (this.resource && isCCloud(this.resource)) {
+  /** Event handler for when CCloud connection gets logged out: If the view was focused on a ccloud resource, reset the view. */
+  ccloudConnectedHandler(connected: boolean): void {
+    if (!connected && this.resource && isCCloud(this.resource)) {
       // any transition of CCloud connection state should reset the tree view if we're focused on
       // a CCloud parent resource
       this.logger.debug("ccloudConnected event fired, resetting view", { connected });
       void this.reset();
     }
+  }
+
+  /** Event handler for when the parent resource has changed: call setParentResource() with it */
+  parentResourceChangedHandler(resource: P | null): void {
+    this.logger.debug("parentResourceChanged event fired, setting parent resource", { resource });
+    void this.setParentResource(resource);
   }
 
   async reset(): Promise<void> {

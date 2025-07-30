@@ -13,7 +13,6 @@ import { SqlV1StatementStatus } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import * as contextValues from "../context/values";
 import { ContextValues } from "../context/values";
-import { ccloudConnected } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem, Phase } from "../models/flinkStatement";
@@ -274,47 +273,6 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
     });
   });
 
-  describe("searchChangedEmitter", () => {
-    let clock: sinon.SinonFakeTimers;
-    const fakeEmitter = new EventEmitter<string | null>();
-
-    beforeEach(() => {
-      clock = sandbox.useFakeTimers();
-    });
-
-    it("should call setSearch and update state when searchChangedEmitter is set and fires", async () => {
-      // create fake subclass that includes a searchChangedEmitter
-      class EmitterTestProvider extends TestViewProvider {
-        searchChangedEmitter = fakeEmitter;
-      }
-      const provider = EmitterTestProvider.getInstance();
-      const setSearchSpy = sandbox.spy(provider, "setSearch");
-
-      const fakeSearch = "search-term";
-      fakeEmitter.fire(fakeSearch);
-      await clock.tickAsync(0);
-
-      sinon.assert.calledWith(setSearchSpy, fakeSearch);
-      assert.strictEqual(provider.itemSearchString, fakeSearch);
-    });
-
-    it("should not throw or fail if searchChangedEmitter is not set", async () => {
-      // create fake subclass that doesn't include a searchChangedEmitter
-      class NoEmitterTestProvider extends TestViewProvider {
-        // searchChangedEmitter is null in TestViewProvider, so no need to override
-      }
-      const provider = NoEmitterTestProvider.getInstance();
-      const setSearchSpy = sandbox.spy(provider, "setSearch");
-
-      const fakeSearch = "search-term";
-      fakeEmitter.fire(fakeSearch);
-      await clock.tickAsync(0);
-
-      sinon.assert.notCalled(setSearchSpy);
-      assert.strictEqual(provider.itemSearchString, null);
-    });
-  });
-
   describe("withProgress", () => {
     it("should call window.withProgress", async () => {
       const withProgressStub = sandbox.stub(window, "withProgress").resolves();
@@ -388,21 +346,12 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
   });
 
   describe("event listeners", () => {
-    it("should register the default ccloudConnected event listener", () => {
-      const handleSpy = sandbox.spy(provider, "handleCCloudConnectionChange");
-
-      ccloudConnected.fire(true);
-
-      assert.ok(handleSpy.calledOnce);
-      assert.ok(handleSpy.calledWith(true));
-    });
-
     it("handleCCloudConnectionChange() should call reset() when the `ccloudConnected` event fires and a CCloud resource is focused", () => {
       const resetSpy = sandbox.spy(provider, "reset");
 
       // simulate CCloud connection state change
       provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      provider["handleCCloudConnectionChange"](false);
+      provider["ccloudConnectedHandler"](false);
 
       sinon.assert.calledOnce(resetSpy);
       assert.strictEqual(provider.resource, null);
@@ -417,7 +366,7 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
         connectionType: ConnectionType.Local,
       } as CCloudFlinkComputePool;
       provider.resource = fakeResource;
-      provider.handleCCloudConnectionChange(false);
+      provider.ccloudConnectedHandler(false);
 
       sinon.assert.notCalled(resetSpy);
       assert.strictEqual(provider.resource, fakeResource);
