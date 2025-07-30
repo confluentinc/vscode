@@ -130,30 +130,5 @@ describe("templates.ts", () => {
       const result = await pickTemplate([template]);
       assert.strictEqual(result, undefined);
     });
-
-    it("should return templates sorted alphabetically by name", () => {
-      const unsortedTemplates = [
-        { name: "AWS Lambda Consumer Application In JavaScript", value: 1 },
-        { name: "AWS Lambda Consumer Application In Python", value: 2 },
-        { name: "Flink Table API In Java For Confluent Cloud", value: 3 },
-      ];
-
-      // Sorting logic to test (replace with actual import if available)
-      function getSortedTemplates(templates: { name: string }[]): { name: string }[] {
-        return [...templates].sort((a, b) => a.name.localeCompare(b.name));
-      }
-
-      const sorted = getSortedTemplates(unsortedTemplates);
-
-      assert.deepStrictEqual(
-        sorted.map((t) => t.name),
-        [
-          "AWS Lambda Consumer Application In JavaScript",
-          "AWS Lambda Consumer Application In Python",
-          "Flink Table API In Java For Confluent Cloud",
-        ],
-        "Templates should be sorted alphabetically by name",
-      );
-    });
   });
 });

@@ -16,9 +16,9 @@ describe("template sorting", () => {
 
   it("should present templates to the user sorted by display_name", async () => {
     const unsortedTemplates = [
-      { spec: { display_name: "AWS Lambda Consumer Application In JavaScript", description: "" } },
-      { spec: { display_name: "AWS Lambda Consumer Application In Python", description: "" } },
-      { spec: { display_name: "Flink Table API In Java For Confluent Cloud", description: "" } },
+      { spec: { display_name: "Flink Table API In Java For Confluent Cloud", name: "flink" } },
+      { spec: { display_name: "AWS Lambda Consumer Application In Python", name: "python" } },
+      { spec: { display_name: "AWS Lambda Consumer Application In JavaScript", name: "js" } },
     ];
 
     let quickPickLabels: string[] = [];
