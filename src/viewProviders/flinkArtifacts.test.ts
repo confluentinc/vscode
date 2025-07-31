@@ -166,7 +166,7 @@ describe("FlinkArtifactsViewProvider", () => {
         );
       });
 
-      it("should not show error notification for HTTP status outside 400-599 range", async () => {
+      it("should not show error notification for HTTP status outside 401-599 range", async () => {
         const mockError = new ResponseError(new Response("oh no", { status: 300 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
@@ -254,24 +254,6 @@ describe("FlinkArtifactsViewProvider", () => {
         sinon.assert.calledWith(
           showErrorNotificationStub,
           "Too many requests. Please try again later.",
-        );
-      });
-
-      it("should handle 400 HTTP error with check request message", async () => {
-        const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        await assert.rejects(async () => {
-          await viewProvider.refresh();
-        }, mockError);
-
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
-
-        sinon.assert.calledOnce(showErrorNotificationStub);
-        sinon.assert.calledWith(
-          showErrorNotificationStub,
-          "Failed to load Flink artifacts. Please check your request and try again.",
         );
       });
 
