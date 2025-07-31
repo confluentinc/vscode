@@ -126,7 +126,7 @@ export async function uploadUDFCommand(): Promise<void> {
             .showInformationMessage("Presigned upload URL received.", "Copy URL")
             .then((selection) => {
               if (selection === "Copy URL") {
-                void vscode.env.clipboard.writeText(response.upload_url!);
+                vscode.env.clipboard.writeText(response.upload_url!);
                 vscode.window.showInformationMessage("Upload URL copied to clipboard.");
               }
             });
@@ -144,6 +144,7 @@ export async function uploadUDFCommand(): Promise<void> {
 }
 /**
  * Registers the "confluent.uploadUDF" command with logging.
+ * Note: this is a placeholder, the final command will register and upload the UDF in a clean sweep.
  */
 export function registerUploadUDFCommand(): vscode.Disposable {
   return registerCommandWithLogging("confluent.uploadUDF", uploadUDFCommand);
