@@ -43,12 +43,9 @@ export class FlinkArtifactsViewProvider
           this.logger.debug("Failed to parse error response as JSON", err);
         });
 
-      if (status >= 400 && status < 600) {
+      if (status >= 401 && status < 600) {
         showNotification = true;
         switch (status) {
-          case 400:
-            message = "Failed to load Flink artifacts. Please check your request and try again.";
-            break;
           case 401:
             message = "Authentication required to load Flink artifacts.";
             break;
