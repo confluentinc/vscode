@@ -6,6 +6,7 @@ import {
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  Uri,
 } from "vscode";
 import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
@@ -17,6 +18,7 @@ import {
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
+  resourceSearchSet,
 } from "../emitters";
 import { logError } from "../errors";
 import {
@@ -63,6 +65,8 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { BaseViewProvider } from "./base";
+import { updateCollapsibleStateFromSearch } from "./collapsing";
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 type ConcreteEnvironment = CCloudEnvironment | LocalEnvironment | DirectEnvironment;
 type ConcreteKafkaCluster = CCloudKafkaCluster | LocalKafkaCluster | DirectKafkaCluster;
@@ -169,9 +173,8 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     return item;
   }
 
-  /** Degenerate implementation for now, we don't yet handle the search aspect. */
   searchableText(): string {
-    return this.name;
+    return this.environments.map((env) => env.searchableText()).join(" ");
   }
 }
 
@@ -446,6 +449,8 @@ export class NewResourceViewProvider
   readonly kind = "resources";
   readonly viewId = "confluent-resources";
   readonly loggerName = "viewProviders.newResources";
+  readonly searchChangedEmitter = resourceSearchSet;
+  readonly searchContextValue = ContextValues.resourceSearchApplied;
 
   private readonly connections: Map<ConnectionId, AnyConnectionRow> = new Map();
 
@@ -596,6 +601,8 @@ export class NewResourceViewProvider
   }
 
   getChildren(element: NewResourceViewProviderData | undefined): NewResourceViewProviderData[] {
+    let children: NewResourceViewProviderData[] = [];
+
     this.logger.debug("Getting children", {
       element: element ? element.constructor.name : "undefined",
     });
@@ -604,56 +611,65 @@ export class NewResourceViewProvider
       if (this.connections.size === 0) {
         // kicks off async initialization task. When done,
         // it will signal to repaint the view.
-        this.lazyInitializeConnections();
+        void this.lazyInitializeConnections();
 
-        // but we have no children at this time.
-        return [];
+        // but we have no children at this time. Let remain empty.
+      } else {
+        // otherwise we have some connection rows, and they are the requested children.
+        children = this.getToplevelChildren();
       }
-
-      // otherwise we have some connection rows, so return them.
-      return this.getToplevelChildren();
-    }
-
-    if (element instanceof ConnectionRow) {
+    } else if (element instanceof ConnectionRow) {
       // Defer to the ConnectionRow implementation to determine direct children.
 
       // LocalConnectionRow and DirectConnectionRow handle 'eliding' their
       // environments and return Kafka clusters and schema registries directly.
       // Only CCloudConnectionRow returns (ccloud) environments.
-      return element.getChildren();
-    }
-
-    if (element instanceof CCloudEnvironment) {
-      return element.children as ConnectionRowChildren[];
-    }
-
-    if (
+      children = element.getChildren();
+    } else if (element instanceof CCloudEnvironment) {
+      children = element.children as ConnectionRowChildren[];
+    } else if (
       element instanceof KafkaCluster ||
       element instanceof SchemaRegistry ||
       element instanceof CCloudFlinkComputePool
     ) {
       // No children for these elements in the resources view.
       this.logger.debug("No children for KafkaCluster, SchemaRegistry, or FlinkComputePool");
-      return [];
+    } else {
+      this.logger.error("Unhandled element type in getChildren()", {
+        elementType: (element as any).constructor.name,
+      });
+      throw new Error(`getChildren(): Unhandled element ${(element as any).constructor.name}`);
     }
 
-    throw new Error(`GetChildren(): Unhandled element ${(element as any).constructor.name}`);
+    return this.filterChildren(element, children);
   }
 
   getTreeItem(element: NewResourceViewProviderData): TreeItem {
+    let treeItem: TreeItem;
     if (element instanceof ConnectionRow) {
-      return element.getTreeItem();
+      treeItem = element.getTreeItem();
     } else if (element instanceof Environment) {
-      return new EnvironmentTreeItem(element);
+      treeItem = new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
-      return new KafkaClusterTreeItem(element);
+      treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
-      return new SchemaRegistryTreeItem(element);
+      treeItem = new SchemaRegistryTreeItem(element);
     } else if (element instanceof CCloudFlinkComputePool) {
-      return new FlinkComputePoolTreeItem(element);
+      treeItem = new FlinkComputePoolTreeItem(element);
+    } else {
+      throw new Error(`Unhandled element: ${(element as any).constructor.name}`);
     }
 
-    throw new Error(`Unhandled element: ${(element as any).constructor.name}`);
+    if (this.itemSearchString) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+      }
+      updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+    }
+
+    return treeItem;
   }
 
   async loadAndStoreConnection(

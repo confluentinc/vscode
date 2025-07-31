@@ -1388,12 +1388,12 @@
       "view/title": [
         {
           "command": "confluent.resources.search",
-          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && !confluent.resourceSearchApplied",
+          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.resources.search.clear",
-          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && confluent.resourceSearchApplied",
+          "when": "view == confluent-resources && confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
