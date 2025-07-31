@@ -19,20 +19,44 @@ import { WebsocketTransport } from "./websocketTransport";
 const logger = new Logger("flinkSql.languageClient.Client");
 const FLINK_DIAGNOSTIC_COLLECTION_NAME = "confluent.flinkSql";
 
+// Interfaces for dependency injection to make testing easier
+export interface WebSocketFactory {
+  create(url: string, options: any): WebSocket;
+}
+
+export interface TokenProvider {
+  getToken(): Promise<string | undefined>;
+}
+
+// Default implementations
+export class DefaultWebSocketFactory implements WebSocketFactory {
+  create(url: string, options: any): WebSocket {
+    return new WebSocket(url, options);
+  }
+}
+
+export class DefaultTokenProvider implements TokenProvider {
+  async getToken(): Promise<string | undefined> {
+    return getSecretStorage().get(SecretStorageKeys.SIDECAR_AUTH_TOKEN);
+  }
+}
+
 /** Initialize the FlinkSQL language client and connect to the language server websocket.
  * Creates a WebSocket (ws), then on ws.onopen makes the WebsocketTransport class for server, and then creates the Client.
  * Provides middleware for completions and diagnostics in ClientOptions
  * @param url The URL of the language server websocket
  * @param onWebSocketDisconnect Callback for WebSocket disconnection events
+ * @param wsFactory Factory for creating WebSocket connections (for testing)
+ * @param tokenProvider Provider for auth token (for testing)
  * @returns A promise that resolves to the language client, or null if initialization failed
  */
 export async function initializeLanguageClient(
   url: string,
   onWebSocketDisconnect: () => void,
+  wsFactory: WebSocketFactory = new DefaultWebSocketFactory(),
+  tokenProvider: TokenProvider = new DefaultTokenProvider(),
 ): Promise<LanguageClient | null> {
-  let accessToken: string | undefined = await getSecretStorage().get(
-    SecretStorageKeys.SIDECAR_AUTH_TOKEN,
-  );
+  let accessToken: string | undefined = await tokenProvider.getToken();
   if (!accessToken) {
     let msg = "Failed to initialize Flink SQL language client: No access token found";
     logError(new Error(msg), "No token found in secret storage");
@@ -41,7 +65,7 @@ export async function initializeLanguageClient(
   return new Promise((resolve, reject) => {
     logger.debug(`WebSocket connection in progress`);
 
-    const ws = new WebSocket(url, {
+    const ws = wsFactory.create(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
 
@@ -113,7 +137,7 @@ export async function initializeLanguageClient(
  * @param onWebSocketDisconnect Callback for WebSocket disconnection events
  * @returns A promise that resolves to the initialized language client
  */
-async function createLanguageClientFromWebsocket(
+export async function createLanguageClientFromWebsocket(
   ws: WebSocket,
   url: string,
   onWebSocketDisconnect: () => void,
