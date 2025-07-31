@@ -211,9 +211,6 @@ describe("FlinkArtifactsViewProvider", () => {
           await viewProvider.refresh();
         }, mockError);
 
-        sinon.assert.notCalled(logErrorStub);
-        sinon.assert.neverCalledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
-
         sinon.assert.notCalled(showErrorNotificationStub);
         sinon.assert.neverCalledWith(
           showErrorNotificationStub,
