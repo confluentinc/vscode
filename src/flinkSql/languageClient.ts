@@ -19,18 +19,6 @@ import { WebsocketTransport } from "./websocketTransport";
 const logger = new Logger("flinkSql.languageClient.Client");
 const FLINK_DIAGNOSTIC_COLLECTION_NAME = "confluent.flinkSql";
 
-/**
- * State of the WebSocket proxy to the language server
- */
-enum ConnectionState {
-  INITIALIZING = "initializing",
-  CONNECTING = "connecting",
-  SERVER_READY = "server_ready", // sidecar successfully connected to ccloud language server
-  CLIENT_READY = "client_ready", // language client is ready to use
-  ERROR = "error",
-  CLOSED = "closed",
-}
-
 /** Initialize the FlinkSQL language client and connect to the language server websocket.
  * Creates a WebSocket (ws), then on ws.onopen makes the WebsocketTransport class for server, and then creates the Client.
  * Provides middleware for completions and diagnostics in ClientOptions
@@ -51,33 +39,30 @@ export async function initializeLanguageClient(
     return null;
   }
   return new Promise((resolve, reject) => {
-    let connectionState = ConnectionState.INITIALIZING;
-    const updateState = (newState: ConnectionState) => {
-      logger.debug(`WebSocket connection state: ${connectionState} -> ${newState}`);
-      connectionState = newState;
-    };
+    logger.debug(`WebSocket connection in progress`);
 
     const ws = new WebSocket(url, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
 
     ws.onopen = async () => {
-      updateState(ConnectionState.CONNECTING);
       logger.debug("WebSocket connection opened");
     };
 
+    /*
+     * Sidecar sends an "OK" message once connection to Flink SQL language server is established
+     * We wait for this message before proceeding to create the language client to avoid in-between state errors
+     * This message handler is short-lived and gets cleared out after we start the client
+     */
     ws.onmessage = async (event) => {
-      logger.debug("WebSocket message received", event.data);
-      // Sidecar sends "OK" message once connection to Flink SQL language server is established
-      if (event.data === "OK" && connectionState === ConnectionState.CONNECTING) {
-        updateState(ConnectionState.SERVER_READY);
+      if (event.data === "OK") {
         logger.debug("WebSocket connection established, creating language client");
         try {
           const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
-          updateState(ConnectionState.CLIENT_READY);
+          // Remove the message handler since we now have a language client that will handle the communication
+          ws.onmessage = null;
           resolve(client);
         } catch (e) {
-          updateState(ConnectionState.ERROR);
           let msg = "Error while creating FlinkSQL language server";
           logError(e, msg, {
             extra: {
@@ -90,7 +75,6 @@ export async function initializeLanguageClient(
     };
 
     ws.onerror = (error) => {
-      updateState(ConnectionState.ERROR);
       let msg = "WebSocket error connecting to Flink SQL language server.";
       logError(error, msg, {
         extra: {
@@ -101,7 +85,6 @@ export async function initializeLanguageClient(
     };
 
     ws.onclose = async (event) => {
-      updateState(ConnectionState.CLOSED);
       const reason = event.reason || "Unknown reason";
       const code = event.code;
       logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
