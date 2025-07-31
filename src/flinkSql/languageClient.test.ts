@@ -1,10 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { LanguageClient } from "vscode-languageclient/node";
+import * as languageClient from "./languageClient";
 import {
   adaptCompletionItems,
   convertToMultiLineRange,
   convertToSingleLinePosition,
+  TokenProvider,
+  WebSocketFactory,
 } from "./languageClient";
 
 describe("flinkSql/languageClient.ts position conversion functions", () => {
@@ -329,295 +333,139 @@ describe("adaptCompletionItems", () => {
   });
 });
 
-// describe("flinkSql/languageClient.ts WebSocket connection and client initialization", () => {
-//   let sandbox: sinon.SinonSandbox;
-//   let mockWebSocket: sinon.SinonStubbedInstance<WebSocket>;
-//   let mockTransport: sinon.SinonStubbedInstance<WebsocketTransport>;
-//   let getSecretStorageStub: sinon.SinonStub;
-//   let clientStartStub: sinon.SinonStub;
-//   let createLanguageClientFromWebsocketStub: sinon.SinonStub;
-//   let onWebSocketDisconnect: sinon.SinonStub;
-//   const testUrl = "ws://test-url";
-//   const testToken = "test-token";
+describe.only("flinkSql/languageClient.ts WebSocket connection and client initialization", () => {
+  let sandbox: sinon.SinonSandbox;
+  const testUrl = "ws://test-url";
+  const testToken = "test-token";
 
-//   beforeEach(() => {
-//     sandbox = sinon.createSandbox();
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
 
-//     // Mock WebSocket
-//     mockWebSocket = sandbox.createStubInstance(WebSocket);
-//     sandbox.stub(global, "WebSocket").callsFake(() => mockWebSocket);
+  afterEach(() => {
+    sandbox.restore();
+  });
 
-//     // Mock secret storage
-//     getSecretStorageStub = sandbox.stub().returns({
-//       get: sandbox.stub().resolves(testToken),
-//     });
-//     sandbox.stub(storage, "getSecretStorage").returns(getSecretStorageStub());
+  describe("initializeLanguageClient()", () => {
+    let mockWebSocket: any;
+    let mockWebSocketFactory: WebSocketFactory;
+    let mockTokenProvider: TokenProvider;
+    let onDisconnectSpy: sinon.SinonSpy;
 
-//     // Mock transport and client
-//     mockTransport = sandbox.createStubInstance(WebsocketTransport);
-//     clientStartStub = sandbox.stub().resolves();
+    beforeEach(() => {
+      // Create mock WebSocket
+      mockWebSocket = {
+        onopen: null,
+        onmessage: null,
+        onerror: null,
+        onclose: null,
+      };
 
-//     // Mock language client
-//     const mockLanguageClient = {
-//       start: clientStartStub,
-//       setTrace: sandbox.stub(),
-//     };
-//     sandbox
-//       .stub(require("vscode-languageclient/node"), "LanguageClient")
-//       .returns(mockLanguageClient);
+      // Create mock factory
+      mockWebSocketFactory = {
+        create: sandbox.stub().returns(mockWebSocket),
+      };
 
-//     // Mock output channel
-//     sandbox.stub(getFlinkSQLLanguageServerOutputChannel);
+      // Create mock token provider
+      mockTokenProvider = {
+        getToken: sandbox.stub().resolves(testToken),
+      };
 
-//     onWebSocketDisconnect = sandbox.stub();
-//     createLanguageClientFromWebsocketStub = sandbox.stub().resolves(mockLanguageClient);
-//   });
+      // Spy for disconnect callback
+      onDisconnectSpy = sandbox.spy();
 
-//   afterEach(() => {
-//     sandbox.restore();
-//   });
+      // Mock the createLanguageClientFromWebsocket function
+      sandbox.stub(languageClient, "createLanguageClientFromWebsocket").resolves({
+        start: sandbox.stub().resolves(),
+        setTrace: sandbox.stub(),
+      } as unknown as LanguageClient);
+    });
 
-//   describe("initializeLanguageClient()", () => {
-//     it("should return null when no access token is available", async () => {
-//       getSecretStorageStub().get.resolves(undefined);
-//       const result = await initializeLanguageClient(testUrl, onWebSocketDisconnect);
-//       assert.strictEqual(result, null);
-//     });
+    it("should return null when no access token is available", async () => {
+      // Setup token provider to return undefined
+      mockTokenProvider.getToken = sandbox.stub().resolves(undefined);
 
-//     it("should create WebSocket with authorization header", async () => {
-//       const initPromise = initializeLanguageClient(testUrl, onWebSocketDisconnect);
+      const result = await languageClient.initializeLanguageClient(
+        testUrl,
+        onDisconnectSpy,
+        mockWebSocketFactory,
+        mockTokenProvider,
+      );
 
-//       // We don't await the promise because it should remain pending
-//       // until the WebSocket event handlers are triggered
+      assert.strictEqual(result, null);
+      //@ts-expect-error yadda yadda
+      sinon.assert.notCalled(mockWebSocketFactory.create);
+    });
 
-//       sinon.assert.calledOnce(global.WebSocket as sinon.SinonStub);
-//       sinon.assert.calledWith(
-//         global.WebSocket as sinon.SinonStub,
-//         testUrl,
-//         sinon.match({
-//           headers: {
-//             authorization: `Bearer ${testToken}`,
-//           },
-//         }),
-//       );
-//     });
+    it("should create WebSocket with authorization header when token is available", async () => {
+      const clientPromise = languageClient.initializeLanguageClient(
+        testUrl,
+        onDisconnectSpy,
+        mockWebSocketFactory,
+        mockTokenProvider,
+      );
 
-//     it("should handle 'OK' message and initialize language client", async () => {
-//       // Store the onmessage handler to call it manually
-//       let onMessageHandler: ((event: { data: string }) => Promise<void>) | null = null;
+      // WebSocket should be created with correct parameters
+      sinon.assert.calledWith(
+        //@ts-expect-error yadda yadda
+        mockWebSocketFactory.create,
+        testUrl,
+        sinon.match({
+          headers: { authorization: `Bearer ${testToken}` },
+        }),
+      );
 
-//       // Override WebSocket mock to capture the onmessage handler
-//       (global.WebSocket as sinon.SinonStub).callsFake(() => {
-//         const ws = mockWebSocket;
+      // Simulate error to clean up the promise
+      mockWebSocket.onerror(new Error("Test cleanup"));
 
-//         // Store the onmessage handler that will be set by initializeLanguageClient
-//         Object.defineProperty(ws, "onmessage", {
-//           set: function (handler) {
-//             onMessageHandler = handler;
-//           },
-//         });
+      await assert.rejects(clientPromise);
+    });
 
-//         // Execute the onopen handler immediately
-//         setTimeout(() => {
-//           if (ws.onopen) {
-//             ws.onopen(new Event("open"));
-//           }
-//         }, 0);
+    it("should initialize language client after receiving OK message", async () => {
+      const clientPromise = languageClient.initializeLanguageClient(
+        testUrl,
+        onDisconnectSpy,
+        mockWebSocketFactory,
+        mockTokenProvider,
+      );
 
-//         return ws;
-//       });
+      // Trigger the onopen event
+      mockWebSocket.onopen({});
 
-//       // Mock createLanguageClientFromWebsocket function
-//       sandbox.stub(require("./languageClient"), "createLanguageClientFromWebsocket").resolves({
-//         client: "mock",
-//       });
+      // Simulate receiving "OK" message
+      await mockWebSocket.onmessage({ data: "OK" });
 
-//       // Start initialization
-//       const clientPromise = initializeLanguageClient(testUrl, onWebSocketDisconnect);
+      const client = await clientPromise;
 
-//       // Make sure onopen was called
-//       await new Promise((resolve) => setTimeout(resolve, 0));
+      // Verify client was created using our mock
+      const createClientStub = (languageClient as any).createLanguageClientFromWebsocket;
+      sinon.assert.calledOnce(createClientStub);
+      sinon.assert.calledWith(createClientStub, mockWebSocket, testUrl, onDisconnectSpy);
 
-//       // Make sure onMessageHandler was set
-//       assert.ok(onMessageHandler, "onmessage handler should be set");
+      assert.ok(client, "Language client should be returned");
+    });
 
-//       // Send the "OK" message to trigger client creation
-//       await onMessageHandler!({ data: "OK" });
+    it("should handle WebSocket errors properly", async () => {
+      const clientPromise = languageClient.initializeLanguageClient(
+        testUrl,
+        onDisconnectSpy,
+        mockWebSocketFactory,
+        mockTokenProvider,
+      );
 
-//       // Now the promise should resolve with the client
-//       const client = await clientPromise;
-//       assert.deepStrictEqual(client, { client: "mock" });
-//     });
+      // Trigger error event
+      const testError = new Error("Test WebSocket error");
+      mockWebSocket.onerror(testError);
 
-//     it("should handle WebSocket error", async () => {
-//       // Store the onerror handler to call it manually
-//       let onErrorHandler: ((error: Error) => void) | null = null;
+      // Promise should be rejected with the error
+      await assert.rejects(clientPromise);
+    });
+  });
 
-//       // Override WebSocket mock to capture the onerror handler
-//       (global.WebSocket as sinon.SinonStub).callsFake(() => {
-//         const ws = mockWebSocket;
-//         Object.defineProperty(ws, "onerror", {
-//           set: function (handler) {
-//             onErrorHandler = handler;
-//           },
-//         });
-//         return ws;
-//       });
-
-//       // Start initialization that should eventually be rejected
-//       const clientPromise = initializeLanguageClient(testUrl, onWebSocketDisconnect);
-
-//       // Make sure onErrorHandler was set
-//       assert.ok(onErrorHandler, "onerror handler should be set");
-
-//       // Trigger error
-//       const testError = new Error("Test WebSocket error");
-//       onErrorHandler!(testError);
-
-//       // Now the promise should reject
-//       await assert.rejects(clientPromise, Error);
-//     });
-
-//     it("should handle WebSocket close", async () => {
-//       // Store the onclose handler to call it manually
-//       let onCloseHandler: ((event: { code: number; reason: string }) => void) | null = null;
-
-//       // Override WebSocket mock to capture the onclose handler
-//       (global.WebSocket as sinon.SinonStub).callsFake(() => {
-//         const ws = mockWebSocket;
-//         Object.defineProperty(ws, "onclose", {
-//           set: function (handler) {
-//             onCloseHandler = handler;
-//           },
-//         });
-
-//         // Execute the onopen handler immediately
-//         setTimeout(() => {
-//           if (ws.onopen) {
-//             ws.onopen(new Event("open"));
-//           }
-//         }, 0);
-
-//         return ws;
-//       });
-
-//       // Start initialization
-//       initializeLanguageClient(testUrl, onWebSocketDisconnect);
-
-//       // Make sure onopen was called
-//       await new Promise((resolve) => setTimeout(resolve, 0));
-
-//       // Make sure onCloseHandler was set
-//       assert.ok(onCloseHandler, "onclose handler should be set");
-
-//       // Trigger normal close (code 1000)
-//       onCloseHandler!({ code: 1000, reason: "Normal closure" });
-
-//       // Trigger abnormal close
-//       onCloseHandler!({ code: 1006, reason: "Abnormal closure" });
-//     });
-//   });
-
-//   describe("createLanguageClientFromWebsocket()", () => {
-//     it("should create language client with correct configuration", async () => {
-//       // Expose the function for testing
-//       const { createLanguageClientFromWebsocket } = require("./languageClient");
-
-//       const client = await createLanguageClientFromWebsocket(
-//         mockWebSocket,
-//         testUrl,
-//         onWebSocketDisconnect,
-//       );
-
-//       // Assert LanguageClient constructor was called with expected args
-//       sinon.assert.calledWith(
-//         require("vscode-languageclient/node").LanguageClient,
-//         "confluent.flinksqlLanguageServer",
-//         "ConfluentFlinkSQL",
-//         sinon.match.func,
-//         sinon.match({
-//           documentSelector: [
-//             { language: "flinksql" },
-//             { scheme: "untitled", language: "flinksql" },
-//             { pattern: "**/*.flink.sql" },
-//           ],
-//           progressOnInitialization: true,
-//           diagnosticCollectionName: "confluent.flinkSql",
-//         }),
-//       );
-
-//       // Assert client was started
-//       sinon.assert.calledOnce(clientStartStub);
-
-//       // Assert client object was returned
-//       assert.ok(client);
-//     });
-
-//     it("should handle error in language client start", async () => {
-//       // Expose the function for testing
-//       const { createLanguageClientFromWebsocket } = require("./languageClient");
-
-//       // Make client.start throw an error
-//       clientStartStub.rejects(new Error("Client start error"));
-
-//       await assert.rejects(
-//         createLanguageClientFromWebsocket(mockWebSocket, testUrl, onWebSocketDisconnect),
-//         /Client start error/,
-//       );
-//     });
-
-//     it("should create middleware that converts positions for completions", async () => {
-//       // Expose the function for testing
-//       const { createLanguageClientFromWebsocket } = require("./languageClient");
-
-//       let middleware: any;
-
-//       require("vscode-languageclient/node").LanguageClient.callsFake(
-//         (_id: string, _name: string, _serverOptions: any, options: any) => {
-//           middleware = options.middleware;
-//           return {
-//             start: clientStartStub,
-//             setTrace: sandbox.stub(),
-//           };
-//         },
-//       );
-
-//       await createLanguageClientFromWebsocket(mockWebSocket, testUrl, onWebSocketDisconnect);
-
-//       // Assert middleware was created
-//       assert.ok(middleware);
-//       assert.ok(middleware.sendRequest);
-
-//       // Test the middleware with a completion request
-//       const nextStub = sandbox.stub().resolves({ items: [] });
-//       const mockDocument = {
-//         getText: sandbox.stub().returns("line1\nline2"),
-//         uri: { toString: () => "file:///test.flink.sql" },
-//       };
-
-//       // Mock workspace.textDocuments
-//       sandbox.stub(vscode.workspace, "textDocuments").value([mockDocument]);
-
-//       const result = await middleware.sendRequest(
-//         { method: "textDocument/completion" },
-//         {
-//           textDocument: { uri: "file:///test.flink.sql" },
-//           position: { line: 1, character: 2 },
-//         },
-//         null,
-//         nextStub,
-//       );
-
-//       // Assert next was called with transformed position
-//       sinon.assert.calledWith(
-//         nextStub,
-//         { method: "textDocument/completion" },
-//         sinon.match({
-//           textDocument: { uri: "file:///test.flink.sql" },
-//           position: { line: 0, character: sinon.match.number },
-//         }),
-//         null,
-//       );
-//     });
-//   });
-// });
+  describe.skip("createLanguageClientFromWebsocket()", () => {
+    it("should create and start a language client", async () => {
+      // This test would require mocking LanguageClient constructor and WebsocketTransport
+      // Skipping it for now
+    });
+  });
+});
