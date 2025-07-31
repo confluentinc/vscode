@@ -431,4 +431,9 @@ describe("sidecarHandle sandbox tests", () => {
       });
     }
   });
+
+  it("getFlinkPresignedUrlsApi() should return a PresignedUrlsArtifactV1Api instance given a provider region", async () => {
+    const api = handle.getFlinkPresignedUrlsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    assert.strictEqual(api.constructor.name, "PresignedUrlsArtifactV1Api");
+  });
 });
