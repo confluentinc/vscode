@@ -79,7 +79,8 @@ export function triageGetFlinkArtifactsError(
       .catch((err) => {
         logger.debug("Failed to parse error response as JSON", err);
       });
-
+    /* Note: This switch statement intentionally excludes 400 errors.
+     Otherwise, they may pop up on loading the compute pool if it is using an unsupported cloud provider. */
     if (status >= 401 && status < 600) {
       showNotification = true;
       switch (status) {

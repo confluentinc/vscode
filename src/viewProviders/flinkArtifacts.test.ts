@@ -203,6 +203,24 @@ describe("FlinkArtifactsViewProvider", () => {
         sinon.assert.calledOnce(changeFireStub);
       });
 
+      it("should NOT handle 400 HTTP error with check request message", async () => {
+        const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
+        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+
+        await assert.rejects(async () => {
+          await viewProvider.refresh();
+        }, mockError);
+
+        sinon.assert.notCalled(logErrorStub);
+        sinon.assert.neverCalledWith(logErrorStub, mockError, "Failed to load Flink artifacts");
+
+        sinon.assert.notCalled(showErrorNotificationStub);
+        sinon.assert.neverCalledWith(
+          showErrorNotificationStub,
+          "Failed to load Flink artifacts. Please check your request and try again.",
+        );
+      });
+
       it("should handle 401 HTTP error with authentication message", async () => {
         const mockError = new ResponseError(new Response("Unauthorized", { status: 401 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
