@@ -485,7 +485,10 @@ export class SidecarManager {
           } catch (e) {
             // We expect ECONNREFUSED while the sidecar is coming up, but log + rethrow other unexpected errors.
             if (!wasConnRefused(e)) {
-              logError(e, `${logPrefix}(handshake attempt ${i}): Attempt raised unexpected error`);
+              // Send to Sentry and log.
+              logError(e, `${logPrefix}(handshake attempt ${i}): Attempt raised unexpected error`, {
+                extra: { handshake_attempt: i },
+              });
             }
             if (i < MAX_ATTEMPTS - 1) {
               logger.info(
@@ -520,7 +523,7 @@ ${outputs.parsedLogLines.map((line) => `${line.timestamp} ${line.level} [${line.
 `,
         );
 
-        // Didn't resolve and return within the loop, so reject.
+        // Reject the promise with a SidecarFatalError.
         reject(new SidecarFatalError(SidecarStartupFailureReason.HANDSHAKE_FAILED, mainComplaint));
       })();
     });
