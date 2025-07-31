@@ -503,13 +503,19 @@ export class SidecarManager {
 
         const mainComplaint = `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts.`;
         const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
+
+        // Only log the last 10 lines of the sidecar logs, to avoid flooding the logs.
+        if (outputs.parsedLogLines.length > 10) {
+          outputs.parsedLogLines = outputs.parsedLogLines.slice(-10);
+        }
+
         logger.error(
           `${mainComplaint}
 
 Sidecar stderr:
 ${outputs.stderrLines.join("\n")}
 
-Sidecar logs:
+Sidecar logs (last 10 lines only):
 ${outputs.parsedLogLines.map((line) => `${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`).join("\n")}
 `,
         );
