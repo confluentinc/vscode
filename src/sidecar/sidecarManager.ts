@@ -48,7 +48,7 @@ import { closeSync, openSync, writeFileSync } from "../utils/fsWrappers";
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
 /** How many loop attempts to try in startSidecar() and doHand */
-export const MAX_ATTEMPTS = 10;
+export const MAX_ATTEMPTS = 20;
 
 const logger = new Logger("sidecarManager");
 
@@ -485,9 +485,7 @@ export class SidecarManager {
           } catch (e) {
             // We expect ECONNREFUSED while the sidecar is coming up, but log + rethrow other unexpected errors.
             if (!wasConnRefused(e)) {
-              logError(e, `${logPrefix}: Attempt raised unexpected error`, {
-                extra: { handshake_attempt: `${i}` },
-              });
+              logError(e, `${logPrefix}(handshake attempt ${i}): Attempt raised unexpected error`);
             }
             if (i < MAX_ATTEMPTS - 1) {
               logger.info(
@@ -498,13 +496,26 @@ export class SidecarManager {
           }
         } // the doHandshake() loop.
 
-        // Didn't resolve and return within the loop, so reject.
-        reject(
-          new SidecarFatalError(
-            SidecarStartupFailureReason.HANDSHAKE_FAILED,
-            `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts`,
-          ),
+        // If here, then we've tried MAX_ATTEMPTS times to handshake with the sidecar
+        // and failed due to ECONNREFUSED every time. And the sidecar didn't exit immediately.
+        // Let's log more state about what whe know about the sidecar process and reject.
+        // (Informative when diagnosing test suite startup flake, for example.)
+
+        const mainComplaint = `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts.`;
+        const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
+        logger.error(
+          `${mainComplaint}
+
+Sidecar stderr:
+${outputs.stderrLines.join("\n")}
+
+Sidecar logs:
+${outputs.parsedLogLines.map((line) => `${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`).join("\n")}
+`,
         );
+
+        // Didn't resolve and return within the loop, so reject.
+        reject(new SidecarFatalError(SidecarStartupFailureReason.HANDSHAKE_FAILED, mainComplaint));
       })();
     });
   }
