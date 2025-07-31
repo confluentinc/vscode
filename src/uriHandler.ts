@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { Logger } from "./logging";
 import { projectScaffoldUri } from "./emitters";
+import { Logger } from "./logging";
 
 const logger = new Logger("uriHandler");
 
