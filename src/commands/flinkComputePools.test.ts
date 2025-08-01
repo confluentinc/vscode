@@ -4,7 +4,11 @@ import * as vscode from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import {
+  ENABLE_FLINK_ARTIFACTS,
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+} from "../extensionSettings/constants";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
 import * as commandsModule from "./flinkComputePools";
@@ -76,5 +80,39 @@ describe("configureFlinkDefaults command", () => {
         "@ext:confluentinc.vscode-confluent flink",
       ),
     );
+  });
+});
+
+describe("selectPoolFromResourcesViewCommand", () => {
+  let sandbox: sinon.SinonSandbox;
+  let executeCommandStub: sinon.SinonStub;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should call both statements and artifacts pool selection commands when Flink Artifacts is enabled", async () => {
+    stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, true);
+
+    await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+
+    sinon.assert.calledWith(executeCommandStub, "confluent-flink-statements.focus");
+    sinon.assert.calledWith(executeCommandStub, "confluent-flink-artifacts.focus");
+  });
+
+  it("should only call statements pool selection command when Flink Artifacts is disabled", async () => {
+    stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, false);
+
+    await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+
+    sinon.assert.calledWith(executeCommandStub, "confluent-flink-statements.focus");
+    sinon.assert.neverCalledWith(executeCommandStub, "confluent-flink-artifacts.focus");
   });
 });
