@@ -8,7 +8,7 @@ import {
   Message,
   Trace,
 } from "vscode-languageclient/node";
-import { WebSocket } from "ws";
+import { CloseEvent, ErrorEvent, MessageEvent, WebSocket } from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { SecretStorageKeys } from "../storage/constants";
@@ -45,58 +45,65 @@ export async function initializeLanguageClient(
       headers: { authorization: `Bearer ${accessToken}` },
     });
 
-    ws.onopen = async () => {
-      logger.debug("WebSocket connection opened");
-    };
-
-    /*
-     * Sidecar sends an "OK" message once connection to Flink SQL language server is established
+    /**
+     * Sidecar sends an "OK" message once its connection to CCloud Flink SQL language server is established.
      * We wait for this message before proceeding to create the language client to avoid in-between state errors
      * This message handler is short-lived and gets cleared out after we start the client
      */
-    ws.onmessage = async (event) => {
-      if (event.data === "OK") {
+    const SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE = "OK";
+
+    const waitingForPeerConnectionMessageHandler = (event: MessageEvent) => {
+      if (event.data === SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE) {
         logger.debug("WebSocket connection established, creating language client");
-        try {
-          const client = await createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect);
-          // Remove the message handler since we now have a language client that will handle the communication
-          ws.onmessage = null;
-          resolve(client);
-        } catch (e) {
-          let msg = "Error while creating FlinkSQL language server";
-          logError(e, msg, {
-            extra: {
-              wsUrl: url,
-            },
+        createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect)
+          .then((client) => {
+            // Remove this message handler since we now have a language client that will handle the communication
+            ws.onmessage = null;
+            // Resolve initializeLanguageClient promise with the client
+            resolve(client);
+          })
+          .catch((e: Error) => {
+            let msg = "Error while creating FlinkSQL language server";
+            logError(e, msg, {
+              extra: {
+                wsUrl: url,
+              },
+            });
+            // Reject initializeLanguageClient promise with the error from createLanguageClientFromWebsocket.
+            reject(e as Error);
           });
-          reject(e);
-        }
+      } else {
+        // If we receive a message that is not the expected "OK", log it as a warning
+        logger.warn(
+          `Unexpected message received from WebSocket: ${JSON.stringify(event, null, 2)}`,
+        );
       }
     };
 
-    ws.onerror = (error) => {
+    ws.onmessage = waitingForPeerConnectionMessageHandler;
+
+    ws.onerror = (error: ErrorEvent) => {
       let msg = "WebSocket error connecting to Flink SQL language server.";
       logError(error, msg, {
         extra: {
           wsUrl: url,
         },
       });
-      reject(error);
+      reject(new Error(`${msg}: ${error.message}`));
     };
 
-    ws.onclose = async (event) => {
-      const reason = event.reason || "Unknown reason";
-      const code = event.code;
-      logger.warn(`WebSocket connection closed: Code ${code}, Reason: ${reason}`);
-      if (code !== 1000) {
-        // 1000 is normal closure
+    ws.onclose = (closeEvent: CloseEvent) => {
+      logger.warn(
+        `WebSocket connection closed: Code ${closeEvent.code}, Reason: ${closeEvent.reason}`,
+      );
+      // 1000 is normal closure
+      if (closeEvent.code !== 1000) {
         logError(
-          new Error(`WebSocket closed unexpectedly: ${reason}`),
+          new Error(`WebSocket closed unexpectedly: ${closeEvent.reason}`),
           "WebSocket onClose handler called",
           {
             extra: {
-              code,
-              reason,
+              closeEvent,
               wsUrl: url,
             },
           },
