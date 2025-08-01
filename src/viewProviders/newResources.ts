@@ -149,13 +149,10 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
    * Return the immediate children of this connection row:
    *  * Kafka cluster and / or schema registry if is a single env row,
    *  * environment(s) if is the logged-in ccloud row
+   *
+   * (Interface ISearchable needs access to children spelled as an attribute.)
    **/
-  abstract getChildren(): ConnectionRowChildren[];
-
-  /** Interface ISearchable needs access to children spelled as an attribute */
-  get children(): ISearchable[] {
-    return this.getChildren();
-  }
+  abstract get children(): ConnectionRowChildren[];
 
   /** Convert this ConnectionRow into a TreeItem. */
   getTreeItem(): TreeItem {
@@ -220,7 +217,7 @@ export abstract class SingleEnvironmentConnectionRow<
     );
   }
 
-  getChildren(): (KCT | SRT)[] {
+  get children(): (KCT | SRT)[] {
     if (this.environments.length === 0) {
       return [];
     }
@@ -268,20 +265,21 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
     return "Confluent Cloud";
   }
 
+  get children(): CCloudEnvironment[] {
+    return this.environments;
+  }
+
   /**
    * Refresh the ccloud connection row. Handles the organization aspect
    * here, defers to super().refresh() to handle environments.
    */
   override async refresh(deepRefresh: boolean): Promise<void> {
-    // Also get the current organization from the loader.
-    this.logger.debug("Refreshing CCloudConnectionRow", { deepRefresh });
-
     if (hasCCloudAuthSession()) {
       try {
         // Load organization and the environments concurrently.
         const results = await Promise.all([
           this.loader.getOrganization(),
-          super.refresh(deepRefresh), // handles environments.
+          super.refresh(deepRefresh), // handles getting the environments.
         ]);
         this.ccloudOrganization = results[0] as CCloudOrganization;
       } catch (e) {
@@ -301,14 +299,6 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
       this.ccloudOrganization = undefined;
       this.environments.length = 0; // Clear environments if no auth session.
     }
-  }
-
-  getChildren(): CCloudEnvironment[] {
-    this.logger.debug("CCloudConnectionRow getting children", {
-      environments: this.environments.length,
-    });
-
-    return this.environments;
   }
 }
 
@@ -629,7 +619,7 @@ export class NewResourceViewProvider
       // LocalConnectionRow and DirectConnectionRow handle 'eliding' their
       // environments and return Kafka clusters and schema registries directly.
       // Only CCloudConnectionRow returns (ccloud) environments.
-      children = element.getChildren();
+      children = element.children;
     } else if (element instanceof CCloudEnvironment) {
       children = element.children as ConnectionRowChildren[];
     } else if (
@@ -665,7 +655,7 @@ export class NewResourceViewProvider
       throw new Error(`Unhandled element: ${(element as any).constructor.name}`);
     }
 
-    if (this.itemSearchString) {
+    if (this.itemSearchString !== null) {
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
         // and color the label, description, and decoration so it stands out in the tree view

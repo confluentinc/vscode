@@ -158,7 +158,9 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
     // clear from any previous search filter
     this.searchMatches.clear();
 
-    // zero out the known child count.
+    // zero out the known child count, otherwise grows uncontrolled with
+    // every search string set call. This concept is flawed and should
+    // probably be removed in the future (James opinion).
     this.totalItemCount = 0;
 
     // Inform the view that parent resource's children have changed and should
