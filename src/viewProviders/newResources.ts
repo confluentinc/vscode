@@ -152,6 +152,11 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
    **/
   abstract getChildren(): ConnectionRowChildren[];
 
+  /** Interface ISearchable needs access to children spelled as an attribute */
+  get children(): ISearchable[] {
+    return this.getChildren();
+  }
+
   /** Convert this ConnectionRow into a TreeItem. */
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name);

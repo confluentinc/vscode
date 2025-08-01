@@ -158,6 +158,9 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
     // clear from any previous search filter
     this.searchMatches.clear();
 
+    // zero out the known child count.
+    this.totalItemCount = 0;
+
     // Inform the view that parent resource's children have changed and should
     // call getChildren() again.
     this._onDidChangeTreeData.fire();
