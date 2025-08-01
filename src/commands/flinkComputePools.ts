@@ -1,7 +1,11 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkArtifactsPoolChanged } from "../emitters";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import {
+  ENABLE_FLINK_ARTIFACTS,
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+} from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -34,10 +38,13 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
 
   // need to pass a new argument to prevent the views from being focused,
   // see https://github.com/confluentinc/vscode/issues/1967
-  await Promise.all([
-    selectPoolForArtifactsViewCommand(pool),
-    selectPoolForStatementsViewCommand(pool),
-  ]);
+  const promises: Promise<void>[] = [selectPoolForStatementsViewCommand(pool)];
+
+  // Only include artifacts view selection if Flink Artifacts feature is enabled
+  if (ENABLE_FLINK_ARTIFACTS.value) {
+    promises.push(selectPoolForArtifactsViewCommand(pool));
+  }
+  await Promise.all(promises);
 }
 
 /**
