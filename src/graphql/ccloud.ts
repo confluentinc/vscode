@@ -71,7 +71,7 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
 
     // parse Flink Compute Pools first for later association with Kafka clusters
     let flinkComputePools: CCloudFlinkComputePool[] = [];
-    if (env.flinkComputePools) {
+    if (env.flinkComputePools && env.flinkComputePools.length > 0) {
       const envFlinkComputePools = env.flinkComputePools.map(
         (pool: any): CCloudFlinkComputePool =>
           new CCloudFlinkComputePool({
@@ -86,7 +86,7 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
 
     // parse Kafka clusters and sort by name
     let kafkaClusters: CCloudKafkaCluster[] = [];
-    if (env.kafkaClusters) {
+    if (env.kafkaClusters && env.kafkaClusters.length > 0) {
       const envKafkaClusters = env.kafkaClusters.map((cluster: any): CCloudKafkaCluster => {
         // Associate Flink compute pools with the same provider/region
         const matchingFlinkPools = flinkComputePools.filter(

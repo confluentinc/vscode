@@ -12,6 +12,7 @@ import { createHash } from "crypto";
 import {
   FlinkArtifactsArtifactV1Api,
   Configuration as FlinkArtifactsConfiguration,
+  PresignedUrlsArtifactV1Api,
 } from "../clients/flinkArtifacts";
 import {
   Configuration as FlinkSqlConfiguration,
@@ -50,6 +51,7 @@ import {
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { ConnectionId, IEnvProviderRegion } from "../models/resource";
+import { showWarningNotificationWithButtons } from "../notifications";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_ENV_ID_HEADER,
@@ -382,6 +384,15 @@ export class SidecarHandle {
     return new ComputePoolsFcpmV2Api(config);
   }
 
+  /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link PresignedUrlsArtifactV1Api} client instance */
+  public getFlinkPresignedUrlsApi(providerRegion: IEnvProviderRegion): PresignedUrlsArtifactV1Api {
+    const config = new FlinkArtifactsConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
+    });
+    return new PresignedUrlsArtifactV1Api(config);
+  }
+
   /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
   public getFlinkSqlStatementsApi(providerRegion: IEnvProviderRegion): StatementsSqlV1Api {
     const config = new FlinkSqlConfiguration({
@@ -415,7 +426,7 @@ export class SidecarHandle {
   // === END OF OPENAPI CLIENT METHODS ===
 
   // Cache of GraphQL query promises to avoid concurrent duplicate requests.
-  private graphQlQueryPromises: Map<string, Promise<GraphQLResponse>> = new Map();
+  private readonly graphQlQueryPromises: Map<string, Promise<GraphQLResponse>> = new Map();
 
   /**
    * Make a GraphQL request to the sidecar via fetch.
@@ -489,14 +500,13 @@ export class SidecarHandle {
     }
 
     if (!payload.data) {
+      // No data at all, only a faceful of errors.
       let errorString: string;
 
       if (payload.errors) {
         // combine all errors into a single error message, if there are multiple
-        const errorMessages: string[] = payload.errors.map(
-          (error: { message: string }) => error.message || JSON.stringify(error),
-        );
-        errorString = `GraphQL query failed: ${errorMessages.join(", ")}`;
+        const errorMessages: string[] = payload.errors.map((error) => error.message);
+        errorString = `GraphQL query failed: ${errorMessages.join("; ")}`;
       } else {
         // we got some other unexpected response structure back, don't attempt to parse it
         errorString = `GraphQL returned unexpected response structure: ${JSON.stringify(payload)}`;
@@ -507,6 +517,30 @@ export class SidecarHandle {
         payload: JSON.stringify(payload),
       });
       throw new Error(errorString);
+    } else if (payload.errors) {
+      // If we got a response with data but also errors, log the errors and then also show the
+      // user a warning.
+
+      const errorMessages: string[] = payload.errors.map((error) => error.message);
+
+      // show the first error and the error count to the user.
+      const firstError = errorMessages[0];
+      const errorCount = errorMessages.length;
+
+      const message =
+        errorCount > 1
+          ? `GraphQL query returned data but also ${errorCount} errors: "${firstError}" (and ${errorCount - 1} more)`
+          : `GraphQL query returned data but also an error: "${firstError}"`;
+
+      logger.warn(message, {
+        query: print(query),
+        variables: variables,
+        response: JSON.stringify(payload),
+      });
+
+      void showWarningNotificationWithButtons(message);
+
+      // fall through to return the data anyway, as the query "was at least partially successful".
     }
 
     return payload.data;

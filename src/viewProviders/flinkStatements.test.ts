@@ -408,7 +408,7 @@ describe("FlinkStatementsViewProvider", () => {
     });
   });
 
-  describe("setCustomEventListeners() wires the proper handler methods to the proper event emitters", () => {
+  describe("setEventListeners() and setCustomEventListeners() wire the proper handler methods to the proper event emitters", () => {
     let emitterStubs: StubbedEventEmitters;
 
     beforeEach(() => {
@@ -421,18 +421,30 @@ describe("FlinkStatementsViewProvider", () => {
     const handlerEmitterPairs: Array<
       [keyof typeof emitterStubs, keyof FlinkStatementsViewProvider]
     > = [
+      // Wired directly by FlinkStatementsViewProvider::setCustomEventListeners()
       ["flinkStatementUpdated", "flinkStatementUpdatedHandler"],
       ["flinkStatementDeleted", "flinkStatementDeletedHandler"],
+      // Wired by ParentedBaseViewProvider::setEventListeners()
+      ["ccloudConnected", "ccloudConnectedHandler"],
+      ["currentFlinkStatementsResourceChanged", "setParentResource"],
+      // Wired by BaseViewProvider::setEventListeners() because FlinkStatementsViewProvider assigns searchChangedEmitter
+      ["flinkStatementSearchSet", "setSearch"],
     ];
+
+    it("setEventListeners should return the expected number of listeners", () => {
+      // @ts-expect-error protected method
+      const listeners = viewProvider.setEventListeners();
+      assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+    });
 
     handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
       it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
         // Create stub for the handler method
         const handlerStub = sandbox.stub(viewProvider, handlerMethodName);
 
-        // Re-invoke setCustomEventListeners() to capture emitter .event() stub calls
+        // Re-invoke setEventListeners() to capture emitter .event() stub calls
         // @ts-expect-error protected method
-        viewProvider.setCustomEventListeners();
+        viewProvider.setEventListeners();
 
         const emitterStub = emitterStubs[emitterName]!;
 
