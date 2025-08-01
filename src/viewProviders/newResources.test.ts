@@ -107,13 +107,19 @@ describe("viewProviders/newResources.ts", () => {
     });
 
     describe("ConnectionRow methods via DirectConnectionRow", () => {
+      let getEnvironmentsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
+      });
+
+      it("searchableText() returns the connection name after refresh completes", async () => {
+        getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
+        await directConnectionRow.refresh(false);
+        assert.strictEqual("test-direct-environment", directConnectionRow.searchableText());
+      });
+
       describe("refresh", () => {
-        let getEnvironmentsStub: sinon.SinonStub;
-
-        beforeEach(() => {
-          getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
-        });
-
         for (const deepRefresh of [true, false] as const) {
           it(`calls getEnvironments with deepRefresh=${deepRefresh}`, async () => {
             await directConnectionRow.refresh(deepRefresh);
@@ -147,13 +153,6 @@ describe("viewProviders/newResources.ts", () => {
             directConnectionRow.environments[0],
             TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
           );
-        });
-
-        it("searchableText doesn't vomit", async () => {
-          // Refine this test later on.
-          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
-          await directConnectionRow.refresh();
-          assert.strictEqual(directConnectionRow.name, directConnectionRow.searchableText());
         });
       });
     });
@@ -595,6 +594,12 @@ describe("viewProviders/newResources.ts", () => {
       ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
       const children = ccloudConnectionRow.children;
       assert.deepEqual(children, [TEST_CCLOUD_ENVIRONMENT]);
+    });
+
+    it("searchableText() returns name", () => {
+      const expectedText = "Confluent Cloud";
+      assert.strictEqual(ccloudConnectionRow.searchableText(), expectedText);
+      assert.strictEqual(ccloudConnectionRow.name, expectedText);
     });
 
     describe("refresh", () => {

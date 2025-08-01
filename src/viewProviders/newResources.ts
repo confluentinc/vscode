@@ -175,8 +175,12 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     return item;
   }
 
+  /**
+   * Return this single node's search fodder for ISearchable. Children's search texts
+   * are discovered through the `children` property.
+   */
   searchableText(): string {
-    return this.environments.map((env) => env.searchableText()).join(" ");
+    return this.name;
   }
 }
 
