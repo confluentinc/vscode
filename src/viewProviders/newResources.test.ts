@@ -1,11 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { MarkdownString, TreeItem, TreeItemCollapsibleState } from "vscode";
-import * as contextValues from "../../src/context/values";
-import * as environmentModels from "../../src/models/environment";
-import * as notifications from "../../src/notifications";
-import * as ccloudConnections from "../../src/sidecar/connections/ccloud";
-import * as sidecarLocalConnections from "../../src/sidecar/connections/local";
 import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -23,12 +18,14 @@ import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organiz
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import * as contextValues from "../context/values";
 import {
   CCloudResourceLoader,
   DirectResourceLoader,
   LocalResourceLoader,
   ResourceLoader,
 } from "../loaders";
+import * as environmentModels from "../models/environment";
 import {
   CCloudEnvironment,
   DirectEnvironment,
@@ -39,7 +36,11 @@ import { FlinkComputePoolTreeItem } from "../models/flinkComputePool";
 import { KafkaClusterTreeItem } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
 import { SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import * as notifications from "../notifications";
+import * as ccloudConnections from "../sidecar/connections/ccloud";
+import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
+import * as collapsing from "./collapsing";
 import {
   AnyConnectionRow,
   CCloudConnectionRow,
@@ -49,6 +50,7 @@ import {
   NewResourceViewProvider,
   SingleEnvironmentConnectionRow,
 } from "./newResources";
+import * as viewProvidersSearch from "./search";
 
 describe("viewProviders/newResources.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -105,13 +107,19 @@ describe("viewProviders/newResources.ts", () => {
     });
 
     describe("ConnectionRow methods via DirectConnectionRow", () => {
+      let getEnvironmentsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
+      });
+
+      it("searchableText() returns the connection name after refresh completes", async () => {
+        getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
+        await directConnectionRow.refresh(false);
+        assert.strictEqual("test-direct-environment", directConnectionRow.searchableText());
+      });
+
       describe("refresh", () => {
-        let getEnvironmentsStub: sinon.SinonStub;
-
-        beforeEach(() => {
-          getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
-        });
-
         for (const deepRefresh of [true, false] as const) {
           it(`calls getEnvironments with deepRefresh=${deepRefresh}`, async () => {
             await directConnectionRow.refresh(deepRefresh);
@@ -146,21 +154,14 @@ describe("viewProviders/newResources.ts", () => {
             TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
           );
         });
-
-        it("searchableText doesn't vomit", async () => {
-          // Refine this test later on.
-          getEnvironmentsStub.resolves([TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR]);
-          await directConnectionRow.refresh();
-          assert.strictEqual(directConnectionRow.name, directConnectionRow.searchableText());
-        });
       });
     });
 
     describe("SingleEnvironmentConnectionRow methods via DirectConnectionRow", () => {
-      describe("getChildren", () => {
+      describe("get children", () => {
         it("returns kafka and schema registry children when both are set", () => {
           directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          const children = directConnectionRow.getChildren();
+          const children = directConnectionRow.children;
           assert.strictEqual(children.length, 2);
           assert.strictEqual(children[0].name, TEST_DIRECT_KAFKA_CLUSTER.name);
           assert.strictEqual(children[1].name, TEST_DIRECT_SCHEMA_REGISTRY.name);
@@ -168,20 +169,20 @@ describe("viewProviders/newResources.ts", () => {
 
         it("returns only kafka child when schema registry is not set", () => {
           directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA);
-          const children = directConnectionRow.getChildren();
+          const children = directConnectionRow.children;
           assert.strictEqual(children.length, 1);
           assert.deepStrictEqual(children[0], TEST_DIRECT_KAFKA_CLUSTER);
         });
 
         it("returns only schema registry child when kafka is not set", () => {
           directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_SR);
-          const children = directConnectionRow.getChildren();
+          const children = directConnectionRow.children;
           assert.strictEqual(children.length, 1);
           assert.deepStrictEqual(children[0], TEST_DIRECT_SCHEMA_REGISTRY);
         });
 
         it("returns empty array when no environment is set", () => {
-          const children = directConnectionRow.getChildren();
+          const children = directConnectionRow.children;
           assert.strictEqual(children.length, 0);
         });
       });
@@ -591,8 +592,14 @@ describe("viewProviders/newResources.ts", () => {
 
     it("getChildren", () => {
       ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT);
-      const children = ccloudConnectionRow.getChildren();
+      const children = ccloudConnectionRow.children;
       assert.deepEqual(children, [TEST_CCLOUD_ENVIRONMENT]);
+    });
+
+    it("searchableText() returns name", () => {
+      const expectedText = "Confluent Cloud";
+      assert.strictEqual(ccloudConnectionRow.searchableText(), expectedText);
+      assert.strictEqual(ccloudConnectionRow.name, expectedText);
     });
 
     describe("refresh", () => {
@@ -702,8 +709,7 @@ describe("viewProviders/newResources.ts", () => {
           ["directConnectionsChanged", "reconcileDirectConnections"],
           ["connectionStable", "refreshConnection"],
           ["connectionDisconnected", "refreshConnection"],
-          // No searchChangedEmitter wired in (yet), so BaseViewProvider::setEventListeners()
-          // doesn't yet contribute anything.
+          ["resourceSearchSet", "setSearch"],
         ];
 
       it("setEventListeners() + setCustomEventListeners() should return the expected number of listeners", () => {
@@ -991,18 +997,28 @@ describe("viewProviders/newResources.ts", () => {
         assert.deepStrictEqual(children, expectedChildren);
       });
 
-      it("Returns children of a specific connection row", () => {
+      it("filters children by search string", () => {
+        const searchString = "cloud";
+
+        const allChildren = assignDefaultChildren();
+        sandbox.stub(allChildren[0], "searchableText").returns(searchString);
+
+        provider.setSearch(searchString);
+
+        const children = provider.getChildren(undefined);
+        assert.strictEqual(children.length, 1); // Just the one that matches.
+      });
+
+      it("Returns children of a specific connection row via row's '.children' property.", () => {
         assignDefaultChildren();
-        const expectedLocalChildren = [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY];
 
         const localConnectionRow = new LocalConnectionRow();
-        const localRowChildrenStub = sandbox
-          .stub(localConnectionRow, "getChildren")
-          .returns(expectedLocalChildren);
+        const expectedLocalChildren = [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY];
+
+        sandbox.stub(localConnectionRow, "children").value(expectedLocalChildren);
 
         const childrenOfRow = provider.getChildren(localConnectionRow);
         assert.deepStrictEqual(childrenOfRow, expectedLocalChildren);
-        sinon.assert.calledOnce(localRowChildrenStub);
       });
 
       const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
@@ -1101,37 +1117,83 @@ describe("viewProviders/newResources.ts", () => {
     });
 
     describe("getTreeItem()", () => {
-      for (const testCase of [
-        {
-          label: "ConnectionRow",
-          element: new LocalConnectionRow(),
-          expectedType: TreeItem, // a ConnectionRow's getTreeItem() returns a bare TreeItem.
-        },
-        {
-          label: "CCloudEnvironent",
-          element: TEST_CCLOUD_ENVIRONMENT,
-          expectedType: EnvironmentTreeItem,
-        },
-        {
-          label: "LocalKafkaCluster",
-          element: TEST_LOCAL_KAFKA_CLUSTER,
-          expectedType: KafkaClusterTreeItem,
-        },
-        {
-          label: "CCloudSchemaRegistry",
-          element: TEST_CCLOUD_SCHEMA_REGISTRY,
-          expectedType: SchemaRegistryTreeItem,
-        },
-        {
-          label: "FlinkComputePool",
-          element: TEST_CCLOUD_FLINK_COMPUTE_POOL,
-          expectedType: FlinkComputePoolTreeItem,
-        },
-      ]) {
-        it(`returns TreeItem for ${testCase.label}`, () => {
-          const treeItem = provider.getTreeItem(testCase.element);
-          assert.ok(treeItem instanceof testCase.expectedType);
-        });
+      let updateCollapsibleStateFromSearchStub: sinon.SinonStub;
+
+      let itemMatchesSearchStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Stub the updateCollapsibleStateFromSearch method to avoid side effects.
+        updateCollapsibleStateFromSearchStub = sandbox.stub(
+          collapsing,
+          "updateCollapsibleStateFromSearch",
+        );
+
+        itemMatchesSearchStub = sandbox.stub(viewProvidersSearch, "itemMatchesSearch");
+      });
+      for (const shouldMatchSearch of [null, true, false]) {
+        for (const testCase of [
+          {
+            label: "ConnectionRow",
+            element: new LocalConnectionRow(),
+            expectedType: TreeItem, // a ConnectionRow's getTreeItem() returns a bare TreeItem.
+          },
+          {
+            label: "CCloudEnvironent",
+            element: TEST_CCLOUD_ENVIRONMENT,
+            expectedType: EnvironmentTreeItem,
+          },
+          {
+            label: "LocalKafkaCluster",
+            element: TEST_LOCAL_KAFKA_CLUSTER,
+            expectedType: KafkaClusterTreeItem,
+          },
+          {
+            label: "CCloudSchemaRegistry",
+            element: TEST_CCLOUD_SCHEMA_REGISTRY,
+            expectedType: SchemaRegistryTreeItem,
+          },
+          {
+            label: "FlinkComputePool",
+            element: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+            expectedType: FlinkComputePoolTreeItem,
+          },
+        ]) {
+          it(`returns TreeItem for ${testCase.label}, search case variant ${shouldMatchSearch}`, () => {
+            // shouldMatchSearch === null means no search string is set, so itemSearchString should be null.
+            // If true, then we want to test that the item matches the search string.
+            // If false, then we want to test that the item does not match the search string.
+
+            let itemSearchString: string | null =
+              shouldMatchSearch !== null ? "search-string" : null;
+
+            // set up the view provider as if should be search filtering.
+            provider.itemSearchString = itemSearchString;
+
+            if (shouldMatchSearch) {
+              // If true, then we want to test that the item matches the search string.
+              itemMatchesSearchStub.returns(true);
+            } else {
+              // If falsey, then we want to test that the item does not match the search string
+              // (if even called).
+              itemMatchesSearchStub.returns(false);
+            }
+
+            const treeItem = provider.getTreeItem(testCase.element);
+
+            assert.ok(treeItem instanceof testCase.expectedType);
+
+            // no search applied, should not have called search-annotating-related stubs.
+            if (shouldMatchSearch === null) {
+              sinon.assert.notCalled(itemMatchesSearchStub);
+              sinon.assert.notCalled(updateCollapsibleStateFromSearchStub);
+            } else {
+              sinon.assert.calledOnce(itemMatchesSearchStub);
+              if (shouldMatchSearch) {
+                sinon.assert.calledOnce(updateCollapsibleStateFromSearchStub);
+              }
+            }
+          });
+        }
       }
 
       it("throws when called with an unsupported element type", () => {
