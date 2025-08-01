@@ -9,7 +9,6 @@ import {
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
 } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
 import * as commandsModule from "./flinkComputePools";
@@ -93,17 +92,13 @@ describe("selectPoolFromResourcesViewCommand", () => {
     sandbox = sinon.createSandbox();
     executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-
-    // Stub the prototype to affect all instances of CCloudResourceLoader
-    sandbox.stub(CCloudResourceLoader.prototype, "getFlinkStatements").resolves([]);
-    sandbox.stub(CCloudResourceLoader.prototype, "getFlinkArtifacts").resolves([]);
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("should call both statements and artifacts view commands when Flink Artifacts is enabled", async () => {
+  it("should call both statements and artifacts pool selection commands when Flink Artifacts is enabled", async () => {
     stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, true);
 
     await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
@@ -112,7 +107,7 @@ describe("selectPoolFromResourcesViewCommand", () => {
     sinon.assert.calledWith(executeCommandStub, "confluent-flink-artifacts.focus");
   });
 
-  it("should only call statements view command when Flink Artifacts is disabled", async () => {
+  it("should only call statements pool selection command when Flink Artifacts is disabled", async () => {
     stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, false);
 
     await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
