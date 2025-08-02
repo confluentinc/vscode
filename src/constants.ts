@@ -80,5 +80,7 @@ export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name!;
 /** The port used for the local Kafka REST proxy. Used by the extension during container creation,
  * and by the sidecar for local Kafka discovery. */
 export const LOCAL_KAFKA_REST_PORT = 8082;
+/** The internal port used by the Medusa service inside the container. Used by the extension during container creation. */
+export const LOCAL_MEDUSA_INTERNAL_PORT = 8082;
 /** The name of the "local" {@link Environment} manageable by the extension via Docker. */
 export const LOCAL_ENVIRONMENT_NAME = "Local"; // not shown anywhere currently

@@ -50,6 +50,8 @@ export enum ContextValues {
   localKafkaClusterAvailable = "confluent.localKafkaClusterAvailable",
   /** A local connection has been made and a local Schema Registry is available for selecting in the Schemas view. */
   localSchemaRegistryAvailable = "confluent.localSchemaRegistryAvailable",
+  /** A local connection has been made and a local Medusa service is available. */
+  localMedusaAvailable = "confluent.localMedusaAvailable",
   /** A direct connection has been made and a Kafka cluster is available for selecting in the Topics view. */
   directKafkaClusterAvailable = "confluent.directKafkaClusterAvailable",
   /** A direct connection has been made and a Schema Registry is available for selecting in the Schemas view. */
