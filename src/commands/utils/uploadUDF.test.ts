@@ -33,8 +33,8 @@ describe("uploadUDF utils", () => {
       };
 
       const mockResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
-        api_version: "v1" as any,
-        kind: "PresignedUploadUrl" as any,
+        api_version: "v1" as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
+        kind: "PresignedUploadUrl" as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
         upload_url: "https://example.com/upload",
       };
 
@@ -129,7 +129,6 @@ describe("uploadUDF utils", () => {
         presignedUploadUrlArtifactV1PresignedUrl: sandbox.stub().resolves(mockResponse),
       }),
     } as any);
-
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
     await handlePresignedUrlRequest(mockRequest);
