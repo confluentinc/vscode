@@ -89,9 +89,9 @@ import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
-import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
 
 const logger = new Logger("extension");
 

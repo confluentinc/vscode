@@ -40,7 +40,6 @@ import * as notifications from "../notifications";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
-import * as collapsing from "./collapsing";
 import {
   AnyConnectionRow,
   CCloudConnectionRow,
@@ -50,7 +49,8 @@ import {
   NewResourceViewProvider,
   SingleEnvironmentConnectionRow,
 } from "./newResources";
-import * as viewProvidersSearch from "./search";
+import * as collapsing from "./utils/collapsing";
+import * as viewProvidersSearch from "./utils/search";
 
 describe("viewProviders/newResources.ts", () => {
   let sandbox: sinon.SinonSandbox;

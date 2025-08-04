@@ -20,7 +20,7 @@ import { EnvironmentId, IResourceBase, isCCloud, ISearchable } from "../models/r
 import { logUsage, UserEvent } from "../telemetry/events";
 import { titleCase } from "../utils";
 import { DisposableCollection } from "../utils/disposables";
-import { filterItems, itemMatchesSearch } from "./search";
+import { filterItems, itemMatchesSearch } from "./utils/search";
 
 /** View providers offering our common refresh() pattern. */
 export interface RefreshableTreeViewProvider {

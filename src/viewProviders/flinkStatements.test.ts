@@ -18,7 +18,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 describe("FlinkStatementsViewProvider", () => {
   let sandbox: sinon.SinonSandbox;
