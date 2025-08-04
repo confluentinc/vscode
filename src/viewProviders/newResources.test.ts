@@ -1169,14 +1169,10 @@ describe("viewProviders/newResources.ts", () => {
             // set up the view provider as if should be search filtering.
             provider.itemSearchString = itemSearchString;
 
-            if (shouldMatchSearch) {
-              // If true, then we want to test that the item matches the search string.
-              itemMatchesSearchStub.returns(true);
-            } else {
-              // If falsey, then we want to test that the item does not match the search string
-              // (if even called).
-              itemMatchesSearchStub.returns(false);
-            }
+            // If true, then we want to test that the item matches the search string.
+            // If falsey, then we want to test that the item does not match the search string
+            // (if even called).
+            itemMatchesSearchStub.returns(Boolean(shouldMatchSearch));
 
             const treeItem = provider.getTreeItem(testCase.element);
 
