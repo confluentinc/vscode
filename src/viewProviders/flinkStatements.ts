@@ -18,7 +18,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { ParentedBaseViewProvider } from "./base";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 /**
  * View controller for Flink statements. Can be assigned to track either

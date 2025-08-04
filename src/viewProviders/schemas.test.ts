@@ -15,7 +15,7 @@ import { ContextValues, getContextValue } from "../context/values";
 import { SchemaVersionChangeEvent, SubjectChangeEvent } from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 describe("SchemasViewProvider", () => {
   let provider: SchemasViewProvider;

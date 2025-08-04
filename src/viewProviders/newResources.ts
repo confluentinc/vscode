@@ -65,8 +65,8 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { BaseViewProvider } from "./base";
-import { updateCollapsibleStateFromSearch } from "./collapsing";
-import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 type ConcreteEnvironment = CCloudEnvironment | LocalEnvironment | DirectEnvironment;
 type ConcreteKafkaCluster = CCloudKafkaCluster | LocalKafkaCluster | DirectKafkaCluster;

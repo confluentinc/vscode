@@ -34,8 +34,8 @@ import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
 import { RefreshableTreeViewProvider } from "./base";
-import { updateCollapsibleStateFromSearch } from "./collapsing";
-import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
+import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 const logger = new Logger("viewProviders.topics");
 
