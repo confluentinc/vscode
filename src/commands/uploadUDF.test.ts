@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import type { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts";
 import * as errorsModule from "../errors";
 import * as sidecarModule from "../sidecar";
-import { getPresignedUploadUrl } from "./uploadUDF";
+import { getPresignedUploadUrl } from "./utils/uploadUDF";
 
 describe("getPresignedUploadUrl", () => {
   let sandbox: sinon.SinonSandbox;
