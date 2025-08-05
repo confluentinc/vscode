@@ -1,6 +1,7 @@
 import { graphql } from "gql.tada";
 import { commands } from "vscode";
 import { ConnectedState, Connection, ConnectionStatus, ConnectionType } from "../clients/sidecar";
+import { hasCCloudDomain } from "../directConnections/utils";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
@@ -96,6 +97,8 @@ export async function getDirectResources(
         withKafka: !!spec?.kafka_cluster,
         withSchemaRegistry: !!spec?.schema_registry,
         failedReason: "connection still in ATTEMPTING state",
+        hasCCloudDomain:
+          hasCCloudDomain(spec?.kafka_cluster) || hasCCloudDomain(spec?.schema_registry),
       });
     }
   }
