@@ -3,6 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { handlePresignedUrlRequest, promptForUDFUploadParams } from "./utils/uploadUDF";
 
 /**
@@ -11,6 +12,9 @@ import { handlePresignedUrlRequest, promptForUDFUploadParams } from "./utils/upl
  */
 
 export async function uploadUDFCommand(): Promise<void> {
+  if (!hasCCloudAuthSession()) {
+    return;
+  }
   try {
     const params = await promptForUDFUploadParams();
     if (!params) {

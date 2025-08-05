@@ -74,6 +74,7 @@ export async function handlePresignedUrlRequest(
 }
 export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
+
   if (!environment || !environment.id) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
