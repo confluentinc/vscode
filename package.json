@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-44",
+  "version": "1.6.0-46",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -276,7 +276,7 @@
         "command": "confluent.uploadUDF",
         "title": "Confluent: Upload UDF",
         "category": "Confluent: Flink Artifacts",
-        "when": "false"
+        "enablement": "false"
       },
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -1394,12 +1394,12 @@
       "view/title": [
         {
           "command": "confluent.resources.search",
-          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && !confluent.resourceSearchApplied",
+          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {
           "command": "confluent.resources.search.clear",
-          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && confluent.resourceSearchApplied",
+          "when": "view == confluent-resources && confluent.resourceSearchApplied",
           "group": "navigation@1"
         },
         {

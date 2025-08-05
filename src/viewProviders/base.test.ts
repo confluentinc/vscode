@@ -181,7 +181,7 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
 
       assert.strictEqual(provider.itemSearchString, null);
       assert.strictEqual(provider.searchMatches.size, 0, "searchMatches should be cleared");
-      assert.strictEqual(provider.totalItemCount, 3, "totalItemCount should not change");
+      assert.strictEqual(provider.totalItemCount, 0, "totalItemCount should be reset");
     });
 
     for (const arg of ["First", null]) {
