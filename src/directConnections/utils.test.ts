@@ -49,14 +49,9 @@ describe("directConnections/utils.ts", function () {
     });
 
     it("should return false when no config is provided", function () {
-      // no Kafka/SR configs by default
-      const spec = TEST_DIRECT_CONNECTION_FORM_SPEC;
+      const result = hasCCloudDomain(undefined);
 
-      const kafkaResult = hasCCloudDomain(spec.kafka_cluster);
-      assert.strictEqual(kafkaResult, false);
-
-      const schemaRegistryResult = hasCCloudDomain(spec.schema_registry);
-      assert.strictEqual(schemaRegistryResult, false);
+      assert.strictEqual(result, false);
     });
   });
 });
