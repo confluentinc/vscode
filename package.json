@@ -276,7 +276,7 @@
         "command": "confluent.uploadUDF",
         "title": "Confluent: Upload UDF",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "false"
+        "enablement": "isDevelopment"
       },
       {
         "command": "confluent.connections.ccloud.signIn",
