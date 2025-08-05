@@ -3,6 +3,7 @@ import {
   ConnectedState,
   Connection,
   ConnectionFromJSON,
+  ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionType,
   UserInfo,
@@ -91,11 +92,16 @@ export const TEST_DIRECT_CONNECTION: Connection = ConnectionFromJSON({
     id: TEST_DIRECT_CONNECTION_ID,
     name: "New Connection",
     type: ConnectionType.Direct,
-  },
+  } satisfies ConnectionSpec,
   status: {},
 } satisfies Connection);
 
-/** Fake spec augmented with `formConnectionType` for test purposes. */
+/**
+ * Fake spec augmented with `formConnectionType` for test purposes.
+ *
+ * **NOTE**: This does not include a {@link ConnectionSpec.kafka_cluster Kafka config} or a
+ * {@link ConnectionSpec.schema_registry Schema Registry config} by default.
+ */
 export const TEST_DIRECT_CONNECTION_FORM_SPEC: CustomConnectionSpec = {
   ...ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION.spec),
   id: TEST_DIRECT_CONNECTION_ID, // enforced ConnectionId type
