@@ -645,14 +645,33 @@ export class FlinkLanguageClientManager implements Disposable {
     return this.languageClient !== null && this.languageClient.isRunning() === true;
   }
 
-  public async dispose(): Promise<void> {
-    await this.cleanupLanguageClient();
-    this.disposables.forEach((d) => d.dispose());
+  /**
+   * Performs synchronous disposal operations to meet the Disposable interface
+   * requirement, and initiates asynchronous cleanup.
+   */
+  public dispose(): void {
+    // Start the async cleanup without waiting
+    this.asyncDispose().catch((error) => {
+      let msg = "Error during async language client cleanup";
+      logError(error, msg);
+    });
+
+    // Immediately perform synchronous disposal operations
+    this.disposables.forEach((disposable) => disposable.dispose());
     this.disposables = [];
     this.openFlinkSqlDocuments.clear();
-    FlinkLanguageClientManager.instance = null; // reset singleton instance to clear state
+    FlinkLanguageClientManager.instance = null;
     clearFlinkSQLLanguageServerOutputChannel();
-    logger.trace("FlinkLanguageClientManager disposed");
+    logger.trace("FlinkLanguageClientManager dispose initiated");
+  }
+
+  /**
+   * Performs asynchronous cleanup operations.
+   * Callers who need to wait for full cleanup can use this method directly.
+   */
+  public async asyncDispose(): Promise<void> {
+    await this.cleanupLanguageClient();
+    logger.trace("FlinkLanguageClientManager async cleanup completed");
   }
 }
 
