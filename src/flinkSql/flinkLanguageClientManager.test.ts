@@ -1,6 +1,9 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { LanguageClient } from "vscode-languageclient/node";
+import { AddressInfo, WebSocketServer } from "ws";
+import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
@@ -16,9 +19,10 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as ccloud from "../sidecar/connections/ccloud";
-import { UriMetadataKeys } from "../storage/constants";
+import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { FlinkLanguageClientManager } from "./flinkLanguageClientManager";
+import * as languageClient from "./languageClient";
 
 describe("FlinkLanguageClientManager", () => {
   let sandbox: sinon.SinonSandbox;
@@ -320,6 +324,202 @@ describe("FlinkLanguageClientManager", () => {
 
       assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 0);
       assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), false);
+    });
+  });
+
+  describe("initializeLanguageClient", () => {
+    let secretStorageStub: StubbedSecretStorage;
+
+    beforeEach(() => {
+      secretStorageStub = getStubbedSecretStorage(sandbox);
+    });
+
+    describe("unit tests", () => {
+      it("logs error and returns null if no sidecar auth token is found", async () => {
+        secretStorageStub.get.withArgs(SecretStorageKeys.SIDECAR_AUTH_TOKEN).resolves(undefined);
+        // @ts-expect-error calling private method for testing
+        const result = await flinkManager.initializeLanguageClient("ws://localhost:8080");
+
+        assert.strictEqual(result, null, "Expected result to be null when no auth token is found");
+      });
+    });
+
+    /** Tests involving a locally hosted websocket server simulating different sidecar behavior. */
+    describe("integration tests", function () {
+      // These tests may take longer to run due to server startup
+      this.timeout(5000);
+
+      let wss: WebSocketServer;
+      let serverUrl: string;
+      let handleWebSocketDisconnectStub: sinon.SinonSpy;
+      let mockAccessToken: string;
+
+      // stub out createLanguageClientFromWebsocket().
+      let createLanguageClientFromWebsocketStub: sinon.SinonStub;
+
+      // @ts-expect-error obviously wrong type, but we are stubbing this out as the return
+      // result from createLanguageClientFromWebsocketStub.
+      const fakeLanguageClient = { fake_language_client: true } as LanguageClient;
+
+      beforeEach(async () => {
+        // Set up WebSocket server
+        wss = new WebSocketServer({ port: 0 }); // Use port 0 for automatic port assignment
+
+        // Get the server url / actual port assigned by the OS
+        serverUrl = await new Promise<string>((resolve) => {
+          wss.on("listening", () => {
+            const address = wss.address() as AddressInfo;
+            const serverPort = address.port;
+            resolve(`ws://localhost:${serverPort}`);
+          });
+        });
+
+        // Set up secret storage stub with mock token
+        mockAccessToken = "mock-access-token";
+        secretStorageStub.get
+          .withArgs(SecretStorageKeys.SIDECAR_AUTH_TOKEN)
+          .resolves(mockAccessToken);
+
+        // Stub for on disconnect callback passed to initializeLanguageClient()
+        handleWebSocketDisconnectStub = sandbox.stub(
+          flinkManager as any,
+          "handleWebSocketDisconnect",
+        );
+
+        createLanguageClientFromWebsocketStub = sandbox
+          .stub(languageClient, "createLanguageClientFromWebsocket")
+          .resolves(fakeLanguageClient);
+      });
+
+      afterEach(async () => {
+        // Close the WebSocket server
+        await new Promise<void>((resolve) => {
+          if (wss) {
+            wss.close(() => resolve());
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      it("should successfully connect and create language client when server sends 'OK'", async () => {
+        // Set up connection handler to validate token and send "OK" message
+        wss.on("connection", (ws, req) => {
+          const authHeader = req.headers.authorization;
+          assert.strictEqual(
+            authHeader,
+            `Bearer ${mockAccessToken}`,
+            "WebSocket connection should include correct authorization header",
+          );
+
+          // After 100s, send the "OK" message to trigger language client creation as if
+          // sidecar had made the peer connection to ccloud.
+          // Then 1000s after that,close the connection normally.
+          setTimeout(() => {
+            ws.send("OK");
+
+            // After a brief delay, simulate normal close from the server side.
+            setTimeout(() => {
+              ws.close(1000, "Test completed successfully");
+            }, 1000);
+          }, 100);
+        });
+
+        // Wait for the client to be created. Should go through the 'OK' handshaking with
+        // the fake WebSocket server.
+        // @ts-expect-error calling private method for testing
+        const client = await flinkManager.initializeLanguageClient(serverUrl);
+
+        assert.deepEqual(client, fakeLanguageClient, "Expected client to be created successfully");
+        sinon.assert.calledOnce(createLanguageClientFromWebsocketStub);
+
+        // flinkManager.initializeLanguageClient() should have returned what
+        // createLanguageClientFromWebsocket() resolved to.
+        assert.deepEqual(client, fakeLanguageClient);
+
+        //  XXX James think about this Wed AM
+        // The disconnect callback should not have been called for a normal close
+        // since the handler wasn't wired in until real LanguageClient creation
+        // (which we've mocked out for these tests, but perhaps should have been
+        // wired in regardless).
+        sinon.assert.notCalled(handleWebSocketDisconnectStub);
+      });
+
+      it("should reject and log error if createLanguageClientFromWebsocket rejects", async () => {
+        // Set up connection handler to send "OK" message
+        wss.on("connection", (ws, req) => {
+          setTimeout(() => {
+            ws.send("OK");
+            setTimeout(() => {
+              ws.close(1000, "Test completed with createLanguageClientFromWebsocket rejection");
+            }, 100);
+          }, 100);
+        });
+
+        // Make createLanguageClientFromWebsocket reject
+        const rejectionError = new Error("Failed to create language client");
+        createLanguageClientFromWebsocketStub.rejects(rejectionError);
+
+        // @ts-expect-error calling private method for testing
+        const resultPromise = flinkManager.initializeLanguageClient(serverUrl);
+
+        await assert.rejects(
+          resultPromise,
+          (err: Error) => err === rejectionError,
+          "Expected rejection from createLanguageClientFromWebsocket",
+        );
+      });
+
+      it("should reject and log error if server does not send 'OK' as first message", async () => {
+        // Set up connection handler to send a non-OK message
+        wss.on("connection", (ws) => {
+          // Send the client a message that is not "OK"
+          setTimeout(() => {
+            ws.send("NOT_OK");
+            // Then close the connection
+            setTimeout(() => {
+              ws.close(1000, "Test completed with NOT_OK");
+            }, 100);
+          }, 100);
+        });
+
+        // @ts-expect-error calling private method for testing
+        const resultPromise = flinkManager.initializeLanguageClient(serverUrl);
+
+        // Should reject with an error
+        await assert.rejects(
+          resultPromise,
+          (err: Error) =>
+            err.message.includes("Unexpected message received from WebSocket instead of OK"),
+          "Expected rejection due to missing OK message",
+        );
+
+        sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
+        sinon.assert.notCalled(handleWebSocketDisconnectStub);
+      });
+
+      it("should reject and log error if server closes connection with non-1000 code before OK", async () => {
+        // Set up connection handler to close with non-1000 code before sending "OK"
+        wss.on("connection", (ws) => {
+          setTimeout(() => {
+            ws.close(4001, "Abnormal closure for test");
+          }, 100);
+        });
+
+        // @ts-expect-error calling private method for testing
+        const resultPromise = flinkManager.initializeLanguageClient(serverUrl);
+
+        await assert.rejects(
+          resultPromise,
+          (err: Error) =>
+            err.message.includes("WebSocket closed before initialization") ||
+            err.message.includes("Abnormal closure for test"),
+          "Expected rejection due to abnormal WebSocket closure",
+        );
+
+        sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
+        sinon.assert.notCalled(handleWebSocketDisconnectStub);
+      });
     });
   });
 });
