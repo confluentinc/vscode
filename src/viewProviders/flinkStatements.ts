@@ -17,7 +17,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { ParentedBaseViewProvider } from "./base";
+import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 /**

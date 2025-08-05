@@ -59,7 +59,7 @@ import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
-import { RefreshableTreeViewProvider } from "./base";
+import { RefreshableTreeViewProvider } from "./baseModels/base";
 import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
