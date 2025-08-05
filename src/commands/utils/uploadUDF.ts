@@ -85,14 +85,22 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
     return undefined;
   }
-  const fileFormat = await vscode.window.showQuickPick(["zip", "jar"], {
-    placeHolder: "Select the file format for the UDF",
-  });
 
-  if (!fileFormat) {
-    showWarningNotificationWithButtons("Upload UDF cancelled: File format is required.");
-    return undefined;
+  const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
+    openLabel: "Select",
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      "Flink Artifact Files": ["zip", "jar"],
+    },
+  });
+  if (!selectedFiles || selectedFiles.length === 0) {
+    // if the user cancels the file selection, silently exit
+    return;
   }
+  // extract the file extension (format) from the selected file
+  const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const region = await vscode.window.showInputBox({
     prompt: "Enter the region for the UDF upload",
