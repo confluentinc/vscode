@@ -26,8 +26,8 @@ import { EnvironmentId } from "../models/resource";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import * as telemetryEvents from "../telemetry/events";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { TopicViewProvider } from "./topics";
+import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 describe("TopicViewProvider", () => {
   let provider: TopicViewProvider;

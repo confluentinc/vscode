@@ -1,7 +1,11 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkArtifactsPoolChanged } from "../emitters";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import {
+  ENABLE_FLINK_ARTIFACTS,
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+} from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -34,10 +38,23 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
 
   // need to pass a new argument to prevent the views from being focused,
   // see https://github.com/confluentinc/vscode/issues/1967
-  await Promise.all([
-    selectPoolForArtifactsViewCommand(pool),
-    selectPoolForStatementsViewCommand(pool),
-  ]);
+
+  // Indirectly invoke selectPoolForStatementsViewCommand() and perhaps
+  // selectPoolForArtifactsViewCommand() to update the views with the selected pool.
+  // (The indirection is done for test mocking purposes -- cannot stub
+  // functions within the same module, but can always stub commands.executeCommand().)
+
+  const thenables: Thenable<void>[] = [
+    // Will invoke selectPoolForStatementsViewCommand().
+    commands.executeCommand("confluent.statements.flink-compute-pool.select", pool),
+  ];
+
+  // Only include artifacts view selection if Flink Artifacts feature is enabled
+  if (ENABLE_FLINK_ARTIFACTS.value) {
+    // Will invoke selectPoolForArtifactsViewCommand().
+    thenables.push(commands.executeCommand("confluent.artifacts.flink-compute-pool.select", pool));
+  }
+  await Promise.all(thenables);
 }
 
 /**
