@@ -18,11 +18,11 @@ export function hasCCloudDomain(
     return false;
   }
 
-  let isCCloud = false;
+  let hasCCloud = false;
   if (instanceOfKafkaClusterConfig(config)) {
-    isCCloud = config.bootstrap_servers.includes(CCLOUD_DOMAIN_SUBSTRING);
+    hasCCloud = config.bootstrap_servers.includes(CCLOUD_DOMAIN_SUBSTRING);
   } else if (instanceOfSchemaRegistryConfig(config)) {
-    isCCloud = config.uri.includes(CCLOUD_DOMAIN_SUBSTRING);
+    hasCCloud = config.uri.includes(CCLOUD_DOMAIN_SUBSTRING);
   }
-  return isCCloud;
+  return hasCCloud;
 }
