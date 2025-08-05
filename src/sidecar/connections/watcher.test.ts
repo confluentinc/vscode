@@ -746,4 +746,44 @@ describe("sidecar/connections/watcher.ts getConnectionSummaries()", () => {
     assert.strictEqual(summaries.length, 1);
     assert.strictEqual(summaries[0].failedReason, srFailedMessage);
   });
+
+  it("should include hasCCloudDomain for DIRECT connection summaries", async () => {
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: { state: ConnectedState.Success },
+        schema_registry: { state: ConnectedState.Success },
+      },
+    };
+
+    const summaries: ConnectionSummary[] = await getConnectionSummaries(
+      connection,
+      ConnectedState.Success,
+    );
+
+    assert.strictEqual(summaries.length, 2);
+    for (const summary of summaries) {
+      // We aren't setting Kafka/SR configs here, so this will always be false.
+      // We also don't need to test the hasCCloudDomain() values here, just that it exists;
+      // see `src/directConnections/utils.test.ts` for hasCCloudDomain() tests.
+      assert.strictEqual(summary.hasCCloudDomain, false);
+    }
+  });
+
+  it("should not include hasCCloudDomain for CCLOUD connection summaries", async () => {
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: { state: ConnectedState.Success },
+      },
+    };
+
+    const summaries: ConnectionSummary[] = await getConnectionSummaries(
+      connection,
+      ConnectedState.Success,
+    );
+
+    assert.strictEqual(summaries.length, 1);
+    assert.strictEqual(summaries[0].hasCCloudDomain, undefined);
+  });
 });

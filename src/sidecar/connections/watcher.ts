@@ -12,6 +12,7 @@ import {
 } from "../../clients/sidecar";
 import { getCredentialsType } from "../../directConnections/credentials";
 import { FormConnectionType, SupportedAuthTypes } from "../../directConnections/types";
+import { hasCCloudDomain } from "../../directConnections/utils";
 import { connectionStable, environmentChanged } from "../../emitters";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
@@ -136,6 +137,7 @@ export async function reportUsableState(connection: Connection) {
         // kafkaConfigSslEnabled or schemaRegistryConfigSslEnabled
         [`${configPrefix}SslEnabled`]: summary.sslEnabled,
         failedReason: summary.failedReason,
+        hasCCloudDomain: summary.hasCCloudDomain,
       });
     });
     successfulConnectionSummaries.forEach((summary) => {
@@ -152,6 +154,7 @@ export async function reportUsableState(connection: Connection) {
         // kafkaConfigSslEnabled or schemaRegistryConfigSslEnabled
         [`${configPrefix}SslEnabled`]: summary.sslEnabled,
         failedReason: summary.failedReason,
+        hasCCloudDomain: summary.hasCCloudDomain,
       });
     });
   }
@@ -176,6 +179,7 @@ export interface ConnectionSummary {
   authType?: SupportedAuthTypes | "Browser";
   sslEnabled?: boolean;
   failedReason?: string; // only for `FAILED` states
+  hasCCloudDomain?: boolean; // only for `DIRECT` connections
 }
 
 /**
@@ -209,6 +213,7 @@ export async function getConnectionSummaries(
             sslEnabled: kafkaConfig?.ssl?.enabled ?? false,
             connectedState: state,
             failedReason: kafkaClusterStatus.errors?.sign_in?.message,
+            hasCCloudDomain: hasCCloudDomain(kafkaConfig),
           });
         }
 
@@ -226,6 +231,7 @@ export async function getConnectionSummaries(
             sslEnabled: schemaRegistryConfig?.ssl?.enabled ?? false,
             connectedState: state,
             failedReason: schemaRegistryState.errors?.sign_in?.message,
+            hasCCloudDomain: hasCCloudDomain(schemaRegistryConfig),
           });
         }
       }
