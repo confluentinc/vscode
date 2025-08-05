@@ -10,6 +10,7 @@ import {
   showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
+import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 
 /**
@@ -72,12 +73,8 @@ export async function handlePresignedUrlRequest(
   }
 }
 export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
-  const environment = await vscode.window.showInputBox({
-    prompt: "Enter the Environment ID for the UDF upload",
-    ignoreFocusOut: true,
-    validateInput: (value) => (value ? undefined : "Environment ID is required"),
-  });
-  if (!environment) {
+  const environment = await flinkCcloudEnvironmentQuickPick();
+  if (!environment || !environment.id) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
   }
@@ -119,5 +116,5 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  return { environment, cloud, region, artifactName, fileFormat };
+  return { environment: environment.id, cloud, region, artifactName, fileFormat };
 }

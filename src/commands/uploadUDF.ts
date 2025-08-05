@@ -9,13 +9,7 @@ import { handlePresignedUrlRequest, promptForUDFUploadParams } from "./utils/upl
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
  */
-export interface UDFUploadParams {
-  environment: string;
-  cloud: string;
-  region: string;
-  artifactName: string;
-  fileFormat: string;
-}
+
 export async function uploadUDFCommand(): Promise<void> {
   try {
     const params = await promptForUDFUploadParams();
@@ -37,7 +31,7 @@ export async function uploadUDFCommand(): Promise<void> {
         title: "Requesting presigned upload URL...",
         cancellable: false,
       },
-      () => handlePresignedUrlRequest(request),
+      async () => await handlePresignedUrlRequest(request),
     );
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
