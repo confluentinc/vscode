@@ -33,7 +33,7 @@ import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/sche
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
-import { RefreshableTreeViewProvider } from "./base";
+import { RefreshableTreeViewProvider } from "./baseModels/base";
 import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 

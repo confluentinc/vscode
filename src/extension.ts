@@ -83,7 +83,7 @@ import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
-import { RefreshableTreeViewProvider } from "./viewProviders/base";
+import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { NewResourceViewProvider } from "./viewProviders/newResources";

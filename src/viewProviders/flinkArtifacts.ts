@@ -6,7 +6,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { ParentedBaseViewProvider } from "./base";
+import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 
 export class FlinkArtifactsViewProvider
   extends ParentedBaseViewProvider<CCloudFlinkComputePool, FlinkArtifact>
