@@ -30,7 +30,7 @@ export async function cloudProviderRegionQuickPick(
     }
     regionItems.push({
       label: region.display_name,
-      description: region.region_name,
+      description: region.http_endpoint,
       iconPath: new ThemeIcon("cloud"),
       value: {
         region: region.region_name,
