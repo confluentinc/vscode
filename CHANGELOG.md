@@ -4,6 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.5.1
+
+### Changed
+
+- Updated ide-sidecar version to v0.227.0 to support CCloud Flink Language Server connection
+  hardening.
+- Removed the "preview" suffix from the Flink Statements view, and the "preview" tag from the
+  `confluent.flink.enableConfluentCloudLanguageServer` setting.
+
 ## 1.5.0
 
 ### Added
