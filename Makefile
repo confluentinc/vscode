@@ -46,7 +46,7 @@ test-mocha: setup-test-env install-test-dependencies install-dependencies
 	else \
 			TEST_SUITE_ARG=""; \
 	fi; \
-	@if [ $$(uname -s) = "Linux" ]; then \
+	if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test $$TEST_SUITE_ARG; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			if pgrep -x "Dock" > /dev/null; then \
@@ -55,7 +55,7 @@ test-mocha: setup-test-env install-test-dependencies install-dependencies
 			else \
 					echo "No active GUI session. Aborting tests."; \
 					exit 1; \
-			fi \
+			fi; \
 	else \
 			npx gulp test $$TEST_SUITE_ARG; \
 	fi
