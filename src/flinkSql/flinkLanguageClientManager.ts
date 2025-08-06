@@ -34,7 +34,7 @@ import {
   getFlinkSQLLanguageServerOutputChannel,
 } from "./logging";
 
-const logger = new Logger("flinkSql.languageClient.ClientManager");
+const logger = new Logger("flinkSql.languageClient.FlinkLanguageClientManager");
 
 export interface FlinkSqlSettings {
   computePoolId: string | null;
@@ -584,11 +584,15 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
       ws.onmessage = (event: MessageEvent) => {
         if (event.data === SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE) {
-          logger.info("WebSocket connection established, creating language client");
+          logger.debug("WebSocket peer connection established, creating language client");
+
+          // Remove this message handler before proceeding to create the real language client.
+          // This pre-LSP work is done and this layer of code should not handle any more messages.
+          ws.onmessage = null;
+
+          // Construct the real LSP client atop the WebSocket connection.
           createLanguageClientFromWebsocket(ws, url, this.handleWebSocketDisconnect.bind(this))
             .then((client) => {
-              // Remove this message handler since we now have a language client that will handle the communication
-              ws.onmessage = null;
               // Resolve initializeLanguageClient promise with the client
               safeResolve(client);
             })
@@ -603,12 +607,14 @@ export class FlinkLanguageClientManager extends DisposableCollection {
               safeReject(e);
             });
         } else {
-          logger.warn(
+          // We just got an unexpected message before the "OK" from the server, which should not
+          // happen.
+          logger.error(
             `Unexpected message received from WebSocket: ${JSON.stringify(event, null, 2)}`,
           );
+
+          // If we haven't resolved yet, reject the promise.
           if (!promiseHandled) {
-            // If we haven't resolved yet, log the unexpected message and reject the promise.
-            // We just got an unexpected message before the "OK" from the server.
             safeReject(
               new Error(
                 `Unexpected message received from WebSocket instead of ${SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE}`,

@@ -8,14 +8,110 @@ import {
   Message,
   Trace,
 } from "vscode-languageclient/node";
-import { WebSocket } from "ws";
+import { CloseEvent, ErrorEvent, MessageEvent, WebSocket } from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
+import { SecretStorageKeys } from "../storage/constants";
+import { getSecretStorage } from "../storage/utils";
 import { getFlinkSQLLanguageServerOutputChannel } from "./logging";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient.Client");
 const FLINK_DIAGNOSTIC_COLLECTION_NAME = "confluent.flinkSql";
+
+/** Initialize the FlinkSQL language client and connect to the language server websocket.
+ * Creates a WebSocket (ws), then on ws.onopen makes the WebsocketTransport class for server, and then creates the Client.
+ * Provides middleware for completions and diagnostics in ClientOptions
+ * @param url The URL of the language server websocket
+ * @param onWebSocketDisconnect Callback for WebSocket disconnection events
+ * @returns A promise that resolves to the language client, or null if initialization failed
+ */
+export async function initializeLanguageClient(
+  url: string,
+  onWebSocketDisconnect: () => void,
+): Promise<LanguageClient | null> {
+  let accessToken: string | undefined = await getSecretStorage().get(
+    SecretStorageKeys.SIDECAR_AUTH_TOKEN,
+  );
+  if (!accessToken) {
+    let msg = "Failed to initialize Flink SQL language client: No access token found";
+    logError(new Error(msg), "No token found in secret storage");
+    return null;
+  }
+  return new Promise((resolve, reject) => {
+    logger.debug(`WebSocket connection in progress`);
+
+    const ws = new WebSocket(url, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+
+    /**
+     * Sidecar sends an "OK" message once its connection to CCloud Flink SQL language server is established.
+     * We wait for this message before proceeding to create the language client to avoid in-between state errors
+     * This message handler is short-lived and gets cleared out after we start the client
+     */
+    const SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE = "OK";
+
+    const waitingForPeerConnectionMessageHandler = (event: MessageEvent) => {
+      if (event.data === SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE) {
+        logger.debug("WebSocket connection established, creating language client");
+        createLanguageClientFromWebsocket(ws, url, onWebSocketDisconnect)
+          .then((client) => {
+            // Remove this message handler since we now have a language client that will handle the communication
+            ws.onmessage = null;
+            // Resolve initializeLanguageClient promise with the client
+            resolve(client);
+          })
+          .catch((e: Error) => {
+            let msg = "Error while creating FlinkSQL language server";
+            logError(e, msg, {
+              extra: {
+                wsUrl: url,
+              },
+            });
+            // Reject initializeLanguageClient promise with the error from createLanguageClientFromWebsocket.
+            reject(e as Error);
+          });
+      } else {
+        // If we receive a message that is not the expected "OK", log it as a warning
+        logger.warn(
+          `Unexpected message received from WebSocket: ${JSON.stringify(event, null, 2)}`,
+        );
+      }
+    };
+
+    ws.onmessage = waitingForPeerConnectionMessageHandler;
+
+    ws.onerror = (error: ErrorEvent) => {
+      let msg = "WebSocket error connecting to Flink SQL language server.";
+      logError(error, msg, {
+        extra: {
+          wsUrl: url,
+        },
+      });
+      reject(new Error(`${msg}: ${error.message}`));
+    };
+
+    ws.onclose = (closeEvent: CloseEvent) => {
+      logger.warn(
+        `WebSocket connection closed: Code ${closeEvent.code}, Reason: ${closeEvent.reason}`,
+      );
+      // 1000 is normal closure
+      if (closeEvent.code !== 1000) {
+        logError(
+          new Error(`WebSocket closed unexpectedly: ${closeEvent.reason}`),
+          "WebSocket onClose handler called",
+          {
+            extra: {
+              closeEvent,
+              wsUrl: url,
+            },
+          },
+        );
+      }
+    };
+  });
+}
 
 /**
  * Creates and initializes a LanguageClient from an established WebSocket connection
@@ -24,7 +120,7 @@ const FLINK_DIAGNOSTIC_COLLECTION_NAME = "confluent.flinkSql";
  * @param onWebSocketDisconnect Callback for WebSocket disconnection events
  * @returns A promise that resolves to the initialized language client
  */
-export async function createLanguageClientFromWebsocket(
+async function createLanguageClientFromWebsocket(
   ws: WebSocket,
   url: string,
   onWebSocketDisconnect: () => void,
