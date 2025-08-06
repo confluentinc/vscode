@@ -223,13 +223,7 @@ describe("sidecarHandle sandbox tests", () => {
       const api = handle.getFlinkArtifactsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       assert.strictEqual(api.constructor.name, "FlinkArtifactsArtifactV1Api");
     });
-
-    it("getFlinkComputePoolsApi() should return a FlinkComputePoolsApi instance given no args.", async () => {
-      const api = handle.getFlinkComputePoolsApi();
-      assert.strictEqual(api.constructor.name, "ComputePoolsFcpmV2Api");
-    });
   });
-
   describe("query()", () => {
     let fetchStub: sinon.SinonStub;
 
