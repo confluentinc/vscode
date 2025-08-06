@@ -30,10 +30,14 @@ semaphore:
       branch: main
       pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
       parameters:
+        - name: TARGET_BRANCH
+          required: true
+          default_value: "main"
+          description: The target branch to create the release from, must be a valid branch.
         - name: COMMIT_SHA
           required: true
           description: |
-            The commit SHA to create the release and tag from, must be a valid SHA/tag/branch.
+            The commit SHA to create the release and tag from.
     - name: scheduled-prerelease-multi-arch-packaging
       branch: main
       pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
