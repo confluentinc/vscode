@@ -41,8 +41,13 @@ remove-test-env:
 .PHONY: test-mocha
 test-mocha: setup-test-env install-test-dependencies install-dependencies
 	npx gulp build
+	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ]; then \
+			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
+	else \
+			TEST_SUITE_ARG=""; \
+	fi; \
 	@if [ $$(uname -s) = "Linux" ]; then \
-			xvfb-run -a npx gulp test; \
+			xvfb-run -a npx gulp test $$TEST_SUITE_ARG; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			if pgrep -x "Dock" > /dev/null; then \
 					echo "GUI session is active."; \
@@ -52,7 +57,7 @@ test-mocha: setup-test-env install-test-dependencies install-dependencies
 					exit 1; \
 			fi \
 	else \
-			npx gulp test; \
+			npx gulp test $$TEST_SUITE_ARG; \
 	fi
 
 # Run only webview (Playwright) tests (split for CI parallelization)
