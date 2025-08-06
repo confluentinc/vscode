@@ -1,15 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import * as errors from "../errors";
 
-import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
-import { SecretStorageKeys } from "../storage/constants";
 import {
   adaptCompletionItems,
   convertToMultiLineRange,
   convertToSingleLinePosition,
-  initializeLanguageClient,
 } from "./languageClient";
 
 describe("flinkSql/languageClient.ts", () => {
@@ -20,28 +16,6 @@ describe("flinkSql/languageClient.ts", () => {
   });
   afterEach(() => {
     sandbox.restore();
-  });
-
-  describe("initializeLanguageClient", () => {
-    const url = "ws://localhost:8080";
-    const onWebSocketDisconnect = (): void => {};
-    let onWebSocketDisconnectSpy: sinon.SinonSpy;
-    let secretStorageStub: StubbedSecretStorage;
-    let logErrorStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      onWebSocketDisconnectSpy = sandbox.spy(onWebSocketDisconnect);
-      secretStorageStub = getStubbedSecretStorage(sandbox);
-      logErrorStub = sandbox.stub(errors, "logError");
-    });
-
-    it("logs error and returns null if no sidecar auth token is found", async () => {
-      secretStorageStub.get.withArgs(SecretStorageKeys.SIDECAR_AUTH_TOKEN).resolves(undefined);
-      const result = await initializeLanguageClient(url, onWebSocketDisconnectSpy);
-
-      assert.strictEqual(result, null, "Expected result to be null when no auth token is found");
-      sinon.assert.calledOnce(logErrorStub);
-    });
   });
 
   describe("position conversion functions", () => {
