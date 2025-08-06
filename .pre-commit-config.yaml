@@ -18,4 +18,8 @@ repos:
       - id: gitleaks
         args:
           - --verbose
+  - repo: https://github.com/confluentinc/devprod-pre-commit
+    rev: v0.4.0
+    hooks:
+      - id: trufflehog
 exclude: ^.devcontainer/|^charts/|^mk-include/|^node_modules/
