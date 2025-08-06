@@ -19,11 +19,6 @@ blocks:
         - name: "Mocha: Unit Tests (VS Code)"
           commands:
             - make test-mocha TEST_SUITE="CCloud auth flow"
-          matrix:
-            - env_var: VSCODE_VERSION
-              values:
-                - stable
-                - insiders
       epilogue:
         always:
           commands:
