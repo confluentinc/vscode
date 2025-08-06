@@ -631,7 +631,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
             wsUrl: url,
           },
         });
-        reject(new Error(`${msg}: ${error.message}`));
+        safeReject(new Error(`${msg}: ${error.message}`));
       };
 
       ws.onclose = (closeEvent: CloseEvent) => {
@@ -639,7 +639,9 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           `WebSocket connection closed: Code ${closeEvent.code}, Reason: ${closeEvent.reason}`,
         );
 
-        // if happens before we receive the "OK" message, we should reject the promise
+        // if happens before we receive the "OK" message, we should reject the promise here.
+        // (If happens after, we'll let the language client handle it. Perhaps we
+        //  should have unwired this ws.onclose? Future experimentation will tell.)
         if (!promiseHandled) {
           logger.warn(
             `WebSocket connection closed before receiving "OK" message, rejecting initialization`,
