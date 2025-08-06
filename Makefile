@@ -41,7 +41,7 @@ remove-test-env:
 .PHONY: test-mocha
 test-mocha: setup-test-env install-test-dependencies install-dependencies
 	npx gulp build
-	if [ $$(uname -s) = "Linux" ]; then \
+	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			if pgrep -x "Dock" > /dev/null; then \
@@ -50,7 +50,7 @@ test-mocha: setup-test-env install-test-dependencies install-dependencies
 			else \
 					echo "No active GUI session. Aborting tests."; \
 					exit 1; \
-			fi; \
+			fi \
 	else \
 			npx gulp test; \
 	fi
