@@ -392,14 +392,9 @@ describe("FlinkLanguageClientManager", () => {
       });
 
       afterEach(async () => {
-        // Close the WebSocket server
-        await new Promise<void>((resolve) => {
-          if (wss) {
-            wss.close(() => resolve());
-          } else {
-            resolve();
-          }
-        });
+        if (wss) {
+          wss.close();
+        }
       });
 
       it("should successfully connect and create language client when server sends 'OK'", async () => {
