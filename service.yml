@@ -39,6 +39,11 @@ semaphore:
       pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
       scheduled: true
       at: "10 4 * * *" # Every day at 04:10 UTC
+    - name: scheduled-ccloud-auth-smoketests-prod
+      branch: main
+      pipeline_file: ".semaphore/ccloud-auth-smoketests.yml"
+      scheduled: true
+      at: "0 * * * *" # Every hour
 sonarqube:
   enable: false
 make:
