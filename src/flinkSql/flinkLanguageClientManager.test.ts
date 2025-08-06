@@ -437,11 +437,13 @@ describe("FlinkLanguageClientManager", () => {
         // createLanguageClientFromWebsocket() resolved to.
         assert.deepEqual(client, fakeLanguageClient);
 
-        //  XXX James think about this Wed AM
-        // The disconnect callback should not have been called for a normal close
+        // The disconnect callback will not have been called for a normal close
         // since the handler wasn't wired in until real LanguageClient creation
         // (which we've mocked out for these tests, but perhaps should have been
-        // wired in regardless).
+        // wired in regardless). Perhps this behavior needs reconsideration in
+        // future branches --- if we get a close before the 'OK' handling, when
+        // does the overall behavior cause FlinkLanguageClientManager to
+        // reconnect / try again?
         sinon.assert.notCalled(handleWebSocketDisconnectStub);
       });
 
