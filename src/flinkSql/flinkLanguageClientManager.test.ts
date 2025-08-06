@@ -447,7 +447,7 @@ describe("FlinkLanguageClientManager", () => {
 
       it("should reject and log error if createLanguageClientFromWebsocket rejects", async () => {
         // Set up connection handler to send "OK" message
-        wss.on("connection", (ws, req) => {
+        wss.on("connection", (ws) => {
           setTimeout(() => {
             ws.send("OK");
             setTimeout(() => {

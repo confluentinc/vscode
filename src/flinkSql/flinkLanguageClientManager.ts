@@ -558,12 +558,12 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
       /**
        * Sidecar sends an "OK" message once its connection to CCloud Flink SQL language server is established.
-       * We wait for this message before proceeding to create the language client to avoid in-between state errors
+       * We wait for this message *before* proceeding to create the language client to avoid in-between state errors
        * This message handler is short-lived and gets cleared out after we start the client
        */
       const SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE = "OK";
 
-      const waitingForPeerConnectionMessageHandler = (event: MessageEvent) => {
+      ws.onmessage = (event: MessageEvent) => {
         if (event.data === SIDECAR_PEER_CONNECTION_ESTABLISHED_MESSAGE) {
           logger.info("WebSocket connection established, creating language client");
           createLanguageClientFromWebsocket(ws, url, this.handleWebSocketDisconnect.bind(this))
@@ -582,7 +582,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
                 },
               });
               // Reject initializeLanguageClient promise with the error from createLanguageClientFromWebsocket.
-              reject(e as Error);
+              reject(e);
             });
         } else {
           logger.warn(
@@ -599,8 +599,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           }
         }
       };
-
-      ws.onmessage = waitingForPeerConnectionMessageHandler;
 
       ws.onerror = (error: ErrorEvent) => {
         let msg = "WebSocket error connecting to Flink SQL language server.";
