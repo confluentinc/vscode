@@ -15,6 +15,12 @@ blocks:
         commands:
           - checkout
           - make ci-bin-sem-cache-restore
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
       jobs:
         - name: "Mocha: CCloud Auth Smoketest (VS Code stable)"
           commands:
