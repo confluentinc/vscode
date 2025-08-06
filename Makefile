@@ -42,7 +42,7 @@ remove-test-env:
 test-mocha: setup-test-env install-test-dependencies install-dependencies
 	npx gulp build
 	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ]; then \
-			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
+			TEST_SUITE_ARG="-t \"$(TEST_SUITE)\""; \
 	else \
 			TEST_SUITE_ARG=""; \
 	fi; \
