@@ -1,0 +1,34 @@
+version: v1.0
+name: ccloud-auth-smoketests
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+blocks:
+  - name: "Linux x64: CCloud Auth Smoketest"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      prologue:
+        commands:
+          - checkout
+          - make ci-bin-sem-cache-restore
+      jobs:
+        - name: "Mocha: CCloud Auth Smoketest (VS Code stable)"
+          commands:
+            - make test-mocha TEST_SUITE="CCloud auth flow"
+      epilogue:
+        always:
+          commands:
+            - make remove-test-env
+            - make ci-bin-sem-cache-store
+            - make store-test-results-to-semaphore
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results to Semaphore
+        commands:
+          - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
