@@ -5,7 +5,7 @@ agent:
     type: s1-prod-ubuntu24-04-amd64-1
 
 blocks:
-  - name: "Linux x64 Stable: Tests"
+  - name: "Linux x64: CCloud Auth Smoketest"
     dependencies: []
     task:
       agent:
@@ -16,7 +16,7 @@ blocks:
           - checkout
           - make ci-bin-sem-cache-restore
       jobs:
-        - name: "Mocha: Unit Tests (VS Code)"
+        - name: "Mocha: CCloud Auth Smoketest (VS Code stable)"
           commands:
             - make test-mocha TEST_SUITE="CCloud auth flow"
       epilogue:
