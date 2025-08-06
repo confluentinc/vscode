@@ -6,7 +6,7 @@ agent:
 
 blocks:
   - name: "Linux x64 Stable: Tests"
-    dependencies: 
+    dependencies: []
     task:
       agent:
         machine:
