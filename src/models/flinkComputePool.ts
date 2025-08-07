@@ -1,6 +1,6 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -50,7 +50,7 @@ export class CCloudFlinkComputePool extends FlinkComputePool implements IEnvProv
   }
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/flink/pools/${this.id}/overview`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/flink/pools/${this.id}/overview`;
   }
 
   searchableText(): string {

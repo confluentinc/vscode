@@ -6,7 +6,7 @@ import {
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
 import { SqlV1StatementStatus } from "../clients/flinkSql";
-import { IconNames } from "../constants";
+import { CCLOUD_BASE_PATH, IconNames } from "../constants";
 import {
   FlinkStatement,
   FlinkStatementTreeItem,
@@ -38,8 +38,7 @@ describe("FlinkStatement", () => {
       computePoolId: "pool0",
     });
 
-    const expectedUrl =
-      "https://confluent.cloud/environments/env0/flink/statements/statement0/activity?utm_source=vscode-ext";
+    const expectedUrl = `https://${CCLOUD_BASE_PATH}/environments/env0/flink/statements/statement0/activity?utm_source=vscode-ext`;
     assert.strictEqual(statement.ccloudUrl, expectedUrl, "Expected ccloudUrl to be correct");
   });
 

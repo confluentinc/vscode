@@ -3,7 +3,7 @@ import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
-import { UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { createKafkaClusterTooltip, LocalKafkaCluster } from "./kafkaCluster";
 describe("createKafkaClusterTooltip()", () => {
   it("should return the correct tooltip for a Confluent Cloud Kafka cluster", () => {
@@ -38,14 +38,14 @@ describe("createKafkaClusterTooltip()", () => {
 describe("Test CCloudKafkaCluster properties", () => {
   it("ccloudUrl should return the correct URL for ccloud kafka cluster", () => {
     assert.strictEqual(
-      `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}?utm_source=${UTM_SOURCE_VSCODE}`,
+      `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_KAFKA_CLUSTER.ccloudUrl,
     );
   });
 
   it("ccloudApiKeysUrl should return the correct URL for ccloud kafka cluster", () => {
     assert.strictEqual(
-      `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
+      `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_KAFKA_CLUSTER.ccloudApiKeysUrl,
     );
   });
