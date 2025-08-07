@@ -4,7 +4,7 @@ import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sid
 import { normalize } from "path";
 import * as vscode from "vscode";
 import { env, Uri } from "vscode";
-import { EXTENSION_VERSION } from "../constants";
+import { CCLOUD_BASE_PATH, EXTENSION_VERSION } from "../constants";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { NotificationButtons, showErrorNotificationWithButtons } from "../notifications";
@@ -45,6 +45,7 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   sidecar_env["QUARKUS_LOG_FILE_PATH"] = getSidecarLogfilePath();
   sidecar_env["VSCODE_VERSION"] = vscode.version;
   sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
+  sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH"] = CCLOUD_BASE_PATH;
 
   // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
   // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
@@ -55,12 +56,6 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     sidecar_env["QUARKUS_HTTP_HOST"] = "0.0.0.0";
     sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_OAUTH_REDIRECT_URI"] =
       "http://[::1]:26636/gateway/v1/callback-vscode-docs";
-  }
-
-  if (process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH) {
-    // Override the default base path for Confluent Cloud connections.
-    sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH"] =
-      process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH;
   }
 
   return sidecar_env;
