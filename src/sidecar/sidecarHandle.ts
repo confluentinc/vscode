@@ -373,7 +373,7 @@ export class SidecarHandle {
     return new FlinkArtifactsArtifactV1Api(config);
   }
 
-  /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link RegionsFcpmV2Api} client instance */
+  /** Create and returns a (Regions API OpenAPI spec) {@link RegionsFcpmV2Api} client instance */
   public getRegionsFcpmV2Api(): RegionsFcpmV2Api {
     const config = new FlinkComputePoolsConfiguration({
       ...this.defaultClientConfigParams,

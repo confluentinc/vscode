@@ -340,9 +340,8 @@ async function loadStatementsForProviderRegion(
 }
 
 /**
- * Load artifacts for a single provider/region
- * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
- *  via executeInWorkerPool())
+ * Load available regions for the current provider.
+ * Returns a list of region data objects from the FCPM API.)
  */
 async function loadArtifactsForProviderRegion(
   handle: SidecarHandle,
@@ -445,7 +444,7 @@ export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]
         needMore = false;
       }
     } catch (error) {
-      logger.error(`Error loading Flink regions`, {
+      logger.error("Error loading Flink regions", {
         error,
       });
       // Re-throw to be handled by executeInWorkerPool
