@@ -285,6 +285,9 @@ describe("FlinkLanguageClientManager", () => {
       sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
 
       // Re-initialize the singleton so the constructor runs
+      // dispose of existing instance to ensure we start fresh
+      flinkManager.dispose();
+
       FlinkLanguageClientManager["instance"] = null;
       flinkManager = FlinkLanguageClientManager.getInstance();
 
@@ -516,6 +519,79 @@ describe("FlinkLanguageClientManager", () => {
 
         sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
         sinon.assert.notCalled(handleWebSocketDisconnectStub);
+      });
+    });
+  });
+
+  describe("Event handling", () => {
+    describe("uriMetadataSetEventHandler", () => {
+      let notifyConfigChangedStub: sinon.SinonStub;
+      let openTextDocumentStub: sinon.SinonStub;
+      let maybeStartLanguageClientStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        notifyConfigChangedStub = sandbox.stub(flinkManager as any, "notifyConfigChanged");
+        openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
+        maybeStartLanguageClientStub = sandbox
+          .stub(flinkManager as any, "maybeStartLanguageClient")
+          .resolves();
+      });
+
+      it("Should call notifyConfigChanged if current document matches metadata", async () => {
+        const uriString = "file:///fake/path/test.flinksql";
+        const fakeUri = vscode.Uri.parse(uriString);
+        flinkManager["lastDocUri"] = fakeUri;
+
+        // Make an equivalent Uri but separate instance.
+        const equivMetadataUri = vscode.Uri.parse(uriString);
+
+        await flinkManager.uriMetadataSetEventHandler(equivMetadataUri);
+
+        sinon.assert.calledOnce(notifyConfigChangedStub);
+      });
+
+      it("should call maybeStartLanguageClient if is new document and smells flinksql", async () => {
+        const documentUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+        flinkManager["lastDocUri"] = null; // No last document
+
+        // as if perhaps they just set the language id from plaintext to flinksql
+        openTextDocumentStub.resolves({
+          languageId: "flinksql",
+          uri: documentUri,
+        } as vscode.TextDocument);
+
+        await flinkManager.uriMetadataSetEventHandler(documentUri);
+
+        sinon.assert.calledOnce(maybeStartLanguageClientStub);
+        sinon.assert.calledWith(maybeStartLanguageClientStub, documentUri);
+      });
+
+      it("should not call maybeStartLanguageClient if new document is not flinksql-y", async () => {
+        const documentUri = vscode.Uri.parse("file:///fake/path/test.txt");
+        flinkManager["lastDocUri"] = null; // No last document
+
+        openTextDocumentStub.resolves({
+          languageId: "plaintext",
+          uri: documentUri,
+        } as vscode.TextDocument);
+
+        await flinkManager.uriMetadataSetEventHandler(documentUri);
+
+        sinon.assert.notCalled(maybeStartLanguageClientStub);
+      });
+
+      it("should not call maybeStartLanguageClient if new document is flinksql-y but not an appropriate uri", async () => {
+        const documentUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.txt`);
+        flinkManager["lastDocUri"] = null; // No last document
+
+        openTextDocumentStub.resolves({
+          languageId: "flinksql",
+          uri: documentUri,
+        } as vscode.TextDocument);
+
+        await flinkManager.uriMetadataSetEventHandler(documentUri);
+
+        sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
     });
   });

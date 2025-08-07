@@ -42,6 +42,8 @@ export interface FlinkSqlSettings {
   catalogName: string | null;
 }
 
+export const FLINKSQL_LANGUAGE_ID = "flinksql";
+
 /**
  * Singleton class that handles Flink configuration settings and language client management.
  * - Listens for CCloud authentication events, flinksql language file open, settings changes
@@ -80,12 +82,12 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       let flinkDoc: TextDocument | undefined = undefined;
       const activeEditor = window.activeTextEditor;
       // Check the active editor first
-      if (activeEditor && activeEditor.document.languageId === "flinksql") {
+      if (activeEditor && activeEditor.document.languageId === FLINKSQL_LANGUAGE_ID) {
         flinkDoc = activeEditor.document;
       } else {
         // If not active, scan all visible editors
         const flinkSqlEditor = window.visibleTextEditors.find(
-          (editor) => editor.document.languageId === "flinksql",
+          (editor) => editor.document.languageId === FLINKSQL_LANGUAGE_ID,
         );
         if (flinkSqlEditor) {
           flinkDoc = flinkSqlEditor.document;
@@ -103,7 +105,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
   private initializeDocumentTracking(): void {
     workspace.textDocuments.forEach((doc) => {
-      if (doc.languageId === "flinksql" && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+      if (doc.languageId === FLINKSQL_LANGUAGE_ID && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
         this.trackDocument(doc.uri);
       }
     });
@@ -156,27 +158,53 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
+  /**
+   * Should we consider language serving for this sort of document?
+   * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
+   */
+  isAppropriateDocument(document: TextDocument): boolean {
+    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isApproriateUriScheme(document.uri);
+  }
+
+  /** Should we consider language serving for this sort of document URI? */
+  isApproriateUriScheme(uri: Uri): boolean {
+    // Just not FLINKSTATEMENT_URI_SCHEME, the one used for readonly statements
+    // downloaded from the Flink Statements view. Be happy with, say,
+    // "file" or "untitled" schemes.
+    return uri.scheme !== FLINKSTATEMENT_URI_SCHEME;
+  }
+
+  /**
+   * Handle changes to the metadata we store for a URI (the annotations we keep re/the document)
+   * Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config.
+   *
+   * At time of writing, the only metadata we store for any URIs is for Flink SQL documents,
+   * (the compute pool id, catalog and database names), but in the future we may
+   * store more metadata for other URIs, so this event handler only acts if the URI /
+   * document is appropriate for Flink SQL language serving.
+   */
+  public async uriMetadataSetEventHandler(uri: Uri): Promise<void> {
+    logger.trace("uriMetadataSetEventHandler(): URI metadata set for", {
+      uri: uri.toString(),
+    });
+
+    if (this.lastDocUri && uri.toString() === this.lastDocUri.toString()) {
+      // Was an already determined appropriate document that we're definitely tracking.
+      // Queue up a config change notification to pick up new cluster etc. settings for the document.
+      void this.notifyConfigChanged();
+    } else if (this.isApproriateUriScheme(uri)) {
+      const doc = await workspace.openTextDocument(uri);
+      if (this.isAppropriateDocument(doc)) {
+        logger.trace("Flink SQL document metadata changed, possibly initializing language client");
+        await this.maybeStartLanguageClient(uri);
+      }
+    }
+  }
+
   private registerListeners(): void {
     // Listen for changes to metadata
     // Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config
-    this.disposables.push(
-      uriMetadataSet.event(async (uri: Uri) => {
-        logger.trace("URI metadata set for", {
-          uri: uri.toString(),
-        });
-        if (this.lastDocUri === uri) {
-          this.notifyConfigChanged();
-        } else if (uri && uri.scheme === "file") {
-          const doc = await workspace.openTextDocument(uri);
-          if (doc.languageId === "flinksql") {
-            logger.trace("Flink SQL file opened, initializing language client");
-            await this.maybeStartLanguageClient(uri);
-          } else {
-            logger.trace("Non-Flink SQL file opened, not initializing language client");
-          }
-        }
-      }),
-    );
+    this.disposables.push(uriMetadataSet.event(this.uriMetadataSetEventHandler.bind(this)));
 
     // Listen for active editor changes
     this.disposables.push(
@@ -185,11 +213,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           languageId: editor?.document.languageId,
           uri: editor?.document.uri.toString(),
         });
-        if (
-          editor &&
-          editor.document.languageId === "flinksql" &&
-          editor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME // ignore readonly statement files
-        ) {
+        if (editor && this.isAppropriateDocument(editor.document)) {
           logger.trace("Active editor changed to Flink SQL file, initializing language client");
           await this.maybeStartLanguageClient(editor.document.uri);
         }
@@ -200,7 +224,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     // but we still listen for open event since it's also called when the language id changes
     this.disposables.push(
       workspace.onDidOpenTextDocument(async (doc) => {
-        if (doc.languageId === "flinksql") {
+        if (doc.languageId === FLINKSQL_LANGUAGE_ID) {
           const activeEditor = window.activeTextEditor;
           // No-op if the document is not the active editor (let the active editor listener handle it)
           if (activeEditor && activeEditor.document.uri.toString() !== doc.uri.toString()) {
@@ -235,7 +259,10 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     // Track documents being opened
     this.disposables.push(
       workspace.onDidOpenTextDocument((doc) => {
-        if (doc.languageId === "flinksql" && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+        if (
+          doc.languageId === FLINKSQL_LANGUAGE_ID &&
+          doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME
+        ) {
           this.trackDocument(doc.uri);
         }
       }),
@@ -244,7 +271,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     // Track documents being closed
     this.disposables.push(
       workspace.onDidCloseTextDocument((doc) => {
-        if (doc.languageId === "flinksql") {
+        if (doc.languageId === FLINKSQL_LANGUAGE_ID) {
           this.untrackDocument(doc.uri);
         }
       }),
@@ -262,7 +289,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           const activeEditor = window.activeTextEditor;
           if (
             activeEditor &&
-            activeEditor.document.languageId === "flinksql" &&
+            activeEditor.document.languageId === FLINKSQL_LANGUAGE_ID &&
             activeEditor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME
           ) {
             // Prioritize the active document
