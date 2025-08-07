@@ -9,6 +9,10 @@ export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.
 /** The URI used when completing the CCloud authentication flow in the browser. */
 export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 
+/** The base path/domain to use when making CCloud requests. Defaults to `confluent.cloud`. */
+export const CCLOUD_BASE_PATH =
+  process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH || "confluent.cloud";
+
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
  * @see https://code.visualstudio.com/api/references/icons-in-labels
