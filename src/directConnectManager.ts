@@ -10,6 +10,7 @@ import {
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { getCredentialsType } from "./directConnections/credentials";
+import { hasCCloudDomain } from "./directConnections/utils";
 import { directConnectionsChanged, environmentChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { DirectResourceLoader, ResourceLoader } from "./loaders";
@@ -181,6 +182,7 @@ export class DirectConnectionManager extends DisposableCollection {
       withSchemaRegistry: !!spec.schema_registry,
       kafkaAuthType: getCredentialsType(spec.kafka_cluster?.credentials),
       schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
+      hasCCloudDomain: hasCCloudDomain(spec.kafka_cluster) || hasCCloudDomain(spec.schema_registry),
     });
 
     if (connection && !dryRun) {
@@ -227,6 +229,7 @@ export class DirectConnectionManager extends DisposableCollection {
       kafkaSslEnabled: spec.kafka_cluster?.ssl?.enabled,
       schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
       schemaRegistrySslEnabled: spec.schema_registry?.ssl?.enabled,
+      hasCCloudDomain: hasCCloudDomain(spec.kafka_cluster) || hasCCloudDomain(spec.schema_registry),
     });
   }
 
@@ -250,6 +253,9 @@ export class DirectConnectionManager extends DisposableCollection {
       kafkaSslEnabled: incomingSpec.kafka_cluster?.ssl?.enabled,
       schemaRegistryAuthType: getCredentialsType(incomingSpec.schema_registry?.credentials),
       schemaRegistrySslEnabled: incomingSpec.schema_registry?.ssl?.enabled,
+      hasCCloudDomain:
+        hasCCloudDomain(incomingSpec.kafka_cluster) ||
+        hasCCloudDomain(incomingSpec.schema_registry),
     });
 
     // update the connection in secret storage (via full replace of the connection by its id)
