@@ -9,7 +9,10 @@ export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.
 /** The URI used when completing the CCloud authentication flow in the browser. */
 export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 
-/** The base path/domain to use when making CCloud requests. Defaults to `confluent.cloud`. */
+/**
+ * The base path/domain to use when making CCloud requests. Configured by setting the
+ * `IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH` environment variable. (Defaults to `confluent.cloud`.)
+ */
 export const CCLOUD_BASE_PATH =
   process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH || "confluent.cloud";
 
