@@ -389,7 +389,7 @@ describe.only("Extension manifest tests", () => {
 
 Remember to remove `.only` after running the test and before making a PR!
 
-#### Clicktesting the VS Code extension against the sidcar
+#### Clicktesting the VS Code extension against the sidecar
 
 ##### Method 1:
 
@@ -402,9 +402,11 @@ the Semaphore UI. Then you can continue on from step 3 of Method 2.
 
 1. Checkout branch you want to test against in the sidecar.
 
-2. Make clean mvn-package-native-no-tests in the sidecar to get the native executable packaged up in the target directory.
+2. Run `make clean mvn-package-native-no-tests` in the sidecar to get the native executable packaged
+   up in the target directory.
 
-3. Toss that in vscode 's bin/ (click&drag).
+3. Copy the native executable from the sidecar's `target` directory to the `vscode/bin/` directory
+   (you can use click & drag).
 
 4. In vscode's .versions/ide-sidecar.txt make sure it matches that specified version in the native
    executable file name.
