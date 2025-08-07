@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.5.1
+
+### Changed
+
+- Updated ide-sidecar version to v0.227.0 to support CCloud Flink Language Server connection
+  hardening.
+
 ## 1.5.0
 
 ### Added
