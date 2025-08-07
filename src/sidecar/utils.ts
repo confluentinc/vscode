@@ -57,6 +57,12 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
       "http://[::1]:26636/gateway/v1/callback-vscode-docs";
   }
 
+  if (process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH) {
+    // Override the default base path for Confluent Cloud connections.
+    sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH"] =
+      process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH;
+  }
+
   return sidecar_env;
 }
 

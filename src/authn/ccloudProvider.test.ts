@@ -490,10 +490,12 @@ describe("CCloud auth flow", () => {
     await ccloud.deleteCCloudConnection();
   });
 
-  it("should successfully authenticate via CCloud with the sign_in_uri", async function () {
-    if (!process.env.E2E_USERNAME || !process.env.E2E_PASSWORD) {
+  it(`should successfully authenticate via CCloud with the sign_in_uri (${process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH || "confluent.cloud"})`, async function () {
+    const testUsername = getTestUserName();
+    const testPassword = getTestPassword();
+    if (!(testUsername && testPassword)) {
       // These env vars needed within testAuthFlow() for any of this to work.
-      console.log("Skipping test: E2E_USERNAME and/or E2E_PASSWORD not set in .env file");
+      console.log("Skipping test: E2E_USERNAME* and/or E2E_PASSWORD* not set in .env file");
       this.skip();
     }
 
@@ -511,9 +513,17 @@ describe("CCloud auth flow", () => {
     );
     assert.ok(connection);
     assert.notEqual(connection.status.ccloud?.state, ConnectedState.None);
-    assert.equal(connection.status.ccloud?.user?.username, process.env.E2E_USERNAME);
+    assert.equal(connection.status.ccloud?.user?.username, testUsername);
   });
 });
+
+function getTestUserName(): string | undefined {
+  return process.env.E2E_USERNAME || process.env.E2E_USERNAME_STAG;
+}
+
+function getTestPassword(): string | undefined {
+  return process.env.E2E_PASSWORD || process.env.E2E_PASSWORD_STAG;
+}
 
 async function testAuthFlow(signInUri: string) {
   const browser = await chromium.launch(); // set { headless: false } here for local debugging
@@ -521,9 +531,9 @@ async function testAuthFlow(signInUri: string) {
   const page = await context.newPage();
   await page.goto(signInUri);
 
-  await page.locator("[name=email]").fill(process.env.E2E_USERNAME!);
+  await page.locator("[name=email]").fill(getTestUserName()!);
   await page.locator("[type=submit]").click();
-  await page.locator("[name=password]").fill(process.env.E2E_PASSWORD!);
+  await page.locator("[name=password]").fill(getTestPassword()!);
   await page.locator("[type=submit]").click();
   await page.waitForURL(/127\.0\.0\.1/, { waitUntil: "networkidle" });
   await page.close();
