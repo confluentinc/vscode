@@ -338,10 +338,10 @@ async function loadStatementsForProviderRegion(
 
   return flinkStatements;
 }
-
 /**
- * Load available regions for the current provider.
- * Returns a list of region data objects from the FCPM API.)
+ * Load artifacts for a single provider/region
+ * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
+ *  via executeInWorkerPool())
  */
 async function loadArtifactsForProviderRegion(
   handle: SidecarHandle,
@@ -404,11 +404,7 @@ async function loadArtifactsForProviderRegion(
   return flinkArtifacts;
 }
 
-/**
- * Load artifacts for a single provider/region
- * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
- *  via executeInWorkerPool())
- */
+/** Load all available cloud provider/region combinations from the FCPM API.) */
 export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]> {
   const sidecarHandle = await getSidecar();
   const regionsClient = sidecarHandle.getRegionsFcpmV2Api();
@@ -428,7 +424,7 @@ export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]
       regionData.push(...Array.from(restResult.data));
       // If this wasn't the last page, update the request to get the next page.
       if (restResult.metadata.next) {
-        // `restResult.metadata.next` will be a full URL like "https://.../artifacts?page_token=UvmDWOB1iwfAIBPj6EYb"
+        // `restResult.metadata.next` will be a full URL like "https://.../regions?page_token=UvmDWOB1iwfAIBPj6EYb"
         // Must extract the page token from the URL.
         const nextUrl = new URL(restResult.metadata.next);
         const pageToken = nextUrl.searchParams.get("page_token");

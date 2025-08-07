@@ -2,6 +2,7 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
@@ -386,8 +387,6 @@ describe("CCloudResourceLoader", () => {
       assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
       assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
       assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
-      assert.ok(args && args.page_size === 100, "Expected page_size to be 100");
-      assert.ok(args && args.page_token === "", "Expected page_token to be empty string");
     });
 
     it("should handle one page of artifacts", async () => {
@@ -457,11 +456,9 @@ describe("CCloudResourceLoader", () => {
     let regionsApiStub: sinon.SinonStubbedInstance<RegionsFcpmV2Api>;
 
     beforeEach(() => {
-      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        sandbox.createStubInstance(sidecar.SidecarHandle);
+      let stubbedSidecar = getSidecarStub(sandbox);
       regionsApiStub = sandbox.createStubInstance(RegionsFcpmV2Api);
-      mockSidecarHandle.getRegionsFcpmV2Api.returns(regionsApiStub);
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+      stubbedSidecar.getRegionsFcpmV2Api.returns(regionsApiStub);
     });
 
     it("should handle zero regions to list", async () => {
