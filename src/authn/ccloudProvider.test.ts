@@ -10,7 +10,7 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectedState, Connection } from "../clients/sidecar";
-import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import * as errors from "../errors";
 import { getSidecar } from "../sidecar";
@@ -490,7 +490,7 @@ describe("CCloud auth flow", () => {
     await ccloud.deleteCCloudConnection();
   });
 
-  it(`should successfully authenticate via CCloud with the sign_in_uri (${process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH || "confluent.cloud"})`, async function () {
+  it(`should successfully authenticate via CCloud with the sign_in_uri (${CCLOUD_BASE_PATH})`, async function () {
     const testUsername = getTestUserName();
     const testPassword = getTestPassword();
     if (!(testUsername && testPassword)) {
