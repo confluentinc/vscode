@@ -4,8 +4,8 @@ import { print } from "graphql";
 // OpenAPI generated static client classes
 
 import {
-  ComputePoolsFcpmV2Api,
   Configuration as FlinkComputePoolsConfiguration,
+  RegionsFcpmV2Api,
 } from "../clients/flinkComputePool";
 
 import { createHash } from "crypto";
@@ -373,15 +373,16 @@ export class SidecarHandle {
     return new FlinkArtifactsArtifactV1Api(config);
   }
 
-  /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link ComputePoolsFcpmV2Api} client instance */
-  public getFlinkComputePoolsApi(): ComputePoolsFcpmV2Api {
+  /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link RegionsFcpmV2Api} client instance */
+  public getRegionsFcpmV2Api(): RegionsFcpmV2Api {
     const config = new FlinkComputePoolsConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
+        ...this.defaultClientConfigParams.headers,
         [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
       },
     });
-    return new ComputePoolsFcpmV2Api(config);
+    return new RegionsFcpmV2Api(config);
   }
 
   /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link PresignedUrlsArtifactV1Api} client instance */

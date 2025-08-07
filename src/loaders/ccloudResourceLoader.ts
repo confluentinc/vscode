@@ -1,6 +1,7 @@
 import { Disposable } from "vscode";
 
 import { ArtifactV1FlinkArtifactListDataInner } from "../clients/flinkArtifacts";
+import { FcpmV2RegionListDataInner, ListFcpmV2RegionsRequest } from "../clients/flinkComputePool";
 import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
@@ -402,6 +403,56 @@ async function loadArtifactsForProviderRegion(
   }
 
   return flinkArtifacts;
+}
+
+/**
+ * Load artifacts for a single provider/region
+ * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
+ *  via executeInWorkerPool())
+ */
+export async function loadProviderRegions(): Promise<FcpmV2RegionListDataInner[]> {
+  const sidecarHandle = await getSidecar();
+  const regionsClient = sidecarHandle.getRegionsFcpmV2Api();
+
+  const regionData: FcpmV2RegionListDataInner[] = [];
+
+  let request: ListFcpmV2RegionsRequest = {
+    page_size: 100,
+  };
+
+  let needMore: boolean = true;
+
+  while (needMore) {
+    try {
+      const restResult = await regionsClient.listFcpmV2Regions(request);
+
+      regionData.push(...Array.from(restResult.data));
+      // If this wasn't the last page, update the request to get the next page.
+      if (restResult.metadata.next) {
+        // `restResult.metadata.next` will be a full URL like "https://.../artifacts?page_token=UvmDWOB1iwfAIBPj6EYb"
+        // Must extract the page token from the URL.
+        const nextUrl = new URL(restResult.metadata.next);
+        const pageToken = nextUrl.searchParams.get("page_token");
+        if (!pageToken) {
+          // Should never happen, but just in case.
+          logger.error("No page token found in next URL.");
+          needMore = false;
+        } else {
+          request = { ...request, page_token: pageToken };
+        }
+      } else {
+        // No more pages to fetch.
+        needMore = false;
+      }
+    } catch (error) {
+      logger.error(`Error loading Flink regions`, {
+        error,
+      });
+      // Re-throw to be handled by executeInWorkerPool
+      throw error;
+    }
+  }
+  return regionData;
 }
 
 /**

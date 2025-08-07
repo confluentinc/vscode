@@ -224,12 +224,11 @@ describe("sidecarHandle sandbox tests", () => {
       assert.strictEqual(api.constructor.name, "FlinkArtifactsArtifactV1Api");
     });
 
-    it("getFlinkComputePoolsApi() should return a FlinkComputePoolsApi instance given no args.", async () => {
-      const api = handle.getFlinkComputePoolsApi();
-      assert.strictEqual(api.constructor.name, "ComputePoolsFcpmV2Api");
+    it("getRegionsFcpmV2Api() should return a RegionsFcpmV2Api instance", async () => {
+      const api = handle.getRegionsFcpmV2Api();
+      assert.strictEqual(api.constructor.name, "RegionsFcpmV2Api");
     });
   });
-
   describe("query()", () => {
     let fetchStub: sinon.SinonStub;
 
