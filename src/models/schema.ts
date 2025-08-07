@@ -1,7 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -91,7 +91,7 @@ export class Subject implements IResourceBase, ISearchable, ISchemaRegistryResou
 
   get ccloudUrl(): string {
     if (isCCloud(this)) {
-      return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.name}?utm_source=${UTM_SOURCE_VSCODE}`;
+      return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.name}?utm_source=${UTM_SOURCE_VSCODE}`;
     }
     return "";
   }
@@ -222,7 +222,7 @@ export class Schema extends Data implements IResourceBase {
 
   get ccloudUrl(): string {
     if (isCCloud(this)) {
-      return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.subject}?utm_source=${UTM_SOURCE_VSCODE}`;
+      return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.subject}?utm_source=${UTM_SOURCE_VSCODE}`;
     }
     return "";
   }

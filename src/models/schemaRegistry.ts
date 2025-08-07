@@ -2,6 +2,7 @@ import { Data, type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
+  CCLOUD_BASE_PATH,
   CCLOUD_CONNECTION_ID,
   IconNames,
   LOCAL_CONNECTION_ID,
@@ -50,11 +51,11 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   region!: Enforced<string>;
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
   get ccloudApiKeysUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 }
 

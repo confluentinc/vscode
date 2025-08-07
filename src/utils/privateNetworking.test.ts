@@ -7,6 +7,7 @@ import {
   TEST_CCLOUD_REGION,
   TEST_CCLOUD_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
+import { CCLOUD_BASE_PATH } from "../constants";
 import * as notifications from "../notifications";
 import {
   containsPrivateNetworkPattern,
@@ -23,25 +24,25 @@ describe("utils/privateNetworking.ts containsPrivateNetworkPattern()", () => {
   it("should return true for URLs containing private networking substrings", () => {
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}-ap123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.accesspoint.glb.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}-ap123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.accesspoint.glb.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.glb.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.glb.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.private.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.private.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.intranet.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.intranet.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
@@ -50,19 +51,19 @@ describe("utils/privateNetworking.ts containsPrivateNetworkPattern()", () => {
   it("should return true for URLs matching private networking regex patterns", () => {
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.dom123456.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.dom123456.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.doma1b2c3.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.doma1b2c3.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.domzzzzzz.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.domzzzzzz.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}`,
       ),
       true,
     );
@@ -78,14 +79,14 @@ describe("utils/privateNetworking.ts containsPrivateNetworkPattern()", () => {
     // intranet or private are fine, but not superprivateinternet
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.superprivateinternet.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.superprivateinternet.${CCLOUD_BASE_PATH}`,
       ),
       false,
     );
     // no capitalization
     assert.strictEqual(
       containsPrivateNetworkPattern(
-        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.domABABAB.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
+        `${TEST_CCLOUD_KAFKA_CLUSTER.id}.domABABAB.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}`,
       ),
       false,
     );
@@ -136,7 +137,7 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
     showPrivateNetworkingHelpNotification({
       resourceName: "test-cluster",
       resourceType: "Kafka cluster",
-      resourceUrl: "kafka.private.confluent.cloud",
+      resourceUrl: `kafka.private.${CCLOUD_BASE_PATH}`,
     });
 
     sinon.assert.calledOnce(showErrorStub);
@@ -144,7 +145,7 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
 
     assert.strictEqual(
       message,
-      'Unable to connect to Kafka cluster "test-cluster": kafka.private.confluent.cloud. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.',
+      `Unable to connect to Kafka cluster "test-cluster": kafka.private.${CCLOUD_BASE_PATH}. This appears to be a private networking configuration issue. Verify your network settings and VPN configuration to access private Confluent resources.`,
     );
   });
 
