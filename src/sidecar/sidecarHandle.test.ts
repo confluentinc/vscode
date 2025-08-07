@@ -223,6 +223,11 @@ describe("sidecarHandle sandbox tests", () => {
       const api = handle.getFlinkArtifactsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       assert.strictEqual(api.constructor.name, "FlinkArtifactsArtifactV1Api");
     });
+
+    it("getRegionsFcpmV2Api() should return a RegionsFcpmV2Api instance", async () => {
+      const api = handle.getRegionsFcpmV2Api();
+      assert.strictEqual(api.constructor.name, "RegionsFcpmV2Api");
+    });
   });
   describe("query()", () => {
     let fetchStub: sinon.SinonStub;
