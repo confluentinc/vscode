@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## Fixed
+- Improved stability of the Flink Language Server client (#2262).
+
 ## 1.5.0
 
 ### Added
