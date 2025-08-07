@@ -822,7 +822,10 @@
           "confluent.flink.enableConfluentCloudLanguageServer": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
+            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
+            "tags": [
+              "preview"
+            ]
           },
           "confluent.flink.computePoolId": {
             "type": "string",
@@ -994,7 +997,7 @@
         },
         {
           "id": "confluent-flink-statements",
-          "name": "Flink Statements",
+          "name": "Flink Statements (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)"
         },
