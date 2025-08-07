@@ -26,7 +26,7 @@ import {
   SqlV1StatementListKindEnum,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
 import { restFlinkStatementToModel } from "../models/flinkStatement";
@@ -124,7 +124,7 @@ describe("CCloudResourceLoader", () => {
           api_version: SqlV1StatementListDataInnerApiVersionEnum.SqlV1,
           kind: SqlV1StatementListDataInnerKindEnum.Statement,
           metadata: {
-            self: "https://api.confluent.cloud/v1/sql/statements",
+            self: `https://api.${CCLOUD_BASE_PATH}/v1/sql/statements`,
             created_at: new Date(),
             updated_at: new Date(),
             uid: "12345",
@@ -194,7 +194,7 @@ describe("CCloudResourceLoader", () => {
         api_version: SqlV1StatementListApiVersionEnum.SqlV1,
         kind: SqlV1StatementListKindEnum.StatementList,
         metadata: {
-          self: "https://api.confluent.cloud/v1/sql/statements",
+          self: `https://api.${CCLOUD_BASE_PATH}/v1/sql/statements`,
           next: maybeNextPageLink,
         },
         data: new Set(statements),
