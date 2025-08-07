@@ -16,6 +16,13 @@ All notable changes to this extension will be documented in this file.
   each connection, as well as allowing individual connection refreshing. Users may opt-out of the
   new implementation by unchecking the 'New Resources View' setting.
 
+## 1.5.1
+
+### Changed
+
+- Updated ide-sidecar version to v0.227.0 to support CCloud Flink Language Server connection
+  hardening.
+
 ## 1.5.0
 
 ### Added
