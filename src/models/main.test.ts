@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
-import { IconNames } from "../constants";
+import { CCLOUD_BASE_PATH, IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString, IdItem, KeyValuePairArray } from "./main";
 import { ISearchable } from "./resource";
 
@@ -109,7 +109,7 @@ describe("CustomMarkdownString tests", () => {
     });
 
     it("includes ccloudUrl if provided", () => {
-      const ccloudUrl = "https://ccloud.confluent.cloud/resource";
+      const ccloudUrl = `https://${CCLOUD_BASE_PATH}/resource`;
       const markdownString = CustomMarkdownString.resourceTooltip(
         "MyResource",
         undefined,
