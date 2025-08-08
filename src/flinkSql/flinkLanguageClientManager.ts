@@ -3,6 +3,7 @@ import {
   Disposable,
   LogOutputChannel,
   TextDocument,
+  TextDocumentChangeEvent,
   TextEditor,
   Uri,
   window,
@@ -174,6 +175,8 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     return uri.scheme !== FLINKSTATEMENT_URI_SCHEME;
   }
 
+  // Event Handlers.
+
   /**
    * Handle changes to the metadata we store for a URI (the annotations we keep re/the document)
    * Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config.
@@ -183,7 +186,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * store more metadata for other URIs, so this event handler only acts if the URI /
    * document is appropriate for Flink SQL language serving.
    */
-  public async uriMetadataSetEventHandler(uri: Uri): Promise<void> {
+  public async uriMetadataSetHandler(uri: Uri): Promise<void> {
     logger.trace("uriMetadataSetEventHandler(): URI metadata set for", {
       uri: uri.toString(),
     });
@@ -201,59 +204,90 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
+  /**
+   * Event handler for {@link window.onDidChangeActiveTextEditor}, which fires after
+   * when "active text editor" {@link window.activeTextEditor} changes, such as when
+   * the user switches to a different editor tab.
+   */
+  async onDidChangeActiveTextEditorHandler(editor: TextEditor | undefined): Promise<void> {
+    logger.trace("Active editor changed", {
+      languageId: editor?.document.languageId,
+      uri: editor?.document.uri.toString(),
+    });
+    if (editor && this.isAppropriateDocument(editor.document)) {
+      logger.trace("Active editor changed to Flink SQL file, initializing language client");
+      await this.maybeStartLanguageClient(editor.document.uri);
+    }
+  }
+
+  /**
+   * Event handler for {@link workspace.onDidOpenTextDocument}.
+   *
+   * Maybe start up the language client if the document is a Flink SQL file.
+   *
+   * From its documentation:
+   *   * An event that is emitted when a {@link TextDocument text document} is opened or when the language id
+   * of a text document {@link languages.setTextDocumentLanguage has been changed}.
+   *
+   *   * Note that The event is emitted before the {@link TextDocument document} is updated in the
+   * {@link window.activeTextEditor active text editor}
+   */
+  async onDidOpenTextDocumentHandler(doc: TextDocument): Promise<void> {
+    if (doc.languageId === FLINKSQL_LANGUAGE_ID) {
+      const activeEditor = window.activeTextEditor;
+      // No-op if the document is not the active editor (let the active editor listener handle it)
+      if (activeEditor && activeEditor.document.uri.toString() !== doc.uri.toString()) {
+        return;
+      } else {
+        logger.trace("Initializing language client for changed active Flink SQL document");
+        await this.maybeStartLanguageClient(doc.uri);
+      }
+    }
+  }
+
+  /**
+   * Event handler for {@link workspace.onDidChangeTextDocument}.
+   *
+   * This is called when the text in a document changes, such as when the user types in the editor.
+   * If the document is a Flink SQL file and has diagnostics, we clear them to avoid stale diagnostics, in
+   * that the remote language server does not clear them automatically.
+   */
+  onDidChangeTextDocumentHandler(event: TextDocumentChangeEvent): void {
+    if (!this.isAppropriateDocument(event.document)) {
+      return;
+    }
+
+    const uriString = event.document.uri.toString();
+
+    if (
+      this.openFlinkSqlDocuments.has(uriString) &&
+      this.languageClient?.diagnostics?.get(event.document.uri)
+    ) {
+      logger.trace(`Clearing diagnostics for document: ${uriString}`);
+      this.languageClient.diagnostics.set(event.document.uri, []);
+    } else {
+      logger.trace(`Not clearing diagnostics for document: ${uriString}`);
+    }
+  }
+
   private registerListeners(): void {
     // Listen for changes to metadata
     // Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config
-    this.disposables.push(uriMetadataSet.event(this.uriMetadataSetEventHandler.bind(this)));
+    this.disposables.push(uriMetadataSet.event(this.uriMetadataSetHandler.bind(this)));
 
     // Listen for active editor changes
     this.disposables.push(
-      window.onDidChangeActiveTextEditor(async (editor: TextEditor | undefined) => {
-        logger.trace("Active editor changed", {
-          languageId: editor?.document.languageId,
-          uri: editor?.document.uri.toString(),
-        });
-        if (editor && this.isAppropriateDocument(editor.document)) {
-          logger.trace("Active editor changed to Flink SQL file, initializing language client");
-          await this.maybeStartLanguageClient(editor.document.uri);
-        }
-      }),
+      window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditorHandler.bind(this)),
     );
 
     // Active editor should cover documents opening,
     // but we still listen for open event since it's also called when the language id changes
     this.disposables.push(
-      workspace.onDidOpenTextDocument(async (doc) => {
-        if (doc.languageId === FLINKSQL_LANGUAGE_ID) {
-          const activeEditor = window.activeTextEditor;
-          // No-op if the document is not the active editor (let the active editor listener handle it)
-          if (activeEditor && activeEditor.document.uri.toString() !== doc.uri.toString()) {
-            return;
-          } else {
-            logger.trace("Initializing language client for changed active Flink SQL document");
-            await this.maybeStartLanguageClient(doc.uri);
-          }
-        }
-      }),
+      workspace.onDidOpenTextDocument(this.onDidOpenTextDocumentHandler.bind(this)),
     );
 
-    // Clear outdated diagnostics on document change; CCloud Flink SQL Server won't publish cleared diagnostics
     this.disposables.push(
-      workspace.onDidChangeTextDocument((event) => {
-        const uriString = event.document.uri.toString();
-        if (uriString.startsWith("output:")) {
-          return;
-        }
-        if (
-          this.openFlinkSqlDocuments.has(uriString) &&
-          this.languageClient?.diagnostics?.get(event.document.uri)
-        ) {
-          logger.trace(`Clearing diagnostics for document: ${uriString}`);
-          this.languageClient.diagnostics.set(event.document.uri, []);
-        } else {
-          logger.trace(`Not clearing diagnostics for document: ${uriString}`);
-        }
-      }),
+      workspace.onDidChangeTextDocument(this.onDidChangeTextDocumentHandler.bind(this)),
     );
 
     // Track documents being opened
