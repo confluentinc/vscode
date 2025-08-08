@@ -1,3 +1,4 @@
+import { CCLOUD_BASE_PATH } from "../../../src/constants";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -16,7 +17,7 @@ export const TEST_CCLOUD_SCHEMA_REGISTRY: CCloudSchemaRegistry = CCloudSchemaReg
   id: "lsrc-abc123",
   provider: TEST_CCLOUD_PROVIDER.toUpperCase(),
   region: TEST_CCLOUD_REGION,
-  uri: `https://psrc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud`,
+  uri: `https://psrc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}`,
   environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
 });
 
