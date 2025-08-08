@@ -387,6 +387,8 @@ describe("CCloudResourceLoader", () => {
       assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
       assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
       assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
+      assert.strictEqual(args.page_size, 100);
+      assert.strictEqual(args.page_token, "");
     });
 
     it("should handle one page of artifacts", async () => {
