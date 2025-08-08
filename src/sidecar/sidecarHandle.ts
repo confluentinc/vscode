@@ -1,19 +1,18 @@
+import { createHash } from "crypto";
 import { type TadaDocumentNode } from "gql.tada";
 import { print } from "graphql";
 
 // OpenAPI generated static client classes
 
 import {
-  Configuration as FlinkComputePoolsConfiguration,
-  RegionsFcpmV2Api,
-} from "../clients/flinkComputePool";
-
-import { createHash } from "crypto";
-import {
   FlinkArtifactsArtifactV1Api,
   Configuration as FlinkArtifactsConfiguration,
   PresignedUrlsArtifactV1Api,
 } from "../clients/flinkArtifacts";
+import {
+  Configuration as FlinkComputePoolsConfiguration,
+  RegionsFcpmV2Api,
+} from "../clients/flinkComputePool";
 import {
   Configuration as FlinkSqlConfiguration,
   StatementResultsSqlV1Api,
@@ -27,6 +26,7 @@ import {
   TopicV3Api,
 } from "../clients/kafkaRest";
 import {
+  BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH,
   Configuration as ScaffoldingServiceConfiguration,
   TemplatesScaffoldV1Api,
 } from "../clients/scaffoldingService";
@@ -48,7 +48,8 @@ import {
   Configuration as SidecarRestConfiguration,
   VersionResourceApi,
 } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { showWarningNotificationWithButtons } from "../notifications";
@@ -170,6 +171,7 @@ export class SidecarHandle {
    */
   public getTemplatesApi(): TemplatesScaffoldV1Api {
     const config = new ScaffoldingServiceConfiguration({
+      basePath: SCAFFOLDING_SERVICE_BASE_PATH.replace("confluent.cloud", CCLOUD_BASE_PATH),
       headers: {
         // Intercept requests to set the Accept header to `application/*` to handle non-JSON responses
         // For example, the service returns a ZIP file for the `POST .../apply` endpoint
