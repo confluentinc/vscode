@@ -396,9 +396,8 @@ Remember to remove `.only` after running the test and before making a PR!
    [prerequisites](https://github.com/confluentinc/ide-sidecar?tab=readme-ov-file#prerequisites-for-development)
    are installed.)
 
-2. Within the cloned `ide-sidecar` directory (make sure to install the
-   [prerequisites](https://github.com/confluentinc/ide-sidecar?tab=readme-ov-file#prerequisites-for-development)),
-   and make sure to run the following `make` command to build the native executable.
+2. Within the cloned `ide-sidecar` directory and make sure to run the following `make` command to
+   build the native executable.
 
 ```bash
 make clean mvn-package-native-no-tests
@@ -433,15 +432,11 @@ directory to the `vscode/bin/` directory.
    `gulp apigen` (see more
    [here](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md#updating-graphql-definitions))
 
-7. Copy/paste that file to vscode's openapi file in
-   [`src/clients/sidecar-openapi-specs/sidecar.openapi.yaml`](../src/clients/sidecar-openapi-specs/sidecar.openapi.yaml)
-   or the schema in [`src/graphql/sidecar.graphql`](../src/graphql/sidecar.graphql).
-
-8. Run
+7. Run
    [`gulp ci`](https://github.com/confluentinc/vscode/blob/b342dbce8548b33f63e4f80e4a896f4c9c034664/Gulpfile.js#L35)
    to check for TypeScript and ESLint errors and confirm the extension builds successfully.
 
-9. Run the extension either via **Run > Start Debugging** (F5) or by packaging the .vsix and
+8. Run the extension either via **Run > Start Debugging** (F5) or by packaging the .vsix and
    installing with `gulp clicktest`.
 
 #### Functional tests
