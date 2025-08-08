@@ -4,7 +4,12 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { handlePresignedUrlRequest, promptForUDFUploadParams } from "./utils/uploadUDF";
+import { uploadFileToAzure } from "./utils/uploadToAzure";
+import {
+  handlePresignedUrlRequest,
+  promptForUDFUploadParams,
+  UDFUploadParams,
+} from "./utils/uploadUDF";
 
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
@@ -28,15 +33,12 @@ export async function uploadUDFCommand(): Promise<void> {
       id: params.artifactName,
       content_format: params.fileFormat,
     };
-
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: "Requesting presigned upload URL...",
-        cancellable: false,
-      },
-      async () => await handlePresignedUrlRequest(request),
-    );
+    const uploadUrl = await handlePresignedUrlRequest(request);
+    if (!uploadUrl) {
+      showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
+      return;
+    }
+    await handleUploadFile(params, uploadUrl);
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
     showErrorNotificationWithButtons(
@@ -44,7 +46,16 @@ export async function uploadUDFCommand(): Promise<void> {
     );
   }
 }
-
+async function handleUploadFile(params: UDFUploadParams, presignedURL: string): Promise<void> {
+  switch (params.cloud) {
+    // TODO: TS ENUMS FOR CLOUD PROVIDERS
+    case "Azure":
+      await uploadFileToAzure({
+        file: params.selectedFile,
+        presignedUrl: presignedURL,
+      });
+  }
+}
 /**
  * Registers the "confluent.uploadUDF" command with logging.
  * Note: this is a placeholder, the final command will register and upload the UDF in a clean sweep.

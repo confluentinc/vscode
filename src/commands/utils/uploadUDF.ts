@@ -7,7 +7,6 @@ import { logError } from "../../errors";
 import { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
   showErrorNotificationWithButtons,
-  showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
@@ -23,6 +22,7 @@ export interface UDFUploadParams {
   region: string;
   artifactName: string;
   fileFormat: string;
+  selectedFile: vscode.Uri;
 }
 
 /**
@@ -59,15 +59,10 @@ export async function getPresignedUploadUrl(
  */
 export async function handlePresignedUrlRequest(
   request: PresignedUploadUrlArtifactV1PresignedUrlRequest,
-): Promise<void> {
+): Promise<string | undefined> {
   const response = await getPresignedUploadUrl(request);
   if (response && response.upload_url) {
-    showInfoNotificationWithButtons("Presigned upload URL received.", {
-      "Copy URL": () => {
-        vscode.env.clipboard.writeText(response.upload_url!);
-        vscode.window.showInformationMessage("Upload URL copied to clipboard.");
-      },
-    });
+    return response.upload_url;
   } else {
     showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
   }
@@ -100,8 +95,9 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     // if the user cancels the file selection, silently exit
     return;
   }
+  const selectedFile = selectedFiles[0];
   // extract the file extension (format) from the selected file
-  const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
+  const fileFormat: string = selectedFile.fsPath.split(".").pop()!;
 
   const region = await vscode.window.showInputBox({
     prompt: "Enter the region for the UDF upload",
@@ -125,5 +121,5 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  return { environment: environment.id, cloud, region, artifactName, fileFormat };
+  return { environment: environment.id, cloud, region, artifactName, selectedFile, fileFormat };
 }
