@@ -25,6 +25,9 @@ blocks:
         - name: "Mocha: CCloud Auth Smoketest (VS Code stable)"
           commands:
             - make test-mocha TEST_SUITE="CCloud auth flow"
+          env_vars:
+            - name: IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH
+              value: $CCLOUD_BASE_PATH
       epilogue:
         always:
           commands:
