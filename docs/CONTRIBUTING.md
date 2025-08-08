@@ -396,8 +396,8 @@ Remember to remove `.only` after running the test and before making a PR!
    [prerequisites](https://github.com/confluentinc/ide-sidecar?tab=readme-ov-file#prerequisites-for-development)
    are installed.)
 
-2. Within the cloned `ide-sidecar` directory and make sure to run the following `make` command to
-   build the native executable.
+2. Within the cloned `ide-sidecar` directory, to run the following `make` command to build the
+   native executable.
 
 ```bash
 make clean mvn-package-native-no-tests
