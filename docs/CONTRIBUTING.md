@@ -1,19 +1,32 @@
 # Confluent For VS Code Contributing Guide 📖
 
-We are grateful for your interest in contributing to the Confluent VSCode extension. This guide includes information on: 
-- [getting started for the first time](#getting-started-for-the-first-time)
-- as well as a [quick reference](#reference-for-contributors) for contributors who need refreshers on the process
+We are grateful for your interest in contributing to the Confluent VSCode extension. This guide
+includes information on:
 
-The best developers are those who are familiar with the user experience of the software they create, so we ask that you review the project's [official documentation](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html) before diving in. We also recommend the VS Code extension development [documentation](https://code.visualstudio.com/api) to familiarize yourself with the VS Code extension development process.
+- [getting started for the first time](#getting-started-for-the-first-time)
+- as well as a [quick reference](#reference-for-contributors) for contributors who need refreshers
+  on the process
+
+The best developers are those who are familiar with the user experience of the software they create,
+so we ask that you review the project's
+[official documentation](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html)
+before diving in. We also recommend the VS Code extension development
+[documentation](https://code.visualstudio.com/api) to familiarize yourself with the VS Code
+extension development process.
 
 There are three main ways to contribute:
 
 1. **File an Issue**
-    - You can report bugs, request features, or ask questions by filing an issue in our [GitHub repository](https://github.com/confluentinc/vscode/issues).
+   - You can report bugs, request features, or ask questions by filing an issue in our
+     [GitHub repository](https://github.com/confluentinc/vscode/issues).
 2. **Submit or Review Pull Requests (PR)**
-    - In this case, we ask that you read the rest of this guide to understand the process and requirements for contributing code.
+   - In this case, we ask that you read the rest of this guide to understand the process and
+     requirements for contributing code.
 3. **Ask A Question Or Contribute to a Discussion**
-   - Use our [GitHub Discussions](https://github.com/confluentinc/vscode/discussions/) page to participate in the conversation around the extension's development. As always, we ask that you follow our [Code of Conduct](https://github.com/confluentinc/vscode/blob/cc4f9e149bca18776bd9dfdbcf241de332495dfc/CODE_OF_CONDUCT.md#L4).
+   - Use our [GitHub Discussions](https://github.com/confluentinc/vscode/discussions/) page to
+     participate in the conversation around the extension's development. As always, we ask that you
+     follow our
+     [Code of Conduct](https://github.com/confluentinc/vscode/blob/cc4f9e149bca18776bd9dfdbcf241de332495dfc/CODE_OF_CONDUCT.md#L4).
 
 ## Getting Started For the First Time
 
@@ -28,7 +41,11 @@ Quicklinks:
 
 ### Project Overview
 
-Our README contains a project overview, including a description of the extension's features and functionality. You can find it [on the main page of the repository](https://github.com/confluentinc/vscode?tab=readme-ov-file#confluent-for-vs-code). Again, you can also find the official documentation for the extension [on the Confluent website](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html).
+Our README contains a project overview, including a description of the extension's features and
+functionality. You can find it
+[on the main page of the repository](https://github.com/confluentinc/vscode?tab=readme-ov-file#confluent-for-vs-code).
+Again, you can also find the official documentation for the extension
+[on the Confluent website](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html).
 
 ### Codebase Overview
 
@@ -70,24 +87,32 @@ it. Currently unassigned issues can be found using
 All changes are made through [pull requests (PRs)](https://github.com/confluentinc/vscode/pulls).
 Every PR's [Semaphore CI/CD build](https://semaphoreci.com/) must pass. The Confluent team will
 review PRs and provide feedback; once the changes in the PR are acceptable, the team will merge the
-PR onto the appropriate branch. 
+PR onto the appropriate branch.
 
-> Note that while a [SonarQube report](https://docs.sonarsource.com/sonarqube-server/10.8/analyzing-source-code/ci-integration/overview/) of less than 80% code coverage will not block a PR, we do expect that the code coverage will improve with each PR. A member of the Confluent team will need to comment "/sem-approve" on the PR to approve external PRs for merging.
+> Note that while a
+> [SonarQube report](https://docs.sonarsource.com/sonarqube-server/10.8/analyzing-source-code/ci-integration/overview/)
+> of less than 80% code coverage will not block a PR, we do expect that the code coverage will
+> improve with each PR. A member of the Confluent team will need to comment "/sem-approve" on the PR
+> to approve external PRs for merging.
 
 To create a PR, you must create a fork of this repository and set up your machine with the tools
 needed for development. These steps are outlined below.
 
 #### Checklist:
 
-- [ ] Install the required tools and dependencies (see [Tools and Prerequisites](#tools-and-prerequisites)).
+- [ ] Install the required tools and dependencies (see
+      [Tools and Prerequisites](#tools-and-prerequisites)).
 - [ ] [Clone your fork](#clone-your-fork) of the repository.
-- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and format locally (see [Sync your repo with ours](#sync-your-repo-with-ours)).
+- [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and
+      format locally (see [Sync your repo with ours](#sync-your-repo-with-ours)).
 
 ### Tools and Prerequisites
 
-
 If you want to work with this project's codebase and maybe contribute to it, you will need to have
-some development tools. We use GitHub, so [consult the GitHub docs](https://docs.github.com/en/get-started/using-github/github-flow) if you are unfamiliar with the GitHub flow. This project uses the following software that you may already have:
+some development tools. We use GitHub, so
+[consult the GitHub docs](https://docs.github.com/en/get-started/using-github/github-flow) if you
+are unfamiliar with the GitHub flow. This project uses the following software that you may already
+have:
 
 - [Git](https://git-scm.com) — version 2.40.0 or later
 - [Node.js](https://nodejs.org/en) — version 18.12.0 or later. It usually installs
@@ -147,7 +172,6 @@ which you will upload your proposed changes and create pull requests. See the
 [GitHub documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo)
 for details.
 
-
 To work locally on the code, you need to pull the code onto your machine. At a terminal, go to the
 directory in which you want to place a local clone of this repository, and run the following
 commands to use SSH authentication (recommended):
@@ -170,7 +194,6 @@ that directory:
 ```
 
 ### Sync your repo with ours
-
 
 If you intend to propose changes to our upstream repository, you should next configure your local
 repository to be able to pull code from the project's _remote_ repository, called the _upstream_
@@ -295,7 +318,7 @@ To get a brief overview of existing automated tasks:
 
 ```bash
     gulp --tasks
-``` 
+```
 
 #### Cleaning
 
@@ -314,7 +337,7 @@ We use [Prettier](https://prettier.io/) for code formatting. To format the code,
 
 ```bash
     gulp format
-``` 
+```
 
 You can also install the
 [Prettier extension for VS Code](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
@@ -332,7 +355,7 @@ Unit tests usually located next to modules they cover. Look for `xxx.test.ts` pa
 
 ```bash
     gulp test
-``` 
+```
 
 You can also specify a pattern (either for `describe` label or `it` labels) to lookup to run
 specific tests:
@@ -340,7 +363,7 @@ specific tests:
 ```bash
     gulp test -t 'should register all commands'
     gulp test -t 'Extension manifest tests'
-``` 
+```
 
 Unit tests should test small, isolated classes and functionality, and should not be unnecessarily
 complex.
@@ -357,14 +380,64 @@ You can run individual unit tests by using the following syntax:
 Or by adding `.only` after a `describe` or `it` block in the test file:
 
 ```typescript
-describe.only('Extension manifest tests', () => {
-  it('should register all commands', () => {
+describe.only("Extension manifest tests", () => {
+  it("should register all commands", () => {
     // test code
   });
 });
 ```
 
-Remember to remove `.only` after running the test and before making a PR! 
+Remember to remove `.only` after running the test and before making a PR!
+
+#### Clicktesting the VS Code extension against the sidecar
+
+1. Clone the [`ide-sidecar` repo](https://github.com/confluentinc/ide-sidecar) and check out the
+   branch/commit you want to test against. (Also ensure any sidecar
+   [prerequisites](https://github.com/confluentinc/ide-sidecar?tab=readme-ov-file#prerequisites-for-development)
+   are installed.)
+
+2. Within the cloned `ide-sidecar` directory and make sure to run the following `make` command to
+   build the native executable.
+
+```bash
+make clean mvn-package-native-no-tests
+```
+
+3.  If your `$VS_CODE_EXTENSION_PROJECT` variable has the path to VS Code, (check with
+    `echo $VS_CODE_EXTENSION_PROJECT`), you can run the following command:
+
+```bash
+cp ./target/ide-sidecar-0.*.0-runner $VS_CODE_EXTENSION_PROJECT/bin
+```
+
+Otherwise, use your preferred method to copy the native executable from the sidecar's `target`
+directory to the `vscode/bin/` directory.
+
+4. Update
+   [`.versions/ide-sidecar.txt`](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt)
+   to ensure it matches the specified version in the native executable file name. (For example,
+   testing against `ide-sidecar-0.123.0-runner` requires `.versions/ide-sidecar.txt` to be
+   `v0.123.0`.)
+
+5. If there are any changes to the sidecar's OpenAPI spec, copy
+   [`ide-sidecar/src/generated/resources/openapi.yaml`](https://github.com/confluentinc/ide-sidecar/blob/main/src/generated/resources/openapi.yaml)
+   into
+   [`src/clients/sidecar-openapi-specs/sidecar.openapi.yaml`](../src/clients/sidecar-openapi-specs/sidecar.openapi.yaml)
+   and run `gulp apigen` (see more
+   [here](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md#updating-openapi-clients)).
+
+6. If there are any changes to the sidecar's GraphQL schema, copy
+   [`ide-sidecar/src/generated/resources/schema.graphql`](https://github.com/confluentinc/ide-sidecar/blob/main/src/generated/resources/schema.graphql)
+   into [`src/graphql/sidecar.graphql`](../src/graphql/sidecar.graphql) and similarly run
+   `gulp apigen` (see more
+   [here](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md#updating-graphql-definitions))
+
+7. Run
+   [`gulp ci`](https://github.com/confluentinc/vscode/blob/b342dbce8548b33f63e4f80e4a896f4c9c034664/Gulpfile.js#L35)
+   to check for TypeScript and ESLint errors and confirm the extension builds successfully.
+
+8. Run the extension either via **Run > Start Debugging** (F5) or by packaging the .vsix and
+   installing with `gulp clicktest`.
 
 #### Functional tests
 
@@ -407,7 +480,6 @@ To run functional tests:
     gulp functional
 ```
 
-
 ## Reference for Contributors
 
 ### Release Process
@@ -423,7 +495,8 @@ patch is ready, we'll release the first `v.MAJOR.MINOR.1` patch version (e.g., `
 to make additional fixes, we'll continue to do so against this same branch and release subsequent
 patch versions (e.g., `v1.2.2`, `v1.2.3`, etc).
 
-This project's releases will be published to [GitHub releases](https://github.com/confluentinc/vscode/releases).
+This project's releases will be published to
+[GitHub releases](https://github.com/confluentinc/vscode/releases).
 
 ### Updating OpenAPI clients
 
