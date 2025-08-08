@@ -526,10 +526,39 @@ describe("FlinkLanguageClientManager", () => {
   describe("Event handling", () => {
     let maybeStartLanguageClientStub: sinon.SinonStub;
 
+    const goodFlinkUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+    const goodFlinkDocument = {
+      languageId: FLINKSQL_LANGUAGE_ID,
+      uri: goodFlinkUri,
+    } as vscode.TextDocument;
+
+    const wrongLanguageIdDocument = {
+      languageId: "plaintext",
+      uri: goodFlinkUri,
+    } as vscode.TextDocument;
+
+    // Used to control what window.activeTextEditor will be in tests
+    let returnedActiveTextEditor: vscode.TextEditor | undefined = undefined;
+
+    // Likewise for window.visibleTextEditors, defaulting to an empty array
+    let returnedVisibleTextEditors: vscode.TextEditor[] = [];
+
     beforeEach(() => {
       maybeStartLanguageClientStub = sandbox
         .stub(flinkManager as any, "maybeStartLanguageClient")
         .resolves();
+
+      // Stub the activeTextEditor to control its value in tests. Defaults to undefined, 'no active editor'.
+      sandbox.stub(vscode.window, "activeTextEditor").get(() => returnedActiveTextEditor);
+
+      // Stub the visibleTextEditors to control its value in tests. Defaults to an empty array, 'no visible editors'.
+      sandbox.stub(vscode.window, "visibleTextEditors").get(() => returnedVisibleTextEditors);
+    });
+
+    afterEach(() => {
+      // Reset these outside-of-sandbox stub results.
+      returnedActiveTextEditor = undefined;
+      returnedVisibleTextEditors = [];
     });
 
     describe("uriMetadataSetHandler", () => {
@@ -649,11 +678,10 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     describe("onDidOpenTextDocumentHandler", () => {
-      let returnedActiveTextEditor: vscode.TextEditor | undefined = undefined;
+      let trackDocumentStub: sinon.SinonStub;
 
       beforeEach(() => {
-        // Stub the activeTextEditor to control its value in tests
-        sandbox.stub(vscode.window, "activeTextEditor").get(() => returnedActiveTextEditor);
+        trackDocumentStub = sandbox.stub(flinkManager, "trackDocument");
       });
 
       it("should not call when non-flinksql document is opened", async () => {
@@ -662,8 +690,11 @@ describe("FlinkLanguageClientManager", () => {
           languageId: "plaintext",
           uri: fakeUri,
         } as vscode.TextDocument;
+
         await flinkManager.onDidOpenTextDocumentHandler(fakeDocument);
+
         sinon.assert.notCalled(maybeStartLanguageClientStub);
+        sinon.assert.notCalled(trackDocumentStub);
       });
 
       it("Should not call maybeStartLanguageClient when flinksql document is opened but not the active editor", async () => {
@@ -684,6 +715,9 @@ describe("FlinkLanguageClientManager", () => {
         await flinkManager.onDidOpenTextDocumentHandler(fakeDocument);
 
         sinon.assert.notCalled(maybeStartLanguageClientStub);
+        // but should have tracked the document
+        sinon.assert.calledOnce(trackDocumentStub);
+        sinon.assert.calledWith(trackDocumentStub, fakeUri);
       });
 
       it(`should call maybeStartLanguageClient when a flinksql document is opened when no active editor at all`, async () => {
@@ -700,6 +734,10 @@ describe("FlinkLanguageClientManager", () => {
 
         sinon.assert.calledOnce(maybeStartLanguageClientStub);
         sinon.assert.calledWith(maybeStartLanguageClientStub, fakeUri);
+
+        // should have tracked the document
+        sinon.assert.calledOnce(trackDocumentStub);
+        sinon.assert.calledWith(trackDocumentStub, fakeUri);
       });
 
       it(`should call maybeStartLanguageClient when open document changes language id`, async () => {
@@ -835,6 +873,81 @@ describe("FlinkLanguageClientManager", () => {
         // Should have cleared diagnostics for this document
         sinon.assert.calledOnce(fakeDiagnosticsCollection.set);
         sinon.assert.calledWith(fakeDiagnosticsCollection.set, fakeUri, []);
+      });
+    });
+
+    describe("onDidCloseTextDocumentHandler", () => {
+      let untrackDocumentStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        untrackDocumentStub = sandbox.stub(flinkManager, "untrackDocument");
+      });
+
+      it("should untrack flinksql documents when closed", () => {
+        flinkManager.onDidCloseTextDocumentHandler(goodFlinkDocument);
+
+        sinon.assert.calledOnce(untrackDocumentStub);
+      });
+
+      it("should not untrack on non-flinksql document close", () => {
+        flinkManager.onDidCloseTextDocumentHandler(wrongLanguageIdDocument);
+
+        sinon.assert.notCalled(untrackDocumentStub);
+      });
+    });
+
+    describe("ccloudConnectedHandler", () => {
+      it("should call maybeStartLanguageClient when CCloud connection is established and active editor has FlinkSQL file", () => {
+        // make seem like the active editor is a flinksql document
+        returnedActiveTextEditor = {
+          document: goodFlinkDocument,
+        } as vscode.TextEditor;
+
+        // Simulate CCloud connection just went green event
+        flinkManager.ccloudConnectedHandler(true);
+
+        sinon.assert.calledOnce(maybeStartLanguageClientStub);
+        sinon.assert.calledWith(maybeStartLanguageClientStub, goodFlinkDocument.uri);
+      });
+
+      it("should call maybeStartLanguageClient when CCloud connection is established and visible flinksql (but not the active editor)", () => {
+        returnedActiveTextEditor = {
+          document: wrongLanguageIdDocument,
+        } as vscode.TextEditor;
+
+        returnedVisibleTextEditors = [
+          {
+            document: goodFlinkDocument,
+          } as vscode.TextEditor,
+        ];
+
+        // Simulate CCloud connection just went green event
+        flinkManager.ccloudConnectedHandler(true);
+
+        sinon.assert.calledOnce(maybeStartLanguageClientStub);
+        sinon.assert.calledWith(maybeStartLanguageClientStub, goodFlinkDocument.uri);
+      });
+
+      it("should not call maybeStartLanguageClient when CCloud connection is established but no active flinksql editor", () => {
+        // Simulate CCloud connection just went green event, but no flink sql documents open at all.
+        flinkManager.ccloudConnectedHandler(true);
+
+        sinon.assert.notCalled(maybeStartLanguageClientStub);
+      });
+
+      it("Should handle ccloud disconnection gracefully", () => {
+        const cleanupLanguageClientStub = sandbox.stub(
+          flinkManager as any,
+          "cleanupLanguageClient",
+        );
+        // Simulate CCloud connection just went red event
+        flinkManager.ccloudConnectedHandler(false);
+
+        // Should not call maybeStartLanguageClient on disconnection
+        sinon.assert.notCalled(maybeStartLanguageClientStub);
+
+        // but should clean up the language client
+        sinon.assert.calledOnce(cleanupLanguageClientStub);
       });
     });
   });
