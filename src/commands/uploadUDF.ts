@@ -2,14 +2,18 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { logError } from "../errors";
+import { Logger } from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { uploadFileToAzure } from "./utils/uploadToAzure";
 import {
   handlePresignedUrlRequest,
+  prepareUploadFileFromUri,
   promptForUDFUploadParams,
   UDFUploadParams,
 } from "./utils/uploadUDF";
+
+const logger = new Logger("commands/uploadUDF");
 
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
@@ -39,6 +43,9 @@ export async function uploadUDFCommand(): Promise<void> {
       return;
     }
     await handleUploadFile(params, uploadUrl);
+    vscode.window.showInformationMessage(
+      `UDF artifact "${params.artifactName}" uploaded successfully!`,
+    );
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
     showErrorNotificationWithButtons(
@@ -47,13 +54,47 @@ export async function uploadUDFCommand(): Promise<void> {
   }
 }
 async function handleUploadFile(params: UDFUploadParams, presignedURL: string): Promise<void> {
+  if (!params.selectedFile) {
+    showErrorNotificationWithButtons("No file selected for upload.");
+    return;
+  }
+  const { file, blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+
+  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    contentType,
+  });
+
   switch (params.cloud) {
     // TODO: TS ENUMS FOR CLOUD PROVIDERS
-    case "Azure":
-      await uploadFileToAzure({
-        file: params.selectedFile,
+    case "Azure": {
+      logger.debug("Uploading to Azure storage");
+      const response = await uploadFileToAzure({
+        file: file ?? blob,
         presignedUrl: presignedURL,
+        contentType,
       });
+
+      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+      });
+      break;
+    }
+    default:
+      logger.error(`Unsupported cloud provider: ${params.cloud}`, {
+        supportedProviders: ["Azure"],
+        requestedProvider: params.cloud,
+      });
+      showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);
   }
 }
 /**

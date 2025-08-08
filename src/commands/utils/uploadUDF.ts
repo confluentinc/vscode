@@ -1,3 +1,4 @@
+import path from "node:path";
 import * as vscode from "vscode";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
@@ -22,7 +23,43 @@ export interface UDFUploadParams {
   region: string;
   artifactName: string;
   fileFormat: string;
-  selectedFile: vscode.Uri;
+  selectedFile?: vscode.Uri; // Optional, used for file selection
+}
+
+/**
+ * Read a file from a VS Code Uri and prepare a Blob (and File if available).
+ */
+export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
+  blob: Blob;
+  file: File | undefined;
+  filename: string;
+  contentType: string;
+  size: number;
+}> {
+  const bytes: Uint8Array = await vscode.workspace.fs.readFile(uri);
+  const filename: string = path.basename(uri.fsPath);
+  const ext: string = path.extname(filename).toLowerCase();
+
+  const contentType: string =
+    ext === ".zip"
+      ? "application/zip"
+      : ext === ".jar"
+        ? "application/java-archive"
+        : "application/octet-stream";
+
+  const blob: Blob = new Blob([bytes], { type: contentType });
+
+  // File may not exist in the VS Code extension host (Node 18). Use Blob if not.
+  let file: File | undefined;
+  try {
+    if (typeof File !== "undefined") {
+      file = new File([blob], filename, { type: contentType, lastModified: Date.now() });
+    }
+  } catch {
+    // ignore – fall back to Blob
+  }
+
+  return { blob, file, filename, contentType, size: blob.size };
 }
 
 /**
@@ -67,6 +104,7 @@ export async function handlePresignedUrlRequest(
     showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
   }
 }
+
 export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
 
@@ -95,9 +133,12 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     // if the user cancels the file selection, silently exit
     return;
   }
-  const selectedFile = selectedFiles[0];
+
+  const selectedFile: vscode.Uri = selectedFiles[0];
+  // NOTE: Build the upload body later (right before fetch) via prepareUploadFileFromUri(selectedFile).
+
   // extract the file extension (format) from the selected file
-  const fileFormat: string = selectedFile.fsPath.split(".").pop()!;
+  const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const region = await vscode.window.showInputBox({
     prompt: "Enter the region for the UDF upload",
@@ -121,5 +162,39 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  return { environment: environment.id, cloud, region, artifactName, selectedFile, fileFormat };
+  return {
+    environment: environment.id,
+    cloud,
+    region,
+    artifactName,
+    fileFormat,
+    selectedFile: selectedFile ? selectedFile : undefined,
+  };
 }
+
+// export async function buildReqBody(
+//   presignedUrl: string,
+//   selectedFile: File | Blob,
+// ): Promise<File | Blob> {
+//   return selectedFile;
+// }
+// The following code was not used and referenced undefined variables.
+// If you need to upload a file to a presigned URL, use a function like this:
+
+/**
+ * Uploads a file or blob to the given presigned URL.
+ */
+// export async function uploadFileToPresignedUrl(
+//   presignedUrl: string,
+//   fileOrBlob: File | Blob,
+//   contentType: string,
+// ): Promise<Response> {
+//   return fetch(presignedUrl, {
+//     method: "PUT",
+//     body: fileOrBlob,
+//     headers: {
+//       "Content-Type": contentType,
+//       // Include any extra headers required by the presigned URL if provided.
+//     },
+//   });
+// }
