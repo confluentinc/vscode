@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { CCLOUD_BASE_PATH } from "../../src/constants";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,5 +15,8 @@ export function loadFixtureFromFile(relativePath: string): string {
   const fixturePath = path.join(__dirname, relativePath);
   const content = fs.readFileSync(fixturePath, "utf8");
   // also support any non-default CCLOUD_BASE_PATH values in the fixture files
-  return content.replace("confluent.cloud", CCLOUD_BASE_PATH);
+  return content.replace(
+    "confluent.cloud",
+    process.env.IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH || "confluent.cloud",
+  );
 }
