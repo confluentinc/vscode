@@ -2,6 +2,7 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
@@ -16,6 +17,15 @@ import {
   ArtifactV1FlinkArtifactListKindEnum,
   FlinkArtifactsArtifactV1Api,
 } from "../clients/flinkArtifacts";
+import {
+  FcpmV2RegionList,
+  FcpmV2RegionListApiVersionEnum,
+  FcpmV2RegionListDataInner,
+  FcpmV2RegionListDataInnerApiVersionEnum,
+  FcpmV2RegionListDataInnerKindEnum,
+  FcpmV2RegionListKindEnum,
+  RegionsFcpmV2Api,
+} from "../clients/flinkComputePool";
 import {
   GetSqlv1Statement200Response,
   SqlV1StatementList,
@@ -32,7 +42,7 @@ import * as graphqlOrgs from "../graphql/organizations";
 import { restFlinkStatementToModel } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
-import { CCloudResourceLoader } from "./ccloudResourceLoader";
+import { CCloudResourceLoader, loadProviderRegions } from "./ccloudResourceLoader";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -373,6 +383,7 @@ describe("CCloudResourceLoader", () => {
 
       // Test the args passed to the API.
       const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
+      assert.ok(args, "Expected args to be defined");
       assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
       assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
       assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
@@ -442,4 +453,114 @@ describe("CCloudResourceLoader", () => {
       };
     }
   }); // getFlinkArtifacts
+
+  describe("loadProviderRegions", () => {
+    let regionsApiStub: sinon.SinonStubbedInstance<RegionsFcpmV2Api>;
+
+    beforeEach(() => {
+      let stubbedSidecar = getSidecarStub(sandbox);
+      regionsApiStub = sandbox.createStubInstance(RegionsFcpmV2Api);
+      stubbedSidecar.getRegionsFcpmV2Api.returns(regionsApiStub);
+    });
+
+    it("should handle zero regions to list", async () => {
+      const mockResponse = makeFakeListRegionsResponse(false, 0);
+
+      regionsApiStub.listFcpmV2Regions.resolves(mockResponse);
+
+      const regions = await loadProviderRegions();
+      assert.strictEqual(regions.length, 0);
+      sinon.assert.calledOnce(regionsApiStub.listFcpmV2Regions);
+
+      const args = regionsApiStub.listFcpmV2Regions.getCall(0).args[0];
+      assert.strictEqual(args?.page_size, 100);
+      assert.strictEqual(args?.page_token, undefined);
+    });
+
+    it("should handle one page of regions", async () => {
+      // Simulate one page of regions.
+      const mockResponse = makeFakeListRegionsResponse(false, 3);
+
+      regionsApiStub.listFcpmV2Regions.resolves(mockResponse);
+      const regions = await loadProviderRegions();
+      assert.strictEqual(regions.length, 3);
+      sinon.assert.calledOnce(regionsApiStub.listFcpmV2Regions);
+    });
+
+    it("should handle multiple pages of regions", async () => {
+      const mockResponse = makeFakeListRegionsResponse(true, 3);
+      const mockResponse2 = makeFakeListRegionsResponse(false, 2);
+      regionsApiStub.listFcpmV2Regions
+        .onFirstCall()
+        .resolves(mockResponse)
+        .onSecondCall()
+        .resolves(mockResponse2);
+      const regions = await loadProviderRegions();
+      assert.strictEqual(regions.length, 5);
+      sinon.assert.calledTwice(regionsApiStub.listFcpmV2Regions);
+    });
+
+    it("should handle errors during region loading", async () => {
+      const error = new Error("API request failed");
+      regionsApiStub.listFcpmV2Regions.rejects(error);
+
+      await assert.rejects(async () => {
+        await loadProviderRegions();
+      }, error);
+    });
+
+    it("should handle pagination correctly", async () => {
+      const mockResponse1 = makeFakeListRegionsResponse(true, 2);
+      const mockResponse2 = makeFakeListRegionsResponse(false, 1);
+
+      regionsApiStub.listFcpmV2Regions
+        .onFirstCall()
+        .resolves(mockResponse1)
+        .onSecondCall()
+        .resolves(mockResponse2);
+
+      const regions = await loadProviderRegions();
+
+      assert.strictEqual(regions.length, 3);
+      sinon.assert.calledTwice(regionsApiStub.listFcpmV2Regions);
+
+      const secondCallArgs = regionsApiStub.listFcpmV2Regions.getCall(1).args[0];
+      assert.strictEqual(secondCallArgs?.page_token, "test-page-token");
+    });
+
+    function makeFakeListRegionsResponse(
+      hasNextPage: boolean,
+      regionCount: number,
+    ): FcpmV2RegionList {
+      const regions: FcpmV2RegionListDataInner[] = [];
+
+      for (let i = 0; i < regionCount; i++) {
+        regions.push({
+          api_version: FcpmV2RegionListDataInnerApiVersionEnum.FcpmV2,
+          kind: FcpmV2RegionListDataInnerKindEnum.Region,
+          id: `region-${i}`,
+          metadata: {
+            self: `https://api.confluent.cloud/fcpm/v2/regions/region-${i}`,
+          },
+          display_name: `Region ${i}`,
+          cloud: i % 2 === 0 ? "AWS" : "AZURE",
+          region_name: `region-${i}`,
+          http_endpoint: `https://flink.region-${i}.confluent.cloud`,
+        });
+      }
+
+      const maybeNextPageLink: string = hasNextPage
+        ? "https://api.confluent.cloud/fcpm/v2/regions?page_token=test-page-token"
+        : "";
+
+      return {
+        api_version: FcpmV2RegionListApiVersionEnum.FcpmV2,
+        kind: FcpmV2RegionListKindEnum.RegionList,
+        metadata: {
+          next: maybeNextPageLink,
+        },
+        data: new Set(regions),
+      };
+    }
+  });
 });
