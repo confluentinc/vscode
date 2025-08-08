@@ -8,6 +8,7 @@ import {
 } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
+  CCLOUD_BASE_PATH,
   CCLOUD_CONNECTION_ID,
   IconNames,
   LOCAL_CONNECTION_ID,
@@ -155,7 +156,7 @@ export class CCloudEnvironment extends Environment {
   }
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
   get children(): ISearchable[] {

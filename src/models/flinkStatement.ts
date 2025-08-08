@@ -8,7 +8,7 @@ import {
   SqlV1StatementStatus,
 } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString, IdItem } from "./main";
 import {
   ConnectionId,
@@ -130,7 +130,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   }
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.name}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/flink/statements/${this.name}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
   get isTerminal(): boolean {
