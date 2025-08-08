@@ -391,40 +391,58 @@ Remember to remove `.only` after running the test and before making a PR!
 
 #### Clicktesting the VS Code extension against the sidecar
 
-##### Method 1:
+1. Clone the [`ide-sidecar` repo](https://github.com/confluentinc/ide-sidecar) and check out the
+   branch/commit you want to test against. (Also ensure any sidecar
+   [prerequisites](https://github.com/confluentinc/ide-sidecar?tab=readme-ov-file#prerequisites-for-development)
+   are installed.)
 
-Manually trigger the "Multi Arch Builds and Upload to GitHub Releases" promotion in the sidecar
-repo. This can be found in the Semaphore UI under the "Promotions" tab. This won't actually upload
-to a release, but will make the native executables available at the workflow's artifacts/ part of
-the Semaphore UI. Then you can continue on from step 3 of Method 2.
+2. Within the cloned `ide-sidecar` directory (make sure to install the
+   [prerequisites](https://github.com/confluentinc/ide-sidecar?tab=readme-ov-file#prerequisites-for-development)),
+   and make sure to run the following `make` command to build the native executable.
 
-##### Method 2:
+```bash
+make clean mvn-package-native-no-tests
+```
 
-1. Checkout branch you want to test against in the sidecar.
+3.  If your `$VS_CODE_EXTENSION_PROJECT` variable has the path to VS Code, (check with
+    `echo $VS_CODE_EXTENSION_PROJECT`), you can run the following command:
 
-2. Run `make clean mvn-package-native-no-tests` in the sidecar to get the native executable packaged
-   up in the target directory.
+```bash
+cp ./target/ide-sidecar-0.*.0-runner $VS_CODE_EXTENSION_PROJECT/bin
+```
 
-3. Copy the native executable from the sidecar's `target` directory to the `vscode/bin/` directory
-   (you can use click & drag).
+Otherwise, use your preferred method to copy the native executable from the sidecar's `target`
+directory to the `vscode/bin/` directory.
 
-4. In vscode's .versions/ide-sidecar.txt make sure it matches that specified version in the native
-   executable file name.
+4. Update
+   [`.versions/ide-sidecar.txt`](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt)
+   to ensure it matches the specified version in the native executable file name. (For example,
+   testing against `ide-sidecar-0.123.0-runner` requires `.versions/ide-sidecar.txt` to be
+   `v0.123.0`.)
 
-5. If there's a change to the REST or graphql model, grab the openapi generated file from sidecar
-   (underlying logic change doesn't require this step)
+5. If there are any changes to the sidecar's OpenAPI spec, copy
+   [`ide-sidecar/src/generated/resources/openapi.yaml`](https://github.com/confluentinc/ide-sidecar/blob/main/src/generated/resources/openapi.yaml)
+   into
+   [`src/clients/sidecar-openapi-specs/sidecar.openapi.yaml`](../src/clients/sidecar-openapi-specs/sidecar.openapi.yaml)
+   and run `gulp apigen` (see more
+   [here](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md#updating-openapi-clients)).
 
-6. Copy/paste that file to vscode's openapi file in
+6. If there are any changes to the sidecar's GraphQL schema, copy
+   [`ide-sidecar/src/generated/resources/schema.graphql`](https://github.com/confluentinc/ide-sidecar/blob/main/src/generated/resources/schema.graphql)
+   into [`src/graphql/sidecar.graphql`](../src/graphql/sidecar.graphql) and similarly run
+   `gulp apigen` (see more
+   [here](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md#updating-graphql-definitions))
+
+7. Copy/paste that file to vscode's openapi file in
    [`src/clients/sidecar-openapi-specs/sidecar.openapi.yaml`](../src/clients/sidecar-openapi-specs/sidecar.openapi.yaml)
    or the schema in [`src/graphql/sidecar.graphql`](../src/graphql/sidecar.graphql).
 
-7. Run `gulp build`.
+8. Run
+   [`gulp ci`](https://github.com/confluentinc/vscode/blob/b342dbce8548b33f63e4f80e4a896f4c9c034664/Gulpfile.js#L35)
+   to check for TypeScript and ESLint errors and confirm the extension builds successfully.
 
-8. Confirm client code changes are expected.
-
-9. Check that ts is still linting properly: `gulp lint`.
-
-10. Start the extension dev host.
+9. Run the extension either via **Run > Start Debugging** (F5) or by packaging the .vsix and
+   installing with `gulp clicktest`.
 
 #### Functional tests
 
