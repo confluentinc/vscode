@@ -1,20 +1,5 @@
 #!/bin/bash
 
-maybe_install_fossa_cli(){
-  mkdir -p ${HOME}/bin
-  export BIN=${HOME}/bin
-  export PATH="${PATH}:${BIN}"
-  which fossa && return
-
-  curl https://confluent-packaging-tools-891377121322-us-west-2.s3.us-west-2.amazonaws.com/fossa_3.6.8_linux_amd64.zip -o fossa.zip
-  unzip fossa.zip
-  rm fossa.zip
-
-  mv fossa ${BIN}/fossa
-
-  command -v fossa || { echo "could not install fossa"; exit 1; }
-}
-
 retry() {
   command=$1
   num_retries=$2
@@ -32,7 +17,8 @@ retry() {
 }
 
 main() {
-  maybe_install_fossa_cli
+  # Verify that fossa CLI is available (should be natively installed in CI agent)
+  command -v fossa || { echo "fossa CLI not found in PATH"; exit 1; }
 
   # Full access token created using rsanjay@confluent.io's FOSSA account (on Jul 17, 2024).
   # Rotate every 80-180 days.
