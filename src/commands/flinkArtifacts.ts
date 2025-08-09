@@ -2,7 +2,7 @@ import { Disposable } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkArtifactUDFViewMode } from "../emitters";
-import { FlinkArtifactsViewProviderMode } from "../viewProviders/flinkArtifacts";
+import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 
 export async function setFlinkArtifactsViewModeCommand() {
   flinkArtifactUDFViewMode.fire(FlinkArtifactsViewProviderMode.Artifacts);
