@@ -235,10 +235,11 @@ describe("CCloudResourceLoader", () => {
         region: "us-west-2",
       });
 
+      // Same provider/region as computePool1, should be reduced away.
       const computePool4: CCloudFlinkComputePool = new CCloudFlinkComputePool({
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
         id: "lfcp-4m68g66",
-        provider: "aws",
+        provider: "aws", // same as computePool1
         region: "us-west-2", // same as computePool1
       });
 
