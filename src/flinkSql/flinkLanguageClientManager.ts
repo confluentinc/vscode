@@ -72,64 +72,54 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
   private constructor() {
     super();
+
     // make sure we dispose the output channel when the manager is disposed
     const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
     this.disposables.push(outputChannel);
+    // Register all our event listeners
+    this.disposables.push(...this.setEventListeners());
+
+    // Survey currently open documents and track the Flink SQL ones.
     this.initializeDocumentTracking();
-    this.registerListeners();
-
-    // This is true here when a user opens a new workspace after authenticating with CCloud in another one
-    if (hasCCloudAuthSession()) {
-      let flinkDoc: TextDocument | undefined = undefined;
-      const activeEditor = window.activeTextEditor;
-      // Check the active editor first
-      if (activeEditor && activeEditor.document.languageId === FLINKSQL_LANGUAGE_ID) {
-        flinkDoc = activeEditor.document;
-      } else {
-        // If not active, scan all visible editors
-        const flinkSqlEditor = window.visibleTextEditors.find(
-          (editor) => editor.document.languageId === FLINKSQL_LANGUAGE_ID,
-        );
-        if (flinkSqlEditor) {
-          flinkDoc = flinkSqlEditor.document;
-        }
-      }
-
-      if (flinkDoc) {
-        logger.trace(
-          "CCloud session already exists + found open Flink SQL document, initializing language client",
-        );
-        this.maybeStartLanguageClient(flinkDoc.uri);
-      }
-    }
   }
 
   private initializeDocumentTracking(): void {
     workspace.textDocuments.forEach((doc) => {
-      if (doc.languageId === FLINKSQL_LANGUAGE_ID && doc.uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
+      if (this.isAppropriateDocument(doc)) {
         this.trackDocument(doc.uri);
       }
     });
   }
 
+  /**
+   * Mark this document URI as one being tracked and needing
+   * language serving.
+   *
+   * When the set of documents is empty, we will schedule a cleanup
+   * of the language client after a delay.
+   *
+   * Callers must all ensure that the document is appropriate for Flink SQL language serving
+   * prior to calling.
+   *
+   * See {@link untrackDocument} and {@link cleanupLanguageClient} for the cleanup logic.
+   */
   public trackDocument(uri: Uri): void {
-    if (uri.scheme !== FLINKSTATEMENT_URI_SCHEME) {
-      const uriString = uri.toString();
-      logger.trace(`Tracking Flink SQL document: ${uriString}`);
-      this.openFlinkSqlDocuments.add(uriString);
-      // Cancel any pending cleanup when a new document is tracked
-      this.clearCleanupTimer();
-    }
+    const uriString = uri.toString();
+    logger.trace(`Tracking Flink SQL document: ${uriString}`);
+    this.openFlinkSqlDocuments.add(uriString);
+    // Cancel any pending cleanup when a new document is tracked
+    this.clearCleanupTimer();
   }
 
   public untrackDocument(uri: Uri): void {
     const uriString = uri.toString();
-    if (this.openFlinkSqlDocuments.has(uriString)) {
+    const removed = this.openFlinkSqlDocuments.delete(uriString);
+    if (removed) {
       logger.trace(`Untracking Flink SQL document: ${uriString}`);
-      this.openFlinkSqlDocuments.delete(uriString);
+
       // If no more documents are open, schedule client cleanup
       if (this.openFlinkSqlDocuments.size === 0 && this.isLanguageClientConnected()) {
-        logger.trace("Last Flink SQL document closed, scheduling language client cleanup");
+        logger.debug("Last Flink SQL document closed, scheduling language client cleanup");
         this.scheduleClientCleanup();
       }
     }
@@ -164,11 +154,11 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
    */
   isAppropriateDocument(document: TextDocument): boolean {
-    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isApproriateUriScheme(document.uri);
+    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isApproriateUri(document.uri);
   }
 
   /** Should we consider language serving for this sort of document URI? */
-  isApproriateUriScheme(uri: Uri): boolean {
+  isApproriateUri(uri: Uri): boolean {
     // Just not FLINKSTATEMENT_URI_SCHEME, the one used for readonly statements
     // downloaded from the Flink Statements view. Be happy with, say,
     // "file" or "untitled" schemes.
@@ -195,7 +185,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       // Was an already determined appropriate document that we're definitely tracking.
       // Queue up a config change notification to pick up new cluster etc. settings for the document.
       void this.notifyConfigChanged();
-    } else if (this.isApproriateUriScheme(uri)) {
+    } else if (this.isApproriateUri(uri)) {
       const doc = await workspace.openTextDocument(uri);
       if (this.isAppropriateDocument(doc)) {
         logger.trace("Flink SQL document metadata changed, possibly initializing language client");
@@ -204,17 +194,18 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
-  async ccloudConnectedHandler(connected: boolean): Promise<void> {
+  ccloudConnectedHandler(connected: boolean): void {
     if (connected) {
       logger.trace("CCloud connected, checking for open Flink SQL documents");
       let flinkSqlDocUri: Uri | undefined = this.findOpenFlinkSqlDocumentUri();
 
       if (flinkSqlDocUri) {
-        await this.maybeStartLanguageClient(flinkSqlDocUri);
+        logger.trace("Found one, initializing language client");
+        void this.maybeStartLanguageClient(flinkSqlDocUri);
       }
     } else {
-      logger.trace("CCloud auth session ended, stopping Flink language client");
-      await this.cleanupLanguageClient();
+      logger.info("CCloud auth session ended, stopping Flink language client");
+      void this.cleanupLanguageClient();
     }
   }
 
@@ -322,36 +313,18 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
-  private registerListeners(): void {
-    // Handlers for our codebase custom events  ...
+  private setEventListeners(): Disposable[] {
+    return [
+      // Handlers for our codebase custom events  ...
+      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
+      uriMetadataSet.event(this.uriMetadataSetHandler.bind(this)),
 
-    // Listen for CCloud authentication events
-    this.disposables.push(ccloudConnected.event(this.ccloudConnectedHandler.bind(this)));
-
-    // Listen for changes to metadata
-    // Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config
-    this.disposables.push(uriMetadataSet.event(this.uriMetadataSetHandler.bind(this)));
-
-    // Handlers for VSCode builtin events ...
-
-    // Active editor should cover documents opening,
-    // but we still listen for open event since it's also called when the language id changes
-    this.disposables.push(
+      // Handlers for VSCode builtin events ...
       workspace.onDidOpenTextDocument(this.onDidOpenTextDocumentHandler.bind(this)),
-    );
-
-    this.disposables.push(
       workspace.onDidCloseTextDocument(this.onDidCloseTextDocumentHandler.bind(this)),
-    );
-
-    this.disposables.push(
       workspace.onDidChangeTextDocument(this.onDidChangeTextDocumentHandler.bind(this)),
-    );
-
-    // Listen for active editor changes
-    this.disposables.push(
       window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditorHandler.bind(this)),
-    );
+    ];
   }
 
   /** Get the document OR global/workspace settings for Flink, if any */
@@ -870,6 +843,8 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
     // Immediately perform synchronous disposal operations
     super.dispose();
+
+    this.clearCleanupTimer();
     this.openFlinkSqlDocuments.clear();
     FlinkLanguageClientManager.instance = null;
     clearFlinkSQLLanguageServerOutputChannel();

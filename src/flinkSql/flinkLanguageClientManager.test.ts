@@ -3,6 +3,12 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { AddressInfo, WebSocketServer } from "ws";
+import {
+  eventEmitterStubs,
+  StubbedEventEmitters,
+  vscodeEventRegistrationStubs,
+  VscodeEventRegistrationStubs,
+} from "../../tests/stubs/emitters";
 import { getStubbedSecretStorage, StubbedSecretStorage } from "../../tests/stubs/extensionStorage";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
@@ -185,98 +191,6 @@ describe("FlinkLanguageClientManager", () => {
       sinon.assert.calledOnce(getCatalogDatabaseFromMetadataStub);
     });
   });
-  describe("constructor behavior", () => {
-    it("should initialize language client when has auth session & active flinksql document", async () => {
-      hasCCloudAuthSessionStub.returns(true);
-      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
-      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
-      sandbox.stub(vscode.window, "activeTextEditor").value(fakeEditor);
-      const maybeStartStub = sandbox
-        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
-        .resolves();
-
-      // Re-initialize the singleton so the constructor runs
-      FlinkLanguageClientManager["instance"] = null;
-      FlinkLanguageClientManager.getInstance();
-
-      sinon.assert.calledOnce(maybeStartStub);
-      sinon.assert.calledWith(maybeStartStub, fakeUri);
-    });
-
-    it("should initialize language client when has auth session & visible flinksql document (no active flinksql document)", async () => {
-      hasCCloudAuthSessionStub.returns(true);
-
-      // Non-flinksql active editor
-      const nonFlinkDocument = {
-        languageId: "typescript",
-        uri: vscode.Uri.parse("file:///non/flink/doc.ts"),
-      } as vscode.TextDocument;
-      const nonFlinkEditor = { document: nonFlinkDocument } as vscode.TextEditor;
-      sandbox.stub(vscode.window, "activeTextEditor").value(nonFlinkEditor);
-
-      // Visible flinksql editor
-      const fakeUri = vscode.Uri.parse("file:///fake/path/visible.flinksql");
-      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
-      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
-      sandbox.stub(vscode.window, "visibleTextEditors").value([fakeEditor]);
-
-      const maybeStartStub = sandbox
-        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
-        .resolves();
-
-      // Re-initialize the singleton so the constructor runs
-      FlinkLanguageClientManager["instance"] = null;
-      FlinkLanguageClientManager.getInstance();
-
-      sinon.assert.calledOnce(maybeStartStub);
-      sinon.assert.calledWith(maybeStartStub, fakeUri);
-    });
-
-    it("should not initialize language client when has auth session but no flinksql document is open", async () => {
-      hasCCloudAuthSessionStub.returns(true);
-
-      // No active editor
-      sandbox.stub(vscode.window, "activeTextEditor").value(undefined);
-
-      // No visible flinksql editors
-      const nonFlinkDocument = {
-        languageId: "typescript",
-        uri: vscode.Uri.parse("file:///non/flink/doc.ts"),
-      } as vscode.TextDocument;
-      const nonFlinkEditor = { document: nonFlinkDocument } as vscode.TextEditor;
-      sandbox.stub(vscode.window, "visibleTextEditors").value([nonFlinkEditor]);
-
-      const maybeStartStub = sandbox
-        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
-        .resolves();
-
-      // Re-initialize the singleton so the constructor runs
-      FlinkLanguageClientManager["instance"] = null;
-      FlinkLanguageClientManager.getInstance();
-
-      sinon.assert.notCalled(maybeStartStub);
-    });
-
-    it("should not initialize language client when not authenticated with CCloud", async () => {
-      hasCCloudAuthSessionStub.returns(false);
-
-      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
-      const fakeDocument = { languageId: "flinksql", uri: fakeUri } as vscode.TextDocument;
-      const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
-      sandbox.stub(vscode.window, "activeTextEditor").value(fakeEditor);
-
-      const maybeStartStub = sandbox
-        .stub(FlinkLanguageClientManager.prototype, "maybeStartLanguageClient")
-        .resolves();
-
-      // Re-initialize the singleton so the constructor runs
-      FlinkLanguageClientManager["instance"] = null;
-      FlinkLanguageClientManager.getInstance();
-
-      sinon.assert.notCalled(maybeStartStub);
-    });
-  });
 
   describe("document tracking", () => {
     it("should add open flink documents to the tracking set when initializing", () => {
@@ -310,20 +224,6 @@ describe("FlinkLanguageClientManager", () => {
       const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
       flinkManager.trackDocument(fakeUri);
       flinkManager.untrackDocument(fakeUri);
-
-      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 0);
-      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), false);
-    });
-
-    it("should not track readonly statements", () => {
-      const fakeUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.flinksql`);
-      const fakeDocument = {
-        languageId: "flinksql",
-        uri: fakeUri,
-      } as vscode.TextDocument;
-      sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
-
-      flinkManager.trackDocument(fakeUri);
 
       assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 0);
       assert.strictEqual(flinkManager["openFlinkSqlDocuments"].has(fakeUri.toString()), false);
@@ -519,6 +419,72 @@ describe("FlinkLanguageClientManager", () => {
 
         sinon.assert.notCalled(createLanguageClientFromWebsocketStub);
         sinon.assert.notCalled(handleWebSocketDisconnectStub);
+      });
+    });
+  });
+
+  describe("setEventListeners", () => {
+    // Define test cases as corresponding tuples of
+    // [which event emitter stub container, event emitter name, language client event handler method name]
+    const eventEmitterHandlerTuples: Array<
+      [
+        "vscode" | "custom",
+        keyof StubbedEventEmitters | keyof VscodeEventRegistrationStubs,
+        keyof FlinkLanguageClientManager,
+      ]
+    > = [
+      ["custom", "ccloudConnected", "ccloudConnectedHandler"],
+      ["custom", "uriMetadataSet", "uriMetadataSetHandler"],
+      ["vscode", "onDidOpenTextDocumentStub", "onDidOpenTextDocumentHandler"],
+      ["vscode", "onDidCloseTextDocumentStub", "onDidCloseTextDocumentHandler"],
+      ["vscode", "onDidChangeTextDocumentStub", "onDidChangeTextDocumentHandler"],
+      ["vscode", "onDidChangeActiveTextEditorStub", "onDidChangeActiveTextEditorHandler"],
+    ];
+
+    // ts-expect-error unused assignemnt
+    let emitterStubs: StubbedEventEmitters;
+    let vscodeStubs: VscodeEventRegistrationStubs;
+
+    beforeEach(() => {
+      // Stub all event emitters in the emitters module
+      emitterStubs = eventEmitterStubs(sandbox);
+      // and also stub the common vscode event handler registration functions
+      vscodeStubs = vscodeEventRegistrationStubs(sandbox);
+    });
+
+    it("setEventListeners() + setCustomEventListeners() should return the expected number of listeners", () => {
+      const listeners = flinkManager["setEventListeners"]();
+      assert.strictEqual(listeners.length, eventEmitterHandlerTuples.length);
+    });
+
+    eventEmitterHandlerTuples.forEach(([eventType, emitterName, handlerMethodName]) => {
+      it(`should register the proper handler ${handlerMethodName} for ${eventType} event emitter ${emitterName}`, () => {
+        // Create stub for the event handler method on our manager instance.
+        const handlerStub = sandbox.stub(flinkManager, handlerMethodName);
+
+        // Re-invoke setEventListeners() to capture emitter .event() stub calls
+        // @ts-expect-error calling protected method.
+        flinkManager.setEventListeners();
+
+        // Grab the corresponding emitter stub from either `emitterStubs` or `vscodeStubs` based on the event class (from vscode or one of our custom emitters)
+        const handlerRegistrationStub =
+          eventType === "custom"
+            ? (emitterStubs as any)[emitterName]!.event // custom emitters have stubbed instances. We're interested in its .event() stubbed method.
+            : (vscodeStubs as any)[emitterName]!; // core vscode event handlers are stub functions over event() already, not stubbed instances.
+
+        // Verify the emitter'sregistration method was called -- that something was registered as a handler
+        sinon.assert.calledOnce(handlerRegistrationStub);
+
+        // Capture the handler function that was registered
+        const registeredHandler = handlerRegistrationStub.firstCall.args[0];
+
+        // Call the handler that was registered ...
+        registeredHandler();
+
+        // Verify the expected method stub was called,
+        // proving that the expected handler was registered
+        // to the expected emitter.
+        sinon.assert.calledOnce(handlerStub);
       });
     });
   });
@@ -935,7 +901,7 @@ describe("FlinkLanguageClientManager", () => {
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
 
-      it("Should handle ccloud disconnection gracefully", () => {
+      it("should handle ccloud disconnection gracefully", () => {
         const cleanupLanguageClientStub = sandbox.stub(
           flinkManager as any,
           "cleanupLanguageClient",
