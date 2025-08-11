@@ -5,6 +5,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { logError } from "../../errors";
+import { Logger } from "../../logging";
 import { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
   showErrorNotificationWithButtons,
@@ -12,6 +13,7 @@ import {
 } from "../../notifications";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
+import { uploadFileToAzure } from "./uploadToAzure";
 
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
@@ -25,6 +27,8 @@ export interface UDFUploadParams {
   fileFormat: string;
   selectedFile?: vscode.Uri; // Optional, used for file selection
 }
+
+const logger = new Logger("commands/uploadUDF");
 
 /**
  * Read a file from a VS Code Uri and prepare a Blob (and File if available).
@@ -170,4 +174,52 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     fileFormat,
     selectedFile: selectedFile ? selectedFile : undefined,
   };
+}
+
+export async function handleUploadFile(
+  params: UDFUploadParams,
+  presignedURL: string,
+): Promise<void> {
+  if (!params.selectedFile) {
+    showErrorNotificationWithButtons("No file selected for upload.");
+    return;
+  }
+  const { file, blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+
+  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    contentType,
+  });
+
+  switch (params.cloud) {
+    // TODO: TS ENUMS FOR CLOUD PROVIDERS
+    case "Azure": {
+      logger.debug("Uploading to Azure storage");
+      const response = await uploadFileToAzure({
+        file: file ?? blob,
+        presignedUrl: presignedURL,
+        contentType,
+      });
+
+      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+      });
+      break;
+    }
+    default:
+      logger.error(`Unsupported cloud provider: ${params.cloud}`, {
+        supportedProviders: ["Azure"],
+        requestedProvider: params.cloud,
+      });
+      showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);
+  }
 }
