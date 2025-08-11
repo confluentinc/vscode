@@ -25,7 +25,7 @@ export interface UDFUploadParams {
   region: string;
   artifactName: string;
   fileFormat: string;
-  selectedFile?: vscode.Uri; // Optional, used for file selection
+  selectedFile?: vscode.Uri;
 }
 
 const logger = new Logger("commands/uploadUDF");
@@ -83,7 +83,6 @@ export async function getPresignedUploadUrl(
     };
     const presignedClient = sidecarHandle.getFlinkPresignedUrlsApi(providerRegion);
 
-    // Wrap the request as required by the OpenAPI client
     const urlResponse = await presignedClient.presignedUploadUrlArtifactV1PresignedUrl({
       PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
     });
@@ -139,9 +138,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   }
 
   const selectedFile: vscode.Uri = selectedFiles[0];
-  // NOTE: Build the upload body later (right before fetch) via prepareUploadFileFromUri(selectedFile).
 
-  // extract the file extension (format) from the selected file
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const region = await vscode.window.showInputBox({
