@@ -171,30 +171,3 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     selectedFile: selectedFile ? selectedFile : undefined,
   };
 }
-
-// export async function buildReqBody(
-//   presignedUrl: string,
-//   selectedFile: File | Blob,
-// ): Promise<File | Blob> {
-//   return selectedFile;
-// }
-// The following code was not used and referenced undefined variables.
-// If you need to upload a file to a presigned URL, use a function like this:
-
-/**
- * Uploads a file or blob to the given presigned URL.
- */
-// export async function uploadFileToPresignedUrl(
-//   presignedUrl: string,
-//   fileOrBlob: File | Blob,
-//   contentType: string,
-// ): Promise<Response> {
-//   return fetch(presignedUrl, {
-//     method: "PUT",
-//     body: fileOrBlob,
-//     headers: {
-//       "Content-Type": contentType,
-//       // Include any extra headers required by the presigned URL if provided.
-//     },
-//   });
-// }

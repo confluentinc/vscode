@@ -37,11 +37,14 @@ export async function uploadUDFCommand(): Promise<void> {
       id: params.artifactName,
       content_format: params.fileFormat,
     };
+
     const uploadUrl = await handlePresignedUrlRequest(request);
+
     if (!uploadUrl) {
       showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
       return;
     }
+
     await handleUploadFile(params, uploadUrl);
     vscode.window.showInformationMessage(
       `UDF artifact "${params.artifactName}" uploaded successfully!`,
@@ -53,6 +56,7 @@ export async function uploadUDFCommand(): Promise<void> {
     );
   }
 }
+
 async function handleUploadFile(params: UDFUploadParams, presignedURL: string): Promise<void> {
   if (!params.selectedFile) {
     showErrorNotificationWithButtons("No file selected for upload.");
