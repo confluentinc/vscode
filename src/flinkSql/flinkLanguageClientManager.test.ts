@@ -510,7 +510,6 @@ describe("FlinkLanguageClientManager", () => {
       ["vscode", "onDidChangeActiveTextEditorStub", "onDidChangeActiveTextEditorHandler"],
     ];
 
-    // ts-expect-error unused assignemnt
     let emitterStubs: StubbedEventEmitters;
     let vscodeStubs: VscodeEventRegistrationStubs;
 
@@ -704,7 +703,7 @@ describe("FlinkLanguageClientManager", () => {
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
 
-      it("shuold not call when no active editor", () => {
+      it("should not call when no active editor", () => {
         // Simulate no active editor
         flinkManager.onDidChangeActiveTextEditorHandler(undefined);
 
