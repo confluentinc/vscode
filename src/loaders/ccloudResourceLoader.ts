@@ -64,21 +64,25 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     }
     super();
 
-    this.registerEventListeners();
+    this.disposables.push(...this.setEventListeners());
   }
 
-  private registerEventListeners(): void {
-    // When the ccloud connection state changes, reset the loader's state.
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
-      await this.reset();
+  /** Register event handlers, returning the array of Disposable registrations. */
+  protected setEventListeners(): Disposable[] {
+    return [ccloudConnected.event(this.ccloudConnectedHandler.bind(this))];
+  }
 
-      if (connected) {
-        // Start the coarse preloading process if we think we have a ccloud connection.
-        await this.ensureCoarseResourcesLoaded();
-      }
-    });
+  /**
+   * When the ccloud connection state changes, reset the loader's state. If
+   * just edged to connected, preemptively perform the coarse preloading process.
+   */
+  public async ccloudConnectedHandler(connected: boolean): Promise<void> {
+    await this.reset();
 
-    this.disposables.push(ccloudConnectedSub);
+    if (connected) {
+      // Start the coarse preloading process if we think we have a ccloud connection.
+      await this.ensureCoarseResourcesLoaded();
+    }
   }
 
   /** Fulfill ResourceLoader::getEnvironmentsFromGraphQL */
@@ -89,9 +93,9 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /** Fulfill ResourceLoader::reset(), taking care of clearing in-memory cached organization. */
   public async reset(): Promise<void> {
-    // Upcall, then also forget the organization (in memory only).
+    // Upcall, clearing resource manager cached on-disk state,
     await super.reset();
-    // cached in memory only.
+    // ... then also forget the organization (in memory only).
     this.organization = null;
   }
 
