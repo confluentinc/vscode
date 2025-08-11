@@ -40,6 +40,8 @@ import {
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
+import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { restFlinkStatementToModel } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
@@ -214,36 +216,36 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should reduce all of the compute pools in an environment to a reduced set of queryables", async () => {
-      const computePool1 = {
+      const computePool1: CCloudFlinkComputePool = new CCloudFlinkComputePool({
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
         id: "lfcp-1m68g66",
         provider: "aws",
         region: "us-west-2",
-      };
-      const computePool2 = {
+      });
+      const computePool2: CCloudFlinkComputePool = new CCloudFlinkComputePool({
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
         id: "lfcp-2m68g66",
         provider: "aws",
         region: "us-east-1", // different region
-      };
-      const computePool3 = {
+      });
+      const computePool3: CCloudFlinkComputePool = new CCloudFlinkComputePool({
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
         id: "lfcp-3m68g66",
         provider: "gcp", // different cloud provider from computePool1 and computePool2
         region: "us-west-2",
-      };
+      });
 
-      const computePool4 = {
+      const computePool4: CCloudFlinkComputePool = new CCloudFlinkComputePool({
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
         id: "lfcp-4m68g66",
         provider: "aws",
         region: "us-west-2", // same as computePool1
-      };
+      });
 
-      const environmentWithPools = {
+      const environmentWithPools: CCloudEnvironment = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         flinkComputePools: [computePool1, computePool2, computePool3, computePool4],
-      };
+      });
 
       const queryables = await loader.determineFlinkQueryables(environmentWithPools);
       // computePool4 is same provider/region as computePool1, so should not be included.
