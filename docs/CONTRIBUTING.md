@@ -403,8 +403,14 @@ Remember to remove `.only` after running the test and before making a PR!
 make clean mvn-package-native-no-tests
 ```
 
-3.  If your `$VS_CODE_EXTENSION_PROJECT` variable has the path to VS Code, (check with
-    `echo $VS_CODE_EXTENSION_PROJECT`), you can run the following command:
+3.  Set the environment variable `$VS_CODE_EXTENSION_PROJECT` to the local directory holding this
+    repository:
+
+```bash
+export VS_CODE_EXTENSION_PROJECT=~/Code/vscode
+```
+
+Next, copy the native executable to the bin directory in the VS Code extension project:
 
 ```bash
 cp ./target/ide-sidecar-0.*.0-runner $VS_CODE_EXTENSION_PROJECT/bin
