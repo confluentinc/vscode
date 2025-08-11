@@ -83,6 +83,23 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     this.initializeDocumentTracking();
   }
 
+  /**
+   * Should we consider language serving for this sort of document?
+   * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
+   */
+  isAppropriateDocument(document: TextDocument): boolean {
+    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isApproriateUri(document.uri);
+  }
+
+  /** Should we consider language serving for this sort of document URI? */
+  isApproriateUri(uri: Uri): boolean {
+    // Just not FLINKSTATEMENT_URI_SCHEME, the one used for readonly statements
+    // downloaded from the Flink Statements view. Be happy with, say,
+    // "file" or "untitled" schemes.
+    return uri.scheme !== FLINKSTATEMENT_URI_SCHEME;
+  }
+
+  /** Set up to track the appropriate documents open at instance construction (extension startup) time. */
   private initializeDocumentTracking(): void {
     workspace.textDocuments.forEach((doc) => {
       if (this.isAppropriateDocument(doc)) {
@@ -147,22 +164,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       this.cleanupTimer = null;
       logger.trace("Cleared scheduled language client cleanup timer");
     }
-  }
-
-  /**
-   * Should we consider language serving for this sort of document?
-   * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
-   */
-  isAppropriateDocument(document: TextDocument): boolean {
-    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isApproriateUri(document.uri);
-  }
-
-  /** Should we consider language serving for this sort of document URI? */
-  isApproriateUri(uri: Uri): boolean {
-    // Just not FLINKSTATEMENT_URI_SCHEME, the one used for readonly statements
-    // downloaded from the Flink Statements view. Be happy with, say,
-    // "file" or "untitled" schemes.
-    return uri.scheme !== FLINKSTATEMENT_URI_SCHEME;
   }
 
   // Event Handlers.
