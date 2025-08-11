@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
@@ -59,6 +60,76 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
     sandbox.restore();
     // clean up any stored metadata
     await getResourceManager().deleteAllUriMetadata();
+  });
+
+  describe("setEventListeners() event emitter wiring tests", () => {
+    let emitterStubs: StubbedEventEmitters;
+
+    beforeEach(() => {
+      // Stub all event emitters in the emitters module
+      emitterStubs = eventEmitterStubs(sandbox);
+    });
+
+    // Define test cases as corresponding pairs of
+    // [event emitter name, view provider handler method name]
+    const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof FlinkSqlCodelensProvider]> =
+      [
+        ["ccloudConnected", "ccloudConnectedHandler"],
+        ["uriMetadataSet", "uriMetadataSetHandler"],
+      ];
+
+    it("setEventListeners() should return the expected number of listeners", () => {
+      const listeners = provider["setEventListeners"]();
+      assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+    });
+
+    handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+      it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+        // Create stub for the handler method
+        const handlerStub = sandbox.stub(provider, handlerMethodName);
+
+        // Re-invoke setEventListeners() to capture emitter .event() stub calls
+        provider["setEventListeners"]();
+
+        const emitterStub = emitterStubs[emitterName]!;
+
+        // Verify the emitter's event method was called
+        sinon.assert.calledOnce(emitterStub.event);
+
+        // Capture the handler function that was registered
+        const registeredHandler = emitterStub.event.firstCall.args[0];
+
+        // Call the registered handler
+        registeredHandler();
+
+        // Verify the expected method stub was called,
+        // proving that the expected handler was registered
+        // to the expected emitter.
+        sinon.assert.calledOnce(handlerStub);
+      });
+    });
+  });
+
+  describe("event handlers", () => {
+    let onDidChangeCodeLensesFireStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      // Stub the onDidChangeCodeLenses event emitter fire method.
+      onDidChangeCodeLensesFireStub = sandbox.stub(provider["_onDidChangeCodeLenses"], "fire");
+    });
+
+    for (const connected of [true, false]) {
+      it("ccloudConnectedHandler() should call onDidChangeCodeLenses.fire()", () => {
+        provider.ccloudConnectedHandler(connected);
+
+        sinon.assert.calledOnce(onDidChangeCodeLensesFireStub);
+      });
+    }
+
+    it("uriMetadataSetHandler() should call onDidChangeCodeLenses.fire()", () => {
+      provider.uriMetadataSetHandler(); // disregards the Uri of the document, so no need to pass it.
+      sinon.assert.calledOnce(onDidChangeCodeLensesFireStub);
+    });
   });
 
   it("should create only one instance of FlinkSqlCodelensProvider", () => {
