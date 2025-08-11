@@ -86,7 +86,7 @@ describe("CCloudResourceLoader", () => {
       ["ccloudConnected", "ccloudConnectedHandler"],
     ];
 
-    it("setEventListeners()should return the expected number of listeners", () => {
+    it("setEventListeners() should return the expected number of listeners", () => {
       // @ts-expect-error protected method
       const listeners = loader.setEventListeners();
       assert.strictEqual(listeners.length, handlerEmitterPairs.length);
