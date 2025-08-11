@@ -4,8 +4,9 @@ import "mocha";
 import sinon from "sinon";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH } from "../clients/scaffoldingService";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import * as constants from "../constants";
 import * as notifications from "../notifications";
 import * as sidecar from "../sidecar";
 import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
@@ -224,12 +225,11 @@ describe("sidecarHandle sandbox tests", () => {
       assert.strictEqual(api.constructor.name, "FlinkArtifactsArtifactV1Api");
     });
 
-    it("getFlinkComputePoolsApi() should return a FlinkComputePoolsApi instance given no args.", async () => {
-      const api = handle.getFlinkComputePoolsApi();
-      assert.strictEqual(api.constructor.name, "ComputePoolsFcpmV2Api");
+    it("getRegionsFcpmV2Api() should return a RegionsFcpmV2Api instance", async () => {
+      const api = handle.getRegionsFcpmV2Api();
+      assert.strictEqual(api.constructor.name, "RegionsFcpmV2Api");
     });
   });
-
   describe("query()", () => {
     let fetchStub: sinon.SinonStub;
 
@@ -262,7 +262,9 @@ describe("sidecarHandle sandbox tests", () => {
     });
 
     it("should call fetch and de-json successfully with single in-flight query", async () => {
-      const result = await handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
+      const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        id: "123",
+      });
 
       assert.deepStrictEqual(result, happyQueryResponseObj.data);
       sinon.assert.calledOnce(fetchStub);
@@ -272,8 +274,12 @@ describe("sidecarHandle sandbox tests", () => {
 
     it("handles multiple awaiters for the same query", async () => {
       // Call the query twice concurrently, exercising the in-flight promise cache.
-      const queryPromise1 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
-      const queryPromise2 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
+      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        id: "123",
+      });
+      const queryPromise2 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        id: "123",
+      });
 
       // Should have one single entry in the cache. Both calls should map to same cache key.
       assert.strictEqual(handle["graphQlQueryPromises"].size, 1);
@@ -289,8 +295,12 @@ describe("sidecarHandle sandbox tests", () => {
 
     it("Separate queries with different variables should not share the same cache entry", async () => {
       // Call the query twice with different variables, should not share the same cache entry.
-      const queryPromise1 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
-      const queryPromise2 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "456" });
+      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        id: "123",
+      });
+      const queryPromise2 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        id: "456",
+      });
 
       assert.strictEqual(handle["graphQlQueryPromises"].size, 2);
 
@@ -306,8 +316,12 @@ describe("sidecarHandle sandbox tests", () => {
     // Likewise separate connection ids
     it("Separate queries with different connection ids should not share the same cache entry", async () => {
       // Call the query twice with different variables, should not share the same cache entry.
-      const queryPromise1 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
-      const queryPromise2 = handle.query(organizationQuery, LOCAL_CONNECTION_ID, { id: "123" });
+      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        id: "123",
+      });
+      const queryPromise2 = handle.query(organizationQuery, constants.LOCAL_CONNECTION_ID, {
+        id: "123",
+      });
 
       assert.strictEqual(handle["graphQlQueryPromises"].size, 2);
 
@@ -322,10 +336,18 @@ describe("sidecarHandle sandbox tests", () => {
 
     it("Separate queries with no variables at all should share same cache entry", async () => {
       // Call the query twice with no variables at all, should share the same cache entry.
-      // @ts-expect-error We are intentionally passing undefined here to simulate no variables, but don't have a better query onhand.
-      const queryPromise1 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, undefined);
-      // @ts-expect-error See above.
-      const queryPromise2 = handle.query(organizationQuery, CCLOUD_CONNECTION_ID, undefined);
+      const queryPromise1 = handle.query(
+        organizationQuery,
+        constants.CCLOUD_CONNECTION_ID,
+        // @ts-expect-error We are intentionally passing undefined here to simulate no variables, but don't have a better query onhand.
+        undefined,
+      );
+      const queryPromise2 = handle.query(
+        organizationQuery,
+        constants.CCLOUD_CONNECTION_ID,
+        // @ts-expect-error See above.
+        undefined,
+      );
 
       assert.strictEqual(handle["graphQlQueryPromises"].size, 1);
 
@@ -344,7 +366,7 @@ describe("sidecarHandle sandbox tests", () => {
       fetchStub.rejects(new Error(errorMessage));
 
       await assert.rejects(
-        handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" }),
+        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, { id: "123" }),
         (err) => {
           assert.strictEqual((err as Error).message, errorMessage);
           return true;
@@ -362,7 +384,7 @@ describe("sidecarHandle sandbox tests", () => {
       } as Response);
 
       await assert.rejects(
-        handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" }),
+        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, { id: "123" }),
         (err) => {
           assert.strictEqual((err as Error).message, "GraphQL query failed: Bad Query");
           return true;
@@ -380,7 +402,7 @@ describe("sidecarHandle sandbox tests", () => {
       } as Response);
 
       await assert.rejects(
-        handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" }),
+        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, { id: "123" }),
         (err) => {
           assert.strictEqual(
             (err as Error).message,
@@ -424,7 +446,9 @@ describe("sidecarHandle sandbox tests", () => {
           "showWarningNotificationWithButtons",
         );
 
-        const result = await handle.query(organizationQuery, CCLOUD_CONNECTION_ID, { id: "123" });
+        const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+          id: "123",
+        });
         assert.deepStrictEqual(result, responseWithErrors.data);
         sinon.assert.calledOnceWithExactly(showWarningNotificationWithButtonsStub, message);
         assert.strictEqual(handle["graphQlQueryPromises"].size, 0); // cache should be empty
@@ -435,5 +459,36 @@ describe("sidecarHandle sandbox tests", () => {
   it("getFlinkPresignedUrlsApi() should return a PresignedUrlsArtifactV1Api instance given a provider region", async () => {
     const api = handle.getFlinkPresignedUrlsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     assert.strictEqual(api.constructor.name, "PresignedUrlsArtifactV1Api");
+  });
+
+  describe("Scaffolding Service class methods", () => {
+    describe("getTemplatesApi()", () => {
+      it("should return a TemplatesScaffoldV1Api instance", () => {
+        const api = handle.getTemplatesApi();
+
+        assert.strictEqual(api.constructor.name, "TemplatesScaffoldV1Api");
+      });
+
+      it("should include basePath in its configuration", () => {
+        const api = handle.getTemplatesApi();
+
+        assert.strictEqual(
+          api["configuration"].basePath,
+          SCAFFOLDING_SERVICE_BASE_PATH.replace("confluent.cloud", constants.CCLOUD_BASE_PATH),
+        );
+      });
+
+      it("should update the basePath if IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH is set to a non-default value", () => {
+        const newBasePath = "test.cloud";
+        sandbox.stub(constants, "CCLOUD_BASE_PATH").value(newBasePath);
+
+        const api = handle.getTemplatesApi();
+
+        assert.strictEqual(
+          api["configuration"].basePath,
+          SCAFFOLDING_SERVICE_BASE_PATH.replace("confluent.cloud", newBasePath),
+        );
+      });
+    });
   });
 });

@@ -10,6 +10,7 @@ import {
   showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
+import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 
@@ -79,9 +80,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
   }
-  const cloud = await vscode.window.showQuickPick(["AWS", "Azure"], {
-    placeHolder: "Select the cloud provider for the UDF upload",
-  });
+  const cloud = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
   if (!cloud) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
     return undefined;
@@ -103,17 +102,6 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   // extract the file extension (format) from the selected file
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
-  const region = await vscode.window.showInputBox({
-    prompt: "Enter the region for the UDF upload",
-    ignoreFocusOut: true,
-    validateInput: (value) => (value ? undefined : "Region is required"),
-  });
-
-  if (!region) {
-    showWarningNotificationWithButtons("Upload UDF cancelled: Region is required.");
-    return undefined;
-  }
-
   const artifactName = await vscode.window.showInputBox({
     prompt: "Enter the artifact name for the UDF",
     ignoreFocusOut: true,
@@ -125,5 +113,11 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  return { environment: environment.id, cloud, region, artifactName, fileFormat };
+  return {
+    environment: environment.id,
+    cloud: cloud.provider,
+    region: cloud.region,
+    artifactName,
+    fileFormat,
+  };
 }

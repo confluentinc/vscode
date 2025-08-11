@@ -947,14 +947,14 @@ components:
       properties:
         name:
           type: string
-        data:
-          type: object
-          nullable: true
         status:
           enum:
           - UP
           - DOWN
           type: string
+        data:
+          type: object
+          nullable: true
 paths:
   /:
     get:
@@ -1421,7 +1421,7 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
 info:
   title: Confluent ide-sidecar API
-  version: 0.231.0
+  version: 0.234.0
   description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
   termsOfService: Your terms here
   contact:

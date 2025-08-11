@@ -12,7 +12,7 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { LOCAL_ENVIRONMENT_NAME } from "../constants";
+import { CCLOUD_BASE_PATH, LOCAL_ENVIRONMENT_NAME } from "../constants";
 import {
   CCloudEnvironment,
   DirectEnvironment,
@@ -230,7 +230,7 @@ describe("models/environment.ts EnvironmentTreeItem", () => {
     const tooltip = treeItem.tooltip as MarkdownString;
     assert.ok(tooltip.value.includes("Environment"));
     assert.ok(tooltip.value.includes("Stream Governance Package"));
-    assert.ok(tooltip.value.includes("confluent.cloud/environments"));
+    assert.ok(tooltip.value.includes(`${CCLOUD_BASE_PATH}/environments`));
   });
 
   it("ccloud context value positively reflecting flink-compute-pool availablity", () => {

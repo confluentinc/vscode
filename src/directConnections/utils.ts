@@ -4,8 +4,7 @@ import {
   KafkaClusterConfig,
   SchemaRegistryConfig,
 } from "../clients/sidecar";
-
-export const CCLOUD_DOMAIN_SUBSTRING = ".confluent.cloud";
+import { CCLOUD_BASE_PATH } from "../constants";
 
 /**
  * Checks if the given Kafka or Schema Registry configuration is a Confluent Cloud domain.
@@ -20,9 +19,9 @@ export function hasCCloudDomain(
 
   let hasCCloud = false;
   if (instanceOfKafkaClusterConfig(config)) {
-    hasCCloud = config.bootstrap_servers.includes(CCLOUD_DOMAIN_SUBSTRING);
+    hasCCloud = config.bootstrap_servers.includes(CCLOUD_BASE_PATH);
   } else if (instanceOfSchemaRegistryConfig(config)) {
-    hasCCloud = config.uri.includes(CCLOUD_DOMAIN_SUBSTRING);
+    hasCCloud = config.uri.includes(CCLOUD_BASE_PATH);
   }
   return hasCCloud;
 }
