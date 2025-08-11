@@ -74,6 +74,75 @@ describe("FlinkLanguageClientManager", () => {
     sandbox.restore();
   });
 
+  describe("constructor", () => {
+    it("should initialize with empty openFlinkSqlDocuments set if no open documents found", () => {
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 0);
+    });
+
+    it("should initialize with non-empty openFlinkSqlDocuments set if appropriate open documents found", () => {
+      // Stub the workspace.textDocuments to return a document with flinksql language id
+      const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+      const fakeDocument = {
+        languageId: FLINKSQL_LANGUAGE_ID,
+        uri: fakeUri,
+      } as vscode.TextDocument;
+      sandbox.stub(vscode.workspace, "textDocuments").value([fakeDocument]);
+
+      // Re-initialize the singleton so the constructor runs
+      // dispose of existing instance to ensure we start fresh
+      flinkManager.dispose();
+      FlinkLanguageClientManager["instance"] = null;
+      flinkManager = FlinkLanguageClientManager.getInstance();
+
+      assert.strictEqual(flinkManager["openFlinkSqlDocuments"].size, 1);
+    });
+
+    it("should have disposables initialized", () => {
+      assert.ok(flinkManager["disposables"]);
+      assert.ok(flinkManager["disposables"].length > 4);
+    });
+
+    it("should set the lastDocUri to null initially", () => {
+      assert.strictEqual(flinkManager["lastDocUri"], null);
+    });
+  });
+
+  describe("isAppropriateDocument", () => {
+    for (const goodScheme of ["file", "untitled"]) {
+      it(`should return true for Flink SQL + ${goodScheme} documents`, () => {
+        const uri = vscode.Uri.parse(`${goodScheme}:///test.flink.sql`);
+        const document = { languageId: FLINKSQL_LANGUAGE_ID, uri } as vscode.TextDocument;
+        assert.strictEqual(flinkManager.isAppropriateDocument(document), true);
+      });
+    }
+
+    it("should return false for plaintext file documents", () => {
+      const uri = vscode.Uri.parse("file:///test.txt");
+      const document = { languageId: "plaintext", uri } as vscode.TextDocument;
+      assert.strictEqual(flinkManager.isAppropriateDocument(document), false);
+    });
+
+    it("should return false for read-only FlinkStatement URIs", () => {
+      const uri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}://test-statement`);
+      const document = { languageId: FLINKSQL_LANGUAGE_ID, uri } as vscode.TextDocument;
+      assert.strictEqual(flinkManager.isAppropriateDocument(document), false);
+    });
+  });
+
+  describe("isAppropriateUri", () => {
+    for (const goodScheme of ["file", "untitled"]) {
+      it(`should return true for Flink SQL + ${goodScheme} URIs`, () => {
+        const uri = vscode.Uri.parse(`${goodScheme}:///test.flink.sql`);
+        assert.strictEqual(flinkManager.isAppropriateUri(uri), true);
+      });
+    }
+
+    it("should return false for read-only FlinkStatement URIs", () => {
+      const uri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}://test-statement`);
+      assert.strictEqual(flinkManager.isAppropriateUri(uri), false);
+    });
+  });
+
   describe("validateFlinkSettings", () => {
     it("should return false when computePoolId is missing", async () => {
       // no default Flink settings set

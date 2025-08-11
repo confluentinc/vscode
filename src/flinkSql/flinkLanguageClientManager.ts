@@ -88,11 +88,11 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * Yes if language id is flinksql and the URI scheme is not flinkstatement (the readonly statements)
    */
   isAppropriateDocument(document: TextDocument): boolean {
-    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isApproriateUri(document.uri);
+    return document.languageId === FLINKSQL_LANGUAGE_ID && this.isAppropriateUri(document.uri);
   }
 
   /** Should we consider language serving for this sort of document URI? */
-  isApproriateUri(uri: Uri): boolean {
+  isAppropriateUri(uri: Uri): boolean {
     // Just not FLINKSTATEMENT_URI_SCHEME, the one used for readonly statements
     // downloaded from the Flink Statements view. Be happy with, say,
     // "file" or "untitled" schemes.
@@ -186,7 +186,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       // Was an already determined appropriate document that we're definitely tracking.
       // Queue up a config change notification to pick up new cluster etc. settings for the document.
       void this.notifyConfigChanged();
-    } else if (this.isApproriateUri(uri)) {
+    } else if (this.isAppropriateUri(uri)) {
       const doc = await workspace.openTextDocument(uri);
       if (this.isAppropriateDocument(doc)) {
         logger.trace("Flink SQL document metadata changed, possibly initializing language client");
