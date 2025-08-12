@@ -11,7 +11,6 @@ import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { uploadFileToAzure } from "./uploadToAzure";
@@ -119,6 +118,18 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
 
   if (!cloud) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
+    return undefined;
+  }
+
+  // Prompt for region after cloud is selected
+  const region = await vscode.window.showInputBox({
+    prompt: `Enter the region for the selected cloud provider (${cloud})`,
+    ignoreFocusOut: true,
+    validateInput: (value) => (value ? undefined : "Region is required"),
+  });
+
+  if (!region) {
+    showErrorNotificationWithButtons("Upload UDF cancelled: Region is required.");
     return undefined;
   }
 
