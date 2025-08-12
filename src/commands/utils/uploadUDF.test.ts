@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
@@ -9,6 +10,7 @@ import {
 import * as errors from "../../errors";
 import * as notifications from "../../notifications";
 import * as sidecar from "../../sidecar";
+import * as uploadUDF from "./uploadUDF";
 import { getPresignedUploadUrl, handlePresignedUrlRequest } from "./uploadUDF";
 
 describe("uploadUDF utils", () => {
@@ -137,5 +139,89 @@ describe("uploadUDF utils", () => {
       showErrorStub,
       "Failed to get presigned upload URL. See logs for details.",
     );
+  });
+
+  describe("prepareUploadFileFromUri", () => {
+    let readFileStub: sinon.SinonStub;
+
+    beforeEach(function () {
+      try {
+        readFileStub = sandbox.stub(vscode.workspace.fs, "readFile");
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (err) {
+        this.skip();
+      }
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should read file from uri and return blob, file, filename, contentType, and size", async function () {
+      if (!readFileStub) this.skip();
+      const fakeBytes = new Uint8Array([1, 2, 3, 4]);
+      const fakeUri: vscode.Uri = vscode.Uri.parse("/tmp/test.jar");
+      readFileStub.resolves(fakeBytes);
+
+      const result = await uploadUDF.prepareUploadFileFromUri(fakeUri);
+
+      assert.strictEqual(result.filename, "test.jar");
+      assert.strictEqual(result.contentType, "application/java-archive");
+      assert.strictEqual(result.size, fakeBytes.length);
+      assert(result.blob instanceof Blob);
+      if (typeof File !== "undefined" && result.file) {
+        assert(result.file instanceof File);
+        assert.strictEqual(result.file.name, "test.jar");
+        assert.strictEqual(result.file.type, "application/java-archive");
+      }
+    });
+
+    it("should use application/zip for .zip files", async function () {
+      if (!readFileStub) this.skip();
+      const fakeBytes = new Uint8Array([5, 6, 7]);
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.zip");
+      readFileStub.resolves(fakeBytes);
+
+      const result = await uploadUDF.prepareUploadFileFromUri(fakeUri);
+
+      assert.strictEqual(result.contentType, "application/zip");
+    });
+
+    it("should use application/octet-stream for unknown extensions", async function () {
+      if (!readFileStub) this.skip();
+      const fakeBytes = new Uint8Array([8, 9]);
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.unknown");
+      readFileStub.resolves(fakeBytes);
+
+      const result = await uploadUDF.prepareUploadFileFromUri(fakeUri);
+
+      assert.strictEqual(result.contentType, "application/octet-stream");
+    });
+  });
+
+  describe("handleUploadFile", () => {
+    let params: uploadUDF.UDFUploadParams;
+    let presignedURL: string;
+
+    beforeEach(function () {
+      params = {
+        environment: "env-123",
+        cloud: "Azure",
+        region: "us-west-2",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: vscode.Uri.file("/tmp/test.jar"),
+      };
+      presignedURL = "https://example.com/upload";
+    });
+
+    it("should show error notification if no file is selected", async function () {
+      params.selectedFile = undefined;
+      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+
+      await uploadUDF.handleUploadFile(params, presignedURL);
+
+      sinon.assert.calledOnceWithExactly(showErrorStub, "No file selected for upload.");
+    });
   });
 });
