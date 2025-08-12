@@ -14,6 +14,7 @@ import {
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { uploadFileToAzure } from "./uploadToAzure";
+export { uploadFileToAzure };
 
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
