@@ -261,7 +261,23 @@ async function _activateExtension(
   ];
   logger.info("Commands registered");
 
+  // Construct the singletons, let them register their event listeners
+  context.subscriptions.push(getSidecarManager());
+  context.subscriptions.push(...constructResourceLoaderSingletons());
+
+  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
+  // (Needs to be done _before_ setupAuthProvider() so that the manager can
+  //  handle the ccloudConnected event which may be fired during auth setup
+  //  if this is a second+ workspace being activated in when already ccloud authed.)
+  if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
+    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
+    context.subscriptions.push(flinkLanguageClientManager);
+  }
+
   const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(getUriHandler());
+
+  // If the user is already authenticated to ccloud (this being not the first
+  // workspace activated), this will eventually cause ccloudConnected to be fired.
   const authProviderDisposables: vscode.Disposable[] = await setupAuthProvider();
   const documentProviders: vscode.Disposable[] = setupDocumentProviders();
 
@@ -275,18 +291,8 @@ async function _activateExtension(
     ...documentProviders,
   );
 
-  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
-  if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
-    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
-    context.subscriptions.push(flinkLanguageClientManager);
-  }
-
   // Just handling command registration and setting disposables
   activateMessageViewer(context);
-
-  // Construct the singletons, let them register their event listeners.
-  context.subscriptions.push(...constructResourceLoaderSingletons());
-  context.subscriptions.push(getSidecarManager());
 
   // register the local resource workflows so they can be used by the resource loaders
   registerLocalResourceWorkflows();
