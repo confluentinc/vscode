@@ -6,7 +6,7 @@ import {
 } from "../../clients/flinkArtifacts";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
-import { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
@@ -111,9 +111,10 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
   }
-  const cloud = await vscode.window.showQuickPick(["AWS", "Azure"], {
+  const cloud = await vscode.window.showQuickPick([CloudProvider.AWS, CloudProvider.Azure], {
     placeHolder: "Select the cloud provider for the UDF upload",
   });
+
   if (!cloud) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
     return undefined;
@@ -188,8 +189,7 @@ export async function handleUploadFile(
   });
 
   switch (params.cloud) {
-    // TODO: TS ENUMS FOR CLOUD PROVIDERS
-    case "Azure": {
+    case CloudProvider.Azure: {
       logger.debug("Uploading to Azure storage");
       const response = await uploadFileToAzure({
         file: file ?? blob,
@@ -210,7 +210,7 @@ export async function handleUploadFile(
     }
     default:
       logger.error(`Unsupported cloud provider: ${params.cloud}`, {
-        supportedProviders: ["Azure"],
+        supportedProviders: [CloudProvider.Azure],
         requestedProvider: params.cloud,
       });
       showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);

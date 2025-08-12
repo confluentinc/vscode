@@ -9,7 +9,6 @@ import {
   handleUploadFile,
   promptForUDFUploadParams,
 } from "./utils/uploadUDF";
-
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
