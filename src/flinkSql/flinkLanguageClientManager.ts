@@ -675,10 +675,11 @@ export class FlinkLanguageClientManager implements Disposable {
    * Handle WebSocket disconnection events and attempt reconnection
    */
   private handleWebSocketDisconnect(): void {
-    // Skip reconnection attempts if we're not authenticated
+    // We don't need to skip reconnection attempts if we're not authenticated since we only know about
+    // the user's control plane token while the sidecar uses the longer-lived data plane token for
+    // authenticating with the Confluent Cloud language service.
     if (!hasCCloudAuthSession()) {
-      logger.warn("Not attempting reconnection: User not authenticated with CCloud");
-      return;
+      logger.warn("Attempting to reconnect websocket despite user having an expired control plane token");
     }
 
     // If we've reached max attempts, stop trying to reconnect
