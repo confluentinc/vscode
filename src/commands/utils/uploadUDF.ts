@@ -121,6 +121,20 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
+  // Ensure cloud is always set to the enum value
+  let cloud: CloudProvider;
+  switch (cloudRegion.provider) {
+    case CloudProvider.Azure:
+      cloud = CloudProvider.Azure;
+      break;
+    case CloudProvider.AWS:
+      cloud = CloudProvider.AWS;
+      break;
+    default:
+      showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
+      return undefined;
+  }
+
   const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
     openLabel: "Select",
     canSelectFiles: true,
@@ -151,7 +165,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
 
   return {
     environment: environment.id,
-    cloud: cloudRegion.provider,
+    cloud,
     region: cloudRegion.region,
     artifactName,
     fileFormat,
@@ -177,13 +191,9 @@ export async function handleUploadFile(
     contentType,
   });
 
-  // Accept both enum and uppercase string for cloud provider
-  const isAzure =
-    params.cloud === CloudProvider.Azure ||
-    params.cloud.toLowerCase() === CloudProvider.Azure.toLowerCase();
-
-  switch (true) {
-    case isAzure: {
+  // Now only need to check the enum, since promptForUDFUploadParams guarantees enum value
+  switch (params.cloud) {
+    case CloudProvider.Azure: {
       logger.debug("Uploading to Azure storage");
       const response = await uploadFileToAzure({
         file: file ?? blob,
