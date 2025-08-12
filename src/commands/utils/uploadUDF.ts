@@ -11,6 +11,7 @@ import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
+import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { uploadFileToAzure } from "./uploadToAzure";
@@ -138,17 +139,6 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   const selectedFile: vscode.Uri = selectedFiles[0];
 
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
-
-  const region = await vscode.window.showInputBox({
-    prompt: "Enter the region for the UDF upload",
-    ignoreFocusOut: true,
-    validateInput: (value) => (value ? undefined : "Region is required"),
-  });
-
-  if (!region) {
-    showWarningNotificationWithButtons("Upload UDF cancelled: Region is required.");
-    return undefined;
-  }
 
   const artifactName = await vscode.window.showInputBox({
     prompt: "Enter the artifact name for the UDF",

@@ -29,27 +29,43 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
   private _onDidChangeCodeLenses: EventEmitter<void> = new EventEmitter<void>();
   readonly onDidChangeCodeLenses: Event<void> = this._onDidChangeCodeLenses.event;
 
-  private constructor() {
-    super();
-    // refresh/update all codelenses for documents visible in the workspace when any of these fire
-    const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
-      logger.debug("ccloudConnected event fired, updating codelenses", { connected });
-      this._onDidChangeCodeLenses.fire();
-    });
-    const uriMetadataSetSub: Disposable = uriMetadataSet.event(() => {
-      logger.debug("uriMetadataSet event fired, updating codelenses");
-      this._onDidChangeCodeLenses.fire();
-    });
-
-    this.disposables.push(ccloudConnectedSub, uriMetadataSetSub);
-  }
-
   private static instance: FlinkSqlCodelensProvider | null = null;
   static getInstance(): FlinkSqlCodelensProvider {
     if (!FlinkSqlCodelensProvider.instance) {
       FlinkSqlCodelensProvider.instance = new FlinkSqlCodelensProvider();
     }
     return FlinkSqlCodelensProvider.instance;
+  }
+
+  private constructor() {
+    super();
+
+    this.disposables.push(...this.setEventListeners());
+  }
+
+  protected setEventListeners(): Disposable[] {
+    return [
+      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
+      uriMetadataSet.event(this.uriMetadataSetHandler.bind(this)),
+    ];
+  }
+
+  /**
+   * Refresh/update all codelenses for documents visible in the workspace when ccloudConnected event fires.
+   * @param connected - whether the user is connected to Confluent Cloud
+   */
+  ccloudConnectedHandler(connected: boolean): void {
+    logger.debug("ccloudConnectedHandler called, updating codelenses", { connected });
+    this._onDidChangeCodeLenses.fire();
+  }
+
+  /**
+   * Refresh/update all codelenses for documents visible in the workspace when uriMetadataSet event fires,
+   * namely when the user changes the compute pool or database for any Flink SQL document.
+   */
+  uriMetadataSetHandler(): void {
+    logger.debug("uriMetadataSetHandler called, updating codelenses");
+    this._onDidChangeCodeLenses.fire();
   }
 
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {

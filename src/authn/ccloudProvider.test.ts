@@ -10,7 +10,7 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectedState, Connection } from "../clients/sidecar";
-import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import * as errors from "../errors";
 import { getSidecar } from "../sidecar";
@@ -490,18 +490,22 @@ describe("CCloud auth flow", () => {
     await ccloud.deleteCCloudConnection();
   });
 
-  it("should successfully authenticate via CCloud with the sign_in_uri", async function () {
-    if (!process.env.E2E_USERNAME || !process.env.E2E_PASSWORD) {
+  it(`should successfully authenticate via CCloud with the sign_in_uri (${CCLOUD_BASE_PATH})`, async function () {
+    const testUsername = getTestUserName();
+    const testPassword = getTestPassword();
+    if (!(testUsername && testPassword)) {
       // These env vars needed within testAuthFlow() for any of this to work.
-      console.log("Skipping test: E2E_USERNAME and/or E2E_PASSWORD not set in .env file");
+      console.log("Skipping test: E2E_USERNAME* and/or E2E_PASSWORD* not set in .env file");
       this.skip();
     }
 
     // NOTE: can't be used with an arrow-function because it needs to be able to access `this`
     this.slow(10000); // mark this test as slow if it takes longer than 10s
     this.retries(2); // retry this test up to 2 times if it fails
+
     const newConnection: Connection = await ccloud.createCCloudConnection();
-    await testAuthFlow(newConnection.metadata.sign_in_uri!);
+    await testAuthFlow(newConnection.metadata.sign_in_uri!, testUsername!, testPassword!);
+
     // make sure the newly-created connection is available via the sidecar
     const client = (await getSidecar()).getConnectionsResourceApi();
     const connection = await client.gatewayV1ConnectionsIdGet({ id: CCLOUD_CONNECTION_ID });
@@ -511,19 +515,27 @@ describe("CCloud auth flow", () => {
     );
     assert.ok(connection);
     assert.notEqual(connection.status.ccloud?.state, ConnectedState.None);
-    assert.equal(connection.status.ccloud?.user?.username, process.env.E2E_USERNAME);
+    assert.equal(connection.status.ccloud?.user?.username, testUsername);
   });
 });
 
-async function testAuthFlow(signInUri: string) {
+function getTestUserName(): string | undefined {
+  return process.env.E2E_USERNAME || process.env.E2E_USERNAME_STAG;
+}
+
+function getTestPassword(): string | undefined {
+  return process.env.E2E_PASSWORD || process.env.E2E_PASSWORD_STAG;
+}
+
+async function testAuthFlow(signInUri: string, testUsername: string, testPassword: string) {
   const browser = await chromium.launch(); // set { headless: false } here for local debugging
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(signInUri);
 
-  await page.locator("[name=email]").fill(process.env.E2E_USERNAME!);
+  await page.locator("[name=email]").fill(testUsername);
   await page.locator("[type=submit]").click();
-  await page.locator("[name=password]").fill(process.env.E2E_PASSWORD!);
+  await page.locator("[name=password]").fill(testPassword);
   await page.locator("[type=submit]").click();
   await page.waitForURL(/127\.0\.0\.1/, { waitUntil: "networkidle" });
   await page.close();

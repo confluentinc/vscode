@@ -1,3 +1,4 @@
+import { CCLOUD_BASE_PATH } from "../../../src/constants";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -22,8 +23,8 @@ export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.
   name: "test-ccloud-kafka-cluster",
   provider: TEST_CCLOUD_PROVIDER,
   region: TEST_CCLOUD_REGION,
-  bootstrapServers: `SASL_SSL://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud:9092`,
-  uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud:443`,
+  bootstrapServers: `SASL_SSL://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:9092`,
+  uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:443`,
   environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
 });
 

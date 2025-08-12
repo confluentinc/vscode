@@ -22,9 +22,9 @@ blocks:
               . vault-setup
             fi
       jobs:
-        - name: "Mocha: CCloud Auth Smoketest (VS Code stable)"
+        - name: "Mocha: CCloud Auth Smoketest (VS Code stable, ${{parameters.CCLOUD_BASE_PATH}})"
           commands:
-            - make test-mocha TEST_SUITE="CCloud auth flow"
+            - make test-mocha TEST_SUITE="CCloud auth flow" IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH=$CCLOUD_BASE_PATH
       epilogue:
         always:
           commands:
