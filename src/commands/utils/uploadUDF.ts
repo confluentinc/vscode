@@ -11,6 +11,7 @@ import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
+import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { uploadFileToAzure } from "./uploadToAzure";
@@ -112,24 +113,11 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
   }
-  const cloud = await vscode.window.showQuickPick([CloudProvider.AWS, CloudProvider.Azure], {
-    placeHolder: "Select the cloud provider for the UDF upload",
-  });
 
-  if (!cloud) {
+  // Use cloudProviderRegionQuickPick to select cloud and region together
+  const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+  if (!cloudRegion) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
-    return undefined;
-  }
-
-  // Prompt for region after cloud is selected
-  const region = await vscode.window.showInputBox({
-    prompt: `Enter the region for the selected cloud provider (${cloud})`,
-    ignoreFocusOut: true,
-    validateInput: (value) => (value ? undefined : "Region is required"),
-  });
-
-  if (!region) {
-    showErrorNotificationWithButtons("Upload UDF cancelled: Region is required.");
     return undefined;
   }
 
@@ -148,7 +136,6 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   }
 
   const selectedFile: vscode.Uri = selectedFiles[0];
-
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const artifactName = await vscode.window.showInputBox({
@@ -164,11 +151,11 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
 
   return {
     environment: environment.id,
-    cloud,
-    region,
+    cloud: cloudRegion.provider,
+    region: cloudRegion.region,
     artifactName,
     fileFormat,
-    selectedFile: selectedFile ? selectedFile : undefined,
+    selectedFile,
   };
 }
 
@@ -190,8 +177,13 @@ export async function handleUploadFile(
     contentType,
   });
 
-  switch (params.cloud) {
-    case CloudProvider.Azure: {
+  // Accept both enum and uppercase string for cloud provider
+  const isAzure =
+    params.cloud === CloudProvider.Azure ||
+    params.cloud.toLowerCase() === CloudProvider.Azure.toLowerCase();
+
+  switch (true) {
+    case isAzure: {
       logger.debug("Uploading to Azure storage");
       const response = await uploadFileToAzure({
         file: file ?? blob,
