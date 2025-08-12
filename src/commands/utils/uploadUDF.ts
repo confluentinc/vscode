@@ -51,16 +51,12 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
         ? "application/java-archive"
         : "application/octet-stream";
 
-  const blob: Blob = new Blob([bytes], { type: contentType });
+  const blob: Blob = new Blob([new Uint8Array(bytes)], { type: contentType });
 
   // File may not exist in the VS Code extension host (Node 18). Use Blob if not.
   let file: File | undefined;
-  try {
-    if (typeof File !== "undefined") {
-      file = new File([blob], filename, { type: contentType, lastModified: Date.now() });
-    }
-  } catch {
-    // ignore – fall back to Blob
+  if (typeof File !== "undefined") {
+    file = new File([blob], filename, { type: contentType, lastModified: Date.now() });
   }
 
   return { blob, file, filename, contentType, size: blob.size };
