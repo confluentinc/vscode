@@ -679,7 +679,9 @@ export class FlinkLanguageClientManager implements Disposable {
     // the user's control plane token while the sidecar uses the longer-lived data plane token for
     // authenticating with the Confluent Cloud language service.
     if (!hasCCloudAuthSession()) {
-      logger.warn("Attempting to reconnect websocket despite user having an expired control plane token");
+      logger.warn(
+        "Attempting to reconnect websocket despite user having an expired control plane token",
+      );
     }
 
     // If we've reached max attempts, stop trying to reconnect
