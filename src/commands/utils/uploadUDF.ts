@@ -121,7 +121,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  // Ensure cloud is always set to the enum value
+  // Ensure cloud is always set to the enum value. TODO: Add call to AWS
   let cloud: CloudProvider;
   switch (cloudRegion.provider) {
     case CloudProvider.Azure:
