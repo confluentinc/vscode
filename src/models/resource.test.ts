@@ -7,6 +7,7 @@ import {
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import {
+  CloudProvider,
   ConnectionId,
   connectionIdToType,
   getConnectionLabel,
@@ -114,4 +115,29 @@ describe("isResource", () => {
       assert.strictEqual(isResource(value), false);
     });
   }
+});
+
+describe("CloudProvider", () => {
+  it("should have AWS value", () => {
+    assert.strictEqual(CloudProvider.AWS, "AWS");
+  });
+
+  it("should have Azure value", () => {
+    assert.strictEqual(CloudProvider.Azure, "Azure");
+  });
+
+  it("should have GCP value for future support", () => {
+    assert.strictEqual(CloudProvider.GCP, "GCP");
+  });
+
+  it("should contain all expected cloud providers", () => {
+    const expectedProviders = ["AWS", "Azure", "GCP"];
+    const actualProviders = Object.values(CloudProvider);
+
+    assert.deepStrictEqual(actualProviders.sort(), expectedProviders.sort());
+  });
+
+  it("should have exactly 3 cloud providers", () => {
+    assert.strictEqual(Object.keys(CloudProvider).length, 3);
+  });
 });
