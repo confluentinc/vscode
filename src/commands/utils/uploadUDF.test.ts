@@ -146,7 +146,7 @@ describe("uploadUDF utils", () => {
     beforeEach(function () {
       try {
         readFileStub = sandbox.stub(vscode.workspace.fs, "readFile");
-      } catch (err) {
+      } catch {
         this.skip();
       }
     });
