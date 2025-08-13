@@ -43,7 +43,6 @@ describe("uploadToAzure", () => {
         headers: new Headers({
           "content-length": "12",
           etag: '"0x8D9A1B2C3D4E5F6"',
-          å,
         }),
       } as Response;
 
