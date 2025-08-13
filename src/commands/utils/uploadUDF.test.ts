@@ -1,4 +1,4 @@
-import * as assert from "assert";
+import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import {
@@ -142,16 +142,17 @@ describe("uploadUDF utils", () => {
   });
   describe("prepareUploadFileFromUri", () => {
     let readFileStub: sinon.SinonStub;
+    let mockWorkspaceFs: any;
 
-    beforeEach(function () {
-      try {
-        readFileStub = sandbox.stub(vscode.workspace.fs, "readFile");
-      } catch {
-        this.skip();
-      }
+    beforeEach(() => {
+      readFileStub = sandbox.stub();
+      mockWorkspaceFs = {
+        readFile: readFileStub,
+      };
+      sandbox.stub(vscode.workspace, "fs").value(mockWorkspaceFs);
     });
 
-    it("should read file from uri and return blob, file, filename, contentType, and size", async function () {
+    it("should read file from uri and return blob, file, filename, contentType, and size", async () => {
       const fakeBytes = new Uint8Array([1, 2, 3, 4]);
       const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.jar");
       readFileStub.resolves(fakeBytes);
@@ -233,7 +234,6 @@ describe("uploadUDF utils", () => {
         region: "us-west-2",
         artifactName: "test-artifact",
         fileFormat: "jar",
-        // Use simple filename URI like other tests in codebase
         selectedFile: vscode.Uri.parse("test.jar"),
       };
       presignedURL = "https://example.com/upload";
