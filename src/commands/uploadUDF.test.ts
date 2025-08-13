@@ -1,8 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 import type { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts";
+import * as errors from "../errors";
 import * as errorsModule from "../errors";
+import * as notifications from "../notifications";
 import * as sidecarModule from "../sidecar";
+import * as ccloudAuth from "../sidecar/connections/ccloud";
+import { uploadUDFCommand } from "./uploadUDF";
+import * as uploadUDFUtils from "./utils/uploadUDF";
 import { getPresignedUploadUrl } from "./utils/uploadUDF";
 
 describe("getPresignedUploadUrl", () => {
@@ -55,33 +61,30 @@ describe("getPresignedUploadUrl", () => {
     assert.strictEqual(result, fakeResponse);
   });
 
-  it("should log and return undefined if the API call throws", async () => {
+  it("should return undefined if the API call throws", async () => {
     const error = new Error("API failure");
     artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.rejects(error);
 
     const result = await getPresignedUploadUrl(request);
 
-    sinon.assert.calledOnce(logErrorStub);
     assert.strictEqual(result, undefined);
   });
 
-  it("should log and return undefined if getSidecar throws", async () => {
+  it("should return undefined if getSidecar throws", async () => {
     const error = new Error("Sidecar connection failed");
     getSidecarStub.rejects(error);
 
     const result = await getPresignedUploadUrl(request);
 
-    sinon.assert.calledOnceWithExactly(logErrorStub, error, "Failed to get presigned upload URL");
     assert.strictEqual(result, undefined);
   });
 
-  it("should log and return undefined if getFlinkPresignedUrlsApi throws", async () => {
+  it("should return undefined if getFlinkPresignedUrlsApi throws", async () => {
     const error = new Error("Client creation failed");
     sidecarHandleStub.getFlinkPresignedUrlsApi.throws(error);
 
     const result = await getPresignedUploadUrl(request);
 
-    sinon.assert.calledOnceWithExactly(logErrorStub, error, "Failed to get presigned upload URL");
     assert.strictEqual(result, undefined);
   });
 
@@ -165,5 +168,184 @@ describe("getPresignedUploadUrl", () => {
 
     assert.strictEqual(result, null);
     sinon.assert.notCalled(logErrorStub);
+  });
+});
+
+describe("uploadUDF", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  describe("uploadUDFCommand", () => {
+    let hasCCloudAuthSessionStub: sinon.SinonStub;
+    let promptForUDFUploadParamsStub: sinon.SinonStub;
+    let handlePresignedUrlRequestStub: sinon.SinonStub;
+    let handleUploadFileStub: sinon.SinonStub;
+    let showErrorNotificationStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let logErrorStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      hasCCloudAuthSessionStub = sandbox.stub(ccloudAuth, "hasCCloudAuthSession").returns(true);
+      promptForUDFUploadParamsStub = sandbox.stub(uploadUDFUtils, "promptForUDFUploadParams");
+      handlePresignedUrlRequestStub = sandbox.stub(uploadUDFUtils, "handlePresignedUrlRequest");
+      handleUploadFileStub = sandbox.stub(uploadUDFUtils, "handleUploadFile");
+      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+      showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      logErrorStub = sandbox.stub(errors, "logError");
+    });
+
+    it("should return early if no CCloud auth session", async () => {
+      hasCCloudAuthSessionStub.returns(false);
+
+      await uploadUDFCommand();
+
+      sinon.assert.notCalled(promptForUDFUploadParamsStub);
+      sinon.assert.notCalled(handlePresignedUrlRequestStub);
+      sinon.assert.notCalled(handleUploadFileStub);
+    });
+
+    it("should return early if user cancels parameter prompt", async () => {
+      promptForUDFUploadParamsStub.resolves(undefined);
+
+      await uploadUDFCommand();
+
+      sinon.assert.calledOnce(promptForUDFUploadParamsStub);
+      sinon.assert.notCalled(handlePresignedUrlRequestStub);
+      sinon.assert.notCalled(handleUploadFileStub);
+    });
+
+    it("should show error notification and return if presigned URL request fails", async () => {
+      const mockParams = {
+        environment: "env-123",
+        cloud: "AWS" as const,
+        region: "us-west-2",
+        artifactName: "test-artifact",
+        fileFormat: "jar" as const,
+        selectedFile: vscode.Uri.file("/path/to/test.jar"),
+      };
+
+      promptForUDFUploadParamsStub.resolves(mockParams);
+      handlePresignedUrlRequestStub.resolves(undefined);
+
+      await uploadUDFCommand();
+
+      const expectedRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+        environment: "env-123",
+        cloud: "AWS",
+        region: "us-west-2",
+        id: "test-artifact",
+        content_format: "jar",
+      };
+
+      sinon.assert.calledOnceWithExactly(handlePresignedUrlRequestStub, expectedRequest);
+      sinon.assert.calledOnceWithExactly(
+        showErrorNotificationStub,
+        "Failed to get presigned upload URL. See logs for details.",
+      );
+      sinon.assert.notCalled(handleUploadFileStub);
+      sinon.assert.notCalled(showInformationMessageStub);
+    });
+
+    it("should successfully upload file and show success message when all operations succeed", async () => {
+      const mockParams = {
+        environment: "env-456",
+        cloud: "Azure" as const,
+        region: "eastus",
+        artifactName: "my-udf",
+        fileFormat: "jar" as const,
+        selectedFile: vscode.Uri.file("/path/to/my-udf.jar"),
+      };
+      const mockUploadUrl = "https://example.com/upload-url";
+
+      promptForUDFUploadParamsStub.resolves(mockParams);
+      handlePresignedUrlRequestStub.resolves(mockUploadUrl);
+      handleUploadFileStub.resolves();
+
+      await uploadUDFCommand();
+
+      const expectedRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+        environment: "env-456",
+        cloud: "Azure",
+        region: "eastus",
+        id: "my-udf",
+        content_format: "jar",
+      };
+
+      sinon.assert.calledOnceWithExactly(handlePresignedUrlRequestStub, expectedRequest);
+      sinon.assert.calledOnceWithExactly(handleUploadFileStub, mockParams, mockUploadUrl);
+      sinon.assert.calledOnceWithExactly(
+        showInformationMessageStub,
+        'UDF artifact "my-udf" uploaded successfully!',
+      );
+      sinon.assert.notCalled(showErrorNotificationStub);
+      sinon.assert.notCalled(logErrorStub);
+    });
+
+    it("should handle errors during upload process", async () => {
+      const mockParams = {
+        environment: "env-789",
+        cloud: "GCP" as const,
+        region: "us-central1",
+        artifactName: "failing-udf",
+        fileFormat: "jar" as const,
+        selectedFile: vscode.Uri.file("/path/to/failing.jar"),
+      };
+      const mockUploadUrl = "https://example.com/upload-url";
+      const uploadError = new Error("Upload failed");
+
+      promptForUDFUploadParamsStub.resolves(mockParams);
+      handlePresignedUrlRequestStub.resolves(mockUploadUrl);
+      handleUploadFileStub.rejects(uploadError);
+
+      await uploadUDFCommand();
+
+      sinon.assert.calledOnceWithExactly(handleUploadFileStub, mockParams, mockUploadUrl);
+      sinon.assert.calledOnceWithExactly(
+        logErrorStub,
+        uploadError,
+        "Failed to execute Upload UDF command",
+      );
+      sinon.assert.calledOnceWithExactly(
+        showErrorNotificationStub,
+        "An error occurred while uploading UDF. See logs for details.",
+      );
+      sinon.assert.notCalled(showInformationMessageStub);
+    });
+
+    it("should handle errors during presigned URL request", async () => {
+      const mockParams = {
+        environment: "env-error",
+        cloud: "AWS" as const,
+        region: "us-west-1",
+        artifactName: "error-udf",
+        fileFormat: "jar" as const,
+        selectedFile: vscode.Uri.file("/path/to/error.jar"),
+      };
+      const requestError = new Error("Presigned URL request failed");
+
+      promptForUDFUploadParamsStub.resolves(mockParams);
+      handlePresignedUrlRequestStub.rejects(requestError);
+
+      await uploadUDFCommand();
+
+      sinon.assert.calledOnceWithExactly(
+        logErrorStub,
+        requestError,
+        "Failed to execute Upload UDF command",
+      );
+      sinon.assert.calledOnceWithExactly(
+        showErrorNotificationStub,
+        "An error occurred while uploading UDF. See logs for details.",
+      );
+      sinon.assert.notCalled(handleUploadFileStub);
+      sinon.assert.notCalled(showInformationMessageStub);
+    });
   });
 });

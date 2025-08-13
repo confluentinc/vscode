@@ -7,7 +7,6 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import * as errors from "../../errors";
 import * as notifications from "../../notifications";
 import * as sidecar from "../../sidecar";
 import * as uploadUDFModule from "./uploadUDF";
@@ -67,7 +66,7 @@ describe("uploadUDF utils", () => {
       );
     });
 
-    it("should return undefined and log error when request fails", async () => {
+    it("should return undefined when request fails", async () => {
       const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
         environment: "env-123",
         cloud: "AWS",
@@ -78,16 +77,10 @@ describe("uploadUDF utils", () => {
 
       const mockError = new Error("API request failed");
       sandbox.stub(sidecar, "getSidecar").rejects(mockError);
-      const logErrorStub = sandbox.stub(errors, "logError");
 
       const result = await getPresignedUploadUrl(mockRequest);
 
       assert.strictEqual(result, undefined);
-      sinon.assert.calledOnceWithExactly(
-        logErrorStub,
-        mockError,
-        "Failed to get presigned upload URL",
-      );
     });
   });
 
@@ -101,7 +94,7 @@ describe("uploadUDF utils", () => {
     };
 
     sandbox.stub(sidecar, "getSidecar").rejects(new Error("Failed"));
-    sandbox.stub(errors, "logError");
+
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
     await handlePresignedUrlRequest(mockRequest);
