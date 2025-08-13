@@ -51,7 +51,7 @@ export const uploadFileToAzure = async ({
     return response;
   } catch (error) {
     logger.error("Azure upload error", error);
-    let sentryContext: Record<string, unknown> = {
+    const sentryContext: Record<string, unknown> = {
       extra: {
         fileType: file instanceof File ? file.type : contentType,
         fileSize: file.size,
