@@ -188,6 +188,37 @@ describe("uploadUDF utils", () => {
 
       assert.strictEqual(result.contentType, "application/octet-stream");
     });
+
+    it("should throw error when file read fails", async function () {
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.jar");
+      const readError = new Error("File not found");
+      readFileStub.rejects(readError);
+
+      await assert.rejects(() => uploadUDFModule.prepareUploadFileFromUri(fakeUri), readError);
+
+      sinon.assert.calledOnceWithExactly(readFileStub, fakeUri);
+    });
+
+    it("should throw error when file access is denied", async function () {
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/restricted.jar");
+      const accessError = new Error("EACCES: permission denied");
+      readFileStub.rejects(accessError);
+
+      await assert.rejects(() => uploadUDFModule.prepareUploadFileFromUri(fakeUri), accessError);
+
+      sinon.assert.calledOnceWithExactly(readFileStub, fakeUri);
+    });
+
+    it("should handle file with no extension", async function () {
+      const fakeBytes = new Uint8Array([10, 11]);
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/noextension");
+      readFileStub.resolves(fakeBytes);
+
+      const result = await uploadUDFModule.prepareUploadFileFromUri(fakeUri);
+
+      assert.strictEqual(result.filename, "noextension");
+      assert.strictEqual(result.contentType, "application/octet-stream");
+    });
   });
 
   describe("handleUploadFile", () => {
