@@ -120,11 +120,15 @@ export class FlinkStatementManager extends DisposableCollection {
     // May be undefined if polling is disabled.
     this.poller = this.resetPoller();
 
-    this.disposables = [
-      // Listen for changes to our configuration. Reconfigures and/or starts/stops me.
-      this.createConfigChangeListener(),
-      // Listen for changes to ccloud auth. Starts or stops me.
-      this.createCcloudAuthListener(),
+    this.disposables.push(...this.setEventListeners());
+  }
+
+  private setEventListeners(): Disposable[] {
+    return [
+      // Listen for changes to user/workspace settings which affect Flink statement support / polling.
+      workspace.onDidChangeConfiguration(this.onDidChangeConfigurationHandler.bind(this)),
+      // Listen for ccloud auth changes, start and stop our polling as needed.
+      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
     ];
   }
 
@@ -159,9 +163,7 @@ export class FlinkStatementManager extends DisposableCollection {
       // Create a new poller with the current frequency.
       const poller = new IntervalPoller(
         "FlinkStatementManager",
-        () => {
-          void this.pollStatements();
-        },
+        this.pollStatements.bind(this),
         this.configuration.pollingFrequency * 1000,
       );
 
@@ -180,55 +182,52 @@ export class FlinkStatementManager extends DisposableCollection {
   }
 
   /**
-   * Event listener to migrate configuration changes that we need to be aware
+   * Event handler to migrate configuration changes that we need to be aware
    * of over to `this.configuration`. Also recreates the poller upon changes
    * to the polling frequency or if Flink is enabled/disabled.
    */
-  private createConfigChangeListener(): Disposable {
+
+  async onDidChangeConfigurationHandler(event: ConfigurationChangeEvent): Promise<void> {
     // NOTE: this fires from any VS Code configuration, not just configs from our extension
-    return workspace.onDidChangeConfiguration(async (event: ConfigurationChangeEvent) => {
-      if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS.id)) {
-        const newFrequency: number = STATEMENT_POLLING_FREQUENCY_SECONDS.value;
-        this.configuration.pollingFrequency = newFrequency;
-        logger.debug(`Polling frequency changed to ${newFrequency}`);
-        this.poller = this.resetPoller();
-        return;
-      }
+    if (event.affectsConfiguration(STATEMENT_POLLING_FREQUENCY_SECONDS.id)) {
+      const newFrequency: number = STATEMENT_POLLING_FREQUENCY_SECONDS.value;
+      this.configuration.pollingFrequency = newFrequency;
+      logger.debug(`Polling frequency changed to ${newFrequency}`);
+      this.poller = this.resetPoller();
+      return;
+    }
 
-      if (event.affectsConfiguration(STATEMENT_POLLING_LIMIT.id)) {
-        const newLimit: number = STATEMENT_POLLING_LIMIT.value;
-        this.configuration.maxStatementsToPoll = newLimit;
-        logger.debug(`Max statement to poll changed to ${newLimit}`);
-        return;
-      }
+    if (event.affectsConfiguration(STATEMENT_POLLING_LIMIT.id)) {
+      const newLimit: number = STATEMENT_POLLING_LIMIT.value;
+      this.configuration.maxStatementsToPoll = newLimit;
+      logger.debug(`Max statement to poll changed to ${newLimit}`);
+      return;
+    }
 
-      if (event.affectsConfiguration(STATEMENT_POLLING_CONCURRENCY.id)) {
-        const newConcurrency: number = STATEMENT_POLLING_CONCURRENCY.value;
-        this.configuration.concurrency = newConcurrency;
-        logger.debug(`Polling concurrency changed to ${newConcurrency}`);
-      }
-    });
+    if (event.affectsConfiguration(STATEMENT_POLLING_CONCURRENCY.id)) {
+      const newConcurrency: number = STATEMENT_POLLING_CONCURRENCY.value;
+      this.configuration.concurrency = newConcurrency;
+      logger.debug(`Polling concurrency changed to ${newConcurrency}`);
+    }
   }
 
   /**
-   * Event listener to listen for ccloud auth changes.
+   * Event handler to react to ccloud auth changes.
    * If we edge to a ccloud-connected state, we will reset the poller.
    * If we edge to a ccloud-disconnected state, we will stop the poller
    * and clear the monitored statements.
    */
-  private createCcloudAuthListener(): Disposable {
-    return ccloudConnected.event((connected: boolean) => {
-      if (connected) {
-        logger.debug("CCloud connected, resetting poller");
-        this.poller = this.resetPoller();
-      } else {
-        logger.debug("CCloud disconnected, stopping poller");
-        if (this.poller) {
-          this.poller.stop();
-        }
-        this.monitoredStatements.clear();
+  ccloudConnectedHandler(connected: boolean): void {
+    if (connected) {
+      logger.debug("CCloud connected, resetting poller");
+      this.poller = this.resetPoller();
+    } else {
+      logger.debug("CCloud disconnected, stopping poller");
+      if (this.poller) {
+        this.poller.stop();
       }
-    });
+      this.monitoredStatements.clear();
+    }
   }
 
   /**
