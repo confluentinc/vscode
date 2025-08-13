@@ -42,26 +42,32 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
   contentType: string;
   size: number;
 }> {
-  const bytes: Uint8Array = await vscode.workspace.fs.readFile(uri);
-  const filename: string = path.basename(uri.fsPath);
-  const ext: string = path.extname(filename).toLowerCase();
+  try {
+    const bytes: Uint8Array = await vscode.workspace.fs.readFile(uri);
+    const filename: string = path.basename(uri.fsPath);
+    const ext: string = path.extname(filename).toLowerCase();
 
-  const contentType: string =
-    ext === ".zip"
-      ? "application/zip"
-      : ext === ".jar"
-        ? "application/java-archive"
-        : "application/octet-stream";
+    const contentType: string =
+      ext === ".zip"
+        ? "application/zip"
+        : ext === ".jar"
+          ? "application/java-archive"
+          : "application/octet-stream";
 
-  const blob: Blob = new Blob([new Uint8Array(bytes)], { type: contentType });
+    const blob: Blob = new Blob([new Uint8Array(bytes)], { type: contentType });
 
-  // File may not exist in the VS Code extension host (Node 18). Use Blob if not.
-  let file: File | undefined;
-  if (typeof File !== "undefined") {
-    file = new File([blob], filename, { type: contentType, lastModified: Date.now() });
+    // File may not exist in the VS Code extension host (Node 18). Use Blob if not.
+    let file: File | undefined;
+    if (typeof File !== "undefined") {
+      file = new File([blob], filename, { type: contentType, lastModified: Date.now() });
+    }
+
+    return { blob, file, filename, contentType, size: blob.size };
+  } catch (err) {
+    logError(err, `Failed to read file from URI: ${uri.toString()}`);
+    showErrorNotificationWithButtons(`Failed to read file: ${uri.fsPath}. See logs for details.`);
+    throw err;
   }
-
-  return { blob, file, filename, contentType, size: blob.size };
 }
 
 /**

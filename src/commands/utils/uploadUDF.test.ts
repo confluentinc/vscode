@@ -193,6 +193,45 @@ describe("uploadUDF utils", () => {
       sinon.assert.calledOnceWithExactly(readFileStub, fakeUri);
     });
 
+    it("should handle environments where File is undefined", async function () {
+      const fakeBytes = new Uint8Array([1, 2, 3, 4]);
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.jar");
+      readFileStub.resolves(fakeBytes);
+
+      const originalFile = global.File;
+      try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        global.File = undefined;
+
+        const result = await uploadUDFModule.prepareUploadFileFromUri(fakeUri);
+
+        assert.strictEqual(result.file, undefined);
+        assert(result.blob instanceof Blob);
+      } finally {
+        // Restore global File
+        global.File = originalFile;
+      }
+    });
+
+    it("should show errors when file read fails", async function () {
+      const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.jar");
+      const readError = new Error("File not found");
+      readFileStub.rejects(readError);
+
+      // Stub the actual logging module
+      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+
+      await assert.rejects(() => uploadUDFModule.prepareUploadFileFromUri(fakeUri), readError);
+
+      // Verify that showErrorNotificationWithButtons was called with the proper message
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(
+        showErrorStub,
+        `Failed to read file: ${fakeUri.fsPath}. See logs for details.`,
+      );
+    });
+
     it("should throw error when file access is denied", async function () {
       const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/restricted.jar");
       const accessError = new Error("EACCES: permission denied");
