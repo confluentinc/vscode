@@ -64,4 +64,106 @@ describe("getPresignedUploadUrl", () => {
     sinon.assert.calledOnce(logErrorStub);
     assert.strictEqual(result, undefined);
   });
+
+  it("should log and return undefined if getSidecar throws", async () => {
+    const error = new Error("Sidecar connection failed");
+    getSidecarStub.rejects(error);
+
+    const result = await getPresignedUploadUrl(request);
+
+    sinon.assert.calledOnceWithExactly(logErrorStub, error, "Failed to get presigned upload URL");
+    assert.strictEqual(result, undefined);
+  });
+
+  it("should log and return undefined if getFlinkPresignedUrlsApi throws", async () => {
+    const error = new Error("Client creation failed");
+    sidecarHandleStub.getFlinkPresignedUrlsApi.throws(error);
+
+    const result = await getPresignedUploadUrl(request);
+
+    sinon.assert.calledOnceWithExactly(logErrorStub, error, "Failed to get presigned upload URL");
+    assert.strictEqual(result, undefined);
+  });
+
+  it("should handle Azure cloud provider correctly", async () => {
+    const azureRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+      environment: "env-2",
+      cloud: "Azure",
+      region: "eastus",
+    } as PresignedUploadUrlArtifactV1PresignedUrlRequest;
+
+    const fakeResponse = {
+      url: "https://test-storage.blob.core.windows.net/",
+      expires: 1234567890,
+    };
+    artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.resolves(fakeResponse);
+
+    const result = await getPresignedUploadUrl(azureRequest);
+
+    const callArg = sidecarHandleStub.getFlinkPresignedUrlsApi.getCall(0).args[0];
+    assert.strictEqual(callArg.environmentId, "env-2");
+    assert.strictEqual(callArg.provider, "Azure");
+    assert.strictEqual(callArg.region, "eastus");
+    assert.strictEqual(result, fakeResponse);
+  });
+
+  it("should handle GCP cloud provider correctly", async () => {
+    const gcpRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+      environment: "env-3",
+      cloud: "GCP",
+      region: "us-central1",
+    } as PresignedUploadUrlArtifactV1PresignedUrlRequest;
+
+    const fakeResponse = {
+      url: "https://storage.googleapis.com/test-bucket/",
+      expires: 1234567890,
+    };
+    artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.resolves(fakeResponse);
+
+    const result = await getPresignedUploadUrl(gcpRequest);
+
+    const callArg = sidecarHandleStub.getFlinkPresignedUrlsApi.getCall(0).args[0];
+    assert.strictEqual(callArg.environmentId, "env-3");
+    assert.strictEqual(callArg.provider, "GCP");
+    assert.strictEqual(callArg.region, "us-central1");
+    assert.strictEqual(result, fakeResponse);
+  });
+
+  it("should pass the complete request object to the API call", async () => {
+    const completeRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+      environment: "env-test",
+      cloud: "AWS",
+      region: "eu-west-1",
+      id: "test-artifact-id",
+      content_format: "jar",
+    } as PresignedUploadUrlArtifactV1PresignedUrlRequest;
+
+    const fakeResponse = { url: "https://test.com", expires: 123 };
+    artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.resolves(fakeResponse);
+
+    await getPresignedUploadUrl(completeRequest);
+
+    sinon.assert.calledOnceWithExactly(
+      artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl,
+      { PresignedUploadUrlArtifactV1PresignedUrlRequest: completeRequest },
+    );
+  });
+
+  it("should return undefined response when API returns undefined", async () => {
+    artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.resolves(undefined);
+
+    const result = await getPresignedUploadUrl(request);
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(logErrorStub);
+  });
+
+  it("should return null response when API returns null", async () => {
+    artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.resolves(null);
+
+    const result = await getPresignedUploadUrl(request);
+
+    assert.strictEqual(result, null);
+    sinon.assert.notCalled(logErrorStub);
+  });
 });
