@@ -11,7 +11,6 @@ describe("uploadToAzure", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
-
   afterEach(() => {
     sandbox.restore();
   });
@@ -44,6 +43,7 @@ describe("uploadToAzure", () => {
         headers: new Headers({
           "content-length": "12",
           etag: '"0x8D9A1B2C3D4E5F6"',
+          å,
         }),
       } as Response;
 
@@ -126,6 +126,49 @@ describe("uploadToAzure", () => {
         showErrorNotificationStub,
         "Failed to upload file to Azure. See logs for details.",
       );
+    });
+
+    it("should log info at start and success of upload", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 201,
+        statusText: "Created",
+        headers: new Headers({
+          "content-length": "12",
+          etag: '"0x8D9A1B2C3D4E5F6"',
+        }),
+      } as Response;
+
+      fetchStub.resolves(mockResponse);
+
+      const result = await uploadFileToAzure(mockParams);
+
+      assert.strictEqual(result, mockResponse);
+
+      sinon.assert.notCalled(logErrorStub);
+      sinon.assert.notCalled(showErrorNotificationStub);
+    });
+
+    it("should handle File instance and log correct file type in error context", async () => {
+      const mockFileInstance = new File(["test content"], "test.zip", {
+        type: "application/zip",
+      });
+      const paramsWithFile = {
+        ...mockParams,
+        file: mockFileInstance,
+      };
+
+      const fetchError = new Error("Network error");
+      fetchStub.rejects(fetchError);
+
+      await assert.rejects(async () => await uploadFileToAzure(paramsWithFile), /Network error/);
+
+      sinon.assert.calledWith(logErrorStub, fetchError, "Failed to upload file to Azure", {
+        extra: {
+          fileType: "application/zip", // Should use file.type when File instance
+          fileSize: mockFileInstance.size,
+        },
+      });
     });
   });
 });
