@@ -107,7 +107,7 @@ describe("flinkStatementManager.ts", () => {
         const bogusDisposable: vscode.Disposable = {
           dispose: () => {},
         };
-        const fakeEventDispsables = [bogusDisposable, bogusDisposable];
+        const fakeEventDisposables = [bogusDisposable, bogusDisposable];
         const setEventListenersStub = sandbox
           .stub(
             // bending over backwards to stub private method.
@@ -116,7 +116,7 @@ describe("flinkStatementManager.ts", () => {
             },
             "setEventListeners",
           )
-          .returns(fakeEventDispsables);
+          .returns(fakeEventDisposables);
         // Clean up old instance, get a new one now with the stubbed method.
         instance.dispose();
         FlinkStatementManager["instance"] = undefined;
@@ -127,7 +127,7 @@ describe("flinkStatementManager.ts", () => {
         sinon.assert.calledOnce(setEventListenersStub);
 
         // and should have assigned into disposables.
-        assert.deepEqual(instance["disposables"], fakeEventDispsables);
+        assert.deepEqual(instance["disposables"], fakeEventDisposables);
       });
     });
 
