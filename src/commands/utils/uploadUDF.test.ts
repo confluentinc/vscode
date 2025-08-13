@@ -103,7 +103,6 @@ describe("uploadUDF utils", () => {
     sandbox.stub(sidecar, "getSidecar").rejects(new Error("Failed"));
     sandbox.stub(errors, "logError");
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-    const handleUploadFileStub = sandbox.stub(uploadUDFModule, "handleUploadFile").resolves();
 
     await handlePresignedUrlRequest(mockRequest);
 
@@ -133,7 +132,6 @@ describe("uploadUDF utils", () => {
       }),
     } as any);
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-    const handleUploadFileStub = sandbox.stub(uploadUDFModule, "handleUploadFile").resolves();
 
     await handlePresignedUrlRequest(mockRequest);
 
@@ -142,25 +140,18 @@ describe("uploadUDF utils", () => {
       "Failed to get presigned upload URL. See logs for details.",
     );
   });
-
   describe("prepareUploadFileFromUri", () => {
     let readFileStub: sinon.SinonStub;
 
     beforeEach(function () {
       try {
         readFileStub = sandbox.stub(vscode.workspace.fs, "readFile");
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         this.skip();
       }
     });
 
-    afterEach(() => {
-      sandbox.restore();
-    });
-
     it("should read file from uri and return blob, file, filename, contentType, and size", async function () {
-      if (!readFileStub) this.skip();
       const fakeBytes = new Uint8Array([1, 2, 3, 4]);
       const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.jar");
       readFileStub.resolves(fakeBytes);
@@ -179,7 +170,6 @@ describe("uploadUDF utils", () => {
     });
 
     it("should use application/zip for .zip files", async function () {
-      if (!readFileStub) this.skip();
       const fakeBytes = new Uint8Array([5, 6, 7]);
       const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.zip");
       readFileStub.resolves(fakeBytes);
@@ -190,7 +180,6 @@ describe("uploadUDF utils", () => {
     });
 
     it("should use application/octet-stream for unknown extensions", async function () {
-      if (!readFileStub) this.skip();
       const fakeBytes = new Uint8Array([8, 9]);
       const fakeUri: vscode.Uri = vscode.Uri.file("/tmp/test.unknown");
       readFileStub.resolves(fakeBytes);
@@ -233,31 +222,6 @@ describe("uploadUDF utils", () => {
         contentType: "application/java-archive",
         size: 3,
       });
-      const uploadFileToAzureStub = sandbox.stub(uploadUDFModule, "uploadFileToAzure").resolves({
-        status: 200,
-        statusText: "OK",
-        headers: {
-          entries: () => [["x-ms-request-id", "abc123"]] as [string, string][],
-        },
-        ok: true,
-        redirected: false,
-        type: "basic",
-        url: "",
-        clone: () => {
-          throw new Error("not implemented");
-        },
-        body: null,
-        bodyUsed: false,
-        arrayBuffer: async () => new ArrayBuffer(0),
-        blob: async () => new Blob(),
-        formData: async () => new FormData(),
-        json: async () => ({}),
-        text: async () => "",
-        trailer: Promise.resolve(new Headers()),
-      } as unknown as Response);
-
-      // Should not show error notification
-      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
       params.cloud = "Azure";
       await handleUploadFileStub(params, presignedURL);
@@ -273,8 +237,6 @@ describe("uploadUDF utils", () => {
         contentType: "application/java-archive",
         size: 1,
       });
-      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-      const uploadFileToAzureStub = sandbox.stub(uploadUDFModule, "uploadFileToAzure");
 
       params.cloud = "AWS";
       await handleUploadFileStub(params, presignedURL);
@@ -286,7 +248,6 @@ describe("uploadUDF utils", () => {
       params.selectedFile = undefined;
       // Always stub to prevent accidental invocation with undefined
       sandbox.stub(uploadUDFModule, "prepareUploadFileFromUri");
-      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
       await handleUploadFileStub(params, presignedURL);
 
