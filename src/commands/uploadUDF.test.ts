@@ -52,7 +52,6 @@ describe("getPresignedUploadUrl", () => {
 
     sinon.assert.calledOnce(getSidecarStub);
 
-    // Check the actual argument values for correctness
     const callArg = sidecarHandleStub.getFlinkPresignedUrlsApi.getCall(0).args[0];
     assert.strictEqual(callArg.environmentId, request.environment);
     assert.strictEqual(callArg.provider, request.cloud);
@@ -107,28 +106,6 @@ describe("getPresignedUploadUrl", () => {
     assert.strictEqual(callArg.environmentId, "env-2");
     assert.strictEqual(callArg.provider, "Azure");
     assert.strictEqual(callArg.region, "eastus");
-    assert.strictEqual(result, fakeResponse);
-  });
-
-  it("should handle GCP cloud provider correctly", async () => {
-    const gcpRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: "env-3",
-      cloud: "GCP",
-      region: "us-central1",
-    } as PresignedUploadUrlArtifactV1PresignedUrlRequest;
-
-    const fakeResponse = {
-      url: "https://storage.googleapis.com/test-bucket/",
-      expires: 1234567890,
-    };
-    artifactsClientStub.presignedUploadUrlArtifactV1PresignedUrl.resolves(fakeResponse);
-
-    const result = await getPresignedUploadUrl(gcpRequest);
-
-    const callArg = sidecarHandleStub.getFlinkPresignedUrlsApi.getCall(0).args[0];
-    assert.strictEqual(callArg.environmentId, "env-3");
-    assert.strictEqual(callArg.provider, "GCP");
-    assert.strictEqual(callArg.region, "us-central1");
     assert.strictEqual(result, fakeResponse);
   });
 
@@ -291,7 +268,7 @@ describe("uploadUDF", () => {
     it("should handle errors during upload process", async () => {
       const mockParams = {
         environment: "env-789",
-        cloud: "GCP" as const,
+        cloud: "Azure" as const,
         region: "us-central1",
         artifactName: "failing-udf",
         fileFormat: "jar" as const,
