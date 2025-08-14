@@ -497,7 +497,11 @@ export class FlinkLanguageClientManager implements Disposable {
           return;
         }
 
-        if (this.isLanguageClientConnected() && url === this.lastWebSocketUrl) {
+        if (
+          this.isLanguageClientConnected() &&
+          url === this.lastWebSocketUrl &&
+          !restartRunningClient
+        ) {
           // If we already have a client, it's alive, the compute pool matches, so we're good
           logger.trace("Language client already connected to correct url, no need to reinitialize");
           return;
