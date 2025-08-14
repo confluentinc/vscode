@@ -431,8 +431,10 @@ export class FlinkLanguageClientManager implements Disposable {
    * - User is authenticated with CCloud
    * - User has designated a compute pool to use (language server route is region+provider specific)
    * - User has opened a Flink SQL file
+   * @param uri The URI of the document to initialize the client for
+   * @param restartRunningClient Whether to force reinitialization of the language client even if it's already running
    */
-  public async maybeStartLanguageClient(uri?: Uri): Promise<void> {
+  public async maybeStartLanguageClient(uri?: Uri, restartRunningClient = false): Promise<void> {
     const uriStr = uri?.toString() || "undefined";
     logger.trace(`Requesting language client initialization for ${uriStr}`);
     // We use runExclusive to ensure only one initialization attempt at a time
@@ -456,8 +458,14 @@ export class FlinkLanguageClientManager implements Disposable {
           this.lastDocUri &&
           uri.toString() === this.lastDocUri.toString()
         ) {
-          logger.trace("Language client already exists for this URI, skipping initialization");
-          return;
+          if (!restartRunningClient) {
+            logger.trace("Language client already exists for this URI, skipping initialization");
+            return;
+          } else {
+            logger.trace(
+              "Language client is already running for this URI, but forcing reinitialization",
+            );
+          }
         }
 
         const { computePoolId } = await this.getFlinkSqlSettings(uri);
@@ -709,7 +717,8 @@ export class FlinkLanguageClientManager implements Disposable {
   private async restartLanguageClient(): Promise<void> {
     if (!this.lastDocUri) return; // We should never get here
     try {
-      await this.maybeStartLanguageClient(this.lastDocUri);
+      // Enforce restart of language client
+      await this.maybeStartLanguageClient(this.lastDocUri, true);
       // Reset counter on successful reconnection
       this.reconnectCounter = 0;
     } catch (e) {
