@@ -9,6 +9,7 @@ import {
 } from "../../clients/flinkArtifacts";
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
+import { CloudProvider } from "../../models/resource";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
@@ -18,7 +19,7 @@ import {
   prepareUploadFileFromUri,
   promptForUDFUploadParams,
 } from "./uploadUDF";
-describe("uploadUDF utils", () => {
+describe("uploadUDF", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -91,11 +92,37 @@ describe("uploadUDF utils", () => {
 
     it("should return undefined if region is not selected", async () => {
       const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
-
       sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
       sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(undefined);
 
       const result = await promptForUDFUploadParams();
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should show error and return undefined for non-Azure cloud providers", async () => {
+      const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
+
+      const mockAwsRegion = {
+        id: "us-west-2",
+        provider: "aws" as CloudProvider,
+        displayName: "US West (Oregon)",
+        regionName: "us-west-2",
+        region: "us-west-2",
+      };
+
+      sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(mockAwsRegion);
+
+      const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
+
+      const result = await promptForUDFUploadParams();
+
+      sinon.assert.calledWithMatch(
+        errorNotificationStub,
+        "Upload UDF cancelled: Unsupported cloud provider.",
+      );
+
       assert.strictEqual(result, undefined);
     });
   });

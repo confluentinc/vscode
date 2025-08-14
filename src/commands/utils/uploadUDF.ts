@@ -95,18 +95,12 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  let cloud: CloudProvider;
-  switch (cloudRegion.provider) {
-    case CloudProvider.Azure:
-      cloud = CloudProvider.Azure;
-      break;
-    case CloudProvider.AWS:
-      cloud = CloudProvider.AWS;
-      break;
-    default:
-      showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
-      return undefined;
+  if (cloudRegion.provider !== CloudProvider.Azure) {
+    showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
+    return undefined;
   }
+
+  let cloud = CloudProvider.Azure;
 
   const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
     openLabel: "Select",
