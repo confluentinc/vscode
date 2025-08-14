@@ -432,9 +432,9 @@ export class FlinkLanguageClientManager implements Disposable {
    * - User has designated a compute pool to use (language server route is region+provider specific)
    * - User has opened a Flink SQL file
    * @param uri The URI of the document to initialize the client for
-   * @param forceRestart Whether to force reinitialization of the language client even if it's already running
+   * @param restartRunningClient Whether to force reinitialization of the language client even if it's already running
    */
-  public async maybeStartLanguageClient(uri?: Uri, forceRestart = false): Promise<void> {
+  public async maybeStartLanguageClient(uri?: Uri, restartRunningClient = false): Promise<void> {
     const uriStr = uri?.toString() || "undefined";
     logger.trace(`Requesting language client initialization for ${uriStr}`);
     // We use runExclusive to ensure only one initialization attempt at a time
@@ -458,12 +458,12 @@ export class FlinkLanguageClientManager implements Disposable {
           this.lastDocUri &&
           uri.toString() === this.lastDocUri.toString()
         ) {
-          if (!forceRestart) {
+          if (!restartRunningClient) {
             logger.trace("Language client already exists for this URI, skipping initialization");
             return;
           } else {
             logger.trace(
-              "Language client already exists for this URI, but forcing reinitialization of language client",
+              "Language client is already running for this URI, but forcing reinitialization",
             );
           }
         }
