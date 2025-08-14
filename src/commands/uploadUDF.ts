@@ -5,7 +5,7 @@ import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import {
-  handlePresignedUrlRequest,
+  getPresignedUploadUrl,
   handleUploadFile,
   promptForUDFUploadParams,
 } from "./utils/uploadUDF";
@@ -32,7 +32,7 @@ export async function uploadUDFCommand(): Promise<void> {
       content_format: params.fileFormat,
     };
 
-    const uploadUrl = await handlePresignedUrlRequest(request);
+    const uploadUrl = await getPresignedUploadUrl(request);
 
     if (!uploadUrl) {
       showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
