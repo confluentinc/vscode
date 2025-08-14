@@ -222,10 +222,9 @@ export class FlinkLanguageClientManager implements Disposable {
         }
         if (
           this.openFlinkSqlDocuments.has(uriString) &&
-          this.languageClient?.diagnostics?.get(event.document.uri)
+          this.languageClient?.diagnostics?.has(event.document.uri)
         ) {
-          logger.trace(`Clearing diagnostics for document: ${uriString}`);
-          this.languageClient.diagnostics.set(event.document.uri, []);
+          this.clearDiagnostics(event.document.uri);
         } else {
           logger.trace(`Not clearing diagnostics for document: ${uriString}`);
         }
@@ -354,6 +353,18 @@ export class FlinkLanguageClientManager implements Disposable {
     } catch (error) {
       logger.error("Error checking Flink resources availability", error);
       return false;
+    }
+  }
+  /**
+   * Clear diagnostics for a specific document URI
+   * This is used to clear diagnostics when the document is closed or when the language client is reinitialized
+   * It prevents stale diagnostics from being shown in the editor
+   * @param documentUri The URI of the document to clear diagnostics for
+   */
+  private clearDiagnostics(documentUri: Uri): void {
+    if (this.languageClient?.diagnostics?.has(documentUri)) {
+      logger.trace(`Clearing diagnostics for document: ${documentUri.toString()}`);
+      this.languageClient.diagnostics.delete(documentUri);
     }
   }
 
@@ -504,6 +515,12 @@ export class FlinkLanguageClientManager implements Disposable {
 
         // Reset reconnect counter on new initialization
         this.reconnectCounter = 0;
+
+        // Clear any diagnostics for the previous document.
+        if (this.lastDocUri) {
+          this.clearDiagnostics(this.lastDocUri);
+        }
+
         logger.debug(`Starting language client with URL: ${url} for document ${uriStr}`);
         this.languageClient = await this.initializeLanguageClient(url);
 
