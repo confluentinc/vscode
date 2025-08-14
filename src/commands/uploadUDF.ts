@@ -4,8 +4,11 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
-import { handlePresignedUrlRequest, promptForUDFUploadParams } from "./utils/uploadUDF";
-
+import {
+  getPresignedUploadUrl,
+  handleUploadFile,
+  promptForUDFUploadParams,
+} from "./utils/uploadUDF";
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
@@ -29,13 +32,16 @@ export async function uploadUDFCommand(): Promise<void> {
       content_format: params.fileFormat,
     };
 
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: "Requesting presigned upload URL...",
-        cancellable: false,
-      },
-      async () => await handlePresignedUrlRequest(request),
+    const uploadUrl = await getPresignedUploadUrl(request);
+
+    if (!uploadUrl) {
+      showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
+      return;
+    }
+
+    await handleUploadFile(params, uploadUrl);
+    vscode.window.showInformationMessage(
+      `UDF artifact "${params.artifactName}" uploaded successfully!`,
     );
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
@@ -44,7 +50,6 @@ export async function uploadUDFCommand(): Promise<void> {
     );
   }
 }
-
 /**
  * Registers the "confluent.uploadUDF" command with logging.
  * Note: this is a placeholder, the final command will register and upload the UDF in a clean sweep.

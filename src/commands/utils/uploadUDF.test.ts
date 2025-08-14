@@ -1,17 +1,25 @@
+import { expect } from "@playwright/test";
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
+import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
 import {
-  PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
-  PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import * as errors from "../../errors";
-import * as notifications from "../../notifications";
+import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
+import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
+import { CloudProvider } from "../../models/resource";
+import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
+import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
-import { getPresignedUploadUrl, handlePresignedUrlRequest } from "./uploadUDF";
-
-describe("uploadUDF utils", () => {
+import * as fsWrappers from "../../utils/fsWrappers";
+import {
+  getPresignedUploadUrl,
+  prepareUploadFileFromUri,
+  promptForUDFUploadParams,
+} from "./uploadUDF";
+describe("uploadUDF", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -22,120 +30,100 @@ describe("uploadUDF utils", () => {
     sandbox.restore();
   });
 
-  describe("getPresignedUploadUrl", () => {
-    it("should return presigned URL response when request succeeds", async () => {
-      const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-        environment: "env-123",
-        cloud: "AWS",
-        region: "us-west-2",
-        id: "test-artifact",
-        content_format: "jar",
-      };
+  describe("prepareUploadFileFromUri", () => {
+    it("should prepare the file for upload", async () => {
+      const mockBuffer = Buffer.from("test file content");
+      const readFileBufferStub = sandbox.stub(fsWrappers, "readFileBuffer").resolves(mockBuffer);
+      const mockUri = { fsPath: "/path/to/file.jar" } as vscode.Uri;
+      const result = await prepareUploadFileFromUri(mockUri);
 
-      const mockResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
-        api_version: "v1" as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
-        kind: "PresignedUploadUrl" as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
-        upload_url: "https://example.com/upload",
-      };
+      sinon.assert.calledOnceWithExactly(readFileBufferStub, mockUri);
 
-      const mockPresignedClient = {
-        presignedUploadUrlArtifactV1PresignedUrl: sandbox.stub().resolves(mockResponse),
-      };
-
-      const mockSidecarHandle = {
-        getFlinkPresignedUrlsApi: sandbox.stub().returns(mockPresignedClient),
-      };
-
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle as any);
-
-      const result = await getPresignedUploadUrl(mockRequest);
-
-      assert.deepStrictEqual(result, mockResponse);
-      sinon.assert.calledOnce(sidecar.getSidecar as sinon.SinonStub);
-      sinon.assert.calledOnceWithExactly(mockSidecarHandle.getFlinkPresignedUrlsApi, {
-        environmentId: "env-123",
-        provider: "AWS",
-        region: "us-west-2",
+      assert.deepStrictEqual(result, {
+        blob: new Blob([mockBuffer], { type: "application/java-archive" }),
+        contentType: "application/java-archive",
       });
-      sinon.assert.calledOnceWithExactly(
-        mockPresignedClient.presignedUploadUrlArtifactV1PresignedUrl,
-        {
-          PresignedUploadUrlArtifactV1PresignedUrlRequest: mockRequest,
-        },
-      );
     });
 
-    it("should return undefined and log error when request fails", async () => {
-      const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-        environment: "env-123",
-        cloud: "AWS",
-        region: "us-west-2",
-        id: "test-artifact",
-        content_format: "jar",
+    it("should throw an error if the file does not exist", async () => {
+      const mockUri = { fsPath: "/path/to/nonexistent.jar" } as vscode.Uri;
+      await expect(prepareUploadFileFromUri(mockUri)).rejects.toThrow(Error);
+    });
+  });
+
+  describe("getPresignedUploadUrl", () => {
+    it("should request a presigned upload URL", async () => {
+      const mockSidecarHandle = sandbox.createStubInstance(sidecar.SidecarHandle);
+      const mockResponse = {
+        upload_url: "https://example.com/presigned-url",
+        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
       };
 
-      const mockError = new Error("API request failed");
-      sandbox.stub(sidecar, "getSidecar").rejects(mockError);
-      const logErrorStub = sandbox.stub(errors, "logError");
+      const mockPresignedClient = sandbox.createStubInstance(PresignedUrlsArtifactV1Api);
+      mockPresignedClient.presignedUploadUrlArtifactV1PresignedUrl.resolves(mockResponse);
 
-      const result = await getPresignedUploadUrl(mockRequest);
+      mockSidecarHandle.getFlinkPresignedUrlsApi.returns(mockPresignedClient);
+
+      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+      const mockPresignedUploadUrlRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+        content_format: "application/java-archive",
+        cloud: "aws",
+        region: "us-west-2",
+        environment: "env-123456",
+      };
+
+      const response = await getPresignedUploadUrl(mockPresignedUploadUrlRequest);
+      expect(response).toStrictEqual({
+        api_version: "artifact/v1",
+        kind: "PresignedUrl",
+        upload_url: "https://example.com/presigned-url",
+      });
+    });
+  });
+
+  describe("promptForUDFUploadParams", () => {
+    it("should return undefined if environment is not selected", async () => {
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(undefined);
+      const result = await promptForUDFUploadParams();
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return undefined if region is not selected", async () => {
+      const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
+      sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(undefined);
+
+      const result = await promptForUDFUploadParams();
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should show error and return undefined for non-Azure cloud providers", async () => {
+      const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
+
+      const mockAwsRegion = {
+        id: "us-west-2",
+        provider: "aws" as CloudProvider,
+        displayName: "US West (Oregon)",
+        regionName: "us-west-2",
+        region: "us-west-2",
+      };
+
+      sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(mockAwsRegion);
+
+      const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
+
+      const result = await promptForUDFUploadParams();
+
+      sinon.assert.calledWithMatch(
+        errorNotificationStub,
+        "Upload UDF cancelled: Unsupported cloud provider.",
+      );
 
       assert.strictEqual(result, undefined);
-      sinon.assert.calledOnceWithExactly(
-        logErrorStub,
-        mockError,
-        "Failed to get presigned upload URL",
-      );
     });
-  });
-
-  it("should show error notification when response is undefined", async () => {
-    const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: "env-123",
-      cloud: "AWS",
-      region: "us-west-2",
-      id: "test-artifact",
-      content_format: "jar",
-    };
-
-    sandbox.stub(sidecar, "getSidecar").rejects(new Error("Failed"));
-    sandbox.stub(errors, "logError");
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-
-    await handlePresignedUrlRequest(mockRequest);
-
-    sinon.assert.calledOnceWithExactly(
-      showErrorStub,
-      "Failed to get presigned upload URL. See logs for details.",
-    );
-  });
-
-  it("should show error notification when response has no upload_url", async () => {
-    const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: "env-123",
-      cloud: "AWS",
-      region: "us-west-2",
-      id: "test-artifact",
-      content_format: "jar",
-    };
-
-    const mockResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
-      api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
-      kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
-    };
-
-    sandbox.stub(sidecar, "getSidecar").resolves({
-      getFlinkPresignedUrlsApi: () => ({
-        presignedUploadUrlArtifactV1PresignedUrl: sandbox.stub().resolves(mockResponse),
-      }),
-    } as any);
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-
-    await handlePresignedUrlRequest(mockRequest);
-
-    sinon.assert.calledOnceWithExactly(
-      showErrorStub,
-      "Failed to get presigned upload URL. See logs for details.",
-    );
   });
 });

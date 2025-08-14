@@ -16,14 +16,22 @@ export async function statFile(uri: vscode.Uri): Promise<vscode.FileStat> {
 }
 
 /**
- * Read a file's contents. Thin wrapper around vscode.workspace.fs.readFile(),
+ * Read a file's contents and return after converting to string. Thin wrapper around vscode.workspace.fs.readFile(),
  * for same mocking reasons as statFile().
  * */
-export async function readFile(uri: vscode.Uri): Promise<string> {
+export async function readFileString(uri: vscode.Uri): Promise<string> {
   const data = await vscode.workspace.fs.readFile(uri);
   return Buffer.from(data).toString("utf8");
 }
 
+/**
+ * Read a file's contents and return a buffer. Thin wrapper around vscode.workspace.fs.readFile(),
+ * for same mocking reasons as statFile().
+ * */
+export async function readFileBuffer(uri: vscode.Uri): Promise<Buffer> {
+  const data: Uint8Array = await vscode.workspace.fs.readFile(uri);
+  return Buffer.from(data);
+}
 /**
  * Call vscode.workspace.fs.writeFile() to write a file.
  */
