@@ -2,21 +2,22 @@ import { expect } from "@playwright/test";
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../../clients/flinkArtifacts";
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
+import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
+import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
-import * as fsWrappers from "../../utils";
-import * as quickPickUtils from "../../utils/";
+import * as fsWrappers from "../../utils/fsWrappers";
 import {
   getPresignedUploadUrl,
   prepareUploadFileFromUri,
   promptForUDFUploadParams,
 } from "./uploadUDF";
-
 describe("uploadUDF utils", () => {
   let sandbox: sinon.SinonSandbox;
 
@@ -83,26 +84,17 @@ describe("uploadUDF utils", () => {
 
   describe("promptForUDFUploadParams", () => {
     it("should return undefined if environment is not selected", async () => {
-      const mockQuickPick = {
-        show: () => {},
-        onDidAccept: (callback: () => void) => {
-          callback(); // Simulate user accepting without selecting an environment
-        },
-      };
-      sandbox.stub(vscode.window, "createQuickPick").returns(mockQuickPick as any);
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(undefined);
       const result = await promptForUDFUploadParams();
       assert.strictEqual(result, undefined);
     });
-    it("should return undefined if cloud region is not selected", async () => {
-      const mockEnvironment = { id: "env-123456" };
-      sandbox.stub(quickPickUtils, ).resolves(mockEnvironment);
-      const mockQuickPick = {
-        show: () => {},
-        onDidAccept: (callback: () => void) => {
-          callback(); // Simulate user accepting without selecting a cloud region
-        },
-      };
-      sandbox.stub(vscode.window, "createQuickPick").returns(mockQuickPick as any);
+
+    it("should return undefined if region is not selected", async () => {
+      const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
+      sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(undefined);
+
       const result = await promptForUDFUploadParams();
       assert.strictEqual(result, undefined);
     });
