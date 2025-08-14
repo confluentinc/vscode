@@ -993,7 +993,9 @@ describe("FlinkLanguageClientManager", () => {
   });
 });
 
-/** Class holding stubs impersonating enough of DiagnosticsCollection methods to be useful.  */
+/**
+ * Class stubbing enough of DiagnosticsCollection methods to be useful.
+ **/
 class FakeDiagnosticsCollection {
   public readonly get: sinon.SinonStub;
   public readonly set: sinon.SinonStub;
