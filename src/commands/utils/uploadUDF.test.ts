@@ -84,55 +84,80 @@ describe("uploadUDF utils", () => {
     });
   });
 
-  it("should show error notification when response is undefined", async () => {
-    const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: "env-123",
-      cloud: "AWS",
-      region: "us-west-2",
-      id: "test-artifact",
-      content_format: "jar",
-    };
+  describe("handlePresignedUrlRequest", () => {
+    it("should return upload_url when response is successful", async () => {
+      const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+        environment: "env-123",
+        cloud: "AWS",
+        region: "us-west-2",
+        id: "test-artifact",
+        content_format: "jar",
+      };
 
-    sandbox.stub(sidecar, "getSidecar").rejects(new Error("Failed"));
+      const mockResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
+        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+        upload_url: "https://example.com/upload",
+      };
 
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+      const getPresignedUrlStub = sandbox
+        .stub(uploadUDFModule, "getPresignedUploadUrl")
+        .resolves(mockResponse);
 
-    await handlePresignedUrlRequest(mockRequest);
+      const result = await handlePresignedUrlRequest(mockRequest);
 
-    sinon.assert.calledOnceWithExactly(
-      showErrorStub,
-      "Failed to get presigned upload URL. See logs for details.",
-    );
+      assert.strictEqual(result, "https://example.com/upload");
+      sinon.assert.calledOnceWithExactly(getPresignedUrlStub, mockRequest);
+    });
+
+    it("should show error notification when response is undefined", async () => {
+      const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+        environment: "env-123",
+        cloud: "AWS",
+        region: "us-west-2",
+        id: "test-artifact",
+        content_format: "jar",
+      };
+
+      sandbox.stub(uploadUDFModule, "getPresignedUploadUrl").resolves(undefined);
+      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+
+      const result = await handlePresignedUrlRequest(mockRequest);
+
+      assert.strictEqual(result, undefined);
+      sinon.assert.calledOnceWithExactly(
+        showErrorStub,
+        "Failed to get presigned upload URL. See logs for details.",
+      );
+    });
+
+    it("should show error notification when response has no upload_url", async () => {
+      const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+        environment: "env-123",
+        cloud: "AWS",
+        region: "us-west-2",
+        id: "test-artifact",
+        content_format: "jar",
+      };
+
+      const mockResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
+        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+      };
+
+      sandbox.stub(uploadUDFModule, "getPresignedUploadUrl").resolves(mockResponse);
+      const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
+
+      const result = await handlePresignedUrlRequest(mockRequest);
+
+      assert.strictEqual(result, undefined);
+      sinon.assert.calledOnceWithExactly(
+        showErrorStub,
+        "Failed to get presigned upload URL. See logs for details.",
+      );
+    });
   });
 
-  it("should show error notification when response has no upload_url", async () => {
-    const mockRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: "env-123",
-      cloud: "AWS",
-      region: "us-west-2",
-      id: "test-artifact",
-      content_format: "jar",
-    };
-
-    const mockResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
-      api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
-      kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
-    };
-
-    sandbox.stub(sidecar, "getSidecar").resolves({
-      getFlinkPresignedUrlsApi: () => ({
-        presignedUploadUrlArtifactV1PresignedUrl: sandbox.stub().resolves(mockResponse),
-      }),
-    } as any);
-    const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-
-    await handlePresignedUrlRequest(mockRequest);
-
-    sinon.assert.calledOnceWithExactly(
-      showErrorStub,
-      "Failed to get presigned upload URL. See logs for details.",
-    );
-  });
   describe("prepareUploadFileFromUri", () => {
     let readFileStub: sinon.SinonStub;
     let mockWorkspaceFs: any;
