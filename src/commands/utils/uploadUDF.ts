@@ -1,29 +1,56 @@
+import path from "node:path";
 import * as vscode from "vscode";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { logError } from "../../errors";
-import { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { Logger } from "../../logging";
+import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
   showErrorNotificationWithButtons,
-  showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../../notifications";
 import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
+import { readFileBuffer } from "../../utils/fsWrappers";
+import { uploadFileToAzure } from "./uploadToAzure";
+export { uploadFileToAzure };
 
-/**
- * Prompts the user for environment, cloud provider, region, and artifact name.
- * Returns an object with these values, or undefined if the user cancels.
- */
 export interface UDFUploadParams {
   environment: string;
   cloud: string;
   region: string;
   artifactName: string;
   fileFormat: string;
+  selectedFile: vscode.Uri;
+}
+
+const logger = new Logger("commands/uploadUDF");
+
+/**
+ * Read a file from a VS Code Uri and prepare a Blob (and File if available).
+ */
+export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
+  blob: Blob;
+  contentType: string;
+}> {
+  try {
+    const bytes: Uint8Array = await readFileBuffer(uri);
+    const ext: string = path.extname(uri.fsPath).toLowerCase();
+
+    const contentType: string =
+      ext === ".jar" ? "application/java-archive" : "application/octet-stream";
+
+    const blob: Blob = new Blob([bytes], { type: contentType });
+
+    return { blob, contentType };
+  } catch (err) {
+    logError(err, `Failed to read file from URI: ${uri.toString()}`);
+    showErrorNotificationWithButtons(`Failed to read file: ${uri.fsPath}. See logs for details.`);
+    throw err;
+  }
 }
 
 /**
@@ -43,7 +70,6 @@ export async function getPresignedUploadUrl(
     };
     const presignedClient = sidecarHandle.getFlinkPresignedUrlsApi(providerRegion);
 
-    // Wrap the request as required by the OpenAPI client
     const urlResponse = await presignedClient.presignedUploadUrlArtifactV1PresignedUrl({
       PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
     });
@@ -54,25 +80,6 @@ export async function getPresignedUploadUrl(
   }
 }
 
-/**
- * Handles the presigned URL request and shows appropriate notifications.
- * @param request The presigned upload URL request
- */
-export async function handlePresignedUrlRequest(
-  request: PresignedUploadUrlArtifactV1PresignedUrlRequest,
-): Promise<void> {
-  const response = await getPresignedUploadUrl(request);
-  if (response && response.upload_url) {
-    showInfoNotificationWithButtons("Presigned upload URL received.", {
-      "Copy URL": () => {
-        vscode.env.clipboard.writeText(response.upload_url!);
-        vscode.window.showInformationMessage("Upload URL copied to clipboard.");
-      },
-    });
-  } else {
-    showErrorNotificationWithButtons("Failed to get presigned upload URL. See logs for details.");
-  }
-}
 export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
 
@@ -80,10 +87,25 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
   }
-  const cloud = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
-  if (!cloud) {
+
+  const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+
+  if (!cloudRegion) {
     showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
     return undefined;
+  }
+
+  let cloud: CloudProvider;
+  switch (cloudRegion.provider) {
+    case CloudProvider.Azure:
+      cloud = CloudProvider.Azure;
+      break;
+    case CloudProvider.AWS:
+      cloud = CloudProvider.AWS;
+      break;
+    default:
+      showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
+      return undefined;
   }
 
   const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
@@ -92,14 +114,15 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     canSelectFolders: false,
     canSelectMany: false,
     filters: {
-      "Flink Artifact Files": ["zip", "jar"],
+      "Flink Artifact Files": ["jar"],
     },
   });
   if (!selectedFiles || selectedFiles.length === 0) {
     // if the user cancels the file selection, silently exit
     return;
   }
-  // extract the file extension (format) from the selected file
+
+  const selectedFile: vscode.Uri = selectedFiles[0];
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const artifactName = await vscode.window.showInputBox({
@@ -115,9 +138,46 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
 
   return {
     environment: environment.id,
-    cloud: cloud.provider,
-    region: cloud.region,
+    cloud,
+    region: cloudRegion.region,
     artifactName,
     fileFormat,
+    selectedFile,
   };
+}
+
+export async function handleUploadFile(
+  params: UDFUploadParams,
+  presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
+): Promise<void> {
+  if (params.cloud !== CloudProvider.Azure) {
+    showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);
+    return;
+  }
+  const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+
+  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    contentType,
+  });
+
+  logger.debug("Uploading to Azure storage");
+  const response = await uploadFileToAzure({
+    file: blob,
+    presignedUrl: presignedURL.upload_url!,
+    contentType,
+  });
+
+  logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+  });
 }
