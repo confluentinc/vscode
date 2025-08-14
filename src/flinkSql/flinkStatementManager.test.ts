@@ -5,7 +5,7 @@ import { ConfigurationChangeEvent } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { ccloudConnected, flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
+import { flinkStatementDeleted, flinkStatementUpdated } from "../emitters";
 import {
   STATEMENT_POLLING_CONCURRENCY,
   STATEMENT_POLLING_FREQUENCY_SECONDS,
@@ -13,6 +13,7 @@ import {
 } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
+import { DisposableCollection } from "../utils/disposables";
 import { IntervalPoller } from "../utils/timing";
 import * as workerPool from "../utils/workerPool";
 import {
@@ -99,6 +100,35 @@ describe("flinkStatementManager.ts", () => {
       instance.dispose();
       FlinkStatementManager["instance"] = undefined;
       sandbox.restore();
+    });
+
+    describe("constructor", () => {
+      it("calls setEventListeners() / sets up event handlers", () => {
+        const bogusDisposable: vscode.Disposable = {
+          dispose: () => {},
+        };
+        const fakeEventDisposables = [bogusDisposable, bogusDisposable];
+        const setEventListenersStub = sandbox
+          .stub(
+            // bending over backwards to stub private method.
+            FlinkStatementManager.prototype as unknown as {
+              setEventListeners: () => vscode.Disposable[];
+            },
+            "setEventListeners",
+          )
+          .returns(fakeEventDisposables);
+        // Clean up old instance, get a new one now with the stubbed method.
+        instance.dispose();
+        FlinkStatementManager["instance"] = undefined;
+
+        // Create a new instance, which should call setEventListeners.
+        instance = FlinkStatementManager.getInstance();
+
+        sinon.assert.calledOnce(setEventListenersStub);
+
+        // and should have assigned into disposables.
+        assert.deepEqual(instance["disposables"], fakeEventDisposables);
+      });
     });
 
     describe("getConfiguration()", () => {
@@ -457,10 +487,10 @@ describe("flinkStatementManager.ts", () => {
       });
     }); // pollStatements()
 
-    describe("createCcloudAuthListener()", () => {
+    describe("ccloudConnectedHandler()", () => {
       it("Should reset poller on ccloudConnected=true", async () => {
         const resetPollerStub = sandbox.stub(instance, "resetPoller");
-        ccloudConnected.fire(true);
+        instance.ccloudConnectedHandler(true);
 
         sinon.assert.calledOnce(resetPollerStub);
       });
@@ -469,7 +499,7 @@ describe("flinkStatementManager.ts", () => {
         const clearClientStub = sandbox.stub(monitoredStatements, "clear");
         const stopPollerStub = sandbox.stub(instance["poller"]!, "stop");
 
-        ccloudConnected.fire(false);
+        instance.ccloudConnectedHandler(false);
 
         sinon.assert.calledOnce(stopPollerStub);
         sinon.assert.calledOnce(clearClientStub);
@@ -481,7 +511,7 @@ describe("flinkStatementManager.ts", () => {
 
         const clearClientStub = sandbox.stub(monitoredStatements, "clear");
 
-        ccloudConnected.fire(false);
+        instance.ccloudConnectedHandler(false);
 
         sinon.assert.calledOnce(clearClientStub);
       });
@@ -506,6 +536,14 @@ describe("flinkStatementManager.ts", () => {
         instance.dispose();
 
         sinon.assert.calledOnce(monitoredStatementClearStub);
+      });
+
+      it("Should call super.dispose() to clear the event handlers", () => {
+        const superDisposeStub = sandbox.stub(DisposableCollection.prototype, "dispose");
+
+        instance.dispose();
+
+        sinon.assert.calledOnce(superDisposeStub);
       });
     }); // dispose()
   }); // describe FlinkStatementManager
