@@ -90,12 +90,15 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     return undefined;
   }
 
-  if (cloudRegion.provider !== CloudProvider.Azure) {
-    void showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
+  let cloud: CloudProvider;
+  if (cloudRegion.provider === "AZURE") {
+    cloud = CloudProvider.Azure;
+  } else {
+    void showErrorNotificationWithButtons(
+      `Upload UDF cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
+    );
     return undefined;
   }
-
-  let cloud = CloudProvider.Azure;
 
   const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
     openLabel: "Select",
@@ -139,34 +142,41 @@ export async function handleUploadFile(
   params: UDFUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
-  if (params.cloud !== CloudProvider.Azure) {
-    void showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);
-    return;
-  }
-  const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Uploading ${params.artifactName}: `,
+      cancellable: false,
+    },
+    async (progress) => {
+      progress.report({ message: "Preparing file..." });
+      const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
 
-  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
-    artifactName: params.artifactName,
-    environment: params.environment,
-    cloud: params.cloud,
-    region: params.region,
-    contentType,
-  });
+      logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+        contentType,
+      });
 
-  logger.debug("Uploading to Azure storage");
-  const response = await uploadFileToAzure({
-    file: blob,
-    presignedUrl: presignedURL.upload_url!,
-    contentType,
-  });
+      progress.report({ message: "Uploading to Azure storage..." });
+      logger.debug("Uploading to Azure storage");
+      const response = await uploadFileToAzure({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
+        contentType,
+      });
 
-  logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-    artifactName: params.artifactName,
-    environment: params.environment,
-    cloud: params.cloud,
-    region: params.region,
-  });
+      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+      });
+    },
+  );
 }
