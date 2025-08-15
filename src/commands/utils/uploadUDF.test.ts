@@ -206,7 +206,7 @@ describe("uploadUDF", () => {
       });
     });
   });
-  // Struggling to stub this out without actually hitting the /path/to/file.jar
+
   describe("handleUploadFile", () => {
     const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
       api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
