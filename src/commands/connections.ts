@@ -18,7 +18,7 @@ import {
   getResourceManager,
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
-import { readFile, writeFile } from "../utils/fsWrappers";
+import { readFileString, writeFile } from "../utils/fsWrappers";
 import { DirectConnectionRow } from "../viewProviders/newResources";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
@@ -148,7 +148,7 @@ export async function createNewDirectConnectionCommand() {
       try {
         const newSpecPath: string = newSpecUris[0].fsPath;
         // read the file and parse it as a JSON object
-        const fileContent = await readFile(Uri.file(newSpecPath));
+        const fileContent = await readFileString(Uri.file(newSpecPath));
         const jsonSpec = JSON.parse(fileContent.toString());
 
         // validate the JSON object against the ConnectionSpec schema
