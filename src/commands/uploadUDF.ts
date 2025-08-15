@@ -3,7 +3,6 @@ import { registerCommandWithLogging } from ".";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import {
   getPresignedUploadUrl,
   handleUploadFile,
@@ -15,12 +14,11 @@ import {
  */
 
 export async function uploadUDFCommand(): Promise<void> {
-  if (!hasCCloudAuthSession()) {
-    return;
-  }
   try {
     const params = await promptForUDFUploadParams();
+
     if (!params) {
+      // User cancelled the prompt
       return;
     }
 
@@ -47,7 +45,6 @@ export async function uploadUDFCommand(): Promise<void> {
 }
 /**
  * Registers the "confluent.uploadUDF" command with logging.
- * Note: this is a placeholder, the final command will register and upload the UDF in a clean sweep.
  */
 export function registerUploadUDFCommand(): vscode.Disposable {
   return registerCommandWithLogging("confluent.uploadUDF", uploadUDFCommand);

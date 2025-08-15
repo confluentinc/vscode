@@ -146,6 +146,7 @@ describe("uploadUDF", () => {
 
       assert.strictEqual(result, undefined);
     });
+
     it("should silently return if user cancels the file selection", async () => {
       sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
       const result = await promptForUDFUploadParams();
