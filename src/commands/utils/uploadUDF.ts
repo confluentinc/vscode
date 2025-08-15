@@ -60,24 +60,19 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
  */
 export async function getPresignedUploadUrl(
   request: PresignedUploadUrlArtifactV1PresignedUrlRequest,
-): Promise<PresignedUploadUrlArtifactV1PresignedUrl200Response | undefined> {
-  try {
-    const sidecarHandle = await getSidecar();
-    const providerRegion: IEnvProviderRegion = {
-      environmentId: request.environment as EnvironmentId,
-      provider: request.cloud,
-      region: request.region,
-    };
-    const presignedClient = sidecarHandle.getFlinkPresignedUrlsApi(providerRegion);
+): Promise<PresignedUploadUrlArtifactV1PresignedUrl200Response> {
+  const sidecarHandle = await getSidecar();
+  const providerRegion: IEnvProviderRegion = {
+    environmentId: request.environment as EnvironmentId,
+    provider: request.cloud,
+    region: request.region,
+  };
+  const presignedClient = sidecarHandle.getFlinkPresignedUrlsApi(providerRegion);
 
-    const urlResponse = await presignedClient.presignedUploadUrlArtifactV1PresignedUrl({
-      PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
-    });
-    return urlResponse;
-  } catch (err) {
-    logError(err, "Failed to get presigned upload URL");
-    return undefined;
-  }
+  const urlResponse = await presignedClient.presignedUploadUrlArtifactV1PresignedUrl({
+    PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
+  });
+  return urlResponse;
 }
 
 export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {

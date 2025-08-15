@@ -4,6 +4,7 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
 import {
+  PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../../clients/flinkArtifacts";
@@ -16,6 +17,7 @@ import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
 import {
   getPresignedUploadUrl,
+  handleUploadFile,
   prepareUploadFileFromUri,
   promptForUDFUploadParams,
 } from "./uploadUDF";
@@ -52,7 +54,7 @@ describe("uploadUDF", () => {
   });
 
   describe("getPresignedUploadUrl", () => {
-    it("should request a presigned upload URL", async () => {
+    it("should return a presigned upload URL", async () => {
       const mockSidecarHandle = sandbox.createStubInstance(sidecar.SidecarHandle);
       const mockResponse = {
         upload_url: "https://example.com/presigned-url",
@@ -69,8 +71,8 @@ describe("uploadUDF", () => {
 
       const mockPresignedUploadUrlRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
         content_format: "application/java-archive",
-        cloud: "aws",
-        region: "us-west-2",
+        cloud: "azure",
+        region: "australiaeast",
         environment: "env-123456",
       };
 
@@ -124,6 +126,108 @@ describe("uploadUDF", () => {
       );
 
       assert.strictEqual(result, undefined);
+    });
+    it("should silently return if user cancels the file selection", async () => {
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
+
+      const result = await promptForUDFUploadParams();
+
+      assert.strictEqual(result, undefined);
+    });
+    it("shows a warning notification if there is no artifact name", async () => {
+      const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
+      const mockRegion = {
+        id: "australiaeast",
+        provider: CloudProvider.Azure,
+        displayName: "Australia East",
+        regionName: "australiaeast",
+        region: "australiaeast",
+      };
+      sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(mockRegion);
+      sandbox
+        .stub(vscode.window, "showOpenDialog")
+        .resolves([vscode.Uri.file("/path/to/file.jar")]);
+
+      sandbox.stub(vscode.window, "showInputBox").resolves("");
+
+      const warningNotificationStub = sandbox.stub(vscode.window, "showWarningMessage").resolves();
+
+      const result = await promptForUDFUploadParams();
+
+      sinon.assert.calledWithMatch(
+        warningNotificationStub,
+        "Upload UDF cancelled: Artifact name is required.",
+      );
+      assert.strictEqual(result, undefined);
+    });
+    it("returns the correct UDF upload parameters", async () => {
+      const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+      sandbox.stub(environments, "flinkCcloudEnvironmentQuickPick").resolves(mockEnvironment);
+      const mockRegion = {
+        id: "australiaeast",
+        provider: CloudProvider.Azure,
+        displayName: "Australia East",
+        regionName: "australiaeast",
+        region: "australiaeast",
+      };
+      sandbox.stub(cloudProviderRegions, "cloudProviderRegionQuickPick").resolves(mockRegion);
+
+      const mockFileUri = vscode.Uri.file("/path/to/file.jar");
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+
+      sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
+
+      const result = await promptForUDFUploadParams();
+
+      assert.deepStrictEqual(result, {
+        environment: mockEnvironment.id,
+        cloud: CloudProvider.Azure,
+        region: mockRegion.region,
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: mockFileUri,
+      });
+    });
+  });
+  describe("handleUploadFile", () => {
+    it("should return an error if the provider is not Azure", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: CloudProvider.AWS,
+        region: "us-west-2",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: vscode.Uri.file("/path/to/file.jar"),
+      };
+      const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
+        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+        upload_url: "https://example.com/presigned-url",
+      };
+      const errorNotificationStub = sandbox
+        .stub(vscode.window, "showErrorMessage")
+        .resolves(undefined);
+      const result = await handleUploadFile(mockParams, mockPresignedUrlResponse);
+      assert.strictEqual(result, undefined);
+      sinon.assert.calledOnce(errorNotificationStub);
+    });
+
+    it("should log the message confirming the upload", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: CloudProvider.Azure,
+        region: "australiaeast",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: vscode.Uri.file("/path/to/file.jar"),
+      };
+      const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
+        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+        upload_url: "https://example.com/presigned-url",
+      };
     });
   });
 });
