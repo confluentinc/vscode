@@ -162,12 +162,12 @@ export class FlinkLanguageClientManager implements Disposable {
    * @param doc The document to simulate changes for.
    * @returns A promise that resolves when the notification has been sent.
    */
-  public simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
+  public async simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
     if (!this.languageClient) {
       logger.info("Can't simulate document change for non-existing language client.");
-      return Promise.resolve();
+      return;
     }
-    return this.languageClient.sendNotification("textDocument/didChange", {
+    await this.languageClient.sendNotification("textDocument/didChange", {
       textDocument: {
         uri: doc.uri.toString() || "",
         version: doc.version,
@@ -215,9 +215,8 @@ export class FlinkLanguageClientManager implements Disposable {
           editor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME // ignore readonly statement files
         ) {
           logger.trace("Active editor changed to Flink SQL file, initializing language client");
-          await this.maybeStartLanguageClient(editor.document.uri).then(() =>
-            this.simulateDocumentChangeToTriggerDiagnostics(editor.document),
-          );
+          await this.maybeStartLanguageClient(editor.document.uri);
+          await this.simulateDocumentChangeToTriggerDiagnostics(editor.document);
         }
       }),
     );
@@ -233,9 +232,8 @@ export class FlinkLanguageClientManager implements Disposable {
             return;
           } else {
             logger.trace("Initializing language client for changed active Flink SQL document");
-            await this.maybeStartLanguageClient(doc.uri).then(() =>
-              this.simulateDocumentChangeToTriggerDiagnostics(doc),
-            );
+            await this.maybeStartLanguageClient(doc.uri);
+            await this.simulateDocumentChangeToTriggerDiagnostics(doc);
           }
         }
       }),
