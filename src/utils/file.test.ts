@@ -68,7 +68,7 @@ describe("getEditorOrFileContents", () => {
     // Also stub out differing file contents on disk. getEditorOrFileContents() should
     // prefer the editor contents over this.
     const fakeFileContents = "Bad on-disk contents";
-    const readFileStub = sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
+    const readFileStub = sandbox.stub(fsWrappers, "readFileString").resolves(fakeFileContents);
 
     const result: LoadedDocumentContent = await getEditorOrFileContents(uri);
 
@@ -84,7 +84,7 @@ describe("getEditorOrFileContents", () => {
     // No open editors ...
     sandbox.stub(vscode.window, "visibleTextEditors").get(() => []);
     // ... but a file that exists ...
-    sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
+    sandbox.stub(fsWrappers, "readFileString").resolves(fakeFileContents);
 
     const result = await getEditorOrFileContents(uri);
     assert.strictEqual(result.content, fakeFileContents);
@@ -97,7 +97,7 @@ describe("getEditorOrFileContents", () => {
     const uri = vscode.Uri.file("file:///etc/hosts");
 
     sandbox.stub(vscode.window, "visibleTextEditors").get(() => []);
-    sandbox.stub(fsWrappers, "readFile").rejects(new Error("File not found"));
+    sandbox.stub(fsWrappers, "readFileString").rejects(new Error("File not found"));
 
     assert.rejects(async () => {
       await getEditorOrFileContents(uri);
