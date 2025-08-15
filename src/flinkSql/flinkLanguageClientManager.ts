@@ -156,6 +156,30 @@ export class FlinkLanguageClientManager implements Disposable {
     }
   }
 
+  /**
+   * Simulates a document change to trigger diagnostics on the server side. Is needed to get diagnostics
+   * when opening a new document. Can be removed when the CCloud Flink Language Service has been updated.
+   * @param doc The document to simulate changes for.
+   * @returns A promise that resolves when the notification has been sent.
+   */
+  public simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
+    if (!this.languageClient) {
+      logger.info("Can't simulate document change for non-existing language client.");
+      return Promise.resolve();
+    }
+    return this.languageClient.sendNotification("textDocument/didChange", {
+      textDocument: {
+        uri: doc.uri.toString() || "",
+        version: doc.version,
+      },
+      contentChanges: [
+        {
+          text: doc.getText(),
+        },
+      ],
+    });
+  }
+
   private registerListeners(): void {
     // Listen for changes to metadata
     // Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config
@@ -191,7 +215,9 @@ export class FlinkLanguageClientManager implements Disposable {
           editor.document.uri.scheme !== FLINKSTATEMENT_URI_SCHEME // ignore readonly statement files
         ) {
           logger.trace("Active editor changed to Flink SQL file, initializing language client");
-          await this.maybeStartLanguageClient(editor.document.uri);
+          await this.maybeStartLanguageClient(editor.document.uri).then(() =>
+            this.simulateDocumentChangeToTriggerDiagnostics(editor.document),
+          );
         }
       }),
     );
@@ -207,7 +233,9 @@ export class FlinkLanguageClientManager implements Disposable {
             return;
           } else {
             logger.trace("Initializing language client for changed active Flink SQL document");
-            await this.maybeStartLanguageClient(doc.uri);
+            await this.maybeStartLanguageClient(doc.uri).then(() =>
+              this.simulateDocumentChangeToTriggerDiagnostics(doc),
+            );
           }
         }
       }),
@@ -546,7 +574,7 @@ export class FlinkLanguageClientManager implements Disposable {
             action: "client_initialized",
             compute_pool_id: computePoolId,
           });
-          this.notifyConfigChanged();
+          await this.notifyConfigChanged();
         }
       } catch (error) {
         let msg = "Error in maybeStartLanguageClient";
