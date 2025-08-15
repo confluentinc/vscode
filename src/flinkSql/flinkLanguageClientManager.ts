@@ -165,7 +165,24 @@ export class FlinkLanguageClientManager implements Disposable {
           uri: uri.toString(),
         });
         if (this.lastDocUri === uri) {
-          this.notifyConfigChanged();
+          // If the metadata change doesn't affect the websocket endpoint URL, then we just need to notify the language
+          // server of the new settings (say, new compute pool or new default database or catalog in same provider+env+region).
+          // Otherwise, we need to restart the language client with the new URL (changed whole cloud provider / region).
+          const settings = await this.getFlinkSqlSettings(uri);
+          if (
+            !settings.computePoolId ||
+            this.lastWebSocketUrl === (await this.buildFlinkSqlWebSocketUrl(settings.computePoolId))
+          ) {
+            logger.trace(
+              "uriMetadataSet: Document metadata change does not warrant new websocket URL. Notifying language server of minor configuration change.",
+            );
+            await this.notifyConfigChanged();
+          } else {
+            logger.trace(
+              "uriMetadataSet: WebSocket URL needs changing, reinitializing language client with new URL",
+            );
+            await this.restartLanguageClient();
+          }
         } else if (uri && uri.scheme === "file") {
           const doc = await workspace.openTextDocument(uri);
           if (doc.languageId === "flinksql") {
@@ -546,7 +563,7 @@ export class FlinkLanguageClientManager implements Disposable {
             action: "client_initialized",
             compute_pool_id: computePoolId,
           });
-          this.notifyConfigChanged();
+          await this.notifyConfigChanged();
         }
       } catch (error) {
         let msg = "Error in maybeStartLanguageClient";
