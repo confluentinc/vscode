@@ -13,7 +13,7 @@ import {
 } from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { WriteableTmpDir } from "../utils/file";
-import { readFile } from "../utils/fsWrappers";
+import { readFileString } from "../utils/fsWrappers";
 import { SIDECAR_FORMATTED_LOGFILE_NAME, SIDECAR_LOGFILE_NAME } from "./constants";
 import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
 
@@ -292,7 +292,7 @@ export async function gatherSidecarOutputs(
 
   let rawLogs: string[] = [];
   try {
-    rawLogs = (await readFile(Uri.file(sidecarLogfilePath))).trim().split("\n").slice(-20);
+    rawLogs = (await readFileString(Uri.file(sidecarLogfilePath))).trim().split("\n").slice(-20);
   } catch (e) {
     myLogger.error(`Failed to read sidecar log file: ${e}`);
   }
@@ -317,7 +317,7 @@ export async function gatherSidecarOutputs(
 
   let stderrLines: string[] = [];
   try {
-    let stderrContent = await readFile(Uri.file(stderrPath));
+    let stderrContent = await readFileString(Uri.file(stderrPath));
     stderrContent = stderrContent.trim();
     stderrLines = stderrContent.split("\n");
     if (stderrLines.length === 1 && stderrLines[0] === "") {
