@@ -145,7 +145,7 @@ export async function handleUploadFile(
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}: `,
+      title: `Uploading ${params.artifactName}:`,
       cancellable: false,
     },
     async (progress) => {
