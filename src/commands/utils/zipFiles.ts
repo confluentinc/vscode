@@ -46,12 +46,10 @@ export async function createZipFile(
 
   archive.pipe(output);
 
-  // add content entries
   for (const contentEntry of contentEntries) {
     archive.append(contentEntry.content, { name: contentEntry.zipPath });
   }
 
-  // add file entries
   try {
     for (const fileEntry of fileEntries) {
       try {
