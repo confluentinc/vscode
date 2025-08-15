@@ -38,7 +38,7 @@ export async function uploadUDFCommand(): Promise<void> {
     );
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
-    showErrorNotificationWithButtons(
+    void showErrorNotificationWithButtons(
       "An error occurred while uploading UDF. See logs for details.",
     );
   }

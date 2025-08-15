@@ -79,19 +79,19 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   const environment = await flinkCcloudEnvironmentQuickPick();
 
   if (!environment || !environment.id) {
-    showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
+    void showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
     return undefined;
   }
 
   const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
   if (!cloudRegion) {
-    showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
+    void showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
     return undefined;
   }
 
   if (cloudRegion.provider !== CloudProvider.Azure) {
-    showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
+    void showErrorNotificationWithButtons("Upload UDF cancelled: Unsupported cloud provider.");
     return undefined;
   }
 
@@ -121,7 +121,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   });
 
   if (!artifactName) {
-    showWarningNotificationWithButtons("Upload UDF cancelled: Artifact name is required.");
+    void showWarningNotificationWithButtons("Upload UDF cancelled: Artifact name is required.");
     return undefined;
   }
 
@@ -140,7 +140,7 @@ export async function handleUploadFile(
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
   if (params.cloud !== CloudProvider.Azure) {
-    showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);
+    void showErrorNotificationWithButtons(`Unsupported cloud provider: ${params.cloud}`);
     return;
   }
   const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);

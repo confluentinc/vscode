@@ -58,7 +58,7 @@ export const uploadFileToAzure = async ({
       },
     };
     logError(error, "Failed to upload file to Azure", sentryContext);
-    showErrorNotificationWithButtons("Failed to upload file to Azure. See logs for details.");
+    void showErrorNotificationWithButtons("Failed to upload file to Azure. See logs for details.");
     throw error;
   }
 };
