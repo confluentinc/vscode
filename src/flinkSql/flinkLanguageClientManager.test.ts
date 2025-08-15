@@ -803,17 +803,14 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     describe("onDidChangeTextDocumentHandler", () => {
-      let fakeDiagnosticsCollection: { get: sinon.SinonStub; set: sinon.SinonStub };
+      let fakeDiagnosticsCollection: FakeDiagnosticsCollection;
+
       beforeEach(() => {
         // wire a mock LanguageClient to the flinkManager
         const fakeLanguageClient = sandbox.createStubInstance(LanguageClient);
 
-        fakeDiagnosticsCollection = {
-          get: sandbox.stub(),
-          set: sandbox.stub(),
-        };
-
-        // Override the read-only diagnostics property for testing
+        // Reassign the read-only `diagnostics` property of the language client
+        fakeDiagnosticsCollection = new FakeDiagnosticsCollection(sandbox);
         Object.defineProperty(fakeLanguageClient, "diagnostics", {
           value: fakeDiagnosticsCollection,
           configurable: true,
@@ -884,6 +881,8 @@ describe("FlinkLanguageClientManager", () => {
         // Should not have called diagnostics collection methods
         sinon.assert.notCalled(fakeDiagnosticsCollection.set);
         sinon.assert.notCalled(fakeDiagnosticsCollection.get);
+        sinon.assert.notCalled(fakeDiagnosticsCollection.delete);
+        sinon.assert.notCalled(fakeDiagnosticsCollection.has);
       });
 
       it("should clear diagnostics for flinksql documents on text change if had prior diagnostics", () => {
@@ -897,7 +896,7 @@ describe("FlinkLanguageClientManager", () => {
         flinkManager.trackDocument(fakeUri);
 
         // And make as if this document had diagnostics set
-        fakeDiagnosticsCollection.get.withArgs(fakeUri).returns(true);
+        fakeDiagnosticsCollection.has.withArgs(fakeUri).returns(true);
 
         // Simulate a text document change event
         const fakeEvent: vscode.TextDocumentChangeEvent = {
@@ -908,9 +907,12 @@ describe("FlinkLanguageClientManager", () => {
 
         flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
 
-        // Should have cleared diagnostics for this document
-        sinon.assert.calledOnce(fakeDiagnosticsCollection.set);
-        sinon.assert.calledWith(fakeDiagnosticsCollection.set, fakeUri, []);
+        // Should have detected then cleared diagnostics for this document
+        sinon.assert.calledTwice(fakeDiagnosticsCollection.has);
+        sinon.assert.calledWith(fakeDiagnosticsCollection.has, fakeUri);
+
+        sinon.assert.calledOnce(fakeDiagnosticsCollection.delete);
+        sinon.assert.calledWith(fakeDiagnosticsCollection.delete, fakeUri);
       });
     });
 
@@ -990,3 +992,20 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 });
+
+/**
+ * Class stubbing enough of DiagnosticsCollection methods to be useful.
+ **/
+class FakeDiagnosticsCollection {
+  public readonly get: sinon.SinonStub;
+  public readonly set: sinon.SinonStub;
+  public readonly has: sinon.SinonStub;
+  public readonly delete: sinon.SinonStub;
+
+  constructor(sandbox: sinon.SinonSandbox) {
+    this.get = sandbox.stub();
+    this.set = sandbox.stub();
+    this.has = sandbox.stub();
+    this.delete = sandbox.stub();
+  }
+}
