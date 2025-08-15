@@ -1,9 +1,14 @@
 import { expect } from "@playwright/test";
 import * as assert from "assert";
+import * as fs from "fs";
+import * as os from "os";
+import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
 import {
+  PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../../clients/flinkArtifacts";
@@ -16,8 +21,10 @@ import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
+import * as uploadToAzure from "./uploadToAzure";
 import {
   getPresignedUploadUrl,
+  handleUploadFile,
   prepareUploadFileFromUri,
   promptForUDFUploadParams,
 } from "./uploadUDF";
@@ -200,42 +207,91 @@ describe("uploadUDF", () => {
     });
   });
   // Struggling to stub this out without actually hitting the /path/to/file.jar
-  // describe("handleUploadFile", () => {
-  //   const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
-  //     api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
-  //     kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
-  //     upload_url: "https://example.com/presigned-url",
-  //   };
-  //   it("should return an error if the provider is not Azure", async () => {
-  //     const mockAWSParams = {
-  //       environment: "env-123456",
-  //       cloud: "AWS",
-  //       region: "us-west-2",
-  //       artifactName: "test-artifact",
-  //       fileFormat: "jar",
-  //       selectedFile: vscode.Uri.file("/path/to/file.jar"),
-  //     };
-  //     const errorNotificationStub = sandbox
-  //       .stub(vscode.window, "showErrorMessage")
-  //       .resolves(undefined);
-  //     const result = await handleUploadFile(mockAWSParams, mockPresignedUrlResponse);
-  //     assert.strictEqual(result, undefined);
-  //     sinon.assert.calledOnce(errorNotificationStub);
-  //   });
-  //   it("should log the message confirming the upload", async () => {
-  //     const mockUri = { fsPath: "/path/to/file.jar" } as vscode.Uri;
-  //     const mockParams = {
-  //       environment: "env-123456",
-  //       cloud: "Azure",
-  //       region: "australiaeast",
-  //       artifactName: "test-artifact",
-  //       fileFormat: "jar",
-  //       selectedFile: mockUri,
-  //     };
-  //     const infoNotificationStub = sandbox.stub(vscode.window, "showInformationMessage");
-  //     await handleUploadFile(mockParams, mockPresignedUrlResponse);
+  describe("handleUploadFile", () => {
+    const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
+      api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+      kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+      upload_url: "https://example.com/presigned-url",
+    };
+    let tempJarPath: string;
+    let tempJarUri: vscode.Uri;
+    let uploadFileToAzureStub: sinon.SinonStub;
 
-  //     sinon.assert.calledOnce(infoNotificationStub);
-  //   });
-  // });
+    beforeEach(() => {
+      const tempDir = os.tmpdir();
+      tempJarPath = path.join(tempDir, `test-udf-${Date.now()}.jar`);
+      fs.writeFileSync(tempJarPath, "dummy jar content");
+      tempJarUri = vscode.Uri.file(tempJarPath);
+
+      // Simple mock Response - follows the pattern from uploadToAzure.test.ts
+      const mockResponse = new Response(null, { status: 200, statusText: "OK" });
+      uploadFileToAzureStub = sandbox
+        .stub(uploadToAzure, "uploadFileToAzure")
+        .resolves(mockResponse);
+    });
+    afterEach(() => {
+      // Clean up the temporary file after each test
+      if (fs.existsSync(tempJarPath)) {
+        fs.unlinkSync(tempJarPath);
+      }
+    });
+    it("should log the message confirming the upload", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: "Azure",
+        region: "australiaeast",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: tempJarUri,
+      };
+
+      const mockProgress = {
+        report: sandbox.stub(),
+      };
+
+      const mockToken = {
+        isCancellationRequested: false,
+        onCancellationRequested: sandbox.stub(),
+      };
+
+      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
+      withProgressStub.callsFake(async (options, callback) => {
+        return await callback(mockProgress as any, mockToken as any);
+      });
+
+      await handleUploadFile(mockParams, mockPresignedUrlResponse);
+      sinon.assert.calledOnce(uploadFileToAzureStub);
+      sinon.assert.calledWith(uploadFileToAzureStub, {
+        file: sinon.match.any, // The blob object
+        presignedUrl: mockPresignedUrlResponse.upload_url,
+        contentType: "application/java-archive",
+      });
+
+      sinon.assert.calledWith(mockProgress.report, { message: "Preparing file..." });
+      sinon.assert.calledWith(mockProgress.report, { message: "Uploading to Azure storage..." });
+    });
+
+    it("should handle upload errors properly", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: "Azure",
+        region: "australiaeast",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: tempJarUri,
+      };
+
+      // Make the upload function throw an error
+      const uploadError = new Error("Azure upload failed: 500 Internal Server Error");
+      uploadFileToAzureStub.rejects(uploadError);
+
+      // The function should rethrow the error
+      await assert.rejects(
+        () => handleUploadFile(mockParams, mockPresignedUrlResponse),
+        uploadError,
+      );
+
+      sinon.assert.calledOnce(uploadFileToAzureStub);
+    });
+  });
 });
