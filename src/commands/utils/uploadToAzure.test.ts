@@ -14,12 +14,10 @@ describe("uploadFileToAzure", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    // Set up all stubs
     fetchStub = sandbox.stub(global, "fetch");
     loggerErrorStub = sandbox.stub(Logger.prototype, "error");
     showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
-    // Set up test data
     mockParams = {
       file: new Blob(["test content"], { type: "application/zip" }),
       presignedUrl: "https://test.blob.core.windows.net/container/file.zip?signature=abc123",
