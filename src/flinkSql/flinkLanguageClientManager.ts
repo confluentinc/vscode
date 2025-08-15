@@ -162,8 +162,12 @@ export class FlinkLanguageClientManager implements Disposable {
    * @param doc The document to simulate changes for.
    * @returns A promise that resolves when the notification has been sent.
    */
-  private simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> | undefined {
-    return this.languageClient?.sendNotification("textDocument/didChange", {
+  public simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
+    if (!this.languageClient) {
+      logger.info("Can't simulate document change for non-existing language client.")
+      return Promise.resolve();
+    }
+    return this.languageClient.sendNotification("textDocument/didChange", {
       textDocument: {
         uri: doc.uri.toString() || "",
         version: doc.version,
@@ -570,7 +574,7 @@ export class FlinkLanguageClientManager implements Disposable {
             action: "client_initialized",
             compute_pool_id: computePoolId,
           });
-          this.notifyConfigChanged();
+          await this.notifyConfigChanged();
         }
       } catch (error) {
         let msg = "Error in maybeStartLanguageClient";
