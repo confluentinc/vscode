@@ -223,7 +223,6 @@ describe("uploadUDF", () => {
       fs.writeFileSync(tempJarPath, "dummy jar content");
       tempJarUri = vscode.Uri.file(tempJarPath);
 
-      // Simple mock Response - follows the pattern from uploadToAzure.test.ts
       const mockResponse = new Response(null, { status: 200, statusText: "OK" });
       uploadFileToAzureStub = sandbox
         .stub(uploadToAzure, "uploadFileToAzure")
@@ -281,11 +280,9 @@ describe("uploadUDF", () => {
         selectedFile: tempJarUri,
       };
 
-      // Make the upload function throw an error
       const uploadError = new Error("Azure upload failed: 500 Internal Server Error");
       uploadFileToAzureStub.rejects(uploadError);
 
-      // The function should rethrow the error
       await assert.rejects(
         () => handleUploadFile(mockParams, mockPresignedUrlResponse),
         uploadError,
