@@ -164,7 +164,7 @@ export class FlinkLanguageClientManager implements Disposable {
    */
   public simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
     if (!this.languageClient) {
-      logger.info("Can't simulate document change for non-existing language client.")
+      logger.info("Can't simulate document change for non-existing language client.");
       return Promise.resolve();
     }
     return this.languageClient.sendNotification("textDocument/didChange", {
