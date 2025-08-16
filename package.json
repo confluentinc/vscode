@@ -759,6 +759,18 @@
         "command": "confluent.flink.statements.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Flink Statements View"
+      },
+      {
+        "command": "confluent.flink.setUDFsViewMode",
+        "title": "Switch to Flink UDFs",
+        "icon": "$(code)",
+        "category": "Confluent: Flink Artifacts/UDFs View"
+      },
+      {
+        "command": "confluent.flink.setArtifactsViewMode",
+        "title": "Switch to Flink Artifacts",
+        "icon": "$(folder-library)",
+        "category": "Confluent: Flink Artifacts/UDFs View"
       }
     ],
     "configuration": [
@@ -1348,6 +1360,14 @@
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
           "when": "false"
+        },
+        {
+          "command": "confluent.flink.setArtifactsViewMode",
+          "when": "confluent.flinkArtifactsUDFsViewMode == 'UDFs'"
+        },
+        {
+          "command": "confluent.flink.setUDFsViewMode",
+          "when": "confluent.flinkArtifactsUDFsViewMode == 'artifacts'"
         }
       ],
       "editor/title": [
@@ -1521,6 +1541,16 @@
           "command": "confluent.artifacts.flink-compute-pool.select",
           "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
           "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.setArtifactsViewMode",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'UDFs'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.flink.setUDFsViewMode",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
