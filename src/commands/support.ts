@@ -5,6 +5,7 @@ import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
+import { getFlinkLSLogFileUris } from "../flinkSql/logging";
 import { CURRENT_LOGFILE_NAME, getLogFileDir, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
 import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
 import { getSidecarFormattedLogfilePath, getSidecarLogfilePath } from "../sidecar/logging";
@@ -233,6 +234,17 @@ async function saveSupportZip() {
     sourceUri: uri,
     zipPath: `${uri.path.split("/").pop() || "vscode-confluent.log"}`,
   }));
+
+  // add flink language server log files
+  try {
+    fileEntries.push(...getFlinkLSLogFileUris().map((uri) => ({
+      sourceUri: uri,
+      zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`
+    })));
+  } catch {
+    // if flink log files don't exist yet, we'll log and move on
+    logger.debug("Flink language server log files not found, skipping in support zip");
+  }
 
   // add the raw JSON log file first
   fileEntries.push({
