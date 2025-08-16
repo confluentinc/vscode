@@ -87,6 +87,10 @@ describe("viewProviders/newResources.ts", () => {
       schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
     });
 
+    const TEST_DIRECT_ENVIRONMENT_NO_CLUSTERS = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+    });
+
     beforeEach(() => {
       directLoader = new DirectResourceLoader("test-direct-connection-id" as ConnectionId);
       directConnectionRow = new DirectConnectionRow(directLoader);
@@ -111,6 +115,25 @@ describe("viewProviders/newResources.ts", () => {
 
       beforeEach(() => {
         getEnvironmentsStub = sandbox.stub(directLoader, "getEnvironments").resolves([]);
+      });
+
+      describe("getTreeItem", () => {
+        it("when connected", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
+          const treeItem = directConnectionRow.getTreeItem();
+          assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
+          assert.strictEqual(treeItem.contextValue, "resources-direct-container-connected");
+          assert.strictEqual(treeItem.id, `${directConnectionRow.connectionId}-connected`);
+        });
+
+        it("when not connected, empty environment", () => {
+          directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_NO_CLUSTERS);
+          const treeItem = directConnectionRow.getTreeItem();
+          assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.None);
+          // No "-connected" suffix when not connected.
+          assert.strictEqual(treeItem.contextValue, "resources-direct-container");
+          assert.strictEqual(treeItem.id, `${directConnectionRow.connectionId}`);
+        });
       });
 
       it("searchableText() returns the connection name after refresh completes", async () => {
