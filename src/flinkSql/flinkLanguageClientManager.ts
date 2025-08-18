@@ -307,7 +307,11 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
     if (
       this.openFlinkSqlDocuments.has(uriString) &&
-      this.languageClient?.diagnostics?.has(event.document.uri)
+      this.languageClient?.diagnostics?.has(event.document.uri) &&
+      // Make sure the change updated the content of the document. Otherwise, clearing diagnostics
+      // won't make sense. We'll, for instance, see document change events without content changes
+      // when saving the document.
+      event.contentChanges.length > 0
     ) {
       logger.trace(`Clearing diagnostics for document: ${uriString}`);
       this.clearDiagnostics(event.document.uri);
