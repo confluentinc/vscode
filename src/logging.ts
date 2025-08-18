@@ -9,7 +9,6 @@ import { WriteableTmpDir } from "./utils/file";
  * Main "Confluent" output channel.
  * @remarks We're using a {@link LogOutputChannel} instead of an `OutputChannel`
  * because it includes timestamps and colored log levels in the output by default.
- * @TODO will delegate writing to the log file to a {@link RotatingLogOutputChannel} instance once merged to v1.5.x
  */
 export const OUTPUT_CHANNEL: LogOutputChannel = window.createOutputChannel("Confluent", {
   log: true,
@@ -32,7 +31,6 @@ export class Logger {
     return new Logger(`${this.name}[${callpoint}.${count}]`);
   }
 
-  /** @TODO will adapt following methods to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x */
   /** More verbose form of "debug" according to the LogOutputChannel */
   trace(message: string, ...args: any[]) {
     const prefix = this.logPrefix("trace");
@@ -73,7 +71,6 @@ export class Logger {
     return `${timestamp} [${level}] [${this.name}]`;
   }
 
-  /** @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x */
   private logToOutputChannelAndFile(
     level: string,
     prefix: string,
@@ -113,7 +110,7 @@ export class Logger {
 
   /** Create a stream to write to the log file in "append" mode, write the log contents to it, and
    * then close the stream.
-   * @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x */
+   */
   private writeToLogFile(prefix: string, message: string, ...args: any[]) {
     const argString = args.map((arg) => JSON.stringify(arg)).join(" ");
     const formattedMessage = `${prefix} ${message} ${argString}\n`;
@@ -175,9 +172,7 @@ export const LOGFILE_ROTATION_INTERVAL = "1d"; // rotate log files daily
 /** Single stream to allow rotating-file-stream to keep track of file sizes and rotation timing. */
 let logFileStream: RotatingFileStream | undefined;
 
-/** Creates a new rotating log file stream if it doesn't already exist.
- * @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x
- */
+/** Creates a new rotating log file stream if it doesn't already exist. */
 export function getLogFileStream(): RotatingFileStream {
   if (!logFileStream) {
     // don't use the `maxSize` option since that will interfere with proper rotation and cleanup by
@@ -214,7 +209,6 @@ export function getLogFileStream(): RotatingFileStream {
  * - `vscode-confluent-1234.2.log`
  * - `vscode-confluent-1234.3.log`
  * - `vscode-confluent-1234.4.log` (new log file)
- * @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x
  */
 export function rotatingFilenameGenerator(time: number | Date, index?: number): string {
   // 0, undefined, null will drop any index suffix
@@ -291,22 +285,13 @@ export function cleanupOldLogFiles() {
  */
 export class RotatingLogManager {
   private stream: RotatingFileStream | undefined;
-  private _baseFileName: string;
-  private _currentFileName: string;
-  private _rotatedFileNames: string[] = [];
+  private readonly _baseFileName: string;
+  private readonly _currentFileName: string;
+  private readonly _rotatedFileNames: string[] = [];
 
-  constructor(private base: string) {
+  constructor(private readonly base: string) {
     this._baseFileName = `${BASEFILE_PREFIX}${this.base}`;
     this._currentFileName = `${this._baseFileName}.log`;
-  }
-
-  get currentFileName(): string {
-    return this._currentFileName;
-  }
-
-  get rotatedFileNames(): string[] {
-    //return copy
-    return [...this._rotatedFileNames];
   }
 
   /** Generates a new log file name based on the base file name and the index. @remarks Taken from {@link rotatingFilenameGenerator} */
@@ -377,8 +362,8 @@ export class RotatingLogManager {
  * @remarks Methods defined factored out from {@link Logger} to avoid code duplication.
  */
 export class RotatingLogOutputChannel implements LogOutputChannel {
-  private rotatingLogManager: RotatingLogManager;
-  private outputChannel: LogOutputChannel;
+  private readonly rotatingLogManager: RotatingLogManager;
+  private readonly outputChannel: LogOutputChannel;
 
   /** Creates a new {@link RotatingLogOutputChannel} instance.
    * @param displayChannelName - The name of the output channel to display in the UI.
@@ -386,9 +371,9 @@ export class RotatingLogOutputChannel implements LogOutputChannel {
    * @param consoleLabelName (optional) - The name of the console label to display in the UI.
    */
   constructor(
-    private displayChannelName: string,
-    private logFileBaseName: string,
-    private consoleLabelName?: string,
+    private readonly displayChannelName: string,
+    private readonly logFileBaseName: string,
+    private readonly consoleLabelName?: string,
   ) {
     this.outputChannel = window.createOutputChannel(this.displayChannelName, { log: true });
     this.rotatingLogManager = new RotatingLogManager(this.logFileBaseName);
