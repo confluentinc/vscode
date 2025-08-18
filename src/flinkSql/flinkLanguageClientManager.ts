@@ -156,6 +156,30 @@ export class FlinkLanguageClientManager implements Disposable {
     }
   }
 
+  /**
+   * Simulates a document change to trigger diagnostics on the server side. Is needed to get diagnostics
+   * when opening a new document. Can be removed when the CCloud Flink Language Service has been updated.
+   * @param doc The document to simulate changes for.
+   * @returns A promise that resolves when the notification has been sent.
+   */
+  public async simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
+    if (!this.languageClient) {
+      logger.info("Can't simulate document change for non-existing language client.");
+      return;
+    }
+    await this.languageClient.sendNotification("textDocument/didChange", {
+      textDocument: {
+        uri: doc.uri.toString() || "",
+        version: doc.version,
+      },
+      contentChanges: [
+        {
+          text: doc.getText(),
+        },
+      ],
+    });
+  }
+
   private registerListeners(): void {
     // Listen for changes to metadata
     // Codelens compute pool affects connection, catalog/db will be sent as LSP workspace config
@@ -165,7 +189,27 @@ export class FlinkLanguageClientManager implements Disposable {
           uri: uri.toString(),
         });
         if (this.lastDocUri === uri) {
-          this.notifyConfigChanged();
+          // If the metadata change affects what the websocket endpoint URL should be, then we
+          // need to restart the language client with the new URL (changed whole cloud
+          // provider / region).
+          //
+          // Otherwise just need to notify the language server of the new settings (say, new compute pool
+          // or new default database or catalog in same provider+env+region).
+          const settings = await this.getFlinkSqlSettings(uri);
+          if (
+            settings.computePoolId &&
+            this.lastWebSocketUrl !== (await this.buildFlinkSqlWebSocketUrl(settings.computePoolId))
+          ) {
+            logger.trace(
+              "uriMetadataSet: WebSocket URL needs changing, reinitializing language client with new URL",
+            );
+            await this.restartLanguageClient();
+          } else {
+            logger.trace(
+              "uriMetadataSet: Document metadata change does not warrant new websocket URL. Notifying language server of minor configuration change.",
+            );
+            await this.notifyConfigChanged();
+          }
         } else if (uri && uri.scheme === "file") {
           const doc = await workspace.openTextDocument(uri);
           if (doc.languageId === "flinksql") {
@@ -222,7 +266,11 @@ export class FlinkLanguageClientManager implements Disposable {
         }
         if (
           this.openFlinkSqlDocuments.has(uriString) &&
-          this.languageClient?.diagnostics?.has(event.document.uri)
+          this.languageClient?.diagnostics?.has(event.document.uri) &&
+          // Make sure the change updated the content of the document. Otherwise, clearing diagnostics
+          // won't make sense. We'll, for instance, see document change events without content changes
+          // when saving the document.
+          event.contentChanges.length > 0
         ) {
           this.clearDiagnostics(event.document.uri);
         } else {
@@ -546,7 +594,7 @@ export class FlinkLanguageClientManager implements Disposable {
             action: "client_initialized",
             compute_pool_id: computePoolId,
           });
-          this.notifyConfigChanged();
+          await this.notifyConfigChanged();
         }
       } catch (error) {
         let msg = "Error in maybeStartLanguageClient";
@@ -557,6 +605,15 @@ export class FlinkLanguageClientManager implements Disposable {
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
+        // Trigger diagnostics for the active document if language client is available
+        if (this.languageClient) {
+          logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
+          for (const textDocument of workspace.textDocuments) {
+            if (textDocument.uri.toString() === uriStr) {
+              await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
+            }
+          }
+        }
       }
     });
   }
