@@ -39,6 +39,8 @@ describe("FlinkLanguageClientManager", () => {
   let getCatalogDatabaseFromMetadataStub: sinon.SinonStub;
   let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
 
+  const TEST_FILE_URI = vscode.Uri.parse("file:///test.flink.sql");
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     FlinkLanguageClientManager["instance"] = null;
@@ -182,13 +184,11 @@ describe("FlinkLanguageClientManager", () => {
   });
 
   describe("getFlinkSqlSettings", () => {
-    const testUri = vscode.Uri.parse("file:///test.flink.sql");
-
     it("should return null for all settings if not configured", async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, "").stubGet(FLINK_CONFIG_DATABASE, "");
       resourceManagerStub.getUriMetadata.resolves(undefined);
 
-      const settings = await flinkManager.getFlinkSqlSettings(testUri);
+      const settings = await flinkManager.getFlinkSqlSettings(TEST_FILE_URI);
 
       assert.deepStrictEqual(settings, {
         computePoolId: null,
@@ -203,7 +203,7 @@ describe("FlinkLanguageClientManager", () => {
         .stubGet(FLINK_CONFIG_DATABASE, "config-db-id");
       resourceManagerStub.getUriMetadata.resolves(undefined);
 
-      const settings = await flinkManager.getFlinkSqlSettings(testUri);
+      const settings = await flinkManager.getFlinkSqlSettings(TEST_FILE_URI);
 
       assert.deepStrictEqual(settings, {
         computePoolId: "config-pool-id",
@@ -225,7 +225,7 @@ describe("FlinkLanguageClientManager", () => {
         database: { name: "test-db-name" },
       });
 
-      const settings = await flinkManager.getFlinkSqlSettings(testUri);
+      const settings = await flinkManager.getFlinkSqlSettings(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getCatalogDatabaseFromMetadataStub);
       assert.deepStrictEqual(settings, {
@@ -249,7 +249,7 @@ describe("FlinkLanguageClientManager", () => {
         database: { name: "metadata-db-name" },
       });
 
-      const settings = await flinkManager.getFlinkSqlSettings(testUri);
+      const settings = await flinkManager.getFlinkSqlSettings(TEST_FILE_URI);
 
       assert.deepStrictEqual(settings, {
         computePoolId: "metadata-pool",
@@ -554,6 +554,332 @@ describe("FlinkLanguageClientManager", () => {
         // to the expected emitter.
         sinon.assert.calledOnce(handlerStub);
       });
+    });
+  });
+
+  describe("simulateDocumentChangeToTriggerDiagnostics", () => {
+    let fakeLanguageClient: sinon.SinonStubbedInstance<LanguageClient>;
+    let fakeDoc: any;
+    let sendNotificationStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      fakeLanguageClient = sandbox.createStubInstance(LanguageClient);
+      flinkManager["languageClient"] = fakeLanguageClient;
+
+      // content doesn't matter here, we just need uri/version/text for .sendNotification checks
+      fakeDoc = {
+        uri: { toString: () => "file:///test/path.sql" },
+        version: 7,
+        getText: sinon.stub().returns("SELECT * FROM foo;"),
+      };
+      sendNotificationStub = sandbox.stub();
+      flinkManager["languageClient"].sendNotification = sendNotificationStub;
+    });
+
+    it("should do nothing if languageClient is null", async () => {
+      flinkManager["languageClient"] = null;
+
+      await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc);
+
+      sinon.assert.notCalled(sendNotificationStub);
+    });
+
+    it("should call sendNotification with correct params if languageClient is set", async () => {
+      await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc);
+
+      sinon.assert.calledOnce(sendNotificationStub);
+      const [method, payload] = sendNotificationStub.firstCall.args;
+      assert.strictEqual(method, "textDocument/didChange");
+      assert.strictEqual(payload.textDocument.uri, fakeDoc.uri.toString());
+      assert.strictEqual(payload.textDocument.version, fakeDoc.version);
+      assert.deepStrictEqual(payload.contentChanges, [{ text: fakeDoc.getText() }]);
+    });
+
+    it("should handle empty document Uri strings gracefully", async () => {
+      fakeDoc.uri = { toString: () => "" };
+
+      await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc);
+
+      sinon.assert.calledOnce(sendNotificationStub);
+      const payload = sendNotificationStub.firstCall.args[1];
+      assert.strictEqual(payload.textDocument.uri, "");
+    });
+
+    it("should propagate errors from sendNotification", async () => {
+      const fakeError = new Error("uh oh");
+      sendNotificationStub.rejects(fakeError);
+
+      await assert.rejects(
+        async () => await flinkManager.simulateDocumentChangeToTriggerDiagnostics(fakeDoc),
+        fakeError,
+      );
+    });
+  });
+
+  describe("maybeStartLanguageClient", () => {
+    let getFlinkSqlSettingsStub: sinon.SinonStub;
+    let validateFlinkSettingsStub: sinon.SinonStub;
+    let buildFlinkSqlWebSocketUrlStub: sinon.SinonStub;
+    let isLanguageClientConnectedStub: sinon.SinonStub;
+    let cleanupLanguageClientStub: sinon.SinonStub;
+    let clearDiagnosticsStub: sinon.SinonStub;
+    let initializeLanguageClientStub: sinon.SinonStub;
+    let notifyConfigChangedStub: sinon.SinonStub;
+    let simulateDocumentChangeToTriggerDiagnosticsStub: sinon.SinonStub;
+    let workspaceTextDocumentsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      // simulate authenticated CCloud connection by default
+      hasCCloudAuthSessionStub.returns(true);
+
+      getFlinkSqlSettingsStub = sandbox.stub(flinkManager, "getFlinkSqlSettings");
+      getFlinkSqlSettingsStub.resolves({ computePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID });
+
+      validateFlinkSettingsStub = sandbox.stub(flinkManager, "validateFlinkSettings");
+      validateFlinkSettingsStub.resolves(true);
+
+      buildFlinkSqlWebSocketUrlStub = sandbox.stub(
+        flinkManager as any,
+        "buildFlinkSqlWebSocketUrl",
+      );
+      buildFlinkSqlWebSocketUrlStub.resolves("ws://localhost:8080/test");
+
+      isLanguageClientConnectedStub = sandbox.stub(
+        flinkManager as any,
+        "isLanguageClientConnected",
+      );
+      isLanguageClientConnectedStub.returns(false);
+
+      cleanupLanguageClientStub = sandbox.stub().resolves();
+      flinkManager["cleanupLanguageClient"] = cleanupLanguageClientStub;
+
+      clearDiagnosticsStub = sandbox.stub().resolves();
+      flinkManager["clearDiagnostics"] = clearDiagnosticsStub;
+
+      const fakeLanguageClient = sandbox.createStubInstance(LanguageClient);
+      initializeLanguageClientStub = sandbox.stub().resolves(fakeLanguageClient);
+      flinkManager["initializeLanguageClient"] = initializeLanguageClientStub;
+
+      notifyConfigChangedStub = sandbox.stub().resolves();
+      flinkManager["notifyConfigChanged"] = notifyConfigChangedStub;
+
+      simulateDocumentChangeToTriggerDiagnosticsStub = sandbox.stub().resolves();
+      flinkManager["simulateDocumentChangeToTriggerDiagnostics"] =
+        simulateDocumentChangeToTriggerDiagnosticsStub;
+
+      workspaceTextDocumentsStub = sandbox.stub(vscode.workspace, "textDocuments").value([]);
+
+      // start with a fresh slate
+      flinkManager["languageClient"] = null;
+      flinkManager["lastDocUri"] = null;
+      flinkManager["lastWebSocketUrl"] = null;
+      flinkManager["reconnectCounter"] = 0;
+    });
+
+    it("should return early if the user doesn't have an authenticated CCloud connection", async () => {
+      hasCCloudAuthSessionStub.returns(false);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.notCalled(getFlinkSqlSettingsStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    it("should return early if no URI is provided", async () => {
+      await flinkManager.maybeStartLanguageClient();
+
+      sinon.assert.notCalled(getFlinkSqlSettingsStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    // the "Language client already exists for this [document] URI" scenario
+    it("should return early if the language client exists for the same URI and restartRunningClient=false", async () => {
+      isLanguageClientConnectedStub.returns(true);
+      flinkManager["lastDocUri"] = TEST_FILE_URI;
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI, false); // no forced restart
+
+      sinon.assert.notCalled(getFlinkSqlSettingsStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    it("should call initializeLanguageClient() if the language client exists for the same document URI and restartRunningClient=true", async () => {
+      isLanguageClientConnectedStub.returns(true);
+      flinkManager["lastDocUri"] = TEST_FILE_URI;
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI, true); // forced restart
+
+      sinon.assert.calledOnce(getFlinkSqlSettingsStub);
+      sinon.assert.calledOnce(cleanupLanguageClientStub);
+      sinon.assert.calledOnce(initializeLanguageClientStub);
+    });
+
+    it("should return early if no compute pool is set", async () => {
+      getFlinkSqlSettingsStub.resolves({ computePoolId: null });
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(getFlinkSqlSettingsStub);
+      sinon.assert.notCalled(validateFlinkSettingsStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    it("should return early if compute pool validation fails", async () => {
+      validateFlinkSettingsStub.resolves(false);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(getFlinkSqlSettingsStub);
+      sinon.assert.calledOnce(validateFlinkSettingsStub);
+      sinon.assert.notCalled(buildFlinkSqlWebSocketUrlStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    it("should return early if WebSocket URL building fails", async () => {
+      buildFlinkSqlWebSocketUrlStub.rejects(new Error("Failed to build URL"));
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(buildFlinkSqlWebSocketUrlStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    it("should return early if WebSocket URL building returns null", async () => {
+      // like if .lookupComputePoolInfo() returns null for various reasons
+      buildFlinkSqlWebSocketUrlStub.resolves(null);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(buildFlinkSqlWebSocketUrlStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    // the "Language client already connected to correct [websocket] url" scenario
+    it("should return early if the language client is already connected to the same WebSocket URL and restartRunningClient=false", async () => {
+      const testUrl = "ws://localhost:8080/test";
+      isLanguageClientConnectedStub.returns(true);
+      flinkManager["lastWebSocketUrl"] = testUrl;
+      buildFlinkSqlWebSocketUrlStub.resolves(testUrl);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI, false); // no forced restart
+
+      sinon.assert.calledOnce(buildFlinkSqlWebSocketUrlStub);
+      sinon.assert.notCalled(cleanupLanguageClientStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+    });
+
+    it("should cleanup and reinitialize if the language client is connected but the WebSocket URL changed", async () => {
+      const oldUrl = "ws://localhost:8080/old";
+      const newUrl = "ws://localhost:8080/new";
+      isLanguageClientConnectedStub.returns(true);
+      flinkManager["lastWebSocketUrl"] = oldUrl;
+      buildFlinkSqlWebSocketUrlStub.resolves(newUrl);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(cleanupLanguageClientStub);
+      sinon.assert.calledOnce(initializeLanguageClientStub);
+      sinon.assert.calledWith(initializeLanguageClientStub, newUrl);
+      // verify that the cleanup happens before reinitialization
+      sinon.assert.callOrder(cleanupLanguageClientStub, initializeLanguageClientStub);
+    });
+
+    it("should successfully initialize the language client with valid settings", async () => {
+      const testUrl = "ws://localhost:8080/test";
+      buildFlinkSqlWebSocketUrlStub.resolves(testUrl);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(getFlinkSqlSettingsStub);
+      sinon.assert.calledOnce(validateFlinkSettingsStub);
+      sinon.assert.calledOnce(buildFlinkSqlWebSocketUrlStub);
+      sinon.assert.calledOnce(initializeLanguageClientStub);
+      sinon.assert.calledWith(initializeLanguageClientStub, testUrl);
+      sinon.assert.calledOnce(notifyConfigChangedStub);
+      // verify internal state is properly set
+      assert.strictEqual(flinkManager["lastDocUri"], TEST_FILE_URI);
+      assert.strictEqual(flinkManager["lastWebSocketUrl"], testUrl);
+      assert.strictEqual(flinkManager["reconnectCounter"], 0);
+    });
+
+    it("should call .clearDiagnostics() for the previous document if it exists", async () => {
+      const previousUri = vscode.Uri.parse("file:///previous.flink.sql");
+      flinkManager["lastDocUri"] = previousUri;
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(clearDiagnosticsStub);
+      sinon.assert.calledWith(clearDiagnosticsStub, previousUri);
+    });
+
+    it("should not call .clearDiagnostics() if no previous document exists", async () => {
+      flinkManager["lastDocUri"] = null;
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.notCalled(clearDiagnosticsStub);
+    });
+
+    it("should call simulateDocumentChangeToTriggerDiagnostics() in finally block when client is created", async () => {
+      const testDocument = {
+        uri: TEST_FILE_URI,
+        languageId: FLINKSQL_LANGUAGE_ID,
+      } as vscode.TextDocument;
+      workspaceTextDocumentsStub.value([testDocument]);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(simulateDocumentChangeToTriggerDiagnosticsStub);
+      sinon.assert.calledWith(simulateDocumentChangeToTriggerDiagnosticsStub, testDocument);
+    });
+
+    it("should not call simulateDocumentChangeToTriggerDiagnostics() if no matching document is found", async () => {
+      const otherDocument = {
+        uri: vscode.Uri.parse("file:///other.flink.sql"),
+        languageId: FLINKSQL_LANGUAGE_ID,
+      } as vscode.TextDocument;
+      workspaceTextDocumentsStub.value([otherDocument]);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.notCalled(simulateDocumentChangeToTriggerDiagnosticsStub);
+    });
+
+    it("should not call simulateDocumentChangeToTriggerDiagnostics() if no language client exists", async () => {
+      initializeLanguageClientStub.resolves(null);
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.notCalled(simulateDocumentChangeToTriggerDiagnosticsStub);
+    });
+
+    it("should handle errors and still call simulateDocumentChangeToTriggerDiagnostics() in the finally block", async () => {
+      flinkManager["languageClient"] = sandbox.createStubInstance(LanguageClient);
+      const testDocument = {
+        uri: TEST_FILE_URI,
+        languageId: FLINKSQL_LANGUAGE_ID,
+      } as vscode.TextDocument;
+      workspaceTextDocumentsStub.value([testDocument]);
+      const testError = new Error("Test error");
+      getFlinkSqlSettingsStub.rejects(testError);
+
+      // error shouldn't propagate, just get logged
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      sinon.assert.calledOnce(getFlinkSqlSettingsStub);
+      sinon.assert.notCalled(initializeLanguageClientStub);
+      sinon.assert.calledOnce(simulateDocumentChangeToTriggerDiagnosticsStub);
+    });
+
+    it("should not add language client to .disposables if initializeLanguageClient() returns null", async () => {
+      initializeLanguageClientStub.resolves(null);
+      const disposablesSizeBefore = flinkManager["disposables"].length;
+
+      await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
+
+      assert.strictEqual(flinkManager["disposables"].length, disposablesSizeBefore);
+      assert.strictEqual(flinkManager["languageClient"], null);
+      sinon.assert.notCalled(notifyConfigChangedStub);
     });
   });
 
@@ -944,7 +1270,7 @@ describe("FlinkLanguageClientManager", () => {
         sinon.assert.notCalled(fakeDiagnosticsCollection.has);
       });
 
-      it("should clear diagnostics for flinksql documents on text change if had prior diagnostics", () => {
+      it("should clear diagnostics for flinksql documents on text change if had prior diagnostics and the TextDocumentChangeEvent has contentChanges", () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
           languageId: FLINKSQL_LANGUAGE_ID,
@@ -960,7 +1286,15 @@ describe("FlinkLanguageClientManager", () => {
         // Simulate a text document change event
         const fakeEvent: vscode.TextDocumentChangeEvent = {
           document: fakeDocument,
-          contentChanges: [],
+          contentChanges: [
+            {
+              // the content here doesn't matter, we just want a TextDocumentContentChangeEvent
+              range: new vscode.Range(0, 0, 1, 0),
+              rangeOffset: 0,
+              rangeLength: 1,
+              text: "SELECT * FROM test",
+            },
+          ],
           reason: vscode.TextDocumentChangeReason.Undo,
         };
 
@@ -972,6 +1306,35 @@ describe("FlinkLanguageClientManager", () => {
 
         sinon.assert.calledOnce(fakeDiagnosticsCollection.delete);
         sinon.assert.calledWith(fakeDiagnosticsCollection.delete, fakeUri);
+      });
+
+      it("should not clear diagnostics if the TextDocumentChangeEvent does not have any contentChanges", () => {
+        const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+        const fakeDocument = {
+          languageId: FLINKSQL_LANGUAGE_ID,
+          uri: fakeUri,
+        } as vscode.TextDocument;
+
+        // stash the document in the openFlinkSqlDocuments set
+        flinkManager.trackDocument(fakeUri);
+
+        // And make as if this document had diagnostics set
+        fakeDiagnosticsCollection.has.withArgs(fakeUri).returns(true);
+
+        // Simulate a text document change event
+        const fakeEvent: vscode.TextDocumentChangeEvent = {
+          document: fakeDocument,
+          contentChanges: [], // no content changes = no clearing diagnostics
+          reason: vscode.TextDocumentChangeReason.Undo,
+        };
+
+        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
+
+        // Should check for diagnostics, but no clearing since there weren't content changes
+        sinon.assert.calledOnce(fakeDiagnosticsCollection.has);
+        sinon.assert.calledWith(fakeDiagnosticsCollection.has, fakeUri);
+
+        sinon.assert.notCalled(fakeDiagnosticsCollection.delete);
       });
     });
 
