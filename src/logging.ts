@@ -1,4 +1,5 @@
 import { readdirSync, statSync, unlinkSync } from "fs";
+import { existsSync } from "./utils/fsWrappers";
 import { join, normalize } from "path";
 import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { Event, LogLevel, LogOutputChannel, Uri, window } from "vscode";
@@ -149,10 +150,10 @@ export function getLogFileDir(): string {
 }
 
 /** The base file name prefix for the log file. Helps with clean up of old log files. @see {@link cleanupOldLogFiles} */
-export const BASEFILE_PREFIX: string = "vscode-confluent-";
+export const BASEFILE_PREFIX: string = "vscode-confluent";
 
 /** The name of the currently active log file, including time/index prefixing. */
-export const CURRENT_LOGFILE_NAME: string = `${BASEFILE_PREFIX}${process.pid}.log`;
+export const CURRENT_LOGFILE_NAME: string = `vscode-confluent-${process.pid}.log`;
 
 /** Set of log file names that have already been created for this extension instance. */
 export const ROTATED_LOGFILE_NAMES: string[] = [];
@@ -339,10 +340,15 @@ export class RotatingLogManager {
   /** Gets the file URIs for the log file. @remarks Taken from {@link file://vscode/src/commands/support.ts extensionLogFileUris} */
   getFileUris(): Uri[] {
     const dir = this.getDir();
-    const current = Uri.file(normalize(join(dir, this._currentFileName)));
+    const currentPath = normalize(join(dir, this._currentFileName));
+    const current = Uri.file(currentPath);
     const rotated = this._rotatedFileNames.map((n) => Uri.file(normalize(join(dir, n))));
     const all = [current, ...rotated];
-    return all.filter((u, i, arr) => arr.findIndex((x) => x.fsPath === u.fsPath) === i);
+    const possibleFileNames = all.filter(
+      (u, i, arr) => arr.findIndex((x) => x.fsPath === u.fsPath) === i,
+    );
+    // Only return file names that exists, the file name generator will be called prior to a file being logged to
+    return possibleFileNames.filter((uri) => existsSync(uri));
   }
 
   private getDir(): string {

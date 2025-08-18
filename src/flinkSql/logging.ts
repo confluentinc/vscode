@@ -8,7 +8,7 @@ export function getFlinkSQLLanguageServerOutputChannel(): LogOutputChannel {
   if (!languageServerOutputChannel) {
     languageServerOutputChannel = new RotatingLogOutputChannel(
       "Confluent Flink SQL Language Server",
-      `flink-language-server-${process.pid}`,
+      `-flink-language-server-${process.pid}`,
     );
   }
   return languageServerOutputChannel;
