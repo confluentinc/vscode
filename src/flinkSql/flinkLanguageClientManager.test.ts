@@ -944,7 +944,7 @@ describe("FlinkLanguageClientManager", () => {
         sinon.assert.notCalled(fakeDiagnosticsCollection.has);
       });
 
-      it("should clear diagnostics for flinksql documents on text change if had prior diagnostics", () => {
+      it("should clear diagnostics for flinksql documents on text change if had prior diagnostics and the TextDocumentChangeEvent has contentChanges", () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
         const fakeDocument = {
           languageId: FLINKSQL_LANGUAGE_ID,
@@ -960,7 +960,15 @@ describe("FlinkLanguageClientManager", () => {
         // Simulate a text document change event
         const fakeEvent: vscode.TextDocumentChangeEvent = {
           document: fakeDocument,
-          contentChanges: [],
+          contentChanges: [
+            {
+              // the content here doesn't matter, we just want a TextDocumentContentChangeEvent
+              range: new vscode.Range(0, 0, 1, 0),
+              rangeOffset: 0,
+              rangeLength: 1,
+              text: "SELECT * FROM test",
+            },
+          ],
           reason: vscode.TextDocumentChangeReason.Undo,
         };
 
@@ -972,6 +980,35 @@ describe("FlinkLanguageClientManager", () => {
 
         sinon.assert.calledOnce(fakeDiagnosticsCollection.delete);
         sinon.assert.calledWith(fakeDiagnosticsCollection.delete, fakeUri);
+      });
+
+      it("should not clear diagnostics if the TextDocumentChangeEvent does not have any contentChanges", () => {
+        const fakeUri = vscode.Uri.parse("file:///fake/path/test.flinksql");
+        const fakeDocument = {
+          languageId: FLINKSQL_LANGUAGE_ID,
+          uri: fakeUri,
+        } as vscode.TextDocument;
+
+        // stash the document in the openFlinkSqlDocuments set
+        flinkManager.trackDocument(fakeUri);
+
+        // And make as if this document had diagnostics set
+        fakeDiagnosticsCollection.has.withArgs(fakeUri).returns(true);
+
+        // Simulate a text document change event
+        const fakeEvent: vscode.TextDocumentChangeEvent = {
+          document: fakeDocument,
+          contentChanges: [], // no content changes = no clearing diagnostics
+          reason: vscode.TextDocumentChangeReason.Undo,
+        };
+
+        flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
+
+        // Should check for diagnostics, but no clearing since there weren't content changes
+        sinon.assert.calledOnce(fakeDiagnosticsCollection.has);
+        sinon.assert.calledWith(fakeDiagnosticsCollection.has, fakeUri);
+
+        sinon.assert.notCalled(fakeDiagnosticsCollection.delete);
       });
     });
 
