@@ -581,11 +581,13 @@ export class FlinkLanguageClientManager implements Disposable {
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
-        // Trigger diagnostics for the active document
-        logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
-        for (const textDocument of workspace.textDocuments) {
-          if (textDocument.uri.toString() === uriStr) {
-            await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
+        // Trigger diagnostics for the active document if language client is available
+        if (this.languageClient) {
+          logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
+          for (const textDocument of workspace.textDocuments) {
+            if (textDocument.uri.toString() === uriStr) {
+              await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
+            }
           }
         }
       }
