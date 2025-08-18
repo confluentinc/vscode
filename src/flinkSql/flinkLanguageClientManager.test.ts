@@ -598,10 +598,64 @@ describe("FlinkLanguageClientManager", () => {
     describe("uriMetadataSetHandler", () => {
       let notifyConfigChangedStub: sinon.SinonStub;
       let openTextDocumentStub: sinon.SinonStub;
+      let restartLanguageClientStub: sinon.SinonStub;
+      let buildFlinkSqlWebSocketUrlStub: sinon.SinonStub;
+      let getFlinkSqlSettingsStub: sinon.SinonStub;
 
       beforeEach(() => {
         notifyConfigChangedStub = sandbox.stub(flinkManager as any, "notifyConfigChanged");
         openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
+        restartLanguageClientStub = sandbox.stub(flinkManager as any, "restartLanguageClient");
+        buildFlinkSqlWebSocketUrlStub = sandbox.stub(
+          flinkManager as any,
+          "buildFlinkSqlWebSocketUrl",
+        );
+        getFlinkSqlSettingsStub = sandbox.stub(flinkManager, "getFlinkSqlSettings").resolves({
+          computePoolId: "computePool-id",
+          databaseName: "test-db",
+          catalogName: "test-catalog",
+        });
+      });
+
+      it("should call restartLanguageClient if new metadata has computepool and implies new websocket url", async () => {
+        // Just force set things up so that new call to buildFlinkSqlWebSocketUrl() will return a different URL.
+        flinkManager["lastWebSocketUrl"] = "ws://old-url";
+        buildFlinkSqlWebSocketUrlStub.returns("ws://new-url");
+
+        const uriString = "file:///fake/path/test.flinksql";
+        const fakeUri = vscode.Uri.parse(uriString);
+        flinkManager["lastDocUri"] = fakeUri;
+
+        // By default up above, getFlinkSqlSettingsStub returns a valid compute pool id, so we should
+        // restart the language client since it appears that the metadata change means
+        // we need to connect to a different region / provider.
+
+        await flinkManager.uriMetadataSetHandler(fakeUri);
+
+        sinon.assert.calledOnce(restartLanguageClientStub);
+      });
+
+      it("should call notifyConfigChanged if new metadata lacks computepool", async () => {
+        getFlinkSqlSettingsStub.resolves({
+          computePoolId: undefined,
+          databaseName: undefined,
+          catalogName: undefined,
+        });
+
+        // Just force set things up so that new call to buildFlinkSqlWebSocketUrl() will return a different URL.
+        flinkManager["lastWebSocketUrl"] = "ws://old-url";
+        buildFlinkSqlWebSocketUrlStub.returns("ws://new-url");
+
+        const uriString = "file:///fake/path/test.flinksql";
+        const fakeUri = vscode.Uri.parse(uriString);
+        flinkManager["lastDocUri"] = fakeUri;
+
+        await flinkManager.uriMetadataSetHandler(fakeUri);
+
+        // should not restart the language client, but notify config changed because no compute pool
+        // to restart client against (?).
+        sinon.assert.notCalled(restartLanguageClientStub);
+        sinon.assert.calledOnce(notifyConfigChangedStub);
       });
 
       it("Should call notifyConfigChanged if current document matches metadata", async () => {
@@ -609,12 +663,17 @@ describe("FlinkLanguageClientManager", () => {
         const fakeUri = vscode.Uri.parse(uriString);
         flinkManager["lastDocUri"] = fakeUri;
 
+        // Set up to smell like metadata implies same websocket URL, but perhaps other bits changed.
+        flinkManager["lastWebSocketUrl"] = "ws://same-url";
+        buildFlinkSqlWebSocketUrlStub.returns("ws://same-url");
+
         // Make an equivalent Uri but separate instance.
         const equivMetadataUri = vscode.Uri.parse(uriString);
 
         await flinkManager.uriMetadataSetHandler(equivMetadataUri);
 
         sinon.assert.calledOnce(notifyConfigChangedStub);
+        sinon.assert.notCalled(restartLanguageClientStub);
       });
 
       it("should call maybeStartLanguageClient if is new document and smells flinksql", async () => {
