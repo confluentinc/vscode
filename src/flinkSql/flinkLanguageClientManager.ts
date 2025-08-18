@@ -267,7 +267,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     if (editor && this.isAppropriateDocument(editor.document)) {
       logger.trace("Active editor changed to Flink SQL file, initializing language client");
       await this.maybeStartLanguageClient(editor.document.uri);
-      await this.simulateDocumentChangeToTriggerDiagnostics(editor.document);
     }
   }
 
@@ -299,7 +298,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       } else {
         logger.trace("Initializing language client for changed active Flink SQL document");
         await this.maybeStartLanguageClient(doc.uri);
-        await this.simulateDocumentChangeToTriggerDiagnostics(doc);
       }
     }
   }
@@ -634,6 +632,15 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
+        // Trigger diagnostics for the active document if language client is available
+        if (this.languageClient) {
+          logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
+          for (const textDocument of workspace.textDocuments) {
+            if (textDocument.uri.toString() === uriStr) {
+              await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
+            }
+          }
+        }
       }
     });
   }
