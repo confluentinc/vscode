@@ -654,6 +654,7 @@ describe("FlinkLanguageClientManager", () => {
 
         // should not restart the language client, but notify config changed because no compute pool
         // to restart client against (?).
+        sinon.assert.notCalled(restartLanguageClientStub);
         sinon.assert.calledOnce(notifyConfigChangedStub);
       });
 
@@ -662,12 +663,17 @@ describe("FlinkLanguageClientManager", () => {
         const fakeUri = vscode.Uri.parse(uriString);
         flinkManager["lastDocUri"] = fakeUri;
 
+        // Set up to smell like metadata implies same websocket URL, but perhaps other bits changed.
+        flinkManager["lastWebSocketUrl"] = "ws://same-url";
+        buildFlinkSqlWebSocketUrlStub.returns("ws://same-url");
+
         // Make an equivalent Uri but separate instance.
         const equivMetadataUri = vscode.Uri.parse(uriString);
 
         await flinkManager.uriMetadataSetHandler(equivMetadataUri);
 
         sinon.assert.calledOnce(notifyConfigChangedStub);
+        sinon.assert.notCalled(restartLanguageClientStub);
       });
 
       it("should call maybeStartLanguageClient if is new document and smells flinksql", async () => {
