@@ -166,6 +166,30 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
+  /**
+   * Simulates a document change to trigger diagnostics on the server side. Is needed to get diagnostics
+   * when opening a new document. Can be removed when the CCloud Flink Language Service has been updated.
+   * @param doc The document to simulate changes for.
+   * @returns A promise that resolves when the notification has been sent.
+   */
+  public async simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
+    if (!this.languageClient) {
+      logger.info("Can't simulate document change for non-existing language client.");
+      return;
+    }
+    await this.languageClient.sendNotification("textDocument/didChange", {
+      textDocument: {
+        uri: doc.uri.toString() || "",
+        version: doc.version,
+      },
+      contentChanges: [
+        {
+          text: doc.getText(),
+        },
+      ],
+    });
+  }
+
   // Event Handlers.
 
   /**
@@ -325,7 +349,11 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
     if (
       this.openFlinkSqlDocuments.has(uriString) &&
-      this.languageClient?.diagnostics?.has(event.document.uri)
+      this.languageClient?.diagnostics?.has(event.document.uri) &&
+      // Make sure the change updated the content of the document. Otherwise, clearing diagnostics
+      // won't make sense. We'll, for instance, see document change events without content changes
+      // when saving the document.
+      event.contentChanges.length > 0
     ) {
       logger.trace(`Clearing diagnostics for document: ${uriString}`);
       this.clearDiagnostics(event.document.uri);
@@ -611,7 +639,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
             action: "client_initialized",
             compute_pool_id: computePoolId,
           });
-          this.notifyConfigChanged();
+          await this.notifyConfigChanged();
         }
       } catch (error) {
         let msg = "Error in maybeStartLanguageClient";
@@ -622,6 +650,15 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
+        // Trigger diagnostics for the active document if language client is available
+        if (this.languageClient) {
+          logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
+          for (const textDocument of workspace.textDocuments) {
+            if (textDocument.uri.toString() === uriStr) {
+              await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
+            }
+          }
+        }
       }
     });
   }
