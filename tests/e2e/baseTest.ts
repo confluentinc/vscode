@@ -22,7 +22,7 @@ export interface VSCodeFixture {
 export const test = testBase.extend<VSCodeFixture>({
   electronApp: async ({ trace }, use, testInfo) => {
     // create a temporary directory for this test run
-    const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
+    const tempDir = path.normalize(mkdtempSync(path.join(tmpdir(), "vscode-test-")));
 
     const vscodeInstallPath: string = await downloadAndUnzipVSCode(
       process.env.VSCODE_VERSION || "stable",
@@ -33,14 +33,8 @@ export const test = testBase.extend<VSCodeFixture>({
 
     // locate the VS Code executable path based on the platform
     let executablePath: string;
-    if (process.platform === "darwin") {
-      // on macOS, the install path is already the full path to the executable
+    if (["win32", "darwin"].includes(process.platform)) {
       executablePath = vscodeInstallPath;
-    } else if (process.platform === "win32") {
-      executablePath = path.join(
-        vscodeInstallPath,
-        vscodeVersion === "insiders" ? "Code - Insiders.exe" : "Code.exe",
-      );
     } else {
       // may be in the install path or in the root directory; need to see which one exists and
       // is executable
@@ -52,10 +46,10 @@ export const test = testBase.extend<VSCodeFixture>({
         : rootExecutable;
     }
 
-    const extensionPath: string = path.resolve(__dirname, "..", "..");
-    const outPath: string = path.resolve(extensionPath, "out");
-    const vsixFiles: string[] = globSync(path.resolve(outPath, "*.vsix"));
-    const vsixPath = vsixFiles[0];
+    const extensionPath: string = path.normalize(path.resolve(__dirname, "..", ".."));
+    const outPath: string = path.normalize(path.resolve(extensionPath, "out"));
+    const vsixFiles: string[] = globSync("*.vsix", { cwd: outPath });
+    const vsixPath = vsixFiles.length > 0 ? path.join(outPath, vsixFiles[0]) : undefined;
     if (!vsixPath) {
       // shouldn't happen during normal `gulp e2e`
       throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
@@ -81,9 +75,7 @@ export const test = testBase.extend<VSCodeFixture>({
         "--disable-workspace-trust",
         "--disable-extensions",
         // additional args needed for the Electron launch:
-        `--user-data-dir=${tempDir}`,
         `--extensionDevelopmentPath=${outPath}`,
-        "--new-window",
       ],
     });
 
