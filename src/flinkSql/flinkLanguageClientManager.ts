@@ -166,6 +166,30 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
   }
 
+  /**
+   * Simulates a document change to trigger diagnostics on the server side. Is needed to get diagnostics
+   * when opening a new document. Can be removed when the CCloud Flink Language Service has been updated.
+   * @param doc The document to simulate changes for.
+   * @returns A promise that resolves when the notification has been sent.
+   */
+  public async simulateDocumentChangeToTriggerDiagnostics(doc: TextDocument): Promise<void> {
+    if (!this.languageClient) {
+      logger.info("Can't simulate document change for non-existing language client.");
+      return;
+    }
+    await this.languageClient.sendNotification("textDocument/didChange", {
+      textDocument: {
+        uri: doc.uri.toString() || "",
+        version: doc.version,
+      },
+      contentChanges: [
+        {
+          text: doc.getText(),
+        },
+      ],
+    });
+  }
+
   // Event Handlers.
 
   /**
@@ -261,6 +285,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     if (editor && this.isAppropriateDocument(editor.document)) {
       logger.trace("Active editor changed to Flink SQL file, initializing language client");
       await this.maybeStartLanguageClient(editor.document.uri);
+      await this.simulateDocumentChangeToTriggerDiagnostics(editor.document);
     }
   }
 
@@ -292,6 +317,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       } else {
         logger.trace("Initializing language client for changed active Flink SQL document");
         await this.maybeStartLanguageClient(doc.uri);
+        await this.simulateDocumentChangeToTriggerDiagnostics(doc);
       }
     }
   }
@@ -325,7 +351,11 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
     if (
       this.openFlinkSqlDocuments.has(uriString) &&
-      this.languageClient?.diagnostics?.has(event.document.uri)
+      this.languageClient?.diagnostics?.has(event.document.uri) &&
+      // Make sure the change updated the content of the document. Otherwise, clearing diagnostics
+      // won't make sense. We'll, for instance, see document change events without content changes
+      // when saving the document.
+      event.contentChanges.length > 0
     ) {
       logger.trace(`Clearing diagnostics for document: ${uriString}`);
       this.clearDiagnostics(event.document.uri);
@@ -611,7 +641,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
             action: "client_initialized",
             compute_pool_id: computePoolId,
           });
-          this.notifyConfigChanged();
+          await this.notifyConfigChanged();
         }
       } catch (error) {
         let msg = "Error in maybeStartLanguageClient";
