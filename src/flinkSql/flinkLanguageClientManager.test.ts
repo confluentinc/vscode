@@ -945,7 +945,7 @@ describe("FlinkLanguageClientManager", () => {
 
         flinkManager.onDidChangeTextDocumentHandler(fakeEvent);
 
-        // Should have detected then cleared diagnostics for this document
+        // Should check for diagnostics, but no clearing since there weren't content changes
         sinon.assert.calledOnce(fakeDiagnosticsCollection.has);
         sinon.assert.calledWith(fakeDiagnosticsCollection.has, fakeUri);
 
