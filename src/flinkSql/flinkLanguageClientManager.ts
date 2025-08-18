@@ -194,12 +194,12 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         settings.computePoolId &&
         this.lastWebSocketUrl !== (await this.buildFlinkSqlWebSocketUrl(settings.computePoolId))
       ) {
-        logger.trace(
+        logger.debug(
           "uriMetadataSet: WebSocket URL needs changing, reinitializing language client with new URL",
         );
         await this.restartLanguageClient();
       } else {
-        logger.trace(
+        logger.debug(
           "uriMetadataSet: Document metadata change does not warrant new websocket URL. Notifying language server of minor configuration change.",
         );
         await this.notifyConfigChanged();
