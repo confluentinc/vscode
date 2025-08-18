@@ -73,8 +73,7 @@ export class Logger {
     return `${timestamp} [${level}] [${this.name}]`;
   }
 
-
- /** @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x */
+  /** @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x */
   private logToOutputChannelAndFile(
     level: string,
     prefix: string,
@@ -178,7 +177,7 @@ let logFileStream: RotatingFileStream | undefined;
 
 /** Creates a new rotating log file stream if it doesn't already exist.
  * @TODO will be deleted once Logger} is adapted to delegate writing to the log file with {@link RotatingLogOutputChannel} methods once merged to v1.5.x
-*/
+ */
 export function getLogFileStream(): RotatingFileStream {
   if (!logFileStream) {
     // don't use the `maxSize` option since that will interfere with proper rotation and cleanup by
@@ -291,7 +290,6 @@ export function cleanupOldLogFiles() {
  * @param base - The base filepath name of the log file.
  */
 export class RotatingLogManager {
-
   private stream: RotatingFileStream | undefined;
   private _baseFileName: string;
   private _currentFileName: string;
@@ -313,32 +311,33 @@ export class RotatingLogManager {
 
   /** Generates a new log file name based on the base file name and the index. @remarks Taken from {@link rotatingFilenameGenerator} */
   rotatingFilenameGenerator(time: number | Date, index?: number): string {
-      // 0, undefined, null will drop any index suffix
-      const maybefileIndex = index ? `.${index}` : "";
-      // use process.pid (from base) to keep the log file names unique across multiple extension instances
-      const newFileName = `${this._baseFileName}${maybefileIndex}.log`;
+    // 0, undefined, null will drop any index suffix
+    const maybefileIndex = index ? `.${index}` : "";
+    // use process.pid (from base) to keep the log file names unique across multiple extension instances
+    const newFileName = `${this._baseFileName}${maybefileIndex}.log`;
 
-      // this function will be called multiple times by RotatingFileStream as it handles rotations, so
-      // we need to guard against adding the same file name multiple times
-      // (we could use a Set, but we would end up calling Array.from() on it over and over)
-      if (newFileName !== this._currentFileName && !this._rotatedFileNames.includes(newFileName)) {
-        this._rotatedFileNames.push(newFileName);
-      }
+    // this function will be called multiple times by RotatingFileStream as it handles rotations, so
+    // we need to guard against adding the same file name multiple times
+    // (we could use a Set, but we would end up calling Array.from() on it over and over)
+    if (newFileName !== this._currentFileName && !this._rotatedFileNames.includes(newFileName)) {
+      this._rotatedFileNames.push(newFileName);
+    }
 
-      if (this._rotatedFileNames.length > MAX_LOGFILES) {
-        // remove the oldest log file from the array
-        // (RotatingFileStream will handle the actual file deletion)
-        this._rotatedFileNames.shift();
-      }
+    if (this._rotatedFileNames.length > MAX_LOGFILES) {
+      // remove the oldest log file from the array
+      // (RotatingFileStream will handle the actual file deletion)
+      this._rotatedFileNames.shift();
+    }
 
-      return newFileName;
+    return newFileName;
   }
 
   /** Gets the stream for the log file. @remark Taken from {@link getLogFileStream} */
   getStream(): RotatingFileStream {
     if (!this.stream) {
       // Arrow function automatically captures 'this' context when getStream() function is recalled
-      const filenameGenerator = (time: number | Date, index?: number) => this.rotatingFilenameGenerator(time, index);
+      const filenameGenerator = (time: number | Date, index?: number) =>
+        this.rotatingFilenameGenerator(time, index);
 
       this.stream = createStream(filenameGenerator, {
         size: MAX_LOGFILE_SIZE,
@@ -376,8 +375,8 @@ export class RotatingLogManager {
 
 /** Wrapper class for the {@link LogOutputChannel} that also writes to a rotating log file.
  * @remarks Methods defined factored out from {@link Logger} to avoid code duplication.
-*/
-export class RotatingLogOutputChannel implements LogOutputChannel{
+ */
+export class RotatingLogOutputChannel implements LogOutputChannel {
   private rotatingLogManager: RotatingLogManager;
   private outputChannel: LogOutputChannel;
 
@@ -385,8 +384,12 @@ export class RotatingLogOutputChannel implements LogOutputChannel{
    * @param displayChannelName - The name of the output channel to display in the UI.
    * @param logFileBaseName - The base name of the log file.
    * @param consoleLabelName (optional) - The name of the console label to display in the UI.
-  */
-  constructor(private displayChannelName: string, private logFileBaseName: string, private consoleLabelName?: string) {
+   */
+  constructor(
+    private displayChannelName: string,
+    private logFileBaseName: string,
+    private consoleLabelName?: string,
+  ) {
     this.outputChannel = window.createOutputChannel(this.displayChannelName, { log: true });
     this.rotatingLogManager = new RotatingLogManager(this.logFileBaseName);
   }
@@ -510,7 +513,6 @@ export class RotatingLogOutputChannel implements LogOutputChannel{
   private logPrefix(level: string): string {
     const timestamp = new Date().toISOString();
     return `${timestamp} [${level}] ${this.consoleLabelName ? `[${this.consoleLabelName}]` : ""}`;
-
   }
 
   // Output channel methods
@@ -540,10 +542,8 @@ export class RotatingLogOutputChannel implements LogOutputChannel{
     this.outputChannel.hide();
   }
 
-  show(preserveFocus?: boolean): void;
-  show(column?: any, preserveFocus?: boolean): void;
-  show(columnOrPreserveFocus?: any, preserveFocus?: boolean): void {
-    this.outputChannel.show(columnOrPreserveFocus, preserveFocus);
+  show(viewColumn?: any, preserveFocus?: boolean): void {
+    this.outputChannel.show(viewColumn, preserveFocus);
   }
 
   // Access to file URIs for support zip

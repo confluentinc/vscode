@@ -237,10 +237,12 @@ async function saveSupportZip() {
 
   // add flink language server log files
   try {
-    fileEntries.push(...getFlinkLSLogFileUris().map((uri) => ({
-      sourceUri: uri,
-      zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`
-    })));
+    fileEntries.push(
+      ...getFlinkLSLogFileUris().map((uri) => ({
+        sourceUri: uri,
+        zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`,
+      })),
+    );
   } catch {
     // if flink log files don't exist yet, we'll log and move on
     logger.debug("Flink language server log files not found, skipping in support zip");
