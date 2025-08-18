@@ -70,3 +70,11 @@ export function openSync(path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode |
 export function closeSync(fd: number): void {
   fs.closeSync(fd);
 }
+
+/**
+ * Wrapper for fs.existsSync()
+ * Return true if the file is stat-able, if not false.
+ * */
+export function existsSync(uri: vscode.Uri): boolean {
+  return fs.existsSync(uri.fsPath);
+}

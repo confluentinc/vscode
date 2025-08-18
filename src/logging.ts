@@ -1,6 +1,8 @@
 import { readdirSync, statSync, unlinkSync } from "fs";
+import { existsSync } from "./utils/fsWrappers";
+import { join, normalize } from "path";
 import { createStream, RotatingFileStream } from "rotating-file-stream";
-import { LogOutputChannel, window } from "vscode";
+import { Event, LogLevel, LogOutputChannel, Uri, window } from "vscode";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 import { WriteableTmpDir } from "./utils/file";
 
@@ -108,7 +110,8 @@ export class Logger {
   }
 
   /** Create a stream to write to the log file in "append" mode, write the log contents to it, and
-   * then close the stream. */
+   * then close the stream.
+   */
   private writeToLogFile(prefix: string, message: string, ...args: any[]) {
     const argString = args.map((arg) => JSON.stringify(arg)).join(" ");
     const formattedMessage = `${prefix} ${message} ${argString}\n`;
@@ -145,6 +148,9 @@ export class Logger {
 export function getLogFileDir(): string {
   return WriteableTmpDir.getInstance().get();
 }
+
+/** The base file name prefix for the log file. Helps with clean up of old log files. @see {@link cleanupOldLogFiles} */
+export const BASEFILE_PREFIX: string = "vscode-confluent";
 
 /** The name of the currently active log file, including time/index prefixing. */
 export const CURRENT_LOGFILE_NAME: string = `vscode-confluent-${process.pid}.log`;
@@ -269,5 +275,275 @@ export function cleanupOldLogFiles() {
     } catch (error) {
       logger.error(`Error deleting old log file: ${filePath}`, error);
     }
+  }
+}
+
+/**
+ * Manages the creation and rotation of log files.
+ * @remarks Taken from {@link getLogFileStream}
+ *
+ * @param base - The base filepath name of the log file.
+ */
+export class RotatingLogManager {
+  private stream: RotatingFileStream | undefined;
+  private readonly _baseFileName: string;
+  private readonly _currentFileName: string;
+  private readonly _rotatedFileNames: string[] = [];
+
+  constructor(private readonly base: string) {
+    this._baseFileName = `${BASEFILE_PREFIX}-${this.base}`;
+    this._currentFileName = `${this._baseFileName}.log`;
+  }
+
+  /** Generates a new log file name based on the base file name and the index. @remarks Taken from {@link rotatingFilenameGenerator} */
+  rotatingFilenameGenerator(time: number | Date, index?: number): string {
+    // 0, undefined, null will drop any index suffix
+    const maybefileIndex = index ? `.${index}` : "";
+    // use process.pid (from base) to keep the log file names unique across multiple extension instances
+    const newFileName = `${this._baseFileName}${maybefileIndex}.log`;
+
+    // this function will be called multiple times by RotatingFileStream as it handles rotations, so
+    // we need to guard against adding the same file name multiple times
+    // (we could use a Set, but we would end up calling Array.from() on it over and over)
+    if (newFileName !== this._currentFileName && !this._rotatedFileNames.includes(newFileName)) {
+      this._rotatedFileNames.push(newFileName);
+    }
+
+    if (this._rotatedFileNames.length > MAX_LOGFILES) {
+      // remove the oldest log file from the array
+      // (RotatingFileStream will handle the actual file deletion)
+      this._rotatedFileNames.shift();
+    }
+
+    return newFileName;
+  }
+
+  /** Gets the stream for the log file. @remark Taken from {@link getLogFileStream} */
+  getStream(): RotatingFileStream {
+    if (!this.stream) {
+      // Arrow function automatically captures 'this' context when getStream() function is recalled
+      const filenameGenerator = (time: number | Date, index?: number) =>
+        this.rotatingFilenameGenerator(time, index);
+
+      this.stream = createStream(filenameGenerator, {
+        size: MAX_LOGFILE_SIZE,
+        maxFiles: MAX_LOGFILES,
+        interval: LOGFILE_ROTATION_INTERVAL,
+        path: this.getDir(),
+        history: `${this._baseFileName}.history.log`,
+        encoding: "utf-8",
+      });
+    }
+    return this.stream;
+  }
+
+  /** Gets the file URIs for the log file. @remarks Taken from {@link file://vscode/src/commands/support.ts extensionLogFileUris} */
+  getFileUris(): Uri[] {
+    const dir = this.getDir();
+    const currentPath = normalize(join(dir, this._currentFileName));
+    const current = Uri.file(currentPath);
+    const rotated = this._rotatedFileNames.map((n) => Uri.file(normalize(join(dir, n))));
+    const all = [current, ...rotated];
+    const possibleFileNames = all.filter(
+      (u, i, arr) => arr.findIndex((x) => x.fsPath === u.fsPath) === i,
+    );
+    // Only return file names that exists, the file name generator will be called prior to a file being logged to
+    return possibleFileNames.filter((uri) => existsSync(uri));
+  }
+
+  private getDir(): string {
+    return WriteableTmpDir.getInstance().get();
+  }
+
+  // close the stream if it exists - for clean up
+  dispose(): void {
+    if (this.stream && !this.stream.closed) {
+      this.stream.end();
+    }
+    this.stream = undefined;
+  }
+}
+
+/** Wrapper class for the {@link LogOutputChannel} that also writes to a rotating log file.
+ * @remarks Methods defined factored out from {@link Logger} to avoid code duplication.
+ */
+export class RotatingLogOutputChannel implements LogOutputChannel {
+  private readonly rotatingLogManager: RotatingLogManager;
+  private readonly outputChannel: LogOutputChannel;
+
+  /** Creates a new {@link RotatingLogOutputChannel} instance.
+   * @param displayChannelName - The name of the output channel to display in the UI.
+   * @param logFileBaseName - The base name of the log file.
+   * @param consoleLabelName (optional) - The name of the console label to display in the UI.
+   */
+  constructor(
+    private readonly displayChannelName: string,
+    private readonly logFileBaseName: string,
+    private readonly consoleLabelName?: string,
+  ) {
+    this.outputChannel = window.createOutputChannel(this.displayChannelName, { log: true });
+    this.rotatingLogManager = new RotatingLogManager(this.logFileBaseName);
+  }
+
+  get name(): string {
+    return this.outputChannel.name;
+  }
+
+  get logLevel(): LogLevel {
+    return this.outputChannel.logLevel;
+  }
+
+  get onDidChangeLogLevel(): Event<LogLevel> {
+    return this.outputChannel.onDidChangeLogLevel;
+  }
+
+  /** Write a message to both output channel and log file
+   * @remarks Taken from {@link Logger.logToOutputChannelAndFile} */
+  private logToOutputChannelAndFile(
+    level: string,
+    prefix: string,
+    message: string,
+    ...args: any[]
+  ): void {
+    try {
+      // Write to VS Code output channel
+      switch (level) {
+        case "trace":
+          this.outputChannel.trace(message, ...args);
+          break;
+        case "debug":
+          this.outputChannel.debug(message, ...args);
+          break;
+        case "info":
+          this.outputChannel.info(message, ...args);
+          break;
+        case "warn":
+          this.outputChannel.warn(message, ...args);
+          break;
+        case "error":
+          this.outputChannel.error(message, ...args);
+          break;
+      }
+      // don't write trace logs to the log file
+      if (level !== "trace") {
+        this.writeToLogFile(prefix, message, ...args).catch(() => {
+          // already logged, no need for additional handling. we still need this here so we don't
+          // get unhandled promise rejections bubbling up.
+        });
+      }
+    } catch {
+      // ignore if the channel is disposed or the log file write fails
+    }
+  }
+
+  /** Create a stream to write to the log file in "append" mode, write the log contents to it, and
+   * then close the stream.
+   * @remarks Taken from {@link Logger.writeToLogFile} */
+  private writeToLogFile(prefix: string, message: string, ...args: any[]) {
+    const argString = args.map((arg) => JSON.stringify(arg)).join(" ");
+    const formattedMessage = `${prefix} ${message} ${argString}\n`;
+
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const stream: RotatingFileStream = this.rotatingLogManager.getStream();
+        if (stream.closed) {
+          resolve();
+          return;
+        }
+        stream.write(formattedMessage, (error) => {
+          if (error) {
+            console.error("Error writing to log file:", error);
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      } catch (error) {
+        console.error("Unexpected error during log file operations:", error);
+        resolve();
+      }
+    });
+  }
+
+  /** More verbose form of "debug" according to the LogOutputChannel */
+  trace(message: string, ...args: any[]) {
+    const prefix = this.logPrefix("trace");
+    console.debug(prefix, message, ...args);
+    this.logToOutputChannelAndFile("trace", prefix, message, ...args);
+  }
+
+  debug(message: string, ...args: any[]) {
+    const prefix = this.logPrefix("debug");
+    console.debug(prefix, message, ...args);
+    this.logToOutputChannelAndFile("debug", prefix, message, ...args);
+  }
+
+  log(message: string, ...args: any[]) {
+    return this.info(message, ...args);
+  }
+
+  info(message: string, ...args: any[]) {
+    const prefix = this.logPrefix("info");
+    console.info(prefix, message, ...args);
+    this.logToOutputChannelAndFile("info", prefix, message, ...args);
+  }
+
+  warn(message: string, ...args: any[]) {
+    const prefix = this.logPrefix("warning");
+    console.warn(prefix, message, ...args);
+    this.logToOutputChannelAndFile("warn", prefix, message, ...args);
+  }
+
+  error(message: string, ...args: any[]) {
+    const prefix = this.logPrefix("error");
+    console.error(prefix, message, ...args);
+    this.logToOutputChannelAndFile("error", prefix, message, ...args);
+  }
+
+  /** Generates a log prefix for the given log level. */
+  private logPrefix(level: string): string {
+    const timestamp = new Date().toISOString();
+    return `${timestamp} [${level}] ${this.consoleLabelName ? `[${this.consoleLabelName}]` : ""}`;
+  }
+
+  // Output channel methods
+  append(value: string): void {
+    this.outputChannel.append(value);
+    const prefix = this.logPrefix("append");
+    this.writeToLogFile(prefix, value.trim()).catch(() => {});
+  }
+
+  appendLine(value: string): void {
+    this.outputChannel.appendLine(value);
+    const prefix = this.logPrefix("appendLine");
+    this.writeToLogFile(prefix, value).catch(() => {});
+  }
+
+  replace(value: string): void {
+    this.outputChannel.replace(value);
+    const prefix = this.logPrefix("replace");
+    this.writeToLogFile(prefix, value).catch(() => {});
+  }
+
+  clear(): void {
+    this.outputChannel.clear();
+  }
+
+  hide(): void {
+    this.outputChannel.hide();
+  }
+
+  show(viewColumn?: any, preserveFocus?: boolean): void {
+    this.outputChannel.show(viewColumn, preserveFocus);
+  }
+
+  // Access to file URIs for support zip
+  getFileUris(): Uri[] {
+    return this.rotatingLogManager.getFileUris();
+  }
+
+  dispose(): void {
+    this.rotatingLogManager.dispose();
+    this.outputChannel.dispose();
   }
 }
