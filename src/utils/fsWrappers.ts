@@ -16,13 +16,6 @@ export async function statFile(uri: vscode.Uri): Promise<vscode.FileStat> {
 }
 
 /**
- * Return true if the file is stat-able, if not false.
- * */
-export function existsSync(uri: vscode.Uri): boolean {
-  return fs.existsSync(uri.fsPath);
-}
-
-/**
  * Read a file's contents. Thin wrapper around vscode.workspace.fs.readFile(),
  * for same mocking reasons as statFile().
  * */
@@ -76,4 +69,12 @@ export function openSync(path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode |
 /** Wrapper for fs.closeSync() */
 export function closeSync(fd: number): void {
   fs.closeSync(fd);
+}
+
+/**
+ * Wrapper for fs.existsSync()
+ * Return true if the file is stat-able, if not false.
+ * */
+export function existsSync(uri: vscode.Uri): boolean {
+  return fs.existsSync(uri.fsPath);
 }

@@ -291,7 +291,7 @@ export class RotatingLogManager {
   private readonly _rotatedFileNames: string[] = [];
 
   constructor(private readonly base: string) {
-    this._baseFileName = `${BASEFILE_PREFIX}${this.base}`;
+    this._baseFileName = `${BASEFILE_PREFIX}-${this.base}`;
     this._currentFileName = `${this._baseFileName}.log`;
   }
 
