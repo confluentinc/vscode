@@ -239,7 +239,6 @@ describe("uploadUDF", () => {
         .resolves(mockResponse);
     });
     afterEach(() => {
-      // Clean up the temporary file after each test
       if (fs.existsSync(tempJarPath)) {
         fs.unlinkSync(tempJarPath);
       }
@@ -281,7 +280,6 @@ describe("uploadUDF", () => {
       );
       uploadFileToAzureStub.rejects(uploadError);
 
-      // Ensure the temp file exists before the test
       if (!fs.existsSync(tempJarPath)) {
         fs.writeFileSync(tempJarPath, "dummy jar content");
       }
@@ -342,7 +340,6 @@ describe("uploadUDF", () => {
         createArtifactV1FlinkArtifact: createArtifactStub,
       } as any);
 
-      // Stub getSidecar to return our stubbed handle
       sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle as unknown as SidecarHandle);
 
       await uploadArtifactToCCloud(mockParams, mockUploadId);
@@ -363,7 +360,6 @@ describe("uploadUDF", () => {
         createArtifactV1FlinkArtifact: createArtifactStub,
       } as any);
 
-      // Stub getSidecar to return our stubbed handle
       sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle as unknown as SidecarHandle);
 
       const errorNotificationStub = sandbox
