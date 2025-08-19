@@ -66,14 +66,6 @@ describe("uploadUDF Command", () => {
     });
 
     it("should show error message if handleUploadToCloudProvider fails", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
-      };
       const mockPresignedUrlResponse = {
         upload_id: "12345",
         url: "https://example.com/upload",
