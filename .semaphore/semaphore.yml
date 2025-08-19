@@ -85,7 +85,7 @@ blocks:
             - make test-playwright-e2e TEST_SUITE=@smoke
           env_vars:
             - name: E2E_TESTING
-              value: true
+              value: "true"
       epilogue: &build-test-epilogue
         always:
           commands:
