@@ -11,15 +11,19 @@ configDotenv({
 });
 
 const vscodeVersion = process.env.VSCODE_VERSION || "stable";
+const WINDOWS_FACTOR = process.platform === "win32" ? 2 : 1;
 
 export default defineConfig({
-  testDir: path.join(__dirname, "specs"),
+  testDir: path.normalize(path.join(__dirname, "specs")),
   forbidOnly: !!process.env.CI,
   retries: 0,
+  maxFailures: 1,
   timeout: 120000,
   workers: 1,
   expect: {
-    timeout: 10000,
+    // Windows may take 10sec+ just to start activating the extension, so it needs some extra time
+    // even when running tests locally
+    timeout: WINDOWS_FACTOR * (process.env.CI ? 30_000 : 10_000),
   },
   reporter: process.env.CI
     ? [
@@ -27,7 +31,7 @@ export default defineConfig({
         [
           "junit",
           {
-            outputFile: path.join(__dirname, "..", "..", "TEST-result-e2e.xml"),
+            outputFile: path.normalize(path.join(__dirname, "..", "..", "TEST-result-e2e.xml")),
             includeProjectInTestName: true,
             suiteName: `VS Code (${vscodeVersion}) Extension Tests: E2E (${process.platform} ${process.arch})`,
           },
