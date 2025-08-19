@@ -274,7 +274,7 @@ Sign out from this extension?`,
     beforeEach(function () {
       showOpenDialogStub = sandbox.stub(window, "showOpenDialog").resolves([]);
       showQuickPickStub = sandbox.stub(window, "showQuickPick");
-      readFileStub = sandbox.stub(fsWrappers, "readFile");
+      readFileStub = sandbox.stub(fsWrappers, "readFileString");
       openDirectConnectionFormStub = sandbox.stub(directConnect, "openDirectConnectionForm");
       showErrorNotificationWithButtonsStub = sandbox.stub(
         notifications,
