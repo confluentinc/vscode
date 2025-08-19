@@ -31,6 +31,8 @@ export interface UDFUploadParams {
 
 const logger = new Logger("commands/uploadUDF");
 
+export const PRESIGNED_URL_LOCATION = "PRESIGNED_URL_LOCATION";
+
 /**
  * Read a file from a VS Code Uri and prepare a Blob (and File if available).
  */
@@ -256,7 +258,7 @@ export function buildCreateArtifactRequest(
     display_name: params.artifactName,
     content_format: params.fileFormat.toUpperCase(),
     upload_source: {
-      location: "PRESIGNED_URL_LOCATION",
+      location: PRESIGNED_URL_LOCATION,
       upload_id: uploadId,
     },
   };
