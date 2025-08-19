@@ -1,19 +1,25 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
+import {
+  GetArtifactV1FlinkArtifact200Response,
+  PresignedUploadUrlArtifactV1PresignedUrlRequest,
+} from "../clients/flinkArtifacts/models";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import {
   getPresignedUploadUrl,
-  handleUploadFile,
+  handleUploadToCloudProvider,
   promptForUDFUploadParams,
+  uploadArtifactToCCloud,
 } from "./utils/uploadUDF";
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
  */
 
-export async function uploadUDFCommand(): Promise<void> {
+export async function uploadUDFCommand(): Promise<
+  GetArtifactV1FlinkArtifact200Response | undefined
+> {
   try {
     const params = await promptForUDFUploadParams();
 
@@ -32,9 +38,24 @@ export async function uploadUDFCommand(): Promise<void> {
 
     const uploadUrl = await getPresignedUploadUrl(request);
 
-    await handleUploadFile(params, uploadUrl);
-    vscode.window.showInformationMessage(
-      `UDF artifact "${params.artifactName}" uploaded successfully!`,
+    await handleUploadToCloudProvider(params, uploadUrl);
+
+    if (!uploadUrl.upload_id) {
+      throw new Error("Upload ID is missing from the presigned URL response.");
+    }
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Uploading UDF "${params.artifactName}" to Confluent Cloud`,
+        cancellable: false,
+      },
+      async () => {
+        const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
+
+        void vscode.window.showInformationMessage(
+          `UDF "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+        );
+      },
     );
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
