@@ -5,8 +5,9 @@ import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import {
   getPresignedUploadUrl,
-  handleUploadFile,
+  handleUploadToCloudProvider,
   promptForUDFUploadParams,
+  uploadArtifactToCCloud,
 } from "./utils/uploadUDF";
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
@@ -32,10 +33,12 @@ export async function uploadUDFCommand(): Promise<void> {
 
     const uploadUrl = await getPresignedUploadUrl(request);
 
-    await handleUploadFile(params, uploadUrl);
-    vscode.window.showInformationMessage(
-      `UDF artifact "${params.artifactName}" uploaded successfully!`,
-    );
+    await handleUploadToCloudProvider(params, uploadUrl);
+
+    if (!uploadUrl.upload_id) {
+      throw new Error("Upload ID is missing from the presigned URL response.");
+    }
+    await uploadArtifactToCCloud(params, uploadUrl.upload_id);
   } catch (err) {
     logError(err, "Failed to execute Upload UDF command");
     void showErrorNotificationWithButtons(

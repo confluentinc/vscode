@@ -24,7 +24,7 @@ describe("uploadUDF Command", () => {
       assert.strictEqual(result, undefined);
     });
     it("should show information message if handeluUploadFile is called successfully", async () => {
-      sandbox.stub(uploadUDF, "handleUploadFile").resolves();
+      sandbox.stub(uploadUDF, "handleUploadToCloudProvider").resolves();
 
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
@@ -32,7 +32,7 @@ describe("uploadUDF Command", () => {
 
       sinon.assert.calledOnce(showInfoStub);
     });
-    it("should show error message if handleUploadFile fails", async () => {
+    it("should show error message if handleUploadToCloudProvider fails", async () => {
       const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
       await uploadUDFCommand.uploadUDFCommand();

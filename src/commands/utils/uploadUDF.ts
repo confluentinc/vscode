@@ -1,6 +1,8 @@
 import path from "node:path";
 import * as vscode from "vscode";
 import {
+  CreateArtifactV1FlinkArtifactRequest,
+  CreateArtifactV1FlinkArtifactRequestUploadSource,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
@@ -138,14 +140,14 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   };
 }
 
-export async function handleUploadFile(
+export async function handleUploadToCloudProvider(
   params: UDFUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}:`,
+      title: `Uploading ${params.artifactName}`,
       cancellable: false,
     },
     async (progress) => {
@@ -179,4 +181,86 @@ export async function handleUploadFile(
       });
     },
   );
+}
+
+export async function uploadArtifactToCCloud(
+  params: UDFUploadParams,
+  uploadId: string,
+): Promise<void> {
+  let createRequest: CreateArtifactV1FlinkArtifactRequest | undefined;
+
+  try {
+    const sidecarHandle = await getSidecar();
+    const providerRegion: IEnvProviderRegion = {
+      environmentId: params.environment as EnvironmentId,
+      provider: params.cloud,
+      region: params.region,
+    };
+
+    const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
+
+    const uploadSource: CreateArtifactV1FlinkArtifactRequestUploadSource = {
+      location: "PRESIGNED_URL_LOCATION",
+      upload_id: uploadId,
+    };
+
+    createRequest = {
+      cloud: params.cloud,
+      region: params.region,
+      environment: params.environment,
+      display_name: params.artifactName,
+      content_format: params.fileFormat.toUpperCase(),
+      upload_source: uploadSource,
+    };
+
+    logger.info("Creating Flink artifact", {
+      artifactName: params.artifactName,
+      environment: params.environment,
+      cloud: params.cloud,
+      region: params.region,
+      uploadId,
+      requestPayload: createRequest,
+    });
+
+    const response = await artifactsClient.createArtifactV1FlinkArtifact({
+      CreateArtifactV1FlinkArtifactRequest: createRequest,
+      cloud: params.cloud,
+      region: params.region,
+    });
+
+    logger.info("Flink artifact created successfully", {
+      artifactId: response.id,
+      artifactName: params.artifactName,
+    });
+  } catch (error) {
+    let apiStatus: number | undefined;
+    let apiResponseBody: unknown;
+
+    if (error instanceof Error && "response" in error) {
+      const responseError = error as Error & {
+        response?: {
+          status?: number;
+          data?: unknown;
+        };
+      };
+      apiStatus = responseError.response?.status;
+      apiResponseBody = responseError.response?.data;
+    }
+
+    const sentryContext: Record<string, unknown> = {
+      extra: {
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+        uploadId,
+        requestPayload: createRequest,
+        apiStatus,
+        apiResponseBody,
+      },
+    };
+    logError(error, "Failed to create Flink artifact in Confluent Cloud", sentryContext);
+    void showErrorNotificationWithButtons("Failed to create Flink artifact. See logs for details.");
+    throw error;
+  }
 }

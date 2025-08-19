@@ -24,7 +24,7 @@ import * as fsWrappers from "../../utils/fsWrappers";
 import * as uploadToAzure from "./uploadToAzure";
 import {
   getPresignedUploadUrl,
-  handleUploadFile,
+  handleUploadToCloudProvider,
   prepareUploadFileFromUri,
   promptForUDFUploadParams,
 } from "./uploadUDF";
@@ -207,7 +207,7 @@ describe("uploadUDF", () => {
     });
   });
 
-  describe("handleUploadFile", () => {
+  describe("handleUploadToCloudProvider", () => {
     const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
       api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
       kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
@@ -258,7 +258,7 @@ describe("uploadUDF", () => {
         return await callback(mockProgress as any, mockToken as any);
       });
 
-      await handleUploadFile(mockParams, mockPresignedUrlResponse);
+      await handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse);
       sinon.assert.calledOnce(uploadFileToAzureStub);
       sinon.assert.calledWith(uploadFileToAzureStub, {
         file: sinon.match.any, // The blob object
@@ -284,7 +284,7 @@ describe("uploadUDF", () => {
       uploadFileToAzureStub.rejects(uploadError);
 
       await assert.rejects(
-        () => handleUploadFile(mockParams, mockPresignedUrlResponse),
+        () => handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse),
         uploadError,
       );
 
