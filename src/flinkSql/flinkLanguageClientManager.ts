@@ -570,16 +570,21 @@ export class FlinkLanguageClientManager implements Disposable {
             lastWebSocketUrl: this.lastWebSocketUrl,
             websocketUrlMatch: url === this.lastWebSocketUrl,
           });
+
+          // Clear any previous diagnostics for the document *before*
+          // reinitializing the language client. (cleanupLanguageClient()
+          // will set this.lastDocUri to null, which will then prevent
+          // the attempt to clear diagnostics before the call to
+          // initializeLanguageClient().)
+          if (this.lastDocUri) {
+            this.clearDiagnostics(this.lastDocUri);
+          }
+
           await this.cleanupLanguageClient();
         }
 
         // Reset reconnect counter on new initialization
         this.reconnectCounter = 0;
-
-        // Clear any diagnostics for the previous document.
-        if (this.lastDocUri) {
-          this.clearDiagnostics(this.lastDocUri);
-        }
 
         logger.debug(`Starting language client with URL: ${url} for document ${uriStr}`);
         this.languageClient = await this.initializeLanguageClient(url);
