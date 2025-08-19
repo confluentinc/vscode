@@ -11,14 +11,12 @@ All notable changes to this extension will be documented in this file.
 - Include Flink SQL language server logs in the support .zip to make language server diagnostics and
   logs available for troubleshooting.
 
-### Changed
-
-- Updated ide-sidecar version to v0.227.1 to support viewing Kafka topic messages using `zstd`
-  compression through direct connections.
-
 ### Fixed
 
 - Improved Flink SQL language client stability and diagnostics handling
+- Updated ide-sidecar version to v0.227.1 to support viewing Kafka topic messages using `zstd`
+  compression through direct connections.
+  ([#2322](https://github.com/confluentinc/vscode/issues/2322))
 
 ## 1.5.1
 
