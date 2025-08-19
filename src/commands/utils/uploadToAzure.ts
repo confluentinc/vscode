@@ -4,7 +4,7 @@ import { showErrorNotificationWithButtons } from "../../notifications";
 
 const logger = new Logger("commands/utils/uploadToAzure");
 
-export const uploadFileToAzure = async ({
+export async function uploadFileToAzure({
   file,
   presignedUrl,
   contentType,
@@ -13,7 +13,7 @@ export const uploadFileToAzure = async ({
   onUploadProgress?: (percentageDec: number) => void;
   presignedUrl: string;
   contentType: string;
-}): Promise<Response> => {
+}): Promise<Response> {
   logger.info("Starting Azure file upload", {
     fileSize: file.size,
     contentType,
@@ -61,4 +61,4 @@ export const uploadFileToAzure = async ({
     void showErrorNotificationWithButtons("Failed to upload file to Azure. See logs for details.");
     throw error;
   }
-};
+}
