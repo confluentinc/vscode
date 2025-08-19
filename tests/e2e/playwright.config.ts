@@ -11,6 +11,7 @@ configDotenv({
 });
 
 const vscodeVersion = process.env.VSCODE_VERSION || "stable";
+const WINDOWS_FACTOR = process.platform === "win32" ? 2 : 1;
 
 export default defineConfig({
   testDir: path.normalize(path.join(__dirname, "specs")),
@@ -20,7 +21,9 @@ export default defineConfig({
   timeout: 120000,
   workers: 1,
   expect: {
-    timeout: process.env.CI ? 30_000 : 10000,
+    // Windows may take 10sec+ just to start activating the extension, so it needs some extra time
+    // even when running tests locally
+    timeout: WINDOWS_FACTOR * (process.env.CI ? 30_000 : 10_000),
   },
   reporter: process.env.CI
     ? [
