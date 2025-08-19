@@ -1,6 +1,8 @@
 import path from "node:path";
 import * as vscode from "vscode";
 import {
+  CreateArtifactV1FlinkArtifact201Response,
+  CreateArtifactV1FlinkArtifactRequest,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
@@ -28,6 +30,8 @@ export interface UDFUploadParams {
 }
 
 const logger = new Logger("commands/uploadUDF");
+
+export const PRESIGNED_URL_LOCATION = "PRESIGNED_URL_LOCATION";
 
 /**
  * Read a file from a VS Code Uri and prepare a Blob (and File if available).
@@ -138,14 +142,14 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   };
 }
 
-export async function handleUploadFile(
+export async function handleUploadToCloudProvider(
   params: UDFUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}:`,
+      title: `Uploading ${params.artifactName}`,
       cancellable: false,
     },
     async (progress) => {
@@ -179,4 +183,103 @@ export async function handleUploadFile(
       });
     },
   );
+}
+
+export async function uploadArtifactToCCloud(
+  params: UDFUploadParams,
+  uploadId: string,
+): Promise<CreateArtifactV1FlinkArtifact201Response> {
+  try {
+    const createRequest = buildCreateArtifactRequest(params, uploadId);
+
+    logger.info("Creating Flink artifact", {
+      artifactName: params.artifactName,
+      environment: params.environment,
+      cloud: params.cloud,
+      region: params.region,
+      uploadId,
+      requestPayload: createRequest,
+    });
+
+    const sidecarHandle = await getSidecar();
+    const providerRegion: IEnvProviderRegion = {
+      environmentId: params.environment as EnvironmentId,
+      provider: params.cloud,
+      region: params.region,
+    };
+    const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
+
+    const response = await artifactsClient.createArtifactV1FlinkArtifact({
+      CreateArtifactV1FlinkArtifactRequest: createRequest,
+      cloud: params.cloud,
+      region: params.region,
+    });
+
+    logger.info("Flink artifact created successfully", {
+      artifactId: response.id,
+      artifactName: params.artifactName,
+    });
+
+    return response;
+  } catch (error) {
+    const { apiStatus, apiResponseBody } = extractApiErrorDetails(error);
+
+    const sentryContext: Record<string, unknown> = {
+      extra: {
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+        uploadId,
+        requestPayload: buildCreateArtifactRequest(params, uploadId),
+        apiStatus,
+        apiResponseBody,
+      },
+    };
+    logError(error, "Failed to create Flink artifact in Confluent Cloud", sentryContext);
+
+    const userMessage =
+      typeof apiResponseBody === "string"
+        ? `Failed to create Flink artifact: ${apiResponseBody}`
+        : "Failed to create Flink artifact. See logs for details.";
+    void showErrorNotificationWithButtons(userMessage);
+    throw error;
+  }
+}
+
+export function buildCreateArtifactRequest(
+  params: UDFUploadParams,
+  uploadId: string,
+): CreateArtifactV1FlinkArtifactRequest {
+  return {
+    cloud: params.cloud,
+    region: params.region,
+    environment: params.environment,
+    display_name: params.artifactName,
+    content_format: params.fileFormat.toUpperCase(),
+    upload_source: {
+      location: PRESIGNED_URL_LOCATION,
+      upload_id: uploadId,
+    },
+  };
+}
+
+export function extractApiErrorDetails(error: unknown): {
+  apiStatus?: number;
+  apiResponseBody?: unknown;
+} {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object"
+  ) {
+    const response = (error as { response: { status?: number; data?: unknown } }).response;
+    return {
+      apiStatus: response.status,
+      apiResponseBody: response.data,
+    };
+  }
+  return { apiStatus: undefined, apiResponseBody: undefined };
 }
