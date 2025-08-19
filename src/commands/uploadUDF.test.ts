@@ -29,6 +29,14 @@ describe("uploadUDF Command", () => {
       fileFormat: "jar",
       selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
     };
+    const mockPresignedUrlResponse = {
+      upload_id: "12345",
+      url: "https://example.com/upload",
+      fields: {},
+      api_version:
+        "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
+      kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
+    };
     it("should fail if there is no params", async () => {
       sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(undefined);
       const result = await uploadUDFCommand.uploadUDFCommand();
@@ -37,14 +45,6 @@ describe("uploadUDF Command", () => {
     });
 
     it("should show information message if uploadArtifactToCCloud is called successfully", async () => {
-      const mockPresignedUrlResponse = {
-        upload_id: "12345",
-        url: "https://example.com/upload",
-        fields: {},
-        api_version:
-          "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
-        kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
-      };
       const mockCreateResponse = {
         display_name: "test-artifact",
         cloud: "Azure",
@@ -66,15 +66,6 @@ describe("uploadUDF Command", () => {
     });
 
     it("should show error message if handleUploadToCloudProvider fails", async () => {
-      const mockPresignedUrlResponse = {
-        upload_id: "12345",
-        url: "https://example.com/upload",
-        fields: {},
-        api_version:
-          "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
-        kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
-      };
-
       sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
       sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       sandbox.stub(uploadUDF, "handleUploadToCloudProvider").rejects(new Error("fail"));
