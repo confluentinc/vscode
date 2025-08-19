@@ -1,7 +1,7 @@
 import { join } from "path";
 import * as vscode from "vscode";
 import { TextDocument } from "vscode";
-import { deleteFile, readFile, statFile, tmpdir, writeFile } from "./fsWrappers";
+import { deleteFile, readFileString, statFile, tmpdir, writeFile } from "./fsWrappers";
 
 /** Check if a file URI exists in the filesystem. */
 export async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
@@ -45,7 +45,7 @@ export async function getEditorOrFileContents(uri: vscode.Uri): Promise<LoadedDo
 
   try {
     return {
-      content: await readFile(uri),
+      content: await readFileString(uri),
     };
   } catch (e) {
     // wrap error
