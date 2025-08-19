@@ -14,7 +14,7 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Updated ide-sidecar version to v0.227.1 to support viewing Kafka topic messages using `zstd`
-  compression.
+  compression through direct connections.
 
 ### Fixed
 
