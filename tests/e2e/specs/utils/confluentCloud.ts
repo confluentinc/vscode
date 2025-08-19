@@ -6,12 +6,13 @@ import { stubMultipleDialogs } from "electron-playwright-helpers";
  * @param electronApp The Electron application instance
  */
 async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> {
+  const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
   await stubMultipleDialogs(electronApp, [
     // Asks whether to Allow signing in with Confluent Cloud
     {
       method: "showMessageBox",
       value: {
-        response: 0, // Simulates clicking "Allow"
+        response: confirmButtonIndex, // Simulates clicking "Allow"
         checkboxChecked: false,
       },
     },
@@ -19,7 +20,7 @@ async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> 
     {
       method: "showMessageBox",
       value: {
-        response: 0, // Simulates clicking "Open"
+        response: confirmButtonIndex, // Simulates clicking "Open"
         checkboxChecked: false,
       },
     },
