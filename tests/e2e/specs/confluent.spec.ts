@@ -14,9 +14,13 @@ test.describe(() => {
     },
   );
 
-  test("sign in to confluent cloud", { tag: [Tag.CCloud] }, async ({ page, electronApp }) => {
-    await openConfluentExtension(page);
+  test(
+    "sign in to confluent cloud",
+    { tag: [Tag.Smoke, Tag.CCloud] },
+    async ({ page, electronApp }) => {
+      await openConfluentExtension(page);
 
-    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-  });
+      await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
+    },
+  );
 });
