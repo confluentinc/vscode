@@ -11,14 +11,6 @@ import * as uploadUDF from "./utils/uploadUDF";
 
 describe("uploadUDF Command", () => {
   let sandbox: sinon.SinonSandbox;
-  const mockParams = {
-    environment: "env-123456",
-    cloud: "Azure",
-    region: "australiaeast",
-    artifactName: "test-artifact",
-    fileFormat: "jar",
-    selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
-  };
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -29,6 +21,14 @@ describe("uploadUDF Command", () => {
   });
 
   describe("uploadUDFCommand", () => {
+    const mockParams = {
+      environment: "env-123456",
+      cloud: "Azure",
+      region: "australiaeast",
+      artifactName: "test-artifact",
+      fileFormat: "jar",
+      selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
+    };
     it("should fail if there is no params", async () => {
       sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(undefined);
       const result = await uploadUDFCommand.uploadUDFCommand();
@@ -66,6 +66,14 @@ describe("uploadUDF Command", () => {
     });
 
     it("should show error message if handleUploadToCloudProvider fails", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: "Azure",
+        region: "australiaeast",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
+      };
       const mockPresignedUrlResponse = {
         upload_id: "12345",
         url: "https://example.com/upload",
@@ -87,8 +95,9 @@ describe("uploadUDF Command", () => {
     });
 
     it("should send the create artifact request to Confluent Cloud", async () => {
+      const mockUploadId = "12345";
       const mockPresignedUrlResponse = {
-        upload_id: "12345",
+        upload_id: mockUploadId,
         url: "https://example.com/upload",
         fields: {},
         api_version:
@@ -117,7 +126,7 @@ describe("uploadUDF Command", () => {
       sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
 
       sinon.assert.calledOnce(createArtifactStub);
-      sinon.assert.calledWithExactly(createArtifactStub, mockParams, "12345");
+      sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
     });
   });
 

@@ -266,17 +266,18 @@ export function extractApiErrorDetails(error: unknown): {
   apiStatus?: number;
   apiResponseBody?: unknown;
 } {
-  if (error instanceof Error && "response" in error) {
-    const responseError = error as Error & {
-      response?: {
-        status?: number;
-        data?: unknown;
-      };
-    };
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object"
+  ) {
+    const response = (error as { response: { status?: number; data?: unknown } }).response;
     return {
-      apiStatus: responseError.response?.status,
-      apiResponseBody: responseError.response?.data,
+      apiStatus: response.status,
+      apiResponseBody: response.data,
     };
   }
-  return {};
+  return { apiStatus: undefined, apiResponseBody: undefined };
 }
