@@ -572,10 +572,10 @@ export class FlinkLanguageClientManager implements Disposable {
           });
 
           // Clear any previous diagnostics for the document *before*
-          // reinitializing the language client (which ends
-          // up reassigning `this.lastDocUri` to null momentarily before
-          // we reassign it after successful language client initialization
-          // in a few lines from now).
+          // reinitializing the language client. (cleanupLanguageClient()
+          // will set this.lastDocUri to null, which will then prevent
+          // the attempt to clear diagnostics before the call to
+          // initializeLanguageClient().)
           if (this.lastDocUri) {
             this.clearDiagnostics(this.lastDocUri);
           }
