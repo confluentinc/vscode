@@ -1,12 +1,15 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import {
+  BASEFILE_PREFIX,
   CURRENT_LOGFILE_NAME,
   Logger,
   MAX_LOGFILES,
   OUTPUT_CHANNEL,
   ROTATED_LOGFILE_NAMES,
   rotatingFilenameGenerator,
+  RotatingLogManager,
+  RotatingLogOutputChannel,
 } from "./logging";
 
 describe("logging.ts Logger methods", function () {
@@ -120,5 +123,94 @@ describe("logging.ts rotatingFilenameGenerator", function () {
 
     assert.strictEqual(ROTATED_LOGFILE_NAMES.length, MAX_LOGFILES);
     assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
+  });
+});
+
+describe("logging.ts RotatingLogManager", () => {
+  let sandbox: sinon.SinonSandbox;
+  let logManager: RotatingLogManager;
+  // let writeableTmpDirStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    // create stub to check correct directory
+    // writeableTmpDirStub = sandbox.stub(WriteableTmpDir.getInstance(), "get").returns("/temptest/");
+
+    // create new RotatingLogManager instance for each test
+    logManager = new RotatingLogManager("test");
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should generate filename without index", function () {
+    const filename = logManager.rotatingFilenameGenerator(new Date());
+
+    assert.strictEqual(filename, `${BASEFILE_PREFIX}-test-base.log`);
+  });
+});
+
+describe("logging.ts RotatingLogOutputChannel", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let traceStub: sinon.SinonStub;
+  let debugStub: sinon.SinonStub;
+  let infoStub: sinon.SinonStub;
+  let warnStub: sinon.SinonStub;
+  let errorStub: sinon.SinonStub;
+
+  let logOutputChannel: RotatingLogOutputChannel;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    logOutputChannel = new RotatingLogOutputChannel("test-channel-name", "test-basepath");
+
+    traceStub = sandbox.stub(logOutputChannel, "trace");
+    debugStub = sandbox.stub(logOutputChannel, "debug");
+    infoStub = sandbox.stub(logOutputChannel, "info");
+    warnStub = sandbox.stub(logOutputChannel, "warn");
+    errorStub = sandbox.stub(logOutputChannel, "error");
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should handle trace method", function () {
+    logOutputChannel.trace("test message");
+
+    assert.strictEqual(traceStub.calledOnce, true);
+    assert.strictEqual(traceStub.firstCall.args[0], "test message");
+  });
+
+  it("should handle info method", function () {
+    logOutputChannel.info("info message");
+
+    assert.strictEqual(infoStub.calledOnce, true);
+    assert.strictEqual(infoStub.firstCall.args[0], "info message");
+  });
+
+  it("should handle error method", function () {
+    logOutputChannel.error("error message");
+
+    assert.strictEqual(errorStub.calledOnce, true);
+    assert.strictEqual(errorStub.firstCall.args[0], "error message");
+  });
+
+  it("should handle warn method", function () {
+    logOutputChannel.error("warn message");
+
+    assert.strictEqual(warnStub.calledOnce, true);
+    assert.strictEqual(warnStub.firstCall.args[0], "warn message");
+  });
+
+  it("should handle debug method", function () {
+    logOutputChannel.debug("debug message");
+
+    assert.strictEqual(debugStub.calledOnce, true);
+    assert.strictEqual(debugStub.firstCall.args[0], "debug message");
   });
 });
