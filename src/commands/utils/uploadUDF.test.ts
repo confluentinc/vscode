@@ -36,12 +36,20 @@ describe("uploadUDF", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
   let tempJarUri: vscode.Uri;
+  const tempDir = os.tmpdir();
+  tempJarPath = path.join(tempDir, `test-udf-${Date.now()}.jar`);
+  fs.writeFileSync(tempJarPath, "dummy jar content");
+  tempJarUri = vscode.Uri.file(tempJarPath);
+  const mockParams = {
+    environment: "env-123456",
+    cloud: "Azure",
+    region: "australiaeast",
+    artifactName: "test-artifact",
+    fileFormat: "jar",
+    selectedFile: tempJarUri,
+  };
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    const tempDir = os.tmpdir();
-    tempJarPath = path.join(tempDir, `test-udf-${Date.now()}.jar`);
-    fs.writeFileSync(tempJarPath, "dummy jar content");
-    tempJarUri = vscode.Uri.file(tempJarPath);
   });
 
   afterEach(() => {
@@ -237,15 +245,6 @@ describe("uploadUDF", () => {
       }
     });
     it("should log the message confirming the upload", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
-
       const mockProgress = {
         report: sandbox.stub(),
       };
@@ -273,15 +272,6 @@ describe("uploadUDF", () => {
     });
 
     it("should handle upload errors properly", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
-
       const uploadError = new Error("Azure upload failed: 500 Internal Server Error");
       uploadFileToAzureStub.rejects(uploadError);
 
@@ -310,15 +300,6 @@ describe("uploadUDF", () => {
   });
   describe("buildCreateArtifactRequest", () => {
     it("should build the artifact request correctly", () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
-
       const uploadId = "upload-id-123";
       const request = buildCreateArtifactRequest(mockParams, uploadId);
 
@@ -337,14 +318,6 @@ describe("uploadUDF", () => {
   });
   describe("uploadArtifactToCCloud", () => {
     it("should upload the artifact to Confluent Cloud", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
       const mockUploadId = "upload-id-123";
 
       const createArtifactStub = sandbox.stub().resolves({
@@ -368,14 +341,6 @@ describe("uploadUDF", () => {
       });
     });
     it("should show an error notification if the upload fails", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
       const mockUploadId = "upload-id-123";
 
       const createArtifactStub = sandbox.stub().rejects(new Error("Upload failed"));
