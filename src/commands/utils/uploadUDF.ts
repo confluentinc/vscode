@@ -1,6 +1,7 @@
 import path from "node:path";
 import * as vscode from "vscode";
 import {
+  CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
@@ -185,7 +186,7 @@ export async function handleUploadToCloudProvider(
 export async function uploadArtifactToCCloud(
   params: UDFUploadParams,
   uploadId: string,
-): Promise<void> {
+): Promise<CreateArtifactV1FlinkArtifact201Response> {
   try {
     const createRequest = buildCreateArtifactRequest(params, uploadId);
 
@@ -216,6 +217,8 @@ export async function uploadArtifactToCCloud(
       artifactId: response.id,
       artifactName: params.artifactName,
     });
+
+    return response;
   } catch (error) {
     const { apiStatus, apiResponseBody } = extractApiErrorDetails(error);
 

@@ -27,21 +27,71 @@ describe("uploadUDF Command", () => {
 
       assert.strictEqual(result, undefined);
     });
-    it("should show information message if handeluUploadFile is called successfully", async () => {
+
+    it("should show information message if uploadArtifactToCCloud is called successfully", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: "Azure",
+        region: "australiaeast",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
+      };
+      const mockPresignedUrlResponse = {
+        upload_id: "12345",
+        url: "https://example.com/upload",
+        fields: {},
+        api_version:
+          "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
+        kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
+      };
+      const mockCreateResponse = {
+        display_name: "test-artifact",
+        cloud: "Azure",
+        region: "australiaeast",
+        environment: " env-123456",
+      };
+
+      sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
+      sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       sandbox.stub(uploadUDF, "handleUploadToCloudProvider").resolves();
+      sandbox.stub(uploadUDF, "uploadArtifactToCCloud").resolves(mockCreateResponse);
 
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
       await uploadUDFCommand.uploadUDFCommand();
 
       sinon.assert.calledOnce(showInfoStub);
+      sinon.assert.calledWithMatch(showInfoStub, sinon.match(/uploaded successfully/));
     });
+
     it("should show error message if handleUploadToCloudProvider fails", async () => {
+      const mockParams = {
+        environment: "env-123456",
+        cloud: "Azure",
+        region: "australiaeast",
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
+      };
+      const mockPresignedUrlResponse = {
+        upload_id: "12345",
+        url: "https://example.com/upload",
+        fields: {},
+        api_version:
+          "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
+        kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
+      };
+
+      sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
+      sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadUDF, "handleUploadToCloudProvider").rejects(new Error("fail"));
       const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
       await uploadUDFCommand.uploadUDFCommand();
 
       sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, sinon.match(/error/i));
     });
 
     it("should send the create artifact request to Confluent Cloud", async () => {
@@ -62,11 +112,21 @@ describe("uploadUDF Command", () => {
           "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
         kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
       };
+      const mockCreateResponse = {
+        display_name: "test-artifact",
+        id: "artifact-123",
+        environment: "env-123456",
+        region: "australiaeast",
+        cloud: "Azure",
+      };
 
       sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
       sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       const handleUploadStub = sandbox.stub(uploadUDF, "handleUploadToCloudProvider").resolves();
-      const createArtifactStub = sandbox.stub(uploadUDF, "uploadArtifactToCCloud").resolves();
+      const createArtifactStub = sandbox
+        .stub(uploadUDF, "uploadArtifactToCCloud")
+        .resolves(mockCreateResponse);
+      sandbox.stub(vscode.window, "showInformationMessage");
 
       await uploadUDFCommand.uploadUDFCommand();
 
