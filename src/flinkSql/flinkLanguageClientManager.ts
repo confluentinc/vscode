@@ -571,11 +571,11 @@ export class FlinkLanguageClientManager implements Disposable {
             websocketUrlMatch: url === this.lastWebSocketUrl,
           });
 
-          // Clear any previos diagnostics for the document before
-          // reinitializing the language client, which ends
+          // Clear any previous diagnostics for the document *before*
+          // reinitializing the language client (which ends
           // up reassigning `this.lastDocUri` to null momentarily before
           // we reassign it after successful language client initialization
-          // in a few lines from now.
+          // in a few lines from now).
           if (this.lastDocUri) {
             this.clearDiagnostics(this.lastDocUri);
           }
