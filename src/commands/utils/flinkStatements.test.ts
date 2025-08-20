@@ -5,6 +5,8 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResource
 import { TEST_CCLOUD_FLINK_STATEMENT } from "../../../tests/unit/testResources/flinkStatement";
 import * as authnUtils from "../../authn/utils";
 import { CCloudResourceLoader } from "../../loaders";
+import * as flinkStatementModels from "../../models/flinkStatement";
+import { FlinkStatement } from "../../models/flinkStatement";
 import * as sidecar from "../../sidecar";
 import {
   FlinkSpecProperties,
@@ -191,6 +193,7 @@ describe("commands/utils/flinkStatements.ts", function () {
         statement: "SELECT * FROM my_table",
         statementName: "test-statement",
         computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        hidden: false,
         properties: FlinkSpecProperties.fromProperties({
           "sql.current-catalog": "my_catalog",
           "sql.current-database": "my_database",
@@ -199,6 +202,10 @@ describe("commands/utils/flinkStatements.ts", function () {
       };
 
       const createSqlv1StatementStub = sandbox.stub().resolves(TEST_CCLOUD_FLINK_STATEMENT);
+      const restFlinkStatementToModelStub = sandbox
+        .stub(flinkStatementModels, "restFlinkStatementToModel")
+        .returns(TEST_CCLOUD_FLINK_STATEMENT);
+
       const mockStatementsApi = {
         createSqlv1Statement: createSqlv1StatementStub,
       };
@@ -206,13 +213,18 @@ describe("commands/utils/flinkStatements.ts", function () {
       // whatever this returns.
       mockSidecar.getFlinkSqlStatementsApi.returns(mockStatementsApi as any);
 
-      const statement: any = await submitFlinkStatement(params);
+      const statement: FlinkStatement = await submitFlinkStatement(params);
 
-      sinon.assert.calledWith(mockSidecar.getFlinkSqlStatementsApi, TEST_CCLOUD_FLINK_COMPUTE_POOL);
-
-      // resolves to whatever createSqlv1Statement() resolved to.
+      // resolves to whatever restFlinkStatementToModel() returns.
       assert.deepStrictEqual(statement, TEST_CCLOUD_FLINK_STATEMENT);
+
       sinon.assert.calledOnce(createSqlv1StatementStub);
+      sinon.assert.calledWith(mockSidecar.getFlinkSqlStatementsApi, TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      sinon.assert.calledWith(
+        restFlinkStatementToModelStub,
+        TEST_CCLOUD_FLINK_STATEMENT,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      );
     });
   });
 
