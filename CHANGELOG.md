@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.5.3
+
+(Minor telemetry update for internal support purposes, no user-facing changes.)
+
 ## 1.5.2
 
 ### Added
