@@ -6,6 +6,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
+import { udfUploadCompleted } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
@@ -219,6 +220,9 @@ export async function uploadArtifactToCCloud(
       artifactId: response.id,
       artifactName: params.artifactName,
     });
+
+    udfUploadCompleted.fire();
+=
 
     return response;
   } catch (error) {
