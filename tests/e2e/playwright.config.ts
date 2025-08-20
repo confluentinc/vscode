@@ -23,7 +23,7 @@ export default defineConfig({
   expect: {
     // Windows may take 10sec+ just to start activating the extension, so it needs some extra time
     // even when running tests locally
-    timeout: WINDOWS_FACTOR * (process.env.CI ? 30_000 : 10_000),
+    timeout: WINDOWS_FACTOR * (process.env.CI ? 60_000 : 30_000),
   },
   reporter: process.env.CI
     ? [
