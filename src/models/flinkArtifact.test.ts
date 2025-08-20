@@ -25,8 +25,8 @@ describe("FlinkArtifactTreeItem", () => {
         id: "artifact-2",
         name: "Another Artifact",
         description: "Another description.",
-        provider: "AWS",
-        region: "us-west-2",
+        provider: "Azure",
+        region: "australiaeast",
       });
 
       const tooltip = createFlinkArtifactToolTip(artifact);
@@ -35,8 +35,8 @@ describe("FlinkArtifactTreeItem", () => {
       assert.strictEqual(typeof tooltipValue, "string");
       assert.match(tooltipValue, /\*\*Another Artifact\*\*/);
       assert.match(tooltipValue, /Another description\./);
-      assert.match(tooltipValue, /Cloud: AWS/);
-      assert.match(tooltipValue, /Region: us-west-2/);
+      assert.match(tooltipValue, /Cloud: Azure/);
+      assert.match(tooltipValue, /Region: australiaeast/);
     });
   });
 });
