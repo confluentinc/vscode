@@ -1,4 +1,5 @@
 import {
+  Event,
   EventHint,
   NodeClient,
   Scope,
@@ -86,16 +87,35 @@ export function initSentry() {
 }
 
 export function sentryCaptureException(ex: unknown, hint?: EventHint | undefined): unknown {
+  return sentryCapture(ex, "exception", hint) as unknown;
+}
+
+export function sentryCaptureEvent(event: Event, hint?: EventHint | undefined): Event {
+  return sentryCapture(event, "event", hint) as Event;
+}
+
+export function sentryCapture(
+  e: Event | unknown,
+  kind: "event" | "exception",
+  hint?: EventHint | undefined,
+): Event | unknown {
   const scope = getSentryScope();
   const client = scope.getClient();
   if (!client) {
-    logger.error("No Sentry client available");
-    return ex;
+    logger.debug("No Sentry client available");
+    return e;
   }
 
-  logger.debug("Sending exception to Sentry", { ex, hint });
-  scope.captureException(ex, hint);
-  return ex;
+  logger.debug(`Sending ${kind} to Sentry`, { item: e, hint });
+  switch (kind) {
+    case "event":
+      return scope.captureEvent(e as Event, hint);
+    case "exception":
+      return scope.captureException(e as unknown, hint);
+    default:
+      logger.error("Unknown kind for Sentry capture", { kind });
+      return e;
+  }
 }
 
 export async function closeSentryClient() {
