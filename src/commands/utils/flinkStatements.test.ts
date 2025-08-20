@@ -186,46 +186,77 @@ describe("commands/utils/flinkStatements.ts", function () {
       }, /User must be signed in to Confluent Cloud to submit Flink statements/);
     });
 
-    it("Submits a Flink statement with the correct parameters", async function () {
-      getOrganizationStub.resolves({ id: "org-123", name: "Test Org" });
+    for (const hidden of [false, true]) {
+      it(`Submits a Flink statement with the correct parameters: hidden ${hidden}`, async function () {
+        getOrganizationStub.resolves({ id: "org-123", name: "Test Org" });
 
-      const params: IFlinkStatementSubmitParameters = {
-        statement: "SELECT * FROM my_table",
-        statementName: "test-statement",
-        computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
-        hidden: false,
-        properties: FlinkSpecProperties.fromProperties({
-          "sql.current-catalog": "my_catalog",
-          "sql.current-database": "my_database",
-          "sql.local-time-zone": localTimezoneOffset(),
-        }),
-      };
+        const params: IFlinkStatementSubmitParameters = {
+          statement: "SELECT * FROM my_table",
+          statementName: "test-statement",
+          computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          hidden: hidden,
+          properties: FlinkSpecProperties.fromProperties({
+            "sql.current-catalog": "my_catalog",
+            "sql.current-database": "my_database",
+            "sql.local-time-zone": localTimezoneOffset(),
+          }),
+        };
 
-      const createSqlv1StatementStub = sandbox.stub().resolves(TEST_CCLOUD_FLINK_STATEMENT);
-      const restFlinkStatementToModelStub = sandbox
-        .stub(flinkStatementModels, "restFlinkStatementToModel")
-        .returns(TEST_CCLOUD_FLINK_STATEMENT);
+        const createSqlv1StatementStub = sandbox.stub().resolves(TEST_CCLOUD_FLINK_STATEMENT);
+        const restFlinkStatementToModelStub = sandbox
+          .stub(flinkStatementModels, "restFlinkStatementToModel")
+          .returns(TEST_CCLOUD_FLINK_STATEMENT);
 
-      const mockStatementsApi = {
-        createSqlv1Statement: createSqlv1StatementStub,
-      };
-      // Not quite the right return type, but submitFlinkStatement returns
-      // whatever this returns.
-      mockSidecar.getFlinkSqlStatementsApi.returns(mockStatementsApi as any);
+        const mockStatementsApi = {
+          createSqlv1Statement: createSqlv1StatementStub,
+        };
+        // Not quite the right return type, but submitFlinkStatement returns
+        // whatever this returns.
+        mockSidecar.getFlinkSqlStatementsApi.returns(mockStatementsApi as any);
 
-      const statement: FlinkStatement = await submitFlinkStatement(params);
+        const statement: FlinkStatement = await submitFlinkStatement(params);
 
-      // resolves to whatever restFlinkStatementToModel() returns.
-      assert.deepStrictEqual(statement, TEST_CCLOUD_FLINK_STATEMENT);
+        // resolves to whatever restFlinkStatementToModel() returns.
+        assert.deepStrictEqual(statement, TEST_CCLOUD_FLINK_STATEMENT);
 
-      sinon.assert.calledOnce(createSqlv1StatementStub);
-      sinon.assert.calledWith(mockSidecar.getFlinkSqlStatementsApi, TEST_CCLOUD_FLINK_COMPUTE_POOL);
-      sinon.assert.calledWith(
-        restFlinkStatementToModelStub,
-        TEST_CCLOUD_FLINK_STATEMENT,
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-    });
+        sinon.assert.calledOnce(createSqlv1StatementStub);
+        if (hidden) {
+          // Prove that requestInner.metadata specifies the hidden label.
+          sinon.assert.calledWith(
+            createSqlv1StatementStub,
+            sinon.match({
+              CreateSqlv1StatementRequest: sinon.match({
+                metadata: {
+                  labels: {
+                    "user.confluent.io/hidden": "true",
+                  },
+                },
+              }),
+            }),
+          );
+        } else {
+          // Prove that requestInner.metadata is not set.
+          sinon.assert.calledWith(
+            createSqlv1StatementStub,
+            sinon.match({
+              CreateSqlv1StatementRequest: sinon.match({
+                metadata: undefined,
+              }),
+            }),
+          );
+        }
+
+        sinon.assert.calledWith(
+          mockSidecar.getFlinkSqlStatementsApi,
+          TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        );
+        sinon.assert.calledWith(
+          restFlinkStatementToModelStub,
+          TEST_CCLOUD_FLINK_STATEMENT,
+          TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        );
+      });
+    }
   });
 
   describe("waitForStatementRunning()", function () {

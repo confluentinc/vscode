@@ -132,7 +132,7 @@ export async function submitFlinkStatementCommand(
     statement,
     statementName,
     computePool,
-    hidden: false, // Do not create a hidden statement, the user submitted it.
+    hidden: false, // Do not create a hidden statement, the user authored it.
     properties: new FlinkSpecProperties({
       currentDatabase,
       currentCatalog: currentDatabaseKafkaCluster.environmentId,
