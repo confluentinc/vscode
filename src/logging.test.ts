@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { RotatingFileStream } from "rotating-file-stream";
 import * as sinon from "sinon";
-import { Uri } from "vscode";
+import { LogOutputChannel, Uri } from "vscode";
 import {
   BASEFILE_PREFIX,
   CURRENT_LOGFILE_NAME,
@@ -16,121 +16,7 @@ import {
 import { WriteableTmpDir } from "./utils/file";
 import * as fsWrappers from "./utils/fsWrappers";
 
-describe("logging.ts Logger methods", function () {
-  let sandbox: sinon.SinonSandbox;
-
-  let traceStub: sinon.SinonStub;
-  let debugStub: sinon.SinonStub;
-  let infoStub: sinon.SinonStub;
-  let warnStub: sinon.SinonStub;
-  let errorStub: sinon.SinonStub;
-
-  let logger: Logger;
-
-  beforeEach(function () {
-    sandbox = sinon.createSandbox();
-
-    // stub output channel methods
-    traceStub = sandbox.stub(OUTPUT_CHANNEL, "trace");
-    debugStub = sandbox.stub(OUTPUT_CHANNEL, "debug");
-    infoStub = sandbox.stub(OUTPUT_CHANNEL, "info");
-    warnStub = sandbox.stub(OUTPUT_CHANNEL, "warn");
-    errorStub = sandbox.stub(OUTPUT_CHANNEL, "error");
-
-    // create a new logger instance for each test
-    logger = new Logger("test");
-  });
-
-  afterEach(function () {
-    sandbox.restore();
-  });
-
-  it("should call OUTPUT_CHANNEL.trace when .trace() is called", function () {
-    logger.trace("test message");
-
-    assert.strictEqual(traceStub.calledOnce, true);
-    assert.strictEqual(traceStub.firstCall.args[0], "[test] test message");
-  });
-
-  it("should call OUTPUT_CHANNEL.debug when .debug() is called", function () {
-    logger.debug("test message");
-
-    assert.strictEqual(debugStub.calledOnce, true);
-    assert.strictEqual(debugStub.firstCall.args[0], "[test] test message");
-  });
-
-  it("should call OUTPUT_CHANNEL.info when .log() is called", function () {
-    logger.log("test message");
-
-    assert.strictEqual(infoStub.calledOnce, true);
-    assert.strictEqual(infoStub.firstCall.args[0], "[test] test message");
-  });
-
-  it("should call OUTPUT_CHANNEL.info when .info() is called", function () {
-    logger.info("test message");
-
-    assert.strictEqual(infoStub.calledOnce, true);
-    assert.strictEqual(infoStub.firstCall.args[0], "[test] test message");
-  });
-
-  it("should call OUTPUT_CHANNEL.warn when .warn() is called", function () {
-    logger.warn("test message");
-
-    assert.strictEqual(warnStub.calledOnce, true);
-    assert.strictEqual(warnStub.firstCall.args[0], "[test] test message");
-  });
-
-  it("should call OUTPUT_CHANNEL.error when .error() is called", function () {
-    logger.error("test message");
-
-    assert.strictEqual(errorStub.calledOnce, true);
-    assert.strictEqual(errorStub.firstCall.args[0], "[test] test message");
-  });
-
-  it("should create a new logger with callpoint when withCallpoint is used", function () {
-    const boundLogger = logger.withCallpoint("testpoint");
-
-    // call a method on the bound logger to check the modified prefix
-    boundLogger.info("test message");
-
-    assert.strictEqual(infoStub.calledOnce, true);
-    assert.strictEqual(infoStub.firstCall.args[0].includes("[test[testpoint.0]]"), true);
-  });
-});
-
-describe("logging.ts rotatingFilenameGenerator", function () {
-  it("should leave ROTATED_LOGFILE_NAMES empty before any rotations", function () {
-    const fileName: string = rotatingFilenameGenerator(new Date(), 0);
-
-    assert.strictEqual(fileName, `vscode-confluent-${process.pid}.log`);
-    // no rotations yet
-    assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 0);
-    assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
-  });
-
-  it("should generate a new filename with a higher index", function () {
-    const fileName: string = rotatingFilenameGenerator(new Date(), 1);
-
-    assert.strictEqual(fileName, `vscode-confluent-${process.pid}.1.log`);
-    // one rotated file, current left alone
-    assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 1);
-    assert.strictEqual(ROTATED_LOGFILE_NAMES[0], `vscode-confluent-${process.pid}.1.log`);
-    assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
-  });
-
-  it(`should only keep the last ${MAX_LOGFILES} log files in ROTATED_LOGFILE_NAMES`, function () {
-    // start at 1 since 0 is the current log file index
-    for (let i = 1; i <= MAX_LOGFILES; i++) {
-      const fileName = rotatingFilenameGenerator(new Date(), i);
-      assert.strictEqual(fileName, `vscode-confluent-${process.pid}.${i}.log`);
-    }
-
-    assert.strictEqual(ROTATED_LOGFILE_NAMES.length, MAX_LOGFILES);
-    assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
-  });
-});
-
-describe("logging.ts new classes", () => {
+describe("logging.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -139,6 +25,114 @@ describe("logging.ts new classes", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  // Logger methods
+  describe("Logger methods", function () {
+    let traceStub: sinon.SinonStub;
+    let debugStub: sinon.SinonStub;
+    let infoStub: sinon.SinonStub;
+    let warnStub: sinon.SinonStub;
+    let errorStub: sinon.SinonStub;
+
+    let logger: Logger;
+
+    beforeEach(function () {
+      // stub output channel methods
+      traceStub = sandbox.stub(OUTPUT_CHANNEL, "trace");
+      debugStub = sandbox.stub(OUTPUT_CHANNEL, "debug");
+      infoStub = sandbox.stub(OUTPUT_CHANNEL, "info");
+      warnStub = sandbox.stub(OUTPUT_CHANNEL, "warn");
+      errorStub = sandbox.stub(OUTPUT_CHANNEL, "error");
+
+      // create a new logger instance for each test
+      logger = new Logger("test");
+    });
+
+    it("should call OUTPUT_CHANNEL.trace when .trace() is called", function () {
+      logger.trace("test message");
+
+      assert.strictEqual(traceStub.calledOnce, true);
+      assert.strictEqual(traceStub.firstCall.args[0], "[test] test message");
+    });
+
+    it("should call OUTPUT_CHANNEL.debug when .debug() is called", function () {
+      logger.debug("test message");
+
+      assert.strictEqual(debugStub.calledOnce, true);
+      assert.strictEqual(debugStub.firstCall.args[0], "[test] test message");
+    });
+
+    it("should call OUTPUT_CHANNEL.info when .log() is called", function () {
+      logger.log("test message");
+
+      assert.strictEqual(infoStub.calledOnce, true);
+      assert.strictEqual(infoStub.firstCall.args[0], "[test] test message");
+    });
+
+    it("should call OUTPUT_CHANNEL.info when .info() is called", function () {
+      logger.info("test message");
+
+      assert.strictEqual(infoStub.calledOnce, true);
+      assert.strictEqual(infoStub.firstCall.args[0], "[test] test message");
+    });
+
+    it("should call OUTPUT_CHANNEL.warn when .warn() is called", function () {
+      logger.warn("test message");
+
+      assert.strictEqual(warnStub.calledOnce, true);
+      assert.strictEqual(warnStub.firstCall.args[0], "[test] test message");
+    });
+
+    it("should call OUTPUT_CHANNEL.error when .error() is called", function () {
+      logger.error("test message");
+
+      assert.strictEqual(errorStub.calledOnce, true);
+      assert.strictEqual(errorStub.firstCall.args[0], "[test] test message");
+    });
+
+    it("should create a new logger with callpoint when withCallpoint is used", function () {
+      const boundLogger = logger.withCallpoint("testpoint");
+
+      // call a method on the bound logger to check the modified prefix
+      boundLogger.info("test message");
+
+      assert.strictEqual(infoStub.calledOnce, true);
+      assert.strictEqual(infoStub.firstCall.args[0].includes("[test[testpoint.0]]"), true);
+    });
+  });
+
+  // original rotatingFilenameGenerator
+  describe("rotatingFilenameGenerator", function () {
+    it("should leave ROTATED_LOGFILE_NAMES empty before any rotations", function () {
+      const fileName: string = rotatingFilenameGenerator(new Date(), 0);
+
+      assert.strictEqual(fileName, `vscode-confluent-${process.pid}.log`);
+      // no rotations yet
+      assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 0);
+      assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
+    });
+
+    it("should generate a new filename with a higher index", function () {
+      const fileName: string = rotatingFilenameGenerator(new Date(), 1);
+
+      assert.strictEqual(fileName, `vscode-confluent-${process.pid}.1.log`);
+      // one rotated file, current left alone
+      assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 1);
+      assert.strictEqual(ROTATED_LOGFILE_NAMES[0], `vscode-confluent-${process.pid}.1.log`);
+      assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
+    });
+
+    it(`should only keep the last ${MAX_LOGFILES} log files in ROTATED_LOGFILE_NAMES`, function () {
+      // start at 1 since 0 is the current log file index
+      for (let i = 1; i <= MAX_LOGFILES; i++) {
+        const fileName = rotatingFilenameGenerator(new Date(), i);
+        assert.strictEqual(fileName, `vscode-confluent-${process.pid}.${i}.log`);
+      }
+
+      assert.strictEqual(ROTATED_LOGFILE_NAMES.length, MAX_LOGFILES);
+      assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
+    });
   });
 
   // constants for testing RotatingLogManager and RotatingLogOutputChannel
@@ -334,23 +328,30 @@ describe("logging.ts new classes", () => {
     let appendStub: sinon.SinonStub;
     let appendLineStub: sinon.SinonStub;
     let replaceStub: sinon.SinonStub;
+    let clearStub: sinon.SinonStub;
+    let hideStub: sinon.SinonStub;
+    let showStub: sinon.SinonStub;
 
     // stub for stream to check method calls from writeToLogFile()
     let streamStub: sinon.SinonStubbedInstance<RotatingFileStream>;
 
     // instance of RotatingLogOutputChannel to test
-    let instanceOfRotatingLogOutputChannel: RotatingLogOutputChannel;
+    let instance: RotatingLogOutputChannel;
+    // member rotating log manager to test
+    let logManagerStub: RotatingLogManager;
+    // member output channel to test
+    let outputChannelStub: LogOutputChannel;
 
     beforeEach(() => {
       // create new rotating log output channel instance for each test
-      instanceOfRotatingLogOutputChannel = new RotatingLogOutputChannel(
+      instance = new RotatingLogOutputChannel(
         TEST_CHANNELNAME,
         TEST_BASEPATH,
         TEST_CONSOLENAME,
       );
 
       // stub rotating log output channel methods
-      const outputChannelStub = instanceOfRotatingLogOutputChannel["outputChannel"];
+      outputChannelStub = instance["outputChannel"];
 
       traceStub = sandbox.stub(outputChannelStub, "trace");
       debugStub = sandbox.stub(outputChannelStub, "debug");
@@ -359,22 +360,36 @@ describe("logging.ts new classes", () => {
       errorStub = sandbox.stub(outputChannelStub, "error");
       appendStub = sandbox.stub(outputChannelStub, "append");
       appendLineStub = sandbox.stub(outputChannelStub, "appendLine");
-      replaceStub = sandbox.stub(outputChannelStub, "replace");
+      replaceStub = sandbox.stub(outputChannelStub, "replace");      clearStub = sandbox.stub(outputChannelStub, "clear");
+      hideStub = sandbox.stub(outputChannelStub, "hide");
+      showStub = sandbox.stub(outputChannelStub, "show");
 
       // stub rotating log manager methods
-      const rotatingLogManagerStub = instanceOfRotatingLogOutputChannel["rotatingLogManager"];
+      logManagerStub = instance["rotatingLogManager"];
 
       streamStub = sinon.createStubInstance(RotatingFileStream);
-      sandbox.stub(rotatingLogManagerStub, "getStream").returns(streamStub);
+      sandbox.stub(logManagerStub, "getStream").returns(streamStub);
     });
 
     afterEach(function () {
-      instanceOfRotatingLogOutputChannel.dispose();
+      instance.dispose();
       sandbox.restore();
     });
 
+    it("should get name from member outputChannel", () => {
+      assert.strictEqual(instance.name, outputChannelStub.name);
+    });
+
+    it('should get logLevel from member outputChannel', () => {
+      assert.strictEqual(instance.logLevel, outputChannelStub.logLevel);
+    });
+
+    it("should get onDidChangeLogLevel from member outputChannel", () => {
+      assert.strictEqual(instance.onDidChangeLogLevel, outputChannelStub.onDidChangeLogLevel);
+    });
+
     it("should handle trace method", () => {
-      instanceOfRotatingLogOutputChannel.trace("test message");
+      instance.trace("test message");
       // stream should not be called for trace logs and writeToLogFile() should not be called because it's too verbose
       sinon.assert.notCalled(streamStub.write);
 
@@ -382,35 +397,8 @@ describe("logging.ts new classes", () => {
       sinon.assert.calledWith(traceStub, `test message`);
     });
 
-    it("should handle info method", () => {
-      instanceOfRotatingLogOutputChannel.info("info message");
-      // info logs should be written to the stream with writeToLogFile()
-      sinon.assert.calledOnce(streamStub.write);
-
-      sinon.assert.calledOnce(infoStub);
-      sinon.assert.calledWith(infoStub, `info message`);
-    });
-
-    it("should handle error method", () => {
-      instanceOfRotatingLogOutputChannel.error("error message");
-      // error logs should be written to the stream with writeToLogFile()
-      sinon.assert.calledOnce(streamStub.write);
-
-      sinon.assert.calledOnce(errorStub);
-      sinon.assert.calledWith(errorStub, `error message`);
-    });
-
-    it("should handle warn method", () => {
-      instanceOfRotatingLogOutputChannel.warn("warn message");
-      // warn logs should be written to the stream with writeToLogFile()
-      sinon.assert.calledOnce(streamStub.write);
-
-      sinon.assert.calledOnce(warnStub);
-      sinon.assert.calledWith(warnStub, `warn message`);
-    });
-
     it("should handle debug method", () => {
-      instanceOfRotatingLogOutputChannel.debug("debug message");
+      instance.debug("debug message");
       // debug logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
 
@@ -418,8 +406,44 @@ describe("logging.ts new classes", () => {
       sinon.assert.calledWith(debugStub, `debug message`);
     });
 
+    it("should handle log method", () => {
+      instance.log("log message");
+      // log logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
+
+      sinon.assert.calledOnce(infoStub);
+      sinon.assert.calledWith(infoStub, `log message`);
+    });
+
+    it("should handle info method", () => {
+      instance.info("info message");
+      // info logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
+
+      sinon.assert.calledOnce(infoStub);
+      sinon.assert.calledWith(infoStub, `info message`);
+    });
+
+    it("should handle warn method", () => {
+      instance.warn("warn message");
+      // warn logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
+
+      sinon.assert.calledOnce(warnStub);
+      sinon.assert.calledWith(warnStub, `warn message`);
+    });
+
+    it("should handle error method", () => {
+      instance.error("error message");
+      // error logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
+
+      sinon.assert.calledOnce(errorStub);
+      sinon.assert.calledWith(errorStub, `error message`);
+    });
+
     it("should handle append method", () => {
-      instanceOfRotatingLogOutputChannel.append("append message");
+      instance.append("append message");
       // append logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
 
@@ -428,7 +452,7 @@ describe("logging.ts new classes", () => {
     });
 
     it("should handle appendLine method", () => {
-      instanceOfRotatingLogOutputChannel.appendLine("appendLine message");
+      instance.appendLine("appendLine message");
       // appendLine logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
 
@@ -437,7 +461,7 @@ describe("logging.ts new classes", () => {
     });
 
     it("should handle replace method", () => {
-      instanceOfRotatingLogOutputChannel.replace("replace message");
+      instance.replace("replace message");
       // replace logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
 
@@ -445,27 +469,28 @@ describe("logging.ts new classes", () => {
       sinon.assert.calledWith(replaceStub, "replace message");
     });
 
-    // it("should delegate getFileUris() method", function () {
-    //   // generate some rotated files to have URIs to return
-    //   const rotatingLogManager = instanceOfRotatingLogOutputChannel["rotatingLogManager"];
-    //   rotatingLogManager.rotatingFilenameGenerator(new Date(), 1);
+    it("should handle clear method", () => {
+      instance.clear();
+      sinon.assert.calledOnce(clearStub);
+    });
 
-    //   // stubs for methods to check that member RotatingLogManager getFileUris() is called correctly
-    //   let existsSyncStub: sinon.SinonStub = sandbox.stub(fsWrappers, "existsSync");
-    //   let writeableTmpDirStub: sinon.SinonStub = sandbox
-    //     .stub(WriteableTmpDir.getInstance(), "get")
-    //     .returns("/test/dir");
-    //   // mock that all files exist
-    //   existsSyncStub.returns(true);
+    it("should handle hide method", () => {
+      instance.hide();
+      sinon.assert.calledOnce(hideStub);
+    });
 
-    //   const fileUris = instanceOfRotatingLogOutputChannel.getFileUris();
+    it("should handle show method", () => {
+      instance.show();
+      sinon.assert.calledOnce(showStub);
+    });
 
-    //   assert.strictEqual(existsSyncStub.called, true);
-    //   assert.strictEqual(writeableTmpDirStub.called, true);
-    //   assert.ok(Array.isArray(fileUris), "Should return an array of URIs");
-    //   assert.strictEqual(fileUris.length, 2); // current + 1 rotated file
-    //   assert.ok(fileUris[0].fsPath.includes(`${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`));
-    //   assert.ok(fileUris[1].fsPath.includes(`${BASEFILE_PREFIX}-${TEST_BASEPATH}.1.log`));
-    // });
+    it("should delegate getFileUris() to member RotatingLogManager instance", function () {
+      let getFileUrisStub = sinon.stub(logManagerStub, "getFileUris");
+
+      instance.getFileUris();
+
+      // check that getFileUris() is called
+      sinon.assert.calledOnce(getFileUrisStub);
+    });
   });
 });
