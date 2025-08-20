@@ -10,7 +10,7 @@ import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/co
 import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkStatement, Phase } from "../models/flinkStatement";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
@@ -132,6 +132,7 @@ export async function submitFlinkStatementCommand(
     statement,
     statementName,
     computePool,
+    hidden: false, // Do not create a hidden statement, the user authored it.
     properties: new FlinkSpecProperties({
       currentDatabase,
       currentCatalog: currentDatabaseKafkaCluster.environmentId,
@@ -140,8 +141,7 @@ export async function submitFlinkStatementCommand(
   };
 
   try {
-    const restResponse = await submitFlinkStatement(submission);
-    const newStatement = restFlinkStatementToModel(restResponse, computePool);
+    const newStatement = await submitFlinkStatement(submission);
 
     if (newStatement.status.phase === Phase.FAILED) {
       // Immediate failure of the statement. User gave us something
