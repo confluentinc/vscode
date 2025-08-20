@@ -320,17 +320,7 @@ describe("logging.ts", () => {
     const TEST_CONSOLENAME = "test-console-name";
 
     // stubs for methods to check that data member outputChannel is called correctly
-    let traceStub: sinon.SinonStub;
-    let debugStub: sinon.SinonStub;
     let infoStub: sinon.SinonStub;
-    let warnStub: sinon.SinonStub;
-    let errorStub: sinon.SinonStub;
-    let appendStub: sinon.SinonStub;
-    let appendLineStub: sinon.SinonStub;
-    let replaceStub: sinon.SinonStub;
-    let clearStub: sinon.SinonStub;
-    let hideStub: sinon.SinonStub;
-    let showStub: sinon.SinonStub;
 
     // stub for stream to check method calls from writeToLogFile()
     let streamStub: sinon.SinonStubbedInstance<RotatingFileStream>;
@@ -349,17 +339,7 @@ describe("logging.ts", () => {
       // stub rotating log output channel methods
       outputChannelStub = instance["outputChannel"];
 
-      traceStub = sandbox.stub(outputChannelStub, "trace");
-      debugStub = sandbox.stub(outputChannelStub, "debug");
       infoStub = sandbox.stub(outputChannelStub, "info");
-      warnStub = sandbox.stub(outputChannelStub, "warn");
-      errorStub = sandbox.stub(outputChannelStub, "error");
-      appendStub = sandbox.stub(outputChannelStub, "append");
-      appendLineStub = sandbox.stub(outputChannelStub, "appendLine");
-      replaceStub = sandbox.stub(outputChannelStub, "replace");
-      clearStub = sandbox.stub(outputChannelStub, "clear");
-      hideStub = sandbox.stub(outputChannelStub, "hide");
-      showStub = sandbox.stub(outputChannelStub, "show");
 
       // stub rotating log manager methods
       logManagerStub = instance["rotatingLogManager"];
@@ -370,7 +350,6 @@ describe("logging.ts", () => {
 
     afterEach(function () {
       instance.dispose();
-      sandbox.restore();
     });
 
     it("should get name from member outputChannel", () => {
@@ -386,6 +365,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle trace method", () => {
+      const traceStub = sandbox.stub(outputChannelStub, "trace");
       instance.trace("test message");
       // stream should not be called for trace logs and writeToLogFile() should not be called because it's too verbose
       sinon.assert.notCalled(streamStub.write);
@@ -395,6 +375,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle debug method", () => {
+      const debugStub = sandbox.stub(outputChannelStub, "debug");
       instance.debug("debug message");
       // debug logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
@@ -422,6 +403,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle warn method", () => {
+      const warnStub = sandbox.stub(outputChannelStub, "warn");
       instance.warn("warn message");
       // warn logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
@@ -431,6 +413,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle error method", () => {
+      const errorStub = sandbox.stub(outputChannelStub, "error");
       instance.error("error message");
       // error logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
@@ -440,6 +423,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle append method", () => {
+      const appendStub = sandbox.stub(outputChannelStub, "append");
       instance.append("append message");
       // append logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
@@ -449,6 +433,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle appendLine method", () => {
+      const appendLineStub = sandbox.stub(outputChannelStub, "appendLine");
       instance.appendLine("appendLine message");
       // appendLine logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
@@ -458,6 +443,7 @@ describe("logging.ts", () => {
     });
 
     it("should handle replace method", () => {
+      const replaceStub = sandbox.stub(outputChannelStub, "replace");
       instance.replace("replace message");
       // replace logs should be written to the stream with writeToLogFile()
       sinon.assert.calledOnce(streamStub.write);
@@ -467,22 +453,25 @@ describe("logging.ts", () => {
     });
 
     it("should handle clear method", () => {
+      const clearStub = sandbox.stub(outputChannelStub, "clear");
       instance.clear();
       sinon.assert.calledOnce(clearStub);
     });
 
     it("should handle hide method", () => {
+      const hideStub = sandbox.stub(outputChannelStub, "hide");
       instance.hide();
       sinon.assert.calledOnce(hideStub);
     });
 
     it("should handle show method", () => {
+      const showStub = sandbox.stub(outputChannelStub, "show");
       instance.show();
       sinon.assert.calledOnce(showStub);
     });
 
     it("should delegate getFileUris() to member RotatingLogManager instance", function () {
-      let getFileUrisStub = sinon.stub(logManagerStub, "getFileUris");
+      const getFileUrisStub = sinon.stub(logManagerStub, "getFileUris");
 
       instance.getFileUris();
 
