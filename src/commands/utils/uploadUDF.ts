@@ -222,7 +222,6 @@ export async function uploadArtifactToCCloud(
     });
 
     udfUploadCompleted.fire();
-=
 
     return response;
   } catch (error) {
