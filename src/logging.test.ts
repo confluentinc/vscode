@@ -1,5 +1,6 @@
 import * as assert from "assert";
-import sinon from "sinon";
+import { RotatingFileStream } from "rotating-file-stream";
+import * as sinon from "sinon";
 import { Uri } from "vscode";
 import {
   BASEFILE_PREFIX,
@@ -334,9 +335,8 @@ describe("logging.ts new classes", () => {
     let appendLineStub: sinon.SinonStub;
     let replaceStub: sinon.SinonStub;
 
-    // stubs for methods to check that getFileUris() is called correctly
-    let existsSyncStub: sinon.SinonStub;
-    let writeableTmpDirStub: sinon.SinonStub;
+    // stub for stream to check method calls from writeToLogFile()
+    let streamStub: sinon.SinonStubbedInstance<RotatingFileStream>;
 
     // instance of RotatingLogOutputChannel to test
     let instanceOfRotatingLogOutputChannel: RotatingLogOutputChannel;
@@ -350,16 +350,22 @@ describe("logging.ts new classes", () => {
       );
 
       // stub rotating log output channel methods
-      const outputChannel = instanceOfRotatingLogOutputChannel["outputChannel"];
+      const outputChannelStub = instanceOfRotatingLogOutputChannel["outputChannel"];
 
-      traceStub = sandbox.stub(outputChannel, "trace");
-      debugStub = sandbox.stub(outputChannel, "debug");
-      infoStub = sandbox.stub(outputChannel, "info");
-      warnStub = sandbox.stub(outputChannel, "warn");
-      errorStub = sandbox.stub(outputChannel, "error");
-      appendStub = sandbox.stub(outputChannel, "append");
-      appendLineStub = sandbox.stub(outputChannel, "appendLine");
-      replaceStub = sandbox.stub(outputChannel, "replace");
+      traceStub = sandbox.stub(outputChannelStub, "trace");
+      debugStub = sandbox.stub(outputChannelStub, "debug");
+      infoStub = sandbox.stub(outputChannelStub, "info");
+      warnStub = sandbox.stub(outputChannelStub, "warn");
+      errorStub = sandbox.stub(outputChannelStub, "error");
+      appendStub = sandbox.stub(outputChannelStub, "append");
+      appendLineStub = sandbox.stub(outputChannelStub, "appendLine");
+      replaceStub = sandbox.stub(outputChannelStub, "replace");
+
+      // stub rotating log manager methods
+      const rotatingLogManagerStub = instanceOfRotatingLogOutputChannel["rotatingLogManager"];
+
+      streamStub = sinon.createStubInstance(RotatingFileStream);
+      sandbox.stub(rotatingLogManagerStub, "getStream").returns(streamStub);
     });
 
     afterEach(function () {
@@ -369,6 +375,8 @@ describe("logging.ts new classes", () => {
 
     it("should handle trace method", () => {
       instanceOfRotatingLogOutputChannel.trace("test message");
+      // stream should not be called for trace logs and writeToLogFile() should not be called because it's too verbose
+      sinon.assert.notCalled(streamStub.write);
 
       sinon.assert.calledOnce(traceStub);
       sinon.assert.calledWith(traceStub, `test message`);
@@ -376,6 +384,8 @@ describe("logging.ts new classes", () => {
 
     it("should handle info method", () => {
       instanceOfRotatingLogOutputChannel.info("info message");
+      // info logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(infoStub);
       sinon.assert.calledWith(infoStub, `info message`);
@@ -383,6 +393,8 @@ describe("logging.ts new classes", () => {
 
     it("should handle error method", () => {
       instanceOfRotatingLogOutputChannel.error("error message");
+      // error logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(errorStub);
       sinon.assert.calledWith(errorStub, `error message`);
@@ -390,6 +402,8 @@ describe("logging.ts new classes", () => {
 
     it("should handle warn method", () => {
       instanceOfRotatingLogOutputChannel.warn("warn message");
+      // warn logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(warnStub);
       sinon.assert.calledWith(warnStub, `warn message`);
@@ -397,14 +411,17 @@ describe("logging.ts new classes", () => {
 
     it("should handle debug method", () => {
       instanceOfRotatingLogOutputChannel.debug("debug message");
+      // debug logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(debugStub);
       sinon.assert.calledWith(debugStub, `debug message`);
     });
 
-    // TODO: better tests to test writeToLogFile()
     it("should handle append method", () => {
       instanceOfRotatingLogOutputChannel.append("append message");
+      // append logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(appendStub);
       sinon.assert.calledWith(appendStub, "append message");
@@ -412,6 +429,8 @@ describe("logging.ts new classes", () => {
 
     it("should handle appendLine method", () => {
       instanceOfRotatingLogOutputChannel.appendLine("appendLine message");
+      // appendLine logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(appendLineStub);
       sinon.assert.calledWith(appendLineStub, "appendLine message");
@@ -419,18 +438,24 @@ describe("logging.ts new classes", () => {
 
     it("should handle replace method", () => {
       instanceOfRotatingLogOutputChannel.replace("replace message");
+      // replace logs should be written to the stream with writeToLogFile()
+      sinon.assert.calledOnce(streamStub.write);
 
       sinon.assert.calledOnce(replaceStub);
       sinon.assert.calledWith(replaceStub, "replace message");
     });
 
     // it("should delegate getFileUris() method", function () {
-    //   existsSyncStub = sandbox.stub(fsWrappers, "existsSync");
-    //   writeableTmpDirStub = sandbox.stub(WriteableTmpDir.getInstance(), "get").returns("/test/dir");
     //   // generate some rotated files to have URIs to return
     //   const rotatingLogManager = instanceOfRotatingLogOutputChannel["rotatingLogManager"];
     //   rotatingLogManager.rotatingFilenameGenerator(new Date(), 1);
 
+    //   // stubs for methods to check that member RotatingLogManager getFileUris() is called correctly
+    //   let existsSyncStub: sinon.SinonStub = sandbox.stub(fsWrappers, "existsSync");
+    //   let writeableTmpDirStub: sinon.SinonStub = sandbox
+    //     .stub(WriteableTmpDir.getInstance(), "get")
+    //     .returns("/test/dir");
+    //   // mock that all files exist
     //   existsSyncStub.returns(true);
 
     //   const fileUris = instanceOfRotatingLogOutputChannel.getFileUris();
