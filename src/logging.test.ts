@@ -344,11 +344,7 @@ describe("logging.ts", () => {
 
     beforeEach(() => {
       // create new rotating log output channel instance for each test
-      instance = new RotatingLogOutputChannel(
-        TEST_CHANNELNAME,
-        TEST_BASEPATH,
-        TEST_CONSOLENAME,
-      );
+      instance = new RotatingLogOutputChannel(TEST_CHANNELNAME, TEST_BASEPATH, TEST_CONSOLENAME);
 
       // stub rotating log output channel methods
       outputChannelStub = instance["outputChannel"];
@@ -360,7 +356,8 @@ describe("logging.ts", () => {
       errorStub = sandbox.stub(outputChannelStub, "error");
       appendStub = sandbox.stub(outputChannelStub, "append");
       appendLineStub = sandbox.stub(outputChannelStub, "appendLine");
-      replaceStub = sandbox.stub(outputChannelStub, "replace");      clearStub = sandbox.stub(outputChannelStub, "clear");
+      replaceStub = sandbox.stub(outputChannelStub, "replace");
+      clearStub = sandbox.stub(outputChannelStub, "clear");
       hideStub = sandbox.stub(outputChannelStub, "hide");
       showStub = sandbox.stub(outputChannelStub, "show");
 
@@ -380,7 +377,7 @@ describe("logging.ts", () => {
       assert.strictEqual(instance.name, outputChannelStub.name);
     });
 
-    it('should get logLevel from member outputChannel', () => {
+    it("should get logLevel from member outputChannel", () => {
       assert.strictEqual(instance.logLevel, outputChannelStub.logLevel);
     });
 
