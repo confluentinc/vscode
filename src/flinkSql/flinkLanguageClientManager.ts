@@ -427,22 +427,16 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         return false;
       }
       // Check if the configured compute pool exists in any environment
-      let poolFound = false;
       for (const env of environments) {
         if (env.flinkComputePools.some((pool) => pool.id === computePoolId)) {
-          poolFound = true;
-          break;
+          return true;
         }
       }
 
-      if (poolFound) {
-        return true;
-      } else {
-        logger.warn(
-          `Configured Flink compute pool ${computePoolId} not found in available resources`,
-        );
-        return false;
-      }
+      logger.warn(
+        `Configured Flink compute pool ${computePoolId} not found in available resources`,
+      );
+      return false;
     } catch (error) {
       logger.error("Error checking Flink resources availability", error);
       return false;
