@@ -139,22 +139,22 @@ describe("logging.ts", () => {
   const TEST_BASEPATH = "test-base-path";
 
   describe("RotatingLogManager", () => {
-    let instanceOfRotatingLogManager: RotatingLogManager;
+    let instance: RotatingLogManager;
 
     beforeEach(() => {
       // create new RotatingLogManager instance for each test
-      instanceOfRotatingLogManager = new RotatingLogManager(TEST_BASEPATH);
+      instance = new RotatingLogManager(TEST_BASEPATH);
     });
 
     afterEach(() => {
-      instanceOfRotatingLogManager.dispose();
+      instance.dispose();
     });
 
     describe("rotatingFilenameGenerator", () => {
       it("should instantiate with empty _rotatedFileNames", function () {
-        const fileName = instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 0);
-        const currentFileName = instanceOfRotatingLogManager["_currentFileName"];
-        const rotatedFileNames = instanceOfRotatingLogManager["_rotatedFileNames"];
+        const fileName = instance.rotatingFilenameGenerator(new Date(), 0);
+        const currentFileName = instance["_currentFileName"];
+        const rotatedFileNames = instance["_rotatedFileNames"];
 
         assert.strictEqual(fileName, `${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`);
         // no rotations yet
@@ -163,16 +163,16 @@ describe("logging.ts", () => {
       });
 
       it("should generate filename without index", function () {
-        const filename = instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date());
+        const filename = instance.rotatingFilenameGenerator(new Date());
 
         assert.strictEqual(filename, `${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`);
       });
 
       it("should generate a new filename with a higher index", function () {
-        const fileName1 = instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 1);
-        const fileName2 = instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 2);
-        const currentFileName = instanceOfRotatingLogManager["_currentFileName"];
-        const rotatedFileNames = instanceOfRotatingLogManager["_rotatedFileNames"];
+        const fileName1 = instance.rotatingFilenameGenerator(new Date(), 1);
+        const fileName2 = instance.rotatingFilenameGenerator(new Date(), 2);
+        const currentFileName = instance["_currentFileName"];
+        const rotatedFileNames = instance["_rotatedFileNames"];
 
         assert.strictEqual(fileName1, `${BASEFILE_PREFIX}-${TEST_BASEPATH}.1.log`);
         assert.strictEqual(fileName2, `${BASEFILE_PREFIX}-${TEST_BASEPATH}.2.log`);
@@ -184,9 +184,9 @@ describe("logging.ts", () => {
       });
 
       it("should limit rotated file names to MAX_LOGFILES", function () {
-        const rotatedFileNames = instanceOfRotatingLogManager["_rotatedFileNames"];
+        const rotatedFileNames = instance["_rotatedFileNames"];
         for (let i = 1; i <= MAX_LOGFILES + 2; i++) {
-          instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), i);
+          instance.rotatingFilenameGenerator(new Date(), i);
         }
 
         assert.strictEqual(rotatedFileNames.length, MAX_LOGFILES);
@@ -196,21 +196,21 @@ describe("logging.ts", () => {
     describe("getStream()", () => {
       it("should create a new stream if one doesn't exist", function () {
         // ensure we start with no existing stream
-        assert.strictEqual(instanceOfRotatingLogManager["stream"], undefined);
+        assert.strictEqual(instance["stream"], undefined);
 
-        const stream = instanceOfRotatingLogManager.getStream();
+        const stream = instance.getStream();
 
         // check that stream is created and has expected properties
         assert.ok(stream, "Stream should be created");
         // check that the stream is stored internally
-        assert.strictEqual(instanceOfRotatingLogManager["stream"], stream);
+        assert.strictEqual(instance["stream"], stream);
         // check that stream is not closed initially
         assert.strictEqual(stream.closed, false, "New stream should not be closed");
       });
 
       it("should return existing stream on subsequent calls", function () {
-        const stream1 = instanceOfRotatingLogManager.getStream();
-        const stream2 = instanceOfRotatingLogManager.getStream();
+        const stream1 = instance.getStream();
+        const stream2 = instance.getStream();
 
         assert.strictEqual(stream1, stream2);
       });
@@ -235,7 +235,7 @@ describe("logging.ts", () => {
           return uri.fsPath.includes(`${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`);
         });
 
-        const fileUris = instanceOfRotatingLogManager.getFileUris();
+        const fileUris = instance.getFileUris();
 
         assert.strictEqual(fileUris.length, 1);
         assert.ok(fileUris[0].fsPath.includes(`${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`));
@@ -244,13 +244,13 @@ describe("logging.ts", () => {
 
       it("should return current and rotated file URIs when rotated files exist", () => {
         // generate some rotated files by calling the filename generator
-        instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 1);
-        instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 2);
+        instance.rotatingFilenameGenerator(new Date(), 1);
+        instance.rotatingFilenameGenerator(new Date(), 2);
 
         // mock that all files exist
         existsSyncStub.returns(true);
 
-        const fileUris = instanceOfRotatingLogManager.getFileUris();
+        const fileUris = instance.getFileUris();
 
         assert.strictEqual(fileUris.length, 3);
 
@@ -272,15 +272,15 @@ describe("logging.ts", () => {
 
       it("should filter out non-existent files", () => {
         // generate some rotated files
-        instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 1);
-        instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), 2);
+        instance.rotatingFilenameGenerator(new Date(), 1);
+        instance.rotatingFilenameGenerator(new Date(), 2);
 
         // mock that only current file and first rotated file exist
         existsSyncStub.callsFake((uri: Uri) => {
           return !uri.fsPath.includes(".2.log");
         });
 
-        const fileUris = instanceOfRotatingLogManager.getFileUris();
+        const fileUris = instance.getFileUris();
 
         assert.strictEqual(fileUris.length, 2);
 
@@ -293,7 +293,7 @@ describe("logging.ts", () => {
         // mock that no files exist
         existsSyncStub.returns(false);
 
-        const fileUris = instanceOfRotatingLogManager.getFileUris();
+        const fileUris = instance.getFileUris();
 
         assert.strictEqual(fileUris.length, 0);
       });
@@ -301,12 +301,12 @@ describe("logging.ts", () => {
       it("should return current file + MAX_LOGFILES rotated files", () => {
         // generate maximum number of rotated files
         for (let i = 1; i <= MAX_LOGFILES + 2; i++) {
-          instanceOfRotatingLogManager.rotatingFilenameGenerator(new Date(), i);
+          instance.rotatingFilenameGenerator(new Date(), i);
         }
 
         existsSyncStub.returns(true);
 
-        const fileUris = instanceOfRotatingLogManager.getFileUris();
+        const fileUris = instance.getFileUris();
 
         // should have current file + MAX_LOGFILES rotated files
         assert.strictEqual(fileUris.length, MAX_LOGFILES + 1);
