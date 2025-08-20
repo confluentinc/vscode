@@ -6,7 +6,7 @@ All notable changes to this extension will be documented in this file.
 
 ## 1.5.3
 
-(Minor telemetry update for internal support purposes. No user-facing changes.)
+(Minor telemetry update for internal support purposes, no user-facing changes.)
 
 ## 1.5.2
 
