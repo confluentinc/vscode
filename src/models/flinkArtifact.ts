@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
@@ -61,6 +62,19 @@ export class FlinkArtifactTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(resource.iconName);
     this.description = resource.description;
 
-    // TODO: add tooltip
+    this.tooltip = createFlinkArtifactToolTip(resource);
   }
+}
+
+export function createFlinkArtifactToolTip(resource: FlinkArtifact): vscode.MarkdownString {
+  return new vscode.MarkdownString(
+    [
+      `**${resource.name}**`,
+      resource.description,
+      `Cloud: ${resource.provider}`,
+      `Region: ${resource.region}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  );
 }
