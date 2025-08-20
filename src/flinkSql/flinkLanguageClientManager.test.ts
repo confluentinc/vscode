@@ -146,40 +146,53 @@ describe("FlinkLanguageClientManager", () => {
   });
 
   describe("validateFlinkSettings", () => {
-    it("should return false when computePoolId is missing", async () => {
-      // no default Flink settings set
-      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, "").stubGet(FLINK_CONFIG_DATABASE, "");
-
+    it("should return false when no computePoolId is provided", async () => {
       const result = await flinkManager.validateFlinkSettings(null);
       assert.strictEqual(result, false);
     });
 
-    it("should return false when compute pool is invalid", async () => {
-      // invalid default compute pool
-      stubbedConfigs
-        .stubGet(FLINK_CONFIG_COMPUTE_POOL, "invalid-pool-id")
-        .stubGet(FLINK_CONFIG_DATABASE, "");
+    it("should return false when no ccloud environments", async () => {
+      ccloudLoaderStub.getEnvironments.resolves([]);
 
-      const result = await flinkManager.validateFlinkSettings("invalid-pool-id");
+      const result = await flinkManager.validateFlinkSettings("pool-id");
       assert.strictEqual(result, false);
     });
 
-    it("should return true when compute pool is valid", async () => {
+    it("should return false when cannot find the given computePoolId in environments", async () => {
       // valid default compute pool
-      stubbedConfigs
-        .stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID)
-        .stubGet(FLINK_CONFIG_DATABASE, "");
+      ccloudLoaderStub.getEnvironments.resolves([
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          // No flinkComputePools set
+        }),
+      ]);
+
+      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false when cannot find the given computePoolId", async () => {
+      // valid default compute pool
+      ccloudLoaderStub.getEnvironments.resolves([
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          // No flinkComputePools set
+        }),
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+        }),
+      ]);
 
       const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
       assert.strictEqual(result, true);
     });
 
-    it("should check resources availability when compute pool is set", async () => {
-      // valid default Flink settings
-      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
+    it("should return false if an error occurs while checking compute pool availability", async () => {
+      ccloudLoaderStub.getEnvironments.rejects(new Error("Test error"));
 
       const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      assert.strictEqual(result, true);
+      assert.strictEqual(result, false);
     });
   });
 
