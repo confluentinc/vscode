@@ -2,7 +2,12 @@ import * as vscode from "vscode";
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
-import { closeSentryClient, initSentry, sentryCaptureException } from "./telemetry/sentryClient";
+import {
+  closeSentryClient,
+  initSentry,
+  sentryCaptureEvent,
+  sentryCaptureException,
+} from "./telemetry/sentryClient";
 if (process.env.SENTRY_DSN) {
   initSentry();
 }
@@ -127,9 +132,11 @@ export async function activate(
   logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
-    logger.info(`Extension version "${extVersion}" fully activated`);
+    const message = `Extension version "${extVersion}" fully activated`;
+    logger.info(message);
     observabilityContext.extensionActivated = true;
     logUsage(UserEvent.ExtensionActivation, { status: "completed" });
+    sentryCaptureEvent({ message, level: "info" });
   } catch (e) {
     logger.error(`Error activating extension version "${extVersion}":`, e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
