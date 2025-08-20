@@ -10,6 +10,13 @@ export type EnvironmentId = string & { readonly brand: unique symbol };
 
 export type OrganizationId = string & { readonly brand: unique symbol };
 
+// GCP is not supported by Flink UDFs / artifacts yet, but added to make updating easier when it is
+export enum CloudProvider {
+  AWS = "AWS",
+  Azure = "Azure",
+  GCP = "GCP",
+}
+
 // Function to convert a ConnectionId to a ConnectionType, because we can always
 // go from one to the other.
 export function connectionIdToType(id: ConnectionId): ConnectionType {
