@@ -74,7 +74,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /**
    * When the ccloud connection state changes, reset the loader's state. If
-   * just edged to connected, preemptively perform the coarse preloading process.
+   * we just transitioned to connected, preemptively perform the coarse preloading process.
    */
   public async ccloudConnectedHandler(connected: boolean): Promise<void> {
     await this.reset();
