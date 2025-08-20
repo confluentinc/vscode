@@ -66,7 +66,7 @@ export class FlinkArtifactTreeItem extends TreeItem {
   }
 }
 
-function createFlinkArtifactToolTip(resource: FlinkArtifact): vscode.MarkdownString {
+export function createFlinkArtifactToolTip(resource: FlinkArtifact): vscode.MarkdownString {
   return new vscode.MarkdownString(
     [
       `**${resource.name}**`,
