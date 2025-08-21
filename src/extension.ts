@@ -72,7 +72,7 @@ import {
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
-import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
+import { cleanupOldLogFiles, Logger, OUTPUT_CHANNEL } from "./logging";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -97,6 +97,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
+import { clearFlinkSQLLanguageServerOutputChannel } from "./flinkSql/logging";
 
 const logger = new Logger("extension");
 
@@ -584,12 +585,11 @@ export function deactivate() {
   // close the sidecar log file stream, if it exists
   closeFormattedSidecarLogStream();
 
+  // close the flink language server log file stream, if it exists
+  clearFlinkSQLLanguageServerOutputChannel();
+
   // close the file stream used with OUTPUT_CHANNEL -- needs to be done last to avoid any other
-  // cleanup logging attempting to write to the file stream
-  const logStream = getLogFileStream();
-  if (logStream) {
-    logStream.end();
-  }
+  OUTPUT_CHANNEL.dispose();
   console.info("Extension deactivated");
 }
 
