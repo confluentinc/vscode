@@ -222,22 +222,17 @@ async function saveSupportZip() {
     zipPath: `${uri.path.split("/").pop() || "vscode-confluent.log"}`,
   }));
 
-  // add flink language server log files
+  // add flink language server log files if Flink Language Server is enabled and has started
   if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
-    const flinkOutputChannel = FlinkLanguageClientManager.getInstance()
+    const flinkLanguageServerLogfileURIs = FlinkLanguageClientManager.getInstance()
       .getOutputChannel()
       .getFileUris();
-    try {
-      fileEntries.push(
-        ...flinkOutputChannel.map((uri) => ({
-          sourceUri: uri,
-          zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`,
-        })),
-      );
-    } catch {
-      // shouldn't happen, but if the log file doesn't exist yet, we'll log and move on
-      logger.debug("Flink language server log file not found, skipping in support zip");
-    }
+    fileEntries.push(
+      ...flinkLanguageServerLogfileURIs.map((uri) => ({
+        sourceUri: uri,
+        zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`,
+      })),
+    );
   }
 
   // add the raw JSON log file first

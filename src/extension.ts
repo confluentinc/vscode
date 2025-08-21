@@ -584,7 +584,7 @@ export function deactivate() {
   // close the sidecar log file stream, if it exists
   closeFormattedSidecarLogStream();
 
-  // close the file stream used with EXTENSION_OUTPUT_CHANNEL -- needs to be done last to avoid any other
+  // close the file stream used with EXTENSION_OUTPUT_CHANNEL -- needs to be done last to avoid any other cleanup logging attempting to write to the file stream
   EXTENSION_OUTPUT_CHANNEL.dispose();
   console.info("Extension deactivated");
 }

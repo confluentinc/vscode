@@ -189,6 +189,27 @@ describe("logging.ts", () => {
         existsSyncStub = sandbox.stub(fsWrappers, "existsSync");
       });
 
+      it("should return deduplicated URIs when current file is included in rotated files", () => {
+        // add rotated file
+        instance.rotatingFilenameGenerator(new Date(), 1);
+        // force duplicate of current file in rotated files
+        instance["_rotatedFileNames"].push(instance.currentLogFileName);
+
+        existsSyncStub.returns(true);
+        const fileUris = instance.getFileUris();
+
+        // should have 2 results due to deduplication (not 3)
+        assert.strictEqual(fileUris.length, 2);
+
+        // check current file appears only once
+        const currentFileUris = fileUris.filter(
+          (uri) =>
+            uri.fsPath.includes(`${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`) &&
+            !uri.fsPath.includes(".1."),
+        );
+        assert.strictEqual(currentFileUris.length, 1);
+      });
+
       it("should return only current file URI when no rotated files exist", () => {
         // create stub for writeableTmpDir to return a test directory
         writeableTmpDirStub = sandbox
