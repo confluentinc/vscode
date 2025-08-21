@@ -6,10 +6,9 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import * as commands from "./index";
-import * as uploadUDFCommand from "./uploadUDF";
-import * as uploadUDF from "./utils/uploadUDF";
+import * as uploadArtifact from "./utils/uploadArtifact";
 
-describe("uploadUDF Command", () => {
+describe("uploadArtifact Command", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -20,7 +19,7 @@ describe("uploadUDF Command", () => {
     sandbox.restore();
   });
 
-  describe("uploadUDFCommand", () => {
+  describe("uploadArtifactCommand", () => {
     const mockParams = {
       environment: "env-123456",
       cloud: "Azure",
@@ -38,8 +37,8 @@ describe("uploadUDF Command", () => {
       kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
     };
     it("should fail if there is no params", async () => {
-      sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(undefined);
-      const result = await uploadUDFCommand.uploadUDFCommand();
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(undefined);
+      const result = await uploadArtifact.uploadArtifactCommand();
 
       assert.strictEqual(result, undefined);
     });
@@ -52,26 +51,26 @@ describe("uploadUDF Command", () => {
         environment: " env-123456",
       };
 
-      sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
-      sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadUDF, "handleUploadToCloudProvider").resolves();
-      sandbox.stub(uploadUDF, "uploadArtifactToCCloud").resolves(mockCreateResponse);
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
 
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
-      await uploadUDFCommand.uploadUDFCommand();
+      await uploadUDFCommand.uploadArtifactCommand();
 
       sinon.assert.calledOnce(showInfoStub);
       sinon.assert.calledWithMatch(showInfoStub, sinon.match(/uploaded successfully/));
     });
 
     it("should show error message if handleUploadToCloudProvider fails", async () => {
-      sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
-      sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadUDF, "handleUploadToCloudProvider").rejects(new Error("fail"));
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").rejects(new Error("fail"));
       const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-      await uploadUDFCommand.uploadUDFCommand();
+      await uploadUDFCommand.uploadArtifactCommand();
 
       sinon.assert.calledOnce(showErrorStub);
       sinon.assert.calledWithMatch(showErrorStub, sinon.match(/error/i));
@@ -87,15 +86,17 @@ describe("uploadUDF Command", () => {
         cloud: "Azure",
       };
 
-      sandbox.stub(uploadUDF, "promptForUDFUploadParams").resolves(mockParams);
-      sandbox.stub(uploadUDF, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      const handleUploadStub = sandbox.stub(uploadUDF, "handleUploadToCloudProvider").resolves();
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      const handleUploadStub = sandbox
+        .stub(uploadArtifact, "handleUploadToCloudProvider")
+        .resolves();
       const createArtifactStub = sandbox
-        .stub(uploadUDF, "uploadArtifactToCCloud")
+        .stub(uploadArtifact, "uploadArtifactToCCloud")
         .resolves(mockCreateResponse);
       sandbox.stub(vscode.window, "showInformationMessage");
 
-      await uploadUDFCommand.uploadUDFCommand();
+      await uploadArtifact.uploadArtifactCommand();
 
       sinon.assert.calledOnce(handleUploadStub);
       sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
@@ -117,7 +118,7 @@ describe("uploadUDF Command", () => {
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
         "confluent.uploadUDF",
-        uploadUDFCommand.uploadUDFCommand,
+        uploadUDFCommand.uploadArtifactCommand,
       );
     });
   });

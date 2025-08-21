@@ -273,8 +273,8 @@
     ],
     "commands": [
       {
-        "command": "confluent.uploadUDF",
-        "title": "Confluent: Upload UDF",
+        "command": "confluent.uploadArtifact",
+        "title": "Confluent: Upload Artifact",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },

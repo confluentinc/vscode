@@ -23,16 +23,16 @@ import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
-import * as uploadToAzure from "./uploadToAzure";
 import {
   buildCreateArtifactRequest,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   prepareUploadFileFromUri,
   PRESIGNED_URL_LOCATION,
-  promptForUDFUploadParams,
+  promptForArtifactUploadParams,
   uploadArtifactToCCloud,
-} from "./uploadUDF";
+} from "./uploadArtifact";
+import * as uploadToAzure from "./uploadToAzure";
 describe("uploadUDF", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
@@ -121,7 +121,7 @@ describe("uploadUDF", () => {
     });
   });
 
-  describe("promptForUDFUploadParams", () => {
+  describe("promptForArtifactUploadParams", () => {
     let flinkCcloudEnvironmentQuickPickStub: sinon.SinonStub;
     let cloudProviderRegionQuickPickStub: sinon.SinonStub;
     const fakeCloudProviderRegion: FcpmV2RegionListDataInner = {
@@ -145,13 +145,13 @@ describe("uploadUDF", () => {
       );
     });
     it("should return undefined if environment is not selected", async () => {
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
     });
 
     it("should return undefined if region is not selected", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(TEST_CCLOUD_ENVIRONMENT);
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
     });
 
@@ -171,7 +171,7 @@ describe("uploadUDF", () => {
 
       const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
 
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
 
       sinon.assert.calledWithMatch(
         errorNotificationStub,
@@ -182,7 +182,7 @@ describe("uploadUDF", () => {
     });
     it("should silently return if user cancels the file selection", async () => {
       sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
     });
 
@@ -200,7 +200,7 @@ describe("uploadUDF", () => {
         .stub(notifications, "showWarningNotificationWithButtons")
         .resolves(undefined);
 
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
 
       assert.strictEqual(result, undefined);
 
@@ -223,7 +223,7 @@ describe("uploadUDF", () => {
 
       sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
 
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
 
       assert.deepStrictEqual(result, {
         environment: mockEnvironment.id,

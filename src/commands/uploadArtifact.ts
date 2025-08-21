@@ -1,27 +1,22 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import {
-  GetArtifactV1FlinkArtifact200Response,
-  PresignedUploadUrlArtifactV1PresignedUrlRequest,
-} from "../clients/flinkArtifacts/models";
+import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { logError } from "../errors";
 import { showErrorNotificationWithButtons } from "../notifications";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
-  promptForUDFUploadParams,
+  promptForArtifactUploadParams,
   uploadArtifactToCCloud,
-} from "./utils/uploadUDF";
+} from "./utils/uploadArtifact";
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
  */
 
-export async function uploadUDFCommand(): Promise<
-  GetArtifactV1FlinkArtifact200Response | undefined
-> {
+export async function uploadArtifactCommand(): Promise<void> {
   try {
-    const params = await promptForUDFUploadParams();
+    const params = await promptForArtifactUploadParams();
 
     if (!params) {
       // User cancelled the prompt
@@ -57,15 +52,15 @@ export async function uploadUDFCommand(): Promise<
       },
     );
   } catch (err) {
-    logError(err, "Failed to execute Upload UDF command");
+    logError(err, "Failed to execute Upload Artifact command");
     void showErrorNotificationWithButtons(
-      "An error occurred while uploading UDF. See logs for details.",
+      "An error occurred while uploading Artifact. See logs for details.",
     );
   }
 }
 /**
- * Registers the "confluent.uploadUDF" command with logging.
+ * Registers the "confluent.uploadArtifact" command with logging.
  */
-export function registerUploadUDFCommand(): vscode.Disposable {
-  return registerCommandWithLogging("confluent.uploadUDF", uploadUDFCommand);
+export function registerUploadArtifactCommand(): vscode.Disposable {
+  return registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand);
 }

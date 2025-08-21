@@ -7,7 +7,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import { udfUploadCompleted } from "../../emitters";
+import { artifactUploadCompleted } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
@@ -22,7 +22,7 @@ import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure } from "./uploadToAzure";
 export { uploadFileToAzure };
 
-export interface UDFUploadParams {
+export interface ArtifactUploadParams {
   environment: string;
   cloud: string;
   region: string;
@@ -31,7 +31,7 @@ export interface UDFUploadParams {
   selectedFile: vscode.Uri;
 }
 
-const logger = new Logger("commands/uploadUDF");
+const logger = new Logger("commands/uploadArtifact");
 
 export const PRESIGNED_URL_LOCATION = "PRESIGNED_URL_LOCATION";
 
@@ -81,18 +81,18 @@ export async function getPresignedUploadUrl(
   return urlResponse;
 }
 
-export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
+export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
 
   if (!environment || !environment.id) {
-    void showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
+    void showErrorNotificationWithButtons("Upload Artifact cancelled: Environment ID is required.");
     return undefined;
   }
 
   const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
   if (!cloudRegion) {
-    void showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
+    void showErrorNotificationWithButtons("Upload Artifact cancelled: Cloud provider is required.");
     return undefined;
   }
 
@@ -101,7 +101,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     cloud = CloudProvider.Azure;
   } else {
     void showErrorNotificationWithButtons(
-      `Upload UDF cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
+      `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
     );
     return undefined;
   }
@@ -124,13 +124,15 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name for the UDF",
+    prompt: "Enter the artifact name for the Artifact",
     ignoreFocusOut: true,
     validateInput: (value) => (value ? undefined : "Artifact name is required"),
   });
 
   if (!artifactName) {
-    void showWarningNotificationWithButtons("Upload UDF cancelled: Artifact name is required.");
+    void showWarningNotificationWithButtons(
+      "Upload Artifact cancelled: Artifact name is required.",
+    );
     return undefined;
   }
 
@@ -145,7 +147,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
 }
 
 export async function handleUploadToCloudProvider(
-  params: UDFUploadParams,
+  params: ArtifactUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
   await vscode.window.withProgress(
@@ -188,7 +190,7 @@ export async function handleUploadToCloudProvider(
 }
 
 export async function uploadArtifactToCCloud(
-  params: UDFUploadParams,
+  params: ArtifactUploadParams,
   uploadId: string,
 ): Promise<CreateArtifactV1FlinkArtifact201Response> {
   try {
@@ -222,7 +224,7 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
-    udfUploadCompleted.fire();
+    artifactUploadCompleted.fire();
 
     return response;
   } catch (error) {
@@ -263,7 +265,7 @@ export async function uploadArtifactToCCloud(
 }
 
 export function buildCreateArtifactRequest(
-  params: UDFUploadParams,
+  params: ArtifactUploadParams,
   uploadId: string,
 ): CreateArtifactV1FlinkArtifactRequest {
   return {
