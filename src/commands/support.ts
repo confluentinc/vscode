@@ -5,8 +5,9 @@ import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { getFlinkLSLogFileUris } from "../flinkSql/logging";
-import { CURRENT_LOGFILE_NAME, getLogFileDir, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
+import { ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER } from "../extensionSettings/constants";
+import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
+import { EXTENSION_OUTPUT_CHANNEL, Logger } from "../logging";
 import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
 import { getSidecarFormattedLogfilePath, getSidecarLogfilePath } from "../sidecar/logging";
 import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
@@ -58,20 +59,6 @@ function openSettings() {
   commands.executeCommand("workbench.action.openSettings", "@ext:confluentinc.vscode-confluent");
 }
 
-/** Return the file URIs for the extension's currently-active log file and any rotated log files for
- * this extension instance, normalized for the user's OS. */
-export function extensionLogFileUris(): Uri[] {
-  const uris: Uri[] = [];
-  const filenames: string[] = [CURRENT_LOGFILE_NAME, ...ROTATED_LOGFILE_NAMES];
-  for (const filename of filenames) {
-    const uri = Uri.file(normalize(join(getLogFileDir(), filename)));
-    if (!uris.some((existingUri) => existingUri.fsPath === uri.fsPath)) {
-      uris.push(uri);
-    }
-  }
-  return uris;
-}
-
 /** Return the file URI for the sidecar's log file, normalized for the user's OS. */
 export function sidecarLogFileUri(): Uri {
   return Uri.file(normalize(getSidecarLogfilePath()));
@@ -87,11 +74,11 @@ export function sidecarFormattedLogFileUri(): Uri {
  * If multiple files exist, they'll be saved as a zip.
  */
 async function saveExtensionLogFile() {
-  const logUris: Uri[] = extensionLogFileUris();
+  const logUris: Uri[] = EXTENSION_OUTPUT_CHANNEL.getFileUris();
 
   // one file: save it directly
   if (logUris.length === 1) {
-    const defaultPath: string = join(homedir(), CURRENT_LOGFILE_NAME);
+    const defaultPath: string = join(homedir(), EXTENSION_OUTPUT_CHANNEL.logFileName);
     const saveUri: Uri | undefined = await window.showSaveDialog({
       defaultUri: Uri.file(defaultPath),
       filters: { "Log files": ["log"] },
@@ -230,18 +217,28 @@ async function saveSupportZip() {
 
   // add extension+sidecar log files
   // NOTE: this will not include other workspaces' logs, only the current workspace
-  const fileEntries: ZipFileEntry[] = extensionLogFileUris().map((uri) => ({
+  const fileEntries: ZipFileEntry[] = EXTENSION_OUTPUT_CHANNEL.getFileUris().map((uri) => ({
     sourceUri: uri,
     zipPath: `${uri.path.split("/").pop() || "vscode-confluent.log"}`,
   }));
 
   // add flink language server log files
-  fileEntries.push(
-    ...getFlinkLSLogFileUris().map((uri) => ({
-      sourceUri: uri,
-      zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`,
-    })),
-  );
+  if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
+    const flinkOutputChannel = FlinkLanguageClientManager.getInstance()
+      .getOutputChannel()
+      .getFileUris();
+    try {
+      fileEntries.push(
+        ...flinkOutputChannel.map((uri) => ({
+          sourceUri: uri,
+          zipPath: `${uri.path.split("/").pop() || "vscode-confluent-flink-language-server.log"}`,
+        })),
+      );
+    } catch {
+      // shouldn't happen, but if the log file doesn't exist yet, we'll log and move on
+      logger.debug("Flink language server log file not found, skipping in support zip");
+    }
+  }
 
   // add the raw JSON log file first
   fileEntries.push({
