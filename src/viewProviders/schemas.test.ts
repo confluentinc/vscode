@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_SCHEMA,
@@ -14,7 +15,7 @@ import { ContextValues, getContextValue } from "../context/values";
 import { SchemaVersionChangeEvent, SubjectChangeEvent } from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 describe("SchemasViewProvider", () => {
   let provider: SchemasViewProvider;
@@ -550,6 +551,58 @@ describe("SchemasViewProvider", () => {
         // Should not have called .refresh() or changed the map
         assert.ok(onDidChangeTreeDataFireStub.notCalled);
         assert.strictEqual(subjectsInTreeView.size, 0);
+      });
+    });
+  });
+
+  describe("setEventListeners() wires the proper handler methods to the proper event emitters", () => {
+    let emitterStubs: StubbedEventEmitters;
+
+    beforeEach(() => {
+      // Stub all event emitters in the emitters module
+      emitterStubs = eventEmitterStubs(sandbox);
+    });
+
+    // Define test cases as corresponding pairs of
+    // [event emitter name, view provider handler method name]
+    const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof SchemasViewProvider]> = [
+      ["environmentChanged", "environmentChangedHandler"],
+      ["ccloudConnected", "ccloudConnectedHandler"],
+      ["localSchemaRegistryConnected", "localSchemaRegistryConnectedHandler"],
+      ["currentSchemaRegistryChanged", "currentSchemaRegistryChangedHandler"],
+      ["schemaSearchSet", "schemaSearchSetHandler"],
+      ["schemaSubjectChanged", "schemaSubjectChangedHandler"],
+      ["schemaVersionsChanged", "schemaVersionsChangedHandler"],
+    ];
+
+    it("setEventListeners should return the expected number of listeners", () => {
+      const listeners = provider.setEventListeners();
+      assert.strictEqual(listeners.length, handlerEmitterPairs.length);
+    });
+
+    handlerEmitterPairs.forEach(([emitterName, handlerMethodName]) => {
+      it(`should register ${handlerMethodName} with ${emitterName} emitter`, () => {
+        // Create stub for the handler method
+        const handlerStub = sandbox.stub(provider, handlerMethodName);
+
+        // Re-invoke setEventListeners() to capture emitter .event() stub calls
+        provider.setEventListeners();
+
+        const emitterStub = emitterStubs[emitterName]!;
+
+        // Verify the emitter's event method was called
+        sinon.assert.calledOnce(emitterStub.event);
+
+        // Capture the handler function that was registered
+        const registeredHandler = emitterStub.event.firstCall.args[0];
+
+        // Call the registered handler
+        registeredHandler();
+
+        // Verify the expected method stub was called,
+        // proving that the expected handler was registered
+        // to the expected emitter.
+        sinon.assert.calledOnce(handlerStub);
       });
     });
   });

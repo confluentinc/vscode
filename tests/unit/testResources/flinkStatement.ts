@@ -1,3 +1,4 @@
+import { SqlV1StatementStatus } from "../../../src/clients/flinkSql";
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
@@ -63,4 +64,8 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       stopped: false,
     },
   });
+}
+
+export function makeStatus(phase: Phase): SqlV1StatementStatus {
+  return createFlinkStatement({ phase }).status;
 }

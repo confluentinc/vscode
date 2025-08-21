@@ -43,7 +43,7 @@ import {
   loadLocalResources,
   ResourceViewProvider,
 } from "./resources";
-import { SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
@@ -472,8 +472,6 @@ describe("ResourceViewProvider search behavior", () => {
     sandbox.stub(ccloudLoader, "getSchemaRegistryForEnvironmentId").resolves();
 
     provider = ResourceViewProvider.getInstance();
-    // skip any direct connection rehydration behavior for these tests
-    provider["rehydratedDirectConnections"] = true;
   });
 
   afterEach(() => {

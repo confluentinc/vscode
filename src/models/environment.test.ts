@@ -12,83 +12,40 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { LOCAL_ENVIRONMENT_NAME } from "../constants";
+import { CCLOUD_BASE_PATH, LOCAL_ENVIRONMENT_NAME } from "../constants";
 import {
   CCloudEnvironment,
   DirectEnvironment,
   EnvironmentTreeItem,
   LocalEnvironment,
 } from "./environment";
+import { CCloudFlinkComputePool } from "./flinkComputePool";
+import { CCloudKafkaCluster, DirectKafkaCluster, LocalKafkaCluster } from "./kafkaCluster";
 import { EnvironmentId } from "./resource";
+import { CCloudSchemaRegistry, DirectSchemaRegistry, LocalSchemaRegistry } from "./schemaRegistry";
 
-describe("models/environment.ts Environment", () => {
-  it("should return the correct .children for a CCloudEnvironment", () => {
-    const env: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
-
-    // no children by default
-    assert.deepStrictEqual(env.children, []);
-
-    // add a Kafka cluster
-    const envWithKafka = new CCloudEnvironment({
-      ...env,
-      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+describe("models/environment.ts DirectEnvironment", () => {
+  it("constructs from plain object as from JSON representation properly", () => {
+    const env = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
     });
-    assert.deepStrictEqual(envWithKafka.children, [TEST_CCLOUD_KAFKA_CLUSTER]);
 
-    // add SR
-    const envWithKafkaSR = new CCloudEnvironment({
-      ...envWithKafka,
-      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
-    });
-    assert.deepStrictEqual(envWithKafkaSR.children, [
-      TEST_CCLOUD_KAFKA_CLUSTER,
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-    ]);
+    assert.strictEqual(env.id, TEST_DIRECT_ENVIRONMENT.id);
+    assert.ok(env.kafkaClusters[0] instanceof DirectKafkaCluster);
+    assert.ok(env.schemaRegistry instanceof DirectSchemaRegistry);
 
-    // add Flink
-    const envWithAll = new CCloudEnvironment({
-      ...envWithKafkaSR,
-      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    });
-    assert.deepStrictEqual(envWithAll.children, [
-      TEST_CCLOUD_KAFKA_CLUSTER,
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      TEST_CCLOUD_FLINK_COMPUTE_POOL,
-    ]);
-  });
+    // Now go to / from JSON to end up with just plain objects all the way down.
+    const rawFromStorage = JSON.parse(JSON.stringify(env));
+    // Now reconstruct the DirectEnvironment from the plain object.
+    const asReconstitutedFromStorage = new DirectEnvironment(rawFromStorage);
 
-  it("should return the correct .children for a LocalEnvironment", () => {
-    const env: LocalEnvironment = TEST_LOCAL_ENVIRONMENT;
-
-    // no children by default
-    assert.deepStrictEqual(env.children, []);
-
-    // add a child
-    const envWithKafka = new LocalEnvironment({
-      ...env,
-      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
-    });
-    assert.deepStrictEqual(envWithKafka.children, [TEST_LOCAL_KAFKA_CLUSTER]);
-
-    // add SR
-    const envWithKafkaSR = new LocalEnvironment({
-      ...envWithKafka,
-      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
-    });
-    assert.deepStrictEqual(envWithKafkaSR.children, [
-      TEST_LOCAL_KAFKA_CLUSTER,
-      TEST_LOCAL_SCHEMA_REGISTRY,
-    ]);
-
-    // try to add Flink, but it should be ignored
-    const envWithAll = new LocalEnvironment({
-      ...envWithKafkaSR,
-      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    } as any);
-    assert.deepStrictEqual(envWithAll.children, [
-      TEST_LOCAL_KAFKA_CLUSTER,
-      TEST_LOCAL_SCHEMA_REGISTRY,
-    ]);
+    // Should have properly promoted the plain object kafka cluster and schema registry
+    // to their respective classes.
+    assert.ok(asReconstitutedFromStorage.kafkaClusters[0] instanceof DirectKafkaCluster);
+    assert.ok(asReconstitutedFromStorage.schemaRegistry instanceof DirectSchemaRegistry);
+    assert.deepStrictEqual(asReconstitutedFromStorage, env);
   });
 
   it("should return the correct .children for a DirectEnvironment", () => {
@@ -126,6 +83,127 @@ describe("models/environment.ts Environment", () => {
   });
 });
 
+describe("models/environment.ts LocalEnvironment", () => {
+  it("constructs from plain object as from JSON representation properly", () => {
+    const env = new LocalEnvironment({
+      id: TEST_LOCAL_ENVIRONMENT.id,
+      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+    });
+
+    assert.strictEqual(env.id, TEST_LOCAL_ENVIRONMENT.id);
+    assert.ok(env.kafkaClusters[0] instanceof LocalKafkaCluster);
+    assert.ok(env.schemaRegistry instanceof LocalSchemaRegistry);
+
+    // Now go to / from JSON to end up with just plain objects all the way down.
+    const rawFromStorage = JSON.parse(JSON.stringify(env));
+    // Now reconstruct the LocalEnvironment from the plain object.
+    const asReconstitutedFromStorage = new LocalEnvironment(rawFromStorage);
+
+    // Should have properly promoted the plain object kafka cluster and schema registry
+    // to their respective classes.
+    assert.ok(asReconstitutedFromStorage.kafkaClusters[0] instanceof LocalKafkaCluster);
+    assert.ok(asReconstitutedFromStorage.schemaRegistry instanceof LocalSchemaRegistry);
+    assert.deepStrictEqual(asReconstitutedFromStorage, env);
+  });
+
+  it("should return the correct .children for a LocalEnvironment", () => {
+    const env: LocalEnvironment = TEST_LOCAL_ENVIRONMENT;
+
+    // no children by default
+    assert.deepStrictEqual(env.children, []);
+
+    // add a child
+    const envWithKafka = new LocalEnvironment({
+      ...env,
+      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+    });
+    assert.deepStrictEqual(envWithKafka.children, [TEST_LOCAL_KAFKA_CLUSTER]);
+
+    // add SR
+    const envWithKafkaSR = new LocalEnvironment({
+      ...envWithKafka,
+      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+    });
+    assert.deepStrictEqual(envWithKafkaSR.children, [
+      TEST_LOCAL_KAFKA_CLUSTER,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+    ]);
+
+    // try to add Flink, but it should be ignored
+    const envWithAll = new LocalEnvironment({
+      ...envWithKafkaSR,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    } as any);
+    assert.deepStrictEqual(envWithAll.children, [
+      TEST_LOCAL_KAFKA_CLUSTER,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+    ]);
+  });
+});
+
+describe("models/environment.ts CCloudEnvironment", () => {
+  it("constructs from plain object as from JSON representation properly", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    });
+
+    assert.strictEqual(env.id, TEST_CCLOUD_ENVIRONMENT.id);
+    assert.ok(env.kafkaClusters[0] instanceof CCloudKafkaCluster);
+    assert.ok(env.schemaRegistry instanceof CCloudSchemaRegistry);
+    assert.ok(env.flinkComputePools[0] instanceof CCloudFlinkComputePool);
+
+    // Now go to / from JSON to end up with just plain objects all the way down.
+    const rawFromStorage = JSON.parse(JSON.stringify(env));
+    // Now reconstruct the CCloudEnvironment from the plain object.
+    const asReconstitutedFromStorage = new CCloudEnvironment(rawFromStorage);
+    // Should have properly promoted the plain object kafka cluster and schema registry
+    // to their respective classes.
+    assert.ok(asReconstitutedFromStorage.kafkaClusters[0] instanceof CCloudKafkaCluster);
+    assert.ok(asReconstitutedFromStorage.schemaRegistry instanceof CCloudSchemaRegistry);
+    assert.ok(asReconstitutedFromStorage.flinkComputePools[0] instanceof CCloudFlinkComputePool);
+    assert.deepStrictEqual(asReconstitutedFromStorage, env);
+  });
+
+  it("should return the correct .children for a CCloudEnvironment", () => {
+    const env: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
+    // no children by default
+    assert.deepStrictEqual(env.children, []);
+
+    // add a Kafka cluster
+    const envWithKafka = new CCloudEnvironment({
+      ...env,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    assert.deepStrictEqual(envWithKafka.children, [TEST_CCLOUD_KAFKA_CLUSTER]);
+
+    // add SR
+    const envWithKafkaSR = new CCloudEnvironment({
+      ...envWithKafka,
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+    });
+    assert.deepStrictEqual(envWithKafkaSR.children, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+    ]);
+
+    // add Flink
+    const envWithAll = new CCloudEnvironment({
+      ...envWithKafkaSR,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    });
+    assert.deepStrictEqual(envWithAll.children, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL,
+    ]);
+  });
+});
+
 describe("models/environment.ts EnvironmentTreeItem", () => {
   it("should be collapsed when the environment has clusters", () => {
     const env = new DirectEnvironment({
@@ -152,7 +230,7 @@ describe("models/environment.ts EnvironmentTreeItem", () => {
     const tooltip = treeItem.tooltip as MarkdownString;
     assert.ok(tooltip.value.includes("Environment"));
     assert.ok(tooltip.value.includes("Stream Governance Package"));
-    assert.ok(tooltip.value.includes("confluent.cloud/environments"));
+    assert.ok(tooltip.value.includes(`${CCLOUD_BASE_PATH}/environments`));
   });
 
   it("ccloud context value positively reflecting flink-compute-pool availablity", () => {

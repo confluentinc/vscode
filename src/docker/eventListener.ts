@@ -317,6 +317,8 @@ export class EventListener {
       });
       // show loader in the Resources view while we wait for the correct log line to appear
       // TODO: also update status bar item once it's available
+
+      // Show progress in both old and new Resources view
       await window.withProgress(
         {
           location: { viewId: "confluent-resources" },
@@ -326,6 +328,7 @@ export class EventListener {
           started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
         },
       );
+
       logger.debug("done waiting for container log line", {
         started,
         stringToInclude: SERVER_STARTED_LOG_LINE,

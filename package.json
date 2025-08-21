@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-28",
+  "version": "1.6.0-79",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -273,6 +273,12 @@
     ],
     "commands": [
       {
+        "command": "confluent.uploadUDF",
+        "title": "Confluent: Upload UDF",
+        "category": "Confluent: Flink Artifacts",
+        "enablement": "isDevelopment"
+      },
+      {
         "command": "confluent.connections.ccloud.signIn",
         "icon": "$(sign-in)",
         "title": "Sign in to Confluent Cloud",
@@ -383,6 +389,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.refreshConnection",
+        "icon": "$(sync)",
+        "title": "Refresh Connection",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.kafka-clusters.item.rename",
         "icon": "$(pencil)",
         "title": "Rename Kafka Cluster",
@@ -408,6 +420,12 @@
       {
         "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
         "title": "Select Flink Environment",
+        "icon": "$(confluent-environment)",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+        "title": "Set Private Network Endpoint(s)",
         "icon": "$(confluent-environment)",
         "category": "Confluent: Resources"
       },
@@ -766,6 +784,11 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
+          },
+          "confluent.experimental.useNewResourcesViewProvider": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Use the new resources view provider for displaying resources in the Confluent extension. This is an experimental feature and may change in future releases.\n\n---\n\n⚠️ **WARNING**: This setting is experimental and may not be fully functional or stable. Must restart extensions for change to take effect."
           }
         }
       },
@@ -781,6 +804,14 @@
             "type": "boolean",
             "default": false,
             "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
+          },
+          "confluent.cloud.privateNetworkEndpoints": {
+            "type": "object",
+            "default": {},
+            "description": "Configure private network endpoints for specific Confluent Cloud environments. Each entry maps an environment ID to its corresponding private endpoints.",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "confluent.ssl.pemPaths": {
             "type": "array",
@@ -862,10 +893,7 @@
           "confluent.flink.enableConfluentCloudLanguageServer": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
-            "tags": [
-              "preview"
-            ]
+            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
           },
           "confluent.flink.enableFlinkArtifacts": {
             "type": "boolean",
@@ -1046,7 +1074,7 @@
         },
         {
           "id": "confluent-flink-statements",
-          "name": "Flink Statements (Preview)",
+          "name": "Flink Statements",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)"
         },
@@ -1205,6 +1233,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.refreshConnection",
+          "when": "false"
+        },
+        {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
         },
@@ -1327,6 +1359,10 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -1388,7 +1424,7 @@
         },
         {
           "command": "confluent.resources.refresh",
-          "when": "view == confluent-resources",
+          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources",
           "group": "navigation@3"
         },
         {
@@ -1519,6 +1555,11 @@
           "group": "2_copy@3"
         },
         {
+          "command": "confluent.resources.refreshConnection",
+          "when": "config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "group": "inline"
+        },
+        {
           "command": "confluent.docker.startLocalResources",
           "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
           "group": "inline"
@@ -1550,17 +1591,17 @@
         },
         {
           "command": "confluent.connections.direct.delete",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /resources-direct-container.*/",
           "group": "inline@3"
         },
         {
           "command": "confluent.connections.direct.edit",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /resources-direct-container.*/",
           "group": "inline@2"
         },
         {
           "command": "confluent.connections.direct.export",
-          "when": "viewItem == direct-environment",
+          "when": "viewItem == direct-environment || viewItem =~ /resources-direct-container.*/",
           "group": "inline@1"
         },
         {
@@ -1700,6 +1741,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
+          "when": "view == confluent-resources && viewItem =~ /.*ccloud-environment/",
           "group": "z_openInCloud"
         },
         {
@@ -2011,7 +2057,7 @@
   "devDependencies": {
     "@0no-co/graphqlsp": "^1.12.8",
     "@eslint/js": "^9.4.0",
-    "@openapitools/openapi-generator-cli": "^2.19.1",
+    "@openapitools/openapi-generator-cli": "^2.22.0",
     "@playwright/test": "^1.45.0",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^28.0.0",

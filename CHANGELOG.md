@@ -4,8 +4,42 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-- Only send the rarer / harder to explain sidecar startup errors to Sentry, so as to lower oncall
-  spiking. Log any startup reason to Segment for tracking, however.
+### Added
+
+- New "Set Private Network Endpoint(s)" command for configuring private network endpoints for a
+  specific CCloud environment.
+
+### Changed
+
+- Telemetry updates to only send less common sidecar startup errors to Sentry.
+- The Resources view has been reimplemented, allowing for independently concurrent initialization of
+  each connection, as well as allowing individual connection refreshing. Users may opt-out of the
+  new implementation by unchecking the 'New Resources View' setting.
+
+## 1.5.3
+
+(Minor telemetry update for internal support purposes, no user-facing changes.)
+
+## 1.5.2
+
+### Added
+
+- Include Flink SQL language server logs in the support .zip to make language server diagnostics and
+  logs available for troubleshooting.
+
+### Fixed
+
+- Improved Flink SQL language client stability and diagnostics handling
+- Updated ide-sidecar version to v0.227.1 to support viewing Kafka topic messages using `zstd`
+  compression through direct connections.
+  ([#2322](https://github.com/confluentinc/vscode/issues/2322))
+
+## 1.5.1
+
+### Changed
+
+- Updated ide-sidecar version to v0.227.0 to support CCloud Flink Language Server connection
+  hardening.
 
 ## 1.5.0
 

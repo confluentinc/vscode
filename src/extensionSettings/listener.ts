@@ -4,6 +4,7 @@ import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManag
 import { Logger } from "../logging";
 import { logUsage, UserEvent } from "../telemetry/events";
 import {
+  CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
   KRB5_CONFIG_PATH,
@@ -13,37 +14,36 @@ import {
 } from "./constants";
 import { updatePreferences } from "./sidecarSync";
 
-const logger = new Logger("preferences.listener");
+const logger = new Logger("extensionSettings.listener");
+
+/** Any settings that require syncing with the sidecar's preferences API. */
+export const PREFERENCES_SYNC_SETTINGS = [
+  SSL_PEM_PATHS,
+  SSL_VERIFY_SERVER_CERT_DISABLED,
+  KRB5_CONFIG_PATH,
+  CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
+];
 
 /** Main listener for any changes to workspace settings. */
 export function createConfigChangeListener(): Disposable {
   // NOTE: this fires from any VS Code configuration, not just configs from our extension
   const disposable: Disposable = workspace.onDidChangeConfiguration(
     async (event: ConfigurationChangeEvent) => {
-      if (event.affectsConfiguration(SSL_PEM_PATHS.id)) {
-        // inform the sidecar that the SSL/TLS .pem paths have changed
-        logger.debug(`"${SSL_PEM_PATHS.id}" config changed`);
-        await updatePreferences();
-        return;
-      }
-
-      if (event.affectsConfiguration(SSL_VERIFY_SERVER_CERT_DISABLED.id)) {
-        // inform the sidecar that the server cert verification has changed
-        logger.debug(`"${SSL_VERIFY_SERVER_CERT_DISABLED.id}" config changed`);
+      const changedId = PREFERENCES_SYNC_SETTINGS.find((setting) =>
+        event.affectsConfiguration(setting.id),
+      );
+      if (changedId) {
+        logger.debug(`"${changedId.id}" setting changed`);
         await updatePreferences();
         return;
       }
 
       if (event.affectsConfiguration(LOCAL_DOCKER_SOCKET_PATH.id)) {
         // just log it so we don't have to log every time we use it
-        logger.debug(`"${LOCAL_DOCKER_SOCKET_PATH.id}" changed:`, LOCAL_DOCKER_SOCKET_PATH.value);
-        return;
-      }
-
-      if (event.affectsConfiguration(KRB5_CONFIG_PATH.id)) {
-        // inform the sidecar that the krb5 config path has changed
-        logger.debug(`"${KRB5_CONFIG_PATH.id}" config changed`);
-        await updatePreferences();
+        logger.debug(
+          `"${LOCAL_DOCKER_SOCKET_PATH.id}" setting changed:`,
+          LOCAL_DOCKER_SOCKET_PATH.value,
+        );
         return;
       }
 
@@ -53,7 +53,7 @@ export function createConfigChangeListener(): Disposable {
       if (event.affectsConfiguration(ENABLE_CHAT_PARTICIPANT.id)) {
         // user toggled the "Enable Chat Participant" experimental setting
         const enabled: boolean = ENABLE_CHAT_PARTICIPANT.value;
-        logger.debug(`"${ENABLE_CHAT_PARTICIPANT.id}" config changed`, { enabled });
+        logger.debug(`"${ENABLE_CHAT_PARTICIPANT.id}" setting changed`, { enabled });
         setContextValue(ContextValues.chatParticipantEnabled, enabled);
         // telemetry for how often users opt in or out of the chat participant feature
         logUsage(UserEvent.ExtensionSettingsChange, {
@@ -67,7 +67,7 @@ export function createConfigChangeListener(): Disposable {
         // user toggled the "Enable Flink CCloud Language Server" preview setting
         // TODO when we remove this flag and settings listener, remove the undefined uri option in `maybeStartLanguageClient`
         const enabled: boolean = ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value;
-        logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" config changed`, { enabled });
+        logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" setting changed`, { enabled });
 
         const manager = FlinkLanguageClientManager.getInstance();
         if (enabled) {

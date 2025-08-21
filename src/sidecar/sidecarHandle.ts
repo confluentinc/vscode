@@ -1,17 +1,18 @@
+import { createHash } from "crypto";
 import { type TadaDocumentNode } from "gql.tada";
 import { print } from "graphql";
 
 // OpenAPI generated static client classes
 
 import {
-  ComputePoolsFcpmV2Api,
-  Configuration as FlinkComputePoolsConfiguration,
-} from "../clients/flinkComputePool";
-
-import {
   FlinkArtifactsArtifactV1Api,
   Configuration as FlinkArtifactsConfiguration,
+  PresignedUrlsArtifactV1Api,
 } from "../clients/flinkArtifacts";
+import {
+  Configuration as FlinkComputePoolsConfiguration,
+  RegionsFcpmV2Api,
+} from "../clients/flinkComputePool";
 import {
   Configuration as FlinkSqlConfiguration,
   StatementResultsSqlV1Api,
@@ -25,6 +26,7 @@ import {
   TopicV3Api,
 } from "../clients/kafkaRest";
 import {
+  BASE_PATH as SCAFFOLDING_SERVICE_BASE_PATH,
   Configuration as ScaffoldingServiceConfiguration,
   TemplatesScaffoldV1Api,
 } from "../clients/scaffoldingService";
@@ -46,11 +48,14 @@ import {
   Configuration as SidecarRestConfiguration,
   VersionResourceApi,
 } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { ConnectionId, IEnvProviderRegion } from "../models/resource";
+import { showWarningNotificationWithButtons } from "../notifications";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
+  CCLOUD_ENV_ID_HEADER,
   CCLOUD_PROVIDER_HEADER,
   CCLOUD_REGION_HEADER,
   CLUSTER_ID_HEADER,
@@ -68,6 +73,12 @@ import {
 import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecarHandle");
+
+/** Shape of objects returned from a GraphQL response's .json(). The data portion will vary per the request. */
+export interface GraphQLResponse {
+  data?: any;
+  errors?: Array<{ message: string }>;
+}
 
 /**
  * A short-term handle to a running, handshaken sidecar process.
@@ -160,6 +171,7 @@ export class SidecarHandle {
    */
   public getTemplatesApi(): TemplatesScaffoldV1Api {
     const config = new ScaffoldingServiceConfiguration({
+      basePath: SCAFFOLDING_SERVICE_BASE_PATH.replace("confluent.cloud", CCLOUD_BASE_PATH),
       headers: {
         // Intercept requests to set the Accept header to `application/*` to handle non-JSON responses
         // For example, the service returns a ZIP file for the `POST .../apply` endpoint
@@ -363,15 +375,25 @@ export class SidecarHandle {
     return new FlinkArtifactsArtifactV1Api(config);
   }
 
-  /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link ComputePoolsFcpmV2Api} client instance */
-  public getFlinkComputePoolsApi(): ComputePoolsFcpmV2Api {
+  /** Create and returns a (Regions API OpenAPI spec) {@link RegionsFcpmV2Api} client instance */
+  public getRegionsFcpmV2Api(): RegionsFcpmV2Api {
     const config = new FlinkComputePoolsConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
+        ...this.defaultClientConfigParams.headers,
         [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
       },
     });
-    return new ComputePoolsFcpmV2Api(config);
+    return new RegionsFcpmV2Api(config);
+  }
+
+  /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link PresignedUrlsArtifactV1Api} client instance */
+  public getFlinkPresignedUrlsApi(providerRegion: IEnvProviderRegion): PresignedUrlsArtifactV1Api {
+    const config = new FlinkArtifactsConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
+    });
+    return new PresignedUrlsArtifactV1Api(config);
   }
 
   /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
@@ -397,6 +419,7 @@ export class SidecarHandle {
   public constructFlinkDataPlaneClientHeaders(providerRegion: IEnvProviderRegion): HTTPHeaders {
     return {
       ...this.defaultClientConfigParams.headers,
+      [CCLOUD_ENV_ID_HEADER]: providerRegion.environmentId,
       [CCLOUD_PROVIDER_HEADER]: providerRegion.provider,
       [CCLOUD_REGION_HEADER]: providerRegion.region,
       [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
@@ -405,45 +428,88 @@ export class SidecarHandle {
 
   // === END OF OPENAPI CLIENT METHODS ===
 
+  // Cache of GraphQL query promises to avoid concurrent duplicate requests.
+  private readonly graphQlQueryPromises: Map<string, Promise<GraphQLResponse>> = new Map();
+
   /**
    * Make a GraphQL request to the sidecar via fetch.
    *
    * NOTE: This uses the GraphQL schema in `src/graphql/sidecar.graphql` to generate the types for
    * the query and variables via the `gql.tada` package.
+   *
+   * If multiple requests are made with the same connectionId/query/variables concurrently, only the first
+   * one will be sent to the sidecar, and subsequent concurrent requests will wait for the fetch to resolve.
+   * All such concurrent requests will return the same result.
+   *
+   * Any Error raised by the fetch() call will be propagated to the caller.
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
-    connectionId?: string,
-    // Mark second parameter as optional if Variables is an empty object type
+    connectionId: ConnectionId,
+    // Mark third parameter as optional if Variables is an empty object type
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
   ): Promise<Result> {
-    let headers: Headers;
-    if (connectionId) {
-      headers = new Headers({
+    let fetchAndExtractPromise: Promise<GraphQLResponse>;
+
+    // Do we already have an in-flight promise for this connectionId/query/variables combination?
+    const queryCacheKey = createHash("md5")
+      .update(connectionId)
+      .update(print(query))
+      .update(JSON.stringify(variables || "no-vars"))
+      .digest("hex");
+
+    if (!this.graphQlQueryPromises.has(queryCacheKey)) {
+      // Go ahead and create a new request promise and put into the pending promise cache.
+      const headers = new Headers({
         ...this.defaultClientConfigParams.headers,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       });
+
+      /** Construct a single new promise to make the query, then parse the json response. */
+      const fetchAndExtractResponsePayload = async (): Promise<GraphQLResponse> => {
+        const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ query: print(query), variables }),
+        });
+
+        // Consume the response body to extract the JSON payload exactly once.
+        return (await response.json()) as GraphQLResponse;
+      };
+
+      fetchAndExtractPromise = fetchAndExtractResponsePayload();
+
+      this.graphQlQueryPromises.set(queryCacheKey, fetchAndExtractPromise);
     } else {
-      headers = new Headers(this.defaultClientConfigParams.headers);
+      // Refer to the cached in-flight promise instead of redundantly
+      // asking sidecar to do the same work.
+      logger.debug(`Using cached GraphQL request for a query for: ${connectionId}`);
+      fetchAndExtractPromise = this.graphQlQueryPromises.get(queryCacheKey)!;
     }
 
-    const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query: print(query), variables }),
-    });
-    const payload = await response.json();
+    let payload: GraphQLResponse;
+
+    // The fetch() call driven by the promise may raise an error, so be sure to clear
+    // the promise from the cache regardless of whether it succeeds or fails.
+    try {
+      payload = await fetchAndExtractPromise;
+    } finally {
+      // Regardless of whether the request succeeded or failed, we remove the promise from the cache.
+
+      // No longer in-flight, so remove the promise from cache. Any calls started subsequently will
+      // create a new request promise.
+      this.graphQlQueryPromises.delete(queryCacheKey);
+    }
 
     if (!payload.data) {
+      // No data at all, only a faceful of errors.
       let errorString: string;
 
       if (payload.errors) {
         // combine all errors into a single error message, if there are multiple
-        const errorMessages: string[] = payload.errors.map(
-          (error: { message: string }) => error.message || JSON.stringify(error),
-        );
-        errorString = `GraphQL query failed: ${errorMessages.join(", ")}`;
+        const errorMessages: string[] = payload.errors.map((error) => error.message);
+        errorString = `GraphQL query failed: ${errorMessages.join("; ")}`;
       } else {
         // we got some other unexpected response structure back, don't attempt to parse it
         errorString = `GraphQL returned unexpected response structure: ${JSON.stringify(payload)}`;
@@ -454,6 +520,30 @@ export class SidecarHandle {
         payload: JSON.stringify(payload),
       });
       throw new Error(errorString);
+    } else if (payload.errors) {
+      // If we got a response with data but also errors, log the errors and then also show the
+      // user a warning.
+
+      const errorMessages: string[] = payload.errors.map((error) => error.message);
+
+      // show the first error and the error count to the user.
+      const firstError = errorMessages[0];
+      const errorCount = errorMessages.length;
+
+      const message =
+        errorCount > 1
+          ? `GraphQL query returned data but also ${errorCount} errors: "${firstError}" (and ${errorCount - 1} more)`
+          : `GraphQL query returned data but also an error: "${firstError}"`;
+
+      logger.warn(message, {
+        query: print(query),
+        variables: variables,
+        response: JSON.stringify(payload),
+      });
+
+      void showWarningNotificationWithButtons(message);
+
+      // fall through to return the data anyway, as the query "was at least partially successful".
     }
 
     return payload.data;

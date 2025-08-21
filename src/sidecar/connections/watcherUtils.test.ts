@@ -96,8 +96,6 @@ describe("connectionEventHandler", () => {
     ConnectionEventAction.CREATED,
     ConnectionEventAction.UPDATED,
     ConnectionEventAction.CONNECTED,
-    ConnectionEventAction.DELETED,
-    ConnectionEventAction.DISCONNECTED,
   ]) {
     it(`should fire when stable direct connection ${action} event received`, () => {
       // Arrange

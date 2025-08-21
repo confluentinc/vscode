@@ -9,7 +9,7 @@ import {
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SUBJECT,
 } from "../../tests/unit/testResources";
-import { CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { EnvironmentId } from "./resource";
 import {
   Schema,
@@ -129,7 +129,7 @@ describe("Schema model methods", () => {
     // ccloud schemas have a ccloud url.
     assert.equal(
       TEST_CCLOUD_SCHEMA.ccloudUrl,
-      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA.environmentId}/stream-governance/schema-registry/data-contracts/${TEST_CCLOUD_SCHEMA.subject}?utm_source=${UTM_SOURCE_VSCODE}`,
+      `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_SCHEMA.environmentId}/stream-governance/schema-registry/data-contracts/${TEST_CCLOUD_SCHEMA.subject}?utm_source=${UTM_SOURCE_VSCODE}`,
     );
 
     // Non-ccloud schemas do not

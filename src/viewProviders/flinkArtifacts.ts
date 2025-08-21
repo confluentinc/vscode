@@ -1,11 +1,12 @@
-import { Disposable, TreeDataProvider, TreeItem } from "vscode";
+import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { ccloudAuthSessionInvalidated, currentFlinkArtifactsPoolChanged } from "../emitters";
-import { isResponseError } from "../errors";
+import { currentFlinkArtifactsPoolChanged } from "../emitters";
+import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { ParentedBaseViewProvider } from "./base";
+import { showErrorNotificationWithButtons } from "../notifications";
+import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 
 export class FlinkArtifactsViewProvider
   extends ParentedBaseViewProvider<CCloudFlinkComputePool, FlinkArtifact>
@@ -19,28 +20,16 @@ export class FlinkArtifactsViewProvider
   parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
   private _artifacts: FlinkArtifact[] = [];
 
-  protected setCustomEventListeners(): Disposable[] {
-    // Listen for auth session invalidation to clear the view
-    const authInvalidatedSub: Disposable = ccloudAuthSessionInvalidated.event(() => {
-      this._artifacts = [];
-      this._onDidChangeTreeData.fire();
-    });
-
-    return [authInvalidatedSub];
-  }
-
   getChildren(element?: FlinkArtifact): FlinkArtifact[] {
     if (!this.computePool) {
       return [];
     }
     return this.filterChildren(element, this._artifacts);
   }
-
   async refresh(): Promise<void> {
     this._artifacts = [];
 
     if (this.computePool) {
-      // Immediately inform the view that we (temporarily) have no data so it will clear.
       this._onDidChangeTreeData.fire();
 
       await this.withProgress(
@@ -50,14 +39,10 @@ export class FlinkArtifactsViewProvider
             const loader = CCloudResourceLoader.getInstance();
             this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
           } catch (error) {
-            this.logger.error("Failed to load Flink artifacts", { error });
-
-            // Check if this is an auth error (401 Unauthorized)
-            if (isResponseError(error) && error.response.status === 401) {
-              // Signal that the auth session is invalid
-              ccloudAuthSessionInvalidated.fire();
+            const { showNotification, message } = triageGetFlinkArtifactsError(error, this.logger);
+            if (showNotification) {
+              void showErrorNotificationWithButtons(message);
             }
-
             throw error;
           }
         },
@@ -67,7 +52,6 @@ export class FlinkArtifactsViewProvider
 
     this._onDidChangeTreeData.fire();
   }
-
   getTreeItem(element: FlinkArtifact): TreeItem {
     return new FlinkArtifactTreeItem(element);
   }
@@ -75,4 +59,58 @@ export class FlinkArtifactsViewProvider
   get computePool(): CCloudFlinkComputePool | null {
     return this.resource;
   }
+}
+
+export function triageGetFlinkArtifactsError(
+  error: unknown,
+  logger: { debug: (msg: string, err: unknown) => void },
+): {
+  showNotification: boolean;
+  message: string;
+} {
+  let showNotification = false;
+  let message = "Failed to load Flink artifacts.";
+
+  if (isResponseError(error)) {
+    const status = error.response.status;
+    error.response
+      .clone()
+      .json()
+      .catch((err) => {
+        logger.debug("Failed to parse error response as JSON", err);
+      });
+    /* Note: This switch statement intentionally excludes 400 errors.
+     Otherwise, they may pop up on loading the compute pool if it is using an unsupported cloud provider. */
+    if (status >= 401 && status < 600) {
+      showNotification = true;
+      switch (status) {
+        case 401:
+          message = "Authentication required to load Flink artifacts.";
+          break;
+        case 403:
+          message = "Failed to load Flink artifacts. Please check your permissions and try again.";
+          break;
+        case 404:
+          message = "Flink artifacts not found for this compute pool.";
+          break;
+        case 429:
+          message = "Too many requests. Please try again later.";
+          break;
+        case 503:
+          message =
+            "Failed to load Flink artifacts. The service is temporarily unavailable. Please try again later.";
+          break;
+        default:
+          message = "Failed to load Flink artifacts due to an unexpected error.";
+          break;
+      }
+    }
+    logError(error, "Failed to load Flink artifacts");
+  } else {
+    message = "Failed to load Flink artifacts. Please check your connection and try again.";
+    showNotification = true;
+    logError(error, "Failed to load Flink artifacts");
+  }
+
+  return { showNotification, message };
 }

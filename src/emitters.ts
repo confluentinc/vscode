@@ -16,7 +16,8 @@ import { SchemaRegistry } from "./models/schemaRegistry";
  * This is controlled by the `ConfluentCloudAuthProvider` and will be fired when a user explicitly
  * signs in (`createSession()`), signs out (`removeSession()`), or when a new workspace is opened
  * and its newly-activated extension instance is syncing its own internal CCloud auth state to
- * transition from "freshly activated, no CCloud auth session" to "found active CCloud auth session".
+ * transition from "freshly activated, no CCloud auth session" to "found existing active CCloud auth session".
+ * (via extension startup calling setupAuthProvider())
  */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
 /** Fires whenever we see a non-`ATTEMPTING` connected state from the sidecar for the current CCloud
@@ -118,6 +119,9 @@ export const currentFlinkArtifactsPoolChanged =
   new vscode.EventEmitter<CCloudFlinkComputePool | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
+
+/** When we get a DISCONNECTED websocket event for a direct connection */
+export const connectionDisconnected = new vscode.EventEmitter<ConnectionId>();
 
 /** The user set/unset a filter for the Resources view. */
 export const resourceSearchSet = new vscode.EventEmitter<string | null>();

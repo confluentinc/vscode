@@ -2,7 +2,12 @@ import * as vscode from "vscode";
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
-import { closeSentryClient, initSentry, sentryCaptureException } from "./telemetry/sentryClient";
+import {
+  closeSentryClient,
+  initSentry,
+  sentryCaptureEvent,
+  sentryCaptureException,
+} from "./telemetry/sentryClient";
 if (process.env.SENTRY_DSN) {
   initSentry();
 }
@@ -28,11 +33,13 @@ import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
+import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
+import { registerUploadUDFCommand } from "./commands/uploadUDF";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
@@ -49,6 +56,7 @@ import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  USE_NEW_RESOURCES_VIEW_PROVIDER,
 } from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
 import { updatePreferences } from "./extensionSettings/sidecarSync";
@@ -68,6 +76,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
+import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { closeFormattedSidecarLogStream, SIDECAR_OUTPUT_CHANNEL } from "./sidecar/logging";
 import { WebsocketManager } from "./sidecar/websocketManager";
@@ -79,14 +88,15 @@ import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
-import { RefreshableTreeViewProvider } from "./viewProviders/base";
+import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
-import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
 
 const logger = new Logger("extension");
 
@@ -122,9 +132,11 @@ export async function activate(
   logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
-    logger.info(`Extension version "${extVersion}" fully activated`);
+    const message = `Extension version "${extVersion}" fully activated`;
+    logger.info(message);
     observabilityContext.extensionActivated = true;
     logUsage(UserEvent.ExtensionActivation, { status: "completed" });
+    sentryCaptureEvent({ message, level: "info" });
   } catch (e) {
     logger.error(`Error activating extension version "${extVersion}":`, e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
@@ -180,19 +192,33 @@ async function _activateExtension(
   await getSidecar();
   logger.info("Sidecar ready for use.");
 
+  // Rehydrate sidecar with local + any direct connections from the secret storage. Do this before
+  // setting up the resource view provider.
+  await rehydrateConnections();
+
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
-  const resourceViewProvider = ResourceViewProvider.getInstance();
+
+  // There can be only one resources view provider ...
+  let resourceViewProviderInstance: ResourceViewProvider | NewResourceViewProvider;
+  if (USE_NEW_RESOURCES_VIEW_PROVIDER.value) {
+    logger.info("Using new resources view provider");
+    resourceViewProviderInstance = NewResourceViewProvider.getInstance();
+  } else {
+    logger.info("Using legacy resources view provider");
+    resourceViewProviderInstance = ResourceViewProvider.getInstance();
+  }
+
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const artifactsViewProvider = FlinkArtifactsViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
-    resourceViewProvider,
+    resourceViewProviderInstance,
     topicViewProvider,
     schemasViewProvider,
     supportViewProvider,
@@ -206,7 +232,7 @@ async function _activateExtension(
 
   // Register refresh commands for our refreshable resource view providers.
   const refreshCommands: vscode.Disposable[] = [];
-  for (const instance of getRefreshableViewProviders()) {
+  for (const instance of getRefreshableViewProviders(resourceViewProviderInstance)) {
     refreshCommands.push(
       registerCommandWithLogging(`confluent.${instance.kind}.refresh`, (): boolean => {
         instance.refresh(true);
@@ -237,10 +263,28 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
+    registerUploadUDFCommand(),
+    ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
 
+  // Construct the singletons, let them register their event listeners
+  context.subscriptions.push(getSidecarManager());
+  context.subscriptions.push(...constructResourceLoaderSingletons());
+
+  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
+  // (Needs to be done _before_ setupAuthProvider() so that the manager can
+  //  handle the ccloudConnected event which may be fired during auth setup
+  //  if this is a second+ workspace being activated in when already ccloud authed.)
+  if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
+    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
+    context.subscriptions.push(flinkLanguageClientManager);
+  }
+
   const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(getUriHandler());
+
+  // If the user is already authenticated to ccloud (this being not the first
+  // workspace activated), this will eventually cause ccloudConnected to be fired.
   const authProviderDisposables: vscode.Disposable[] = await setupAuthProvider();
   const documentProviders: vscode.Disposable[] = setupDocumentProviders();
 
@@ -254,18 +298,8 @@ async function _activateExtension(
     ...documentProviders,
   );
 
-  // if the Flink CCloud language server setting is enabled, get the client manager ready for use
-  if (ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value) {
-    const flinkLanguageClientManager = initializeFlinkLanguageClientManager();
-    context.subscriptions.push(flinkLanguageClientManager);
-  }
-
   // Just handling command registration and setting disposables
   activateMessageViewer(context);
-
-  // Construct the singletons, let them register their event listeners.
-  context.subscriptions.push(...constructResourceLoaderSingletons());
-  context.subscriptions.push(getSidecarManager());
 
   // register the local resource workflows so they can be used by the resource loaders
   registerLocalResourceWorkflows();
@@ -342,6 +376,7 @@ async function setupContextValues() {
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
     "confluent-resources",
+    "new-confluent-resources",
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",
@@ -444,15 +479,19 @@ async function setupFeatureFlags(): Promise<void> {
 }
 
 /** Return view provider + name fragment pairs for auto-registering refresh() commands. */
-export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
+export function getRefreshableViewProviders(
+  resourcesViewProviderInstance: ResourceViewProvider | NewResourceViewProvider,
+): RefreshableTreeViewProvider[] {
   // When adding a new view provider pair, also update the test
   // mentioning "viewProviderNameFragments" in extension.test.ts.
-  return [
-    ResourceViewProvider.getInstance(),
+  const refreshables = [
+    resourcesViewProviderInstance,
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),
   ];
+
+  return refreshables;
 }
 
 /**
@@ -552,4 +591,42 @@ export function deactivate() {
     logStream.end();
   }
   console.info("Extension deactivated");
+}
+
+/**
+ * Rehydrate the direct connections from the secret storage at startup time, informing
+ * the sidecar about them.
+ *
+ * Also go ahead and create the local connection in the sidecar if it doesn't exist yet
+ * (as would be the case if opening a second workspace talking to the sidecar).
+ */
+export async function rehydrateConnections(): Promise<void> {
+  const createConnectionPromises = [
+    // Rehydrate the direct connections from secret storage.
+    async () => {
+      try {
+        await DirectConnectionManager.getInstance().rehydrateConnections();
+      } catch (error) {
+        logger.error("Failed to rehydrate direct connections", { error });
+      }
+    },
+    // Create the local connection if it doesn't exist yet.
+    // (Must happen before we try to GraphQL query it, for instance.)
+    async () => {
+      if (!(await getLocalConnection())) {
+        try {
+          await createLocalConnection();
+        } catch (error) {
+          logger.error("Failed to create local connection for rehydration", { error });
+        }
+      }
+    },
+    // Do not need to pre-create the distinquished ccloud connection, as its creation is
+    // explicitly handled in the auth provider, and no codepath should try to GraphQL query
+    // it unless hasCCloudAuthSession() is true, which will only be the case if the
+    // ccloud connection exists and is valid.
+  ];
+
+  await Promise.all(createConnectionPromises.map((fn) => fn()));
+  logger.info("Rehydrated direct connections and created local connection if needed");
 }
