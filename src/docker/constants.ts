@@ -5,13 +5,6 @@
  */
 export const DEFAULT_SCHEMA_REGISTRY_TAG = "latest";
 
-/**
- * Default image tag to use for the local Medusa container.
- *
- * Must match the default value in the "confluent.docker.localMedusaImageTag" configuration in package.json.
- */
-export const DEFAULT_MEDUSA_IMAGE_TAG = "a736fae";
-
 /** Network name to use when creating new Docker containers from the extension workflows. */
 export const DEFAULT_DOCKER_NETWORK = "vscode-confluent-local-network";
 
