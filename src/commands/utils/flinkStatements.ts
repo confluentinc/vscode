@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { getCCloudAuthSession } from "../../authn/utils";
 import {
-  CreateSqlv1Statement201Response,
   CreateSqlv1StatementOperationRequest,
   CreateSqlv1StatementRequest,
   CreateSqlv1StatementRequestApiVersionEnum,
@@ -10,7 +9,7 @@ import {
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { FlinkStatement } from "../../models/flinkStatement";
+import { FlinkStatement, restFlinkStatementToModel } from "../../models/flinkStatement";
 import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
 import { WebviewPanelCache } from "../../webview-cache";
@@ -119,11 +118,16 @@ export interface IFlinkStatementSubmitParameters {
   statementName: string;
   computePool: CCloudFlinkComputePool;
   properties: FlinkSpecProperties;
+
+  /**
+   * False if user directly submitted this statement, true if it was created by the extension.
+   */
+  hidden: boolean;
 }
 
 export async function submitFlinkStatement(
   params: IFlinkStatementSubmitParameters,
-): Promise<CreateSqlv1Statement201Response> {
+): Promise<FlinkStatement> {
   const ccloudLoader = CCloudResourceLoader.getInstance();
 
   const handle = await getSidecar();
@@ -146,16 +150,30 @@ export async function submitFlinkStatement(
     },
   };
 
+  if (params.hidden) {
+    // If this is a hidden statement, we set the metadata to indicate that.
+    requestInner.metadata = {
+      self: null,
+      labels: {
+        "user.confluent.io/hidden": "true",
+      },
+    };
+  }
+
   const request: CreateSqlv1StatementOperationRequest = {
     organization_id: organization.id,
     environment_id: params.computePool.environmentId,
     CreateSqlv1StatementRequest: requestInner,
   };
 
+  // Get at the statements client for the compute pool.
   const statementsClient = handle.getFlinkSqlStatementsApi(params.computePool);
+  // Make the request to create the statement.
   const response = await statementsClient.createSqlv1Statement(request);
+  // Promote from REST response to model.
+  const statementModel = restFlinkStatementToModel(response, params.computePool);
 
-  return response;
+  return statementModel;
 }
 
 /**
