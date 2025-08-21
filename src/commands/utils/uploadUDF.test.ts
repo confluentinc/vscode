@@ -297,7 +297,7 @@ describe("uploadUDF", () => {
       }
 
       await assert.rejects(
-        () => handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse),
+        async () => await handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse),
         (err: Error) => {
           // Accept any error, just ensure an error is thrown
           return err instanceof Error;
