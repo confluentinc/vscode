@@ -296,7 +296,7 @@ describe("uploadArtifact", () => {
       fs.writeFileSync(tempJarPath, "dummy jar content");
 
       await assert.rejects(
-        async () => await handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse),
+        async () => handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse),
         (err: Error) => {
           // Accept any error, just ensure an error is thrown
           return err instanceof Error;
