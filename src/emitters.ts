@@ -136,3 +136,6 @@ export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 
 /** Metadata for a given {@link vscode.Uri} has been updated. */
 export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
+
+/** Fires when a UDF upload completes successfully. */
+export const udfUploadCompleted = new vscode.EventEmitter<void>();
