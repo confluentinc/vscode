@@ -6,6 +6,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import * as commands from "./index";
+import { registerUploadArtifactCommand, uploadArtifactCommand } from "./uploadArtifact";
 import * as uploadArtifact from "./utils/uploadArtifact";
 
 describe("uploadArtifact Command", () => {
@@ -38,7 +39,7 @@ describe("uploadArtifact Command", () => {
     };
     it("should fail if there is no params", async () => {
       sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(undefined);
-      const result = await uploadArtifact.uploadArtifactCommand();
+      const result = await uploadArtifactCommand();
 
       assert.strictEqual(result, undefined);
     });
@@ -58,7 +59,7 @@ describe("uploadArtifact Command", () => {
 
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
-      await uploadUDFCommand.uploadArtifactCommand();
+      await uploadArtifactCommand();
 
       sinon.assert.calledOnce(showInfoStub);
       sinon.assert.calledWithMatch(showInfoStub, sinon.match(/uploaded successfully/));
@@ -70,7 +71,7 @@ describe("uploadArtifact Command", () => {
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").rejects(new Error("fail"));
       const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-      await uploadUDFCommand.uploadArtifactCommand();
+      await uploadArtifactCommand();
 
       sinon.assert.calledOnce(showErrorStub);
       sinon.assert.calledWithMatch(showErrorStub, sinon.match(/error/i));
@@ -96,7 +97,7 @@ describe("uploadArtifact Command", () => {
         .resolves(mockCreateResponse);
       sandbox.stub(vscode.window, "showInformationMessage");
 
-      await uploadArtifact.uploadArtifactCommand();
+      await uploadArtifactCommand();
 
       sinon.assert.calledOnce(handleUploadStub);
       sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
@@ -106,19 +107,19 @@ describe("uploadArtifact Command", () => {
     });
   });
 
-  describe("registerUploadUDFCommand", () => {
-    it("should register the uploadUDF command", () => {
+  describe("registerUploadArtifactCommand", () => {
+    it("should register the uploadArtifact command", () => {
       const registerCommandWithLoggingStub = sandbox
         .stub(commands, "registerCommandWithLogging")
         .returns({} as vscode.Disposable);
 
-      uploadUDFCommand.registerUploadUDFCommand();
+      registerUploadArtifactCommand();
 
       sinon.assert.calledOnce(registerCommandWithLoggingStub);
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
-        "confluent.uploadUDF",
-        uploadUDFCommand.uploadArtifactCommand,
+        "confluent.uploadArtifact",
+        uploadArtifactCommand,
       );
     });
   });
