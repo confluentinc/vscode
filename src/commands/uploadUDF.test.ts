@@ -79,14 +79,6 @@ describe("uploadUDF Command", () => {
 
     it("should send the create artifact request to Confluent Cloud", async () => {
       const mockUploadId = "12345";
-      const mockPresignedUrlResponse = {
-        upload_id: mockUploadId,
-        url: "https://example.com/upload",
-        fields: {},
-        api_version:
-          "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
-        kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
-      };
       const mockCreateResponse = {
         display_name: "test-artifact",
         id: "artifact-123",
