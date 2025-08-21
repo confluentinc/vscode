@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { OUTPUT_CHANNEL } from "../logging";
+import { EXTENSION_OUTPUT_CHANNEL } from "../logging";
 import { SIDECAR_OUTPUT_CHANNEL } from "../sidecar/logging";
 
 async function showOutputChannelCommand() {
   // make sure the Output panel is visible first
   await vscode.commands.executeCommand("workbench.panel.output.focus");
-  OUTPUT_CHANNEL.show();
+  EXTENSION_OUTPUT_CHANNEL.show();
 }
 
 async function showSidecarOutputChannelCommand() {

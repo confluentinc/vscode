@@ -72,7 +72,7 @@ import {
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
-import { cleanupOldLogFiles, Logger, OUTPUT_CHANNEL } from "./logging";
+import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -97,7 +97,6 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
-import { clearFlinkSQLLanguageServerOutputChannel } from "./flinkSql/logging";
 
 const logger = new Logger("extension");
 
@@ -167,7 +166,7 @@ async function _activateExtension(
   // register the log output channels, debugging commands, and support commands to ensure we have
   // visibility into the extension and sidecar logs and can download support .zip and/or file issues
   context.subscriptions.push(
-    OUTPUT_CHANNEL,
+    EXTENSION_OUTPUT_CHANNEL,
     SIDECAR_OUTPUT_CHANNEL,
     ...registerDebugCommands(),
     ...registerSupportCommands(),
@@ -585,11 +584,8 @@ export function deactivate() {
   // close the sidecar log file stream, if it exists
   closeFormattedSidecarLogStream();
 
-  // close the flink language server log file stream, if it exists
-  clearFlinkSQLLanguageServerOutputChannel();
-
-  // close the file stream used with OUTPUT_CHANNEL -- needs to be done last to avoid any other
-  OUTPUT_CHANNEL.dispose();
+  // close the file stream used with EXTENSION_OUTPUT_CHANNEL -- needs to be done last to avoid any other
+  EXTENSION_OUTPUT_CHANNEL.dispose();
   console.info("Extension deactivated");
 }
 
