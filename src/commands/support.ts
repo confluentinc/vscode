@@ -6,7 +6,7 @@ import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { getFlinkLSLogFileUris } from "../flinkSql/logging";
-import { CURRENT_LOGFILE_NAME, getLogFileDir, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
+import { Logger, OUTPUT_CHANNEL } from "../logging";
 import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
 import { getSidecarFormattedLogfilePath, getSidecarLogfilePath } from "../sidecar/logging";
 import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
@@ -61,15 +61,16 @@ function openSettings() {
 /** Return the file URIs for the extension's currently-active log file and any rotated log files for
  * this extension instance, normalized for the user's OS. */
 export function extensionLogFileUris(): Uri[] {
-  const uris: Uri[] = [];
-  const filenames: string[] = [CURRENT_LOGFILE_NAME, ...ROTATED_LOGFILE_NAMES];
-  for (const filename of filenames) {
-    const uri = Uri.file(normalize(join(getLogFileDir(), filename)));
-    if (!uris.some((existingUri) => existingUri.fsPath === uri.fsPath)) {
-      uris.push(uri);
-    }
-  }
-  return uris;
+  // const uris: Uri[] = [];
+  // const filenames: string[] = [CURRENT_LOGFILE_NAME, ...ROTATED_LOGFILE_NAMES];
+  // for (const filename of filenames) {
+  //   const uri = Uri.file(normalize(join(getLogFileDir(), filename)));
+  //   if (!uris.some((existingUri) => existingUri.fsPath === uri.fsPath)) {
+  //     uris.push(uri);
+  //   }
+  // }
+  // return uris;
+  return OUTPUT_CHANNEL?.getFileUris() ?? [];
 }
 
 /** Return the file URI for the sidecar's log file, normalized for the user's OS. */
@@ -91,7 +92,7 @@ async function saveExtensionLogFile() {
 
   // one file: save it directly
   if (logUris.length === 1) {
-    const defaultPath: string = join(homedir(), CURRENT_LOGFILE_NAME);
+    const defaultPath: string = join(homedir(), OUTPUT_CHANNEL.logFileName);
     const saveUri: Uri | undefined = await window.showSaveDialog({
       defaultUri: Uri.file(defaultPath),
       filters: { "Log files": ["log"] },
