@@ -1,4 +1,4 @@
-import { TreeDataProvider, TreeItem } from "vscode";
+import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
 import { currentFlinkArtifactsPoolChanged, udfUploadCompleted } from "../emitters";
 import { isResponseError, logError } from "../errors";
@@ -66,11 +66,8 @@ export class FlinkArtifactsViewProvider
     return this.resource;
   }
 
-  protected setEventListeners(): import("vscode").Disposable[] {
-    return [
-      ...super.setEventListeners(),
-      udfUploadCompleted.event(this.udfUploadCompletedHandler.bind(this)),
-    ];
+  protected setEventListeners(): Disposable[] {
+    return [udfUploadCompleted.event(this.udfUploadCompletedHandler.bind(this))];
   }
 
   private udfUploadCompletedHandler(): void {

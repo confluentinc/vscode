@@ -1,5 +1,6 @@
 import path from "node:path";
 import * as vscode from "vscode";
+import { ResponseError } from "vscode-jsonrpc";
 import {
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
@@ -225,26 +226,37 @@ export async function uploadArtifactToCCloud(
 
     return response;
   } catch (error) {
-    const { apiStatus, apiResponseBody } = extractApiErrorDetails(error);
-
-    const sentryContext: Record<string, unknown> = {
-      extra: {
-        artifactName: params.artifactName,
-        environment: params.environment,
-        cloud: params.cloud,
-        region: params.region,
-        uploadId,
-        requestPayload: buildCreateArtifactRequest(params, uploadId),
-        apiStatus,
-        apiResponseBody,
-      },
+    let userMessage = "Failed to create Flink artifact. See logs for details.";
+    let extra: Record<string, unknown> = {
+      artifactName: params.artifactName,
+      environment: params.environment,
+      cloud: params.cloud,
+      region: params.region,
+      uploadId,
+      requestPayload: buildCreateArtifactRequest(params, uploadId),
     };
-    logError(error, "Failed to create Flink artifact in Confluent Cloud", sentryContext);
 
-    const userMessage =
-      typeof apiResponseBody === "string"
-        ? `Failed to create Flink artifact: ${apiResponseBody}`
-        : "Failed to create Flink artifact. See logs for details.";
+    if (error instanceof ResponseError && error.data) {
+      try {
+        const contentType = error.data.headers.get("content-type");
+        let apiResponseBody: unknown;
+        if (contentType && contentType.includes("application/json")) {
+          apiResponseBody = await error.data.json();
+        } else {
+          apiResponseBody = await error.data.text();
+        }
+        extra.apiStatus = error.data.status;
+        extra.apiResponseBody = apiResponseBody;
+        userMessage =
+          typeof apiResponseBody === "string"
+            ? `Failed to create Flink artifact: ${apiResponseBody}`
+            : `Failed to create Flink artifact: ${JSON.stringify(apiResponseBody)}`;
+      } catch {
+        // fallback to default message
+      }
+    }
+
+    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
     void showErrorNotificationWithButtons(userMessage);
     throw error;
   }
@@ -265,24 +277,4 @@ export function buildCreateArtifactRequest(
       upload_id: uploadId,
     },
   };
-}
-
-export function extractApiErrorDetails(error: unknown): {
-  apiStatus?: number;
-  apiResponseBody?: unknown;
-} {
-  if (
-    error &&
-    typeof error === "object" &&
-    "response" in error &&
-    error.response &&
-    typeof error.response === "object"
-  ) {
-    const response = (error as { response: { status?: number; data?: unknown } }).response;
-    return {
-      apiStatus: response.status,
-      apiResponseBody: response.data,
-    };
-  }
-  return { apiStatus: undefined, apiResponseBody: undefined };
 }

@@ -46,14 +46,13 @@ export async function uploadUDFCommand(): Promise<
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Uploading UDF "${params.artifactName}" to Confluent Cloud`,
+        title: `Uploading artifact "${params.artifactName}" to Confluent Cloud`,
         cancellable: false,
       },
       async () => {
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
-
         void vscode.window.showInformationMessage(
-          `UDF "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+          `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
         );
       },
     );
