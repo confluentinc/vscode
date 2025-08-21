@@ -67,7 +67,10 @@ export class FlinkArtifactsViewProvider
   }
 
   protected setEventListeners(): Disposable[] {
-    return [udfUploadCompleted.event(this.udfUploadCompletedHandler.bind(this))];
+    return [
+      ...super.setEventListeners(),
+      udfUploadCompleted.event(this.udfUploadCompletedHandler.bind(this)),
+    ];
   }
 
   private udfUploadCompletedHandler(): void {
