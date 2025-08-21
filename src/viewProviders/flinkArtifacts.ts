@@ -1,6 +1,6 @@
 import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentFlinkArtifactsPoolChanged, artifactUploadCompleted } from "../emitters";
+import { artifactUploadCompleted, currentFlinkArtifactsPoolChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
@@ -69,11 +69,11 @@ export class FlinkArtifactsViewProvider
   protected setEventListeners(): Disposable[] {
     return [
       ...super.setEventListeners(),
-      artifactUploadCompleted.event(this.udfUploadCompletedHandler.bind(this)),
+      artifactUploadCompleted.event(this.artifactUploadCompletedHandler.bind(this)),
     ];
   }
 
-  private udfUploadCompletedHandler(): void {
+  private artifactUploadCompletedHandler(): void {
     this.refresh();
   }
 }
