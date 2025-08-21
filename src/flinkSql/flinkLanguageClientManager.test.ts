@@ -109,6 +109,10 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 
+  it("getOutputChannel should return a not undefined output channel", () => {
+    assert.notStrictEqual(flinkManager.getOutputChannel(), undefined);
+  });
+
   describe("isAppropriateDocument", () => {
     for (const goodScheme of ["file", "untitled"]) {
       it(`should return true for Flink SQL + ${goodScheme} documents`, () => {
