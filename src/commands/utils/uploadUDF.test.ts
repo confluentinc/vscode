@@ -5,7 +5,7 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { ResponseError } from "vscode-languageclient";
+import { ResponseError } from "vscode-jsonrpc";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
 import {
