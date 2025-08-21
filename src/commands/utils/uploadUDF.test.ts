@@ -353,7 +353,6 @@ describe("uploadUDF", () => {
       const mockUploadId = "upload-id-123";
 
       let stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-      // Reject with an error to simulate failure
       stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(new Error("Upload failed"));
       let stubbedSidecarHandle = getSidecarStub(sandbox);
       stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
@@ -371,6 +370,76 @@ describe("uploadUDF", () => {
       sinon.assert.calledWith(
         errorNotificationStub,
         "Failed to create Flink artifact. See logs for details.",
+      );
+    });
+    it("should parse and display JSON error details from ResponseError", async () => {
+      const mockUploadId = "upload-id-123";
+      let stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+      const jsonBody = { error: "artifact already exists" };
+      const mockHeaders = new Map([["content-type", "application/json"]]);
+      const mockResponse = {
+        headers: {
+          get: (key: string) => mockHeaders.get(key),
+        },
+        status: 409,
+        json: sandbox.stub().resolves(jsonBody),
+        text: sandbox.stub(),
+      };
+      const responseError = new ResponseError(409, "Conflict", mockResponse as any);
+
+      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+      let stubbedSidecarHandle = getSidecarStub(sandbox);
+      stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+
+      const errorNotificationStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.rejects(
+        () => uploadArtifactToCCloud(mockParams, mockUploadId),
+        (err: Error) => err === responseError,
+      );
+
+      sinon.assert.calledOnce(errorNotificationStub);
+      sinon.assert.calledWith(
+        errorNotificationStub,
+        `Failed to create Flink artifact: ${JSON.stringify(jsonBody)}`,
+      );
+    });
+
+    it("should parse and display text error details from ResponseError", async () => {
+      const mockUploadId = "upload-id-123";
+      let stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+
+      const textBody = "artifact already exists";
+      const mockHeaders = new Map([["content-type", "text/plain"]]);
+      const mockResponse = {
+        headers: {
+          get: (key: string) => mockHeaders.get(key),
+        },
+        status: 409,
+        json: sandbox.stub(),
+        text: sandbox.stub().resolves(textBody),
+      };
+      const responseError = new ResponseError(409, "Conflict", mockResponse as any);
+
+      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+      let stubbedSidecarHandle = getSidecarStub(sandbox);
+      stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+
+      const errorNotificationStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.rejects(
+        () => uploadArtifactToCCloud(mockParams, mockUploadId),
+        (err: Error) => err === responseError,
+      );
+
+      sinon.assert.calledOnce(errorNotificationStub);
+      sinon.assert.calledWith(
+        errorNotificationStub,
+        `Failed to create Flink artifact: ${textBody}`,
       );
     });
   });
