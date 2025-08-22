@@ -1,6 +1,5 @@
 import path from "node:path";
 import * as vscode from "vscode";
-import { ResponseError } from "vscode-jsonrpc";
 import {
   CreateArtifactV1FlinkArtifact201Response,
   CreateArtifactV1FlinkArtifactRequest,
@@ -8,7 +7,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactUploadCompleted } from "../../emitters";
-import { logError } from "../../errors";
+import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
@@ -192,7 +191,7 @@ export async function handleUploadToCloudProvider(
 export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
-): Promise<CreateArtifactV1FlinkArtifact201Response> {
+): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
   try {
     const createRequest = buildCreateArtifactRequest(params, uploadId);
 
@@ -238,29 +237,22 @@ export async function uploadArtifactToCCloud(
       requestPayload: buildCreateArtifactRequest(params, uploadId),
     };
 
-    if (error instanceof ResponseError && error.data) {
+    if (isResponseError(error)) {
+      let errBody: string | undefined;
       try {
-        const contentType = error.data.headers.get("content-type");
-        let apiResponseBody: unknown;
-        if (contentType && contentType.includes("application/json")) {
-          apiResponseBody = await error.data.json();
-        } else {
-          apiResponseBody = await error.data.text();
+        const respJson = await error.response.clone().json();
+        if (respJson && typeof respJson === "object" && respJson.message) {
+          errBody = respJson.message;
         }
-        extra.apiStatus = error.data.status;
-        extra.apiResponseBody = apiResponseBody;
-        userMessage =
-          typeof apiResponseBody === "string"
-            ? `Failed to create Flink artifact: ${apiResponseBody}`
-            : `Failed to create Flink artifact: ${JSON.stringify(apiResponseBody)}`;
       } catch {
-        // fallback to default message
+        errBody = await error.response.clone().text();
+      }
+      if (errBody !== undefined) {
+        logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
+        void showErrorNotificationWithButtons(userMessage);
+        throw error;
       }
     }
-
-    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-    void showErrorNotificationWithButtons(userMessage);
-    throw error;
   }
 }
 

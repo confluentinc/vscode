@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
-import { logError } from "../errors";
-import { showErrorNotificationWithButtons } from "../notifications";
+import { isResponseError, logError } from "../errors";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -46,16 +45,34 @@ export async function uploadArtifactCommand(): Promise<void> {
       },
       async () => {
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
-        void vscode.window.showInformationMessage(
-          `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-        );
+        if (response) {
+          void vscode.window.showInformationMessage(
+            `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+          );
+        } else {
+          void vscode.window.showWarningMessage(
+            `Artifact upload completed, but no response was returned from Confluent Cloud.`,
+          );
+        }
       },
     );
   } catch (err) {
-    logError(err, "Failed to execute Upload Artifact command");
-    void showErrorNotificationWithButtons(
-      "An error occurred while uploading Artifact. See logs for details.",
-    );
+    if (isResponseError(err)) {
+      let errBody: string | undefined;
+      try {
+        const respJson = await err.response.clone().json();
+        if (respJson && typeof respJson === "object") {
+          errBody = JSON.stringify(respJson);
+        }
+      } catch {
+        errBody = await err.response.clone().text();
+      }
+      if (errBody) {
+        const userMessage = `Failed to upload artifact: ${err.message} - ${errBody}`;
+        void vscode.window.showErrorMessage(userMessage);
+        logError(userMessage, "Artifact upload failed with response error");
+      }
+    }
   }
 }
 /**

@@ -5,7 +5,6 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { ResponseError } from "vscode-jsonrpc";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
 import {
@@ -17,6 +16,7 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
+import { ResponseError } from "../../clients/sidecar";
 import { CloudProvider } from "../../models/resource";
 import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
@@ -286,11 +286,11 @@ describe("uploadArtifact", () => {
 
     it("should handle server-side upload errors properly", async () => {
       const uploadError = new ResponseError(
-        500,
-        "Internal Server Error",
-        new Response(null, { status: 500 }),
+        new Response("", {
+          status: 500,
+          statusText: "Internal Server Error",
+        }),
       );
-
       uploadFileToAzureStub.rejects(uploadError);
 
       fs.writeFileSync(tempJarPath, "dummy jar content");
@@ -363,7 +363,7 @@ describe("uploadArtifact", () => {
         .resolves();
 
       await assert.rejects(
-        () => uploadArtifactToCCloud(mockParams, mockUploadId),
+        uploadArtifactToCCloud(mockParams, mockUploadId),
         (err: Error) => err.message === "Upload failed",
       );
 
@@ -377,16 +377,13 @@ describe("uploadArtifact", () => {
     it("should parse and display JSON error details from ResponseError", async () => {
       const mockUploadId = "upload-id-123";
       const jsonBody = { error: "artifact already exists" };
-      const mockHeaders = new Map([["content-type", "application/json"]]);
-      const mockResponse = {
-        headers: {
-          get: (key: string) => mockHeaders.get(key),
-        },
-        status: 409,
-        json: sandbox.stub().resolves(jsonBody),
-        text: sandbox.stub(),
-      };
-      const responseError = new ResponseError(409, "Conflict", mockResponse as any);
+
+      const responseError = new ResponseError(
+        new Response("", {
+          status: 409,
+          statusText: "Conflict",
+        }),
+      );
 
       stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
 
@@ -395,7 +392,7 @@ describe("uploadArtifact", () => {
         .resolves();
 
       await assert.rejects(
-        () => uploadArtifactToCCloud(mockParams, mockUploadId),
+        uploadArtifactToCCloud(mockParams, mockUploadId),
         (err: Error) => err === responseError,
       );
 
@@ -409,16 +406,13 @@ describe("uploadArtifact", () => {
     it("should parse and display text error details from ResponseError", async () => {
       const mockUploadId = "upload-id-123";
       const textBody = "artifact already exists";
-      const mockHeaders = new Map([["content-type", "text/plain"]]);
-      const mockResponse = {
-        headers: {
-          get: (key: string) => mockHeaders.get(key),
-        },
-        status: 409,
-        json: sandbox.stub(),
-        text: sandbox.stub().resolves(textBody),
-      };
-      const responseError = new ResponseError(409, "Conflict", mockResponse as any);
+
+      const responseError = new ResponseError(
+        new Response("", {
+          status: 409,
+          statusText: "Conflict",
+        }),
+      );
 
       stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
 
@@ -427,7 +421,7 @@ describe("uploadArtifact", () => {
         .resolves();
 
       await assert.rejects(
-        () => uploadArtifactToCCloud(mockParams, mockUploadId),
+        uploadArtifactToCCloud(mockParams, mockUploadId),
         (err: Error) => err === responseError,
       );
 
