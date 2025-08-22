@@ -217,35 +217,17 @@ describe("commands/utils/flinkStatements.ts", function () {
 
         const statement: FlinkStatement = await submitFlinkStatement(params);
 
-        // resolves to whatever restFlinkStatementToModel() returns.
         assert.deepStrictEqual(statement, TEST_CCLOUD_FLINK_STATEMENT);
 
         sinon.assert.calledOnce(createSqlv1StatementStub);
-        if (hidden) {
-          // Prove that requestInner.metadata specifies the hidden label.
-          sinon.assert.calledWith(
-            createSqlv1StatementStub,
-            sinon.match({
-              CreateSqlv1StatementRequest: sinon.match({
-                metadata: {
-                  labels: {
-                    "user.confluent.io/hidden": "true",
-                  },
-                },
-              }),
+        sinon.assert.calledWith(
+          createSqlv1StatementStub,
+          sinon.match({
+            CreateSqlv1StatementRequest: sinon.match({
+              metadata: hidden ? { labels: { "user.confluent.io/hidden": "true" } } : undefined,
             }),
-          );
-        } else {
-          // Prove that requestInner.metadata is not set.
-          sinon.assert.calledWith(
-            createSqlv1StatementStub,
-            sinon.match({
-              CreateSqlv1StatementRequest: sinon.match({
-                metadata: undefined,
-              }),
-            }),
-          );
-        }
+          }),
+        );
 
         sinon.assert.calledWith(
           mockSidecar.getFlinkSqlStatementsApi,
