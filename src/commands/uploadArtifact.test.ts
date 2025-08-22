@@ -117,6 +117,30 @@ describe("uploadArtifact Command", () => {
       );
     });
 
+    it("should show error notification with error message from JSON-formatted message if present", async () => {
+      const params = { ...mockParams };
+      const uploadUrl = { ...mockPresignedUrlResponse };
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+
+      const errorMessage = "Artifact already exists";
+      const respJson = { error: { message: errorMessage } };
+
+      // Pass stringified JSON as the body
+      const responseError = createResponseError(409, "Conflict", JSON.stringify(respJson));
+
+      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, errorMessage);
+    });
+
     it("should send the create artifact request to Confluent Cloud", async () => {
       const mockUploadId = "12345";
       const mockCreateResponse = {
