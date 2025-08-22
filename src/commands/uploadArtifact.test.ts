@@ -98,6 +98,25 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
     });
 
+    it("should show error notification if uploadUrl.upload_id is missing", async () => {
+      const params = { ...mockParams };
+      const uploadUrlMissingId = { ...mockPresignedUrlResponse, upload_id: undefined };
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrlMissingId);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(
+        showErrorStub,
+        sinon.match(/Failed to upload artifact. See logs for details/),
+      );
+    });
+
     it("should send the create artifact request to Confluent Cloud", async () => {
       const mockUploadId = "12345";
       const mockCreateResponse = {
