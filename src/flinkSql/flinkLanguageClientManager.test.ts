@@ -109,8 +109,21 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 
-  it("getOutputChannel should return a not undefined output channel", () => {
-    assert.notStrictEqual(flinkManager.getOutputChannel(), undefined);
+  describe("getOutputChannel", () => {
+    it("should return the same instance when called multiple times", () => {
+      const outputChannel1 = flinkManager.getOutputChannel();
+      const outputChannel2 = flinkManager.getOutputChannel();
+      assert.strictEqual(outputChannel1, outputChannel2, "Should return the same instance");
+    });
+
+    it("should be automatically disposed when the manager is disposed", () => {
+      const outputChannel = flinkManager.getOutputChannel();
+      const disposeSpy = sandbox.spy(outputChannel, "dispose");
+
+      flinkManager.dispose();
+
+      sinon.assert.calledOnce(disposeSpy);
+    });
   });
 
   describe("isAppropriateDocument", () => {
