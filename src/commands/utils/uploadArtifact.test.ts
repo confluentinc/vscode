@@ -5,8 +5,10 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { getShowErrorNotificationWithButtonsStub } from "../../../tests/stubs/notifications";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
+import { createResponseError } from "../../../tests/unit/testUtils";
 import {
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
@@ -288,7 +290,7 @@ describe("uploadArtifact", () => {
       const uploadError = new ResponseError(
         new Response("", {
           status: 500,
-          statusText: "Internal Server Error",
+          statusText: "Bad Request",
         }),
       );
       uploadFileToAzureStub.rejects(uploadError);
@@ -355,17 +357,13 @@ describe("uploadArtifact", () => {
     });
 
     it("should show an error notification if the upload fails", async () => {
-      const mockUploadId = "upload-id-123";
       stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(new Error("Upload failed"));
 
-      const errorNotificationStub = sandbox
-        .stub(notifications, "showErrorNotificationWithButtons")
-        .resolves();
+      const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
 
-      await assert.rejects(
-        uploadArtifactToCCloud(mockParams, mockUploadId),
-        (err: Error) => err.message === "Upload failed",
-      );
+      await uploadArtifactToCCloud(mockParams, "upload-id-123").catch((err) => {
+        assert.strictEqual(err.message, "Upload failed");
+      });
 
       sinon.assert.calledOnce(errorNotificationStub);
       sinon.assert.calledWith(
@@ -376,14 +374,8 @@ describe("uploadArtifact", () => {
 
     it("should parse and display JSON error details from ResponseError", async () => {
       const mockUploadId = "upload-id-123";
-      const jsonBody = { error: "artifact already exists" };
 
-      const responseError = new ResponseError(
-        new Response("", {
-          status: 409,
-          statusText: "Conflict",
-        }),
-      );
+      const responseError = createResponseError(409, "Conflict", "artifact already exists");
 
       stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
 
@@ -399,7 +391,7 @@ describe("uploadArtifact", () => {
       sinon.assert.calledOnce(errorNotificationStub);
       sinon.assert.calledWith(
         errorNotificationStub,
-        `Failed to create Flink artifact: ${JSON.stringify(jsonBody)}`,
+        `Failed to create Flink artifact: artifact already exists`,
       );
     });
 
@@ -407,13 +399,7 @@ describe("uploadArtifact", () => {
       const mockUploadId = "upload-id-123";
       const textBody = "artifact already exists";
 
-      const responseError = new ResponseError(
-        new Response("", {
-          status: 409,
-          statusText: "Conflict",
-        }),
-      );
-
+      const responseError = createResponseError(409, "Conflict", textBody);
       stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
 
       const errorNotificationStub = sandbox

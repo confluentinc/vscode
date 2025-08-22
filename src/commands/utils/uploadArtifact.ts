@@ -248,11 +248,12 @@ export async function uploadArtifactToCCloud(
         errBody = await error.response.clone().text();
       }
       if (errBody !== undefined) {
-        logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-        void showErrorNotificationWithButtons(userMessage);
-        throw error;
+        userMessage = `Failed to create Flink artifact: ${errBody}`;
       }
     }
+    void showErrorNotificationWithButtons(userMessage);
+    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
+    throw error;
   }
 }
 

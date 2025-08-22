@@ -1,6 +1,8 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
+import { createResponseError } from "../../tests/unit/testUtils";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
@@ -68,13 +70,15 @@ describe("uploadArtifact Command", () => {
     it("should show error message if handleUploadToCloudProvider fails", async () => {
       sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
       sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").rejects(new Error("fail"));
-      const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
-
+      sandbox
+        .stub(uploadArtifact, "handleUploadToCloudProvider")
+        .rejects(createResponseError(500, "Internal Server Error", "Server error"));
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      sandbox.stub(vscode.window, "withProgress").resolves();
       await uploadArtifactCommand();
 
       sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(showErrorStub, sinon.match(/error/i));
+      sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
     });
 
     it("should send the create artifact request to Confluent Cloud", async () => {

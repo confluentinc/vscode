@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { isResponseError, logError } from "../errors";
+import { showErrorNotificationWithButtons } from "../notifications";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -57,22 +58,30 @@ export async function uploadArtifactCommand(): Promise<void> {
       },
     );
   } catch (err) {
+    let logErrMessage: string;
+    let showNotificationMessage: string;
     if (isResponseError(err)) {
-      let errBody: string | undefined;
       try {
         const respJson = await err.response.clone().json();
+        logErrMessage = `Status: ${err.response.status}, Response: ${JSON.stringify(respJson)}`;
+        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
         if (respJson && typeof respJson === "object") {
-          errBody = JSON.stringify(respJson);
+          logErrMessage = JSON.stringify(respJson);
+          showNotificationMessage =
+            respJson.error?.message ||
+            respJson.message ||
+            `Failed to upload artifact: ${err.message}. See logs for details.`;
         }
       } catch {
-        errBody = await err.response.clone().text();
+        logErrMessage = await err.response.clone().text();
+        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
       }
-      if (errBody) {
-        const userMessage = `Failed to upload artifact: ${err.message} - ${errBody}`;
-        void vscode.window.showErrorMessage(userMessage);
-        logError(userMessage, "Artifact upload failed with response error");
-      }
+    } else {
+      logErrMessage = `Failed to upload artifact: ${err}`;
+      showNotificationMessage = "Failed to upload artifact. See logs for details.";
     }
+    logError(logErrMessage, "Failed to upload artifact");
+    showErrorNotificationWithButtons(showNotificationMessage);
   }
 }
 /**
