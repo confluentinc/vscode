@@ -5,11 +5,11 @@ import { Tail } from "tail";
 import { commands, LogOutputChannel, Uri, window } from "vscode";
 import { SHOW_SIDECAR_EXCEPTIONS } from "../extensionSettings/constants";
 import {
+  EXTENSION_OUTPUT_CHANNEL,
   LOGFILE_ROTATION_INTERVAL,
   Logger,
   MAX_LOGFILE_SIZE,
   MAX_LOGFILES,
-  OUTPUT_CHANNEL,
 } from "../logging";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { WriteableTmpDir } from "../utils/file";
@@ -197,7 +197,7 @@ function createLogTailer(): Tail | undefined {
   });
 
   logTailer.on("error", (data: any) => {
-    OUTPUT_CHANNEL.error(`Error tailing sidecar log: ${data.toString()}`);
+    EXTENSION_OUTPUT_CHANNEL.error(`Error tailing sidecar log: ${data.toString()}`);
   });
 
   return logTailer;
@@ -214,13 +214,13 @@ export function appendSidecarLogToOutputChannel(line: string) {
   const log: SidecarLogFormat | null = parseSidecarLogLine(line);
   if (!log) {
     // failed to parse JSON, or missing required fields; pass the raw line to the output channel
-    OUTPUT_CHANNEL.error(`Failed to parse sidecar log line: ${line}`);
+    EXTENSION_OUTPUT_CHANNEL.error(`Failed to parse sidecar log line: ${line}`);
     SIDECAR_OUTPUT_CHANNEL.appendLine(line);
     try {
       const formattedLogStream = getFormattedSidecarLogStream();
       formattedLogStream.write(`${line}\n`);
     } catch (e) {
-      OUTPUT_CHANNEL.warn(`Failed to write raw line to formatted sidecar log: ${e}`);
+      EXTENSION_OUTPUT_CHANNEL.warn(`Failed to write raw line to formatted sidecar log: ${e}`);
     }
     return;
   }
@@ -247,7 +247,7 @@ export function appendSidecarLogToOutputChannel(line: string) {
     formattedLogStream.write(`${formattedLine}\n`);
   } catch (e) {
     // don't let any potential log file write errors break the main logging functionality
-    OUTPUT_CHANNEL.warn(`Failed to write formatted line to sidecar log: ${e}`);
+    EXTENSION_OUTPUT_CHANNEL.warn(`Failed to write formatted line to sidecar log: ${e}`);
   }
 
   switch (log.level) {
@@ -361,7 +361,7 @@ export function closeFormattedSidecarLogStream(): void {
       formattedSidecarLogStream.end();
       formattedSidecarLogStream = undefined;
     } catch (e) {
-      OUTPUT_CHANNEL.warn(`Error closing formatted sidecar log stream: ${e}`);
+      EXTENSION_OUTPUT_CHANNEL.warn(`Error closing formatted sidecar log stream: ${e}`);
     }
   }
 }
