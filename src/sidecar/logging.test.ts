@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as path from "path";
 import * as sinon from "sinon";
-import { OUTPUT_CHANNEL } from "../logging";
+import { EXTENSION_OUTPUT_CHANNEL } from "../logging";
 import { WriteableTmpDir } from "../utils/file";
 import { SIDECAR_LOGFILE_NAME } from "./constants";
 import {
@@ -197,7 +197,7 @@ describe("sidecar/logging.ts", () => {
       errorStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "error");
       appendLineStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "appendLine");
 
-      mainOutputErrorStub = sandbox.stub(OUTPUT_CHANNEL, "error");
+      mainOutputErrorStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "error");
     });
 
     afterEach(() => {
