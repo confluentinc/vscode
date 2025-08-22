@@ -128,7 +128,6 @@ describe("uploadArtifact Command", () => {
       const errorMessage = "Artifact already exists";
       const respJson = { error: { message: errorMessage } };
 
-      // Pass stringified JSON as the body
       const responseError = createResponseError(409, "Conflict", JSON.stringify(respJson));
 
       sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
