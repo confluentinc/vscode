@@ -23,12 +23,19 @@ import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
+import { EnvironmentId } from "../models/resource";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as ccloud from "../sidecar/connections/ccloud";
+import { SIDECAR_PORT } from "../sidecar/constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { FlinkLanguageClientManager, FLINKSQL_LANGUAGE_ID } from "./flinkLanguageClientManager";
+import {
+  ComputePoolInfo,
+  FlinkLanguageClientManager,
+  FLINKSQL_LANGUAGE_ID,
+} from "./flinkLanguageClientManager";
 import * as languageClient from "./languageClient";
 
 describe("FlinkLanguageClientManager", () => {
@@ -147,20 +154,70 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 
-  describe("validateFlinkSettings", () => {
-    it("should return false when no computePoolId is provided", async () => {
-      const result = await flinkManager.validateFlinkSettings(null);
-      assert.strictEqual(result, false);
+  describe("lookupComputePoolInfo", () => {
+    it("should return pool info when compute pool is found", async () => {
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+
+      assert.deepStrictEqual(result, {
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      });
     });
 
-    it("should return false when no ccloud environments", async () => {
+    it("should find pool in second environment when first has no pools", async () => {
+      const TEST_CCLOUD_ENVIRONMENT_2 = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        id: "env-2" as EnvironmentId,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
+
+      ccloudLoaderStub.getEnvironments.resolves([
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          flinkComputePools: [], // Empty
+        }),
+        TEST_CCLOUD_ENVIRONMENT_2,
+      ]);
+
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+
+      assert.deepStrictEqual(result, {
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: "env-2", // Should be from the second environment
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      });
+    });
+
+    it("should return null when no organization is available", async () => {
+      ccloudLoaderStub.getOrganization.resolves(undefined);
+
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null when no computePoolId is provided", async () => {
+      const result = await (flinkManager as any).lookupComputePoolInfo(null);
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null when no ccloud environments", async () => {
       ccloudLoaderStub.getEnvironments.resolves([]);
 
-      const result = await flinkManager.validateFlinkSettings("pool-id");
-      assert.strictEqual(result, false);
+      const result = await (flinkManager as any).lookupComputePoolInfo("pool-id");
+      assert.strictEqual(result, null);
     });
 
-    it("should return false when cannot find the given computePoolId in environments", async () => {
+    it("should return null when cannot find the given computePoolId", async () => {
       // valid default compute pool
       ccloudLoaderStub.getEnvironments.resolves([
         new CCloudEnvironment({
@@ -169,11 +226,13 @@ describe("FlinkLanguageClientManager", () => {
         }),
       ]);
 
-      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      assert.strictEqual(result, false);
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+      assert.strictEqual(result, null);
     });
 
-    it("should return false when cannot find the given computePoolId", async () => {
+    it("should return null when cannot find the given computePoolId in environments", async () => {
       // valid default compute pool
       ccloudLoaderStub.getEnvironments.resolves([
         new CCloudEnvironment({
@@ -182,19 +241,50 @@ describe("FlinkLanguageClientManager", () => {
         }),
         new CCloudEnvironment({
           ...TEST_CCLOUD_ENVIRONMENT,
-          flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+          flinkComputePools: [],
         }),
       ]);
 
-      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      assert.strictEqual(result, true);
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+      assert.strictEqual(result, null);
     });
 
-    it("should return false if an error occurs while checking compute pool availability", async () => {
+    it("should return null if an error occurs while checking compute pool availability", async () => {
       ccloudLoaderStub.getEnvironments.rejects(new Error("Test error"));
 
-      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      assert.strictEqual(result, false);
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+      assert.strictEqual(result, null);
+    });
+  });
+
+  describe("buildFlinkSqlWebSocketUrl", () => {
+    it("should include all required URL parameters", () => {
+      const poolInfo: ComputePoolInfo = {
+        organizationId: "test-org",
+        environmentId: "test-env",
+        region: "test-region",
+        provider: "test-provider",
+      };
+
+      const result = (flinkManager as any).buildFlinkSqlWebSocketUrl(poolInfo);
+
+      assert.ok(result.startsWith(`ws://localhost:${SIDECAR_PORT}/flsp?`));
+
+      // check that all required parameters are present
+      assert.ok(result.includes(`connectionId=${CCLOUD_CONNECTION_ID}`));
+      assert.ok(result.includes("region=test-region"));
+      assert.ok(result.includes("provider=test-provider"));
+      assert.ok(result.includes("environmentId=test-env"));
+      assert.ok(result.includes("organizationId=test-org"));
+    });
+
+    it("should return null if poolInfo is null", () => {
+      const result = (flinkManager as any).buildFlinkSqlWebSocketUrl(null);
+      assert.strictEqual(result, null);
     });
   });
 
@@ -633,7 +723,7 @@ describe("FlinkLanguageClientManager", () => {
 
   describe("maybeStartLanguageClient", () => {
     let getFlinkSqlSettingsStub: sinon.SinonStub;
-    let validateFlinkSettingsStub: sinon.SinonStub;
+    let lookupComputePoolInfoStub: sinon.SinonStub;
     let buildFlinkSqlWebSocketUrlStub: sinon.SinonStub;
     let isLanguageClientConnectedStub: sinon.SinonStub;
     let cleanupLanguageClientStub: sinon.SinonStub;
@@ -650,8 +740,13 @@ describe("FlinkLanguageClientManager", () => {
       getFlinkSqlSettingsStub = sandbox.stub(flinkManager, "getFlinkSqlSettings");
       getFlinkSqlSettingsStub.resolves({ computePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID });
 
-      validateFlinkSettingsStub = sandbox.stub(flinkManager, "validateFlinkSettings");
-      validateFlinkSettingsStub.resolves(true);
+      lookupComputePoolInfoStub = sandbox.stub(flinkManager as any, "lookupComputePoolInfo");
+      lookupComputePoolInfoStub.resolves({
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      });
 
       buildFlinkSqlWebSocketUrlStub = sandbox.stub(
         flinkManager as any,
@@ -735,17 +830,17 @@ describe("FlinkLanguageClientManager", () => {
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.notCalled(validateFlinkSettingsStub);
+      sinon.assert.notCalled(lookupComputePoolInfoStub);
       sinon.assert.notCalled(initializeLanguageClientStub);
     });
 
     it("should return early if compute pool validation fails", async () => {
-      validateFlinkSettingsStub.resolves(false);
+      lookupComputePoolInfoStub.resolves(null);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.calledOnce(validateFlinkSettingsStub);
+      sinon.assert.calledOnce(lookupComputePoolInfoStub);
       sinon.assert.notCalled(buildFlinkSqlWebSocketUrlStub);
       sinon.assert.notCalled(initializeLanguageClientStub);
     });
@@ -807,7 +902,7 @@ describe("FlinkLanguageClientManager", () => {
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.calledOnce(validateFlinkSettingsStub);
+      sinon.assert.calledOnce(lookupComputePoolInfoStub);
       sinon.assert.calledOnce(buildFlinkSqlWebSocketUrlStub);
       sinon.assert.calledOnce(initializeLanguageClientStub);
       sinon.assert.calledWith(initializeLanguageClientStub, testUrl);

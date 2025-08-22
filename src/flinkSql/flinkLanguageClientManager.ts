@@ -420,11 +420,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       catalogName,
     };
   }
-
-  /** Verify that Flink is enabled + the compute pool id setting exists and is in an environment we know about */
-  public async validateFlinkSettings(computePoolId: string | null): Promise<boolean> {
-    return !!(computePoolId && (await this.lookupComputePoolInfo(computePoolId)));
-  }
   /**
    * Clear diagnostics for a specific document URI
    * This is used to clear diagnostics when the document is closed or when the language client is reinitialized
@@ -555,12 +550,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         const { computePoolId } = await this.getFlinkSqlSettings(uri);
         if (!computePoolId) {
           logger.trace("No compute pool, not starting language client");
-          return;
-        }
-
-        const isPoolOk = await this.validateFlinkSettings(computePoolId);
-        if (!isPoolOk) {
-          logger.trace("No valid compute pool; not initializing language client");
           return;
         }
 
