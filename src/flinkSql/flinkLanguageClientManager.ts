@@ -38,6 +38,17 @@ export interface FlinkSqlSettings {
   catalogName: string | null;
 }
 
+/**
+ * Information about the compute pool that the user is using.
+ * This is used to build the WebSocket URL for the language client.
+ */
+export interface ComputePoolInfo {
+  organizationId: string;
+  environmentId: string;
+  region: string;
+  provider: string;
+}
+
 export const FLINKSQL_LANGUAGE_ID = "flinksql";
 
 /**
@@ -224,10 +235,8 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       // Otherwise just need to notify the language server of the new settings (say, new compute pool
       // or new default database or catalog in same provider+env+region).
       const settings = await this.getFlinkSqlSettings(uri);
-      if (
-        settings.computePoolId &&
-        this.lastWebSocketUrl !== (await this.buildFlinkSqlWebSocketUrl(settings.computePoolId))
-      ) {
+      const poolInfo = await this.lookupComputePoolInfo(settings.computePoolId);
+      if (poolInfo && this.lastWebSocketUrl !== this.buildFlinkSqlWebSocketUrl(poolInfo)) {
         logger.debug(
           "uriMetadataSet: WebSocket URL needs changing, reinitializing language client with new URL",
         );
@@ -421,37 +430,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       catalogName,
     };
   }
-
-  /** Verify that Flink is enabled + the compute pool id setting exists and is in an environment we know about */
-  public async validateFlinkSettings(computePoolId: string | null): Promise<boolean> {
-    if (!computePoolId) {
-      return false;
-    }
-    try {
-      // Load available compute pools to verify the configured pool exists
-      // Find the environment containing this compute pool
-      const loader = CCloudResourceLoader.getInstance();
-      const environments: CCloudEnvironment[] = await loader.getEnvironments();
-      if (!environments || environments.length === 0) {
-        logger.trace("No CCloud environments found");
-        return false;
-      }
-      // Check if the configured compute pool exists in any environment
-      for (const env of environments) {
-        if (env.flinkComputePools.some((pool) => pool.id === computePoolId)) {
-          return true;
-        }
-      }
-
-      logger.warn(
-        `Configured Flink compute pool ${computePoolId} not found in available resources`,
-      );
-      return false;
-    } catch (error) {
-      logger.error("Error checking Flink resources availability", error);
-      return false;
-    }
-  }
   /**
    * Clear diagnostics for a specific document URI
    * This is used to clear diagnostics when the document is closed or when the language client is reinitialized
@@ -470,26 +448,32 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * @param computePoolId The ID of the compute pool to look up
    * @returns Object {organizationId, environmentId, region, provider} or null if not found
    */
-  private async lookupComputePoolInfo(computePoolId: string): Promise<{
-    organizationId: string;
-    environmentId: string;
-    region: string;
-    provider: string;
-  } | null> {
+  private async lookupComputePoolInfo(
+    computePoolId: string | null,
+  ): Promise<ComputePoolInfo | null> {
+    if (!computePoolId) {
+      logger.trace("No compute pool id provided");
+      return null;
+    }
+
     try {
+      // Load available compute pools to verify the configured pool exists
       const loader = CCloudResourceLoader.getInstance();
       // Get the current org
       const currentOrg = await loader.getOrganization();
       const organizationId: string | undefined = currentOrg?.id;
       if (!organizationId) {
+        logger.trace("No organization found");
         return null;
       }
 
       // Find the environment containing this compute pool
       const environments: CCloudEnvironment[] = await loader.getEnvironments();
       if (!environments || environments.length === 0) {
+        logger.trace("No CCloud environments found");
         return null;
       }
+      // Check if the configured compute pool exists in any environment
       for (const env of environments) {
         const foundPool = env.flinkComputePools.find(
           (pool: CCloudFlinkComputePool) => pool.id === computePoolId,
@@ -519,18 +503,15 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
   /**
    * Builds the WebSocket URL for the Flink SQL Language Server
-   * @param computePoolId The ID of the compute pool to use
-   * @returns (string) WebSocket URL, or null if pool info couldn't be retrieved
+   * @param poolInfo The compute pool info to use
+   * @returns (string) WebSocket URL, or null if pool info is invalid
    */
-  private async buildFlinkSqlWebSocketUrl(computePoolId: string): Promise<string | null> {
-    const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+  private buildFlinkSqlWebSocketUrl(poolInfo: ComputePoolInfo | null): string | null {
     if (!poolInfo) {
-      logger.error(`Could not find environment containing compute pool ${computePoolId}`);
+      logger.trace("No pool info provided, cannot build WebSocket URL");
       return null;
     }
-    const { organizationId, environmentId, region, provider } = poolInfo;
-    const url = `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${region}&provider=${provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
-    return url;
+    return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${poolInfo.region}&provider=${poolInfo.provider}&environmentId=${poolInfo.environmentId}&organizationId=${poolInfo.organizationId}`;
   }
 
   /**
@@ -582,24 +563,13 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           return;
         }
 
-        const isPoolOk = await this.validateFlinkSettings(computePoolId);
-        if (!isPoolOk) {
+        const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+        if (!poolInfo) {
           logger.trace("No valid compute pool; not initializing language client");
           return;
         }
 
-        let url: string | null = await this.buildFlinkSqlWebSocketUrl(computePoolId).catch(
-          (error) => {
-            let msg = "Failed to build WebSocket URL";
-            logError(error, msg, {
-              extra: {
-                compute_pool_id: computePoolId,
-              },
-            });
-            return null;
-          },
-        );
-
+        let url: string | null = this.buildFlinkSqlWebSocketUrl(poolInfo);
         if (!url) {
           logger.error("Failed to build WebSocket URL, cannot start language client");
           return;
