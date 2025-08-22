@@ -9,7 +9,7 @@ import {
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { FlinkStatement, restFlinkStatementToModel } from "../../models/flinkStatement";
+import { FlinkStatement, Phase, restFlinkStatementToModel } from "../../models/flinkStatement";
 import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
 import { WebviewPanelCache } from "../../webview-cache";
@@ -192,13 +192,37 @@ const DEFAULT_POLL_PERIOD_MS = 300;
 export const MAX_WAIT_TIME_MS = 60_000;
 
 /**
- * Wait for a Flink statement to enter results-viewable state by polling its status.
+ * Wait for a Flink statement to enter into a state where results can be fetched -- start running, completed, and is
+ * within the age limit for results to be viewable.
  *
  * @param statement The Flink statement to monitor
- * @returns Promise that resolves when the statement enters RUNNING phase
- * @throws Error if statement doesn't reach RUNNING phase within MAX_WAIT_TIME_MS seconds, or if it is not found.
+ * @returns Promise that resolves when the statement enters a phase where results can (try to) be fetched w/o error.
+ * @throws Error if statement doesn't fulfil `statement.areResultsViewable` within MAX_WAIT_TIME_MS seconds, or if it is not found.
  */
-export async function waitForStatementRunning(statement: FlinkStatement): Promise<void> {
+export async function waitForResultsFetchable(statement: FlinkStatement): Promise<void> {
+  return waitForStatementState(statement, (s) => s.canRequestResults);
+}
+
+/**
+ * Wait for a vscode-generated and just now-submitted 'hidden' Flink statement to complete.
+ */
+export async function waitForStatementCompletion(statement: FlinkStatement): Promise<void> {
+  return waitForStatementState(statement, (s) => s.phase === Phase.COMPLETED);
+}
+
+/**
+ * Wait for a Flink statement to enter any given state as determined by the provided predicate.
+ *
+ * @param statement The Flink statement to monitor
+ * @param predicate A function that takes a Flink statement and returns true if the statement is in the desired state.
+ * @returns Promise that resolves when the statement passes the predicate check.
+ * @throws Error if statement doesn't fulfill the predicate within MAX_WAIT_TIME_MS seconds, or if the statement is not found, or
+ * if the predicate itself throws an error.
+ */
+async function waitForStatementState(
+  statement: FlinkStatement,
+  predicate: (s: FlinkStatement) => boolean,
+): Promise<void> {
   const startTime = Date.now();
 
   const ccloudLoader = CCloudResourceLoader.getInstance();
@@ -211,8 +235,9 @@ export async function waitForStatementRunning(statement: FlinkStatement): Promis
       // if the statement is no longer found, break to raise error
       logger.warn(`waitForStatementRunning: statement "${statement.name}" not found`);
       throw new Error(`Statement ${statement.name} no longer exists.`);
-    } else if (refreshedStatement.areResultsViewable) {
-      // Resolve if now in a viewable state
+    }
+
+    if (predicate(refreshedStatement)) {
       return;
     }
 
@@ -221,7 +246,7 @@ export async function waitForStatementRunning(statement: FlinkStatement): Promis
   }
 
   throw new Error(
-    `Statement ${statement.name} did not reach RUNNING phase within ${MAX_WAIT_TIME_MS / 1000} seconds`,
+    `Statement ${statement.name} did not reach desired state within ${MAX_WAIT_TIME_MS / 1000} seconds`,
   );
 }
 

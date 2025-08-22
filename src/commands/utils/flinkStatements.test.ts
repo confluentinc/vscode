@@ -16,7 +16,8 @@ import {
   determineFlinkStatementName,
   localTimezoneOffset,
   submitFlinkStatement,
-  waitForStatementRunning,
+  waitForResultsFetchable,
+  waitForStatementCompletion,
 } from "./flinkStatements";
 
 describe("commands/utils/flinkStatements.ts", function () {
@@ -259,7 +260,7 @@ describe("commands/utils/flinkStatements.ts", function () {
     }
   });
 
-  describe("waitForStatementRunning()", function () {
+  describe("waitForStatement* tests", function () {
     let refreshFlinkStatementStub: sinon.SinonStub;
     this.beforeEach(function () {
       sandbox.useFakeTimers(new Date());
@@ -268,38 +269,76 @@ describe("commands/utils/flinkStatements.ts", function () {
       refreshFlinkStatementStub = sandbox.stub(ccloudLoader, "refreshFlinkStatement");
     });
 
-    it("returns when statement is running", async function () {
-      refreshFlinkStatementStub.resolves({
-        areResultsViewable: true,
+    describe("waitForResultsFetchable()", function () {
+      it("returns when statement is running", async function () {
+        refreshFlinkStatementStub.resolves({
+          canRequestResults: true,
+        });
+
+        await waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT);
+        sinon.assert.calledOnce(refreshFlinkStatementStub);
       });
 
-      await waitForStatementRunning(TEST_CCLOUD_FLINK_STATEMENT);
-      sinon.assert.calledOnce(refreshFlinkStatementStub);
-    });
+      it("throws an error if statement is not found", async function () {
+        refreshFlinkStatementStub.resolves(null);
 
-    it("throws an error if statement is not found", async function () {
-      refreshFlinkStatementStub.resolves(null);
-
-      await assert.rejects(
-        waitForStatementRunning(TEST_CCLOUD_FLINK_STATEMENT),
-        /no longer exists/,
-      );
-    });
-
-    it("throws an error if statement is not running after MAX_WAIT_TIME_MS seconds", async function () {
-      refreshFlinkStatementStub.resolves({
-        areResultsViewable: false,
+        await assert.rejects(
+          waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT),
+          /no longer exists/,
+        );
       });
 
-      const clock = sandbox.clock;
+      it("throws an error if statement is not running after MAX_WAIT_TIME_MS seconds", async function () {
+        refreshFlinkStatementStub.resolves({
+          canRequestResults: false,
+        });
 
-      // Start the promise
-      const promise = waitForStatementRunning(TEST_CCLOUD_FLINK_STATEMENT);
+        const clock = sandbox.clock;
 
-      // Advance past the max wait time is reached.
-      await clock.tickAsync(MAX_WAIT_TIME_MS + 1);
+        // Start the promise
+        const promise = waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT);
 
-      await assert.rejects(promise, /did not reach RUNNING phase/);
+        // Advance past the max wait time is reached.
+        await clock.tickAsync(MAX_WAIT_TIME_MS + 1);
+
+        await assert.rejects(promise, /did not reach desired state/);
+      });
+    });
+
+    describe("waitForStatementCompletion()", () => {
+      it("returns when statement is completed", async function () {
+        refreshFlinkStatementStub.resolves({
+          isCompleted: true,
+        });
+
+        await waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT);
+        sinon.assert.calledOnce(refreshFlinkStatementStub);
+      });
+
+      it("throws an error if statement is not found", async function () {
+        refreshFlinkStatementStub.resolves(null);
+
+        await assert.rejects(
+          waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT),
+          /no longer exists/,
+        );
+      });
+
+      it("throws an error if statement is not completed after MAX_WAIT_TIME_MS seconds", async function () {
+        refreshFlinkStatementStub.resolves({
+          isCompleted: false,
+        });
+
+        const clock = sandbox.clock;
+
+        // Start the promise
+        const promise = waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT);
+
+        // Advance past the max wait time is reached.
+        await clock.tickAsync(MAX_WAIT_TIME_MS + 1);
+
+        await assert.rejects(promise, /did not reach desired state/);
+      });
     });
   });
 

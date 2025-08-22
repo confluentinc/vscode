@@ -30,7 +30,7 @@ import {
   determineFlinkStatementName,
   localTimezoneOffset,
   submitFlinkStatement,
-  waitForStatementRunning,
+  waitForResultsFetchable,
 } from "./utils/flinkStatements";
 
 const logger = new Logger("commands.flinkStatements");
@@ -181,7 +181,7 @@ export async function submitFlinkStatementCommand(
     // Wait for the statement to start running, then open the results view.
     // Show a progress indicator over the Flink Statements view while we wait.
     await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
-      await waitForStatementRunning(newStatement);
+      await waitForResultsFetchable(newStatement);
       await openFlinkStatementResultsView(newStatement);
     });
 

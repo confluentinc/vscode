@@ -219,7 +219,7 @@ export class FlinkStatementResultsManager {
       if (
         this._state() !== "running" ||
         !this._moreResults() ||
-        !this.statement.areResultsViewable ||
+        !this.statement.canRequestResults ||
         this._getResultsAbortController.signal.aborted
       ) {
         // Self-destruct
@@ -506,7 +506,7 @@ export class FlinkStatementResultsManager {
           detail: this.statement.status?.detail ?? null,
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
-          areResultsViewable: this.statement.areResultsViewable,
+          areResultsViewable: this.statement.canRequestResults,
           isForeground: this.statement.isForeground,
         };
       }

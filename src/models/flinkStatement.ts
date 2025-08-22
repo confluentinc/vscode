@@ -43,7 +43,7 @@ export const FAILED_PHASES = [Phase.FAILED, Phase.FAILING];
 /**  List of terminal phases. Statements in terminal phase won't ever change on their own. */
 export const TERMINAL_PHASES = [Phase.COMPLETED, Phase.STOPPED, Phase.FAILED];
 
-const VIEWABLE_PHASES = [
+const EXECUTION_STARTED_PHASES = [
   Phase.PENDING,
   Phase.RUNNING,
   Phase.COMPLETED,
@@ -207,17 +207,23 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    * For statement results to be viewable, it must satisfy these conditions:
    * 1. The statement must have been created in the last 24 hours
    *    (which is the TTL for the statement result to be deleted.)
-   * 2. The statement phase indicates {@link VIEWABLE_PHASES viewability.}
+   * 2. The statement phase indicates {@link EXECUTION_STARTED_PHASES viewability.}
+   * 3. The results have not been fetched already (which we cannot ourselves determine, but
+   *    we document it here for posterity).
    */
-  get areResultsViewable(): boolean {
+  get canRequestResults(): boolean {
     if (!this.createdAt) {
       return false;
     }
 
-    return (
-      this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS &&
-      VIEWABLE_PHASES.includes(this.phase)
-    );
+    // If the statement is more than 24 hours old, results will never be viewable.
+    if (this.createdAt.getTime() < new Date().getTime() - ONE_DAY_MILLIS) {
+      throw new Error(
+        `Statement "${this.name}" is older than 24 hours and results are not viewable.`,
+      );
+    }
+
+    return EXECUTION_STARTED_PHASES.includes(this.phase);
   }
 
   /** @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model */
