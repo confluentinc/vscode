@@ -17,6 +17,7 @@ import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL,
   TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
 } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
@@ -67,6 +68,7 @@ describe("FlinkLanguageClientManager", () => {
       flinkComputePools: [pool],
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
+    ccloudLoaderStub.getOrganization.resolves(TEST_CCLOUD_ORGANIZATION);
     flinkManager = FlinkLanguageClientManager.getInstance();
   });
 
@@ -655,7 +657,7 @@ describe("FlinkLanguageClientManager", () => {
         flinkManager as any,
         "buildFlinkSqlWebSocketUrl",
       );
-      buildFlinkSqlWebSocketUrlStub.resolves("ws://localhost:8080/test");
+      buildFlinkSqlWebSocketUrlStub.returns("ws://localhost:8080/test");
 
       isLanguageClientConnectedStub = sandbox.stub(
         flinkManager as any,
@@ -749,7 +751,8 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should return early if WebSocket URL building fails", async () => {
-      buildFlinkSqlWebSocketUrlStub.rejects(new Error("Failed to build URL"));
+      // if .lookupComputePoolInfo() returns null for various reasons
+      buildFlinkSqlWebSocketUrlStub.returns(null);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -759,7 +762,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should return early if WebSocket URL building returns null", async () => {
       // like if .lookupComputePoolInfo() returns null for various reasons
-      buildFlinkSqlWebSocketUrlStub.resolves(null);
+      buildFlinkSqlWebSocketUrlStub.returns(null);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -772,7 +775,7 @@ describe("FlinkLanguageClientManager", () => {
       const testUrl = "ws://localhost:8080/test";
       isLanguageClientConnectedStub.returns(true);
       flinkManager["lastWebSocketUrl"] = testUrl;
-      buildFlinkSqlWebSocketUrlStub.resolves(testUrl);
+      buildFlinkSqlWebSocketUrlStub.returns(testUrl);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI, false); // no forced restart
 
@@ -786,7 +789,7 @@ describe("FlinkLanguageClientManager", () => {
       const newUrl = "ws://localhost:8080/new";
       isLanguageClientConnectedStub.returns(true);
       flinkManager["lastWebSocketUrl"] = oldUrl;
-      buildFlinkSqlWebSocketUrlStub.resolves(newUrl);
+      buildFlinkSqlWebSocketUrlStub.returns(newUrl);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -799,7 +802,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should successfully initialize the language client with valid settings", async () => {
       const testUrl = "ws://localhost:8080/test";
-      buildFlinkSqlWebSocketUrlStub.resolves(testUrl);
+      buildFlinkSqlWebSocketUrlStub.returns(testUrl);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -957,8 +960,15 @@ describe("FlinkLanguageClientManager", () => {
       });
 
       it("should call restartLanguageClient if new metadata has computepool and implies new websocket url", async () => {
-        // Just force set things up so that new call to buildFlinkSqlWebSocketUrl() will return a different URL.
+        // stub out .lookupComputePoolInfo() to return a valid compute pool info so buildFlinkSqlWebSocketUrl() will return a valid URL
+        sandbox.stub(flinkManager as any, "lookupComputePoolInfo").resolves({
+          organizationId: "test-org",
+          environmentId: "test-env",
+          region: "us-west-2",
+          provider: "aws",
+        });
         flinkManager["lastWebSocketUrl"] = "ws://old-url";
+        // Just force set things up so that new call to buildFlinkSqlWebSocketUrl() will return a different URL.
         buildFlinkSqlWebSocketUrlStub.returns("ws://new-url");
 
         const uriString = "file:///fake/path/test.flinksql";
