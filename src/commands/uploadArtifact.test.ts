@@ -81,6 +81,23 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
     });
 
+    it("should show error notification for non-ResponseError thrown", async () => {
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+      sandbox
+        .stub(uploadArtifact, "uploadArtifactToCCloud")
+        .rejects(new Error("Some generic error"));
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      sandbox.stub(vscode.window, "showInformationMessage");
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
+    });
+
     it("should send the create artifact request to Confluent Cloud", async () => {
       const mockUploadId = "12345";
       const mockCreateResponse = {
