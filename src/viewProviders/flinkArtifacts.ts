@@ -11,6 +11,8 @@ import { FlinkArtifactsViewProviderMode } from "./multiViewDelegates/constants";
 import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
+export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
+
 /**
  * Multi-mode view provider for Flink artifacts and UDFs.
  * - When set to the "artifacts" mode, logic is delegated to the {@link FlinkArtifactsDelegate}.
@@ -19,14 +21,14 @@ import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
   FlinkArtifactsViewProviderMode,
   CCloudFlinkComputePool,
-  FlinkArtifact | FlinkUdf
+  ArtifactOrUdf
 > {
   viewId = "confluent-flink-artifacts";
 
   parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
   parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
 
-  children: (FlinkArtifact | FlinkUdf)[] = [];
+  children: ArtifactOrUdf[] = [];
 
   constructor() {
     super();
@@ -37,7 +39,7 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
 
     this.treeViewDelegates = new Map<
       FlinkArtifactsViewProviderMode,
-      ViewProviderDelegate<FlinkArtifactsViewProviderMode, FlinkArtifact | FlinkUdf>
+      ViewProviderDelegate<FlinkArtifactsViewProviderMode, ArtifactOrUdf>
     >([
       [FlinkArtifactsViewProviderMode.Artifacts, artifactsDelegate],
       [FlinkArtifactsViewProviderMode.UDFs, udfsDelegate],
