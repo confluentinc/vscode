@@ -21,6 +21,7 @@ export async function openConfluentExtension(page: Page): Promise<void> {
   const isVisible = await viewContainer.locator.isVisible();
   console.log(`Confluent view container is visible: ${isVisible}`);
   if (!isVisible) {
+    console.log("Clicking activity bar item to open sidebar");
     await activityBarItem.locator.click();
   }
 
