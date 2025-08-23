@@ -40,16 +40,12 @@ class TestDelegateChild {
   }
 }
 
-class FooDelegate extends ViewProviderDelegate<TestMode, TestDelegateChild> {
+class FooDelegate extends ViewProviderDelegate<TestMode, TestParentResource, TestDelegateChild> {
   readonly mode: TestMode = TestMode.Foo;
   readonly viewTitle = "Mode Foo";
   loadingMessage = "Loading Foo items...";
 
   children: TestDelegateChild[] = [];
-
-  constructor(public parent: TestMultiViewProvider) {
-    super();
-  }
 
   async fetchChildren(): Promise<TestDelegateChild[]> {
     return this.children;
@@ -60,16 +56,12 @@ class FooDelegate extends ViewProviderDelegate<TestMode, TestDelegateChild> {
   }
 }
 
-class BarDelegate extends ViewProviderDelegate<TestMode, TestDelegateChild> {
+class BarDelegate extends ViewProviderDelegate<TestMode, TestParentResource, TestDelegateChild> {
   readonly mode: TestMode = TestMode.Bar;
   readonly viewTitle = "Mode Bar";
   loadingMessage = "Loading Bar items...";
 
   children: TestDelegateChild[] = [];
-
-  constructor(public parent: TestMultiViewProvider) {
-    super();
-  }
 
   async fetchChildren(): Promise<TestDelegateChild[]> {
     return this.children;
@@ -94,10 +86,13 @@ class TestMultiViewProvider extends MultiModeViewProvider<
 
   constructor() {
     super();
-    const fooDelegate = new FooDelegate(this);
-    const barDelegate = new BarDelegate(this);
+    const fooDelegate = new FooDelegate();
+    const barDelegate = new BarDelegate();
 
-    this.treeViewDelegates = new Map<TestMode, ViewProviderDelegate<TestMode, TestDelegateChild>>([
+    this.treeViewDelegates = new Map<
+      TestMode,
+      ViewProviderDelegate<TestMode, TestParentResource, TestDelegateChild>
+    >([
       [TestMode.Foo, fooDelegate],
       [TestMode.Bar, barDelegate],
     ]);
