@@ -1,11 +1,12 @@
 import { TreeItem } from "vscode";
+import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkUDF";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
-import { type FlinkArtifactsUDFsViewProvider } from "../flinkArtifacts";
 import { FlinkArtifactsViewProviderMode } from "./constants";
 
 export class FlinkUDFsDelegate extends ViewProviderDelegate<
   FlinkArtifactsViewProviderMode,
+  CCloudFlinkComputePool,
   FlinkUdf
 > {
   readonly mode = FlinkArtifactsViewProviderMode.UDFs;
@@ -15,28 +16,23 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
 
   loadingMessage = "Loading Flink UDFs...";
 
-  constructor(readonly parent: FlinkArtifactsUDFsViewProvider) {
-    super();
-  }
-
-  async fetchChildren(): Promise<FlinkUdf[]> {
+  async fetchChildren(resource: CCloudFlinkComputePool): Promise<FlinkUdf[]> {
     this.children = [];
 
-    if (this.parent.computePool) {
-      // TODO: replace this when https://github.com/confluentinc/vscode/issues/2310 is done
-      this.children = [
-        new FlinkUdf({
-          connectionId: this.parent.computePool!.connectionId,
-          connectionType: this.parent.computePool!.connectionType,
-          environmentId: this.parent.computePool!.environmentId,
-          id: "example-udf",
-          name: "Example UDF",
-          description: "This is an example UDF for demonstration purposes.",
-          provider: this.parent.computePool!.provider,
-          region: this.parent.computePool!.region,
-        }),
-      ];
-    }
+    // TODO: replace this when https://github.com/confluentinc/vscode/issues/2310 is done
+    this.children = [
+      new FlinkUdf({
+        connectionId: resource.connectionId,
+        connectionType: resource.connectionType,
+        environmentId: resource.environmentId,
+        id: "example-udf",
+        name: "Example UDF",
+        description: "This is an example UDF for demonstration purposes.",
+        provider: resource.provider,
+        region: resource.region,
+      }),
+    ];
+
     return this.children;
   }
 

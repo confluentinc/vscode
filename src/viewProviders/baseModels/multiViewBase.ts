@@ -3,7 +3,11 @@ import { ContextValues, setContextValue } from "../../context/values";
 import { BaseViewProviderData } from "./base";
 import { EnvironmentedBaseViewProviderData, ParentedBaseViewProvider } from "./parentedBase";
 
-export abstract class ViewProviderDelegate<M extends string, T extends BaseViewProviderData> {
+export abstract class ViewProviderDelegate<
+  M extends string,
+  P extends EnvironmentedBaseViewProviderData,
+  T extends BaseViewProviderData,
+> {
   abstract readonly mode: M;
 
   abstract readonly viewTitle: string;
@@ -11,7 +15,7 @@ export abstract class ViewProviderDelegate<M extends string, T extends BaseViewP
 
   abstract children: T[];
 
-  abstract fetchChildren(element?: T): Promise<T[]>;
+  abstract fetchChildren(resource: P): Promise<T[]>;
 
   getChildren(): T[] {
     return this.children;
@@ -30,10 +34,10 @@ export abstract class MultiModeViewProvider<
   T extends BaseViewProviderData,
 > extends ParentedBaseViewProvider<P, T> {
   /** Map of available delegates by their {@linkcode ViewProviderDelegate.mode mode} */
-  protected treeViewDelegates!: Map<M, ViewProviderDelegate<M, T>>;
+  protected treeViewDelegates!: Map<M, ViewProviderDelegate<M, P, T>>;
 
-  protected defaultDelegate!: ViewProviderDelegate<M, T>;
-  protected currentDelegate: ViewProviderDelegate<M, T>;
+  protected defaultDelegate!: ViewProviderDelegate<M, P, T>;
+  protected currentDelegate: ViewProviderDelegate<M, P, T>;
 
   /** Optional context value to update when delegate changes */
   protected delegateContextValue?: ContextValues;

@@ -22,7 +22,7 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
 
     beforeEach(() => {
       provider = FlinkArtifactsUDFsViewProvider.getInstance();
-      udfsDelegate = new FlinkUDFsDelegate(provider);
+      udfsDelegate = new FlinkUDFsDelegate();
     });
 
     afterEach(() => {
@@ -30,19 +30,9 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
       FlinkArtifactsUDFsViewProvider["instanceMap"].clear();
     });
 
-    it("should return an empty array when no compute pool is selected", async () => {
-      provider["resource"] = null;
-
-      const items = await udfsDelegate.fetchChildren();
-
-      assert.deepStrictEqual(items, []);
-    });
-
-    it("should return a UDF array when a compute pool is selected", async () => {
+    it(".fetchChildren() should return a FlinkUdf array when a compute pool is provided", async () => {
       // TODO: stub the actual loading here when https://github.com/confluentinc/vscode/issues/2310 is done
-      provider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-
-      const items = await udfsDelegate.fetchChildren();
+      const items = await udfsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL);
 
       assert.ok(items.length > 0);
       assert.ok(items[0] instanceof FlinkUdf);

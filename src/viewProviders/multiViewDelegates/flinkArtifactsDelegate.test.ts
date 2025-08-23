@@ -33,7 +33,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
     let artifactsDelegate: FlinkArtifactsDelegate;
 
     beforeEach(() => {
-      artifactsDelegate = new FlinkArtifactsDelegate(fakeParent as any);
+      artifactsDelegate = new FlinkArtifactsDelegate();
     });
 
     describe("fetchChildren()", () => {
@@ -56,7 +56,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
 
         stubbedLoader.getFlinkArtifacts.resolves(mockArtifacts);
 
-        const children = await artifactsDelegate.fetchChildren();
+        const children = await artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL);
 
         assert.deepStrictEqual(children, mockArtifacts);
         assert.deepStrictEqual(artifactsDelegate["children"], mockArtifacts);
@@ -70,7 +70,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
 
         assert.deepStrictEqual(artifactsDelegate["children"], []);
         sinon.assert.calledOnce(logErrorStub);
@@ -83,7 +86,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("Service unavailable", { status: 503 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });
@@ -94,7 +100,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new Error("Failed to load Flink artifacts");
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });
@@ -105,7 +114,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("oh no", { status: 300 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
 
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.notCalled(showErrorNotificationStub);
@@ -121,7 +133,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
           createFlinkArtifact({ id: "artifact1", name: "Initial Artifact" }),
         ];
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         assert.deepStrictEqual(artifactsDelegate["children"], []);
       });
 
@@ -131,7 +146,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.notCalled(showErrorNotificationStub);
       });
@@ -142,7 +160,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("Unauthorized", { status: 401 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });
@@ -153,7 +174,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("Not found", { status: 404 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });
@@ -164,7 +188,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("Too many requests", { status: 429 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });
@@ -175,7 +202,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         const mockError = new ResponseError(new Response("I'm a teapot", { status: 418 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
-        await assert.rejects(() => artifactsDelegate.fetchChildren(), mockError);
+        await assert.rejects(
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          mockError,
+        );
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });

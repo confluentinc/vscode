@@ -34,12 +34,12 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
     super();
     // pass the main provider into each mode so they can call its helpers without needing to extend
     // the provider itself and causing circular dependencies / stack overflows
-    const artifactsDelegate = new FlinkArtifactsDelegate(this);
-    const udfsDelegate = new FlinkUDFsDelegate(this);
+    const artifactsDelegate = new FlinkArtifactsDelegate();
+    const udfsDelegate = new FlinkUDFsDelegate();
 
     this.treeViewDelegates = new Map<
       FlinkArtifactsViewProviderMode,
-      ViewProviderDelegate<FlinkArtifactsViewProviderMode, ArtifactOrUdf>
+      ViewProviderDelegate<FlinkArtifactsViewProviderMode, CCloudFlinkComputePool, ArtifactOrUdf>
     >([
       [FlinkArtifactsViewProviderMode.Artifacts, artifactsDelegate],
       [FlinkArtifactsViewProviderMode.UDFs, udfsDelegate],
@@ -64,7 +64,7 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            this.children = await this.currentDelegate.fetchChildren();
+            this.children = await this.currentDelegate.fetchChildren(this.computePool!);
           } catch (error) {
             const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
             void logError(error, msg);

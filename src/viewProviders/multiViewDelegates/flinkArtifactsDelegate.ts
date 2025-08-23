@@ -2,13 +2,14 @@ import { TreeItem } from "vscode";
 import { isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
+import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
-import { type FlinkArtifactsUDFsViewProvider } from "../flinkArtifacts";
 import { FlinkArtifactsViewProviderMode } from "./constants";
 
 export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   FlinkArtifactsViewProviderMode,
+  CCloudFlinkComputePool,
   FlinkArtifact
 > {
   readonly mode = FlinkArtifactsViewProviderMode.Artifacts;
@@ -18,15 +19,11 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
 
   loadingMessage = "Loading Flink artifacts...";
 
-  constructor(readonly parent: FlinkArtifactsUDFsViewProvider) {
-    super();
-  }
-
-  async fetchChildren(): Promise<FlinkArtifact[]> {
+  async fetchChildren(resource: CCloudFlinkComputePool): Promise<FlinkArtifact[]> {
     this.children = [];
     try {
       const loader = CCloudResourceLoader.getInstance();
-      this.children = await loader.getFlinkArtifacts(this.parent.computePool!);
+      this.children = await loader.getFlinkArtifacts(resource);
       return this.children;
     } catch (error) {
       const { showNotification, message } = triageGetFlinkArtifactsError(error);
