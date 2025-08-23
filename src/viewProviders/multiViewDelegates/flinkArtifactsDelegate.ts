@@ -29,7 +29,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
       this.children = await loader.getFlinkArtifacts(this.parent.computePool!);
       return this.children;
     } catch (error) {
-      const { showNotification, message } = triageGetFlinkArtifactsError(error, this.parent.logger);
+      const { showNotification, message } = triageGetFlinkArtifactsError(error);
       if (showNotification) {
         void showErrorNotificationWithButtons(message);
       }
@@ -42,10 +42,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   }
 }
 
-export function triageGetFlinkArtifactsError(
-  error: unknown,
-  logger: { debug: (msg: string, err: unknown) => void },
-): {
+export function triageGetFlinkArtifactsError(error: unknown): {
   showNotification: boolean;
   message: string;
 } {
@@ -54,12 +51,6 @@ export function triageGetFlinkArtifactsError(
 
   if (isResponseError(error)) {
     const status = error.response.status;
-    error.response
-      .clone()
-      .json()
-      .catch((err) => {
-        logger.debug("Failed to parse error response as JSON", err);
-      });
     /* Note: This switch statement intentionally excludes 400 errors.
      Otherwise, they may pop up on loading the compute pool if it is using an unsupported cloud provider. */
     if (status >= 401 && status < 600) {
