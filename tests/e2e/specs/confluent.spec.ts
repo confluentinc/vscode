@@ -3,7 +3,7 @@ import { Tag } from "../tags";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
 
-test.describe.only(() => {
+test.describe(() => {
   test(
     "should load the extension properly",
     { tag: [Tag.Smoke] },
