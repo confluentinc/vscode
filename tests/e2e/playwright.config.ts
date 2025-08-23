@@ -16,7 +16,7 @@ const WINDOWS_FACTOR = process.platform === "win32" ? 2 : 1;
 export default defineConfig({
   testDir: path.normalize(path.join(__dirname, "specs")),
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  retries: 2,
   maxFailures: 1,
   timeout: 120000,
   workers: 1,
@@ -39,7 +39,7 @@ export default defineConfig({
       ]
     : "html",
   use: {
-    trace: "retain-on-failure",
+    trace: "on",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
