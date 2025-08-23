@@ -1,3 +1,4 @@
+import { stubAllDialogs } from "electron-playwright-helpers";
 import { test } from "../baseTest";
 import { Tag } from "../tags";
 import { openConfluentExtension } from "./utils/confluent";
@@ -8,6 +9,7 @@ test.describe(() => {
     "should load the extension properly",
     { tag: [Tag.Smoke] },
     async ({ page, electronApp }) => {
+      stubAllDialogs(electronApp);
       await openConfluentExtension(page);
     },
   );
