@@ -9,16 +9,12 @@ export abstract class ViewProviderDelegate<M extends string, T extends BaseViewP
   abstract readonly viewTitle: string;
   abstract loadingMessage: string;
 
-  abstract parent: ParentedBaseViewProvider<EnvironmentedBaseViewProviderData, T>;
   abstract children: T[];
 
   abstract fetchChildren(element?: T): Promise<T[]>;
 
-  getChildren(element?: T): T[] {
-    if (!this.parent.resource) {
-      return [];
-    }
-    return this.parent.filterChildren(element, this.children);
+  getChildren(): T[] {
+    return this.children;
   }
 
   abstract getTreeItem(element: T): TreeItem;
@@ -71,7 +67,11 @@ export abstract class MultiModeViewProvider<
   }
 
   getChildren(element?: T): T[] {
-    return this.currentDelegate.getChildren(element);
+    if (!this.resource) {
+      return [];
+    }
+    const children = this.currentDelegate.getChildren();
+    return this.filterChildren(element, children);
   }
 
   getTreeItem(element: T): TreeItem {
