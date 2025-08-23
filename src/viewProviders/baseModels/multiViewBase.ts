@@ -71,16 +71,10 @@ export abstract class MultiModeViewProvider<
   }
 
   getChildren(element?: T): T[] {
-    if (!this.currentDelegate) {
-      return [];
-    }
     return this.currentDelegate.getChildren(element);
   }
 
   getTreeItem(element: T): TreeItem {
-    if (!this.currentDelegate) {
-      throw new Error("No active mode for getTreeItem");
-    }
     return this.currentDelegate.getTreeItem(element);
   }
 
