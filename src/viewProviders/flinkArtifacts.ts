@@ -1,116 +1,93 @@
-import { TreeDataProvider, TreeItem } from "vscode";
+import { Disposable } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentFlinkArtifactsPoolChanged } from "../emitters";
-import { isResponseError, logError } from "../errors";
-import { CCloudResourceLoader } from "../loaders";
-import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
+import { currentFlinkArtifactsPoolChanged, flinkArtifactUDFViewMode } from "../emitters";
+import { logError } from "../errors";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FlinkUdf } from "../models/flinkUDF";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
+import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
+import { FlinkArtifactsViewProviderMode } from "./multiViewDelegates/constants";
+import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
+import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
-export class FlinkArtifactsViewProvider
-  extends ParentedBaseViewProvider<CCloudFlinkComputePool, FlinkArtifact>
-  implements TreeDataProvider<FlinkArtifact>
-{
-  readonly kind = "flinkArtifacts";
-  loggerName = "viewProviders.flinkArtifacts";
+export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
+
+/**
+ * Multi-mode view provider for Flink artifacts and UDFs.
+ * - When set to the "artifacts" mode, logic is delegated to the {@link FlinkArtifactsDelegate}.
+ * - When set to the "udfs" mode, logic is delegated to the {@link FlinkUDFsDelegate}.
+ */
+export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
+  FlinkArtifactsViewProviderMode,
+  CCloudFlinkComputePool,
+  ArtifactOrUdf
+> {
   viewId = "confluent-flink-artifacts";
 
   parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
   parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
-  private _artifacts: FlinkArtifact[] = [];
 
-  getChildren(element?: FlinkArtifact): FlinkArtifact[] {
-    if (!this.computePool) {
-      return [];
-    }
-    return this.filterChildren(element, this._artifacts);
+  children: ArtifactOrUdf[] = [];
+
+  constructor() {
+    super();
+    // pass the main provider into each mode so they can call its helpers without needing to extend
+    // the provider itself and causing circular dependencies / stack overflows
+    const artifactsDelegate = new FlinkArtifactsDelegate(this);
+    const udfsDelegate = new FlinkUDFsDelegate(this);
+
+    this.treeViewDelegates = new Map<
+      FlinkArtifactsViewProviderMode,
+      ViewProviderDelegate<FlinkArtifactsViewProviderMode, ArtifactOrUdf>
+    >([
+      [FlinkArtifactsViewProviderMode.Artifacts, artifactsDelegate],
+      [FlinkArtifactsViewProviderMode.UDFs, udfsDelegate],
+    ]);
+
+    this.defaultDelegate = artifactsDelegate;
+    this.currentDelegate = this.defaultDelegate;
   }
+
+  setCustomEventListeners(): Disposable[] {
+    return [flinkArtifactUDFViewMode.event(this.switchMode.bind(this))];
+  }
+
   async refresh(): Promise<void> {
-    this._artifacts = [];
+    this.children = [];
 
     if (this.computePool) {
+      // clear out the current delegate's children
       this._onDidChangeTreeData.fire();
 
       await this.withProgress(
-        "Loading Flink artifacts...",
+        this.currentDelegate.loadingMessage,
         async () => {
           try {
-            const loader = CCloudResourceLoader.getInstance();
-            this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
+            this.children = await this.currentDelegate.fetchChildren();
           } catch (error) {
-            const { showNotification, message } = triageGetFlinkArtifactsError(error, this.logger);
-            if (showNotification) {
-              void showErrorNotificationWithButtons(message);
-            }
-            throw error;
+            const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
+            void logError(error, msg);
+            void showErrorNotificationWithButtons(msg);
           }
         },
         false,
       );
     }
 
+    // either show the empty state or the current delegate's children
     this._onDidChangeTreeData.fire();
   }
-  getTreeItem(element: FlinkArtifact): TreeItem {
-    return new FlinkArtifactTreeItem(element);
+
+  get loggerName() {
+    return `viewProviders.flink.${this.currentDelegate?.mode ?? "unknown"}`;
+  }
+
+  get kind() {
+    return this.currentDelegate?.mode ?? "unknown";
   }
 
   get computePool(): CCloudFlinkComputePool | null {
     return this.resource;
   }
-}
-
-export function triageGetFlinkArtifactsError(
-  error: unknown,
-  logger: { debug: (msg: string, err: unknown) => void },
-): {
-  showNotification: boolean;
-  message: string;
-} {
-  let showNotification = false;
-  let message = "Failed to load Flink artifacts.";
-
-  if (isResponseError(error)) {
-    const status = error.response.status;
-    error.response
-      .clone()
-      .json()
-      .catch((err) => {
-        logger.debug("Failed to parse error response as JSON", err);
-      });
-    /* Note: This switch statement intentionally excludes 400 errors.
-     Otherwise, they may pop up on loading the compute pool if it is using an unsupported cloud provider. */
-    if (status >= 401 && status < 600) {
-      showNotification = true;
-      switch (status) {
-        case 401:
-          message = "Authentication required to load Flink artifacts.";
-          break;
-        case 403:
-          message = "Failed to load Flink artifacts. Please check your permissions and try again.";
-          break;
-        case 404:
-          message = "Flink artifacts not found for this compute pool.";
-          break;
-        case 429:
-          message = "Too many requests. Please try again later.";
-          break;
-        case 503:
-          message =
-            "Failed to load Flink artifacts. The service is temporarily unavailable. Please try again later.";
-          break;
-        default:
-          message = "Failed to load Flink artifacts due to an unexpected error.";
-          break;
-      }
-    }
-    logError(error, "Failed to load Flink artifacts");
-  } else {
-    message = "Failed to load Flink artifacts. Please check your connection and try again.";
-    showNotification = true;
-    logError(error, "Failed to load Flink artifacts");
-  }
-
-  return { showNotification, message };
 }
