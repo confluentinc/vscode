@@ -1,5 +1,6 @@
 import { expect, Page } from "@playwright/test";
 import { ActivityBarItem } from "../../objects/ActivityBarItem";
+import { NotificationArea } from "../../objects/notifications/NotificationArea";
 import { ViewContainer } from "../../objects/ViewContainer";
 import { ResourcesView } from "../../objects/views/ResourcesView";
 
@@ -24,6 +25,9 @@ export async function openConfluentExtension(page: Page): Promise<void> {
     console.log("Clicking activity bar item to open sidebar");
     await activityBarItem.locator.click();
   }
+
+  const notificationArea = new NotificationArea(page);
+  await expect(notificationArea.errorNotifications).toHaveCount(0);
 
   const resourcesView = new ResourcesView(page);
   // the Resources should be visible and expanded by default
