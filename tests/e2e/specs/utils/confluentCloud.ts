@@ -6,26 +6,6 @@ import { join } from "path";
 import { NotificationArea } from "../../objects/notifications/NotificationArea";
 
 /**
- * Sets up dialog stubs for the authentication flow
- * @param electronApp The Electron application instance
- */
-async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> {
-  const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
-  await stubMultipleDialogs(electronApp, [
-    // Handles both auth dialogs:
-    // 1. "Allow signing in with Confluent Cloud"
-    // 2. "Permission to open the URL"
-    {
-      method: "showMessageBox",
-      value: {
-        response: confirmButtonIndex, // Simulates clicking "Allow"/"Open"
-        checkboxChecked: false,
-      },
-    },
-  ]);
-}
-
-/**
  * Handles the Confluent Cloud authentication flow in a separate browser
  * @param authUrl The OAuth URL to authenticate with
  * @param username The username to authenticate with
@@ -97,7 +77,19 @@ export async function login(
   username: string,
   password: string,
 ): Promise<void> {
-  await stubAuthDialogs(electronApp);
+  const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
+  await stubMultipleDialogs(electronApp, [
+    // Handles both auth dialogs:
+    // 1. "Allow signing in with Confluent Cloud"
+    // 2. "Permission to open the URL"
+    {
+      method: "showMessageBox",
+      value: {
+        response: confirmButtonIndex, // Simulates clicking "Allow"/"Open"
+        checkboxChecked: false,
+      },
+    },
+  ]);
 
   // Hover over "No Connection" to make sign-in button visible
   const ccloudConnection = await page.getByText("Confluent Cloud(No connection)");
