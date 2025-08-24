@@ -133,8 +133,18 @@ export async function login(
   // Wait for VS Code to process the authentication
   // It will open up a confirmation dialog, click "Open"
   // NOTE: this is not a system/Electron dialog like the one stubbed earlier
-  if (!process.env.CI) {
-    const open = await page.getByRole("button", { name: "Open" });
+  if (process.env.CI) {
+    await electronApp.evaluate(async () => {
+      const { getUriHandler } = require("./src/uriHandler");
+      const vscode = require("vscode");
+
+      const uri = vscode.Uri.parse(
+        `${vscode.env.uriScheme}://confluentinc.vscode-confluent/authCallback?success=true`,
+      );
+      await getUriHandler().handleUri(uri);
+    });
+  } else {
+    const open = page.getByRole("button", { name: "Open" });
     await open.waitFor({ state: "visible" });
     await open.click();
   }
