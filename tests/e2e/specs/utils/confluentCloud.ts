@@ -133,9 +133,9 @@ export async function login(
   // Wait for VS Code to process the authentication
   // It will open up a confirmation dialog, click "Open"
   // NOTE: this is not a system/Electron dialog like the one stubbed earlier
-  const open = await page.getByRole("button", { name: "Open" });
-  await open.waitFor({ state: "visible" });
-  await open.click();
+  // const open = await page.getByRole("button", { name: "Open" });
+  // await open.waitFor({ state: "visible" });
+  // await open.click();
 
   // Expect a notification that says "Successfully signed in to Confluent Cloud as "
   const notificationArea = new NotificationArea(page);
