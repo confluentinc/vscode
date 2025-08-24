@@ -14,15 +14,8 @@ test.describe(() => {
     },
   );
 
-  test(
-    "should load the extension properly in another test",
-    { tag: [Tag.Smoke] },
-    async ({ page, electronApp }) => {
-      await openConfluentExtension(page);
-    },
-  );
-
   test("sign in to confluent cloud", { tag: [Tag.CCloud] }, async ({ page, electronApp }) => {
+    stubAllDialogs(electronApp);
     await openConfluentExtension(page);
 
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
