@@ -9,7 +9,15 @@ test.describe(() => {
     "should load the extension properly",
     { tag: [Tag.Smoke] },
     async ({ page, electronApp }) => {
-      await stubAllDialogs(electronApp);
+      stubAllDialogs(electronApp);
+      await openConfluentExtension(page);
+    },
+  );
+
+  test(
+    "should load the extension properly in another test",
+    { tag: [Tag.Smoke] },
+    async ({ page, electronApp }) => {
       await openConfluentExtension(page);
     },
   );
