@@ -1,30 +1,9 @@
-import { ElectronApplication, chromium } from "@playwright/test";
+import { ElectronApplication, chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
-
-/**
- * Sets up dialog stubs for the authentication flow
- * @param electronApp The Electron application instance
- */
-async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> {
-  await stubMultipleDialogs(electronApp, [
-    // Asks whether to Allow signing in with Confluent Cloud
-    {
-      method: "showMessageBox",
-      value: {
-        response: 0, // Simulates clicking "Allow"
-        checkboxChecked: false,
-      },
-    },
-    // Asks for permission to open the URL
-    {
-      method: "showMessageBox",
-      value: {
-        response: 0, // Simulates clicking "Open"
-        checkboxChecked: false,
-      },
-    },
-  ]);
-}
+import { readFile, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+import { NotificationArea } from "../../objects/notifications/NotificationArea";
 
 /**
  * Handles the Confluent Cloud authentication flow in a separate browser
@@ -98,25 +77,19 @@ export async function login(
   username: string,
   password: string,
 ): Promise<void> {
-  let authUrl: string | null = null;
-
-  await stubAuthDialogs(electronApp);
-
-  // Intercept shell.openExternal calls
-  // TODO: In a try/finally, de-intercept and put original impl back
-  await electronApp.evaluate(({ shell }) => {
-    const originalOpenExternal = shell.openExternal;
-    shell.openExternal = (url: string) => {
-      console.log("Intercepted URL:", url);
-      if (url.includes("login.confluent.io")) {
-        // Store the URL somewhere we can access it
-        (global as any).__interceptedUrl = url;
-        // Don't actually open the URL
-        return Promise.resolve();
-      }
-      return originalOpenExternal(url);
-    };
-  });
+  const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
+  await stubMultipleDialogs(electronApp, [
+    // Handles both auth dialogs:
+    // 1. "Allow signing in with Confluent Cloud"
+    // 2. "Permission to open the URL"
+    {
+      method: "showMessageBox",
+      value: {
+        response: confirmButtonIndex, // Simulates clicking "Allow"/"Open"
+        checkboxChecked: false,
+      },
+    },
+  ]);
 
   // Hover over "No Connection" to make sign-in button visible
   const ccloudConnection = await page.getByText("Confluent Cloud(No connection)");
@@ -129,8 +102,20 @@ export async function login(
   // Wait for dialogs to return
   await page.waitForTimeout(200);
 
-  authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
-
+  // the auth provider will write to this once it gets the CCloud sign-in URL from the sidecar
+  const tempFilePath = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
+  let authUrl: string | null = null;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      authUrl = await readFile(tempFilePath, "utf-8");
+      if (authUrl.trim()) {
+        break;
+      }
+    } catch {
+      // file doesn't exist yet
+    }
+    await page.waitForTimeout(250);
+  }
   if (!authUrl) {
     throw new Error("Failed to capture OAuth URL from shell.openExternal");
   }
@@ -138,20 +123,28 @@ export async function login(
   // Handle the authentication flow
   await handleAuthFlow(authUrl, username, password, electronApp);
 
-  // Wait for VS Code to process the authentication
-  // It will open up a confirmation dialog, click "Open"
-  const open = await page.getByRole("button", { name: "Open" });
-  await open.waitFor({ state: "visible" });
-  await open.click();
+  // delete the temp file with the sign-in URL
+  try {
+    await unlink(tempFilePath);
+  } catch (error) {
+    console.warn("Failed to clean up temp file:", error);
+  }
+
+  await page.screenshot({ path: "ccloud-login.png", fullPage: true });
+
+  if (!process.env.CI) {
+    // Wait for VS Code to process the authentication
+    // It will open up a confirmation dialog, click "Open"
+    // NOTE: this is not a system/Electron dialog like the one stubbed earlier
+    const open = page.getByRole("button", { name: "Open" });
+    await open.waitFor({ state: "visible" });
+    await open.click();
+  }
 
   // Expect a notification that says "Successfully signed in to Confluent Cloud as "
-  await page
-    .getByLabel(/Successfully signed in to Confluent Cloud as .*/)
-    .locator("div")
-    .filter({ hasText: "Successfully signed in to" })
-    .nth(2)
-    .waitFor({
-      state: "visible",
-      timeout: 200,
-    });
+  const notificationArea = new NotificationArea(page);
+  const signInNotification = notificationArea.infoNotifications.filter({
+    hasText: /Successfully signed in to Confluent Cloud/,
+  });
+  await expect(signInNotification.first()).toBeVisible();
 }
