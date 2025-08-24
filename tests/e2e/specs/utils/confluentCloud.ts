@@ -130,20 +130,10 @@ export async function login(
     console.warn("Failed to clean up temp file:", error);
   }
 
-  // Wait for VS Code to process the authentication
-  // It will open up a confirmation dialog, click "Open"
-  // NOTE: this is not a system/Electron dialog like the one stubbed earlier
-  if (process.env.CI) {
-    await electronApp.evaluate(async () => {
-      const { getUriHandler } = require("./src/uriHandler");
-      const vscode = require("vscode");
-
-      const uri = vscode.Uri.parse(
-        `${vscode.env.uriScheme}://confluentinc.vscode-confluent/authCallback?success=true`,
-      );
-      await getUriHandler().handleUri(uri);
-    });
-  } else {
+  if (!process.env.CI) {
+    // Wait for VS Code to process the authentication
+    // It will open up a confirmation dialog, click "Open"
+    // NOTE: this is not a system/Electron dialog like the one stubbed earlier
     const open = page.getByRole("button", { name: "Open" });
     await open.waitFor({ state: "visible" });
     await open.click();
