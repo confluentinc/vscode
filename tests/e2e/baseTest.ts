@@ -6,9 +6,7 @@ import {
 } from "@playwright/test";
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
 import { stubAllDialogs } from "electron-playwright-helpers";
-import { mkdtempSync } from "fs";
 import { globSync } from "glob";
-import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -22,9 +20,6 @@ export interface VSCodeFixture {
 
 export const test = testBase.extend<VSCodeFixture>({
   electronApp: async ({ trace }, use, testInfo) => {
-    // create a temporary directory for this test run
-    const tempDir = path.normalize(mkdtempSync(path.join(tmpdir(), "vscode-test-")));
-
     const vscodeInstallPath: string = await downloadAndUnzipVSCode(
       process.env.VSCODE_VERSION || "stable",
     );
@@ -45,6 +40,7 @@ export const test = testBase.extend<VSCodeFixture>({
       executablePath = directExecutable.endsWith(insidersOrStable)
         ? directExecutable
         : rootExecutable;
+      console.log("  Linux executable path:", executablePath);
     }
 
     const extensionPath: string = path.normalize(path.resolve(__dirname, "..", ".."));
@@ -60,7 +56,6 @@ export const test = testBase.extend<VSCodeFixture>({
     console.log("  Executable:", executablePath);
     console.log("  Extension path:", extensionPath);
     console.log("  VSIX path:", vsixPath);
-    console.log("  Temp dir:", tempDir);
 
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
