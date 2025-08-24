@@ -12,19 +12,13 @@ import { NotificationArea } from "../../objects/notifications/NotificationArea";
 async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> {
   const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
   await stubMultipleDialogs(electronApp, [
-    // Asks whether to Allow signing in with Confluent Cloud
+    // Handles both auth dialogs:
+    // 1. "Allow signing in with Confluent Cloud"
+    // 2. "Permission to open the URL"
     {
       method: "showMessageBox",
       value: {
-        response: confirmButtonIndex, // Simulates clicking "Allow"
-        checkboxChecked: false,
-      },
-    },
-    // Asks for permission to open the URL
-    {
-      method: "showMessageBox",
-      value: {
-        response: confirmButtonIndex, // Simulates clicking "Open"
+        response: confirmButtonIndex, // Simulates clicking "Allow"/"Open"
         checkboxChecked: false,
       },
     },
