@@ -132,13 +132,16 @@ export async function login(
 
   await page.screenshot({ path: "ccloud-login.png", fullPage: true });
 
-  if (!process.env.CI) {
-    // Wait for VS Code to process the authentication
-    // It will open up a confirmation dialog, click "Open"
-    // NOTE: this is not a system/Electron dialog like the one stubbed earlier
-    const open = page.getByRole("button", { name: "Open" });
+  // Wait for VS Code to process the authentication
+  // It will open up a confirmation dialog, click "Open"
+  // NOTE: this is not a system/Electron dialog like the one stubbed earlier
+  const open = page.getByRole("button", { name: "Open" });
+  try {
     await open.waitFor({ state: "visible" });
     await open.click();
+  } catch (error) {
+    console.error("Failed to open confirmation dialog:", error);
+    await page.screenshot({ path: "ccloud-login-error.png", fullPage: true });
   }
 
   // Expect a notification that says "Successfully signed in to Confluent Cloud as "
