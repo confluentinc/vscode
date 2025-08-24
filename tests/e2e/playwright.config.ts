@@ -40,8 +40,8 @@ export default defineConfig({
     : "html",
   use: {
     trace: "on",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    screenshot: "on",
+    video: "on",
   },
   projects: [
     {

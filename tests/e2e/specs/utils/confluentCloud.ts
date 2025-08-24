@@ -130,6 +130,8 @@ export async function login(
     console.warn("Failed to clean up temp file:", error);
   }
 
+  await page.screenshot({ path: "ccloud-login.png", fullPage: true });
+
   if (!process.env.CI) {
     // Wait for VS Code to process the authentication
     // It will open up a confirmation dialog, click "Open"
