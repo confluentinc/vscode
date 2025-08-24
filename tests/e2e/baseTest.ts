@@ -5,6 +5,7 @@ import {
   test as testBase,
 } from "@playwright/test";
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
+import { stubAllDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
 import { globSync } from "glob";
 import { tmpdir } from "os";
@@ -82,6 +83,11 @@ export const test = testBase.extend<VSCodeFixture>({
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
+
+    // Stub all dialogs by default; tests can still override as needed.
+    // For available `method` values to use with `stubMultipleDialogs`, see:
+    // https://www.electronjs.org/docs/latest/api/dialog
+    await stubAllDialogs(electronApp);
 
     // on*, retain-on*
     if (trace.toString().includes("on")) {
