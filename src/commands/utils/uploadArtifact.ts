@@ -229,12 +229,8 @@ export async function uploadArtifactToCCloud(
   } catch (error) {
     let userMessage = "Failed to create Flink artifact. See logs for details.";
     let extra: Record<string, unknown> = {
-      artifactName: params.artifactName,
-      environment: params.environment,
       cloud: params.cloud,
       region: params.region,
-      uploadId,
-      requestPayload: buildCreateArtifactRequest(params, uploadId),
     };
 
     if (isResponseError(error)) {
