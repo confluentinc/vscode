@@ -1,7 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import { IdItem } from "./main";
+import { CustomMarkdownString, IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
@@ -61,6 +61,12 @@ export class FlinkArtifactTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(resource.iconName);
     this.description = resource.description;
 
-    // TODO: add tooltip
+    this.tooltip = createFlinkArtifactToolTip(resource);
   }
+}
+
+export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkdownString {
+  return CustomMarkdownString.resourceTooltip(resource.name, IconNames.FLINK_ARTIFACT, undefined, [
+    ["Description: ", resource.description],
+  ]);
 }
