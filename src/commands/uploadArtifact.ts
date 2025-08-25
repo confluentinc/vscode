@@ -2,7 +2,10 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { isResponseError, logError } from "../errors";
-import { showErrorNotificationWithButtons } from "../notifications";
+import {
+  showErrorNotificationWithButtons,
+  showWarningNotificationWithButtons,
+} from "../notifications";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -51,7 +54,7 @@ export async function uploadArtifactCommand(): Promise<void> {
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
           );
         } else {
-          void vscode.window.showWarningMessage(
+          void showWarningNotificationWithButtons(
             `Artifact upload completed, but no response was returned from Confluent Cloud.`,
           );
         }
