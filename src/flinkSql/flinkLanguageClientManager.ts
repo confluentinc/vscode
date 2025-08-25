@@ -1,7 +1,6 @@
 import { Mutex } from "async-mutex";
 import {
   Disposable,
-  LogOutputChannel,
   TextDocument,
   TextDocumentChangeEvent,
   TextEditor,
@@ -18,7 +17,7 @@ import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { logError } from "../errors";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
-import { Logger } from "../logging";
+import { Logger, RotatingLogOutputChannel } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
@@ -30,10 +29,6 @@ import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { DisposableCollection } from "../utils/disposables";
 import { createLanguageClientFromWebsocket } from "./languageClient";
-import {
-  clearFlinkSQLLanguageServerOutputChannel,
-  getFlinkSQLLanguageServerOutputChannel,
-} from "./logging";
 
 const logger = new Logger("flinkSql.languageClient.FlinkLanguageClientManager");
 
@@ -73,6 +68,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   private readonly clientInitMutex = new Mutex();
   private cleanupTimer: NodeJS.Timeout | null = null;
   private readonly CLEANUP_DELAY_MS = 60000; // 60 seconds
+  private readonly outputChannel: RotatingLogOutputChannel;
 
   static getInstance(): FlinkLanguageClientManager {
     if (!FlinkLanguageClientManager.instance) {
@@ -84,14 +80,28 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   private constructor() {
     super();
 
-    // make sure we dispose the output channel when the manager is disposed
-    const outputChannel: LogOutputChannel = getFlinkSQLLanguageServerOutputChannel();
-    this.disposables.push(outputChannel);
+    // create the output channel ({@link RotatingLogOutputChannel}) for the Flink Language Server
+    // this will automatically be disposed when the manager is disposed
+    this.outputChannel = new RotatingLogOutputChannel(
+      "Confluent Flink SQL Language Server",
+      `flink-language-server-${process.pid}`,
+    );
+    this.disposables.push(this.outputChannel);
+
     // Register all our event listeners
     this.disposables.push(...this.setEventListeners());
 
     // Survey currently open documents and track the Flink SQL ones.
     this.initializeDocumentTracking();
+  }
+
+  /**
+   * The {@link RotatingLogOutputChannel} for the Flink Language Server.
+   * This will be automatically created and disposed with the {@link FlinkLanguageClientManager}
+   * @returns The {@link RotatingLogOutputChannel} for the Flink Language Server
+   */
+  getOutputChannel(): RotatingLogOutputChannel {
+    return this.outputChannel;
   }
 
   /**
@@ -692,7 +702,12 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           ws.onmessage = null;
 
           // Construct the real LSP client atop the WebSocket connection.
-          createLanguageClientFromWebsocket(ws, url, this.handleWebSocketDisconnect.bind(this))
+          createLanguageClientFromWebsocket(
+            ws,
+            url,
+            this.handleWebSocketDisconnect.bind(this),
+            this.outputChannel,
+          )
             .then((client) => {
               // Resolve initializeLanguageClient promise with the client
               safeResolve(client);
@@ -898,12 +913,12 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     });
 
     // Immediately perform synchronous disposal operations
+    // Includes cleans up of language server outputChannel log stream & channel
     super.dispose();
 
     this.clearCleanupTimer();
     this.openFlinkSqlDocuments.clear();
     FlinkLanguageClientManager.instance = null;
-    clearFlinkSQLLanguageServerOutputChannel();
     logger.trace("FlinkLanguageClientManager dispose initiated");
   }
 

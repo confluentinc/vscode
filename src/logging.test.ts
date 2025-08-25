@@ -4,12 +4,9 @@ import * as sinon from "sinon";
 import { LogOutputChannel, Uri } from "vscode";
 import {
   BASEFILE_PREFIX,
-  CURRENT_LOGFILE_NAME,
+  EXTENSION_OUTPUT_CHANNEL,
   Logger,
   MAX_LOGFILES,
-  OUTPUT_CHANNEL,
-  ROTATED_LOGFILE_NAMES,
-  rotatingFilenameGenerator,
   RotatingLogManager,
   RotatingLogOutputChannel,
 } from "./logging";
@@ -39,52 +36,52 @@ describe("logging.ts", () => {
 
     beforeEach(function () {
       // stub output channel methods
-      traceStub = sandbox.stub(OUTPUT_CHANNEL, "trace");
-      debugStub = sandbox.stub(OUTPUT_CHANNEL, "debug");
-      infoStub = sandbox.stub(OUTPUT_CHANNEL, "info");
-      warnStub = sandbox.stub(OUTPUT_CHANNEL, "warn");
-      errorStub = sandbox.stub(OUTPUT_CHANNEL, "error");
+      traceStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "trace");
+      debugStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "debug");
+      infoStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "info");
+      warnStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "warn");
+      errorStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "error");
 
       // create a new logger instance for each test
       logger = new Logger("test");
     });
 
-    it("should call OUTPUT_CHANNEL.trace when .trace() is called", function () {
+    it("should call EXTENSION_OUTPUT_CHANNEL.trace when .trace() is called", function () {
       logger.trace("test message");
 
       assert.strictEqual(traceStub.calledOnce, true);
       assert.strictEqual(traceStub.firstCall.args[0], "[test] test message");
     });
 
-    it("should call OUTPUT_CHANNEL.debug when .debug() is called", function () {
+    it("should call EXTENSION_OUTPUT_CHANNEL.debug when .debug() is called", function () {
       logger.debug("test message");
 
       assert.strictEqual(debugStub.calledOnce, true);
       assert.strictEqual(debugStub.firstCall.args[0], "[test] test message");
     });
 
-    it("should call OUTPUT_CHANNEL.info when .log() is called", function () {
+    it("should call EXTENSION_OUTPUT_CHANNEL.info when .log() is called", function () {
       logger.log("test message");
 
       assert.strictEqual(infoStub.calledOnce, true);
       assert.strictEqual(infoStub.firstCall.args[0], "[test] test message");
     });
 
-    it("should call OUTPUT_CHANNEL.info when .info() is called", function () {
+    it("should call EXTENSION_OUTPUT_CHANNEL.info when .info() is called", function () {
       logger.info("test message");
 
       assert.strictEqual(infoStub.calledOnce, true);
       assert.strictEqual(infoStub.firstCall.args[0], "[test] test message");
     });
 
-    it("should call OUTPUT_CHANNEL.warn when .warn() is called", function () {
+    it("should call EXTENSION_OUTPUT_CHANNEL.warn when .warn() is called", function () {
       logger.warn("test message");
 
       assert.strictEqual(warnStub.calledOnce, true);
       assert.strictEqual(warnStub.firstCall.args[0], "[test] test message");
     });
 
-    it("should call OUTPUT_CHANNEL.error when .error() is called", function () {
+    it("should call EXTENSION_OUTPUT_CHANNEL.error when .error() is called", function () {
       logger.error("test message");
 
       assert.strictEqual(errorStub.calledOnce, true);
@@ -99,39 +96,6 @@ describe("logging.ts", () => {
 
       assert.strictEqual(infoStub.calledOnce, true);
       assert.strictEqual(infoStub.firstCall.args[0].includes("[test[testpoint.0]]"), true);
-    });
-  });
-
-  // original rotatingFilenameGenerator
-  describe("rotatingFilenameGenerator", function () {
-    it("should leave ROTATED_LOGFILE_NAMES empty before any rotations", function () {
-      const fileName: string = rotatingFilenameGenerator(new Date(), 0);
-
-      assert.strictEqual(fileName, `vscode-confluent-${process.pid}.log`);
-      // no rotations yet
-      assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 0);
-      assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
-    });
-
-    it("should generate a new filename with a higher index", function () {
-      const fileName: string = rotatingFilenameGenerator(new Date(), 1);
-
-      assert.strictEqual(fileName, `vscode-confluent-${process.pid}.1.log`);
-      // one rotated file, current left alone
-      assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 1);
-      assert.strictEqual(ROTATED_LOGFILE_NAMES[0], `vscode-confluent-${process.pid}.1.log`);
-      assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
-    });
-
-    it(`should only keep the last ${MAX_LOGFILES} log files in ROTATED_LOGFILE_NAMES`, function () {
-      // start at 1 since 0 is the current log file index
-      for (let i = 1; i <= MAX_LOGFILES; i++) {
-        const fileName = rotatingFilenameGenerator(new Date(), i);
-        assert.strictEqual(fileName, `vscode-confluent-${process.pid}.${i}.log`);
-      }
-
-      assert.strictEqual(ROTATED_LOGFILE_NAMES.length, MAX_LOGFILES);
-      assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
     });
   });
 
@@ -223,6 +187,27 @@ describe("logging.ts", () => {
       beforeEach(() => {
         // create stub for existsSync to mock creating files on disk
         existsSyncStub = sandbox.stub(fsWrappers, "existsSync");
+      });
+
+      it("should return deduplicated URIs when current file is included in rotated files", () => {
+        // add rotated file
+        instance.rotatingFilenameGenerator(new Date(), 1);
+        // force duplicate of current file in rotated files
+        instance["_rotatedFileNames"].push(instance.currentLogFileName);
+
+        existsSyncStub.returns(true);
+        const fileUris = instance.getFileUris();
+
+        // should have 2 results due to deduplication (not 3)
+        assert.strictEqual(fileUris.length, 2);
+
+        // check current file appears only once
+        const currentFileUris = fileUris.filter(
+          (uri) =>
+            uri.fsPath.includes(`${BASEFILE_PREFIX}-${TEST_BASEPATH}.log`) &&
+            !uri.fsPath.includes(".1."),
+        );
+        assert.strictEqual(currentFileUris.length, 1);
       });
 
       it("should return only current file URI when no rotated files exist", () => {
