@@ -1,6 +1,6 @@
-import { TreeDataProvider, TreeItem } from "vscode";
+import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentFlinkArtifactsPoolChanged } from "../emitters";
+import { artifactUploadCompleted, currentFlinkArtifactsPoolChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
@@ -26,6 +26,7 @@ export class FlinkArtifactsViewProvider
     }
     return this.filterChildren(element, this._artifacts);
   }
+
   async refresh(): Promise<void> {
     this._artifacts = [];
 
@@ -37,7 +38,11 @@ export class FlinkArtifactsViewProvider
         async () => {
           try {
             const loader = CCloudResourceLoader.getInstance();
-            this._artifacts = await loader.getFlinkArtifacts(this.computePool!);
+            if (!this.computePool) {
+              this._artifacts = [];
+              return;
+            }
+            this._artifacts = await loader.getFlinkArtifacts(this.computePool);
           } catch (error) {
             const { showNotification, message } = triageGetFlinkArtifactsError(error, this.logger);
             if (showNotification) {
@@ -52,12 +57,24 @@ export class FlinkArtifactsViewProvider
 
     this._onDidChangeTreeData.fire();
   }
+
   getTreeItem(element: FlinkArtifact): TreeItem {
     return new FlinkArtifactTreeItem(element);
   }
 
   get computePool(): CCloudFlinkComputePool | null {
     return this.resource;
+  }
+
+  protected setEventListeners(): Disposable[] {
+    return [
+      ...super.setEventListeners(),
+      artifactUploadCompleted.event(this.artifactUploadCompletedHandler.bind(this)),
+    ];
+  }
+
+  private artifactUploadCompletedHandler(): void {
+    this.refresh();
   }
 }
 
