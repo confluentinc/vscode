@@ -1,21 +1,10 @@
 import assert from "assert";
-import { afterEach, beforeEach, describe, it } from "mocha";
-import sinon, { SinonSandbox } from "sinon";
+import { describe, it } from "mocha";
 import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
 import { createFlinkArtifactToolTip, FlinkArtifact } from "./flinkArtifact";
 import { ConnectionId, EnvironmentId } from "./resource";
 
 describe("FlinkArtifactTreeItem", () => {
-  let sandbox: SinonSandbox;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
   describe("createFlinkArtifactToolTip", () => {
     it("should return a CustomMarkdownString with all artifact details", () => {
       const artifact = new FlinkArtifact({
