@@ -121,11 +121,9 @@ export async function submitFlinkStatementCommand(
   const currentDatabaseKafkaCluster: KafkaCluster | undefined = validDatabaseProvided
     ? database
     : await flinkDatabaseQuickpick(computePool);
-  if (!currentDatabaseKafkaCluster) {
-    funcLogger.debug("User canceled the default database quickpick");
-    return;
-  }
-  const currentDatabase = currentDatabaseKafkaCluster.name;
+  // Database selection is now optional - user can dismiss the quickpick and submit without it
+  const currentDatabase = currentDatabaseKafkaCluster?.name;
+  const environmentId = currentDatabaseKafkaCluster?.environmentId || computePool.environmentId;
 
   // 5. Prep to submit, submit.
   const submission: IFlinkStatementSubmitParameters = {
@@ -135,7 +133,7 @@ export async function submitFlinkStatementCommand(
     hidden: false, // Do not create a hidden statement, the user authored it.
     properties: new FlinkSpecProperties({
       currentDatabase,
-      currentCatalog: currentDatabaseKafkaCluster.environmentId,
+      currentCatalog: environmentId,
       localTimezone: localTimezoneOffset(),
     }),
   };
