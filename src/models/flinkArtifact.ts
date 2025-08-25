@@ -68,7 +68,5 @@ export class FlinkArtifactTreeItem extends TreeItem {
 export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkdownString {
   return CustomMarkdownString.resourceTooltip(resource.name, IconNames.FLINK_ARTIFACT, undefined, [
     ["Description: ", resource.description],
-    ["Cloud: ", resource.provider],
-    ["Region: ", resource.region],
   ]);
 }

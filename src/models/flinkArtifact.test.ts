@@ -34,8 +34,6 @@ describe("FlinkArtifactTreeItem", () => {
 
       assert.strictEqual(typeof tooltipValue, "string");
       assert.match(tooltipValue, /Description: : `Another description\.`/);
-      assert.match(tooltipValue, /Cloud: : `Azure`/);
-      assert.match(tooltipValue, /Region: : `australiaeast`/);
     });
   });
 });
