@@ -11,7 +11,6 @@ import {
 import { WebSocket } from "ws";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import { getFlinkSQLLanguageServerOutputChannel } from "./logging";
 import { WebsocketTransport } from "./websocketTransport";
 
 const logger = new Logger("flinkSql.languageClient.Client");
@@ -22,12 +21,14 @@ const FLINK_DIAGNOSTIC_COLLECTION_NAME = "confluent.flinkSql";
  * @param ws The open WebSocket connection to the language server
  * @param url The URL of the language server (for error reporting)
  * @param onWebSocketDisconnect Callback for WebSocket disconnection events
+ * @param outputChannel The output channel to use for logging
  * @returns A promise that resolves to the initialized language client
  */
 export async function createLanguageClientFromWebsocket(
   ws: WebSocket,
   url: string,
   onWebSocketDisconnect: () => void,
+  outputChannel: vscode.LogOutputChannel,
 ): Promise<LanguageClient> {
   const transport = new WebsocketTransport(ws);
   const serverOptions = () => {
@@ -39,7 +40,7 @@ export async function createLanguageClientFromWebsocket(
       { scheme: "untitled", language: "flinksql" },
       { pattern: "**/*.flink.sql" },
     ],
-    outputChannel: getFlinkSQLLanguageServerOutputChannel(),
+    outputChannel: outputChannel,
     progressOnInitialization: true,
     diagnosticCollectionName: FLINK_DIAGNOSTIC_COLLECTION_NAME,
     middleware: {

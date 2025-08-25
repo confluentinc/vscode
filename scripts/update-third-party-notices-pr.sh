@@ -10,7 +10,17 @@
 GIT_REMOTE_NAME="origin"
 BASE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 PR_BRANCH="update-third-party-notices-${BASE_BRANCH}"
-COMMIT_MESSAGE="[${BASE_BRANCH}] chore: update third party notices [ci skip]"
+
+# Don't use [ci skip] for branches other than main, since branch protection rules* will require CI
+# checks to pass before merging. If [ci skip] is used, we will need to manually push an empty commit
+# without [ci skip] to cause the CI checks to run.
+# (*This only applies to release branches, which is really the only other path since we don't create
+# third party notice PRs for normal development branches.)
+CI_SKIP_SUFFIX=""
+if [[ "${BASE_BRANCH}" == "main" ]]; then
+  CI_SKIP_SUFFIX=" [ci skip]"
+fi
+COMMIT_MESSAGE="[${BASE_BRANCH}] chore: update third party notices${CI_SKIP_SUFFIX}"
 
 push_local_changes() {
   git commit -q -m "${COMMIT_MESSAGE}"

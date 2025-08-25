@@ -54,16 +54,19 @@ export enum ContextValues {
   directKafkaClusterAvailable = "confluent.directKafkaClusterAvailable",
   /** A direct connection has been made and a Schema Registry is available for selecting in the Schemas view. */
   directSchemaRegistryAvailable = "confluent.directSchemaRegistryAvailable",
+
   /** A resource has been selected for comparison. */
   resourceSelectedForCompare = "confluent.resourceSelectedForCompare",
-  /** The user clicked a Kafka cluster tree item. */
+
+  /** The user focused a Kafka cluster for the Topics view. */
   kafkaClusterSelected = "confluent.kafkaClusterSelected",
-  /** The user clicked a Schema Registry tree item. */
+  /** The user focused a Schema Registry for the Schemas view. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
   /** The user focused a Flink compute pool for the Flink Statements view. */
   flinkStatementsPoolSelected = "confluent.flinkStatementsPoolSelected",
   /** The user focused a Flink compute pool for the Flink Artifacts view. */
   flinkArtifactsPoolSelected = "confluent.flinkArtifactsPoolSelected",
+
   /** The user applied a search string to the Resources view. */
   resourceSearchApplied = "confluent.resourceSearchApplied",
   /** The user applied a search string to the Topics view. */
@@ -74,6 +77,10 @@ export enum ContextValues {
   flinkStatementsSearchApplied = "confluent.flinkStatementsSearchApplied",
   /** The user applied a search string to the Flink Artifacts view. */
   flinkArtifactsSearchApplied = "confluent.flinkArtifactsSearchApplied",
+
+  /** The user changed the mode of the Flink Artifacts/UDFs view. */
+  flinkArtifactsUDFsViewMode = "confluent.flinkArtifactsUDFsViewMode",
+
   /**
    * EXPERIMENTAL: Is the chat participant enabled?
    * (This should go away once the `confluent.experimental.enableChatParticipant` setting is removed.)

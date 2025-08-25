@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.6.0-72",
+  "version": "1.6.0-86",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -759,6 +759,18 @@
         "command": "confluent.flink.statements.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Flink Statements View"
+      },
+      {
+        "command": "confluent.flink.setUDFsViewMode",
+        "title": "Switch to Flink UDFs",
+        "icon": "$(code)",
+        "category": "Confluent: Flink Artifacts/UDFs View"
+      },
+      {
+        "command": "confluent.flink.setArtifactsViewMode",
+        "title": "Switch to Flink Artifacts",
+        "icon": "$(folder-library)",
+        "category": "Confluent: Flink Artifacts/UDFs View"
       }
     ],
     "configuration": [
@@ -875,10 +887,7 @@
           "confluent.flink.enableConfluentCloudLanguageServer": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
-            "tags": [
-              "preview"
-            ]
+            "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
           },
           "confluent.flink.enableFlinkArtifacts": {
             "type": "boolean",
@@ -1059,7 +1068,7 @@
         },
         {
           "id": "confluent-flink-statements",
-          "name": "Flink Statements (Preview)",
+          "name": "Flink Statements",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)"
         },
@@ -1348,6 +1357,14 @@
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
           "when": "false"
+        },
+        {
+          "command": "confluent.flink.setArtifactsViewMode",
+          "when": "confluent.flinkArtifactsUDFsViewMode == 'UDFs'"
+        },
+        {
+          "command": "confluent.flink.setUDFsViewMode",
+          "when": "confluent.flinkArtifactsUDFsViewMode == 'artifacts'"
         }
       ],
       "editor/title": [
@@ -1521,6 +1538,16 @@
           "command": "confluent.artifacts.flink-compute-pool.select",
           "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
           "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.setArtifactsViewMode",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'UDFs'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.flink.setUDFsViewMode",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -1576,17 +1603,17 @@
         },
         {
           "command": "confluent.connections.direct.delete",
-          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
+          "when": "viewItem == direct-environment || viewItem =~ /resources-direct-container.*/",
           "group": "inline@3"
         },
         {
           "command": "confluent.connections.direct.edit",
-          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
+          "when": "viewItem == direct-environment || viewItem =~ /resources-direct-container.*/",
           "group": "inline@2"
         },
         {
           "command": "confluent.connections.direct.export",
-          "when": "viewItem == direct-environment || viewItem =~ /.*resources-direct-container-.*/",
+          "when": "viewItem == direct-environment || viewItem =~ /resources-direct-container.*/",
           "group": "inline@1"
         },
         {
