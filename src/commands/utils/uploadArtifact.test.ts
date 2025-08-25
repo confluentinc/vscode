@@ -337,18 +337,18 @@ describe("uploadArtifact", () => {
       });
 
       it("should show an error notification if the upload fails", async () => {
-        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(new Error("Upload failed"));
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(
+          createResponseError(500, "Internal Server Error", "Upload failed"),
+        );
 
         const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
 
-        await assert.rejects(uploadArtifactToCCloud(mockParams, "upload-id-123"), {
-          message: "Upload failed",
-        });
+        await assert.rejects(uploadArtifactToCCloud(mockParams, "upload-id-123"));
 
         sinon.assert.calledOnce(errorNotificationStub);
         sinon.assert.calledWith(
           errorNotificationStub,
-          "Failed to create Flink artifact. See logs for details.",
+          "Failed to create Flink artifact: Upload failed",
         );
       });
 

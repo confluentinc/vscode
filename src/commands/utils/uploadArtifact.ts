@@ -242,6 +242,9 @@ export async function uploadArtifactToCCloud(
     }
     void showErrorNotificationWithButtons(userMessage);
     logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
+    if (error && typeof error === "object" && "message" in error) {
+      (error as { message: string }).message = userMessage;
+    }
     throw error;
   }
 }

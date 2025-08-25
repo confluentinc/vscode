@@ -39,6 +39,7 @@ describe("uploadArtifact Command", () => {
         "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
       kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
     };
+
     it("should fail if there is no params", async () => {
       sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(undefined);
       const result = await uploadArtifactCommand();
@@ -87,7 +88,7 @@ describe("uploadArtifact Command", () => {
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
       sandbox
         .stub(uploadArtifact, "uploadArtifactToCCloud")
-        .rejects(new Error("Some generic error"));
+        .rejects(createResponseError(400, "Bad Request", "Some generic error"));
 
       const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
       sandbox.stub(vscode.window, "showInformationMessage");
