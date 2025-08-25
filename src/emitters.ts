@@ -138,5 +138,8 @@ export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 /** Metadata for a given {@link vscode.Uri} has been updated. */
 export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 
+/** Fires when an Artifact upload completes successfully. */
+export const artifactUploadCompleted = new vscode.EventEmitter<void>();
+
 /** Event emitter for switching Flink artifact/UDF view modes. */
 export const flinkArtifactUDFViewMode = new vscode.EventEmitter<FlinkArtifactsViewProviderMode>();
