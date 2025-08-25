@@ -363,10 +363,7 @@ describe("uploadArtifact", () => {
           .stub(notifications, "showErrorNotificationWithButtons")
           .resolves();
 
-        await assert.rejects(
-          uploadArtifactToCCloud(mockParams, mockUploadId),
-          (err: Error) => err === responseError,
-        );
+        await assert.rejects(uploadArtifactToCCloud(mockParams, mockUploadId), responseError);
 
         sinon.assert.calledOnce(errorNotificationStub);
         sinon.assert.calledWith(
@@ -386,10 +383,7 @@ describe("uploadArtifact", () => {
           .stub(notifications, "showErrorNotificationWithButtons")
           .resolves();
 
-        await assert.rejects(
-          uploadArtifactToCCloud(mockParams, mockUploadId),
-          (err: Error) => err === responseError,
-        );
+        await assert.rejects(uploadArtifactToCCloud(mockParams, mockUploadId), responseError);
 
         sinon.assert.calledOnce(errorNotificationStub);
         sinon.assert.calledWith(
