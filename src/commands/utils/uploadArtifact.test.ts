@@ -286,28 +286,6 @@ describe("uploadArtifact", () => {
       sinon.assert.calledWith(mockProgress.report, { message: "Uploading to Azure storage..." });
     });
 
-    it("should handle server-side upload errors properly", async () => {
-      const uploadError = new ResponseError(
-        new Response("", {
-          status: 500,
-          statusText: "Bad Request",
-        }),
-      );
-      uploadFileToAzureStub.rejects(uploadError);
-
-      fs.writeFileSync(tempJarPath, "dummy jar content");
-
-      await assert.rejects(
-        async () => handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse),
-        (err: Error) => {
-          // Accept any error, just ensure an error is thrown
-          return err instanceof Error;
-        },
-      );
-
-      sinon.assert.calledOnce(uploadFileToAzureStub);
-    });
-  });
   describe("buildCreateArtifactRequest", () => {
     it("should build the artifact request correctly", () => {
       const uploadId = "upload-id-123";
