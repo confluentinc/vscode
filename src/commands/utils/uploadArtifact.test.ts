@@ -18,7 +18,6 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
-import { ResponseError } from "../../clients/sidecar";
 import { CloudProvider } from "../../models/resource";
 import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
@@ -286,114 +285,118 @@ describe("uploadArtifact", () => {
       sinon.assert.calledWith(mockProgress.report, { message: "Uploading to Azure storage..." });
     });
 
-  describe("buildCreateArtifactRequest", () => {
-    it("should build the artifact request correctly", () => {
-      const uploadId = "upload-id-123";
-      const request = buildCreateArtifactRequest(mockParams, uploadId);
+    describe("buildCreateArtifactRequest", () => {
+      it("should build the artifact request correctly", () => {
+        const uploadId = "upload-id-123";
+        const request = buildCreateArtifactRequest(mockParams, uploadId);
 
-      assert.deepStrictEqual(request, {
-        cloud: mockParams.cloud,
-        region: mockParams.region,
-        environment: mockParams.environment,
-        display_name: mockParams.artifactName,
-        content_format: mockParams.fileFormat.toUpperCase(),
-        upload_source: {
-          location: PRESIGNED_URL_LOCATION,
-          upload_id: uploadId,
-        },
+        assert.deepStrictEqual(request, {
+          cloud: mockParams.cloud,
+          region: mockParams.region,
+          environment: mockParams.environment,
+          display_name: mockParams.artifactName,
+          content_format: mockParams.fileFormat.toUpperCase(),
+          upload_source: {
+            location: PRESIGNED_URL_LOCATION,
+            upload_id: uploadId,
+          },
+        });
       });
     });
-  });
-  describe("uploadArtifactToCCloud", () => {
-    let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
-    let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
+    describe("uploadArtifactToCCloud", () => {
+      let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+      let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
 
-    beforeEach(() => {
-      stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-      stubbedSidecarHandle = getSidecarStub(sandbox);
-      stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
-    });
-
-    it("should upload the artifact to Confluent Cloud", async () => {
-      const mockUploadId = "upload-id-123";
-      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.resolves({
-        id: "artifact-id-123",
-        cloud: "",
-        region: "",
-        environment: "",
-        display_name: "",
+      beforeEach(() => {
+        stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+        stubbedSidecarHandle = getSidecarStub(sandbox);
+        stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
       });
 
-      await uploadArtifactToCCloud(mockParams, mockUploadId);
+      it("should upload the artifact to Confluent Cloud", async () => {
+        const mockUploadId = "upload-id-123";
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.resolves({
+          id: "artifact-id-123",
+          cloud: "",
+          region: "",
+          environment: "",
+          display_name: "",
+        });
 
-      sinon.assert.calledOnce(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact);
-      sinon.assert.calledWith(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact, {
-        CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(mockParams, mockUploadId),
-        cloud: mockParams.cloud,
-        region: mockParams.region,
+        await uploadArtifactToCCloud(mockParams, mockUploadId);
+
+        sinon.assert.calledOnce(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact);
+        sinon.assert.calledWith(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact, {
+          CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(
+            mockParams,
+            mockUploadId,
+          ),
+          cloud: mockParams.cloud,
+          region: mockParams.region,
+        });
       });
-    });
 
-    it("should show an error notification if the upload fails", async () => {
-      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(new Error("Upload failed"));
+      it("should show an error notification if the upload fails", async () => {
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(new Error("Upload failed"));
 
-      const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
+        const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
 
-      await uploadArtifactToCCloud(mockParams, "upload-id-123").catch((err) => {
-        assert.strictEqual(err.message, "Upload failed");
+        await assert.rejects(uploadArtifactToCCloud(mockParams, "upload-id-123"), {
+          message: "Upload failed",
+        });
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          "Failed to create Flink artifact. See logs for details.",
+        );
       });
 
-      sinon.assert.calledOnce(errorNotificationStub);
-      sinon.assert.calledWith(
-        errorNotificationStub,
-        "Failed to create Flink artifact. See logs for details.",
-      );
-    });
+      it("should parse and display JSON error details from ResponseError", async () => {
+        const mockUploadId = "upload-id-123";
 
-    it("should parse and display JSON error details from ResponseError", async () => {
-      const mockUploadId = "upload-id-123";
+        const responseError = createResponseError(409, "Conflict", "artifact already exists");
 
-      const responseError = createResponseError(409, "Conflict", "artifact already exists");
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
 
-      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+        const errorNotificationStub = sandbox
+          .stub(notifications, "showErrorNotificationWithButtons")
+          .resolves();
 
-      const errorNotificationStub = sandbox
-        .stub(notifications, "showErrorNotificationWithButtons")
-        .resolves();
+        await assert.rejects(
+          uploadArtifactToCCloud(mockParams, mockUploadId),
+          (err: Error) => err === responseError,
+        );
 
-      await assert.rejects(
-        uploadArtifactToCCloud(mockParams, mockUploadId),
-        (err: Error) => err === responseError,
-      );
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: artifact already exists`,
+        );
+      });
 
-      sinon.assert.calledOnce(errorNotificationStub);
-      sinon.assert.calledWith(
-        errorNotificationStub,
-        `Failed to create Flink artifact: artifact already exists`,
-      );
-    });
+      it("should parse and display text error details from ResponseError", async () => {
+        const mockUploadId = "upload-id-123";
+        const textBody = "artifact already exists";
 
-    it("should parse and display text error details from ResponseError", async () => {
-      const mockUploadId = "upload-id-123";
-      const textBody = "artifact already exists";
+        const responseError = createResponseError(409, "Conflict", textBody);
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
 
-      const responseError = createResponseError(409, "Conflict", textBody);
-      stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+        const errorNotificationStub = sandbox
+          .stub(notifications, "showErrorNotificationWithButtons")
+          .resolves();
 
-      const errorNotificationStub = sandbox
-        .stub(notifications, "showErrorNotificationWithButtons")
-        .resolves();
+        await assert.rejects(
+          uploadArtifactToCCloud(mockParams, mockUploadId),
+          (err: Error) => err === responseError,
+        );
 
-      await assert.rejects(
-        uploadArtifactToCCloud(mockParams, mockUploadId),
-        (err: Error) => err === responseError,
-      );
-
-      sinon.assert.calledOnce(errorNotificationStub);
-      sinon.assert.calledWith(
-        errorNotificationStub,
-        `Failed to create Flink artifact: ${textBody}`,
-      );
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: ${textBody}`,
+        );
+      });
     });
   });
 });
