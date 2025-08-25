@@ -46,7 +46,10 @@ async function handleAuthFlow(
     }
 
     // If we reach here, that means auth has succeeded
-    // Return control; the test will trigger the VS Code callback from the renderer page
+    // Trigger the callback URL in VS Code
+    await electronApp.evaluate(({ shell }) => {
+      shell.openExternal("vscode://confluentinc.vscode-confluent/authCallback?success=true");
+    });
 
     // Close browser resources before returning
     await authPage.close();
@@ -120,15 +123,6 @@ export async function login(
   // Handle the authentication flow
   await handleAuthFlow(authUrl, username, password, electronApp);
 
-  // Trigger the URI handler by issuing a request from the VS Code renderer page;
-  // Playwright maps vscode:// URIs to this shim URL, which routes to the registered UriHandler
-  const callbackUrl = "https://pw-vscode--confluentinc.vscode-confluent/authCallback?success=true";
-  await page.evaluate((url: string) => {
-    const img = new Image();
-    (window as any).__ccloudAuthCallbackImg = img; // avoid GC
-    img.src = url;
-  }, callbackUrl);
-
   // delete the temp file with the sign-in URL
   try {
     await unlink(tempFilePath);
@@ -143,10 +137,11 @@ export async function login(
   // NOTE: this is not a system/Electron dialog like the one stubbed earlier
   const open = page.getByRole("button", { name: "Open" });
   try {
-    await open.waitFor({ state: "visible", timeout: 5000 });
+    await open.waitFor({ state: "visible" });
     await open.click();
   } catch (error) {
-    console.warn("Open confirmation dialog not shown; continuing.");
+    console.error("Failed to open confirmation dialog:", error);
+    await page.screenshot({ path: "ccloud-login-error.png", fullPage: true });
   }
 
   // Expect a notification that says "Successfully signed in to Confluent Cloud as "
