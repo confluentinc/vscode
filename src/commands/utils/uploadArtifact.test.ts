@@ -1,4 +1,3 @@
-import { expect } from "@playwright/test";
 import * as assert from "assert";
 import * as fs from "fs";
 import * as os from "os";
@@ -6,8 +5,12 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { getShowErrorNotificationWithButtonsStub } from "../../../tests/stubs/notifications";
+import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
+import { createResponseError } from "../../../tests/unit/testUtils";
 import {
+  FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
@@ -21,22 +24,50 @@ import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
-import * as uploadToAzure from "./uploadToAzure";
+import * as uploadArtifactModule from "./uploadArtifact";
 import {
+  buildCreateArtifactRequest,
   getPresignedUploadUrl,
-  handleUploadFile,
+  handleUploadToCloudProvider,
   prepareUploadFileFromUri,
-  promptForUDFUploadParams,
-} from "./uploadUDF";
-describe("uploadUDF", () => {
+  PRESIGNED_URL_LOCATION,
+  promptForArtifactUploadParams,
+  uploadArtifactToCCloud,
+} from "./uploadArtifact";
+import * as uploadToAzure from "./uploadToAzure";
+describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
+  let tempJarPath: string;
+  let tempJarUri: vscode.Uri;
+  const tempDir = os.tmpdir();
+
+  const mockParams = {
+    environment: "env-123456",
+    cloud: "Azure",
+    region: "australiaeast",
+    artifactName: "test-artifact",
+    fileFormat: "jar",
+    selectedFile: undefined as unknown as vscode.Uri,
+  };
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    tempJarPath = path.join(tempDir, `test-artifact-${Date.now()}.jar`);
+    fs.writeFileSync(tempJarPath, "dummy jar content");
+    tempJarUri = vscode.Uri.file(tempJarPath);
+    mockParams.selectedFile = tempJarUri;
   });
 
   afterEach(() => {
     sandbox.restore();
+    // Clean up temp files created for tests
+    if (tempJarPath && fs.existsSync(tempJarPath)) {
+      try {
+        fs.unlinkSync(tempJarPath);
+      } catch {
+        // ignore errors on cleanup
+      }
+    }
   });
 
   describe("prepareUploadFileFromUri", () => {
@@ -56,7 +87,7 @@ describe("uploadUDF", () => {
 
     it("should throw an error if the file does not exist", async () => {
       const mockUri = { fsPath: "/path/to/nonexistent.jar" } as vscode.Uri;
-      await expect(prepareUploadFileFromUri(mockUri)).rejects.toThrow(Error);
+      await assert.rejects(() => prepareUploadFileFromUri(mockUri), Error);
     });
   });
 
@@ -84,7 +115,7 @@ describe("uploadUDF", () => {
       };
 
       const response = await getPresignedUploadUrl(mockPresignedUploadUrlRequest);
-      expect(response).toStrictEqual({
+      assert.deepStrictEqual(response, {
         api_version: "artifact/v1",
         kind: "PresignedUrl",
         upload_url: "https://example.com/presigned-url",
@@ -92,7 +123,7 @@ describe("uploadUDF", () => {
     });
   });
 
-  describe("promptForUDFUploadParams", () => {
+  describe("promptForArtifactUploadParams", () => {
     let flinkCcloudEnvironmentQuickPickStub: sinon.SinonStub;
     let cloudProviderRegionQuickPickStub: sinon.SinonStub;
     const fakeCloudProviderRegion: FcpmV2RegionListDataInner = {
@@ -116,13 +147,13 @@ describe("uploadUDF", () => {
       );
     });
     it("should return undefined if environment is not selected", async () => {
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
     });
 
     it("should return undefined if region is not selected", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(TEST_CCLOUD_ENVIRONMENT);
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
     });
 
@@ -142,18 +173,18 @@ describe("uploadUDF", () => {
 
       const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
 
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
 
       sinon.assert.calledWithMatch(
         errorNotificationStub,
-        `Upload UDF cancelled: Unsupported cloud provider: ${mockAwsRegion.provider}`,
+        `Upload Artifact cancelled: Unsupported cloud provider: ${mockAwsRegion.provider}`,
       );
 
       assert.strictEqual(result, undefined);
     });
     it("should silently return if user cancels the file selection", async () => {
       sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
     });
 
@@ -171,17 +202,17 @@ describe("uploadUDF", () => {
         .stub(notifications, "showWarningNotificationWithButtons")
         .resolves(undefined);
 
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
 
       assert.strictEqual(result, undefined);
 
       sinon.assert.calledWith(
         warningNotificationStub,
-        "Upload UDF cancelled: Artifact name is required.",
+        "Upload Artifact cancelled: Artifact name is required.",
       );
     });
 
-    it("returns the correct UDF upload parameters", async () => {
+    it("returns the correct Artifact upload parameters", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
       // reset the region quick pick stub to return a valid Azure region
       cloudProviderRegionQuickPickStub.resolves({
@@ -194,7 +225,7 @@ describe("uploadUDF", () => {
 
       sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
 
-      const result = await promptForUDFUploadParams();
+      const result = await promptForArtifactUploadParams();
 
       assert.deepStrictEqual(result, {
         environment: mockEnvironment.id,
@@ -207,43 +238,26 @@ describe("uploadUDF", () => {
     });
   });
 
-  describe("handleUploadFile", () => {
+  describe("handleUploadToCloudProvider", () => {
     const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
       api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
       kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
       upload_url: "https://example.com/presigned-url",
     };
-    let tempJarPath: string;
-    let tempJarUri: vscode.Uri;
     let uploadFileToAzureStub: sinon.SinonStub;
 
     beforeEach(() => {
-      const tempDir = os.tmpdir();
-      tempJarPath = path.join(tempDir, `test-udf-${Date.now()}.jar`);
-      fs.writeFileSync(tempJarPath, "dummy jar content");
-      tempJarUri = vscode.Uri.file(tempJarPath);
-
       const mockResponse = new Response(null, { status: 200, statusText: "OK" });
       uploadFileToAzureStub = sandbox
         .stub(uploadToAzure, "uploadFileToAzure")
         .resolves(mockResponse);
-    });
-    afterEach(() => {
-      // Clean up the temporary file after each test
-      if (fs.existsSync(tempJarPath)) {
-        fs.unlinkSync(tempJarPath);
-      }
+
+      sandbox.stub(uploadArtifactModule, "prepareUploadFileFromUri").resolves({
+        blob: new Blob(["dummy"], { type: "application/java-archive" }),
+        contentType: "application/java-archive",
+      });
     });
     it("should log the message confirming the upload", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
-
       const mockProgress = {
         report: sandbox.stub(),
       };
@@ -258,7 +272,8 @@ describe("uploadUDF", () => {
         return await callback(mockProgress as any, mockToken as any);
       });
 
-      await handleUploadFile(mockParams, mockPresignedUrlResponse);
+      await handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse);
+
       sinon.assert.calledOnce(uploadFileToAzureStub);
       sinon.assert.calledWith(uploadFileToAzureStub, {
         file: sinon.match.any, // The blob object
@@ -270,25 +285,118 @@ describe("uploadUDF", () => {
       sinon.assert.calledWith(mockProgress.report, { message: "Uploading to Azure storage..." });
     });
 
-    it("should handle upload errors properly", async () => {
-      const mockParams = {
-        environment: "env-123456",
-        cloud: "Azure",
-        region: "australiaeast",
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: tempJarUri,
-      };
+    describe("buildCreateArtifactRequest", () => {
+      it("should build the artifact request correctly", () => {
+        const uploadId = "upload-id-123";
+        const request = buildCreateArtifactRequest(mockParams, uploadId);
 
-      const uploadError = new Error("Azure upload failed: 500 Internal Server Error");
-      uploadFileToAzureStub.rejects(uploadError);
+        assert.deepStrictEqual(request, {
+          cloud: mockParams.cloud,
+          region: mockParams.region,
+          environment: mockParams.environment,
+          display_name: mockParams.artifactName,
+          content_format: mockParams.fileFormat.toUpperCase(),
+          upload_source: {
+            location: PRESIGNED_URL_LOCATION,
+            upload_id: uploadId,
+          },
+        });
+      });
+    });
+    describe("uploadArtifactToCCloud", () => {
+      let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+      let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
 
-      await assert.rejects(
-        () => handleUploadFile(mockParams, mockPresignedUrlResponse),
-        uploadError,
-      );
+      beforeEach(() => {
+        stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+        stubbedSidecarHandle = getSidecarStub(sandbox);
+        stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+      });
 
-      sinon.assert.calledOnce(uploadFileToAzureStub);
+      it("should upload the artifact to Confluent Cloud", async () => {
+        const mockUploadId = "upload-id-123";
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.resolves({
+          id: "artifact-id-123",
+          cloud: "",
+          region: "",
+          environment: "",
+          display_name: "",
+        });
+
+        await uploadArtifactToCCloud(mockParams, mockUploadId);
+
+        sinon.assert.calledOnce(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact);
+        sinon.assert.calledWith(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact, {
+          CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(
+            mockParams,
+            mockUploadId,
+          ),
+          cloud: mockParams.cloud,
+          region: mockParams.region,
+        });
+      });
+
+      it("should show an error notification if the upload fails", async () => {
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(new Error("Upload failed"));
+
+        const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+        await assert.rejects(uploadArtifactToCCloud(mockParams, "upload-id-123"), {
+          message: "Upload failed",
+        });
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          "Failed to create Flink artifact. See logs for details.",
+        );
+      });
+
+      it("should parse and display JSON error details from ResponseError", async () => {
+        const mockUploadId = "upload-id-123";
+
+        const responseError = createResponseError(409, "Conflict", "artifact already exists");
+
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        const errorNotificationStub = sandbox
+          .stub(notifications, "showErrorNotificationWithButtons")
+          .resolves();
+
+        await assert.rejects(
+          uploadArtifactToCCloud(mockParams, mockUploadId),
+          (err: Error) => err === responseError,
+        );
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: artifact already exists`,
+        );
+      });
+
+      it("should parse and display text error details from ResponseError", async () => {
+        const mockUploadId = "upload-id-123";
+        const textBody = "artifact already exists";
+
+        const responseError = createResponseError(409, "Conflict", textBody);
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        const errorNotificationStub = sandbox
+          .stub(notifications, "showErrorNotificationWithButtons")
+          .resolves();
+
+        await assert.rejects(
+          uploadArtifactToCCloud(mockParams, mockUploadId),
+          (err: Error) => err === responseError,
+        );
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: ${textBody}`,
+        );
+      });
     });
   });
 });

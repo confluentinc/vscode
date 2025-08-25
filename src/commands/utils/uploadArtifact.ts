@@ -1,10 +1,13 @@
 import path from "node:path";
 import * as vscode from "vscode";
 import {
+  CreateArtifactV1FlinkArtifact201Response,
+  CreateArtifactV1FlinkArtifactRequest,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import { logError } from "../../errors";
+import { artifactUploadCompleted } from "../../emitters";
+import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
@@ -18,7 +21,7 @@ import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure } from "./uploadToAzure";
 export { uploadFileToAzure };
 
-export interface UDFUploadParams {
+export interface ArtifactUploadParams {
   environment: string;
   cloud: string;
   region: string;
@@ -27,7 +30,9 @@ export interface UDFUploadParams {
   selectedFile: vscode.Uri;
 }
 
-const logger = new Logger("commands/uploadUDF");
+const logger = new Logger("commands/uploadArtifact");
+
+export const PRESIGNED_URL_LOCATION = "PRESIGNED_URL_LOCATION";
 
 /**
  * Read a file from a VS Code Uri and prepare a Blob (and File if available).
@@ -75,18 +80,18 @@ export async function getPresignedUploadUrl(
   return urlResponse;
 }
 
-export async function promptForUDFUploadParams(): Promise<UDFUploadParams | undefined> {
+export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
 
   if (!environment || !environment.id) {
-    void showErrorNotificationWithButtons("Upload UDF cancelled: Environment ID is required.");
+    void showErrorNotificationWithButtons("Upload Artifact cancelled: Environment ID is required.");
     return undefined;
   }
 
   const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
   if (!cloudRegion) {
-    void showErrorNotificationWithButtons("Upload UDF cancelled: Cloud provider is required.");
+    void showErrorNotificationWithButtons("Upload Artifact cancelled: Cloud provider is required.");
     return undefined;
   }
 
@@ -95,7 +100,7 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
     cloud = CloudProvider.Azure;
   } else {
     void showErrorNotificationWithButtons(
-      `Upload UDF cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
+      `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
     );
     return undefined;
   }
@@ -118,13 +123,15 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name for the UDF",
+    prompt: "Enter the artifact name for the Artifact",
     ignoreFocusOut: true,
     validateInput: (value) => (value ? undefined : "Artifact name is required"),
   });
 
   if (!artifactName) {
-    void showWarningNotificationWithButtons("Upload UDF cancelled: Artifact name is required.");
+    void showWarningNotificationWithButtons(
+      "Upload Artifact cancelled: Artifact name is required.",
+    );
     return undefined;
   }
 
@@ -138,14 +145,14 @@ export async function promptForUDFUploadParams(): Promise<UDFUploadParams | unde
   };
 }
 
-export async function handleUploadFile(
-  params: UDFUploadParams,
+export async function handleUploadToCloudProvider(
+  params: ArtifactUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}:`,
+      title: `Uploading ${params.artifactName}`,
       cancellable: false,
     },
     async (progress) => {
@@ -179,4 +186,86 @@ export async function handleUploadFile(
       });
     },
   );
+}
+
+export async function uploadArtifactToCCloud(
+  params: ArtifactUploadParams,
+  uploadId: string,
+): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
+  try {
+    const createRequest = buildCreateArtifactRequest(params, uploadId);
+
+    logger.info("Creating Flink artifact", {
+      artifactName: params.artifactName,
+      environment: params.environment,
+      cloud: params.cloud,
+      region: params.region,
+      uploadId,
+      requestPayload: createRequest,
+    });
+
+    const sidecarHandle = await getSidecar();
+    const providerRegion: IEnvProviderRegion = {
+      environmentId: params.environment as EnvironmentId,
+      provider: params.cloud,
+      region: params.region,
+    };
+    const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
+
+    const response = await artifactsClient.createArtifactV1FlinkArtifact({
+      CreateArtifactV1FlinkArtifactRequest: createRequest,
+      cloud: params.cloud,
+      region: params.region,
+    });
+
+    logger.info("Flink artifact created successfully", {
+      artifactId: response.id,
+      artifactName: params.artifactName,
+    });
+
+    artifactUploadCompleted.fire();
+
+    return response;
+  } catch (error) {
+    let userMessage = "Failed to create Flink artifact. See logs for details.";
+    let extra: Record<string, unknown> = {
+      cloud: params.cloud,
+      region: params.region,
+    };
+
+    if (isResponseError(error)) {
+      let errBody: string | undefined;
+      try {
+        const respJson = await error.response.clone().json();
+        if (respJson && typeof respJson === "object" && respJson.message) {
+          errBody = respJson.message;
+        }
+      } catch {
+        errBody = await error.response.clone().text();
+      }
+      if (errBody !== undefined) {
+        userMessage = `Failed to create Flink artifact: ${errBody}`;
+      }
+    }
+    void showErrorNotificationWithButtons(userMessage);
+    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
+    throw error;
+  }
+}
+
+export function buildCreateArtifactRequest(
+  params: ArtifactUploadParams,
+  uploadId: string,
+): CreateArtifactV1FlinkArtifactRequest {
+  return {
+    cloud: params.cloud,
+    region: params.region,
+    environment: params.environment,
+    display_name: params.artifactName,
+    content_format: params.fileFormat.toUpperCase(),
+    upload_source: {
+      location: PRESIGNED_URL_LOCATION,
+      upload_id: uploadId,
+    },
+  };
 }
