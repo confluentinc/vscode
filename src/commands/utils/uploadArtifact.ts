@@ -82,16 +82,9 @@ export async function getPresignedUploadUrl(
 
 export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
-
-  if (!environment || !environment.id) {
-    void showErrorNotificationWithButtons("Upload Artifact cancelled: Environment ID is required.");
-    return undefined;
-  }
-
   const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
-  if (!cloudRegion) {
-    void showErrorNotificationWithButtons("Upload Artifact cancelled: Cloud provider is required.");
+  if (!environment || !environment.id || !cloudRegion) {
     return undefined;
   }
 
