@@ -17,7 +17,7 @@ describe("FlinkArtifactTreeItem", () => {
   });
 
   describe("createFlinkArtifactToolTip", () => {
-    it("should return a MarkdownString with all artifact details", () => {
+    it("should return a CustomMarkdownString with all artifact details", () => {
       const artifact = new FlinkArtifact({
         connectionId: "conn-2" as ConnectionId,
         connectionType: ConnectionType.Ccloud,
@@ -33,10 +33,9 @@ describe("FlinkArtifactTreeItem", () => {
       const tooltipValue = tooltip.value;
 
       assert.strictEqual(typeof tooltipValue, "string");
-      assert.match(tooltipValue, /\*\*Another Artifact\*\*/);
-      assert.match(tooltipValue, /Another description\./);
-      assert.match(tooltipValue, /Cloud: Azure/);
-      assert.match(tooltipValue, /Region: australiaeast/);
+      assert.match(tooltipValue, /Description: : `Another description\.`/);
+      assert.match(tooltipValue, /Cloud: : `Azure`/);
+      assert.match(tooltipValue, /Region: : `australiaeast`/);
     });
   });
 });
