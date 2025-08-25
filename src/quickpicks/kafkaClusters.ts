@@ -176,8 +176,8 @@ export async function kafkaClusterQuickPick(
 export async function flinkDatabaseQuickpick(
   computePool: CCloudFlinkComputePool,
   placeholder: string = "Select the Kafka cluster to use as the default database for the statement",
-): Promise<KafkaCluster | undefined> {
-  return await kafkaClusterQuickPick({
+): Promise<CCloudKafkaCluster | undefined> {
+  return (await kafkaClusterQuickPick({
     placeHolder: placeholder,
     filter: (cluster: KafkaCluster) => {
       if (!isCCloud(cluster)) {
@@ -193,5 +193,5 @@ export async function flinkDatabaseQuickpick(
         ccloudCluster.region === computePool.region
       );
     },
-  });
+  })) as CCloudKafkaCluster | undefined;
 }

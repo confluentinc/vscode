@@ -9,68 +9,18 @@ import {
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { FlinkStatement, Phase, restFlinkStatementToModel } from "../../models/flinkStatement";
+import {
+  FlinkSpecProperties,
+  FlinkStatement,
+  Phase,
+  restFlinkStatementToModel,
+} from "../../models/flinkStatement";
 import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
 import { WebviewPanelCache } from "../../webview-cache";
 import flinkStatementResults from "../../webview/flink-statement-results.html";
 
 const logger = new Logger("commands.utils.flinkStatements");
-
-export class FlinkSpecProperties {
-  currentCatalog: string | undefined = undefined;
-  currentDatabase: string | undefined = undefined;
-  localTimezone: string | undefined = undefined;
-
-  constructor(
-    options: Pick<
-      Partial<FlinkSpecProperties>,
-      "currentCatalog" | "currentDatabase" | "localTimezone"
-    >,
-  ) {
-    this.currentCatalog = options.currentCatalog;
-    this.currentDatabase = options.currentDatabase;
-    this.localTimezone = options.localTimezone;
-  }
-
-  static fromProperties(properties: Record<string, string>): FlinkSpecProperties {
-    const currentCatalog = properties["sql.current-catalog"];
-    const currentDatabase = properties["sql.current-database"];
-    const localTimezone = properties["sql.local-time-zone"];
-    return new FlinkSpecProperties({
-      currentCatalog,
-      currentDatabase,
-      localTimezone,
-    });
-  }
-
-  toProperties(): Record<string, string> {
-    const properties: Record<string, string> = {};
-    if (this.currentCatalog) {
-      properties["sql.current-catalog"] = this.currentCatalog;
-    }
-    if (this.currentDatabase) {
-      properties["sql.current-database"] = this.currentDatabase;
-    }
-    if (this.localTimezone) {
-      properties["sql.local-time-zone"] = this.localTimezone;
-    }
-    return properties;
-  }
-
-  /**
-   * Return new properties set based on union of this and provided other, preferring any value
-   * set in other over this.
-   */
-  union(other: FlinkSpecProperties): FlinkSpecProperties {
-    const merged = new FlinkSpecProperties({
-      currentCatalog: other.currentCatalog || this.currentCatalog,
-      currentDatabase: other.currentDatabase || this.currentDatabase,
-      localTimezone: other.localTimezone || this.localTimezone,
-    });
-    return merged;
-  }
-}
 
 /**
  * Return a suitable (and unique) name for a Flink statement to submit.
@@ -174,15 +124,6 @@ export async function submitFlinkStatement(
   const statementModel = restFlinkStatementToModel(response, params.computePool);
 
   return statementModel;
-}
-
-/**
- * Get the user's local timezone offset.
- * @returns The local timezone offset in the format "GMT+/-HHMM", e.g. "GMT-0400" for EDT.
- */
-export function localTimezoneOffset(): string {
-  const nowStr = new Date().toString();
-  return nowStr.match(/([A-Z]+[+-]\d+)/)![1]; //NOSONAR: This regex is safe for parsing the timezone offset from a date string.
 }
 
 /** Poll period in millis to check whether statement has reached results-viewable state */

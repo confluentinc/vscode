@@ -373,3 +373,58 @@ export function restFlinkStatementToModel(
     status: restFlinkStatement.status,
   });
 }
+
+export class FlinkSpecProperties {
+  currentCatalog: string | undefined = undefined;
+  currentDatabase: string | undefined = undefined;
+  localTimezone: string | undefined = undefined;
+
+  constructor(
+    options: Pick<
+      Partial<FlinkSpecProperties>,
+      "currentCatalog" | "currentDatabase" | "localTimezone"
+    >,
+  ) {
+    this.currentCatalog = options.currentCatalog;
+    this.currentDatabase = options.currentDatabase;
+    this.localTimezone = options.localTimezone;
+  }
+
+  static fromProperties(properties: Record<string, string>): FlinkSpecProperties {
+    const currentCatalog = properties["sql.current-catalog"];
+    const currentDatabase = properties["sql.current-database"];
+    const localTimezone = properties["sql.local-time-zone"];
+    return new FlinkSpecProperties({
+      currentCatalog,
+      currentDatabase,
+      localTimezone,
+    });
+  }
+
+  toProperties(): Record<string, string> {
+    const properties: Record<string, string> = {};
+    if (this.currentCatalog) {
+      properties["sql.current-catalog"] = this.currentCatalog;
+    }
+    if (this.currentDatabase) {
+      properties["sql.current-database"] = this.currentDatabase;
+    }
+    if (this.localTimezone) {
+      properties["sql.local-time-zone"] = this.localTimezone;
+    }
+    return properties;
+  }
+
+  /**
+   * Return new properties set based on union of this and provided other, preferring any value
+   * set in other over this.
+   */
+  union(other: FlinkSpecProperties): FlinkSpecProperties {
+    const merged = new FlinkSpecProperties({
+      currentCatalog: other.currentCatalog || this.currentCatalog,
+      currentDatabase: other.currentDatabase || this.currentDatabase,
+      localTimezone: other.localTimezone || this.localTimezone,
+    });
+    return merged;
+  }
+}

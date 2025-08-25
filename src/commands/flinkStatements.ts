@@ -11,7 +11,7 @@ import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
@@ -24,13 +24,12 @@ import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import {
-  FlinkSpecProperties,
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
   determineFlinkStatementName,
-  localTimezoneOffset,
   submitFlinkStatement,
   waitForResultsFetchable,
+  waitForStatementCompletion,
 } from "./utils/flinkStatements";
 
 const logger = new Logger("commands.flinkStatements");
@@ -118,7 +117,7 @@ export async function submitFlinkStatementCommand(
     database instanceof CCloudKafkaCluster &&
     database.provider === computePool.provider &&
     database.region === computePool.region;
-  const currentDatabaseKafkaCluster: KafkaCluster | undefined = validDatabaseProvided
+  const currentDatabaseKafkaCluster: CCloudKafkaCluster | undefined = validDatabaseProvided
     ? database
     : await flinkDatabaseQuickpick(computePool);
   if (!currentDatabaseKafkaCluster) {
@@ -133,11 +132,7 @@ export async function submitFlinkStatementCommand(
     statementName,
     computePool,
     hidden: false, // Do not create a hidden statement, the user authored it.
-    properties: new FlinkSpecProperties({
-      currentDatabase,
-      currentCatalog: currentDatabaseKafkaCluster.environmentId,
-      localTimezone: localTimezoneOffset(),
-    }),
+    properties: currentDatabaseKafkaCluster.toFlinkSpecProperties(),
   };
 
   try {
@@ -303,11 +298,42 @@ async function openFlinkStatementResultsView(statement: FlinkStatement | undefin
   });
 }
 
+/** Scratch command to test build out */
+export async function listFunctionsCommand(computePool: CCloudFlinkComputePool): Promise<void> {
+  void vscode.window.showInformationMessage("List functions command invoked");
+
+  const database = await flinkDatabaseQuickpick(computePool);
+
+  if (!database) {
+    logger.info("User cancelled database quickpick");
+    return [];
+  }
+
+  const statementParams: IFlinkStatementSubmitParameters = {
+    statement: "SHOW FUNCTIONS;",
+    statementName: await determineFlinkStatementName(),
+    computePool,
+    hidden: true, // Hidden statement, user didn't author it.
+    properties: database.toFlinkSpecProperties(),
+  };
+
+  // Submit statement
+  const statement = await submitFlinkStatement(statementParams);
+
+  await waitForStatementCompletion(statement);
+
+  logger.info(`Statement ${statement.id} completed with phase ${statement.status.phase}`);
+
+  // TODO: fetch and digest results.
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
     // Different naming scheme due to legacy telemetry reasons.
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
+    // temporary scratch command
+    registerCommandWithLogging("confluent.flink.listFunctions", listFunctionsCommand),
   ];
 }

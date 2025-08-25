@@ -8,7 +8,9 @@ import {
   LOCAL_CONNECTION_ID,
   UTM_SOURCE_VSCODE,
 } from "../constants";
+import { localTimezoneOffset } from "../utils/timezone";
 import { CCloudFlinkComputePool } from "./flinkComputePool";
+import { FlinkSpecProperties } from "./flinkStatement";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -56,6 +58,15 @@ export class CCloudKafkaCluster extends KafkaCluster {
 
   get ccloudApiKeysUrl(): string {
     return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/clusters/${this.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  /** Coerce this CCLoudKafkaCluster into a portion needed for submitting Flink statement */
+  toFlinkSpecProperties(): FlinkSpecProperties {
+    return new FlinkSpecProperties({
+      currentDatabase: this.name,
+      currentCatalog: this.environmentId,
+      localTimezone: localTimezoneOffset(),
+    });
   }
 
   searchableText(): string {
