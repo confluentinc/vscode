@@ -52,6 +52,12 @@ export interface KafkaClusterConfig {
    * @memberof KafkaClusterConfig
    */
   ssl?: TLSConfig | null;
+  /**
+   * The suffix to append to the Kafka client config option client.id when interacting with this Kafka cluster. Is useful when, for instance, connecting to WarpStream agents via Kubernetes port-forwarding.
+   * @type {string}
+   * @memberof KafkaClusterConfig
+   */
+  client_id_suffix?: string | null;
 }
 
 /**
@@ -80,6 +86,7 @@ export function KafkaClusterConfigFromJSONTyped(
         ? undefined
         : KafkaClusterConfigCredentialsFromJSON(json["credentials"]),
     ssl: json["ssl"] == null ? undefined : TLSConfigFromJSON(json["ssl"]),
+    client_id_suffix: json["client_id_suffix"] == null ? undefined : json["client_id_suffix"],
   };
 }
 
@@ -99,5 +106,6 @@ export function KafkaClusterConfigToJSONTyped(
     bootstrap_servers: value["bootstrap_servers"],
     credentials: KafkaClusterConfigCredentialsToJSON(value["credentials"]),
     ssl: TLSConfigToJSON(value["ssl"]),
+    client_id_suffix: value["client_id_suffix"],
   };
 }

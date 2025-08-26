@@ -308,7 +308,8 @@ export function getConnectionSpecFromFormData(
           path.includes(".auth_type") ||
           path.includes(".credentials.") ||
           path.includes(".ssl.truststore") ||
-          path.includes(".ssl.keystore")
+          path.includes(".ssl.keystore") ||
+          path.includes(".client_id_suffix")
         ) {
           continue;
         }
@@ -354,6 +355,12 @@ export function getConnectionSpecFromFormData(
       }
     }
   }
+
+  // When using WarpStream, maybe enable Kubernetes port-forwarding for connecting to agents
+  if (formData["formconnectiontype"] === "WarpStream") {
+    setValueAtPath(spec, "kafka_cluster.client_id_suffix", formData["kafka_cluster.client_id_suffix"]);
+  }
+
   return spec;
 }
 

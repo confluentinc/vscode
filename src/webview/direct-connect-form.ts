@@ -87,6 +87,12 @@ class DirectConnectFormViewModel extends ViewModel {
     return `${this.vscodeUriScheme()}://settings/confluent.krb5ConfigPath`;
   });
 
+  // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
+  warpStreamPortForwardingEnabled = this.derive(() => {
+    if (this.spec()?.kafka_cluster?.client_id_suffix?.toString() === "ws_host_override=localhost") return true;
+    else return false;
+  });
+
   // SSL enabled is true by default. If this is undefined it means the user never set/saved it
   kafkaSslEnabled = this.derive(() => {
     if (this.spec()?.kafka_cluster?.ssl?.enabled?.toString() === "false") return false;
@@ -213,6 +219,13 @@ class DirectConnectFormViewModel extends ViewModel {
       case "schema_registry.ssl.enabled":
         this.schemaSslEnabled(input.checked);
         break;
+      case "kafka_cluster.client_id_suffix":
+        this.warpStreamPortForwardingEnabled(input.checked);
+        await post("UpdateSpecValue", {
+          inputName: "kafka_cluster.client_id_suffix",
+          inputValue: input.checked ? "ws_host_override=localhost" : "",
+        });
+        break;
       case "kafka_cluster.bootstrap_servers":
         this.kafkaBootstrapServers(input.value);
         // if localhost, uncheck SSL
@@ -303,6 +316,11 @@ class DirectConnectFormViewModel extends ViewModel {
     ) {
       // Enforce SCRAM_SHA_512 for WarpStream in the data; that's all WarpStream supports
       data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
+    }
+    if (this.warpStreamPortForwardingEnabled()) {
+      data["kafka_cluster.client_id_suffix"] = "ws_host_override=localhost";
+    } else {
+      data["kafka_cluster.client_id_suffix"] = "";
     }
 
     if (data["formconnectiontype"] === "Confluent Cloud") {
