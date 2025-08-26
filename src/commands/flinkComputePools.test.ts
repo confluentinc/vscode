@@ -91,17 +91,12 @@ describe("flinkComputePools.ts", () => {
       executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
     });
 
-    it("should only invoke statements pool selection command since Flink Artifacts is disabled", async () => {
+    it("should invoke statements pool selection command", async () => {
       await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
 
       sinon.assert.calledWith(
         executeCommandStub,
         "confluent.statements.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-      sinon.assert.neverCalledWith(
-        executeCommandStub,
-        "confluent.artifacts.flink-compute-pool.select",
         TEST_CCLOUD_FLINK_COMPUTE_POOL,
       );
     });

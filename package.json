@@ -436,12 +436,6 @@
         "category": "Confluent: Flink Statements"
       },
       {
-        "command": "confluent.artifacts.flink-compute-pool.select",
-        "icon": "$(confluent-flink-compute-pool)",
-        "title": "Select Flink Compute Pool",
-        "category": "Confluent: Flink Artifacts"
-      },
-      {
         "command": "confluent.statements.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -1044,16 +1038,6 @@
           "name": "Flink Statements",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)"
-        },
-        {
-          "id": "confluent-flink-artifacts",
-          "name": "Flink Artifacts (Preview)",
-          "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "when": "false",
-          "tags": [
-            "preview"
-          ]
         },
         {
           "id": "confluent-support",
