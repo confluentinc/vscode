@@ -265,10 +265,10 @@ async function _activateExtension(
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
-    registerUploadUDFCommand(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
+    registerUploadUDFCommand(),
     ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
