@@ -262,13 +262,13 @@ async function _activateExtension(
     ...registerExtraCommands(),
     ...registerDockerCommands(),
     ...registerProjectGenerationCommands(),
-    ...registerFlinkArtifactCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
+    registerUploadUDFCommand(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
-    registerUploadUDFCommand(),
+    ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
