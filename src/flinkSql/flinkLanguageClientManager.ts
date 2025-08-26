@@ -641,6 +641,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   public async maybeStartLanguageClient(uri?: Uri, restartRunningClient = false): Promise<void> {
     const uriStr = uri?.toString() || "undefined";
     logger.trace(`Requesting language client initialization for ${uriStr}`);
+    // We use runExclusive to ensure only one initialization attempt at a time
 
     await this.clientInitMutex.runExclusive(async () => {
       try {
