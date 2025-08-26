@@ -12,7 +12,7 @@ import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
-import { ENABLE_MEDUSA_CONTAINER, LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { ConnectionLabel } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
@@ -82,10 +82,7 @@ export async function runWorkflowWithProgress(
   }
   if (resources.includes(LocalResourceKind.Medusa)) {
     try {
-      // Only add medusa workflow if the feature setting is enabled
-      if (ENABLE_MEDUSA_CONTAINER.value) {
-        subworkflows.push(LocalResourceWorkflow.getMedusaWorkflow());
-      }
+      subworkflows.push(LocalResourceWorkflow.getMedusaWorkflow());
     } catch (error) {
       logger.error("error getting Medusa workflow:", error);
       return;
