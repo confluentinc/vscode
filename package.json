@@ -674,7 +674,7 @@
       },
       {
         "command": "confluent.artifacts.query",
-        "title": "Query with Flink SQL",
+        "title": "Register with Flink SQL",
         "category": "Confluent: Artifacts"
       },
       {
