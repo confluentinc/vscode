@@ -17,7 +17,9 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
   const placeholderQuery = `-- Register UDF for artifact "${selectedArtifact.name}"
 -- Replace this with your actual Flink SQL UDF registration statement
 
-CREATE FUNCTION ${selectedArtifact.name} AS 'com.example.udf.${selectedArtifact.name}';
+CREATE FUNCTION "${selectedArtifact.name}"
+  AS 'com.example.udf.${selectedArtifact.name}'
+  USING JAR 'confluent-artifact://<plugin-id>/<version-id>';
 `;
 
   const document = await vscode.workspace.openTextDocument({
