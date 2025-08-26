@@ -18,7 +18,6 @@ import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { Logger } from "../logging";
-import { FlinkArtifact } from "../models/flinkArtifact";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
@@ -482,26 +481,6 @@ async function produceMessages(
       buttons,
     );
   }
-}
-
-/**Open a new tab set to Flink SQL type with placeholder Flink UDF registration statement for selected artifact */
-export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | undefined) {
-  if (!selectedArtifact || !(selectedArtifact instanceof FlinkArtifact)) {
-    return;
-  }
-
-  const placeholderQuery = `-- Register UDF for artifact "${selectedArtifact.name}"
--- Replace this with your actual Flink SQL UDF registration statement
-
-CREATE FUNCTION ${selectedArtifact.name} AS 'com.example.udf.${selectedArtifact.name}';
-`;
-
-  const document = await vscode.workspace.openTextDocument({
-    language: FLINK_SQL_LANGUAGE_ID,
-    content: placeholderQuery,
-  });
-
-  await vscode.window.showTextDocument(document, { preview: false });
 }
 
 /** Open a new tab set to Flink SQL type with placeholder Flink query of the selected topic */
