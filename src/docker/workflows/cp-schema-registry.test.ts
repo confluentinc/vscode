@@ -24,6 +24,7 @@ import * as local from "../../sidecar/connections/local";
 import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import * as dockerContainers from "../containers";
 import * as ports from "../ports";
+import { LocalResourceWorkflow } from "./base";
 import { brokerConfigsToRestBootstrapServers } from "./confluent-local";
 import {
   ConfluentPlatformSchemaRegistryWorkflow,
@@ -84,6 +85,10 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     getContainerStub = sandbox.stub(dockerContainers, "getContainer");
 
     workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
+
+    // Set up the Kafka workflow to have the correct imageTag for tests
+    const kafkaWorkflow = LocalResourceWorkflow.getKafkaWorkflow();
+    kafkaWorkflow.imageTag = LOCAL_KAFKA_IMAGE_TAG.defaultValue;
 
     checkForImageStub = sandbox.stub(workflow, "checkForImage").resolves();
     handleExistingContainersStub = sandbox.stub(workflow, "handleExistingContainers").resolves();
