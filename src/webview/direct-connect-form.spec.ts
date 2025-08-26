@@ -1114,7 +1114,10 @@ test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page })
   );
 });
 
-test("sets the client ID suffix correctly when using K8s port-forwarding for WarpStream platform", async ({ execute, page }) => {
+test("sets the client ID suffix correctly when using K8s port-forwarding for WarpStream platform", async ({
+  execute,
+  page,
+}) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;

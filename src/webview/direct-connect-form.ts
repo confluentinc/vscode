@@ -89,8 +89,11 @@ class DirectConnectFormViewModel extends ViewModel {
 
   // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
   warpStreamPortForwardingEnabled = this.derive(() => {
-    if (this.spec()?.kafka_cluster?.client_id_suffix?.toString() === "ws_host_override=localhost") return true;
-    else return false;
+    if (this.spec()?.kafka_cluster?.client_id_suffix?.toString() === "ws_host_override=localhost") {
+      return true;
+    } else {
+      return false;
+    }
   });
 
   // SSL enabled is true by default. If this is undefined it means the user never set/saved it

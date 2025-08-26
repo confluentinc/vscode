@@ -358,7 +358,11 @@ export function getConnectionSpecFromFormData(
 
   // When using WarpStream, maybe enable Kubernetes port-forwarding for connecting to agents
   if (formData["formconnectiontype"] === "WarpStream") {
-    setValueAtPath(spec, "kafka_cluster.client_id_suffix", formData["kafka_cluster.client_id_suffix"]);
+    setValueAtPath(
+      spec,
+      "kafka_cluster.client_id_suffix",
+      formData["kafka_cluster.client_id_suffix"],
+    );
   }
 
   return spec;
