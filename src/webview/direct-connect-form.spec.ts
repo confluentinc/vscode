@@ -1108,6 +1108,59 @@ test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page })
       "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512",
       "kafka_cluster.credentials.scram_username": "user",
       "kafka_cluster.credentials.scram_password": "password",
+      // Should not use Kubernetes port-forwarding by default for connecting to WarpStream agents
+      "kafka_cluster.client_id_suffix": "",
+    }),
+  );
+});
+
+test("sets the client ID suffix correctly when using K8s port-forwarding for WarpStream platform", async ({
+  execute,
+  page,
+}) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with WarpStream and SCRAM auth
+  await page.fill("input[name=name]", "WarpStream Test");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='formconnectiontype']", "WarpStream");
+  // Connect to WarpStream agents via Kubernetes port-forwarding
+  await page.check("input[type=checkbox][name='kafka_cluster.client_id_suffix']");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+
+  // Verify client ID suffix is set correctly
+  expect(submitCall?.[1]).toEqual(
+    expect.objectContaining({
+      name: "WarpStream Test",
+      formconnectiontype: "WarpStream",
+      "kafka_cluster.bootstrap_servers": "localhost:9092",
+      "kafka_cluster.auth_type": "SCRAM",
+      "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512",
+      "kafka_cluster.credentials.scram_username": "user",
+      "kafka_cluster.credentials.scram_password": "password",
+      "kafka_cluster.client_id_suffix": "ws_host_override=localhost",
     }),
   );
 });
