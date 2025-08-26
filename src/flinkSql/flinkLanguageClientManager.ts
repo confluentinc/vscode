@@ -515,6 +515,121 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   }
 
   /**
+   * Sub-function of {@link maybeStartLanguageClient} that checks prerequisites for starting a new language client.
+   * Prerequisites for starting a new language client:
+   * - User is authenticated with CCloud
+   * - User has designated a compute pool to use (language server route is region+provider specific)
+   * - User does not already have a language client running for this uri or need to force restart it
+   * @param uri The URI of the document to check
+   * @param restartRunningClient Whether to force reinitialization of the language client even if it's already running
+   * @returns The compute pool ID, pool info, and WebSocket URL if the prerequisites are met, or null if they are not
+   */
+  private async checkClientPrerequisites(
+    uri?: Uri,
+    restartRunningClient: boolean = false,
+  ): Promise<{
+    computePoolId: string;
+    poolInfo: ComputePoolInfo;
+    websocketUrl: string;
+  } | null> {
+    if (!hasCCloudAuthSession()) {
+      logger.trace("User is not authenticated with CCloud, not initializing language client");
+      return null;
+    }
+
+    if (!uri) {
+      logger.trace("No URI provided, cannot start language client");
+      return null;
+    }
+
+    // Check if we have a client for this URI and if we don't need to restart
+    if (
+      this.isLanguageClientConnected() &&
+      this.lastDocUri &&
+      uri.toString() === this.lastDocUri.toString()
+    ) {
+      if (!restartRunningClient) {
+        logger.trace("Language client already exists for this URI, skipping initialization");
+        return null;
+      } else {
+        logger.trace(
+          "Language client is already running for this URI, but forcing reinitialization",
+        );
+      }
+    }
+
+    const { computePoolId } = await this.getFlinkSqlSettings(uri);
+    if (!computePoolId) {
+      logger.trace("No compute pool, not starting language client");
+      return null;
+    }
+
+    const poolInfo = await this.lookupComputePoolInfo(computePoolId);
+    if (!poolInfo) {
+      logger.trace("No valid compute pool; not initializing language client");
+      return null;
+    }
+
+    const websocketUrl = this.buildFlinkSqlWebSocketUrl(poolInfo);
+    if (!websocketUrl) {
+      logger.error("Failed to build WebSocket URL, cannot start language client");
+      return null;
+    }
+
+    return { computePoolId, poolInfo, websocketUrl };
+  }
+
+  /**
+   * Sub-function of {@link maybeStartLanguageClient} that clears diagnostics and initializes a new language client
+   * @param uri The URI of the document to initialize the client for
+   * @param computePoolId The ID of the compute pool to use
+   * @param websocketUrl The WebSocket URL to use for the language client
+   */
+  private async initializeNewClient(
+    uri: Uri,
+    computePoolId: string,
+    websocketUrl: string,
+  ): Promise<void> {
+    // Cleanup logic
+    logger.trace("Cleaning up and reinitializing", {
+      clientConnected: this.isLanguageClientConnected(),
+      lastWebSocketUrl: this.lastWebSocketUrl,
+      websocketUrlMatch: websocketUrl === this.lastWebSocketUrl,
+    });
+
+    // Clear any previous diagnostics for the document *before*
+    // reinitializing the language client. (cleanupLanguageClient()
+    // will set this.lastDocUri to null, which will then prevent
+    // the attempt to clear diagnostics before the call to
+    // initializeLanguageClient().)
+    if (this.lastDocUri) {
+      this.clearDiagnostics(this.lastDocUri);
+    }
+    await this.cleanupLanguageClient();
+
+    // Reset reconnect counter on new initialization
+    this.reconnectCounter = 0;
+
+    logger.debug(
+      `Starting language client with URL: ${websocketUrl} for document ${uri.toString()}`,
+    );
+    this.languageClient = await this.initializeLanguageClient(websocketUrl);
+
+    if (this.languageClient) {
+      this.disposables.push(this.languageClient);
+      this.lastDocUri = uri;
+      this.lastWebSocketUrl = websocketUrl;
+
+      logger.trace("Flink SQL language client successfully initialized");
+      logUsage(UserEvent.FlinkSqlClientInteraction, {
+        action: "client_initialized",
+        compute_pool_id: computePoolId,
+      });
+      await this.notifyConfigChanged();
+    }
+  }
+
+  /**
    * Ensures the language client is initialized if prerequisites are met
    * Prerequisites:
    * - User is authenticated with CCloud
@@ -526,106 +641,34 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   public async maybeStartLanguageClient(uri?: Uri, restartRunningClient = false): Promise<void> {
     const uriStr = uri?.toString() || "undefined";
     logger.trace(`Requesting language client initialization for ${uriStr}`);
-    // We use runExclusive to ensure only one initialization attempt at a time
+
     await this.clientInitMutex.runExclusive(async () => {
       try {
         logger.trace(`Acquired initialization lock for ${uriStr}`);
 
-        if (!hasCCloudAuthSession()) {
-          logger.trace("User is not authenticated with CCloud, not initializing language client");
+        // Step 1: Check prerequisites for starting a new client
+        const prereqCheck = await this.checkClientPrerequisites(uri, restartRunningClient);
+        if (!prereqCheck) {
+          logger.trace("Prerequisites not met, not starting language client");
           return;
         }
 
-        if (!uri) {
-          logger.trace("No URI provided, cannot start language client");
-          return;
-        }
-
-        // Check if we already have a client for this exact URI
+        // Step 2: Check if client is already connected to the same WebSocket URL and doesn't need to force restart
         if (
           this.isLanguageClientConnected() &&
-          this.lastDocUri &&
-          uri.toString() === this.lastDocUri.toString()
-        ) {
-          if (!restartRunningClient) {
-            logger.trace("Language client already exists for this URI, skipping initialization");
-            return;
-          } else {
-            logger.trace(
-              "Language client is already running for this URI, but forcing reinitialization",
-            );
-          }
-        }
-
-        const { computePoolId } = await this.getFlinkSqlSettings(uri);
-        if (!computePoolId) {
-          logger.trace("No compute pool, not starting language client");
-          return;
-        }
-
-        const poolInfo = await this.lookupComputePoolInfo(computePoolId);
-        if (!poolInfo) {
-          logger.trace("No valid compute pool; not initializing language client");
-          return;
-        }
-
-        let url: string | null = this.buildFlinkSqlWebSocketUrl(poolInfo);
-        if (!url) {
-          logger.error("Failed to build WebSocket URL, cannot start language client");
-          return;
-        }
-
-        if (
-          this.isLanguageClientConnected() &&
-          url === this.lastWebSocketUrl &&
+          prereqCheck.websocketUrl === this.lastWebSocketUrl &&
           !restartRunningClient
         ) {
-          // If we already have a client, it's alive, the compute pool matches, so we're good
           logger.trace("Language client already connected to correct url, no need to reinitialize");
           return;
-        } else {
-          logger.trace("Cleaning up and reinitializing", {
-            clientConnected: this.isLanguageClientConnected(),
-            lastWebSocketUrl: this.lastWebSocketUrl,
-            websocketUrlMatch: url === this.lastWebSocketUrl,
-          });
-
-          // Clear any previous diagnostics for the document *before*
-          // reinitializing the language client. (cleanupLanguageClient()
-          // will set this.lastDocUri to null, which will then prevent
-          // the attempt to clear diagnostics before the call to
-          // initializeLanguageClient().)
-          if (this.lastDocUri) {
-            this.clearDiagnostics(this.lastDocUri);
-          }
-
-          await this.cleanupLanguageClient();
         }
 
-        // Reset reconnect counter on new initialization
-        this.reconnectCounter = 0;
-
-        logger.debug(`Starting language client with URL: ${url} for document ${uriStr}`);
-        this.languageClient = await this.initializeLanguageClient(url);
-
-        if (this.languageClient) {
-          this.disposables.push(this.languageClient);
-          this.lastDocUri = uri;
-          this.lastWebSocketUrl = url;
-
-          logger.trace("Flink SQL language client successfully initialized");
-          logUsage(UserEvent.FlinkSqlClientInteraction, {
-            action: "client_initialized",
-            compute_pool_id: computePoolId,
-          });
-          await this.notifyConfigChanged();
-        }
+        // Step 3: Set up new client with valid prerequisites from {@link checkClientPrerequisites}
+        await this.initializeNewClient(uri!, prereqCheck.computePoolId, prereqCheck.websocketUrl);
       } catch (error) {
-        let msg = "Error in maybeStartLanguageClient";
-        logError(error, msg, {
-          extra: {
-            uri: uri?.toString(),
-          },
+        // Should never happen, but if it does, we should log the error and continue
+        logError(error, "Error in maybeStartLanguageClient", {
+          extra: { uri: uri?.toString() },
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
