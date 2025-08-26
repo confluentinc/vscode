@@ -92,7 +92,7 @@ upload source maps.
 - The extension has minimum operating system requirements based on the sidecar executable builds:
   - Windows: Windows 10 and above (built on Windows Server 2019)
   - Ubuntu: Ubuntu 22.04 and above
-  - macOS: macOS 13 and above (built on macOS 13.5)
+  - macOS: macOS 14 and above (built on macOS 15)
   - Running the extension on older operating systems may result in the sidecar process failing to
     start, which prevents the extension from establishing a successful handshake.
 - We do not yet support private networking when working with Confluent Cloud for Apache Flink®.

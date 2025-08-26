@@ -17,17 +17,25 @@ import {
   TEST_CCLOUD_FLINK_COMPUTE_POOL,
   TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
 } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
+import { EnvironmentId } from "../models/resource";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as ccloud from "../sidecar/connections/ccloud";
+import { SIDECAR_PORT } from "../sidecar/constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { FlinkLanguageClientManager, FLINKSQL_LANGUAGE_ID } from "./flinkLanguageClientManager";
+import {
+  ComputePoolInfo,
+  FlinkLanguageClientManager,
+  FLINKSQL_LANGUAGE_ID,
+} from "./flinkLanguageClientManager";
 import * as languageClient from "./languageClient";
 
 describe("FlinkLanguageClientManager", () => {
@@ -67,6 +75,7 @@ describe("FlinkLanguageClientManager", () => {
       flinkComputePools: [pool],
     });
     ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
+    ccloudLoaderStub.getOrganization.resolves(TEST_CCLOUD_ORGANIZATION);
     flinkManager = FlinkLanguageClientManager.getInstance();
   });
 
@@ -109,6 +118,23 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 
+  describe("getOutputChannel", () => {
+    it("should return the same instance when called multiple times", () => {
+      const outputChannel1 = flinkManager.getOutputChannel();
+      const outputChannel2 = flinkManager.getOutputChannel();
+      assert.strictEqual(outputChannel1, outputChannel2, "Should return the same instance");
+    });
+
+    it("should be automatically disposed when the manager is disposed", () => {
+      const outputChannel = flinkManager.getOutputChannel();
+      const disposeSpy = sandbox.spy(outputChannel, "dispose");
+
+      flinkManager.dispose();
+
+      sinon.assert.calledOnce(disposeSpy);
+    });
+  });
+
   describe("isAppropriateDocument", () => {
     for (const goodScheme of ["file", "untitled"]) {
       it(`should return true for Flink SQL + ${goodScheme} documents`, () => {
@@ -145,41 +171,137 @@ describe("FlinkLanguageClientManager", () => {
     });
   });
 
-  describe("validateFlinkSettings", () => {
-    it("should return false when computePoolId is missing", async () => {
-      // no default Flink settings set
-      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, "").stubGet(FLINK_CONFIG_DATABASE, "");
+  describe("lookupComputePoolInfo", () => {
+    it("should return pool info when compute pool is found", async () => {
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
 
-      const result = await flinkManager.validateFlinkSettings(null);
-      assert.strictEqual(result, false);
+      assert.deepStrictEqual(result, {
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      });
     });
 
-    it("should return false when compute pool is invalid", async () => {
-      // invalid default compute pool
-      stubbedConfigs
-        .stubGet(FLINK_CONFIG_COMPUTE_POOL, "invalid-pool-id")
-        .stubGet(FLINK_CONFIG_DATABASE, "");
+    it("should find pool in second environment when first has no pools", async () => {
+      const TEST_CCLOUD_ENVIRONMENT_2 = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        id: "env-2" as EnvironmentId,
+        flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+      });
 
-      const result = await flinkManager.validateFlinkSettings("invalid-pool-id");
-      assert.strictEqual(result, false);
+      ccloudLoaderStub.getEnvironments.resolves([
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          flinkComputePools: [], // Empty
+        }),
+        TEST_CCLOUD_ENVIRONMENT_2,
+      ]);
+
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+
+      assert.deepStrictEqual(result, {
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: "env-2", // Should be from the second environment
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      });
     });
 
-    it("should return true when compute pool is valid", async () => {
+    it("should return null when no organization is available", async () => {
+      ccloudLoaderStub.getOrganization.resolves(undefined);
+
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null when no computePoolId is provided", async () => {
+      const result = await (flinkManager as any).lookupComputePoolInfo(null);
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null when no ccloud environments", async () => {
+      ccloudLoaderStub.getEnvironments.resolves([]);
+
+      const result = await (flinkManager as any).lookupComputePoolInfo("pool-id");
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null when cannot find the given computePoolId", async () => {
       // valid default compute pool
-      stubbedConfigs
-        .stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID)
-        .stubGet(FLINK_CONFIG_DATABASE, "");
+      ccloudLoaderStub.getEnvironments.resolves([
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          // No flinkComputePools set
+        }),
+      ]);
 
-      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      assert.strictEqual(result, true);
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+      assert.strictEqual(result, null);
     });
 
-    it("should check resources availability when compute pool is set", async () => {
-      // valid default Flink settings
-      stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
+    it("should return null when cannot find the given computePoolId in environments", async () => {
+      // valid default compute pool
+      ccloudLoaderStub.getEnvironments.resolves([
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          // No flinkComputePools set
+        }),
+        new CCloudEnvironment({
+          ...TEST_CCLOUD_ENVIRONMENT,
+          flinkComputePools: [],
+        }),
+      ]);
 
-      const result = await flinkManager.validateFlinkSettings(TEST_CCLOUD_FLINK_COMPUTE_POOL_ID);
-      assert.strictEqual(result, true);
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null if an error occurs while checking compute pool availability", async () => {
+      ccloudLoaderStub.getEnvironments.rejects(new Error("Test error"));
+
+      const result = await (flinkManager as any).lookupComputePoolInfo(
+        TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      );
+      assert.strictEqual(result, null);
+    });
+  });
+
+  describe("buildFlinkSqlWebSocketUrl", () => {
+    it("should include all required URL parameters", () => {
+      const poolInfo: ComputePoolInfo = {
+        organizationId: "test-org",
+        environmentId: "test-env",
+        region: "test-region",
+        provider: "test-provider",
+      };
+
+      const result = (flinkManager as any).buildFlinkSqlWebSocketUrl(poolInfo);
+
+      assert.ok(result.startsWith(`ws://localhost:${SIDECAR_PORT}/flsp?`));
+
+      // check that all required parameters are present
+      assert.ok(result.includes(`connectionId=${CCLOUD_CONNECTION_ID}`));
+      assert.ok(result.includes("region=test-region"));
+      assert.ok(result.includes("provider=test-provider"));
+      assert.ok(result.includes("environmentId=test-env"));
+      assert.ok(result.includes("organizationId=test-org"));
+    });
+
+    it("should return null if poolInfo is null", () => {
+      const result = (flinkManager as any).buildFlinkSqlWebSocketUrl(null);
+      assert.strictEqual(result, null);
     });
   });
 
@@ -618,7 +740,7 @@ describe("FlinkLanguageClientManager", () => {
 
   describe("maybeStartLanguageClient", () => {
     let getFlinkSqlSettingsStub: sinon.SinonStub;
-    let validateFlinkSettingsStub: sinon.SinonStub;
+    let lookupComputePoolInfoStub: sinon.SinonStub;
     let buildFlinkSqlWebSocketUrlStub: sinon.SinonStub;
     let isLanguageClientConnectedStub: sinon.SinonStub;
     let cleanupLanguageClientStub: sinon.SinonStub;
@@ -635,14 +757,19 @@ describe("FlinkLanguageClientManager", () => {
       getFlinkSqlSettingsStub = sandbox.stub(flinkManager, "getFlinkSqlSettings");
       getFlinkSqlSettingsStub.resolves({ computePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID });
 
-      validateFlinkSettingsStub = sandbox.stub(flinkManager, "validateFlinkSettings");
-      validateFlinkSettingsStub.resolves(true);
+      lookupComputePoolInfoStub = sandbox.stub(flinkManager as any, "lookupComputePoolInfo");
+      lookupComputePoolInfoStub.resolves({
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+        region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+        provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+      });
 
       buildFlinkSqlWebSocketUrlStub = sandbox.stub(
         flinkManager as any,
         "buildFlinkSqlWebSocketUrl",
       );
-      buildFlinkSqlWebSocketUrlStub.resolves("ws://localhost:8080/test");
+      buildFlinkSqlWebSocketUrlStub.returns("ws://localhost:8080/test");
 
       isLanguageClientConnectedStub = sandbox.stub(
         flinkManager as any,
@@ -720,23 +847,24 @@ describe("FlinkLanguageClientManager", () => {
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.notCalled(validateFlinkSettingsStub);
+      sinon.assert.notCalled(lookupComputePoolInfoStub);
       sinon.assert.notCalled(initializeLanguageClientStub);
     });
 
     it("should return early if compute pool validation fails", async () => {
-      validateFlinkSettingsStub.resolves(false);
+      lookupComputePoolInfoStub.resolves(null);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.calledOnce(validateFlinkSettingsStub);
+      sinon.assert.calledOnce(lookupComputePoolInfoStub);
       sinon.assert.notCalled(buildFlinkSqlWebSocketUrlStub);
       sinon.assert.notCalled(initializeLanguageClientStub);
     });
 
     it("should return early if WebSocket URL building fails", async () => {
-      buildFlinkSqlWebSocketUrlStub.rejects(new Error("Failed to build URL"));
+      // if .lookupComputePoolInfo() returns null for various reasons
+      buildFlinkSqlWebSocketUrlStub.returns(null);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -746,7 +874,7 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should return early if WebSocket URL building returns null", async () => {
       // like if .lookupComputePoolInfo() returns null for various reasons
-      buildFlinkSqlWebSocketUrlStub.resolves(null);
+      buildFlinkSqlWebSocketUrlStub.returns(null);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -759,7 +887,7 @@ describe("FlinkLanguageClientManager", () => {
       const testUrl = "ws://localhost:8080/test";
       isLanguageClientConnectedStub.returns(true);
       flinkManager["lastWebSocketUrl"] = testUrl;
-      buildFlinkSqlWebSocketUrlStub.resolves(testUrl);
+      buildFlinkSqlWebSocketUrlStub.returns(testUrl);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI, false); // no forced restart
 
@@ -773,7 +901,7 @@ describe("FlinkLanguageClientManager", () => {
       const newUrl = "ws://localhost:8080/new";
       isLanguageClientConnectedStub.returns(true);
       flinkManager["lastWebSocketUrl"] = oldUrl;
-      buildFlinkSqlWebSocketUrlStub.resolves(newUrl);
+      buildFlinkSqlWebSocketUrlStub.returns(newUrl);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
@@ -786,12 +914,12 @@ describe("FlinkLanguageClientManager", () => {
 
     it("should successfully initialize the language client with valid settings", async () => {
       const testUrl = "ws://localhost:8080/test";
-      buildFlinkSqlWebSocketUrlStub.resolves(testUrl);
+      buildFlinkSqlWebSocketUrlStub.returns(testUrl);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
 
       sinon.assert.calledOnce(getFlinkSqlSettingsStub);
-      sinon.assert.calledOnce(validateFlinkSettingsStub);
+      sinon.assert.calledOnce(lookupComputePoolInfoStub);
       sinon.assert.calledOnce(buildFlinkSqlWebSocketUrlStub);
       sinon.assert.calledOnce(initializeLanguageClientStub);
       sinon.assert.calledWith(initializeLanguageClientStub, testUrl);
@@ -944,8 +1072,15 @@ describe("FlinkLanguageClientManager", () => {
       });
 
       it("should call restartLanguageClient if new metadata has computepool and implies new websocket url", async () => {
-        // Just force set things up so that new call to buildFlinkSqlWebSocketUrl() will return a different URL.
+        // stub out .lookupComputePoolInfo() to return a valid compute pool info so buildFlinkSqlWebSocketUrl() will return a valid URL
+        sandbox.stub(flinkManager as any, "lookupComputePoolInfo").resolves({
+          organizationId: "test-org",
+          environmentId: "test-env",
+          region: "us-west-2",
+          provider: "aws",
+        });
         flinkManager["lastWebSocketUrl"] = "ws://old-url";
+        // Just force set things up so that new call to buildFlinkSqlWebSocketUrl() will return a different URL.
         buildFlinkSqlWebSocketUrlStub.returns("ws://new-url");
 
         const uriString = "file:///fake/path/test.flinksql";

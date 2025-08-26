@@ -29,8 +29,10 @@ import { registerDockerCommands } from "./commands/docker";
 import { registerDocumentCommands } from "./commands/documents";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
+import { registerFlinkArtifactCommands } from "./commands/flinkArtifacts";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
+import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
@@ -72,7 +74,7 @@ import {
 import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageClientManager";
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
-import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
+import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -89,8 +91,9 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
-import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
+import { FlinkArtifactsUDFsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
+import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -166,7 +169,7 @@ async function _activateExtension(
   // register the log output channels, debugging commands, and support commands to ensure we have
   // visibility into the extension and sidecar logs and can download support .zip and/or file issues
   context.subscriptions.push(
-    OUTPUT_CHANNEL,
+    EXTENSION_OUTPUT_CHANNEL,
     SIDECAR_OUTPUT_CHANNEL,
     ...registerDebugCommands(),
     ...registerSupportCommands(),
@@ -215,7 +218,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkArtifactsViewProvider.getInstance();
+  const artifactsViewProvider = FlinkArtifactsUDFsViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProviderInstance,
@@ -259,8 +262,10 @@ async function _activateExtension(
     ...registerExtraCommands(),
     ...registerDockerCommands(),
     ...registerProjectGenerationCommands(),
+    ...registerFlinkArtifactCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
     registerUploadUDFCommand(),
@@ -420,6 +425,11 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
+  // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
+  const flinkViewMode = setContextValue(
+    ContextValues.flinkArtifactsUDFsViewMode,
+    FlinkArtifactsViewProviderMode.Artifacts,
+  );
   await Promise.all([
     chatParticipantEnabled,
     kafkaClusterSelected,
@@ -430,6 +440,7 @@ async function setupContextValues() {
     resourcesWithNames,
     resourcesWithURIs,
     diffableResources,
+    flinkViewMode,
   ]);
 }
 
@@ -584,12 +595,8 @@ export function deactivate() {
   // close the sidecar log file stream, if it exists
   closeFormattedSidecarLogStream();
 
-  // close the file stream used with OUTPUT_CHANNEL -- needs to be done last to avoid any other
-  // cleanup logging attempting to write to the file stream
-  const logStream = getLogFileStream();
-  if (logStream) {
-    logStream.end();
-  }
+  // close the file stream used with EXTENSION_OUTPUT_CHANNEL -- needs to be done last to avoid any other cleanup logging attempting to write to the file stream
+  EXTENSION_OUTPUT_CHANNEL.dispose();
   console.info("Extension deactivated");
 }
 
