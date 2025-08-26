@@ -513,20 +513,41 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
     return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${poolInfo.region}&provider=${poolInfo.provider}&environmentId=${poolInfo.environmentId}&organizationId=${poolInfo.organizationId}`;
   }
-  private async checkClientPrerequisites(uri?: Uri): Promise<{
+  private async checkClientPrerequisites(
+    uri?: Uri,
+    restartRunningClient: boolean = false,
+  ): Promise<{
     canProceed: boolean;
     uri?: Uri;
     computePoolId?: string;
     poolInfo?: ComputePoolInfo;
   }> {
+    // validate auth
     if (!hasCCloudAuthSession()) {
       logger.trace("User is not authenticated with CCloud, not initializing language client");
       return { canProceed: false };
     }
 
+    // validate URI
     if (!uri) {
       logger.trace("No URI provided, cannot start language client");
       return { canProceed: false };
+    }
+
+    // pre-check if we have a client for this URI and if we don't need to restart
+    if (
+      this.isLanguageClientConnected() &&
+      this.lastDocUri &&
+      uri.toString() === this.lastDocUri.toString()
+    ) {
+      if (!restartRunningClient) {
+        logger.trace("Language client already exists for this URI, skipping initialization");
+        return { canProceed: false };
+      } else {
+        logger.trace(
+          "Language client is already running for this URI, but forcing reinitialization",
+        );
+      }
     }
 
     const { computePoolId } = await this.getFlinkSqlSettings(uri);
@@ -544,47 +565,30 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     return { canProceed: true, uri, computePoolId, poolInfo };
   }
 
-  private async checkClientReuse(
-    uri: Uri,
+  private async checkWebSocketUrlReuse(
     poolInfo: ComputePoolInfo,
     restartRunningClient: boolean,
   ): Promise<{
-    shouldReuse: boolean;
+    canProceed: boolean;
     websocketUrl?: string;
   }> {
-    // Check if we already have a client for this exact URI
-    if (
-      this.isLanguageClientConnected() &&
-      this.lastDocUri &&
-      uri.toString() === this.lastDocUri.toString()
-    ) {
-      if (!restartRunningClient) {
-        logger.trace("Language client already exists for this URI, skipping initialization");
-        return { shouldReuse: true };
-      } else {
-        logger.trace(
-          "Language client is already running for this URI, but forcing reinitialization",
-        );
-      }
-    }
-
-    // No need to lookup again - use the passed poolInfo
     const websocketUrl = this.buildFlinkSqlWebSocketUrl(poolInfo);
     if (!websocketUrl) {
       logger.error("Failed to build WebSocket URL, cannot start language client");
-      return { shouldReuse: true };
+      return { canProceed: false };
     }
 
+    // Check if client is connected to the same WebSocket URL and doesn't need restart
     if (
       this.isLanguageClientConnected() &&
       websocketUrl === this.lastWebSocketUrl &&
       !restartRunningClient
     ) {
       logger.trace("Language client already connected to correct url, no need to reinitialize");
-      return { shouldReuse: true };
+      return { canProceed: false };
     }
 
-    return { shouldReuse: false, websocketUrl };
+    return { canProceed: true, websocketUrl };
   }
 
   private async initializeNewClient(
@@ -599,13 +603,19 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       websocketUrlMatch: websocketUrl === this.lastWebSocketUrl,
     });
 
+    // Clear any previous diagnostics for the document *before*
+    // reinitializing the language client. (cleanupLanguageClient()
+    // will set this.lastDocUri to null, which will then prevent
+    // the attempt to clear diagnostics before the call to
+    // initializeLanguageClient().)
     if (this.lastDocUri) {
       this.clearDiagnostics(this.lastDocUri);
     }
     await this.cleanupLanguageClient();
 
-    // Initialize new client
+    // Reset reconnect counter on new initialization
     this.reconnectCounter = 0;
+
     logger.debug(
       `Starting language client with URL: ${websocketUrl} for document ${uri.toString()}`,
     );
@@ -622,17 +632,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         compute_pool_id: computePoolId,
       });
       await this.notifyConfigChanged();
-    }
-  }
-
-  private async triggerDiagnosticsIfNeeded(uriStr: string): Promise<void> {
-    if (this.languageClient) {
-      logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
-      for (const textDocument of workspace.textDocuments) {
-        if (textDocument.uri.toString() === uriStr) {
-          await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
-        }
-      }
     }
   }
 
@@ -653,17 +652,16 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       try {
         logger.trace(`Acquired initialization lock for ${uriStr}`);
 
-        // Step 1: Check prerequisites
-        const prereqCheck = await this.checkClientPrerequisites(uri);
+        // Step 1: Check prerequisites for starting a new client
+        const prereqCheck = await this.checkClientPrerequisites(uri, restartRunningClient);
         if (!prereqCheck.canProceed) return;
 
-        // Step 2: Check if we can reuse existing client
-        const reuseCheck = await this.checkClientReuse(
-          prereqCheck.uri!,
-          prereqCheck.poolInfo!, // Pass poolInfo instead of computePoolId
+        // Step 2: Check if we can reuse the existing client based on WebSocket URL
+        const reuseCheck = await this.checkWebSocketUrlReuse(
+          prereqCheck.poolInfo!,
           restartRunningClient,
         );
-        if (reuseCheck.shouldReuse) return;
+        if (!reuseCheck.canProceed) return; // Return if client is already running and matches compute pool & no need to force restart
 
         // Step 3: Set up new client
         await this.initializeNewClient(
@@ -677,7 +675,15 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         });
       } finally {
         logger.trace(`Released initialization lock for ${uriStr}`);
-        await this.triggerDiagnosticsIfNeeded(uriStr);
+        // Trigger diagnostics for the active document if language client is available
+        if (this.languageClient) {
+          logger.trace(`Simulating change to ${uriStr} to trigger diagnostics`);
+          for (const textDocument of workspace.textDocuments) {
+            if (textDocument.uri.toString() === uriStr) {
+              await this.simulateDocumentChangeToTriggerDiagnostics(textDocument);
+            }
+          }
+        }
       }
     });
   }
