@@ -381,6 +381,12 @@ components:
           allOf:
           - $ref: "#/components/schemas/TLSConfig"
           nullable: true
+        client_id_suffix:
+          description: "The suffix to append to the Kafka client config option client.id\
+            \ when interacting with this Kafka cluster. Is useful when, for instance,\
+            \ connecting to WarpStream agents via Kubernetes port-forwarding."
+          type: string
+          nullable: true
     KafkaClusterStatus:
       description: The status related to the specified Kafka cluster.
       required:
