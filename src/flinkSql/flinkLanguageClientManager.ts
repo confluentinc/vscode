@@ -513,25 +513,35 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     }
     return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${poolInfo.region}&provider=${poolInfo.provider}&environmentId=${poolInfo.environmentId}&organizationId=${poolInfo.organizationId}`;
   }
+
+  /**
+   * Sub-function of {@link maybeStartLanguageClient} that checks prerequisites for starting a new language client.
+   * Prerequisites for starting a new language client:
+   * - User is authenticated with CCloud
+   * - User has designated a compute pool to use (language server route is region+provider specific)
+   * - User does not already have a language client running for this uri or need to force restart it
+   * @param uri The URI of the document to check
+   * @param restartRunningClient Whether to force reinitialization of the language client even if it's already running
+   * @returns The compute pool ID, pool info, and WebSocket URL if the prerequisites are met, or null if they are not
+   */
   private async checkClientPrerequisites(
     uri?: Uri,
     restartRunningClient: boolean = false,
   ): Promise<{
-    canProceed: boolean;
-    uri?: Uri;
-    computePoolId?: string;
-    poolInfo?: ComputePoolInfo;
-  }> {
+    computePoolId: string;
+    poolInfo: ComputePoolInfo;
+    websocketUrl: string;
+  } | null> {
     // validate auth
     if (!hasCCloudAuthSession()) {
       logger.trace("User is not authenticated with CCloud, not initializing language client");
-      return { canProceed: false };
+      return null;
     }
 
     // validate URI
     if (!uri) {
       logger.trace("No URI provided, cannot start language client");
-      return { canProceed: false };
+      return null;
     }
 
     // pre-check if we have a client for this URI and if we don't need to restart
@@ -542,7 +552,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     ) {
       if (!restartRunningClient) {
         logger.trace("Language client already exists for this URI, skipping initialization");
-        return { canProceed: false };
+        return null;
       } else {
         logger.trace(
           "Language client is already running for this URI, but forcing reinitialization",
@@ -553,44 +563,30 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     const { computePoolId } = await this.getFlinkSqlSettings(uri);
     if (!computePoolId) {
       logger.trace("No compute pool, not starting language client");
-      return { canProceed: false };
+      return null;
     }
 
     const poolInfo = await this.lookupComputePoolInfo(computePoolId);
     if (!poolInfo) {
       logger.trace("No valid compute pool; not initializing language client");
-      return { canProceed: false };
+      return null;
     }
 
-    return { canProceed: true, uri, computePoolId, poolInfo };
-  }
-
-  private async checkWebSocketUrlReuse(
-    poolInfo: ComputePoolInfo,
-    restartRunningClient: boolean,
-  ): Promise<{
-    canProceed: boolean;
-    websocketUrl?: string;
-  }> {
     const websocketUrl = this.buildFlinkSqlWebSocketUrl(poolInfo);
     if (!websocketUrl) {
       logger.error("Failed to build WebSocket URL, cannot start language client");
-      return { canProceed: false };
+      return null;
     }
 
-    // Check if client is connected to the same WebSocket URL and doesn't need restart
-    if (
-      this.isLanguageClientConnected() &&
-      websocketUrl === this.lastWebSocketUrl &&
-      !restartRunningClient
-    ) {
-      logger.trace("Language client already connected to correct url, no need to reinitialize");
-      return { canProceed: false };
-    }
-
-    return { canProceed: true, websocketUrl };
+    return { computePoolId, poolInfo, websocketUrl };
   }
 
+  /**
+   * Sub-function of {@link maybeStartLanguageClient} that initializes a new language client
+   * @param uri The URI of the document to initialize the client for
+   * @param computePoolId The ID of the compute pool to use
+   * @param websocketUrl The WebSocket URL to use for the language client
+   */
   private async initializeNewClient(
     uri: Uri,
     computePoolId: string,
@@ -654,22 +650,25 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
         // Step 1: Check prerequisites for starting a new client
         const prereqCheck = await this.checkClientPrerequisites(uri, restartRunningClient);
-        if (!prereqCheck.canProceed) return;
+        if (!prereqCheck) {
+          logger.trace("Prerequisites not met, not starting language client");
+          return;
+        }
 
-        // Step 2: Check if we can reuse the existing client based on WebSocket URL
-        const reuseCheck = await this.checkWebSocketUrlReuse(
-          prereqCheck.poolInfo!,
-          restartRunningClient,
-        );
-        if (!reuseCheck.canProceed) return; // Return if client is already running and matches compute pool & no need to force restart
+        // Step 2: Check if client is connected to the same WebSocket URL and doesn't need restart
+        if (
+          this.isLanguageClientConnected() &&
+          prereqCheck.websocketUrl === this.lastWebSocketUrl &&
+          !restartRunningClient
+        ) {
+          logger.trace("Language client already connected to correct url, no need to reinitialize");
+          return;
+        }
 
-        // Step 3: Set up new client
-        await this.initializeNewClient(
-          prereqCheck.uri!,
-          prereqCheck.computePoolId!,
-          reuseCheck.websocketUrl!,
-        );
+        // Step 3: Set up new client with valid prerequisites from {@link checkClientPrerequisites}
+        await this.initializeNewClient(uri!, prereqCheck.computePoolId, prereqCheck.websocketUrl);
       } catch (error) {
+        // Should never happen, but if it does, we should log the error and continue
         logError(error, "Error in maybeStartLanguageClient", {
           extra: { uri: uri?.toString() },
         });
