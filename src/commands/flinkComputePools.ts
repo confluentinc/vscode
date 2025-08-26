@@ -1,11 +1,7 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkArtifactsPoolChanged } from "../emitters";
-import {
-  ENABLE_FLINK_ARTIFACTS,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../extensionSettings/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -49,11 +45,6 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
     commands.executeCommand("confluent.statements.flink-compute-pool.select", pool),
   ];
 
-  // Only include artifacts view selection if Flink Artifacts feature is enabled
-  if (ENABLE_FLINK_ARTIFACTS.value) {
-    // Will invoke selectPoolForArtifactsViewCommand().
-    thenables.push(commands.executeCommand("confluent.artifacts.flink-compute-pool.select", pool));
-  }
   await Promise.all(thenables);
 }
 
