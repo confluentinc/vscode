@@ -532,19 +532,17 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     poolInfo: ComputePoolInfo;
     websocketUrl: string;
   } | null> {
-    // validate auth
     if (!hasCCloudAuthSession()) {
       logger.trace("User is not authenticated with CCloud, not initializing language client");
       return null;
     }
 
-    // validate URI
     if (!uri) {
       logger.trace("No URI provided, cannot start language client");
       return null;
     }
 
-    // pre-check if we have a client for this URI and if we don't need to restart
+    // Check if we have a client for this URI and if we don't need to restart
     if (
       this.isLanguageClientConnected() &&
       this.lastDocUri &&
@@ -582,7 +580,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   }
 
   /**
-   * Sub-function of {@link maybeStartLanguageClient} that initializes a new language client
+   * Sub-function of {@link maybeStartLanguageClient} that clears diagnostics and initializes a new language client
    * @param uri The URI of the document to initialize the client for
    * @param computePoolId The ID of the compute pool to use
    * @param websocketUrl The WebSocket URL to use for the language client
@@ -655,7 +653,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
           return;
         }
 
-        // Step 2: Check if client is connected to the same WebSocket URL and doesn't need restart
+        // Step 2: Check if client is already connected to the same WebSocket URL and doesn't need to force restart
         if (
           this.isLanguageClientConnected() &&
           prereqCheck.websocketUrl === this.lastWebSocketUrl &&
