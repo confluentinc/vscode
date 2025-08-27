@@ -8,9 +8,7 @@ import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelega
 /**Open a new tab set to Flink SQL type with placeholder Flink UDF registration statement for selected artifact */
 export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | undefined) {
   const placeholderQuery = `-- Register UDF for artifact "${selectedArtifact?.name}"
-CREATE FUNCTION "yourFunctionNameHere"
-  AS 'your.class.NameHere'
-  USING JAR 'confluent-artifact://${selectedArtifact?.id}';
+CREATE FUNCTION \`yourFunctionNameHere\` AS 'your.class.NameHere' USING JAR 'confluent-artifact://${selectedArtifact?.id}';
 -- confirm with 'SHOW USER FUNCTIONS';
 `;
 
