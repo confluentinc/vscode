@@ -8,7 +8,8 @@ import {
   HostConfig,
 } from "../../clients/docker";
 import { LOCAL_MEDUSA_INTERNAL_PORT } from "../../constants";
-import { LOCAL_MEDUSA_IMAGE, LOCAL_MEDUSA_IMAGE_TAG } from "../../extensionSettings/constants";
+import { localMedusaConnected } from "../../emitters";
+import { LOCAL_MEDUSA_IMAGE_TAG } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getLocalResourceContainers } from "../../sidecar/connections/local";
@@ -177,18 +178,14 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     return container ? { id: container.Id, name: CONTAINER_NAME } : undefined;
   }
 
-  get imageRepo(): string {
-    return LOCAL_MEDUSA_IMAGE.value;
-  }
-
-  get imageRepoTag(): string {
-    return `${this.imageRepo}:${this.imageTag}`;
-  }
-
+  /** Block until we see the {@link localMedusaConnected} event fire. (Controlled by the EventListener
+   * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
   async waitForLocalResourceEventChange(): Promise<void> {
-    // For now, just complete immediately
-    // In a real implementation, you might want to wait for specific events
-    // or health checks for the Medusa service
-    this.logAndUpdateProgress(`${this.resourceKind} is ready.`);
+    await new Promise((resolve) => {
+      const listener = localMedusaConnected.event(() => {
+        listener.dispose();
+        resolve(void 0);
+      });
+    });
   }
 }
