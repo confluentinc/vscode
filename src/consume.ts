@@ -418,7 +418,7 @@ function messageViewerStartPollingCommand(
   function flushMessages(stream: Stream) {
     const search = os.peek(textFilter);
     while (queue.length > 0) {
-      /* Pick messages from the queue one by one since we may stop putting 
+      /* Pick messages from the queue one by one since we may stop putting
       them into stream but we don't want to drop the rest. */
       const message = queue.shift()!;
 
@@ -435,7 +435,7 @@ function messageViewerStartPollingCommand(
         searchBitset(search.bitset);
       }
 
-      /* For the first time when the stream reaches defined capacity, we pause 
+      /* For the first time when the stream reaches defined capacity, we pause
       consumption so the user can work with exact data they expected to consume.
       They still can resume the stream back to get into "windowed" mode. */
       if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {

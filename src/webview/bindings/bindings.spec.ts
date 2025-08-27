@@ -148,8 +148,8 @@ test("data-value + data-on-input", async ({ execute, page }) => {
     root.innerHTML = /* html */ `
       <div>
         <input data-value="this.message()" data-on-input="this.message(event.target.value)">
-        <span 
-          data-text="this.message()" 
+        <span
+          data-text="this.message()"
           data-prop-css-text="'color:' + this.message() == 'hello' ? 'red': 'blue'"
         ></span>
       </div>
@@ -178,7 +178,7 @@ test("data-attr-*", async ({ execute, page }) => {
     let { applyBindings } = await import("./bindings");
     let root = document.createElement("main");
     root.innerHTML = /* html */ `
-      <button 
+      <button
         data-on-click="this.counter(v => v + 1)"
         data-attr-disabled="this.counter() >= 2"
         data-attr-aria-label="this.counter() >= 2 ? 'no longer clickable' : 'click it'"
