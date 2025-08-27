@@ -27,7 +27,6 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
   let sandbox: sinon.SinonSandbox;
 
   // vscode stubs
-  // let showErrorMessageStub: sinon.SinonStub;
   let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   // docker/containers.ts+networks.ts wrapper function stubs

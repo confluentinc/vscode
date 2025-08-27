@@ -23,7 +23,7 @@ export const CONTAINER_NAME = "vscode-medusa";
 
 export class MedusaWorkflow extends LocalResourceWorkflow {
   resourceKind: string = "Medusa";
-  static imageRepo = "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa"; //todo update this
+  static imageRepo = "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa";
 
   logger = new Logger("docker.workflow.medusa");
 
