@@ -177,7 +177,7 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
           imageRepoTag = `${LOCAL_SCHEMA_REGISTRY_IMAGE.value}:${LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value}`;
           break;
         default:
-          imageRepoTag = "unknown image";
+          throw new Error(`Unsupported resource kind: ${input.resourceKind}`);
       }
 
       invocationMessage = `Get ${input.resourceKind} containers for configured image: ${imageRepoTag}`;
@@ -186,7 +186,7 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
         .appendMarkdown(
           `This will search for **${input.resourceKind}** containers using your configured image: **${imageRepoTag}**\n\n` +
             `The search is based on your extension settings. If no containers are found, you may need to:\n` +
-            `- Start the containers\n` +
+            `- Create the container(s)\n` +
             `- Update your image tag settings to match your local images\n\n` +
             `Proceed with the search?`,
         );

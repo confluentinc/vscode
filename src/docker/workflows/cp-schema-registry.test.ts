@@ -86,10 +86,6 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
 
-    // Set up the Kafka workflow to have the correct imageTag for tests
-    const kafkaWorkflow = LocalResourceWorkflow.getKafkaWorkflow();
-    kafkaWorkflow.imageTag = LOCAL_KAFKA_IMAGE_TAG.defaultValue;
-
     checkForImageStub = sandbox.stub(workflow, "checkForImage").resolves();
     handleExistingContainersStub = sandbox.stub(workflow, "handleExistingContainers").resolves();
     showErrorNotificationStub = sandbox
