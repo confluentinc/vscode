@@ -175,7 +175,7 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
       return;
     }
 
-    return container ? { id: container.Id, name: CONTAINER_NAME } : undefined;
+    return { id: container.Id, name: CONTAINER_NAME };
   }
 
   /** Block until we see the {@link localMedusaConnected} event fire. (Controlled by the EventListener
