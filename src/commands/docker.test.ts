@@ -8,7 +8,7 @@ import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import { MedusaWorkflow } from "../docker/workflows/medusa";
-import { ENABLE_MEDUSA_CONTAINER, LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../extensionSettings/constants";
 import * as notifications from "../notifications";
 import * as quickpicks from "../quickpicks/localResources";
 import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
@@ -29,8 +29,6 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let stubKafkaWorkflow: sinon.SinonStubbedInstance<ConfluentLocalWorkflow>;
   let stubSchemaRegistryWorkflow: sinon.SinonStubbedInstance<ConfluentPlatformSchemaRegistryWorkflow>;
   let stubMedusaWorkflow: sinon.SinonStubbedInstance<MedusaWorkflow>;
-
-  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -63,10 +61,6 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     getMedusaWorkflowStub = sandbox
       .stub(LocalResourceWorkflow, "getMedusaWorkflow")
       .returns(stubMedusaWorkflow);
-
-    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-    // Default to Medusa feature enabled for most tests
-    stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
   });
 
   afterEach(() => {
@@ -111,19 +105,8 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     await runWorkflowWithProgress();
 
     // `docker/workflows/index.test.ts` tests the error notification for this case
-    assert.ok(stubMedusaWorkflow.start.notCalled);
-    assert.ok(stubMedusaWorkflow.stop.notCalled);
-  });
-
-  it("should skip Medusa workflow when feature flag is disabled", async () => {
-    localResourcesQuickPickStub.resolves([LocalResourceKind.Medusa]);
-    stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, false);
-
-    await runWorkflowWithProgress();
-
-    assert.ok(getMedusaWorkflowStub.notCalled);
-    assert.ok(stubMedusaWorkflow.start.notCalled);
-    assert.ok(stubMedusaWorkflow.stop.notCalled);
+    sinon.assert.notCalled(stubMedusaWorkflow.start);
+    sinon.assert.notCalled(stubMedusaWorkflow.stop);
   });
 
   it("should show an workflow's error notification for uncaught errors in the workflow .start()", async () => {
@@ -167,8 +150,6 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
       LocalResourceKind.SchemaRegistry,
       LocalResourceKind.Medusa,
     ]);
-
-    console.log("ENABLE_MEDUSA_CONTAINER.value:", ENABLE_MEDUSA_CONTAINER.value);
 
     await runWorkflowWithProgress();
 

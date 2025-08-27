@@ -99,7 +99,7 @@ export async function runWorkflowWithProgress(
   const orderedWorkflows: LocalResourceWorkflow[] = orderWorkflows(subworkflows, start);
 
   logger.debug("running local resource workflow(s)", { start, resources });
-  window.withProgress(
+  await window.withProgress(
     {
       location: ProgressLocation.Notification,
       title: ConnectionLabel.LOCAL,
