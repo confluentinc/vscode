@@ -114,11 +114,11 @@
   margin-inline-end: 10px;
 }
 
-/** Shared styles for webview forms 
+/** Shared styles for webview forms
 * for layout, incl. children:
 * div.webview-form
 *   div.form-header
-*   form.form-container (or <div>?) 
+*   form.form-container (or <div>?)
 *     fieldset|div.form-section (*n)
 *       h2.form-section-heading
 *       inputs(*n), e.g. div.input-container|div.input-row
@@ -297,7 +297,7 @@
   color: var(--vscode-descriptionForeground);
   font-size: 0.8em;
 }
-/** Button styles 
+/** Button styles
 * .input[type="submit"] or .button
 */
 .input[type="submit"],
