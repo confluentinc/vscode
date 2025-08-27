@@ -17,7 +17,10 @@ import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
@@ -39,6 +42,8 @@ import {
 } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
+import { ResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
 import {
@@ -498,6 +503,22 @@ export async function queryTopicWithFlink(topic: KafkaTopic) {
     return;
   }
 
+  const loader = CCloudResourceLoader.getInstance();
+  const environments: CCloudEnvironment[] = await loader.getEnvironments();
+  if (!environments || environments.length === 0) {
+    logger.trace("No CCloud environments found");
+    return null; // FIXME don't think we need to stop the process here, just can't update metadata
+  }
+  let foundPool: CCloudFlinkComputePool | undefined;
+  for (const env of environments) {
+    // Find the first available Flink compute pool in the environment to use for metadata/language server
+    foundPool = env.flinkComputePools[0];
+    if (foundPool) {
+      // Found a compute pool, no need to check other environments
+      break;
+    }
+  }
+
   const fullyQualifiedTopicName = `\`${environment?.name}\`.\`${cluster.name}\`.\`${topic.name}\``;
   const placeholderQuery = `-- Query topic "${topic.name}" with Flink SQL
 -- Replace this with your actual Flink SQL query
@@ -511,7 +532,14 @@ LIMIT 10;`;
     content: placeholderQuery,
   });
 
-  await vscode.window.showTextDocument(document, { preview: false });
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
+  const docUri = editor.document.uri;
+  const rm = ResourceManager.getInstance();
+  // Setting doc metadata so that the language server is connects to the right region, and user can submit statement right away
+  await rm.setUriMetadata(docUri, {
+    [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: foundPool?.id,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: cluster?.id,
+  });
 }
 
 /**
