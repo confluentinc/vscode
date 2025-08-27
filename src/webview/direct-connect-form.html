@@ -108,6 +108,18 @@
               comma-separated list for more than one server)</span
             >
           </div>
+          <template data-if="this.platformType() === 'WarpStream'">
+            <label class="checkbox" for="kafka_cluster.client_id_suffix">
+              <input
+                type="checkbox"
+                id="kafka_cluster.client_id_suffix"
+                name="kafka_cluster.client_id_suffix"
+                data-attr-checked="this.warpStreamPortForwardingEnabled()"
+                data-attr-value="this.warpStreamPortForwardingEnabled()"
+                data-on-change="this.updateValue(event)"
+              /><span>Connect to WarpStream agents via Kubernetes port-forwarding</span></label
+            >
+          </template>
           <div
             class="input-container"
             data-attr-title="this.editing() ? 'Changing the authentication type of an existing connection is not supported' : false"
