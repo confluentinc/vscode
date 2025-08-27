@@ -17,10 +17,8 @@ import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
-import { KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
@@ -515,23 +513,19 @@ LIMIT 10;`;
   });
 
   const editor = await vscode.window.showTextDocument(document, { preview: false });
-
-  // Try setting doc metadata so that the language server connects to the right region & user can submit right away
-  const loader = CCloudResourceLoader.getInstance();
-  const environments: CCloudEnvironment[] = await loader.getEnvironments();
-  if (!environments || environments.length === 0) {
-    logger.trace("No CCloud environments found, won't update metadata");
-  } else {
-    const env = environments.find((env) => env.id === topicEnvironment.id);
-    // Find the first available Flink compute pool in the environment to use for metadata/language server
-    if (env?.flinkComputePools[0]) {
-      const docUri = editor.document.uri;
-      const rm = ResourceManager.getInstance();
-      await rm.setUriMetadata(docUri, {
-        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: env.flinkComputePools[0].id,
-        [UriMetadataKeys.FLINK_DATABASE_ID]: cluster?.id,
-      });
-    }
+  if (!isCCloud(cluster)) {
+    // Only CCloud clusters are supported for Flink so really we should not get here
+    return;
+  }
+  // Grab the first compute pool in the same region/provider as the topic cluster
+  const ccloudCluster = cluster as CCloudKafkaCluster; // we already know this is ccloud but TS doesn't believe it
+  if (ccloudCluster.flinkPools && ccloudCluster.flinkPools.length > 0) {
+    const docUri = editor.document.uri;
+    const rm = ResourceManager.getInstance();
+    await rm.setUriMetadata(docUri, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: ccloudCluster.flinkPools[0].id,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: ccloudCluster.id,
+    });
   }
 }
 
