@@ -24,7 +24,6 @@ import * as local from "../../sidecar/connections/local";
 import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import * as dockerContainers from "../containers";
 import * as ports from "../ports";
-
 import { brokerConfigsToRestBootstrapServers } from "./confluent-local";
 import {
   ConfluentPlatformSchemaRegistryWorkflow,
