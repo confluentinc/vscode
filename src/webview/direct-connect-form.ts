@@ -91,7 +91,8 @@ class DirectConnectFormViewModel extends ViewModel {
   // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
   warpStreamPortForwardingEnabled = this.derive(() => {
     return (
-      this.spec()?.kafka_cluster?.client_id_suffix?.toString() === WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX
+      this.spec()?.kafka_cluster?.client_id_suffix?.toString() ===
+      WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX
     );
   });
 
