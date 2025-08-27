@@ -27,6 +27,7 @@ const allAuthOptions: Array<{ label: string; value: SupportedAuthTypes }> = [
   { label: "SASL/OAUTHBEARER", value: "OAuth" },
   { label: "Kerberos (SASL/GSSAPI)", value: "Kerberos" },
 ];
+const warpStreamPortForwardingClientIdSuffix = "ws_host_override=localhost";
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
@@ -89,7 +90,7 @@ class DirectConnectFormViewModel extends ViewModel {
 
   // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
   warpStreamPortForwardingEnabled = this.derive(() => {
-    return this.spec()?.kafka_cluster?.client_id_suffix?.toString() === "ws_host_override=localhost";
+    return this.spec()?.kafka_cluster?.client_id_suffix?.toString() === warpStreamPortForwardingClientIdSuffix;
   });
 
   // SSL enabled is true by default. If this is undefined it means the user never set/saved it
@@ -222,7 +223,7 @@ class DirectConnectFormViewModel extends ViewModel {
         this.warpStreamPortForwardingEnabled(input.checked);
         await post("UpdateSpecValue", {
           inputName: "kafka_cluster.client_id_suffix",
-          inputValue: input.checked ? "ws_host_override=localhost" : "",
+          inputValue: input.checked ? warpStreamPortForwardingClientIdSuffix : "",
         });
         break;
       case "kafka_cluster.bootstrap_servers":
@@ -317,7 +318,7 @@ class DirectConnectFormViewModel extends ViewModel {
       data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
     }
     if (this.warpStreamPortForwardingEnabled()) {
-      data["kafka_cluster.client_id_suffix"] = "ws_host_override=localhost";
+      data["kafka_cluster.client_id_suffix"] = warpStreamPortForwardingClientIdSuffix;
     } else {
       data["kafka_cluster.client_id_suffix"] = "";
     }
