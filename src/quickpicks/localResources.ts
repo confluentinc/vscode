@@ -66,8 +66,9 @@ export async function localResourcesQuickPick(
     detail: "A local Medusa service instance",
     buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Configure Medusa Docker Image` }],
   };
-  // For now, always show Medusa option since we don't have context tracking yet
-  // TODO: Add proper context tracking for Medusa availability
+
+  // show the Medusa item if Medusa isn't already running and this is the start workflow
+  // or if local Medusa is already running and this is the stop workflow
   const medusaAvailable: boolean = getContextValue(ContextValues.localMedusaAvailable) === true;
   if ((starting && !medusaAvailable) || (medusaAvailable && !starting)) {
     // Only show Medusa option if the feature setting is enabled
