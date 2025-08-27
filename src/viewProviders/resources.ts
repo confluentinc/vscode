@@ -350,13 +350,6 @@ export class ResourceViewProvider
       },
     );
 
-    // const localMedusaConnectedSub: vscode.Disposable = localMedusaConnected.event(
-    //   (connected: boolean) => {
-    //     logger.debug("localMedusaConnected event fired", { connected });
-    //     this.refresh();
-    //   },
-    // );
-
     const connectionUsableSub: vscode.Disposable = connectionStable.event((id: ConnectionId) => {
       logger.debug("connectionStable event fired", { id });
       // if is stable, then is definitely not loading anymore.
@@ -393,7 +386,6 @@ export class ResourceViewProvider
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
-      // localMedusaConnectedSub,
       connectionUsableSub,
       resourceSearchSetSub,
     ];
