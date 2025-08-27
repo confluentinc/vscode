@@ -350,6 +350,18 @@ describe("directConnect.ts", () => {
         password: "testpass",
       });
     });
+    it("should correctly set `kafka_cluster.client_id_suffix` for WarpStream connections", () => {
+      const formData = {
+        name: "WarpStream Connection",
+        formconnectiontype: "WarpStream",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.client_id_suffix": "ws_host_override=localhost",
+      };
+
+      const spec = getConnectionSpecFromFormData(formData);
+      assert.ok(spec.kafka_cluster);
+      assert.strictEqual(spec.kafka_cluster.client_id_suffix, "ws_host_override=localhost");
+    });
   });
 
   describe("parseTestResult", () => {
