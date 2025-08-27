@@ -129,7 +129,7 @@ class DirectConnectFormViewModel extends ViewModel {
       case "Confluent Cloud":
         return allAuthOptions.filter((auth) => ["API", "SCRAM", "OAuth"].includes(auth.value));
       case "WarpStream":
-        return allAuthOptions.filter((auth) => ["Basic", "SCRAM"].includes(auth.value));
+        return allAuthOptions.filter((auth) => ["None", "Basic", "SCRAM"].includes(auth.value));
       default:
         return allAuthOptions;
     }
