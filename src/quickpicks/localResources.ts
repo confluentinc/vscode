@@ -3,8 +3,11 @@ import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { LocalResourceKind } from "../docker/constants";
 import {
+  ENABLE_MEDUSA_CONTAINER,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_MEDUSA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../extensionSettings/constants";
@@ -53,6 +56,25 @@ export async function localResourcesQuickPick(
   // start workflow or if local Schema Registry is already running and this is the stop workflow
   if ((starting && !schemaRegistryAvailable) || (schemaRegistryAvailable && !starting)) {
     items.push(schemaRegistryItem);
+  }
+
+  const medusaRepoTag = `${LOCAL_MEDUSA_IMAGE.value}:${LOCAL_MEDUSA_IMAGE_TAG.value}`;
+  const medusaItem: QuickPickItem = {
+    label: LocalResourceKind.Medusa,
+    iconPath: new ThemeIcon("server"),
+    description: medusaRepoTag,
+    detail: "A local Medusa service instance",
+    buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Configure Medusa Docker Image` }],
+  };
+
+  // show the Medusa item if Medusa isn't already running and this is the start workflow
+  // or if local Medusa is already running and this is the stop workflow
+  const medusaAvailable: boolean = getContextValue(ContextValues.localMedusaAvailable) === true;
+  if ((starting && !medusaAvailable) || (medusaAvailable && !starting)) {
+    // Only show Medusa option if the feature setting is enabled
+    if (ENABLE_MEDUSA_CONTAINER.value) {
+      items.push(medusaItem);
+    }
   }
 
   logger.debug("showing local resource quickpick", {
