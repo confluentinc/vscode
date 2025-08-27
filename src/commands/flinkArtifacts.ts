@@ -11,6 +11,7 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
 CREATE FUNCTION "YOUR_FUNCTION_NAME_HERE"
   AS 'com.example.udf.${selectedArtifact?.name}'
   USING JAR 'confluent-artifact://${selectedArtifact?.id}';
+-- confirm with 'SHOW USER FUNCTIONS';
 `;
 
   const document = await vscode.workspace.openTextDocument({
