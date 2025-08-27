@@ -1144,6 +1144,7 @@ test("sets the client ID suffix correctly when using K8s port-forwarding for War
   // Fill in the form with WarpStream and SCRAM auth
   await page.fill("input[name=name]", "WarpStream Test");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='kafka_cluster.auth_type']", "None");
   await page.selectOption("select[name='formconnectiontype']", "WarpStream");
   // Connect to WarpStream agents via Kubernetes port-forwarding
   await page.check("input[type=checkbox][name='kafka_cluster.client_id_suffix']");
@@ -1164,7 +1165,7 @@ test("sets the client ID suffix correctly when using K8s port-forwarding for War
       name: "WarpStream Test",
       formconnectiontype: "WarpStream",
       "kafka_cluster.bootstrap_servers": "localhost:9092",
-      "kafka_cluster.auth_type": "Basic",
+      "kafka_cluster.auth_type": "None",
       "kafka_cluster.client_id_suffix": "ws_host_override=localhost",
       "kafka_cluster.ssl.enabled": "false",
     }),
