@@ -27,7 +27,7 @@ const allAuthOptions: Array<{ label: string; value: SupportedAuthTypes }> = [
   { label: "SASL/OAUTHBEARER", value: "OAuth" },
   { label: "Kerberos (SASL/GSSAPI)", value: "Kerberos" },
 ];
-const warpStreamPortForwardingClientIdSuffix = "ws_host_override=localhost";
+const WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX = "ws_host_override=localhost";
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
@@ -91,7 +91,7 @@ class DirectConnectFormViewModel extends ViewModel {
   // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
   warpStreamPortForwardingEnabled = this.derive(() => {
     return (
-      this.spec()?.kafka_cluster?.client_id_suffix?.toString() === warpStreamPortForwardingClientIdSuffix
+      this.spec()?.kafka_cluster?.client_id_suffix?.toString() === WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX
     );
   });
 
@@ -225,7 +225,7 @@ class DirectConnectFormViewModel extends ViewModel {
         this.warpStreamPortForwardingEnabled(input.checked);
         await post("UpdateSpecValue", {
           inputName: "kafka_cluster.client_id_suffix",
-          inputValue: input.checked ? warpStreamPortForwardingClientIdSuffix : "",
+          inputValue: input.checked ? WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX : "",
         });
         break;
       case "kafka_cluster.bootstrap_servers":
@@ -320,7 +320,7 @@ class DirectConnectFormViewModel extends ViewModel {
       data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
     }
     if (this.warpStreamPortForwardingEnabled()) {
-      data["kafka_cluster.client_id_suffix"] = warpStreamPortForwardingClientIdSuffix;
+      data["kafka_cluster.client_id_suffix"] = WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX;
     } else {
       data["kafka_cluster.client_id_suffix"] = "";
     }
