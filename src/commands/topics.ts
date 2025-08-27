@@ -17,7 +17,9 @@ import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import { CCloudEnvironment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
@@ -39,6 +41,8 @@ import {
 } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
+import { ResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
 import {
@@ -492,13 +496,12 @@ export async function queryTopicWithFlink(topic: KafkaTopic) {
   // Get the environment and cluster for the topic to generate a fully qualified table name
   const topicViewProvider = getTopicViewProvider();
   const cluster = topicViewProvider.kafkaCluster;
-  const environment = topicViewProvider.environment;
+  const topicEnvironment = topicViewProvider.environment;
 
-  if (!environment || !cluster) {
+  if (!topicEnvironment || !cluster) {
     return;
   }
-
-  const fullyQualifiedTopicName = `\`${environment?.name}\`.\`${cluster.name}\`.\`${topic.name}\``;
+  const fullyQualifiedTopicName = `\`${topicEnvironment?.name}\`.\`${cluster.name}\`.\`${topic.name}\``;
   const placeholderQuery = `-- Query topic "${topic.name}" with Flink SQL
 -- Replace this with your actual Flink SQL query
 
@@ -511,7 +514,25 @@ LIMIT 10;`;
     content: placeholderQuery,
   });
 
-  await vscode.window.showTextDocument(document, { preview: false });
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+  // Try setting doc metadata so that the language server connects to the right region & user can submit right away
+  const loader = CCloudResourceLoader.getInstance();
+  const environments: CCloudEnvironment[] = await loader.getEnvironments();
+  if (!environments || environments.length === 0) {
+    logger.trace("No CCloud environments found, won't update metadata");
+  } else {
+    const env = environments.find((env) => env.id === topicEnvironment.id);
+    // Find the first available Flink compute pool in the environment to use for metadata/language server
+    if (env?.flinkComputePools[0]) {
+      const docUri = editor.document.uri;
+      const rm = ResourceManager.getInstance();
+      await rm.setUriMetadata(docUri, {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: env.flinkComputePools[0].id,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: cluster?.id,
+      });
+    }
+  }
 }
 
 /**
