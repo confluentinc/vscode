@@ -451,7 +451,7 @@ function template(options = {}) {
       if (filter(id)) {
         return {
           code: `
-          const template = ${JSON.stringify(code)}; 
+          const template = ${JSON.stringify(code)};
           export default (variables) => {
             const keys = Object.keys(variables);
             const values = Object.values(variables);

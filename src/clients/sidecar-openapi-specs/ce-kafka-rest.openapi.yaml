@@ -4140,7 +4140,7 @@ components:
       type: http
       scheme: basic
       description: |
-        Authenticate with resource-specific API Keys using HTTP Basic Auth. Treat the resource-specific API Key ID 
+        Authenticate with resource-specific API Keys using HTTP Basic Auth. Treat the resource-specific API Key ID
         as the username and resource-specific API Key Secret as the password.
     external-access-token:
       type: oauth2

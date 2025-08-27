@@ -261,7 +261,7 @@ repository's `main` branch:
 
 You can create local branches from `main` and do your development there.
 
-> [!NOTE]  
+> [!NOTE]
 > You don't need to keep the `main` branch on your remote https://github.com/YOUR-USERNAME/vscode
 > repository in sync, but you can if you want:
 >
