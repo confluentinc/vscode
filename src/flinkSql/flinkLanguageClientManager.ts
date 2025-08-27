@@ -525,7 +525,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * @returns The compute pool ID, pool info, and WebSocket URL if the prerequisites are met, or null if they are not
    */
   private async checkClientPrerequisites(
-    uri?: Uri,
+    uri: Uri,
     restartRunningClient: boolean = false,
   ): Promise<{
     computePoolId: string;
