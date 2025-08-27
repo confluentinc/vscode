@@ -514,18 +514,15 @@ LIMIT 10;`;
 
   const editor = await vscode.window.showTextDocument(document, { preview: false });
   if (!isCCloud(cluster)) {
-    // Only CCloud clusters are supported for Flink so really we should not get here if it's not CCloud
+    // Only CCloud clusters are supported for Flink so really we should not get here
     return;
   } else {
-    // Find the first compute pool in the same region/provider as the topic cluster
-    const matchingComputePool = cluster.flinkPools?.find((pool) => {
-      return pool.region === cluster.region && pool.provider === cluster.provider;
-    });
-    if (matchingComputePool) {
+    // Grab the first compute pool in the same region/provider as the topic cluster
+    if (cluster.flinkPools && cluster.flinkPools.length > 0) {
       const docUri = editor.document.uri;
       const rm = ResourceManager.getInstance();
       await rm.setUriMetadata(docUri, {
-        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: matchingComputePool?.id,
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: cluster.flinkPools[0].id,
         [UriMetadataKeys.FLINK_DATABASE_ID]: cluster?.id,
       });
     }
