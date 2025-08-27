@@ -982,6 +982,30 @@ LIMIT 10;`;
 
   it("should set URI metadata correctly with compute pool ID and database ID", async function () {
     const mockTopicViewProvider = {
+      kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+      environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
+    };
+    getTopicViewProviderStub.returns(mockTopicViewProvider);
+    const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
+    openTextDocumentStub.resolves(mockDocument);
+    showTextDocumentStub.resolves({ document: mockDocument });
+
+    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
+
+    // verify document was opened
+    sinon.assert.calledOnce(openTextDocumentStub);
+    sinon.assert.calledOnce(showTextDocumentStub);
+
+    // Verify that the URI metadata was set correctly
+    sinon.assert.calledOnce(setUriMetadataStub);
+    sinon.assert.calledWith(setUriMetadataStub, mockDocument.uri, {
+      flinkComputePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      flinkDatabaseId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+    });
+  });
+
+  it("should NOT set metadata if kafka cluster had no related Flink compute pools", async function () {
+    const mockTopicViewProvider = {
       kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER,
       environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
     };
@@ -992,12 +1016,11 @@ LIMIT 10;`;
 
     await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
 
-    // Verify that the URI metadata was set correctly
-    sinon.assert.calledOnce(setUriMetadataStub);
-    sinon.assert.calledWith(setUriMetadataStub, mockDocument.uri, {
-      flinkComputePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-      flinkDatabaseId: TEST_CCLOUD_KAFKA_CLUSTER.id,
-    });
+    // document was opened, but with defaults for codelensing since no compute pool was found
+    sinon.assert.calledOnce(openTextDocumentStub);
+    sinon.assert.calledOnce(showTextDocumentStub);
+
+    sinon.assert.notCalled(setUriMetadataStub);
   });
 
   it("should return early if topic is null or not a KafkaTopic instance", async function () {
