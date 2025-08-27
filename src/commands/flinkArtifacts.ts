@@ -12,7 +12,7 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
 
 CREATE FUNCTION "${selectedArtifact?.name}"
   AS 'com.example.udf.${selectedArtifact?.name}'
-  USING JAR 'confluent-artifact://<plugin-id>/<version-id>';
+  USING JAR 'confluent-artifact://${selectedArtifact?.id}';
 `;
 
   const document = await vscode.workspace.openTextDocument({
