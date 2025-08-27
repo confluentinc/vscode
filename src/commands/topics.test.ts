@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -15,9 +16,7 @@ import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/ka
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
@@ -930,8 +929,12 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
   let getTopicViewProviderStub: sinon.SinonStub;
   let setUriMetadataStub: sinon.SinonStub;
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
-  let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
+  const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK = new CCloudEnvironment({
+    ...TEST_CCLOUD_ENVIRONMENT,
+    kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL],
+    flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+  });
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
@@ -942,10 +945,6 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
     stubResourceManager = sandbox.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
     setUriMetadataStub = stubResourceManager.setUriMetadata;
-
-    // Create stub for CCloudResourceLoader
-    ccloudLoaderStub = sandbox.createStubInstance(CCloudResourceLoader);
-    sandbox.stub(CCloudResourceLoader, "getInstance").returns(ccloudLoaderStub);
   });
 
   afterEach(function () {
@@ -953,19 +952,11 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
   });
 
   it("should create a new document with Flink SQL language and correct placeholder query for CCloud topic", async function () {
-    const mockFlinkComputePool = { id: "test-flink-pool" };
-    const mockEnvironment = new CCloudEnvironment({
-      ...TEST_CCLOUD_ENVIRONMENT,
-      [mockFlinkComputePool.id]: mockFlinkComputePool,
-    });
     const mockTopicViewProvider = {
       kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER,
-      environment: mockEnvironment,
+      environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
     };
     getTopicViewProviderStub.returns(mockTopicViewProvider);
-
-    // Set up the stub for getEnvironments to return environments with compute pools
-    ccloudLoaderStub.getEnvironments.resolves([mockEnvironment]);
 
     const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
     openTextDocumentStub.resolves(mockDocument);
@@ -978,7 +969,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
 -- Replace this with your actual Flink SQL query
 
 SELECT *
-FROM \`${mockEnvironment.name}\`.\`${TEST_CCLOUD_KAFKA_CLUSTER.name}\`.\`${TEST_CCLOUD_KAFKA_TOPIC.name}\`
+FROM \`${TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.name}\`.\`${TEST_CCLOUD_KAFKA_CLUSTER.name}\`.\`${TEST_CCLOUD_KAFKA_TOPIC.name}\`
 LIMIT 10;`;
     sinon.assert.calledWithExactly(openTextDocumentStub, {
       language: FLINK_SQL_LANGUAGE_ID,
@@ -990,20 +981,11 @@ LIMIT 10;`;
   });
 
   it("should set URI metadata correctly with compute pool ID and database ID", async function () {
-    const mockFlinkComputePool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-    const mockEnvironment = new CCloudEnvironment({
-      ...TEST_CCLOUD_ENVIRONMENT,
-      flinkComputePools: [mockFlinkComputePool],
-    });
     const mockTopicViewProvider = {
       kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER,
-      environment: mockEnvironment,
+      environment: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK,
     };
     getTopicViewProviderStub.returns(mockTopicViewProvider);
-
-    // Set up the stub for getEnvironments to return environments with compute pools
-    ccloudLoaderStub.getEnvironments.resolves([mockEnvironment]);
-
     const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
     openTextDocumentStub.resolves(mockDocument);
     showTextDocumentStub.resolves({ document: mockDocument });
@@ -1013,7 +995,7 @@ LIMIT 10;`;
     // Verify that the URI metadata was set correctly
     sinon.assert.calledOnce(setUriMetadataStub);
     sinon.assert.calledWith(setUriMetadataStub, mockDocument.uri, {
-      flinkComputePoolId: mockFlinkComputePool.id,
+      flinkComputePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
       flinkDatabaseId: TEST_CCLOUD_KAFKA_CLUSTER.id,
     });
   });
@@ -1081,17 +1063,11 @@ LIMIT 10;`;
   });
 
   it("should not set metadata when no compute pool is available", async function () {
-    const mockPoolfreeEnvironment = new CCloudEnvironment({
-      ...TEST_CCLOUD_ENVIRONMENT,
-    });
     const mockTopicViewProvider = {
       kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER,
-      environment: mockPoolfreeEnvironment,
+      environment: TEST_CCLOUD_ENVIRONMENT, // Using regular environment with no Flink compute pools
     };
     getTopicViewProviderStub.returns(mockTopicViewProvider);
-
-    // Return environments with no compute pools
-    ccloudLoaderStub.getEnvironments.resolves([mockPoolfreeEnvironment]);
 
     const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
     openTextDocumentStub.resolves(mockDocument);
