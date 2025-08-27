@@ -9,12 +9,15 @@ import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_ARTIFACTS,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
+  ENABLE_MEDUSA_CONTAINER,
   FLINK_CONFIG_COMPUTE_POOL,
   FLINK_CONFIG_DATABASE,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_MEDUSA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
   SCHEMA_RBAC_WARNINGS_ENABLED,
   SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS,
@@ -149,6 +152,45 @@ describe("extensionSettings/constants.ts", function () {
       assert.ok(LOCAL_KAFKA_IMAGE_TAG.defaultValue !== undefined);
       assert.strictEqual(LOCAL_KAFKA_IMAGE_TAG.defaultValue, expectedDefault);
       assert.ok(LOCAL_KAFKA_IMAGE_TAG.value !== undefined);
+    });
+
+    it("should set the correct section and default value for LOCAL_MEDUSA_IMAGE", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        LOCAL_MEDUSA_IMAGE.id,
+      );
+      assert.ok(section);
+      assert.strictEqual(LOCAL_MEDUSA_IMAGE.sectionTitle, section.title);
+
+      const expectedDefault = section.properties[LOCAL_MEDUSA_IMAGE.id].default;
+      assert.ok(LOCAL_MEDUSA_IMAGE.defaultValue !== undefined);
+      assert.strictEqual(LOCAL_MEDUSA_IMAGE.defaultValue, expectedDefault);
+      assert.ok(LOCAL_MEDUSA_IMAGE.value !== undefined);
+    });
+
+    it("should set the correct section and default value for LOCAL_MEDUSA_IMAGE_TAG", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        LOCAL_MEDUSA_IMAGE_TAG.id,
+      );
+      assert.ok(section);
+      assert.strictEqual(LOCAL_MEDUSA_IMAGE_TAG.sectionTitle, section.title);
+
+      const expectedDefault = section.properties[LOCAL_MEDUSA_IMAGE_TAG.id].default;
+      assert.ok(LOCAL_MEDUSA_IMAGE_TAG.defaultValue !== undefined);
+      assert.strictEqual(LOCAL_MEDUSA_IMAGE_TAG.defaultValue, expectedDefault);
+      assert.ok(LOCAL_MEDUSA_IMAGE_TAG.value !== undefined);
+    });
+
+    it("should set the correct section and default value for ENABLE_MEDUSA_CONTAINER", () => {
+      const section: ExtensionConfiguration | undefined = getSectionForSetting(
+        ENABLE_MEDUSA_CONTAINER.id,
+      );
+      assert.ok(section);
+      assert.strictEqual(ENABLE_MEDUSA_CONTAINER.sectionTitle, section.title);
+
+      const expectedDefault = section.properties[ENABLE_MEDUSA_CONTAINER.id].default;
+      assert.ok(ENABLE_MEDUSA_CONTAINER.defaultValue !== undefined);
+      assert.strictEqual(ENABLE_MEDUSA_CONTAINER.defaultValue, expectedDefault);
+      assert.ok(ENABLE_MEDUSA_CONTAINER.value !== undefined);
     });
 
     it("should set the correct section and default value for LOCAL_SCHEMA_REGISTRY_IMAGE_TAG", () => {
