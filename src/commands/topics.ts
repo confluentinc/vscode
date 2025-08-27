@@ -493,7 +493,7 @@ export async function queryTopicWithFlink(topic: KafkaTopic) {
 
   // Get the environment and cluster for the topic to generate a fully qualified table name
   const topicViewProvider = getTopicViewProvider();
-  const cluster = topicViewProvider.kafkaCluster as CCloudKafkaCluster;
+  const cluster = topicViewProvider.kafkaCluster;
   const topicEnvironment = topicViewProvider.environment;
 
   if (!topicEnvironment || !cluster) {
@@ -516,16 +516,16 @@ LIMIT 10;`;
   if (!isCCloud(cluster)) {
     // Only CCloud clusters are supported for Flink so really we should not get here
     return;
-  } else {
-    // Grab the first compute pool in the same region/provider as the topic cluster
-    if (cluster.flinkPools && cluster.flinkPools.length > 0) {
-      const docUri = editor.document.uri;
-      const rm = ResourceManager.getInstance();
-      await rm.setUriMetadata(docUri, {
-        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: cluster.flinkPools[0].id,
-        [UriMetadataKeys.FLINK_DATABASE_ID]: cluster?.id,
-      });
-    }
+  }
+  // Grab the first compute pool in the same region/provider as the topic cluster
+  const ccloudCluster = cluster as CCloudKafkaCluster; // we already know this is ccloud but TS doesn't believe it
+  if (ccloudCluster.flinkPools && ccloudCluster.flinkPools.length > 0) {
+    const docUri = editor.document.uri;
+    const rm = ResourceManager.getInstance();
+    await rm.setUriMetadata(docUri, {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: ccloudCluster.flinkPools[0].id,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: ccloudCluster.id,
+    });
   }
 }
 
