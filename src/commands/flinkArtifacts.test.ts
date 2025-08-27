@@ -40,8 +40,7 @@ describe("flinkArtifacts", () => {
     assert.ok(callArgs, "openTextDocStub was not called with any arguments");
     assert.strictEqual(callArgs.language, "flinksql");
     assert.ok(
-      typeof callArgs.content === "string" &&
-        callArgs.content.includes('CREATE FUNCTION "test-artifact"'),
+      typeof callArgs.content === "string" && callArgs.content.includes("CREATE FUNCTION"),
       "callArgs.content should include the CREATE FUNCTION statement",
     );
     sinon.assert.calledOnce(showTextDocStub);
