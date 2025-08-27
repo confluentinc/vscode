@@ -22,8 +22,8 @@ export { SidecarHandle } from "./sidecarHandle";
 
 
   getSidecar() will return a SidecarHandle object which contains the auth token and process id needed to make requests to the sidecar. It
-  will also contain the current connection id as attribute 
-  
+  will also contain the current connection id as attribute
+
 */
 
 // Singleton instance of the SidecarManager class.
