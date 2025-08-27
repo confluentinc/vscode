@@ -59,7 +59,7 @@ export async function ccloudSignOutCommand() {
   // dialog from the Accounts section of the VS Code UI
   const yesButton = "Sign Out";
   const confirmation = await window.showInformationMessage(
-    `The account '${authSession.account.label}' has been used by: 
+    `The account '${authSession.account.label}' has been used by:
 
 Confluent
 

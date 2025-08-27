@@ -55,7 +55,7 @@ blocks:
           commands:
             - make ci-bin-sem-cache-store
         on_pass:
-          commands: 
+          commands:
             - VSIX_FILE=$(find out/ -name "*.vsix")
             - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
 
@@ -106,7 +106,7 @@ blocks:
 
   - name: "Package VSIX (Windows AMD64)"
     dependencies: []
-    task: 
+    task:
       agent:
         machine:
           type: s1-prod-windows

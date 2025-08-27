@@ -14,7 +14,7 @@ index 1425e51..94333ec 100644
 @@ -1752,6 +1754,14 @@ components:
        schema:
          type: boolean
- 
+
 +    IncludeAuthorizedOperationsCamelCase:
 +      name: includeAuthorizedOperations
 +      description: Specify if authorized operations should be included in the response.
