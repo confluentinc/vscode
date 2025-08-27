@@ -83,9 +83,6 @@ blocks:
         - name: "Playwright: E2E Smoke Tests (VS Code)"
           commands:
             - make test-playwright-e2e TEST_SUITE=@smoke
-          env_vars:
-            - name: E2E_TESTING
-              value: "true"
       epilogue: &build-test-epilogue
         always:
           commands:
