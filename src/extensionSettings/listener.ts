@@ -1,12 +1,10 @@
 import { ConfigurationChangeEvent, Disposable, workspace } from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
-import { FlinkLanguageClientManager } from "../flinkSql/flinkLanguageClientManager";
 import { Logger } from "../logging";
 import { logUsage, UserEvent } from "../telemetry/events";
 import {
   CCLOUD_PRIVATE_NETWORK_ENDPOINTS,
   ENABLE_CHAT_PARTICIPANT,
-  ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
   KRB5_CONFIG_PATH,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
@@ -58,31 +56,6 @@ export function createConfigChangeListener(): Disposable {
         // telemetry for how often users opt in or out of the chat participant feature
         logUsage(UserEvent.ExtensionSettingsChange, {
           settingId: ENABLE_CHAT_PARTICIPANT.id,
-          enabled,
-        });
-        return;
-      }
-
-      if (event.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id)) {
-        // user toggled the "Enable Flink CCloud Language Server" preview setting
-        // TODO when we remove this flag and settings listener, remove the undefined uri option in `maybeStartLanguageClient`
-        const enabled: boolean = ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value;
-        logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" setting changed`, { enabled });
-
-        const manager = FlinkLanguageClientManager.getInstance();
-        if (enabled) {
-          // start the Flink Language Client Manager up if it isn't already running
-          // (this is typically done internally based on various events, but we want to ensure
-          // it starts up when the user opts in to the feature)
-          manager.maybeStartLanguageClient();
-        } else {
-          // stop the Flink Language Client Manager if it's running
-          manager.dispose();
-        }
-
-        // telemetry for how often users opt in or out of the Flink CCloud Language Server feature
-        logUsage(UserEvent.ExtensionSettingsChange, {
-          settingId: ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id,
           enabled,
         });
         return;

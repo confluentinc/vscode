@@ -638,7 +638,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
    * @param uri The URI of the document to initialize the client for
    * @param restartRunningClient Whether to force reinitialization of the language client even if it's already running
    */
-  public async maybeStartLanguageClient(uri?: Uri, restartRunningClient = false): Promise<void> {
+  public async maybeStartLanguageClient(uri: Uri, restartRunningClient = false): Promise<void> {
     const uriStr = uri?.toString() || "undefined";
     logger.trace(`Requesting language client initialization for ${uriStr}`);
     // We use runExclusive to ensure only one initialization attempt at a time
@@ -665,7 +665,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         }
 
         // Step 3: Set up new client with valid prerequisites from {@link checkClientPrerequisites}
-        await this.initializeNewClient(uri!, prereqCheck.computePoolId, prereqCheck.websocketUrl);
+        await this.initializeNewClient(uri, prereqCheck.computePoolId, prereqCheck.websocketUrl);
       } catch (error) {
         // Should never happen, but if it does, we should log the error and continue
         logError(error, "Error in maybeStartLanguageClient", {
