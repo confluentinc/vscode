@@ -15,22 +15,33 @@ export async function uploadFileToS3({
   contentType: string;
   uploadFormData: { [key: string]: string };
 }): Promise<Response> {
+  // non-sensitive form data values for logging
+  const formDataDebugValues = {
+    bucket: uploadFormData.bucket,
+    key: uploadFormData.key,
+    acl: uploadFormData.acl,
+    successActionStatus: uploadFormData.success_action_status,
+  };
+
   logger.info("Starting S3 file upload", {
     fileSize: file.size,
     contentType,
     presignedUrlHost: new URL(presignedUrl).host,
-    formDataKeys: Object.keys(uploadFormData),
+    ...formDataDebugValues,
   });
 
   try {
+    /** Using FormData with POST instead of PUT to support multiple content types.
+     * This is required for future Python UDF support where we need to upload
+     * multiple file formats in a single request. PUT requests are limited to
+     * a single content type, while POST with FormData can handle multiple formats.
+     */
     const formData = new FormData();
-    // Add all the form fields from the presigned URL
+    // add all the form fields from the presigned URL
     Object.keys(uploadFormData).forEach((key) => {
       formData.append(key, uploadFormData[key]);
     });
-    logger.debug("Added form fields", {
-      formDataKeys: Object.keys(uploadFormData),
-    });
+    logger.debug(`Added ${Object.keys(uploadFormData).length} formData fields`);
     formData.append("file", file);
 
     const response = await fetch(presignedUrl, {
@@ -66,7 +77,7 @@ export async function uploadFileToS3({
       extra: {
         fileType: file instanceof File ? file.type : contentType,
         fileSize: file.size,
-        formDataKeys: Object.keys(uploadFormData),
+        ...formDataDebugValues,
       },
     };
     logError(error, "Failed to upload file to S3", sentryContext);
