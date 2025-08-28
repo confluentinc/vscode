@@ -65,17 +65,11 @@ export function createConfigChangeListener(): Disposable {
 
       if (event.affectsConfiguration(ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id)) {
         // user toggled the "Enable Flink CCloud Language Server" preview setting
-        // TODO when we remove this flag and settings listener, remove the undefined uri option in `maybeStartLanguageClient`
         const enabled: boolean = ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.value;
         logger.debug(`"${ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER.id}" setting changed`, { enabled });
 
         const manager = FlinkLanguageClientManager.getInstance();
-        if (enabled) {
-          // start the Flink Language Client Manager up if it isn't already running
-          // (this is typically done internally based on various events, but we want to ensure
-          // it starts up when the user opts in to the feature)
-          manager.maybeStartLanguageClient();
-        } else {
+        if (!enabled) {
           // stop the Flink Language Client Manager if it's running
           manager.dispose();
         }

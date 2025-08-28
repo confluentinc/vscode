@@ -813,7 +813,7 @@ describe("FlinkLanguageClientManager", () => {
     });
 
     it("should return early if no URI is provided", async () => {
-      await flinkManager.maybeStartLanguageClient();
+      await flinkManager.maybeStartLanguageClient(undefined as any);
 
       sinon.assert.notCalled(getFlinkSqlSettingsStub);
       sinon.assert.notCalled(initializeLanguageClientStub);
