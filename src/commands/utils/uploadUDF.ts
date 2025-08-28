@@ -15,8 +15,8 @@ import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegi
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
-import { uploadFileToAWS } from "./uploadToAWS";
 import { uploadFileToAzure } from "./uploadToAzure";
+import { uploadFileToS3 } from "./uploadToS3";
 export { uploadFileToAzure };
 
 export interface UDFUploadParams {
@@ -195,7 +195,7 @@ export async function handleUploadFile(
             throw new Error("AWS upload form data is missing from presigned URL response");
           }
 
-          const response = await uploadFileToAWS({
+          const response = await uploadFileToS3({
             file: blob,
             presignedUrl: presignedURL.upload_url!,
             contentType,

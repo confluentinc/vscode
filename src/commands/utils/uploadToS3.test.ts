@@ -2,9 +2,9 @@ import assert from "assert";
 import * as sinon from "sinon";
 import { Logger } from "../../logging";
 import * as notifications from "../../notifications";
-import { uploadFileToAWS } from "./uploadToAWS";
+import { uploadFileToS3 } from "./uploadToS3";
 
-describe("uploadFileToAWS", () => {
+describe("uploadFileToS3", () => {
   let sandbox: sinon.SinonSandbox;
   let fetchStub: sinon.SinonStub;
   let loggerErrorStub: sinon.SinonStub;
@@ -54,7 +54,7 @@ describe("uploadFileToAWS", () => {
     });
     fetchStub.resolves(mockResponse);
 
-    const response = await uploadFileToAWS(mockParams);
+    const response = await uploadFileToS3(mockParams);
 
     // check that the form data is correct
     const expectedFormDataKeys = [...Object.keys(mockParams.uploadFormData), "file"];
@@ -91,13 +91,13 @@ describe("uploadFileToAWS", () => {
 
     let thrownError: Error | undefined;
     try {
-      await uploadFileToAWS(mockParams);
+      await uploadFileToS3(mockParams);
     } catch (error) {
       thrownError = error as Error;
     }
 
     assert(thrownError instanceof Error);
-    assert(thrownError.message.includes("AWS upload failed: 403 Forbidden"));
+    assert(thrownError.message.includes("S3 upload failed: 403 Forbidden"));
     assert(thrownError.message.includes(errorResponseBody));
 
     sinon.assert.called(loggerErrorStub);
@@ -128,13 +128,13 @@ describe("uploadFileToAWS", () => {
 
     let thrownError: Error | undefined;
     try {
-      await uploadFileToAWS(mockParams);
+      await uploadFileToS3(mockParams);
     } catch (error) {
       thrownError = error as Error;
     }
 
     assert(thrownError instanceof Error);
-    assert.strictEqual(thrownError.message, "AWS upload failed: 500 Internal Server Error");
+    assert.strictEqual(thrownError.message, "S3 upload failed: 500 Internal Server Error");
 
     sinon.assert.called(loggerErrorStub);
     sinon.assert.calledOnce(showErrorNotificationStub);
