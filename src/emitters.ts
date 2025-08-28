@@ -6,7 +6,6 @@ import { KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
-import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
@@ -137,6 +136,3 @@ export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 
 /** Metadata for a given {@link vscode.Uri} has been updated. */
 export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
-
-/** Event emitter for switching Flink artifact/UDF view modes. */
-export const flinkArtifactUDFViewMode = new vscode.EventEmitter<FlinkArtifactsViewProviderMode>();

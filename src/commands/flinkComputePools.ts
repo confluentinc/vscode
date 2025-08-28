@@ -1,11 +1,6 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { currentFlinkArtifactsPoolChanged } from "../emitters";
-import {
-  ENABLE_FLINK_ARTIFACTS,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../extensionSettings/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -49,11 +44,6 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
     commands.executeCommand("confluent.statements.flink-compute-pool.select", pool),
   ];
 
-  // Only include artifacts view selection if Flink Artifacts feature is enabled
-  if (ENABLE_FLINK_ARTIFACTS.value) {
-    // Will invoke selectPoolForArtifactsViewCommand().
-    thenables.push(commands.executeCommand("confluent.artifacts.flink-compute-pool.select", pool));
-  }
   await Promise.all(thenables);
 }
 
@@ -79,20 +69,6 @@ export async function selectPoolForStatementsViewCommand(item?: CCloudFlinkCompu
   // for the view to load the new pool's statements.
   const flinkStatementsView = FlinkStatementsViewProvider.getInstance();
   await flinkStatementsView.setParentResource(pool);
-}
-
-/** Select a {@link FlinkComputePool} to focus in the "Artifacts" view. */
-export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComputePool) {
-  // the user either clicked a pool in the Flink Artifacts view or used the command palette
-  const pool: CCloudFlinkComputePool | undefined =
-    item instanceof CCloudFlinkComputePool
-      ? item
-      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink-artifacts");
-  if (!pool) {
-    return;
-  }
-  currentFlinkArtifactsPoolChanged.fire(pool);
-  commands.executeCommand("confluent-flink-artifacts.focus");
 }
 
 /**
@@ -134,10 +110,6 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
     registerCommandWithLogging(
       "confluent.statements.flink-compute-pool.select",
       selectPoolForStatementsViewCommand,
-    ),
-    registerCommandWithLogging(
-      "confluent.artifacts.flink-compute-pool.select",
-      selectPoolForArtifactsViewCommand,
     ),
     registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),
   ];
