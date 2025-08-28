@@ -116,7 +116,7 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
   const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name for the Artifact",
+    prompt: "Enter the artifact name",
     ignoreFocusOut: true,
     validateInput: (value) => (value ? undefined : "Artifact name is required"),
   });
