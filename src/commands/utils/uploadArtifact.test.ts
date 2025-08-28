@@ -169,19 +169,18 @@ describe("uploadArtifact", () => {
       assert.strictEqual(result, undefined);
     });
 
-    it("should show error and return undefined for non-Azure/AWS cloud providers", async () => {
+    it("should show error and return undefined for GCP cloud provider", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(TEST_CCLOUD_ENVIRONMENT);
-      cloudProviderRegionQuickPickStub.resolves(fakeCloudProviderRegion);
 
-      const mockUnSupportedProviderRegion = {
-        id: "test-unsupported-provider",
-        provider: "test-unsupported-provider" as CloudProvider,
-        displayName: "Test Unsupported Provider",
-        regionName: "test-unsupported-provider",
-        region: "test-unsupported-provider",
+      const mockGCPRegion = {
+        id: "us-central1",
+        provider: "GCP" as CloudProvider,
+        displayName: "US Central 1",
+        regionName: "us-central1",
+        region: "us-central1",
       };
 
-      cloudProviderRegionQuickPickStub.resolves(mockUnSupportedProviderRegion);
+      cloudProviderRegionQuickPickStub.resolves(mockGCPRegion);
 
       const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
 
@@ -189,11 +188,12 @@ describe("uploadArtifact", () => {
 
       sinon.assert.calledWithMatch(
         errorNotificationStub,
-        `Upload Artifact cancelled: Unsupported cloud provider: ${mockUnSupportedProviderRegion.provider}`,
+        `Upload Artifact cancelled: Unsupported cloud provider: ${mockGCPRegion.provider}`,
       );
 
       assert.strictEqual(result, undefined);
     });
+
     it("should silently return if user cancels the file selection", async () => {
       sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
       const result = await promptForArtifactUploadParams();
