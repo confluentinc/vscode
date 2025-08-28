@@ -102,6 +102,11 @@ export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = new ExtensionSetting<string>(
   "confluent.localDocker.schemaRegistryImageTag",
   SettingsSection.LOCAL,
 );
+/** Whether or not to enable Medusa container functionality. */
+export const ENABLE_MEDUSA_CONTAINER = new ExtensionSetting<boolean>(
+  "confluent.localDocker.medusaEnable",
+  SettingsSection.LOCAL,
+);
 /** Docker image to use with {@link LOCAL_MEDUSA_IMAGE_TAG} when creating local Medusa containers. */
 export const LOCAL_MEDUSA_IMAGE = new ExtensionSetting<string>(
   "confluent.localDocker.medusaImageRepo",
@@ -110,11 +115,6 @@ export const LOCAL_MEDUSA_IMAGE = new ExtensionSetting<string>(
 /** Docker image tag to use when creating local Medusa containers. */
 export const LOCAL_MEDUSA_IMAGE_TAG = new ExtensionSetting<string>(
   "confluent.localDocker.medusaImageTag",
-  SettingsSection.LOCAL,
-);
-/** Whether or not to enable Medusa container functionality. */
-export const ENABLE_MEDUSA_CONTAINER = new ExtensionSetting<boolean>(
-  "confluent.localDocker.enableMedusaContainer",
   SettingsSection.LOCAL,
 );
 
