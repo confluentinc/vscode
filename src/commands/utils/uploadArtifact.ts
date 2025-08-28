@@ -19,6 +19,7 @@ import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure } from "./uploadToAzure";
+import { uploadFileToS3 } from "./uploadToS3";
 export { uploadFileToAzure };
 
 export interface ArtifactUploadParams {
@@ -91,6 +92,8 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
   let cloud: CloudProvider;
   if (cloudRegion.provider === "AZURE") {
     cloud = CloudProvider.Azure;
+  } else if (cloudRegion.provider === "AWS") {
+    cloud = CloudProvider.AWS;
   } else {
     void showErrorNotificationWithButtons(
       `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
@@ -160,23 +163,57 @@ export async function handleUploadToCloudProvider(
         contentType,
       });
 
-      progress.report({ message: "Uploading to Azure storage..." });
-      logger.debug("Uploading to Azure storage");
-      const response = await uploadFileToAzure({
-        file: blob,
-        presignedUrl: presignedURL.upload_url!,
-        contentType,
-      });
+      switch (params.cloud) {
+        case CloudProvider.Azure: {
+          progress.report({ message: "Uploading to Azure storage..." });
+          logger.debug("Uploading to Azure storage");
+          const response = await uploadFileToAzure({
+            file: blob,
+            presignedUrl: presignedURL.upload_url!,
+            contentType,
+          });
 
-      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        artifactName: params.artifactName,
-        environment: params.environment,
-        cloud: params.cloud,
-        region: params.region,
-      });
+          logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            artifactName: params.artifactName,
+            environment: params.environment,
+            cloud: params.cloud,
+            region: params.region,
+          });
+          break;
+        }
+        case CloudProvider.AWS: {
+          progress.report({ message: "Uploading to AWS storage..." });
+          logger.debug("Uploading to AWS storage");
+
+          // build required form data for api request
+          const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
+
+          if (!uploadFormData) {
+            throw new Error("AWS upload form data is missing from presigned URL response");
+          }
+
+          const response = await uploadFileToS3({
+            file: blob,
+            presignedUrl: presignedURL.upload_url!,
+            contentType,
+            uploadFormData,
+          });
+
+          logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            artifactName: params.artifactName,
+            environment: params.environment,
+            cloud: params.cloud,
+            region: params.region,
+          });
+          break;
+        }
+      }
     },
   );
 }
