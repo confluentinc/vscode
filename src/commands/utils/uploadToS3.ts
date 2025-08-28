@@ -33,12 +33,6 @@ export async function uploadFileToS3({
     });
     formData.append("file", file);
 
-    logger.info("Starting S3 file upload", {
-      fileSize: file.size,
-      contentType,
-      presignedUrlHost: new URL(presignedUrl).host,
-    });
-
     const response = await fetch(presignedUrl, {
       method: "POST",
       body: formData,
