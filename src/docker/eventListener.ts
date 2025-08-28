@@ -9,8 +9,16 @@ import {
   SystemEventsRequest,
 } from "../clients/docker";
 import { ContextValues, setContextValue } from "../context/values";
-import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
-import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../extensionSettings/constants";
+import {
+  localKafkaConnected,
+  localMedusaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+} from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
@@ -285,8 +293,11 @@ export class EventListener {
     // first, make sure it's an image we support tracking for updates in the Resources view
     const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
     const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
+    const medusaImage: string = LOCAL_MEDUSA_IMAGE.value;
     const isManagedImage =
-      imageName.startsWith(kafkaImage) || imageName.startsWith(schemaRegistryImage);
+      imageName.startsWith(kafkaImage) ||
+      imageName.startsWith(schemaRegistryImage) ||
+      imageName.startsWith(medusaImage);
     if (!isManagedImage) {
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
@@ -305,6 +316,7 @@ export class EventListener {
 
     // then if it's an image that requires a specific log line to appear before it's fully ready, wait
     // for that log line to appear before considering the container fully started
+    // TODO Patrick: Wait for Medusa log line
     const needToWaitForLog =
       imageName.startsWith(LOCAL_KAFKA_IMAGE.defaultValue) ||
       imageName.startsWith(LOCAL_SCHEMA_REGISTRY_IMAGE.defaultValue);
@@ -342,6 +354,9 @@ export class EventListener {
     } else if (imageName.startsWith(schemaRegistryImage)) {
       await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
       localSchemaRegistryConnected.fire(started);
+    } else if (imageName.startsWith(medusaImage)) {
+      await setContextValue(ContextValues.localMedusaAvailable, started);
+      localMedusaConnected.fire(started);
     }
     // delete+recreate the local connection to purge any previous clusters from the sidecar cache
     await updateLocalConnection();
@@ -357,6 +372,7 @@ export class EventListener {
 
     const kafkaImage: string = LOCAL_KAFKA_IMAGE.value;
     const schemaRegistryImage: string = LOCAL_SCHEMA_REGISTRY_IMAGE.value;
+    const medusaImage: string = LOCAL_MEDUSA_IMAGE.value;
 
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, false);
@@ -364,6 +380,9 @@ export class EventListener {
     } else if (imageName.startsWith(schemaRegistryImage)) {
       await setContextValue(ContextValues.localSchemaRegistryAvailable, false);
       localSchemaRegistryConnected.fire(false);
+    } else if (imageName.startsWith(medusaImage)) {
+      await setContextValue(ContextValues.localMedusaAvailable, false);
+      localMedusaConnected.fire(false);
     }
   }
 
