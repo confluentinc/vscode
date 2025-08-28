@@ -35,16 +35,27 @@ import {
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
 import * as uploadToAzure from "./uploadToAzure";
+import * as uploadToS3 from "./uploadToS3";
+
 describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
   let tempJarUri: vscode.Uri;
   const tempDir = os.tmpdir();
 
-  const mockParams = {
+  const mockAzureParams = {
     environment: "env-123456",
     cloud: "Azure",
     region: "australiaeast",
+    artifactName: "test-artifact",
+    fileFormat: "jar",
+    selectedFile: undefined as unknown as vscode.Uri,
+  };
+
+  const mockAwsParams = {
+    environment: "env-123456",
+    cloud: "AWS",
+    region: "us-east-1",
     artifactName: "test-artifact",
     fileFormat: "jar",
     selectedFile: undefined as unknown as vscode.Uri,
@@ -55,7 +66,8 @@ describe("uploadArtifact", () => {
     tempJarPath = path.join(tempDir, `test-artifact-${Date.now()}.jar`);
     fs.writeFileSync(tempJarPath, "dummy jar content");
     tempJarUri = vscode.Uri.file(tempJarPath);
-    mockParams.selectedFile = tempJarUri;
+    mockAzureParams.selectedFile = tempJarUri;
+    mockAwsParams.selectedFile = tempJarUri;
   });
 
   afterEach(() => {
@@ -128,7 +140,7 @@ describe("uploadArtifact", () => {
     let cloudProviderRegionQuickPickStub: sinon.SinonStub;
     const fakeCloudProviderRegion: FcpmV2RegionListDataInner = {
       id: "australiaeast",
-      cloud: CloudProvider.Azure,
+      cloud: "temp", //Change in below tests
       display_name: "Australia East",
       region_name: "australiaeast",
       metadata: {} as any,
@@ -157,19 +169,19 @@ describe("uploadArtifact", () => {
       assert.strictEqual(result, undefined);
     });
 
-    it("should show error and return undefined for non-Azure cloud providers", async () => {
+    it("should show error and return undefined for non-Azure/AWS cloud providers", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(TEST_CCLOUD_ENVIRONMENT);
       cloudProviderRegionQuickPickStub.resolves(fakeCloudProviderRegion);
 
-      const mockAwsRegion = {
-        id: "us-west-2",
-        provider: "AWS" as CloudProvider,
-        displayName: "US West (Oregon)",
-        regionName: "us-west-2",
-        region: "us-west-2",
+      const mockUnSupportedProviderRegion = {
+        id: "test-unsupported-provider",
+        provider: "test-unsupported-provider" as CloudProvider,
+        displayName: "Test Unsupported Provider",
+        regionName: "test-unsupported-provider",
+        region: "test-unsupported-provider",
       };
 
-      cloudProviderRegionQuickPickStub.resolves(mockAwsRegion);
+      cloudProviderRegionQuickPickStub.resolves(mockUnSupportedProviderRegion);
 
       const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
 
@@ -177,7 +189,7 @@ describe("uploadArtifact", () => {
 
       sinon.assert.calledWithMatch(
         errorNotificationStub,
-        `Upload Artifact cancelled: Unsupported cloud provider: ${mockAwsRegion.provider}`,
+        `Upload Artifact cancelled: Unsupported cloud provider: ${mockUnSupportedProviderRegion.provider}`,
       );
 
       assert.strictEqual(result, undefined);
@@ -212,7 +224,7 @@ describe("uploadArtifact", () => {
       );
     });
 
-    it("returns the correct Artifact upload parameters", async () => {
+    it("returns the correct Artifact upload parameters for Azure", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
       // reset the region quick pick stub to return a valid Azure region
       cloudProviderRegionQuickPickStub.resolves({
@@ -236,6 +248,30 @@ describe("uploadArtifact", () => {
         selectedFile: mockFileUri,
       });
     });
+
+    it("returns the correct Artifact upload parameters for AWS", async () => {
+      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
+
+      cloudProviderRegionQuickPickStub.resolves({
+        ...fakeCloudProviderRegion,
+        provider: "AWS",
+        region: fakeCloudProviderRegion.region_name,
+      });
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+      sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
+
+      const result = await promptForArtifactUploadParams();
+
+      assert.deepStrictEqual(result, {
+        environment: mockEnvironment.id,
+        cloud: "AWS",
+        region: fakeCloudProviderRegion.region_name,
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: mockFileUri,
+      });
+    });
   });
 
   describe("handleUploadToCloudProvider", () => {
@@ -245,19 +281,23 @@ describe("uploadArtifact", () => {
       upload_url: "https://example.com/presigned-url",
     };
     let uploadFileToAzureStub: sinon.SinonStub;
+    let uploadFileToS3Stub: sinon.SinonStub;
 
     beforeEach(() => {
-      const mockResponse = new Response(null, { status: 200, statusText: "OK" });
+      const mockAzureResponse = new Response(null, { status: 200, statusText: "OK" });
       uploadFileToAzureStub = sandbox
         .stub(uploadToAzure, "uploadFileToAzure")
-        .resolves(mockResponse);
+        .resolves(mockAzureResponse);
+
+      const mockS3Response = new Response(null, { status: 204, statusText: "No Content" });
+      uploadFileToS3Stub = sandbox.stub(uploadToS3, "uploadFileToS3").resolves(mockS3Response);
 
       sandbox.stub(uploadArtifactModule, "prepareUploadFileFromUri").resolves({
         blob: new Blob(["dummy"], { type: "application/java-archive" }),
         contentType: "application/java-archive",
       });
     });
-    it("should log the message confirming the upload", async () => {
+    it("should log the message confirming the upload for Azure", async () => {
       const mockProgress = {
         report: sandbox.stub(),
       };
@@ -272,7 +312,7 @@ describe("uploadArtifact", () => {
         return await callback(mockProgress as any, mockToken as any);
       });
 
-      await handleUploadToCloudProvider(mockParams, mockPresignedUrlResponse);
+      await handleUploadToCloudProvider(mockAzureParams, mockPresignedUrlResponse);
 
       sinon.assert.calledOnce(uploadFileToAzureStub);
       sinon.assert.calledWith(uploadFileToAzureStub, {
@@ -285,17 +325,92 @@ describe("uploadArtifact", () => {
       sinon.assert.calledWith(mockProgress.report, { message: "Uploading to Azure storage..." });
     });
 
+    it("should upload to S3 with form data for AWS", async () => {
+      const mockS3PresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
+        api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+        kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+        upload_url: "https://test.s3.amazonaws.com/presigned-url",
+        upload_form_data: {
+          key: "test-key",
+          policy: "base64-encoded-policy",
+          "x-amz-algorithm": "AWS4-HMAC-SHA256",
+          "x-amz-credential": "test-credential",
+          "x-amz-date": "20240101T000000Z",
+          "x-amz-signature": "test-signature",
+          "x-amz-security-token": "test-security-token",
+        },
+      };
+
+      const mockProgress = {
+        report: sandbox.stub(),
+      };
+
+      const mockToken = {
+        isCancellationRequested: false,
+        onCancellationRequested: sandbox.stub(),
+      };
+
+      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
+      withProgressStub.callsFake(async (options, callback) => {
+        return await callback(mockProgress as any, mockToken as any);
+      });
+
+      await handleUploadToCloudProvider(mockAwsParams, mockS3PresignedUrlResponse);
+
+      sinon.assert.calledOnce(uploadFileToS3Stub);
+      sinon.assert.calledWith(uploadFileToS3Stub, {
+        file: sinon.match.any, // The blob object
+        presignedUrl: mockS3PresignedUrlResponse.upload_url,
+        contentType: "application/java-archive",
+        uploadFormData: mockS3PresignedUrlResponse.upload_form_data,
+      });
+
+      sinon.assert.calledWith(mockProgress.report, { message: "Preparing file..." });
+      sinon.assert.calledWith(mockProgress.report, { message: "Uploading to AWS storage..." });
+    });
+
+    it("should throw error when AWS upload form data is missing", async () => {
+      const mockS3PresignedUrlResponseNoFormData: PresignedUploadUrlArtifactV1PresignedUrl200Response =
+        {
+          api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
+          kind: PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum.PresignedUrl,
+          upload_url: "https://test.s3.amazonaws.com/presigned-url",
+          // upload_form_data is missing
+        };
+
+      const mockProgress = {
+        report: sandbox.stub(),
+      };
+
+      const mockToken = {
+        isCancellationRequested: false,
+        onCancellationRequested: sandbox.stub(),
+      };
+
+      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
+      withProgressStub.callsFake(async (options, callback) => {
+        return await callback(mockProgress as any, mockToken as any);
+      });
+
+      await assert.rejects(
+        handleUploadToCloudProvider(mockAwsParams, mockS3PresignedUrlResponseNoFormData),
+        /AWS upload form data is missing from presigned URL response/,
+      );
+
+      sinon.assert.notCalled(uploadFileToS3Stub);
+    });
+
     describe("buildCreateArtifactRequest", () => {
       it("should build the artifact request correctly", () => {
         const uploadId = "upload-id-123";
-        const request = buildCreateArtifactRequest(mockParams, uploadId);
+        const request = buildCreateArtifactRequest(mockAzureParams, uploadId);
 
         assert.deepStrictEqual(request, {
-          cloud: mockParams.cloud,
-          region: mockParams.region,
-          environment: mockParams.environment,
-          display_name: mockParams.artifactName,
-          content_format: mockParams.fileFormat.toUpperCase(),
+          cloud: mockAzureParams.cloud,
+          region: mockAzureParams.region,
+          environment: mockAzureParams.environment,
+          display_name: mockAzureParams.artifactName,
+          content_format: mockAzureParams.fileFormat.toUpperCase(),
           upload_source: {
             location: PRESIGNED_URL_LOCATION,
             upload_id: uploadId,
@@ -323,16 +438,16 @@ describe("uploadArtifact", () => {
           display_name: "",
         });
 
-        await uploadArtifactToCCloud(mockParams, mockUploadId);
+        await uploadArtifactToCCloud(mockAzureParams, mockUploadId);
 
         sinon.assert.calledOnce(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact);
         sinon.assert.calledWith(stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact, {
           CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(
-            mockParams,
+            mockAzureParams,
             mockUploadId,
           ),
-          cloud: mockParams.cloud,
-          region: mockParams.region,
+          cloud: mockAzureParams.cloud,
+          region: mockAzureParams.region,
         });
       });
 
@@ -343,7 +458,7 @@ describe("uploadArtifact", () => {
 
         const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
 
-        await assert.rejects(uploadArtifactToCCloud(mockParams, "upload-id-123"));
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
 
         sinon.assert.calledOnce(errorNotificationStub);
         sinon.assert.calledWith(
@@ -363,7 +478,7 @@ describe("uploadArtifact", () => {
           .stub(notifications, "showErrorNotificationWithButtons")
           .resolves();
 
-        await assert.rejects(uploadArtifactToCCloud(mockParams, mockUploadId), responseError);
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, mockUploadId), responseError);
 
         sinon.assert.calledOnce(errorNotificationStub);
         sinon.assert.calledWith(
@@ -383,7 +498,7 @@ describe("uploadArtifact", () => {
           .stub(notifications, "showErrorNotificationWithButtons")
           .resolves();
 
-        await assert.rejects(uploadArtifactToCCloud(mockParams, mockUploadId), responseError);
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, mockUploadId), responseError);
 
         sinon.assert.calledOnce(errorNotificationStub);
         sinon.assert.calledWith(
