@@ -78,9 +78,6 @@ export enum ContextValues {
   /** The user applied a search string to the Flink Artifacts view. */
   flinkArtifactsSearchApplied = "confluent.flinkArtifactsSearchApplied",
 
-  /** The user changed the mode of the Flink Artifacts/UDFs view. */
-  flinkArtifactsUDFsViewMode = "confluent.flinkArtifactsUDFsViewMode",
-
   /**
    * EXPERIMENTAL: Is the chat participant enabled?
    * (This should go away once the `confluent.experimental.enableChatParticipant` setting is removed.)

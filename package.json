@@ -273,12 +273,6 @@
     ],
     "commands": [
       {
-        "command": "confluent.uploadUDF",
-        "title": "Confluent: Upload UDF",
-        "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
-      },
-      {
         "command": "confluent.connections.ccloud.signIn",
         "icon": "$(sign-in)",
         "title": "Sign in to Confluent Cloud",
@@ -440,12 +434,6 @@
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
         "category": "Confluent: Flink Statements"
-      },
-      {
-        "command": "confluent.artifacts.flink-compute-pool.select",
-        "icon": "$(confluent-flink-compute-pool)",
-        "title": "Select Flink Compute Pool",
-        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.statements.refresh",
@@ -759,18 +747,6 @@
         "command": "confluent.flink.statements.search.clear",
         "title": "Clear Search",
         "category": "Confluent: Flink Statements View"
-      },
-      {
-        "command": "confluent.flink.setUDFsViewMode",
-        "title": "Switch to Flink UDFs",
-        "icon": "$(code)",
-        "category": "Confluent: Flink Artifacts/UDFs View"
-      },
-      {
-        "command": "confluent.flink.setArtifactsViewMode",
-        "title": "Switch to Flink Artifacts",
-        "icon": "$(folder-library)",
-        "category": "Confluent: Flink Artifacts/UDFs View"
       }
     ],
     "configuration": [
@@ -888,15 +864,6 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
-          },
-          "confluent.flink.enableFlinkArtifacts": {
-            "type": "boolean",
-            "default": false,
-            "order": 1,
-            "markdownDescription": "Enable Flink Artifacts functionality including the artifacts view and related features for managing Flink artifacts in Confluent Cloud. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)",
-            "tags": [
-              "preview"
-            ]
           },
           "confluent.flink.computePoolId": {
             "type": "string",
@@ -1073,16 +1040,6 @@
           "icon": "$(confluent-logo)"
         },
         {
-          "id": "confluent-flink-artifacts",
-          "name": "Flink Artifacts (Preview)",
-          "visibility": "collapsed",
-          "icon": "$(confluent-logo)",
-          "when": "config.confluent.flink.enableFlinkArtifacts",
-          "tags": [
-            "preview"
-          ]
-        },
-        {
           "id": "confluent-support",
           "name": "Support",
           "icon": "$(confluent-logo)"
@@ -1159,21 +1116,6 @@
         "view": "confluent-flink-statements",
         "contents": "No Flink statements match search string. [Clear search](command:confluent.flink.statements.search.clear) or [try a new search](command:confluent.flink.statements.search).",
         "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected && confluent.flinkStatementsSearchApplied"
-      },
-      {
-        "view": "confluent-flink-artifacts",
-        "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && !confluent.ccloudConnectionAvailable"
-      },
-      {
-        "view": "confluent-flink-artifacts",
-        "contents": "No Flink compute pool selected. Click below to get started.\n[Select Flink Compute Pool](command:confluent.artifacts.flink-compute-pool.select)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && !confluent.flinkArtifactsPoolSelected"
-      },
-      {
-        "view": "confluent-flink-artifacts",
-        "contents": "No Flink artifacts found.",
-        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkArtifactsPoolSelected"
       }
     ],
     "menus": {
@@ -1357,14 +1299,6 @@
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
           "when": "false"
-        },
-        {
-          "command": "confluent.flink.setArtifactsViewMode",
-          "when": "confluent.flinkArtifactsUDFsViewMode == 'UDFs'"
-        },
-        {
-          "command": "confluent.flink.setUDFsViewMode",
-          "when": "confluent.flinkArtifactsUDFsViewMode == 'artifacts'"
         }
       ],
       "editor/title": [
@@ -1533,21 +1467,6 @@
           "command": "confluent.statements.refresh",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected",
           "group": "navigation@5"
-        },
-        {
-          "command": "confluent.artifacts.flink-compute-pool.select",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
-          "group": "navigation@1"
-        },
-        {
-          "command": "confluent.flink.setArtifactsViewMode",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'UDFs'",
-          "group": "navigation@2"
-        },
-        {
-          "command": "confluent.flink.setUDFsViewMode",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
-          "group": "navigation@2"
         }
       ],
       "view/item/context": [

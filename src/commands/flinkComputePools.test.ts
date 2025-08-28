@@ -4,11 +4,7 @@ import * as vscode from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import {
-  ENABLE_FLINK_ARTIFACTS,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../extensionSettings/constants";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
 import * as commandsModule from "./flinkComputePools";
@@ -90,43 +86,17 @@ describe("flinkComputePools.ts", () => {
 
   describe("selectPoolFromResourcesViewCommand", () => {
     let executeCommandStub: sinon.SinonStub;
-    let stubbedConfigs: StubbedWorkspaceConfiguration;
 
     beforeEach(() => {
       executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
-      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     });
 
-    it("should invoke both statements and artifacts pool selection commands when Flink Artifacts is enabled", async () => {
-      stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, true);
-
+    it("should invoke statements pool selection command", async () => {
       await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
 
       sinon.assert.calledWith(
         executeCommandStub,
         "confluent.statements.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-      sinon.assert.calledWith(
-        executeCommandStub,
-        "confluent.artifacts.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-    });
-
-    it("should only invoke statements pool selection command when Flink Artifacts is disabled", async () => {
-      stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, false);
-
-      await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-
-      sinon.assert.calledWith(
-        executeCommandStub,
-        "confluent.statements.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-      sinon.assert.neverCalledWith(
-        executeCommandStub,
-        "confluent.artifacts.flink-compute-pool.select",
         TEST_CCLOUD_FLINK_COMPUTE_POOL,
       );
     });
