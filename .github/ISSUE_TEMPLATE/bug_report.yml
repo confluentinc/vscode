@@ -15,7 +15,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/confluentinc/vscode/blob/master/CODE_OF_CONDUCT.md). 
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/confluentinc/vscode/blob/master/CODE_OF_CONDUCT.md).
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
@@ -52,7 +52,7 @@ body:
       label: To Reproduce
       description: A step-by-step description of how to reproduce the issue. Screenshots can be provided in the issue body below. If using code blocks, make sure that [syntax highlighting is correct](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks#syntax-highlighting) and double check that the rendered preview is not broken.
       placeholder: |
-        1. 
+        1.
         2. Click X
         3. Y will happen
     validations:
@@ -92,11 +92,10 @@ body:
     attributes:
       label: Additional context
       description: |
-        Any extra information that might help us investigate. Does the issue happen repeatedly? Are you able to log into Confluent Cloud? 
+        Any extra information that might help us investigate. Does the issue happen repeatedly? Are you able to log into Confluent Cloud?
       placeholder: |
         Yes, the issue happens (almost) every time I perform the steps above.
 
         or
 
-        No, the issue is intermittent. 
-
+        No, the issue is intermittent.
