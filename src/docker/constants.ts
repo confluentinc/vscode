@@ -15,4 +15,5 @@ export const MANAGED_CONTAINER_LABEL = "io.confluent.vscode.managed";
 export enum LocalResourceKind {
   Kafka = "Kafka",
   SchemaRegistry = "Schema Registry",
+  Medusa = "Medusa",
 }
