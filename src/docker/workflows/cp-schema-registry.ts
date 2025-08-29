@@ -37,6 +37,7 @@ export const IMAGE_SETTINGS_BUTTON = "Configure Image Settings";
 export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkflow {
   resourceKind: string = "Schema Registry";
   static imageRepo = "confluentinc/cp-schema-registry";
+  imageTag: string = LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value;
 
   logger = new Logger("docker.workflow.cp-schema-registry");
 
