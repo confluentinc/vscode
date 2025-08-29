@@ -36,8 +36,15 @@ export async function setCCloudComputePoolForUriCommand(uri?: Uri, database?: CC
     ? (pool: CCloudFlinkComputePool) =>
         pool.provider === database.provider && pool.region === database.region
     : undefined;
-  const pool: CCloudFlinkComputePool | undefined = await flinkComputePoolQuickPick(filter);
+
+  // Present quickpick to the user.
+  const pool: CCloudFlinkComputePool | undefined = await flinkComputePoolQuickPick(
+    null, // do not pre-select any pool
+    filter, // if a database is provided, filter pools to match provider/region
+  );
+
   if (!pool) {
+    // User canceled the quickpick
     return;
   }
 
