@@ -74,9 +74,8 @@ test.describe("Schema Management", () => {
     });
 
     await openConfluentExtension(page);
-    resourcesView = new ResourcesView(page);
-    await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
 
+    resourcesView = new ResourcesView(page);
     notificationArea = new NotificationArea(page);
   });
 

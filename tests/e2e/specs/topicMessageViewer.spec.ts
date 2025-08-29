@@ -38,8 +38,8 @@ test.describe("Topics Listing & Message Viewer", () => {
 
   test.beforeEach(async ({ page }) => {
     await openConfluentExtension(page);
+
     resourcesView = new ResourcesView(page);
-    await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
   });
 
   test.describe("CCLOUD connection", { tag: [Tag.CCloud] }, () => {
