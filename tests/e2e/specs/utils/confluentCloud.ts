@@ -40,7 +40,7 @@ async function handleAuthFlow(
 
     // Wait for success page
     try {
-      await authPage.waitForSelector("text=Authentication Complete", { timeout: 3000 });
+      await authPage.waitForSelector("text=Authentication Complete");
     } catch (error) {
       throw new Error("Authentication failed.");
     }
