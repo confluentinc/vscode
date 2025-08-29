@@ -50,17 +50,10 @@ export async function uploadFileToS3({
     });
 
     if (!response.ok) {
-      const responseText = await response.text();
-      logger.error("S3 upload failed", {
-        status: response.status,
-        statusText: response.statusText,
-        responseBody: responseText,
-        headers: Object.fromEntries(response.headers.entries()),
-      });
-      const errorMessage = responseText.trim()
-        ? `S3 upload failed: ${response.status} ${response.statusText} - ${responseText}`
-        : `S3 upload failed: ${response.status} ${response.statusText}`;
-      throw new Error(errorMessage);
+      const errorText = await response.text();
+      const error = new Error(`${response.status} ${response.statusText}`);
+      Object.assign(error, { responseText: errorText });
+      throw error;
     }
 
     logger.info("S3 upload successful", {
@@ -72,12 +65,12 @@ export async function uploadFileToS3({
 
     return response;
   } catch (error) {
-    logger.error("S3 upload error", error);
     const sentryContext: Record<string, unknown> = {
       extra: {
         fileType: file instanceof File ? file.type : contentType,
         fileSize: file.size,
         ...formDataDebugValues,
+        ...{ responseBody: (error as any)?.responseText }, // include the full XML response
       },
     };
     logError(error, "Failed to upload file to S3", sentryContext);

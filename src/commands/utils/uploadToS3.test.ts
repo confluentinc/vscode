@@ -67,7 +67,7 @@ describe("uploadFileToS3", () => {
           if (!(value instanceof FormData)) return false;
           const formDataKeys = Array.from(value.keys());
           return expectedFormDataKeys.every((key) => formDataKeys.includes(key));
-        }, "FormData with all expected fields"),
+        }),
       }),
     );
 
@@ -97,25 +97,12 @@ describe("uploadFileToS3", () => {
     }
 
     assert(thrownError instanceof Error);
-    assert(thrownError.message.includes("S3 upload failed: 403 Forbidden"));
-    assert(thrownError.message.includes(errorResponseBody));
+    assert(thrownError.message.includes("403 Forbidden"));
+    assert((thrownError as any).responseText.includes(errorResponseBody));
 
-    sinon.assert.called(loggerErrorStub);
+    sinon.assert.calledOnce(loggerErrorStub);
     sinon.assert.calledOnce(showErrorNotificationStub);
 
-    const expectedFormDataKeys = [...Object.keys(mockParams.uploadFormData), "file"];
-    sinon.assert.calledWith(
-      fetchStub,
-      mockParams.presignedUrl,
-      sinon.match({
-        method: "POST",
-        body: sinon.match((value) => {
-          if (!(value instanceof FormData)) return false;
-          const formDataKeys = Array.from(value.keys());
-          return expectedFormDataKeys.every((key) => formDataKeys.includes(key));
-        }, "FormData with all expected fields"),
-      }),
-    );
     sinon.assert.calledOnce(fetchStub);
   });
 
@@ -134,24 +121,11 @@ describe("uploadFileToS3", () => {
     }
 
     assert(thrownError instanceof Error);
-    assert.strictEqual(thrownError.message, "S3 upload failed: 500 Internal Server Error");
+    assert.strictEqual(thrownError.message, "500 Internal Server Error");
 
-    sinon.assert.called(loggerErrorStub);
+    sinon.assert.calledOnce(loggerErrorStub);
     sinon.assert.calledOnce(showErrorNotificationStub);
 
-    const expectedFormDataKeys = [...Object.keys(mockParams.uploadFormData), "file"];
-    sinon.assert.calledWith(
-      fetchStub,
-      mockParams.presignedUrl,
-      sinon.match({
-        method: "POST",
-        body: sinon.match((value) => {
-          if (!(value instanceof FormData)) return false;
-          const formDataKeys = Array.from(value.keys());
-          return expectedFormDataKeys.every((key) => formDataKeys.includes(key));
-        }, "FormData with all expected fields"),
-      }),
-    );
     sinon.assert.calledOnce(fetchStub);
   });
 });
