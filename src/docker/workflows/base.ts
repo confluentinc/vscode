@@ -44,7 +44,7 @@ export abstract class LocalResourceWorkflow {
    */
   static imageRepo: string;
   /** Tag for the Docker image to use for this workflow. Should be configurable by the user in extension settings. */
-  imageTag: string = "7.9.0";
+  imageTag: string = "latest";
 
   // Registry to store workflow instances by image repo
   private static workflowRegistry: Map<string, LocalResourceWorkflow> = new Map();
