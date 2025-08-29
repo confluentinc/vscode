@@ -4,9 +4,12 @@ import * as vscode from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
+import * as flinkStatementsViewModule from "../viewProviders/flinkStatements";
 import * as commandsModule from "./flinkComputePools";
 
 describe("flinkComputePools.ts", () => {
@@ -81,6 +84,68 @@ describe("flinkComputePools.ts", () => {
           "@ext:confluentinc.vscode-confluent flink",
         ),
       );
+    });
+  });
+
+  describe("selectPoolForStatementsViewCommand", () => {
+    let flinkComputePoolQuickPickWithViewProgressStub: sinon.SinonStub;
+    let fakeFlinkStatementsViewProvider: {
+      computePool: CCloudFlinkComputePool | null;
+      setParentResource: sinon.SinonStub;
+    };
+
+    beforeEach(() => {
+      flinkComputePoolQuickPickWithViewProgressStub = sandbox.stub(
+        quickpicks,
+        "flinkComputePoolQuickPickWithViewProgress",
+      );
+
+      sandbox.stub(vscode.commands, "executeCommand").resolves();
+
+      // stub FlinkStatementsViewProvider.getInstance()
+      fakeFlinkStatementsViewProvider = {
+        computePool: null,
+        setParentResource: sandbox.stub().resolves(),
+      };
+
+      sandbox
+        .stub(flinkStatementsViewModule.FlinkStatementsViewProvider, "getInstance")
+        .returns(fakeFlinkStatementsViewProvider as any);
+    });
+
+    const testCases: Array<[string, any]> = [
+      ["undefined", undefined],
+      ["a FlinkStatement instance", createFlinkStatement()],
+    ];
+    for (const [description, param] of testCases) {
+      it(`should call flinkComputePoolQuickPickWithViewProgress when passed something not a pool: ${description}`, async () => {
+        const testPool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+        flinkComputePoolQuickPickWithViewProgressStub.resolves(testPool);
+
+        await commandsModule.selectPoolForStatementsViewCommand(param);
+
+        sinon.assert.calledOnce(flinkComputePoolQuickPickWithViewProgressStub);
+        sinon.assert.calledWith(fakeFlinkStatementsViewProvider.setParentResource, testPool);
+      });
+    }
+
+    it("should return early when user cancels pool selection", async () => {
+      flinkComputePoolQuickPickWithViewProgressStub.resolves(undefined);
+
+      await commandsModule.selectPoolForStatementsViewCommand(undefined);
+
+      sinon.assert.calledOnce(flinkComputePoolQuickPickWithViewProgressStub);
+      sinon.assert.notCalled(fakeFlinkStatementsViewProvider.setParentResource);
+    });
+
+    it("should skip call to flinkComputePoolQuickPickWithViewProgress when passed a pool", async () => {
+      const testPool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      await commandsModule.selectPoolForStatementsViewCommand(testPool);
+
+      sinon.assert.notCalled(flinkComputePoolQuickPickWithViewProgressStub);
+      sinon.assert.calledWith(fakeFlinkStatementsViewProvider.setParentResource, testPool);
     });
   });
 
