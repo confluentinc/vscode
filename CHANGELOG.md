@@ -4,17 +4,24 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.6.0
+
 ### Added
 
+- Support for [Private Networking with Confluent Cloud for Apache Flink](https://docs.confluent.io/cloud/current/flink/concepts/flink-private-networking.html)
+- New optional implementation of the Resources view, offering much better performance and per-connection
+  refresh capability. Currently guarded by the experimental setting "Use New Resources View Provider".
 - New "Set Private Network Endpoint(s)" command for configuring private network endpoints for a
   specific CCloud environment.
+- Support for dark mode in the local Confluent Cloud OAuth callback page
+- Support [connecting to WarpStream agents via Kubernetes port-forwarding](https://docs.warpstream.com/warpstream/byoc/port-forwarding-k8s)
 
 ### Changed
 
 - Telemetry updates to only send less common sidecar startup errors to Sentry.
-- The Resources view has been reimplemented, allowing for independently concurrent initialization of
-  each connection, as well as allowing individual connection refreshing. Users may opt-out of the
-  new implementation by unchecking the 'New Resources View' setting.
+- Validate authentication types in Direct connection form
+- Bump minimum required macOS version from 13 to 14
+- Update metadata for automatically created "Query with Flink" docs
 
 ## 1.5.3
 
