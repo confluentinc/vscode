@@ -53,7 +53,11 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
 export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkComputePool) {
   // the user either clicked a pool in the Flink Statements view or used the command palette
 
-  if (!pool) {
+  // (If the user had a Flink Statement selected in the statements view, then hits the
+  //  icon to select a different pool, the command is invoked with *the FlinkStatement*,
+  //  so be sure to treat that the same as if nothing provided at all, and to ask the
+  //  user to pick a new pool.)
+  if (!pool || !(pool instanceof CCloudFlinkComputePool)) {
     pool = await flinkComputePoolQuickPickWithViewProgress(
       "confluent-flink-statements",
       // Initially select whatever the view is currently set to. Will be null if not focused on exactly one pool.
