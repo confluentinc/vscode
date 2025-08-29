@@ -261,8 +261,105 @@ describe("sidecarHandle sandbox tests", () => {
       } as Response);
     });
 
+    describe("partial errors tests", () => {
+      it("should return data and show warning if response has both data and single error and showPartialErrors is true", async () => {
+        const responseWithErrors: GraphQLResponse = {
+          data: {
+            ccloudConnectionById: { organizations: [{ id: "123", name: "foo", current: true }] },
+          },
+          errors: [{ message: "Some error occurred" }],
+        };
+
+        fetchStub.resolves({
+          ok: true,
+          json: async () => responseWithErrors,
+        } as Response);
+
+        const showWarningNotificationWithButtonsStub = sandbox.stub(
+          notifications,
+          "showWarningNotificationWithButtons",
+        );
+
+        const result = await handle.query(
+          organizationQuery,
+          constants.CCLOUD_CONNECTION_ID,
+          true, // DO show partial errors
+          {
+            id: "123",
+          },
+        );
+        assert.deepStrictEqual(result, responseWithErrors.data);
+        sinon.assert.calledOnceWithExactly(
+          showWarningNotificationWithButtonsStub,
+          'GraphQL query returned data but also an error: "Some error occurred"',
+        );
+      });
+
+      it("should not show warning if response has both data and single error and showPartialErrors is false", async () => {
+        const responseWithErrors: GraphQLResponse = {
+          data: {
+            ccloudConnectionById: { organizations: [{ id: "123", name: "foo", current: true }] },
+          },
+          errors: [{ message: "Some error occurred" }],
+        };
+
+        fetchStub.resolves({
+          ok: true,
+          json: async () => responseWithErrors,
+        } as Response);
+
+        const showWarningNotificationWithButtonsStub = sandbox.stub(
+          notifications,
+          "showWarningNotificationWithButtons",
+        );
+
+        const result = await handle.query(
+          organizationQuery,
+          constants.CCLOUD_CONNECTION_ID,
+          false, // do NOT show partial errors
+          {
+            id: "123",
+          },
+        );
+        assert.deepStrictEqual(result, responseWithErrors.data);
+        sinon.assert.notCalled(showWarningNotificationWithButtonsStub);
+      });
+
+      for (const testCaseValue of [false, true]) {
+        it(`should show error if response only had errors independent of showPartialErrors: ${testCaseValue}`, async () => {
+          const responseWithOnlyErrors: GraphQLResponse = {
+            data: null,
+            errors: [{ message: "Some error occurred" }],
+          };
+
+          fetchStub.resolves({
+            ok: true,
+            json: async () => responseWithOnlyErrors,
+          } as Response);
+
+          const showWarningNotificationWithButtonsStub = sandbox.stub(
+            notifications,
+            "showWarningNotificationWithButtons",
+          );
+
+          await assert.rejects(
+            handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, testCaseValue, {
+              id: "123",
+            }),
+            (err) => {
+              assert.strictEqual(
+                (err as Error).message,
+                "GraphQL query failed: Some error occurred",
+              );
+              return true;
+            },
+          );
+          sinon.assert.notCalled(showWarningNotificationWithButtonsStub);
+        });
+      }
+    });
     it("should call fetch and de-json successfully with single in-flight query", async () => {
-      const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+      const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "123",
       });
 
@@ -274,10 +371,10 @@ describe("sidecarHandle sandbox tests", () => {
 
     it("handles multiple awaiters for the same query", async () => {
       // Call the query twice concurrently, exercising the in-flight promise cache.
-      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "123",
       });
-      const queryPromise2 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+      const queryPromise2 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "123",
       });
 
@@ -295,10 +392,10 @@ describe("sidecarHandle sandbox tests", () => {
 
     it("Separate queries with different variables should not share the same cache entry", async () => {
       // Call the query twice with different variables, should not share the same cache entry.
-      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "123",
       });
-      const queryPromise2 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+      const queryPromise2 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "456",
       });
 
@@ -316,10 +413,10 @@ describe("sidecarHandle sandbox tests", () => {
     // Likewise separate connection ids
     it("Separate queries with different connection ids should not share the same cache entry", async () => {
       // Call the query twice with different variables, should not share the same cache entry.
-      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+      const queryPromise1 = handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
         id: "123",
       });
-      const queryPromise2 = handle.query(organizationQuery, constants.LOCAL_CONNECTION_ID, {
+      const queryPromise2 = handle.query(organizationQuery, constants.LOCAL_CONNECTION_ID, true, {
         id: "123",
       });
 
@@ -339,12 +436,14 @@ describe("sidecarHandle sandbox tests", () => {
       const queryPromise1 = handle.query(
         organizationQuery,
         constants.CCLOUD_CONNECTION_ID,
+        true,
         // @ts-expect-error We are intentionally passing undefined here to simulate no variables, but don't have a better query onhand.
         undefined,
       );
       const queryPromise2 = handle.query(
         organizationQuery,
         constants.CCLOUD_CONNECTION_ID,
+        true,
         // @ts-expect-error See above.
         undefined,
       );
@@ -366,7 +465,7 @@ describe("sidecarHandle sandbox tests", () => {
       fetchStub.rejects(new Error(errorMessage));
 
       await assert.rejects(
-        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, { id: "123" }),
+        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, { id: "123" }),
         (err) => {
           assert.strictEqual((err as Error).message, errorMessage);
           return true;
@@ -384,7 +483,7 @@ describe("sidecarHandle sandbox tests", () => {
       } as Response);
 
       await assert.rejects(
-        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, { id: "123" }),
+        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, { id: "123" }),
         (err) => {
           assert.strictEqual((err as Error).message, "GraphQL query failed: Bad Query");
           return true;
@@ -402,7 +501,7 @@ describe("sidecarHandle sandbox tests", () => {
       } as Response);
 
       await assert.rejects(
-        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, { id: "123" }),
+        handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, { id: "123" }),
         (err) => {
           assert.strictEqual(
             (err as Error).message,
@@ -446,7 +545,7 @@ describe("sidecarHandle sandbox tests", () => {
           "showWarningNotificationWithButtons",
         );
 
-        const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, {
+        const result = await handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, true, {
           id: "123",
         });
         assert.deepStrictEqual(result, responseWithErrors.data);

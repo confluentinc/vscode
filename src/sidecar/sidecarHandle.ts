@@ -442,10 +442,20 @@ export class SidecarHandle {
    * All such concurrent requests will return the same result.
    *
    * Any Error raised by the fetch() call will be propagated to the caller.
+   *
+   * @param query The GraphQL query document, created via the `graphql` template tag from `gql.tada`.
+   * @param connectionId The connection ID to set in the `x-connection-id` header.
+   * @param showPartialErrors If true, if the response contains both `data` and `errors`, log the errors
+   * and show a warning notification to the user, but still return the `data`. If false, will not show a
+   * notification, but will still log the errors.
+   * @param variables Optional variables for the GraphQL query. Omit or pass `undefined` if there are no variables.
+   * @returns The `data` portion of the GraphQL response.
+   * @throws {Error} if the fetch fails, or if the response contains `errors` and `showPartialErrors` is false.
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
     connectionId: ConnectionId,
+    showPartialErrors: boolean,
     // Mark third parameter as optional if Variables is an empty object type
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
@@ -521,7 +531,7 @@ export class SidecarHandle {
       });
       throw new Error(errorString);
     } else if (payload.errors) {
-      // If we got a response with data but also errors, log the errors and then also show the
+      // If we got a response with data but also errors, log the errors and then also perhaps show the
       // user a warning.
 
       const errorMessages: string[] = payload.errors.map((error) => error.message);
@@ -541,7 +551,12 @@ export class SidecarHandle {
         response: JSON.stringify(payload),
       });
 
-      void showWarningNotificationWithButtons(message);
+      if (showPartialErrors) {
+        // Show the warning message to the user if allowed (disallowed in local resources fetching
+        // since we know we query both Kafka and Schema Registry connections, but schema registry
+        // image may still be starting up.
+        void showWarningNotificationWithButtons(message);
+      }
 
       // fall through to return the data anyway, as the query "was at least partially successful".
     }
