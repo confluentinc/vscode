@@ -203,13 +203,19 @@ class DirectConnectFormViewModel extends ViewModel {
     }
     // The switch statement performs local side effects for certain inputs
     switch (input.name) {
-      case "formconnectiontype":
+      case "formConnectionType": {
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
         }
+        // Update auth type if it isn't valid for platform choice
+        const validAuthTypes = this.getValidKafkaAuthTypes().map((option) => option.value);
+        if (!validAuthTypes.includes(this.kafkaAuthType())) {
+          this.kafkaAuthType(validAuthTypes[0]);
+        }
         break;
+      }
       case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         break;
@@ -314,7 +320,7 @@ class DirectConnectFormViewModel extends ViewModel {
     }
 
     if (
-      data["formconnectiontype"] === "WarpStream" &&
+      data["formConnectionType"] === "WarpStream" &&
       data["kafka_cluster.auth_type"] === "SCRAM"
     ) {
       // Enforce SCRAM_SHA_512 for WarpStream in the data; that's all WarpStream supports
@@ -326,7 +332,7 @@ class DirectConnectFormViewModel extends ViewModel {
       data["kafka_cluster.client_id_suffix"] = "";
     }
 
-    if (data["formconnectiontype"] === "Confluent Cloud") {
+    if (data["formConnectionType"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.ssl.enabled"] = "true";
       data["schema_registry.ssl.enabled"] = "true";
