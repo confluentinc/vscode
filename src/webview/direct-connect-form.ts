@@ -209,7 +209,13 @@ class DirectConnectFormViewModel extends ViewModel {
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
         }
+        // Update auth type if it isn't valid for platform choice
+        const validAuthTypes = this.getValidKafkaAuthTypes().map((option) => option.value);
+        if (!validAuthTypes.includes(this.kafkaAuthType())) {
+          this.kafkaAuthType(validAuthTypes[0]);
+        }
         break;
+      }
       case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         break;
