@@ -8,7 +8,6 @@ import {
   SystemApi,
   SystemEventsRequest,
 } from "../clients/docker";
-import { LOCAL_MEDUSA_INTERNAL_PORT } from "../constants";
 import { ContextValues, setContextValue } from "../context/values";
 import {
   localKafkaConnected,
@@ -24,7 +23,8 @@ import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
-import { getContainer } from "./containers";
+import { LocalResourceWorkflow } from "./workflows/base";
+import { MedusaWorkflow } from "./workflows/medusa";
 
 const logger = new Logger("docker.eventListener");
 
@@ -363,7 +363,8 @@ export class EventListener {
           title: "Waiting for local resources to be ready...",
         },
         async () => {
-          started = await this.waitForMedusa(containerId);
+          const workflow = LocalResourceWorkflow.getMedusaWorkflow() as MedusaWorkflow; //todo Patrick: make generic
+          started = await workflow.waitForReadiness(containerId);
         },
       );
       await setContextValue(ContextValues.localMedusaAvailable, started);
@@ -445,80 +446,6 @@ export class EventListener {
       logger.debug(`error checking container state, waiting and trying again...`, { error });
     }
     return false;
-  }
-  /**
-   * Generic health check method for any containerized service.
-   */
-  async waitForServiceHealthCheck(
-    containerId: string,
-    internalPort: number,
-    healthEndpoint: string,
-    serviceName: string,
-    maxWaitTimeSec: number = 60,
-    requestTimeoutMs: number = 5000,
-  ): Promise<boolean> {
-    try {
-      let container: ContainerInspectResponse;
-      try {
-        container = await getContainer(containerId);
-      } catch (error) {
-        logger.error(
-          `Failed to inspect container ${containerId} for ${serviceName} health check:`,
-          error,
-        );
-        return false;
-      }
-      const portBindings = container.HostConfig?.PortBindings;
-      const externalPort = portBindings?.[`${internalPort}/tcp`]?.[0]?.HostPort;
-
-      if (!externalPort) {
-        logger.debug(
-          `Failed to find ${serviceName} external port mapping for port ${internalPort}`,
-        );
-        return false;
-      }
-
-      const healthUrl = `http://localhost:${externalPort}${healthEndpoint}`;
-      logger.debug(`Starting ${serviceName} health check at ${healthUrl}`);
-
-      const healthCheckStartTime = Date.now();
-      while (Date.now() - healthCheckStartTime < maxWaitTimeSec * 1000) {
-        try {
-          const response = await fetch(healthUrl, {
-            method: "GET",
-            signal: AbortSignal.timeout(requestTimeoutMs),
-          });
-
-          if (response.ok) {
-            logger.debug(`${serviceName} health check succeeded`);
-            return true;
-          }
-        } catch {
-          // Ignore individual request failures, keep trying
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      logger.debug(`${serviceName} health check timed out after ${maxWaitTimeSec}s`);
-      return false;
-    } catch (error) {
-      logger.error(`Error during ${serviceName} health check:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Wait for Medusa to be healthy and ready to serve requests.
-   */
-  async waitForMedusa(containerId: string, maxWaitTimeSec: number = 60): Promise<boolean> {
-    return this.waitForServiceHealthCheck(
-      containerId,
-      LOCAL_MEDUSA_INTERNAL_PORT,
-      "/v1/generators/categories",
-      "Medusa",
-      maxWaitTimeSec,
-    );
   }
 
   /** Make a request to `/containers/{id}/logs` and return a readable stream, then match the incoming
