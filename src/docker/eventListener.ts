@@ -23,6 +23,8 @@ import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
+import { LocalResourceWorkflow } from "./workflows/base";
+import { MedusaWorkflow } from "./workflows/medusa";
 
 const logger = new Logger("docker.eventListener");
 
@@ -355,6 +357,16 @@ export class EventListener {
       await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
       localSchemaRegistryConnected.fire(started);
     } else if (imageName.startsWith(medusaImage)) {
+      await window.withProgress(
+        {
+          location: { viewId: "confluent-resources" },
+          title: "Waiting for local resources to be ready...",
+        },
+        async () => {
+          const workflow = LocalResourceWorkflow.getMedusaWorkflow() as MedusaWorkflow; //todo Patrick: make generic
+          started = await workflow.waitForReadiness(containerId);
+        },
+      );
       await setContextValue(ContextValues.localMedusaAvailable, started);
       localMedusaConnected.fire(started);
     }
