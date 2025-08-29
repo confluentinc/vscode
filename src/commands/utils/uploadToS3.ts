@@ -44,7 +44,7 @@ export async function uploadFileToS3({
     logger.debug(`Added ${Object.keys(uploadFormData).length} formData fields`);
     formData.append("file", file);
 
-    const response = await fetch("https://test.s3.amazonaws.com/file.jar", {
+    const response = await fetch(presignedUrl, {
       method: "POST",
       body: formData,
     });
