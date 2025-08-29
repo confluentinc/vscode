@@ -863,7 +863,7 @@
           },
           "confluent.localDocker.kafkaImageTag": {
             "type": "string",
-            "default": "7.9.0",
+            "default": "latest",
             "description": "Docker image tag to use when starting a local Kafka container"
           },
           "confluent.localDocker.schemaRegistryImageRepo": {
@@ -876,7 +876,7 @@
           },
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
-            "default": "7.9.0",
+            "default": "latest",
             "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
           }
         }
