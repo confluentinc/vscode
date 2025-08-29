@@ -267,7 +267,7 @@ export async function getCatalogDatabaseFromMetadata(
       database = CCloudKafkaCluster.create({ ...cluster });
     } else {
       logger.warn("database provider/region does not match compute pool provider/region", {
-        database,
+        database: cluster,
         computePool,
       });
     }
