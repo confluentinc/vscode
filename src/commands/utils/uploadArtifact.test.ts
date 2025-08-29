@@ -135,7 +135,8 @@ describe("uploadArtifact", () => {
       http_endpoint: "",
     };
     const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
-    const mockFileUri = vscode.Uri.file("/path/to/file.jar");
+    const mockFileName = "mock-file";
+    const mockFileUri = vscode.Uri.file(`/path/to/${mockFileName}.jar`);
     beforeEach(() => {
       flinkCcloudEnvironmentQuickPickStub = sandbox.stub(
         environments,
@@ -210,6 +211,23 @@ describe("uploadArtifact", () => {
         warningNotificationStub,
         "Upload Artifact cancelled: Artifact name is required.",
       );
+    });
+
+    it("should prefill artifact name with file base name when selecting a file", async () => {
+      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
+      cloudProviderRegionQuickPickStub.resolves({
+        ...fakeCloudProviderRegion,
+        provider: "AZURE",
+      });
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves(mockFileName);
+
+      const result = await promptForArtifactUploadParams();
+
+      sinon.assert.calledWithMatch(showInputBoxStub, sinon.match({ value: mockFileName }));
+      assert.deepStrictEqual(result?.selectedFile, mockFileUri);
     });
 
     it("returns the correct Artifact upload parameters", async () => {
