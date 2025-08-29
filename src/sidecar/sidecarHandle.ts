@@ -450,7 +450,7 @@ export class SidecarHandle {
    * notification, but will still log the errors.
    * @param variables Optional variables for the GraphQL query. Omit or pass `undefined` if there are no variables.
    * @returns The `data` portion of the GraphQL response.
-   * @throws {Error} if the fetch fails, or if the response contains `errors` and `showPartialErrors` is false.
+   * @throws {Error} if the fetch fails entirely, or returns only `error` payload w/o also `data`.
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
