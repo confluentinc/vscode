@@ -26,7 +26,7 @@ export async function getOrganizations(): Promise<CCloudOrganization[]> {
   const sidecar = await getSidecar();
   let response;
   try {
-    response = await sidecar.query(query, CCLOUD_CONNECTION_ID, false, {
+    response = await sidecar.query(query, CCLOUD_CONNECTION_ID, true, {
       id: CCLOUD_CONNECTION_ID,
     });
   } catch (error) {
