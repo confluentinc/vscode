@@ -221,11 +221,16 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
 
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
-      assert.strictEqual(codeLenses.length, 3);
+      assert.strictEqual(codeLenses.length, 4);
 
-      const poolLens = codeLenses[0];
-      const dbLens = codeLenses[1];
-      const resetLens = codeLenses[2];
+      const submitLens = codeLenses[0];
+      const poolLens = codeLenses[1];
+      const dbLens = codeLenses[2];
+      const resetLens = codeLenses[3];
+
+      assert.strictEqual(submitLens.command?.command, "confluent.statements.create");
+      assert.strictEqual(submitLens.command?.title, "▶️ Submit Statement");
+      assert.deepStrictEqual(submitLens.command?.arguments, [fakeDocument.uri, pool, undefined]);
 
       assert.strictEqual(dbLens.command?.command, "confluent.document.flinksql.setCCloudDatabase");
       assert.strictEqual(dbLens.command?.title, "Set Catalog & Database");
@@ -288,6 +293,51 @@ describe("codelens/flinkSqlProvider.ts FlinkSqlCodelensProvider", () => {
     );
     assert.strictEqual(poolLens.command?.title, pool.name);
     assert.deepStrictEqual(poolLens.command?.arguments, [fakeDocument.uri, database]);
+
+    assert.strictEqual(
+      resetLens.command?.command,
+      "confluent.document.flinksql.resetCCloudMetadata",
+    );
+    assert.strictEqual(resetLens.command?.title, "Clear Settings");
+    assert.deepStrictEqual(resetLens.command?.arguments, [fakeDocument.uri]);
+  });
+
+  it("should provide 'Submit Statement' codelens when only a compute pool is set (without database)", async () => {
+    const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+    // simulate stored compute pool metadata (but no database)
+    resourceManagerStub.getUriMetadata.resolves({
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+      // no database metadata set
+    });
+    const envWithPool: CCloudEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      flinkComputePools: [pool],
+    });
+    ccloudLoaderStub.getEnvironments.resolves([envWithPool]);
+
+    const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+    assert.strictEqual(codeLenses.length, 4);
+
+    const submitLens = codeLenses[0];
+    const poolLens = codeLenses[1];
+    const dbLens = codeLenses[2];
+    const resetLens = codeLenses[3];
+
+    assert.strictEqual(submitLens.command?.command, "confluent.statements.create");
+    assert.strictEqual(submitLens.command?.title, "▶️ Submit Statement");
+    assert.deepStrictEqual(submitLens.command?.arguments, [fakeDocument.uri, pool, undefined]);
+
+    assert.strictEqual(
+      poolLens.command?.command,
+      "confluent.document.flinksql.setCCloudComputePool",
+    );
+    assert.strictEqual(poolLens.command?.title, pool.name);
+    assert.deepStrictEqual(poolLens.command?.arguments, [fakeDocument.uri, undefined]);
+
+    assert.strictEqual(dbLens.command?.command, "confluent.document.flinksql.setCCloudDatabase");
+    assert.strictEqual(dbLens.command?.title, "Set Catalog & Database");
+    assert.deepStrictEqual(dbLens.command?.arguments, [fakeDocument.uri, pool]);
 
     assert.strictEqual(
       resetLens.command?.command,

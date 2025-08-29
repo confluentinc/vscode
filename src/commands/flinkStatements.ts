@@ -70,7 +70,8 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
  *  2) Create **statement name** (auto-generated from template pattern, but user can override)
  *  3) (If no `pool` is passed): show a quickpick to **choose a Flink compute pool** to send the statement
  *  4) (if no `database` is passed): show a quickpick to **choose a database** (Kafka cluster) to
- *     submit along with the **catalog name** (the environment, inferable from the chosen database).
+ *     submit along with the **catalog name** (the environment, inferable from the chosen database),
+ *     user can choose to skip this, their query will only work if the table name is fully qualified.
  *  5) Submit!
  *  6) Show error notification for any submission errors.
  *  7) Refresh the statements view if the view is focused on the chosen compute pool.
@@ -121,11 +122,8 @@ export async function submitFlinkStatementCommand(
   const currentDatabaseKafkaCluster: KafkaCluster | undefined = validDatabaseProvided
     ? database
     : await flinkDatabaseQuickpick(computePool);
-  if (!currentDatabaseKafkaCluster) {
-    funcLogger.debug("User canceled the default database quickpick");
-    return;
-  }
-  const currentDatabase = currentDatabaseKafkaCluster.name;
+  // Database selection is now optional - user can dismiss the quickpick and submit without it
+  const currentDatabase = currentDatabaseKafkaCluster?.name;
 
   // 5. Prep to submit, submit.
   const submission: IFlinkStatementSubmitParameters = {
@@ -135,7 +133,7 @@ export async function submitFlinkStatementCommand(
     hidden: false, // Do not create a hidden statement, the user authored it.
     properties: new FlinkSpecProperties({
       currentDatabase,
-      currentCatalog: currentDatabaseKafkaCluster.environmentId,
+      currentCatalog: currentDatabaseKafkaCluster?.environmentId,
       localTimezone: localTimezoneOffset(),
     }),
   };

@@ -34,6 +34,8 @@ export type KafkaClusterQuickPickOptions = {
   placeHolder?: string;
   /** Function to filter the list of Kafka clusters before making quickpick items. */
   filter?: KafkaClusterFilter;
+  /** When true, adds a "Skip" option at the bottom of the list that returns undefined when selected */
+  allowSkip?: boolean;
 };
 
 /**
@@ -157,6 +159,20 @@ export async function kafkaClusterQuickPick(
     });
   }
 
+  // Add skip option at the bottom if requested
+  if (options.allowSkip) {
+    clusterItems.push({
+      kind: QuickPickItemKind.Separator,
+      label: "Must use fully qualified table name",
+    });
+    clusterItems.push({
+      label: "Skip",
+      description: "Continue without selecting a database",
+      iconPath: new ThemeIcon("testing-skipped-icon"),
+      value: null as any,
+    });
+  }
+
   // prompt the user to select a Kafka Cluster
   const chosenClusterItem: QuickPickItemWithValue<KafkaCluster> | undefined =
     await window.showQuickPick(clusterItems, {
@@ -171,7 +187,7 @@ export async function kafkaClusterQuickPick(
  * @param computePool The compute pool to use as the context for the quickpick (limits to clusters in same cloud provider/region).
  * @param placeholder Optionally override the placeholder text for the quickpick.
  *                    Defaults to "Select the Kafka cluster to use as the default database for the statement".
- * @returns chosen Kafka cluster or undefined if the user cancels the quickpick.
+ * @returns chosen Kafka cluster or undefined if the user cancels the quickpick or selects "Skip".
  */
 export async function flinkDatabaseQuickpick(
   computePool: CCloudFlinkComputePool,
@@ -179,6 +195,7 @@ export async function flinkDatabaseQuickpick(
 ): Promise<KafkaCluster | undefined> {
   return await kafkaClusterQuickPick({
     placeHolder: placeholder,
+    allowSkip: true,
     filter: (cluster: KafkaCluster) => {
       if (!isCCloud(cluster)) {
         // Only CCloud clusters are supported for Flink compute pools.

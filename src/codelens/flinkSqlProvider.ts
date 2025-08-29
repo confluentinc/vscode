@@ -140,7 +140,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
     };
     const resetLens = new CodeLens(range, resetCommand);
 
-    if (computePool && database) {
+    if (computePool) {
       const submitCommand: Command = {
         title: "▶️ Submit Statement",
         command: "confluent.statements.create",
@@ -151,7 +151,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
       // show the "Submit Statement" | <current pool> | <current catalog+db> codelenses
       codeLenses.push(submitLens, computePoolLens, databaseLens, resetLens);
     } else {
-      // don't show the submit codelens if we don't have a compute pool and database
+      // don't show the submit codelens if we don't have a compute pool
       codeLenses.push(computePoolLens, databaseLens, resetLens);
     }
 
