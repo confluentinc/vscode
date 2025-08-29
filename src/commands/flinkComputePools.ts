@@ -1,6 +1,5 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { currentFlinkArtifactsPoolChanged } from "../emitters";
 import {
   ENABLE_FLINK_ARTIFACTS,
   FLINK_CONFIG_COMPUTE_POOL,
@@ -14,6 +13,7 @@ import {
   flinkComputePoolQuickPickWithViewProgress,
 } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
+import { FlinkArtifactsUDFsViewProvider } from "../viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 const logger = new Logger("commands.flinkComputePools");
@@ -91,16 +91,29 @@ export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkCompu
 
 /** Select a {@link FlinkComputePool} to focus in the "Artifacts" view. */
 export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComputePool) {
-  // the user either clicked a pool in the Flink Artifacts view or used the command palette
-  const pool: CCloudFlinkComputePool | undefined =
-    item instanceof CCloudFlinkComputePool
-      ? item
-      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink-artifacts");
-  if (!pool) {
+  // the user either clicked a pool in the Flink Artifacts/UDFs view or used the command palette
+
+  // If invoked with a non-pool argument (e.g., an artifact item), prompt for a pool and preselect the
+  // current Artifacts view pool if exactly one is focused.
+  if (!item || !(item instanceof CCloudFlinkComputePool)) {
+    item = await flinkComputePoolQuickPickWithViewProgress(
+      "confluent-flink-artifacts",
+      FlinkArtifactsUDFsViewProvider.getInstance().computePool,
+    );
+  }
+
+  if (!item) {
+    // none provided by caller and then user canceled the quickpick
     return;
   }
-  currentFlinkArtifactsPoolChanged.fire(pool);
+
+  // Focus the Flink Artifacts view to make sure it is visible.
   commands.executeCommand("confluent-flink-artifacts.focus");
+
+  // Inform the Flink Artifacts view that the user has selected a new compute pool, and wait
+  // for the view to load the new pool's artifacts/UDFs.
+  const flinkArtifactsView = FlinkArtifactsUDFsViewProvider.getInstance();
+  await flinkArtifactsView.setParentResource(item);
 }
 
 /**
