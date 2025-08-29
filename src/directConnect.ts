@@ -277,9 +277,9 @@ export function getConnectionSpecFromFormData(
     id: connectionId ?? (randomUUID() as ConnectionId),
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
-    formConnectionType: formData["formconnectiontype"],
+    formConnectionType: formData["formConnectionType"],
   };
-  if (formData["formconnectiontype"] === "Other") {
+  if (formData["formConnectionType"] === "Other") {
     spec.specifiedConnectionType = formData["othertype"];
   }
 
@@ -357,7 +357,7 @@ export function getConnectionSpecFromFormData(
   }
 
   // When using WarpStream, maybe enable Kubernetes port-forwarding for connecting to agents
-  if (formData["formconnectiontype"] === "WarpStream") {
+  if (formData["formConnectionType"] === "WarpStream") {
     setValueAtPath(
       spec,
       "kafka_cluster.client_id_suffix",
