@@ -50,15 +50,19 @@ export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkCompu
 /**
  * Select a {@link FlinkComputePool} to focus in the "Statements" view.
  */
-export async function selectPoolForStatementsViewCommand(item?: CCloudFlinkComputePool) {
+export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkComputePool) {
   // the user either clicked a pool in the Flink Statements view or used the command palette
-  const pool: CCloudFlinkComputePool | undefined =
-    item instanceof CCloudFlinkComputePool
-      ? item
-      : await flinkComputePoolQuickPickWithViewProgress("confluent-flink-statements");
 
   if (!pool) {
-    // user canceled the quickpick
+    pool = await flinkComputePoolQuickPickWithViewProgress(
+      "confluent-flink-statements",
+      // Initially select whatever the view is currently set to. Will be null if not focused on exactly one pool.
+      FlinkStatementsViewProvider.getInstance().computePool,
+    );
+  }
+
+  if (!pool) {
+    // none provided by caller and then user canceled the quickpick
     return;
   }
 
