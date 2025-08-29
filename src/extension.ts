@@ -262,12 +262,12 @@ async function _activateExtension(
     ...registerExtraCommands(),
     ...registerDockerCommands(),
     ...registerProjectGenerationCommands(),
-    ...registerFlinkArtifactCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
+    ...registerFlinkArtifactCommands(),
     registerUploadArtifactCommand(),
     ...registerNewResourceViewCommands(),
   ];

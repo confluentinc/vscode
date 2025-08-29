@@ -673,6 +673,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.artifacts.query",
+        "title": "Register with Flink SQL",
+        "category": "Confluent: Artifacts"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -1303,6 +1308,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.artifacts.query",
+          "when": "true"
+        },
+        {
           "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
@@ -1753,6 +1762,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.query",
+          "when": "view == confluent-flink-artifacts",
           "group": "z_openInCloud"
         },
         {
