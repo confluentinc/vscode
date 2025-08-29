@@ -262,6 +262,15 @@ describe("sidecarHandle sandbox tests", () => {
     });
 
     describe("partial errors tests", () => {
+      let showWarningNotificationWithButtonsStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        showWarningNotificationWithButtonsStub = sandbox.stub(
+          notifications,
+          "showWarningNotificationWithButtons",
+        );
+      });
+
       it("should return data and show warning if response has both data and single error and showPartialErrors is true", async () => {
         const responseWithErrors: GraphQLResponse = {
           data: {
@@ -274,11 +283,6 @@ describe("sidecarHandle sandbox tests", () => {
           ok: true,
           json: async () => responseWithErrors,
         } as Response);
-
-        const showWarningNotificationWithButtonsStub = sandbox.stub(
-          notifications,
-          "showWarningNotificationWithButtons",
-        );
 
         const result = await handle.query(
           organizationQuery,
@@ -308,11 +312,6 @@ describe("sidecarHandle sandbox tests", () => {
           json: async () => responseWithErrors,
         } as Response);
 
-        const showWarningNotificationWithButtonsStub = sandbox.stub(
-          notifications,
-          "showWarningNotificationWithButtons",
-        );
-
         const result = await handle.query(
           organizationQuery,
           constants.CCLOUD_CONNECTION_ID,
@@ -336,11 +335,6 @@ describe("sidecarHandle sandbox tests", () => {
             ok: true,
             json: async () => responseWithOnlyErrors,
           } as Response);
-
-          const showWarningNotificationWithButtonsStub = sandbox.stub(
-            notifications,
-            "showWarningNotificationWithButtons",
-          );
 
           await assert.rejects(
             handle.query(organizationQuery, constants.CCLOUD_CONNECTION_ID, testCaseValue, {
