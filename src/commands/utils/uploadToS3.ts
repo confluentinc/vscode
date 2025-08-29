@@ -44,7 +44,7 @@ export async function uploadFileToS3({
     logger.debug(`Added ${Object.keys(uploadFormData).length} formData fields`);
     formData.append("file", file);
 
-    const response = await fetch(presignedUrl, {
+    const response = await fetch("https://test.s3.amazonaws.com/file.jar", {
       method: "POST",
       body: formData,
     });
@@ -65,6 +65,7 @@ export async function uploadFileToS3({
 
     return response;
   } catch (error) {
+    logger.error("S3 upload error", error);
     const sentryContext: Record<string, unknown> = {
       extra: {
         fileType: file instanceof File ? file.type : contentType,

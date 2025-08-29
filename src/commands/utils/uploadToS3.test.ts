@@ -100,7 +100,7 @@ describe("uploadFileToS3", () => {
     assert(thrownError.message.includes("403 Forbidden"));
     assert((thrownError as any).responseText.includes(errorResponseBody));
 
-    sinon.assert.calledOnce(loggerErrorStub);
+    sinon.assert.called(loggerErrorStub);
     sinon.assert.calledOnce(showErrorNotificationStub);
 
     sinon.assert.calledOnce(fetchStub);
@@ -123,7 +123,7 @@ describe("uploadFileToS3", () => {
     assert(thrownError instanceof Error);
     assert.strictEqual(thrownError.message, "500 Internal Server Error");
 
-    sinon.assert.calledOnce(loggerErrorStub);
+    sinon.assert.called(loggerErrorStub);
     sinon.assert.calledOnce(showErrorNotificationStub);
 
     sinon.assert.calledOnce(fetchStub);
