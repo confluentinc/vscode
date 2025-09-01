@@ -221,6 +221,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     });
   }
 
+  async waitForReadiness(containerId: string): Promise<boolean> {
+    console.log(containerId);
+    return false; // TODO Patrick: Add readiness check
+  }
+
   /** Create a Kafka container with the provided broker configuration and environment variables. */
   async createKafkaContainer(
     brokerConfig: KafkaBrokerConfig,
