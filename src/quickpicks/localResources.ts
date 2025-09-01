@@ -58,21 +58,21 @@ export async function localResourcesQuickPick(
     items.push(schemaRegistryItem);
   }
 
-  const medusaRepoTag = `${LOCAL_MEDUSA_IMAGE.value}:${LOCAL_MEDUSA_IMAGE_TAG.value}`;
-  const medusaItem: QuickPickItem = {
-    label: LocalResourceKind.Medusa,
-    iconPath: new ThemeIcon("server"),
-    description: medusaRepoTag,
-    detail: "A local Medusa service instance",
-    buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Configure Medusa Docker Image` }],
-  };
+  if (ENABLE_MEDUSA_CONTAINER.value) {
+    const medusaRepoTag = `${LOCAL_MEDUSA_IMAGE.value}:${LOCAL_MEDUSA_IMAGE_TAG.value}`;
+    const medusaItem: QuickPickItem = {
+      label: LocalResourceKind.Medusa,
+      iconPath: new ThemeIcon("server"),
+      description: medusaRepoTag,
+      detail: "A local Medusa service instance",
+      buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Configure Medusa Docker Image` }],
+    };
 
-  // show the Medusa item if Medusa isn't already running and this is the start workflow
-  // or if local Medusa is already running and this is the stop workflow
-  const medusaAvailable: boolean = getContextValue(ContextValues.localMedusaAvailable) === true;
-  if ((starting && !medusaAvailable) || (medusaAvailable && !starting)) {
-    // Only show Medusa option if the feature setting is enabled
-    if (ENABLE_MEDUSA_CONTAINER.value) {
+    // show the Medusa item if Medusa isn't already running and this is the start workflow
+    // or if local Medusa is already running and this is the stop workflow
+    const medusaAvailable: boolean = getContextValue(ContextValues.localMedusaAvailable) === true;
+    if ((starting && !medusaAvailable) || (medusaAvailable && !starting)) {
+      // Only show Medusa option if the feature setting is enabled
       items.push(medusaItem);
     }
   }
