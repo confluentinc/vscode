@@ -1,10 +1,3 @@
-/**
- * Default image tag to use for the local Schema Registry container.
- *
- * Must match the default value in the "confluent.docker.localSchemaRegistryImageTag" configuration in package.json.
- */
-export const DEFAULT_SCHEMA_REGISTRY_TAG = "latest";
-
 /** Network name to use when creating new Docker containers from the extension workflows. */
 export const DEFAULT_DOCKER_NETWORK = "vscode-confluent-local-network";
 
