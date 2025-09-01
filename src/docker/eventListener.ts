@@ -318,7 +318,6 @@ export class EventListener {
 
     // then if it's an image that requires a specific log line to appear before it's fully ready, wait
     // for that log line to appear before considering the container fully started
-    // TODO Patrick: Wait for Medusa log line
     const needToWaitForLog =
       imageName.startsWith(LOCAL_KAFKA_IMAGE.defaultValue) ||
       imageName.startsWith(LOCAL_SCHEMA_REGISTRY_IMAGE.defaultValue);
