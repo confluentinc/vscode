@@ -318,14 +318,22 @@ export class EventListener {
       return;
     }
 
+    logger.debug("container status shows 'running', checking container readiness...", {
+      imageName,
+    });
+
     await window.withProgress(
       {
         location: { viewId: "confluent-resources" },
         title: "Waiting for local resources to be ready...",
       },
       async () => {
-        const workflow = LocalResourceWorkflow.getWorkflowForKind(resourceKind);
-        started = await workflow.waitForReadiness(containerId);
+        if (resourceKind === LocalResourceKind.Kafka) {
+          started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
+        } else {
+          const workflow = LocalResourceWorkflow.getWorkflowForKind(resourceKind);
+          started = await workflow.waitForReadiness(containerId);
+        }
       },
     );
 
