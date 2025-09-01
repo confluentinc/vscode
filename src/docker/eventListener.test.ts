@@ -23,6 +23,8 @@ import {
 import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
 import { EventListener, SystemEventMessage } from "./eventListener";
+import { LocalResourceWorkflow } from "./workflows/base";
+import { MedusaWorkflow } from "./workflows/medusa";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",
@@ -536,10 +538,14 @@ describe("docker/eventListener.ts EventListener methods", function () {
     const waitForContainerRunningStub = sandbox
       .stub(eventListener, "waitForContainerState")
       .resolves(true);
-    // stub the waitForContainerLog method - note that Medusa containers don't wait for a log line
-    const waitForServerStartedLogStub = sandbox
-      .stub(eventListener, "waitForContainerLog")
-      .resolves(true);
+    // stub the getMedusaWorkflow method to return a mock workflow
+    const getMedusaWorkflowStub = sandbox.stub(LocalResourceWorkflow, "getMedusaWorkflow");
+    // create a mock workflow with a stubbed waitForReadiness method
+    const waitForReadinessStub = sandbox.stub().resolves(true);
+    const mockWorkflow = {
+      waitForReadiness: waitForReadinessStub,
+    } as unknown as MedusaWorkflow;
+    getMedusaWorkflowStub.returns(mockWorkflow);
     // stub the setContextValue and localMedusaConnected.fire methods so we can assert that they're called
     const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localMedusaConnectedFireStub = sandbox.stub(localMedusaConnected, "fire");
@@ -554,8 +560,9 @@ describe("docker/eventListener.ts EventListener methods", function () {
     await eventListener.handleContainerStartEvent(medusaEvent);
 
     assert.ok(waitForContainerRunningStub.calledOnce);
-    // Medusa containers don't wait for a specific log line, so this should NOT be called
-    assert.ok(waitForServerStartedLogStub.notCalled);
+    // Verify that the workflow's waitForReadiness method was called
+    assert.ok(getMedusaWorkflowStub.calledOnce);
+    assert.ok(waitForReadinessStub.calledOnceWith(TEST_CONTAINER_EVENT.id));
     assert.ok(
       setContextValueStub.calledOnceWith(contextValues.ContextValues.localMedusaAvailable, true),
     );
