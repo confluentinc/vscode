@@ -8,6 +8,7 @@ import {
   getContainersForImage,
   startContainer,
   stopContainer,
+  waitForServiceHealthCheck,
 } from "./containers";
 import * as dockerImages from "./images";
 
@@ -168,5 +169,90 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
 
     await assert.rejects(getContainer("1"), fakeError);
     assert.ok(containerInspectStub.calledOnce);
+  });
+});
+
+describe("docker/containers.ts waitForServiceHealthCheck", () => {
+  let sandbox: sinon.SinonSandbox;
+  let containerInspectStub: sinon.SinonStub;
+  let fetchStub: sinon.SinonStub;
+
+  const mockContainer: dockerClients.ContainerInspectResponse = {
+    Id: "test-container",
+    HostConfig: {
+      PortBindings: {
+        "8080/tcp": [{ HostPort: "9090", HostIp: "0.0.0.0" }],
+      },
+    },
+  };
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    containerInspectStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerInspect");
+    fetchStub = sandbox.stub(globalThis, "fetch");
+    containerInspectStub.resolves(mockContainer);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return true when service health check succeeds", async () => {
+    fetchStub.resolves({ ok: true, status: 200 });
+
+    const result = await waitForServiceHealthCheck(
+      "test-container",
+      8080,
+      "/health",
+      "TestService",
+    );
+
+    assert.strictEqual(result, true);
+    assert.ok(fetchStub.calledWith("http://localhost:9090/health"));
+  });
+
+  it("should return false when container inspection fails", async () => {
+    containerInspectStub.rejects(new Error("Container not found"));
+
+    const result = await waitForServiceHealthCheck(
+      "test-container",
+      8080,
+      "/health",
+      "TestService",
+    );
+
+    assert.strictEqual(result, false);
+    assert.ok(fetchStub.notCalled);
+  });
+
+  it("should return false when port mapping not found", async () => {
+    containerInspectStub.resolves({ Id: "test", HostConfig: { PortBindings: {} } });
+
+    const result = await waitForServiceHealthCheck(
+      "test-container",
+      8080,
+      "/health",
+      "TestService",
+    );
+
+    assert.strictEqual(result, false);
+    assert.ok(fetchStub.notCalled);
+  });
+
+  it("should retry failed requests and eventually succeed", async () => {
+    // First call fails, second call succeeds
+    fetchStub.onFirstCall().rejects(new Error("Connection refused"));
+    fetchStub.onSecondCall().resolves({ ok: true, status: 200 });
+
+    const result = await waitForServiceHealthCheck(
+      "test-container",
+      8080,
+      "/health",
+      "TestService",
+      5,
+    );
+
+    assert.strictEqual(result, true);
+    assert.strictEqual(fetchStub.callCount, 2);
   });
 });

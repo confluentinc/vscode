@@ -141,6 +141,61 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
   }
 }
 
+/**
+ * Generic health check method for any containerized service.
+ */
+export async function waitForServiceHealthCheck(
+  containerId: string,
+  internalPort: number,
+  healthEndpoint: string,
+  serviceName: string,
+  maxWaitTimeSec: number = 60,
+  requestTimeoutMs: number = 5000,
+): Promise<boolean> {
+  try {
+    const container = await getContainer(containerId);
+    const portBindings = getContainerPorts(container);
+    const externalPort = portBindings[`${internalPort}/tcp`];
+
+    if (!externalPort) {
+      logger.error(`Failed to find ${serviceName} external port mapping for port ${internalPort}`);
+      return false;
+    }
+
+    const healthUrl = `http://localhost:${externalPort}${healthEndpoint}`;
+    logger.debug(`Starting ${serviceName} health check at ${healthUrl}`);
+
+    const healthCheckStartTime = Date.now();
+    while (Date.now() - healthCheckStartTime < maxWaitTimeSec * 1000) {
+      try {
+        const response = await fetch(healthUrl, {
+          method: "GET",
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+
+        if (response.ok) {
+          logger.debug(`${serviceName} health check succeeded`);
+          return true;
+        }
+        logger.debug(
+          `${serviceName} health check failed with status ${response.status}, retrying...`,
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.debug(`${serviceName} health check request failed: ${errorMessage}, retrying...`);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    logger.warn(`${serviceName} health check timed out after ${maxWaitTimeSec}s`);
+    return false;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Critical error during ${serviceName} health check: ${errorMessage}`);
+    return false;
+  }
+}
 export function getContainerEnvVars(container: ContainerInspectResponse): Record<string, string> {
   const envVars: Record<string, string> = {};
   container.Config?.Env?.forEach((envVar) => {
