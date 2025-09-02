@@ -145,24 +145,14 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
  * Generic health check method for any containerized service.
  */
 export async function waitForServiceHealthCheck(
-  containerId: string,
-  internalPort: number,
+  containerPort: string,
   healthEndpoint: string,
   serviceName: string,
   maxWaitTimeSec: number = 60,
   requestTimeoutMs: number = 5000,
 ): Promise<boolean> {
   try {
-    const container = await getContainer(containerId);
-    const portBindings = getContainerPorts(container);
-    const externalPort = portBindings[`${internalPort}/tcp`];
-
-    if (!externalPort) {
-      logger.error(`Failed to find ${serviceName} external port mapping for port ${internalPort}`);
-      return false;
-    }
-
-    const healthUrl = `http://localhost:${externalPort}${healthEndpoint}`;
+    const healthUrl = `http://localhost:${containerPort}${healthEndpoint}`;
     logger.debug(`Starting ${serviceName} health check at ${healthUrl}`);
 
     const healthCheckStartTime = Date.now();
@@ -217,4 +207,13 @@ export function getContainerPorts(container: ContainerInspectResponse): Record<s
     });
   }
   return ports;
+}
+
+export function getFirstExternalPort(container: ContainerInspectResponse): string {
+  const ports = Object.values(getContainerPorts(container));
+  if (ports.length === 0) {
+    logger.error("No external ports found for container", { containerId: container.Id });
+    return "";
+  }
+  return ports[0];
 }

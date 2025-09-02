@@ -119,6 +119,8 @@ export abstract class LocalResourceWorkflow {
     ...args: any[]
   ): Promise<void>;
 
+  abstract waitForReadiness(containerId: string): Promise<boolean>;
+
   /**
    * Common flow for attempting to start a container by its Start a specific container for a workflow by its provided ID. If any errors occur, a notification
    * will be shown to the user and no {@link ContainerInspectResponse} will be returned. */
