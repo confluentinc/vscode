@@ -17,6 +17,9 @@ import { MedusaWorkflow } from "./medusa";
 import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
 class TestWorkflow extends LocalResourceWorkflow {
+  waitForReadiness(containerId: string): Promise<boolean> {
+    throw new Error(containerId);
+  }
   protected logger = new Logger("test");
   resourceKind = "test";
 
