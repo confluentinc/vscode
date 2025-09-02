@@ -673,6 +673,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.artifacts.registerUDF",
+        "title": "Register Flink Artifact with Flink SQL",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -719,6 +724,11 @@
         "icon": "$(confluent-logo)",
         "title": "View in Confluent Cloud",
         "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.artifacts.registerUDF",
+        "title": "Register Flink Artifact with Flink SQL",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.openCCloudApiKeysUrl",
@@ -1753,6 +1763,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.registerUDF",
+          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
