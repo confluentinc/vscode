@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import { Disposable, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkArtifactUDFViewMode } from "../emitters";
@@ -15,12 +15,12 @@ CREATE FUNCTION \`yourFunctionNameHere\` AS 'your.class.NameHere' USING JAR 'con
 -- confirm with 'SHOW USER FUNCTIONS';
 `;
 
-  const document = await vscode.workspace.openTextDocument({
+  const document = await workspace.openTextDocument({
     language: "flinksql",
     content: placeholderQuery,
   });
 
-  await vscode.window.showTextDocument(document, { preview: false });
+  await window.showTextDocument(document, { preview: false });
 }
 
 export async function setFlinkArtifactsViewModeCommand() {
