@@ -726,8 +726,8 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.artifacts.query",
-        "title": "Query Flink Artifact with Flink SQL",
+        "command": "confluent.artifacts.registerUDF",
+        "title": "Register Flink Artifact with Flink SQL",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -1766,7 +1766,7 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.query",
+          "command": "confluent.artifacts.registerUDF",
           "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },

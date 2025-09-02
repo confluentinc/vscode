@@ -37,6 +37,6 @@ export function registerFlinkArtifactCommands(): Disposable[] {
       "confluent.flink.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
-    registerCommandWithLogging("confluent.artifacts.query", queryArtifactWithFlink),
+    registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
   ];
 }
