@@ -673,11 +673,6 @@
         "category": "Confluent: Topics"
       },
       {
-        "command": "confluent.artifacts.registerUDF",
-        "title": "Register with Flink SQL",
-        "category": "Confluent: Artifacts"
-      },
-      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
