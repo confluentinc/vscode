@@ -49,7 +49,6 @@ describe("deleteArtifactCommand", () => {
       sinon.assert.notCalled(showInformationMessageStub);
     });
     it("should call the sidecar to delete the artifact and show a success message", async () => {
-      // Return a MessageItem object to match the implementation's check
       sandbox.stub(vscode.window, "showWarningMessage").resolves({ title: "Yes, delete" });
       const showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
 
