@@ -726,6 +726,11 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.artifacts.query",
+        "title": "Query Flink Artifact with Flink SQL",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.openCCloudApiKeysUrl",
         "icon": "$(confluent-logo)",
         "title": "Manage API Keys in Confluent Cloud",
