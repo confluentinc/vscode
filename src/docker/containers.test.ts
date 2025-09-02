@@ -6,6 +6,7 @@ import {
   createContainer,
   getContainer,
   getContainersForImage,
+  getFirstExternalPort,
   startContainer,
   stopContainer,
   waitForServiceHealthCheck,
@@ -172,25 +173,60 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
   });
 });
 
+describe("docker/containers.ts getFirstExternalPort", () => {
+  it("should return the first external port when container has valid port bindings", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {
+          "8080/tcp": [{ HostPort: "9090" }],
+          "8081/tcp": [{ HostPort: "9091" }],
+        },
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "9090");
+  });
+
+  it("should return empty string when container has no external ports", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {},
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "");
+  });
+
+  it("should return empty string when port bindings exist but have no valid HostPort", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {
+          "8080/tcp": [{}], // No HostPort specified
+          "8081/tcp": [], // Empty array
+        },
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "");
+  });
+});
+
 describe("docker/containers.ts waitForServiceHealthCheck", () => {
   let sandbox: sinon.SinonSandbox;
-  let containerInspectStub: sinon.SinonStub;
   let fetchStub: sinon.SinonStub;
-
-  const mockContainer: dockerClients.ContainerInspectResponse = {
-    Id: "test-container",
-    HostConfig: {
-      PortBindings: {
-        "8080/tcp": [{ HostPort: "9090", HostIp: "0.0.0.0" }],
-      },
-    },
-  };
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    containerInspectStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerInspect");
     fetchStub = sandbox.stub(globalThis, "fetch");
-    containerInspectStub.resolves(mockContainer);
   });
 
   afterEach(() => {
@@ -200,43 +236,28 @@ describe("docker/containers.ts waitForServiceHealthCheck", () => {
   it("should return true when service health check succeeds", async () => {
     fetchStub.resolves({ ok: true, status: 200 });
 
-    const result = await waitForServiceHealthCheck(
-      "test-container",
-      8080,
-      "/health",
-      "TestService",
-    );
+    const result = await waitForServiceHealthCheck("9090", "/health", "TestService");
 
     assert.strictEqual(result, true);
     assert.ok(fetchStub.calledWith("http://localhost:9090/health"));
   });
 
-  it("should return false when container inspection fails", async () => {
-    containerInspectStub.rejects(new Error("Container not found"));
+  it("should return false when health check fails consistently", async () => {
+    fetchStub.rejects(new Error("Connection refused"));
 
-    const result = await waitForServiceHealthCheck(
-      "test-container",
-      8080,
-      "/health",
-      "TestService",
-    );
+    const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 3);
 
     assert.strictEqual(result, false);
-    assert.ok(fetchStub.notCalled);
+    assert.ok(fetchStub.called);
   });
 
-  it("should return false when port mapping not found", async () => {
-    containerInspectStub.resolves({ Id: "test", HostConfig: { PortBindings: {} } });
+  it("should return false when service returns non-ok status", async () => {
+    fetchStub.resolves({ ok: false, status: 503 });
 
-    const result = await waitForServiceHealthCheck(
-      "test-container",
-      8080,
-      "/health",
-      "TestService",
-    );
+    const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 3);
 
     assert.strictEqual(result, false);
-    assert.ok(fetchStub.notCalled);
+    assert.ok(fetchStub.called);
   });
 
   it("should retry failed requests and eventually succeed", async () => {
@@ -244,13 +265,7 @@ describe("docker/containers.ts waitForServiceHealthCheck", () => {
     fetchStub.onFirstCall().rejects(new Error("Connection refused"));
     fetchStub.onSecondCall().resolves({ ok: true, status: 200 });
 
-    const result = await waitForServiceHealthCheck(
-      "test-container",
-      8080,
-      "/health",
-      "TestService",
-      5,
-    );
+    const result = await waitForServiceHealthCheck("9090", "/health", "TestService", 5);
 
     assert.strictEqual(result, true);
     assert.strictEqual(fetchStub.callCount, 2);
