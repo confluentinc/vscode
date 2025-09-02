@@ -92,19 +92,13 @@ export async function uploadArtifactCommand(): Promise<void> {
  * Registers the "confluent.uploadArtifact" command with logging.
  */
 export function registerUploadArtifactCommand(): vscode.Disposable {
-  // Register both commands separately and return a Disposable that disposes both
-  const uploadDisposable = registerCommandWithLogging(
-    "confluent.uploadArtifact",
-    uploadArtifactCommand,
-  );
-  const deleteDisposable = registerCommandWithLogging(
-    "confluent.deleteArtifact",
-    deleteArtifactCommand,
-  );
-  return {
-    dispose: () => {
-      uploadDisposable.dispose();
-      deleteDisposable.dispose();
-    },
-  };
+  // Register only the upload command here
+  return registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand);
+}
+/**
+ * Registers the "confluent.uploadArtifact" command with logging.
+ */
+export function registerDeleteArtifactCommand(): vscode.Disposable {
+  // Register only the delete command here
+  return registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand);
 }
