@@ -279,6 +279,12 @@
         "enablement": "isDevelopment"
       },
       {
+        "command": "confluent.deleteArtifact",
+        "title": "Confluent: Delete Artifact",
+        "category": "Confluent: Flink Artifacts",
+        "enablement": "isDevelopment"
+      },
+      {
         "command": "confluent.connections.ccloud.signIn",
         "icon": "$(sign-in)",
         "title": "Sign in to Confluent Cloud",
