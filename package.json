@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-3",
+  "version": "1.7.0-5",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -868,7 +868,7 @@
           },
           "confluent.localDocker.kafkaImageTag": {
             "type": "string",
-            "default": "latest",
+            "default": "7.9.0",
             "description": "Docker image tag to use when starting a local Kafka container"
           },
           "confluent.localDocker.schemaRegistryImageRepo": {
@@ -881,7 +881,7 @@
           },
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
-            "default": "latest",
+            "default": "7.9.0",
             "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
           }
         }
