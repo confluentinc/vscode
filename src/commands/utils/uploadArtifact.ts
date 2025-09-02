@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import * as vscode from "vscode";
 import {
   CreateArtifactV1FlinkArtifact201Response,
@@ -122,7 +122,7 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
   const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
 
   const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name for the Artifact",
+    prompt: "Enter the artifact name for the artifact",
     value: defaultArtifactName,
     ignoreFocusOut: true,
     validateInput: (value) => (value && value.trim() ? undefined : "Artifact name is required"),
@@ -139,7 +139,7 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
     environment: environment.id,
     cloud,
     region: cloudRegion.region,
-    artifactName: artifactName.trim(),
+    artifactName,
     fileFormat,
     selectedFile,
   };

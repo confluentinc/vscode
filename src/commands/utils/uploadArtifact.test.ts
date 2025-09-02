@@ -225,7 +225,6 @@ describe("uploadArtifact", () => {
       );
     });
 
-<<<<<<< HEAD
     it("should prefill artifact name with file base name when selecting a file", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
       cloudProviderRegionQuickPickStub.resolves({
@@ -243,10 +242,7 @@ describe("uploadArtifact", () => {
       assert.deepStrictEqual(result?.selectedFile, mockFileUri);
     });
 
-    it("returns the correct Artifact upload parameters", async () => {
-=======
     it("returns the correct Artifact upload parameters for Azure", async () => {
->>>>>>> main
       flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
       // reset the region quick pick stub to return a valid Azure region
       cloudProviderRegionQuickPickStub.resolves({
