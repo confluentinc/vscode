@@ -223,62 +223,163 @@ export async function getCatalogDatabaseFromMetadata(
   computePool?: CCloudFlinkComputePool,
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
+  if (envs.length === 0) {
+    logger.warn("no environments available to look up catalog/database");
+    return catalogDatabase;
+  }
+
+  // first look up the default catalog/database from user settings
+  let defaultCatalog: CCloudEnvironment | undefined;
+  let defaultDatabase: CCloudKafkaCluster | undefined;
+  const defaults: CatalogDatabase = await getDefaultCatalogDatabase(envs);
+  if (defaults.catalog && defaults.database) {
+    defaultCatalog = defaults.catalog;
+    defaultDatabase = defaults.database;
+  }
+
+  // only fall back to the default values if metadata wasn't set at all, since `null` indicates
+  // it was cleared via the "Clear Settings" codelens
+  let catalogName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_NAME];
+  let catalogId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_ID];
+  if (defaultCatalog && (catalogName === undefined || catalogId === undefined)) {
+    catalogName = defaultCatalog.name;
+    catalogId = defaultCatalog.id;
+  }
+  let databaseName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_NAME];
+  let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+  if (defaultDatabase && (databaseName === undefined || databaseId === undefined)) {
+    databaseName = defaultDatabase.name;
+    databaseId = defaultDatabase.id;
+  }
+
+  if (!(catalogName && databaseName)) {
+    // no starting info to go off of (or the user cleared metadata settings), so just return empty
+    logger.warn("no catalog or database name stored in metadata");
+    return catalogDatabase;
+  }
+
+  // at this point, we should at least have the catalog and database names to check against
+  const matchingCatalogs: CCloudEnvironment[] = envs.filter((e) => e.name === catalogName);
+  const matchingDatabases: CCloudKafkaCluster[] = [];
+  for (const env of matchingCatalogs) {
+    const matchedDbs = env.kafkaClusters.filter((k) => k.name === databaseName);
+    matchingDatabases.push(...matchedDbs);
+  }
+  if (matchingCatalogs.length === 0 || matchingDatabases.length === 0) {
+    // no catalogs or databases found with the stored names, so just return empty
+    logger.warn(
+      "no matching catalogs or databases found from catalog/database names in document metadata",
+    );
+    return catalogDatabase;
+  }
+  if (matchingCatalogs.length === 1 && matchingDatabases.length === 1) {
+    logger.info("matched one catalog and one database from name-related metadata");
+    // ideal scenario: exactly one catalog and one database found based on the names alone
+    catalogDatabase.catalog = matchingCatalogs[0];
+    catalogDatabase.database = matchingDatabases[0];
+    return catalogDatabase;
+  }
+
+  // if we made it this far, we have multiple catalogs and/or databases to choose from
+  // so let's narrow the matches down further by one of two ways:
+  // 1. if we have the catalog and database IDs, filter with them since they're unique
+  // 2. if we have a compute pool, use its provider/region to match against the database
+  //   (and from it, the catalog)
+  if (catalogId && databaseId) {
+    logger.debug("multiple catalog/database name matches, checking against IDs", {
+      catalogId,
+      databaseId,
+    });
+    const matchedCatalog = matchingCatalogs.find((c) => c.id === catalogId);
+    const matchedDatabase = matchingDatabases.find((d) => d.id === databaseId);
+    if (matchedCatalog && matchedDatabase && matchedDatabase.environmentId === matchedCatalog.id) {
+      // found exact matches based on IDs
+      catalogDatabase.catalog = matchedCatalog;
+      catalogDatabase.database = matchedDatabase;
+      return catalogDatabase;
+    }
+    // fall through to the provider/region matching below
+    logger.warn(
+      "no matching catalogs or databases found from catalog/database IDs in document metadata",
+      { catalogId, databaseId },
+    );
+  }
+
+  if (!computePool) {
+    logger.warn("no compute pool to compare against");
+    return catalogDatabase;
+  }
+
+  logger.info(
+    "multiple catalog/database name matches, checking against compute pool region/provider",
+    { provider: computePool.provider, region: computePool.region },
+  );
+  const poolMatchedDatabases: CCloudKafkaCluster[] = [];
+  for (const db of matchingDatabases) {
+    if (db.provider === computePool.provider && db.region === computePool.region) {
+      poolMatchedDatabases.push(db);
+    }
+  }
+  if (poolMatchedDatabases.length === 0) {
+    // no databases found that match the compute pool's provider/region
+    logger.warn(
+      "no matching databases found from compute pool provider/region compared to database provider/region",
+      { provider: computePool.provider, region: computePool.region },
+    );
+    return catalogDatabase;
+  }
+  if (poolMatchedDatabases.length === 1) {
+    // exactly one database found that matches the compute pool's provider/region
+    const matchedDatabase = poolMatchedDatabases[0];
+    const matchedCatalog = matchingCatalogs.find((c) => c.id === matchedDatabase.environmentId);
+    if (matchedCatalog) {
+      catalogDatabase.catalog = matchedCatalog;
+      catalogDatabase.database = matchedDatabase;
+      logger.info(
+        "matched one catalog and one database from name-related metadata and compute pool provider/region",
+      );
+      return catalogDatabase;
+    }
+  }
+
+  // if we made it this far, we couldn't narrow down the matches to exactly one catalog and one database
+  logger.warn("could not narrow down to one catalog and one database from stored metadata");
+
+  return catalogDatabase;
+}
+
+/**
+ * Get the default catalog and database from user settings, if set.
+ * @param envs The environments to look up the catalog and database.
+ * @returns The `catalog` and `database`, if found
+ */
+export async function getDefaultCatalogDatabase(
+  envs: CCloudEnvironment[],
+): Promise<CatalogDatabase> {
+  let defaultCatalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
+  if (envs.length === 0) {
+    logger.warn("no environments available to look up default catalog/database");
+    return defaultCatalogDatabase;
+  }
 
   const defaultDatabaseId: string | undefined = FLINK_CONFIG_DATABASE.value;
-  // clearing will set the metadata to `null`, so we'll only fall back to the default value if
-  // the metadata is `undefined` (not set at all)
-  let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
-  if (databaseId === undefined) {
-    databaseId = defaultDatabaseId;
-  }
-  if (!databaseId) {
-    return catalogDatabase;
+  if (!defaultDatabaseId) {
+    return defaultCatalogDatabase;
   }
 
-  const catalog: CCloudEnvironment | undefined = envs.find((e) =>
-    e.kafkaClusters.some((k) => k.id === databaseId || k.name === databaseId),
-  );
-  if (!catalog) {
-    // no need to clear it since we'll show "Set Catalog & Database" codelens
-    logger.warn("catalog not found from stored database ID/name", { database: databaseId });
-    return catalogDatabase;
-  }
-
-  const cluster: CCloudKafkaCluster | undefined = catalog.kafkaClusters.find(
-    (k) => k.id === databaseId || k.name === databaseId,
-  );
-  if (!cluster) {
-    // shouldn't happen since we just looked it up in order to get the catalog
-    logger.warn("database not found from stored database ID/name", { database: databaseId });
-    return catalogDatabase;
-  }
-
-  // finding a database by ID is not enough, we need to check that the provider/region
-  // match the compute pool (if one is selected)
-  let database: CCloudKafkaCluster | undefined;
-  if (computePool) {
-    if (cluster.provider === computePool.provider && cluster.region === computePool?.region) {
-      // explicitly turn into a CCloudKafkaCluster since `submitFlinkStatementCommand` checks
-      // for a CCloudKafkaCluster instance
-      logger.debug("database provider/region matches compute pool provider/region", {
-        database: cluster,
-        computePool,
-      });
-      database = CCloudKafkaCluster.create({ ...cluster });
-    } else {
-      logger.warn("database provider/region does not match compute pool provider/region", {
-        database: cluster,
-        computePool,
-      });
+  // look up the default database ID across all environments, and from it, the catalog
+  for (const env of envs) {
+    const matchedDatabases: CCloudKafkaCluster[] = env.kafkaClusters.filter(
+      (cluster: CCloudKafkaCluster) => cluster.id === defaultDatabaseId,
+    );
+    if (matchedDatabases.length > 0) {
+      // not worrying about matching on more than ID, because if we have multiple matches, we have
+      // bigger problems
+      defaultCatalogDatabase.catalog = env;
+      defaultCatalogDatabase.database = matchedDatabases[0];
+      break;
     }
-  } else {
-    // no compute pool selected, so we can use the database as-is
-    logger.debug("no compute pool selected, using database without provider/region matching", {
-      database: cluster,
-    });
-    database = CCloudKafkaCluster.create({ ...cluster });
   }
 
-  catalogDatabase = { catalog, database };
-  return catalogDatabase;
+  return defaultCatalogDatabase;
 }
