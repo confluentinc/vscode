@@ -32,6 +32,8 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
   // docker/containers.ts+networks.ts wrapper function stubs
   let createContainerStub: sinon.SinonStub;
   let getContainersForImageStub: sinon.SinonStub;
+  let getContainerStub: sinon.SinonStub;
+  let waitForServiceHealthCheckStub: sinon.SinonStub;
   let createNetworkStub: sinon.SinonStub;
   let findFreePortStub: sinon.SinonStub;
 
@@ -59,6 +61,8 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
     getContainersForImageStub = sandbox
       .stub(dockerContainers, "getContainersForImage")
       .resolves([]);
+    getContainerStub = sandbox.stub(dockerContainers, "getContainer");
+    waitForServiceHealthCheckStub = sandbox.stub(dockerContainers, "waitForServiceHealthCheck");
     createNetworkStub = sandbox.stub(dockerNetworks, "createNetwork");
     findFreePortStub = sandbox.stub(ports, "findFreePort").resolves(8083);
 
@@ -278,14 +282,6 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
   });
 
   describe("waitForReadiness()", () => {
-    let getContainerStub: sinon.SinonStub;
-    let waitForServiceHealthCheckStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      getContainerStub = sandbox.stub(dockerContainers, "getContainer");
-      waitForServiceHealthCheckStub = sandbox.stub(dockerContainers, "waitForServiceHealthCheck");
-    });
-
     it("should return true when health check succeeds", async () => {
       const mockContainer: ContainerInspectResponse = {
         Id: "test-container-id",
@@ -302,7 +298,10 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
 
       assert.strictEqual(result, true);
       assert.ok(getContainerStub.calledOnceWith("test-container-id"));
-      assert.ok(waitForServiceHealthCheckStub.calledOnceWith("51475", "/health", "Medusa"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnce);
+      assert.ok(
+        waitForServiceHealthCheckStub.calledWith("51475", "/v1/generators/categories", "Medusa"),
+      );
     });
 
     it("should return false when health check fails", async () => {
@@ -321,7 +320,10 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
 
       assert.strictEqual(result, false);
       assert.ok(getContainerStub.calledOnceWith("test-container-id"));
-      assert.ok(waitForServiceHealthCheckStub.calledOnceWith("51475", "/health", "Medusa"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnce);
+      assert.ok(
+        waitForServiceHealthCheckStub.calledWith("51475", "/v1/generators/categories", "Medusa"),
+      );
     });
   });
 });
