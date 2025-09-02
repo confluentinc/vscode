@@ -8,7 +8,9 @@ import {
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
+import { CCloudEnvironment, Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { showInfoNotificationWithButtons } from "../notifications";
@@ -17,6 +19,7 @@ import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
+import { UriMetadata } from "../storage/types";
 
 const logger = new Logger("commands.documents");
 
@@ -110,15 +113,24 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
     return;
   }
 
+  const loader = CCloudResourceLoader.getInstance();
+  const env: Environment | undefined = await loader.getEnvironment(database.environmentId);
+  if (!env) {
+    return;
+  }
+  const catalog = env as CCloudEnvironment;
+  const metadata: UriMetadata = {
+    [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.name,
+    [UriMetadataKeys.FLINK_CATALOG_NAME]: catalog.name,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+    [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
+  };
+
   logger.debug("setting metadata for URI", {
     uri: uri.toString(),
-    [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+    ...metadata,
   });
-  await getResourceManager().setUriMetadataValue(
-    uri,
-    UriMetadataKeys.FLINK_DATABASE_ID,
-    database.id,
-  );
+  await getResourceManager().setUriMetadata(uri, metadata);
   uriMetadataSet.fire(uri);
 
   const defaultDatabaseId: string = FLINK_CONFIG_DATABASE.value;
@@ -166,8 +178,11 @@ export async function resetCCloudMetadataForUriCommand(uri?: Uri) {
   });
   // explicitly set to `null` instead of `undefined` so defaults from settings aren't used
   await getResourceManager().setUriMetadata(uri, {
-    [UriMetadataKeys.FLINK_DATABASE_ID]: null,
     [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: null,
+    [UriMetadataKeys.FLINK_CATALOG_ID]: null,
+    [UriMetadataKeys.FLINK_CATALOG_NAME]: null,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: null,
+    [UriMetadataKeys.FLINK_DATABASE_NAME]: null,
   });
   uriMetadataSet.fire(uri);
 }
