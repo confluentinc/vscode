@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import { Disposable } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkArtifactUDFViewMode } from "../emitters";
