@@ -45,4 +45,13 @@ describe("flinkArtifacts", () => {
     );
     sinon.assert.calledOnce(showTextDocStub);
   });
+  it("should return early if no artifact is provided", async () => {
+    const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
+    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
+
+    await queryArtifactWithFlink(undefined);
+
+    sinon.assert.notCalled(openTextDocStub);
+    sinon.assert.notCalled(showTextDocStub);
+  });
 });
