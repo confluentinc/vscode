@@ -16,6 +16,12 @@ import { ContainerInspectResponse, ContainerSummary, SystemApi } from "../../cli
 import { defaultRequestInit } from "../../docker/configs";
 import { LocalResourceKind } from "../../docker/constants";
 import { getContainer } from "../../docker/containers";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
+} from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import {
   getLocalKafkaContainers,
@@ -161,11 +167,28 @@ export class GetDockerContainersTool extends BaseLanguageModelTool<IGetDockerCon
     let confirmationMessage: MarkdownString;
 
     if (input.resourceKind) {
-      invocationMessage = `Get all Docker containers for resource kind: ${input.resourceKind}`;
+      // Get the specific Docker image repo:tag based on the resource kind and user settings
+      let imageRepoTag: string;
+      switch (input.resourceKind) {
+        case LocalResourceKind.Kafka:
+          imageRepoTag = `${LOCAL_KAFKA_IMAGE.value}:${LOCAL_KAFKA_IMAGE_TAG.value}`;
+          break;
+        case LocalResourceKind.SchemaRegistry:
+          imageRepoTag = `${LOCAL_SCHEMA_REGISTRY_IMAGE.value}:${LOCAL_SCHEMA_REGISTRY_IMAGE_TAG.value}`;
+          break;
+        default:
+          throw new Error(`Unsupported resource kind: ${input.resourceKind}`);
+      }
+
+      invocationMessage = `Get ${input.resourceKind} containers for configured image: ${imageRepoTag}`;
       confirmationMessage = new MarkdownString()
         .appendMarkdown(`## Docker Containers Lookup\n`)
         .appendMarkdown(
-          `This tool will look up all Docker containers associated with **${input.resourceKind}** resources. Results will include container details. Do you want to proceed?`,
+          `This will search for **${input.resourceKind}** containers using your configured image: **${imageRepoTag}**\n\n` +
+            `The search is based on your extension settings. If no containers are found, you may need to:\n` +
+            `- Create the container(s)\n` +
+            `- Update your image tag settings to match your local images\n\n` +
+            `Proceed with the search?`,
         );
     } else {
       invocationMessage = "No resource kind provided for Docker containers lookup.";

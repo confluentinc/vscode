@@ -31,6 +31,7 @@ export const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
 export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   resourceKind: string = "Kafka";
   static imageRepo = "confluentinc/confluent-local";
+  imageTag: string = LOCAL_KAFKA_IMAGE_TAG.value;
 
   logger = new Logger("docker.workflow.confluent-local");
 

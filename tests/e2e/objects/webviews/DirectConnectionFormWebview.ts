@@ -32,7 +32,7 @@ export class DirectConnectionForm extends Webview {
     return this.webview.locator("#name");
   }
   get connectionTypeDropdown(): Locator {
-    return this.webview.locator("#formconnectiontype");
+    return this.webview.locator("#formConnectionType");
   }
   get otherTypeField(): Locator {
     return this.webview.locator("#othertype");
