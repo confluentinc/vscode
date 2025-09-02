@@ -125,7 +125,7 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
       command: "confluent.document.flinksql.setCCloudDatabase",
       tooltip:
         catalog && database
-          ? `Catalog: ${catalog.name}, Database: ${database.name}`
+          ? `Catalog: ${catalog.name}, Database: ${database.name} (${database.provider} ${database.region})`
           : "Set Catalog & Database for Flink Statement",
       arguments: [document.uri, computePool],
     };
@@ -258,11 +258,16 @@ export async function getCatalogDatabaseFromMetadata(
     return catalogDatabase;
   }
 
-  // at this point, we should at least have the catalog and database names to check against
-  const matchingCatalogs: CCloudEnvironment[] = envs.filter((e) => e.name === catalogName);
+  // at this point, we should at least have the catalog and database names to check against, but
+  // unfortunately they may contain IDs instead of names, so we have to check both
+  const matchingCatalogs: CCloudEnvironment[] = envs.filter(
+    (catalog) => catalog.id === catalogName || catalog.name === catalogName,
+  );
   const matchingDatabases: CCloudKafkaCluster[] = [];
   for (const env of matchingCatalogs) {
-    const matchedDbs = env.kafkaClusters.filter((k) => k.name === databaseName);
+    const matchedDbs = env.kafkaClusters.filter(
+      (database) => database.id === databaseName || database.name === databaseName,
+    );
     matchingDatabases.push(...matchedDbs);
   }
   if (matchingCatalogs.length === 0 || matchingDatabases.length === 0) {
