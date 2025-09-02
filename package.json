@@ -280,7 +280,7 @@
       },
       {
         "command": "confluent.deleteArtifact",
-        "title": "Confluent: Delete Artifact",
+        "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },
@@ -1685,6 +1685,11 @@
           "command": "confluent.schemas.deleteSubject",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "schemas"
+        },
+        {
+          "command": "confluent.deleteArtifact",
+          "when": "view == confluent-flink-artifacts && viewItem =~ /.*-flink-artifact$/",
+          "group": "artifacts"
         },
         {
           "command": "confluent.schemas.upload",
