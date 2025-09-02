@@ -11,6 +11,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { UriMetadataKeys } from "../storage/constants";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
@@ -531,5 +532,56 @@ describe("codelens/flinkSqlProvider.ts getCatalogDatabaseFromMetadata()", () => 
 
     assert.strictEqual(catalogDb.catalog, testFlinkEnv);
     assert.strictEqual(catalogDb.database, undefined);
+  });
+
+  it("should select the correct database even if there are duplicate database names across catalogs", async () => {
+    const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+    const catalogName = "env_0";
+    const databaseName = "cluster_0";
+
+    // two Kafka clusters/databases, both of which share a common name/ID but are in different
+    // catalogs/environments and have different provider/region values
+    const correctDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      name: databaseName,
+    });
+    const incorrectDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      name: databaseName,
+      provider: "other-provider",
+      region: "other-region",
+    });
+    // two environments/catalogs, both of which include a Kafka cluster with the name we're trying
+    // to match against a statement's database ID/name
+    const correctCatalog: CCloudEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: "env1" as EnvironmentId,
+      name: catalogName,
+      flinkComputePools: [pool],
+      kafkaClusters: [correctDatabase],
+    });
+    const incorrectCatalog: CCloudEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: "env2" as EnvironmentId,
+      name: "Other Catalog",
+      flinkComputePools: [pool],
+      kafkaClusters: [incorrectDatabase],
+    });
+    // make sure the incorrect one shows up first in the list to prove that we're not just taking
+    // the first match we find
+    const envs = [incorrectCatalog, correctCatalog];
+    const metadata = {
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
+      [UriMetadataKeys.FLINK_CATALOG_ID]: correctCatalog.id,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: catalogName,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: correctDatabase.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: databaseName,
+    };
+
+    const catalogDb: CatalogDatabase = await getCatalogDatabaseFromMetadata(metadata, envs);
+
+    assert.deepStrictEqual(catalogDb.catalog, correctCatalog);
+    assert.deepStrictEqual(catalogDb.database, correctDatabase);
   });
 });
