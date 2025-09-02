@@ -306,7 +306,7 @@ export async function listFunctionsCommand(computePool: CCloudFlinkComputePool):
 
   if (!database) {
     logger.info("User cancelled database quickpick");
-    return [];
+    return;
   }
 
   const statementParams: IFlinkStatementSubmitParameters = {
