@@ -4441,7 +4441,7 @@ components:
     resource-api-key:
       type: http
       description: |
-        Authenticate with resource-specific API Keys using HTTP Basic Auth. Treat the resource-specific API Key ID 
+        Authenticate with resource-specific API Keys using HTTP Basic Auth. Treat the resource-specific API Key ID
         as the username and resource-specific API Key Secret as the password.
       scheme: basic
     external-access-token:
