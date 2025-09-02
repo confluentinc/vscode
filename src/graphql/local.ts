@@ -32,7 +32,11 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
   const sidecar = await getSidecar();
   let response;
   try {
-    response = await sidecar.query(query, LOCAL_CONNECTION_ID);
+    // Call with showPartialErrors=false to suppress error notifications for partial errors,
+    // which are expected for local connection if we're starting up both kafka and schema registry
+    // containers, but just queried sidecar and it could only contact Kafka (SR still coming online).
+    // When docker SR does come online, we'll re-query again and be happy.
+    response = await sidecar.query(query, LOCAL_CONNECTION_ID, false);
   } catch (error) {
     logError(error, "local resources", { extra: { connectionId: LOCAL_CONNECTION_ID } });
     showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
