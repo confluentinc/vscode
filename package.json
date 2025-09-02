@@ -673,7 +673,7 @@
         "category": "Confluent: Topics"
       },
       {
-        "command": "confluent.artifacts.query",
+        "command": "confluent.artifacts.registerUDF",
         "title": "Register with Flink SQL",
         "category": "Confluent: Artifacts"
       },
@@ -1308,10 +1308,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.artifacts.query",
-          "when": "true"
-        },
-        {
           "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
@@ -1766,7 +1762,7 @@
         },
         {
           "command": "confluent.artifacts.query",
-          "when": "view == confluent-flink-artifacts",
+          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
