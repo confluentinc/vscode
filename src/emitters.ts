@@ -143,3 +143,6 @@ export const artifactUploadCompleted = new vscode.EventEmitter<void>();
 
 /** Event emitter for switching Flink artifact/UDF view modes. */
 export const flinkArtifactUDFViewMode = new vscode.EventEmitter<FlinkArtifactsViewProviderMode>();
+
+/** Fires when an Artifact upload deletes successfully. */
+export const artifactUploadDeleted = new vscode.EventEmitter<void>();
