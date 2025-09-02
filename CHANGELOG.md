@@ -22,7 +22,6 @@ All notable changes to this extension will be documented in this file.
 - Telemetry updates to only send less common sidecar startup errors to Sentry.
 - Validate authentication types in Direct connection form.
 - Bump minimum required macOS version from 13 to 14.
-- Update metadata for automatically created "Query with Flink" editor files.
 - Automatically set appropriate compute pool, catalog, and database
   when using "Query with Flink", or opening an existing Flink job.
 
