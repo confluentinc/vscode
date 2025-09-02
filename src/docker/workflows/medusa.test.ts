@@ -276,4 +276,52 @@ describe("docker/workflows/medusa.ts MedusaWorkflow", () => {
       { HostIp: "0.0.0.0", HostPort: expectedPort.toString() },
     ]);
   });
+
+  describe("waitForReadiness()", () => {
+    let getContainerStub: sinon.SinonStub;
+    let waitForServiceHealthCheckStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getContainerStub = sandbox.stub(dockerContainers, "getContainer");
+      waitForServiceHealthCheckStub = sandbox.stub(dockerContainers, "waitForServiceHealthCheck");
+    });
+
+    it("should return true when health check succeeds", async () => {
+      const mockContainer: ContainerInspectResponse = {
+        Id: "test-container-id",
+        HostConfig: {
+          PortBindings: {
+            "8082/tcp": [{ HostPort: "51475" }],
+          },
+        },
+      };
+      getContainerStub.resolves(mockContainer);
+      waitForServiceHealthCheckStub.resolves(true);
+
+      const result = await workflow.waitForReadiness("test-container-id");
+
+      assert.strictEqual(result, true);
+      assert.ok(getContainerStub.calledOnceWith("test-container-id"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnceWith("51475", "/health", "Medusa"));
+    });
+
+    it("should return false when health check fails", async () => {
+      const mockContainer: ContainerInspectResponse = {
+        Id: "test-container-id",
+        HostConfig: {
+          PortBindings: {
+            "8082/tcp": [{ HostPort: "51475" }],
+          },
+        },
+      };
+      getContainerStub.resolves(mockContainer);
+      waitForServiceHealthCheckStub.resolves(false);
+
+      const result = await workflow.waitForReadiness("test-container-id");
+
+      assert.strictEqual(result, false);
+      assert.ok(getContainerStub.calledOnceWith("test-container-id"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnceWith("51475", "/health", "Medusa"));
+    });
+  });
 });

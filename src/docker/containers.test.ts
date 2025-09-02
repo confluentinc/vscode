@@ -6,6 +6,7 @@ import {
   createContainer,
   getContainer,
   getContainersForImage,
+  getFirstExternalPort,
   startContainer,
   stopContainer,
   waitForServiceHealthCheck,
@@ -169,6 +170,53 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
 
     await assert.rejects(getContainer("1"), fakeError);
     assert.ok(containerInspectStub.calledOnce);
+  });
+});
+
+describe("docker/containers.ts getFirstExternalPort", () => {
+  it("should return the first external port when container has valid port bindings", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {
+          "8080/tcp": [{ HostPort: "9090" }],
+          "8081/tcp": [{ HostPort: "9091" }],
+        },
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "9090");
+  });
+
+  it("should return empty string when container has no external ports", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {},
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "");
+  });
+
+  it("should return empty string when port bindings exist but have no valid HostPort", () => {
+    const mockContainer: dockerClients.ContainerInspectResponse = {
+      Id: "test-container-id",
+      HostConfig: {
+        PortBindings: {
+          "8080/tcp": [{}], // No HostPort specified
+          "8081/tcp": [], // Empty array
+        },
+      },
+    };
+
+    const result = getFirstExternalPort(mockContainer);
+
+    assert.strictEqual(result, "");
   });
 });
 

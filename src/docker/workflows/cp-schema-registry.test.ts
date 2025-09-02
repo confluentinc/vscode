@@ -397,6 +397,54 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       `createContainerStub called with: ${JSON.stringify(createContainerStub.args, null, 2)}\n\nand not ${JSON.stringify([workflow.imageRepo, workflow.imageTag, createBody], null, 2)}`,
     );
   });
+
+  describe("waitForReadiness()", () => {
+    let getContainerStub: sinon.SinonStub;
+    let waitForServiceHealthCheckStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getContainerStub = sandbox.stub(dockerContainers, "getContainer");
+      waitForServiceHealthCheckStub = sandbox.stub(dockerContainers, "waitForServiceHealthCheck");
+    });
+
+    it("should return true when health check succeeds", async () => {
+      const mockContainer: ContainerInspectResponse = {
+        Id: "test-container-id",
+        HostConfig: {
+          PortBindings: {
+            "8081/tcp": [{ HostPort: "8081" }],
+          },
+        },
+      };
+      getContainerStub.resolves(mockContainer);
+      waitForServiceHealthCheckStub.resolves(true);
+
+      const result = await workflow.waitForReadiness("test-container-id");
+
+      assert.strictEqual(result, true);
+      assert.ok(getContainerStub.calledOnceWith("test-container-id"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnceWith("8081", "/config", "Schema Registry"));
+    });
+
+    it("should return false when health check fails", async () => {
+      const mockContainer: ContainerInspectResponse = {
+        Id: "test-container-id",
+        HostConfig: {
+          PortBindings: {
+            "8081/tcp": [{ HostPort: "8081" }],
+          },
+        },
+      };
+      getContainerStub.resolves(mockContainer);
+      waitForServiceHealthCheckStub.resolves(false);
+
+      const result = await workflow.waitForReadiness("test-container-id");
+
+      assert.strictEqual(result, false);
+      assert.ok(getContainerStub.calledOnceWith("test-container-id"));
+      assert.ok(waitForServiceHealthCheckStub.calledOnceWith("8081", "/config", "Schema Registry"));
+    });
+  });
 });
 
 describe("docker/workflows/cp-schema-registry.ts helper functions", () => {
