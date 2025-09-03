@@ -524,7 +524,10 @@ LIMIT 10;`;
     const rm = ResourceManager.getInstance();
     await rm.setUriMetadata(docUri, {
       [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: ccloudCluster.flinkPools[0].id,
+      [UriMetadataKeys.FLINK_CATALOG_ID]: topicEnvironment.id,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: topicEnvironment.name,
       [UriMetadataKeys.FLINK_DATABASE_ID]: ccloudCluster.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: ccloudCluster.name,
     });
   }
 }

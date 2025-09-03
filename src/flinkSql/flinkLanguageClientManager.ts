@@ -22,7 +22,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
-import { SecretStorageKeys } from "../storage/constants";
+import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { getSecretStorage } from "../storage/utils";
@@ -396,7 +396,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
   /** Get the document OR global/workspace settings for Flink, if any */
   public async getFlinkSqlSettings(uri: Uri): Promise<FlinkSqlSettings> {
     let computePoolId: string | null = null;
-    let currentDatabaseId: string | null = null;
+    let currentDatabaseName: string | null = null;
     let catalogName: string | null = null;
     let databaseName: string | null = null;
 
@@ -405,11 +405,14 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     const uriMetadata: UriMetadata | undefined = await rm.getUriMetadata(uri);
     // If not, does the workspace have a default set?
     // Set to whichever one wins!
-    computePoolId = uriMetadata?.flinkComputePoolId ?? (FLINK_CONFIG_COMPUTE_POOL.value || null);
-    currentDatabaseId = uriMetadata?.flinkDatabaseId ?? (FLINK_CONFIG_DATABASE.value || null);
+    computePoolId =
+      uriMetadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID] ??
+      (FLINK_CONFIG_COMPUTE_POOL.value || null);
+    currentDatabaseName =
+      uriMetadata?.[UriMetadataKeys.FLINK_DATABASE_NAME] ?? (FLINK_CONFIG_DATABASE.value || null);
 
     // Look up the cluster & db name if we have a database id
-    if (currentDatabaseId) {
+    if (currentDatabaseName) {
       try {
         const loader = CCloudResourceLoader.getInstance();
         // Get all clusters from all environments since we don't know which environment the cluster belongs to
