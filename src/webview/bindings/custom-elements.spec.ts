@@ -14,7 +14,7 @@ test.use({
 });
 
 test("custom element with properties passed down", async ({ execute, page }) => {
-  /* This is a basic example of custom component having its own lifecycle and 
+  /* This is a basic example of custom component having its own lifecycle and
   internal state, while being provided with values from the outside. */
 
   await execute(async () => {

@@ -27,6 +27,7 @@ const allAuthOptions: Array<{ label: string; value: SupportedAuthTypes }> = [
   { label: "SASL/OAUTHBEARER", value: "OAuth" },
   { label: "Kerberos (SASL/GSSAPI)", value: "Kerberos" },
 ];
+const WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX = "ws_host_override=localhost";
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
@@ -87,6 +88,14 @@ class DirectConnectFormViewModel extends ViewModel {
     return `${this.vscodeUriScheme()}://settings/confluent.krb5ConfigPath`;
   });
 
+  // We must use a specific client ID suffix for connecting to WarpStream by K8s port-forwarding
+  warpStreamPortForwardingEnabled = this.derive(() => {
+    return (
+      this.spec()?.kafka_cluster?.client_id_suffix?.toString() ===
+      WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX
+    );
+  });
+
   // SSL enabled is true by default. If this is undefined it means the user never set/saved it
   kafkaSslEnabled = this.derive(() => {
     if (this.spec()?.kafka_cluster?.ssl?.enabled?.toString() === "false") return false;
@@ -115,15 +124,18 @@ class DirectConnectFormViewModel extends ViewModel {
   });
 
   /** Get valid auth types based on form connection type */
-  getValidKafkaAuthTypes = this.derive(() => {
-    switch (this.platformType()) {
+  getValidKafkaAuthTypesForPlatform = (platformType: FormConnectionType) => {
+    switch (platformType) {
       case "Confluent Cloud":
         return allAuthOptions.filter((auth) => ["API", "SCRAM", "OAuth"].includes(auth.value));
       case "WarpStream":
-        return allAuthOptions.filter((auth) => ["Basic", "SCRAM"].includes(auth.value));
+        return allAuthOptions.filter((auth) => ["None", "Basic", "SCRAM"].includes(auth.value));
       default:
         return allAuthOptions;
     }
+  };
+  getValidKafkaAuthTypes = this.derive(() => {
+    return this.getValidKafkaAuthTypesForPlatform(this.platformType());
   });
 
   /** Form State */
@@ -194,13 +206,21 @@ class DirectConnectFormViewModel extends ViewModel {
     }
     // The switch statement performs local side effects for certain inputs
     switch (input.name) {
-      case "formconnectiontype":
+      case "formConnectionType": {
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
         }
+        // Update auth type if it isn't valid for platform choice
+        const validAuthTypes = this.getValidKafkaAuthTypesForPlatform(
+          input.value as FormConnectionType,
+        ).map((option) => option.value);
+        if (!validAuthTypes.includes(this.kafkaAuthType())) {
+          this.kafkaAuthType(validAuthTypes[0]);
+        }
         break;
+      }
       case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         break;
@@ -212,6 +232,13 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "schema_registry.ssl.enabled":
         this.schemaSslEnabled(input.checked);
+        break;
+      case "kafka_cluster.client_id_suffix":
+        this.warpStreamPortForwardingEnabled(input.checked);
+        await post("UpdateSpecValue", {
+          inputName: "kafka_cluster.client_id_suffix",
+          inputValue: input.checked ? WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX : "",
+        });
         break;
       case "kafka_cluster.bootstrap_servers":
         this.kafkaBootstrapServers(input.value);
@@ -298,14 +325,19 @@ class DirectConnectFormViewModel extends ViewModel {
     }
 
     if (
-      data["formconnectiontype"] === "WarpStream" &&
+      data["formConnectionType"] === "WarpStream" &&
       data["kafka_cluster.auth_type"] === "SCRAM"
     ) {
       // Enforce SCRAM_SHA_512 for WarpStream in the data; that's all WarpStream supports
       data["kafka_cluster.credentials.hash_algorithm"] = "SCRAM_SHA_512";
     }
+    if (this.warpStreamPortForwardingEnabled()) {
+      data["kafka_cluster.client_id_suffix"] = WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX;
+    } else {
+      data["kafka_cluster.client_id_suffix"] = "";
+    }
 
-    if (data["formconnectiontype"] === "Confluent Cloud") {
+    if (data["formConnectionType"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.ssl.enabled"] = "true";
       data["schema_registry.ssl.enabled"] = "true";

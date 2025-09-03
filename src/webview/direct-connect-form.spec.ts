@@ -76,7 +76,7 @@ test("renders form html correctly", async ({ page }) => {
   await expect(form).toBeVisible();
 
   // Check for our various field types to be visible in the form:
-  const typeSelect = page.locator("select[name='formconnectiontype']");
+  const typeSelect = page.locator("select[name='formConnectionType']");
   await expect(typeSelect).toBeVisible();
   const typeOptions = await typeSelect.locator("option").all();
   await expect(typeOptions.length).toBe(5);
@@ -213,9 +213,10 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
   expect(submitCallData).toEqual({
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
+    "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "https://fakehost:8081",
@@ -267,8 +268,9 @@ test("changes the checkbox for ssl to false if localhost", async ({ execute, pag
     "kafka_cluster.bootstrap_servers": "localhost:9092",
     "kafka_cluster.auth_type": "None",
     "kafka_cluster.ssl.enabled": "false",
+    "kafka_cluster.client_id_suffix": "",
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "false",
     "schema_registry.uri": "http://localhost:8081",
@@ -360,9 +362,10 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
   expect(submitCallData).toEqual({
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
+    "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "https://fakehost:8081",
@@ -416,8 +419,9 @@ test("submits the form with namespaced TLS config fields when filled", async ({
   expect(submitCall?.[1]).toEqual({
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
+    "kafka_cluster.client_id_suffix": "",
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "",
@@ -536,9 +540,10 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
   // Verify correct form data
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "None",
+    "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.ssl.verify_hostname": "true",
     "kafka_cluster.ssl.keystore.type": "JKS",
@@ -593,9 +598,10 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
   // Verify correct form data
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "SCRAM",
+    "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.credentials.scram_username": "user",
     "kafka_cluster.credentials.scram_password": "password",
@@ -679,7 +685,7 @@ test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ ex
   // Fill in the form with SASL/OAUTHBEARER auth type
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "fakehost:9092");
-  await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud");
+  await page.selectOption("select[name='formConnectionType']", "Confluent Cloud");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "OAuth");
   await page.fill(
     "input[name='kafka_cluster.credentials.tokens_url']",
@@ -726,9 +732,10 @@ test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ ex
   // Verify correct form data
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
-    formconnectiontype: "Confluent Cloud",
+    formConnectionType: "Confluent Cloud",
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "OAuth",
+    "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.credentials.ccloud_identity_pool_id": "pool-xyz789",
     "kafka_cluster.credentials.ccloud_logical_cluster_id": "lkc-abc123",
     "kafka_cluster.credentials.client_id": "client123",
@@ -774,7 +781,7 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
 
   const form = page.locator("form");
   await expect(form).toBeVisible();
-  await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud");
+  await page.selectOption("select[name='formConnectionType']", "Confluent Cloud");
 
   // Check that the form fields are populated with OAuth connection spec values
   const nameInput = page.locator("input[name='name']");
@@ -880,9 +887,10 @@ test("submits values for Kerberos auth type when filled in", async ({ execute, p
   // Verify correct form data
   expect(submitCall?.[1]).toEqual({
     name: "Test Connection",
-    formconnectiontype: "Apache Kafka",
+    formConnectionType: "Apache Kafka",
     "kafka_cluster.bootstrap_servers": "fakehost:9092",
     "kafka_cluster.auth_type": "Kerberos",
+    "kafka_cluster.client_id_suffix": "",
     "kafka_cluster.credentials.principal": "user@EXAMPLE.COM",
     "kafka_cluster.credentials.keytab_path": "/path/to/keytab",
     "kafka_cluster.credentials.service_name": "kafka",
@@ -1081,7 +1089,7 @@ test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page })
   // Fill in the form with WarpStream and SCRAM auth
   await page.fill("input[name=name]", "WarpStream Test");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
-  await page.selectOption("select[name='formconnectiontype']", "WarpStream");
+  await page.selectOption("select[name='formConnectionType']", "WarpStream");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
 
   // No need to select hash_algorithm as it should be enforced
@@ -1102,12 +1110,64 @@ test("enforces SCRAM_SHA_512 for WarpStream platform", async ({ execute, page })
   expect(submitCall?.[1]).toEqual(
     expect.objectContaining({
       name: "WarpStream Test",
-      formconnectiontype: "WarpStream",
+      formConnectionType: "WarpStream",
       "kafka_cluster.bootstrap_servers": "localhost:9092",
       "kafka_cluster.auth_type": "SCRAM",
       "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512",
       "kafka_cluster.credentials.scram_username": "user",
       "kafka_cluster.credentials.scram_password": "password",
+      // Should not use Kubernetes port-forwarding by default for connecting to WarpStream agents
+      "kafka_cluster.client_id_suffix": "",
+    }),
+  );
+});
+
+test("sets the client ID suffix correctly when using K8s port-forwarding for WarpStream platform", async ({
+  execute,
+  page,
+}) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with WarpStream and SCRAM auth
+  await page.fill("input[name=name]", "WarpStream Test");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='kafka_cluster.auth_type']", "None");
+  await page.selectOption("select[name='formConnectionType']", "WarpStream");
+  // Connect to WarpStream agents via Kubernetes port-forwarding
+  await page.check("input[type=checkbox][name='kafka_cluster.client_id_suffix']");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+
+  // Verify client ID suffix is set correctly
+  expect(submitCall?.[1]).toEqual(
+    expect.objectContaining({
+      name: "WarpStream Test",
+      formConnectionType: "WarpStream",
+      "kafka_cluster.bootstrap_servers": "localhost:9092",
+      "kafka_cluster.auth_type": "None",
+      "kafka_cluster.client_id_suffix": "ws_host_override=localhost",
+      "kafka_cluster.ssl.enabled": "false",
     }),
   );
 });

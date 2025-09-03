@@ -1,14 +1,14 @@
-import { commands, QuickPickItemKind, ThemeIcon, window, workspace } from "vscode";
+import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
+import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
 import { showInfoNotificationWithButtons } from "../notifications";
-import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.flinkComputePools");
@@ -17,6 +17,7 @@ const logger = new Logger("quickpicks.flinkComputePools");
  * progress indicator on the Resources or Flink Statements/Artifacts view(s). */
 export async function flinkComputePoolQuickPickWithViewProgress(
   viewId: "confluent-resources" | "confluent-flink-statements" | "confluent-flink-artifacts",
+  initiallySelectedPool: CCloudFlinkComputePool | null = null,
 ): Promise<CCloudFlinkComputePool | undefined> {
   return await window.withProgress(
     {
@@ -24,7 +25,7 @@ export async function flinkComputePoolQuickPickWithViewProgress(
       title: "Loading Flink compute pools...",
     },
     async () => {
-      return await flinkComputePoolQuickPick();
+      return await flinkComputePoolQuickPick(initiallySelectedPool);
     },
   );
 }
@@ -39,8 +40,15 @@ export async function flinkComputePoolQuickPickWithViewProgress(
  * ccloud-pool2 (lfcp-id2)
  * ---------------------------------- Confluent Cloud: env2
  * ccloud-pool3 (lfcp-id3)
+ *
+ * If a currentlySelectedPool is provided, it will be pre-selected in the quickpick and
+ * indicated with a 'selected' icon. Additionally, if the user has set a default compute
+ * pool in the settings, it will be presented either at the top of the list (if no
+ * currentlySelectedPool is provided) or second in the list (if a currentlySelectedPool
+ * is provided and is different from the default).
  */
 export async function flinkComputePoolQuickPick(
+  initiallySelectedPool: CCloudFlinkComputePool | null = null,
   filterPredicate?: (pool: CCloudFlinkComputePool) => boolean,
 ): Promise<CCloudFlinkComputePool | undefined> {
   const loader = CCloudResourceLoader.getInstance();
@@ -53,9 +61,6 @@ export async function flinkComputePoolQuickPick(
       computePools.push(...pools.map((pool) => new CCloudFlinkComputePool(pool)));
     }
   }
-
-  const config = workspace.getConfiguration("confluent.flink");
-  const defaultComputePoolId = config.get<string>("computePoolId");
 
   if (computePools.length === 0) {
     let login: string = "";
@@ -76,27 +81,27 @@ export async function flinkComputePoolQuickPick(
   // name used for the separators
   const items: QuickPickItemWithValue<CCloudFlinkComputePool>[] = [];
 
-  // if any pools are focused in the Statements/Artifacts views, move them to the top of the list
   const focusedPools: CCloudFlinkComputePool[] = [];
-  const statementsPool: CCloudFlinkComputePool | null =
-    FlinkStatementsViewProvider.getInstance().computePool;
-  if (statementsPool) {
-    focusedPools.push(statementsPool);
+
+  // Caller wanted us to pre-select a pool.
+  if (initiallySelectedPool) {
+    focusedPools.push(initiallySelectedPool);
   }
-  // TODO: uncomment this if/when we start working with the artifacts view again
-  // const artifactsPool: CCloudFlinkComputePool | null =
-  //   FlinkArtifactsViewProvider.getInstance().computePool;
-  const artifactsPool: CCloudFlinkComputePool | null = null;
-  if (artifactsPool) {
-    focusedPools.push(artifactsPool);
-  }
-  // Add default compute pool to focused pools if it exists
-  if (defaultComputePoolId) {
+
+  // Add user preference default compute pool to focused pools (if set and if it exists and if it isn't currentlySelectedPool already
+  // added to focusedPools). If exists and found, it will either be the only pool in focusedPools or the second (after currentlySelectedPool).
+  const defaultComputePoolId = FLINK_CONFIG_COMPUTE_POOL.value;
+  if (defaultComputePoolId !== "") {
     const defaultPool = computePools.find((pool) => pool.id === defaultComputePoolId);
     if (defaultPool && !focusedPools.some((pool) => pool.id === defaultComputePoolId)) {
       focusedPools.push(defaultPool);
     }
   }
+
+  // Remove the focused pool(s) from their current position(s) in computePools and add them to the front.
+  // (First reverse the focusedPools so that when we unshift them in order, they maintain their order, otherwise
+  // if has both a currentlySelectedPool and a default pool, the default would end up first always, contrary to the intent.)
+  focusedPools.reverse();
   for (const focusedPool of focusedPools) {
     const focusedPoolIndex: number = computePools.findIndex((pool) => focusedPool.id === pool.id);
     if (focusedPoolIndex !== -1) {
@@ -104,8 +109,6 @@ export async function flinkComputePoolQuickPick(
       computePools.unshift(focusedPool!);
     }
   }
-  const focusedPoolIds: string[] = focusedPools.map((pool) => pool.id);
-
   let lastSeparator: string = "";
   for (const pool of computePools) {
     if (filterPredicate && !filterPredicate(pool)) {
@@ -118,7 +121,7 @@ export async function flinkComputePoolQuickPick(
       logger.warn(`No environment found for Flink compute pool "${pool.name}"`);
       return;
     }
-    const isFocusedPool = focusedPoolIds.includes(pool.id);
+    const isCurrentlySelectedPool = pool.id === initiallySelectedPool?.id;
     // show a separator by environment to make it easier to differentiate between the connection types
     // and make it clear which environment the pool(s) are associated with
     const connectionLabel = getConnectionLabel(environment.connectionType);
@@ -134,8 +137,8 @@ export async function flinkComputePoolQuickPick(
       });
       lastSeparator = separatorLabel;
     }
-    // show the currently-focused pool, if there is one
-    const icon = isFocusedPool ? IconNames.CURRENT_RESOURCE : pool.iconName;
+    // Indicate the currently-focused pool, if there is one, with a 'selected' icon.
+    const icon = isCurrentlySelectedPool ? IconNames.CURRENT_RESOURCE : pool.iconName;
     items.push({
       label: pool.name,
       description: pool.id,

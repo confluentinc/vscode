@@ -13,7 +13,7 @@ export class Stream {
 
     /* Despite the UI having the ability to do "unbounded" consumption, we set
     the upper limit to make memory management predictable. If I'm wrong about
-    this assumptions, I would be happy to receive a bug report "unable to see 
+    this assumptions, I would be happy to receive a bug report "unable to see
     more than 16m messages in unbounded stream". What a nice problem to have. */
     this.messages = new CircularBuffer(capacity);
     let values = this.messages.values;
@@ -25,12 +25,12 @@ export class Stream {
     so the UI would know if they can be parsed back to an object. */
     this.serialized = { key: new BitSet(capacity), value: new BitSet(capacity) };
 
-    /* Message timestamp is a number that grows continuously. We can't really 
+    /* Message timestamp is a number that grows continuously. We can't really
     expect it to repeat often. */
     let timestampOf = (point: number) => values[point].timestamp;
     this.timestamp = new SkipList(capacity, 1 / 4, timestampOf, descending);
 
-    /* Message partition id is a number that represents a category. It often 
+    /* Message partition id is a number that represents a category. It often
     going to be repeated. */
     let partitionOf = (point: number) => values[point].partition_id;
     this.partition = new SkipList(capacity, 1 / 2, partitionOf, ascending);

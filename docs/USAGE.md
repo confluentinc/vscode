@@ -62,12 +62,12 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 
 ### Produce messages to Kafka topics
 
-With Confluent for VS Code, you can produce messages to your Kafka topics, with or without a key/value schema. 
+With Confluent for VS Code, you can produce messages to your Kafka topics, with or without a key/value schema.
 
 1. Prepare a JSON file containing message `headers` (optional), `key` and `value` as top-level fields.
 1. Click the produce icon ![produce icon](../resources/icons/confluent-send-message.svg) next to the topic name to open the Produce Message quickpick flow.
 1. When you're prompted, choose a JSON file containing message `headers`, `key` and `value`.
-1. Next, choose whether to produce the message with/without a key/value schema. 
+1. Next, choose whether to produce the message with/without a key/value schema.
 1. Click OK to produce the message.
 1. You will be notified of whether the produce was successful or not. If successful, you can open the Message Viewer (click the ![envelope-with-magnifying-glass](../resources/icons/confluent-view-messages.svg) icon against the topic) to inspect the message you just produced.
 
@@ -118,12 +118,12 @@ If you want to produce a message using a schema version earlier than the latest,
 
 #### Explore schemas
 
-The **Schemas** view displays all the schemas available for the current Schema Registry cluster selected. 
+The **Schemas** view displays all the schemas available for the current Schema Registry cluster selected.
 Schemas are also shown in the **Topics** view by expanding a topic item if the subject name follows
 either `TopicNameStrategy` or `TopicRecordNameStrategy` [schema naming strategies](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) and you have the appropriate permissions.
 
 You can view schema definitions by expanding the schema subject to list all schema versions,
-then clicking on the specific schema version. You can also easily "View Latest Schema" by 
+then clicking on the specific schema version. You can also easily "View Latest Schema" by
 clicking the code file icon next to the subject.
 
 #### Create/evolve schemas
@@ -252,4 +252,3 @@ You can export the connection details to a local file by clicking the socket-dow
 ##### Importing connection details
 
 You can import connection details by clicking the "+" icon in the Resources panel, and select "Import from file" in the dropdown. This opens a file browser and you may then choose the desired connection details JSON file. Edit the connection details as desired and click "Test" or "Save".
-

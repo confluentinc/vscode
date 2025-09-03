@@ -114,7 +114,7 @@ describe("commands/connections.ts", function () {
       sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub);
       sinon.assert.calledOnceWithExactly(
         showInformationMessageStub,
-        `The account '${TEST_CCLOUD_AUTH_SESSION.account.label}' has been used by: 
+        `The account '${TEST_CCLOUD_AUTH_SESSION.account.label}' has been used by:
 
 Confluent
 

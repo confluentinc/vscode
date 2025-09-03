@@ -54,12 +54,12 @@ export class Histogram extends HTMLElement {
     // this tooltip is used for outputting currently hovered bin's information
     const tooltip = document.createElement("div");
     tooltip.style.cssText = `
-      position: absolute; 
-      top: 0; 
-      left: 0; 
-      background: var(--vscode-editor-background); 
-      color: var(--vscode-editor-foreground); 
-      display: none; 
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: var(--vscode-editor-background);
+      color: var(--vscode-editor-foreground);
+      display: none;
       white-space: pre;
       padding: 0.5rem 0.75rem;
       pointer-events: none;

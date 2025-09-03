@@ -26,7 +26,7 @@ blocks:
     task:
       agent:
         machine:
-          type: s1-prod-macos-13-5-amd64
+          type: s1-macos-15-amd64-6
       # Define the task prologue anchor for reuse (except Windows)
       prologue: &packageVsixTaskPrologue
         commands:
@@ -55,7 +55,7 @@ blocks:
           commands:
             - make ci-bin-sem-cache-store
         on_pass:
-          commands: 
+          commands:
             - VSIX_FILE=$(find out/ -name "*.vsix")
             - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
 
@@ -64,7 +64,7 @@ blocks:
     task:
       agent:
         machine:
-          type: s1-prod-macos-13-5-arm64
+          type: s1-macos-15-arm64-8
       env_vars:
         - name: TARGET
           value: darwin-arm64
@@ -106,7 +106,7 @@ blocks:
 
   - name: "Package VSIX (Windows AMD64)"
     dependencies: []
-    task: 
+    task:
       agent:
         machine:
           type: s1-prod-windows
