@@ -5,22 +5,27 @@ import { flinkArtifactUDFViewMode } from "../emitters";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 
-/**Open a new tab set to Flink SQL type with placeholder Flink UDF registration statement for selected artifact */
 export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | undefined) {
   if (!selectedArtifact) {
     return;
   }
-  const placeholderQuery = `-- Register UDF for artifact "${selectedArtifact.name}"
-CREATE FUNCTION \`yourFunctionNameHere\` AS 'your.class.NameHere' USING JAR 'confluent-artifact://${selectedArtifact.id}';
--- confirm with 'SHOW USER FUNCTIONS';
-`;
+  const snippetString = new SnippetString()
+    .appendText(`-- Register UDF for artifact "${selectedArtifact.name}"\n`)
+    .appendText("CREATE FUNCTION `")
+    .appendPlaceholder("yourFunctionNameHere", 1)
+    .appendText("` AS '")
+    .appendPlaceholder("your.class.NameHere", 2)
+    .appendText(`' USING JAR 'confluent-artifact://${selectedArtifact.id}';\n`)
+    .appendText("-- confirm with 'SHOW USER FUNCTIONS';\n");
 
   const document = await workspace.openTextDocument({
     language: "flinksql",
-    content: placeholderQuery,
+    // content is initialized as an empty string, we insert the snippet next due to how the Snippets API works
+    content: "",
   });
 
-  await window.showTextDocument(document, { preview: false });
+  const editor = await window.showTextDocument(document, { preview: false });
+  await editor.insertSnippet(snippetString);
 }
 
 export async function setFlinkArtifactsViewModeCommand() {
