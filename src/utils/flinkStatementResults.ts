@@ -18,7 +18,7 @@ export const INTERNAL_COUNT_KEEP_LAST_ROW = "INTERNAL_COUNT_KEEP_LAST_ROW";
  * Compute a fixed-length unique id for this row based on either:
  *   * the known upsert-key column values (if any), or
  *   * all of the values in the row.
- * Uses SHA-256 to avoid unbounded key length, truncated to 128 bits (32 hex chars).
+ * Uses MD5 internally to generate a stable 128-bit hash.
  **/
 export function generateRowId(row: unknown[], upsertColumns?: number[]): string {
   const keyValues: unknown[] = upsertColumns?.length ? upsertColumns.map((i) => row[i]) : row;
@@ -26,7 +26,8 @@ export function generateRowId(row: unknown[], upsertColumns?: number[]): string 
   const canonical = JSON.stringify(keyValues);
 
   // 128-bit (32-hex-char) stable id identifying the row based on its key values.
-  return createHash("sha256").update(canonical).digest("hex").slice(0, 32);
+  // (This is not a secure hash, just a stable one for internal row id tracking.)
+  return createHash("md5").update(canonical).digest("hex");
 }
 
 /**
@@ -77,10 +78,16 @@ export interface ParseResultsProps {
   columns: ColumnDetails[];
   isAppendOnly: boolean;
   limit?: number;
-  /** The results map */
-  map: Map<string, Map<string, any>>;
+  /** The flink statement result changelog rows returned from the results route call to parse into map form.*/
   rows?: StatementResultsRow[] | null;
   upsertColumns?: number[];
+  /**
+   * The results map, either brand new or from prior result fed back in again.
+   * The keys of the map are for internal use, the values can be converted to
+   * objects, representing the row results. The order of the map is the order
+   * of the rows as they should be displayed.
+   **/
+  map: Map<string, Map<string, any>>;
 }
 
 /**
@@ -109,7 +116,7 @@ export function parseResults({
   const hasUpsertColumns = Boolean(upsertColumns?.length);
 
   rows.forEach((item, index) => {
-    const rowId = generateRowId(item.row, upsertColumns);
+    let rowId = generateRowId(item.row, upsertColumns);
 
     // (jvoronin): special case for count query:
     // - the issue:
@@ -153,7 +160,6 @@ export function parseResults({
       }
 
       const hasRowId = map.has(rowId);
-
       if (
         // If no upsert_columns and (is_append_only mode or rowId already exists), append UUID to allow for duplicate row
         (!hasUpsertColumns && (isAppendOnly || hasRowId)) ||
@@ -163,17 +169,19 @@ export function parseResults({
         (hasUpsertColumns && hasRowId && item.op === Operation.Insert)
       ) {
         const idSuffix = uuidv4();
-        const newRowId = `${rowId}-${idSuffix}`;
-        map.set(newRowId, data);
-      } else {
-        map.set(rowId, data);
+        rowId = `${rowId}-${idSuffix}`;
       }
+      map.set(rowId, data);
     } else {
-      const keyToDelete = Array.from(map.keys())
-        .filter((key) => {
-          return (key.startsWith(rowId) && validateUUIDSuffix(key)) || key === rowId;
-        })
-        .pop();
+      // delete operation, op=Operation.Delete.
+      // Scan keys once without allocating arrays; remember the last matching key.
+      let keyToDelete: string | undefined;
+      for (const key of map.keys()) {
+        if (key === rowId || (key.startsWith(rowId) && validateUUIDSuffix(key))) {
+          keyToDelete = key;
+        }
+      }
+      // And delete.
       if (keyToDelete) {
         map.delete(keyToDelete);
       }
