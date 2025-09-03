@@ -6,6 +6,7 @@ import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../notifications";
+import { deleteArtifactCommand } from "./utils/deleteArtifact";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -91,5 +92,13 @@ export async function uploadArtifactCommand(): Promise<void> {
  * Registers the "confluent.uploadArtifact" command with logging.
  */
 export function registerUploadArtifactCommand(): vscode.Disposable {
+  // Register only the upload command here
   return registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand);
+}
+/**
+ * Registers the "confluent.deleteArtifact" command with logging.
+ */
+export function registerDeleteArtifactCommand(): vscode.Disposable {
+  // Register only the delete command here
+  return registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand);
 }

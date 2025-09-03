@@ -279,6 +279,12 @@
         "enablement": "isDevelopment"
       },
       {
+        "command": "confluent.deleteArtifact",
+        "title": "Delete Artifact",
+        "category": "Confluent: Flink Artifacts",
+        "enablement": "isDevelopment"
+      },
+      {
         "command": "confluent.connections.ccloud.signIn",
         "icon": "$(sign-in)",
         "title": "Sign in to Confluent Cloud",
@@ -1684,6 +1690,11 @@
           "command": "confluent.schemas.deleteSubject",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "schemas"
+        },
+        {
+          "command": "confluent.deleteArtifact",
+          "when": "view == confluent-flink-artifacts && viewItem =~ /.*-flink-artifact$/",
+          "group": "artifacts"
         },
         {
           "command": "confluent.schemas.upload",
