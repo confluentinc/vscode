@@ -29,6 +29,7 @@ import {
   SubjectNameStrategy,
 } from "../schemas/produceMessageSchema";
 import * as sidecar from "../sidecar";
+import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import * as fileUtils from "../utils/file";
 import { ExecutionResult } from "../utils/workerPool";
@@ -999,8 +1000,11 @@ LIMIT 10;`;
     // Verify that the URI metadata was set correctly
     sinon.assert.calledOnce(setUriMetadataStub);
     sinon.assert.calledWith(setUriMetadataStub, mockDocument.uri, {
-      flinkComputePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-      flinkDatabaseId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.id,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.name,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_KAFKA_CLUSTER.name,
     });
   });
 

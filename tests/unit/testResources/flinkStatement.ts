@@ -3,8 +3,9 @@ import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
 import { EnvironmentId, OrganizationId } from "../../../src/models/resource";
-import { TEST_CCLOUD_ENVIRONMENT_ID } from "./environments";
+import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "./flinkComputePool";
+import { TEST_CCLOUD_KAFKA_CLUSTER } from "./kafkaCluster";
 import { TEST_CCLOUD_ORGANIZATION } from "./organization";
 
 export const TEST_CCLOUD_FLINK_STATEMENT = createFlinkStatement();
@@ -28,10 +29,10 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
   return new FlinkStatement({
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,
-    environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT_ID,
+    environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT.id,
     organizationId: overrides.organizationId || TEST_CCLOUD_ORGANIZATION.id,
-    provider: "aws",
-    region: "us-west-2",
+    provider: TEST_CCLOUD_PROVIDER,
+    region: TEST_CCLOUD_REGION,
 
     name: overrides.name || "statement0",
 
@@ -57,8 +58,8 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       principal: "test-principal",
       authorized_principals: [],
       properties: {
-        "sql.current-catalog": "custom-data-env",
-        "sql.current-database": "Custom Data Dedicated Replica",
+        "sql.current-catalog": TEST_CCLOUD_ENVIRONMENT.name,
+        "sql.current-database": TEST_CCLOUD_KAFKA_CLUSTER.name,
         "sql.local-time-zone": "GMT-04:00",
       },
       stopped: false,
