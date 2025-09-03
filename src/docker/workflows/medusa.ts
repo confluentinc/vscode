@@ -14,7 +14,12 @@ import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { getLocalResourceContainers } from "../../sidecar/connections/local";
 import { UserEvent } from "../../telemetry/events";
-import { createContainer, waitForServiceHealthCheck } from "../containers";
+import {
+  createContainer,
+  getContainer,
+  getFirstExternalPort,
+  waitForServiceHealthCheck,
+} from "../containers";
 import { createNetwork } from "../networks";
 import { findFreePort } from "../ports";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
@@ -179,13 +184,10 @@ export class MedusaWorkflow extends LocalResourceWorkflow {
     return { id: container.Id, name: CONTAINER_NAME };
   }
 
-  waitForReadiness(containerId: string): Promise<boolean> {
-    return waitForServiceHealthCheck(
-      containerId,
-      LOCAL_MEDUSA_INTERNAL_PORT,
-      HEALTHCHECK_ENDPOINT,
-      this.resourceKind,
-    );
+  async waitForReadiness(containerId: string): Promise<boolean> {
+    const container = await getContainer(containerId);
+    const firstExternalPort = getFirstExternalPort(container);
+    return waitForServiceHealthCheck(firstExternalPort, HEALTHCHECK_ENDPOINT, this.resourceKind);
   }
 
   /** Block until we see the {@link localMedusaConnected} event fire. (Controlled by the EventListener

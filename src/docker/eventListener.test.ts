@@ -24,6 +24,7 @@ import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
 import { EventListener, SystemEventMessage } from "./eventListener";
 import { LocalResourceWorkflow } from "./workflows/base";
+import { ConfluentPlatformSchemaRegistryWorkflow } from "./workflows/cp-schema-registry";
 import { MedusaWorkflow } from "./workflows/medusa";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
@@ -502,13 +503,18 @@ describe("docker/eventListener.ts EventListener methods", function () {
   });
 
   it("handleContainerStartEvent() should set the 'localSchemaRegistryAvailable' context value and cause the 'localSchemaRegistryConnected' event emitter to fire if a container from the Schema Registry image starts successfully", async function () {
-    // stub the waitForContainerState and waitForContainerLog methods so we don't actually wait for them to resolve
+    // stub the waitForContainerState method so we don't actually wait for it to resolve
     const waitForContainerRunningStub = sandbox
       .stub(eventListener, "waitForContainerState")
       .resolves(true);
-    const waitForServerStartedLogStub = sandbox
-      .stub(eventListener, "waitForContainerLog")
-      .resolves(true);
+    // stub the getWorkflowForKind method to return a mock workflow
+    const getWorkflowForKindStub = sandbox.stub(LocalResourceWorkflow, "getWorkflowForKind");
+    // create a mock workflow with a stubbed waitForReadiness method
+    const waitForReadinessStub = sandbox.stub().resolves(true);
+    const mockWorkflow = {
+      waitForReadiness: waitForReadinessStub,
+    } as unknown as ConfluentPlatformSchemaRegistryWorkflow;
+    getWorkflowForKindStub.returns(mockWorkflow);
     // stub the setContextValue and localSchemaRegistryConnected.fire methods so we can assert that they're called
     const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localSchemaRegistryConnectedFireStub = sandbox.stub(localSchemaRegistryConnected, "fire");
@@ -523,7 +529,9 @@ describe("docker/eventListener.ts EventListener methods", function () {
     await eventListener.handleContainerStartEvent(schemaRegistryEvent);
 
     assert.ok(waitForContainerRunningStub.calledOnce);
-    assert.ok(waitForServerStartedLogStub.calledOnce);
+    // Verify that the workflow's waitForReadiness method was called
+    assert.ok(getWorkflowForKindStub.calledOnce);
+    assert.ok(waitForReadinessStub.calledOnceWith(TEST_CONTAINER_EVENT.id));
     assert.ok(
       setContextValueStub.calledOnceWith(
         contextValues.ContextValues.localSchemaRegistryAvailable,
