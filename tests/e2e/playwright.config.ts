@@ -17,7 +17,6 @@ export default defineConfig({
   testDir: path.normalize(path.join(__dirname, "specs")),
   forbidOnly: !!process.env.CI,
   retries: 2,
-  maxFailures: 1,
   timeout: 120000,
   workers: 1,
   expect: {
