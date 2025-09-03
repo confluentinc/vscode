@@ -55,14 +55,16 @@ describe("utils/flinkStatementResults", () => {
         map: new Map(),
         upsertColumns: [0, 1],
       });
-      const res = Array.from(resMap, ([INTERNAL_ID, data]) => ({
+      const res: any = Array.from(resMap, ([INTERNAL_ID, data]) => ({
         INTERNAL_ID,
         ...Object.fromEntries(data),
       }));
 
+      // Should have become just one row with id=2 and users=0
       assert.equal(res.length, 1);
-      assert.equal(res[0].INTERNAL_ID, "2-0");
-      assert.deepEqual(res[0], { INTERNAL_ID: "2-0", id: 2, users: 0 });
+      assert.strictEqual(res[0].INTERNAL_ID, generateRowId([2, 0]));
+      assert.strictEqual(res[0].id, 2); // the statement-level 'id' column
+      assert.strictEqual(res[0].users, 0); // the statement-level 'users' column
     });
 
     it("respects is_append_only property", () => {
@@ -242,7 +244,7 @@ describe("utils/flinkStatementResults", () => {
       });
       assert.equal(resMap.size, limit1);
       // first two items should be dropped
-      assert.equal(resMap.keys().next().value, "3-20");
+      assert.deepEqual(resMap.values().next().value?.get("id"), 3); // the [3, 20] row
 
       const limit2 = 4;
       const moreRows = [
@@ -258,7 +260,7 @@ describe("utils/flinkStatementResults", () => {
       });
       assert.equal(resMap2.size, limit2);
       // first item should be dropped
-      assert.equal(resMap2.keys().next().value, "4-20");
+      assert.equal(resMap2.values().next().value?.get("id"), 4); // the [4, 20] row
     });
 
     it("returns correct results with nested data", () => {
@@ -682,17 +684,27 @@ describe("utils/flinkStatementResults", () => {
   });
 
   describe("generateRowId", () => {
-    it("returns correct row ID for simple row data without upsert columns", () => {
-      const rowData = ["1", "John Doe", 30];
-      const rowId = generateRowId(rowData);
-      assert.equal(rowId, "1-John Doe-30");
+    it("returns distinct row IDs for simple row data without upsert columns", () => {
+      const rowId1 = generateRowId(["1", "John Doe", 30]);
+      // vary the data slightly
+      const rowId2 = generateRowId(["1", "John Doe", 31]);
+
+      // Should be different results.
+      assert.notEqual(rowId1, rowId2);
+      assert.equal(rowId1.length, rowId2.length);
+      // 32 chars of SHA-256 hash prefix in hex goodness.
+      assert.equal(rowId1.length, 32);
     });
 
-    it("returns correct row ID for simple row data with upsert columns", () => {
+    it("returns row id based on upsert columns", () => {
       const rowData = ["1", "John Doe", 30];
+      const originalRowId = generateRowId(rowData);
+
       const upsertColumns = [0]; // Only use the first column for ID generation
-      const rowId = generateRowId(rowData, upsertColumns);
-      assert.equal(rowId, "1");
+      const upsertAwareRowId = generateRowId(rowData, upsertColumns);
+
+      // Should be different results.
+      assert.notEqual(originalRowId, upsertAwareRowId);
     });
   });
 
