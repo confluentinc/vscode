@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { v4 as uuidv4, validate, version } from "uuid";
 import { ColumnDetails } from "../clients/flinkSql";
 
@@ -13,33 +14,50 @@ export type StatementResultsRow = { op: Operation; row: any[] };
 export const DEFAULT_RESULTS_LIMIT = 10_000;
 export const INTERNAL_COUNT_KEEP_LAST_ROW = "INTERNAL_COUNT_KEEP_LAST_ROW";
 
-export const generateRowId = (row: any[], upsertColumns?: number[]): string => {
-  let result = row;
-  // If upsertColumns exists, use that to generate row ID/key.
-  if (upsertColumns) {
-    result = row.filter((_, idx) => upsertColumns.includes(idx));
-  }
+/**
+ * Compute a fixed-length unique id for this row based on either:
+ *   * the known upsert-key column values (if any), or
+ *   * all of the values in the row.
+ * Uses MD5 internally to generate a stable 128-bit hash.
+ **/
+export function generateRowId(row: unknown[], upsertColumns?: number[]): string {
+  const keyValues: unknown[] = upsertColumns?.length ? upsertColumns.map((i) => row[i]) : row;
 
-  return JSON.stringify(result.join("-")).replace(/[\\"]/g, "");
-};
+  const canonical = JSON.stringify(keyValues);
 
-export const mapColumnsToRowData = (
+  // 128-bit (32-hex-char) stable id identifying the row based on its key values.
+  // (This is not a secure hash, just a stable one for internal row id tracking.)
+  return createHash("md5").update(canonical).digest("hex");
+}
+
+/**
+ * Given an array of column details and a corresponding array of row data, return
+ * a Map that associates each column name with its corresponding data value.
+ *
+ * @param columns - An array of column details, each containing metadata about a column.
+ * @param rowData - An array of values representing a single row's data, where each value corresponds to a column.
+ * @returns A Map where each key is a column name and each value is the corresponding data from the row.
+ */
+export function mapColumnsToRowData(
   columns: ColumnDetails[],
   rowData: StatementResultsRow["row"],
-) => {
+): Map<string, any> {
   return columns.reduce((acc: Map<string, any>, column, index) => {
     acc.set(column.name, rowData[index]);
     return acc;
   }, new Map());
-};
+}
 
-const isInsertOperation = (op: Operation | null) => {
+/**
+ * Check if the operation is an insert operation.
+ */
+function isInsertOperation(op: Operation | null): boolean {
   // sometimes flink doesn't send `op`, so if it is not present, treat it as an INSERT operation
   if (op == null) {
     return true;
   }
-  return [Operation.Insert, Operation.UpdateAfter].includes(op);
-};
+  return op === Operation.Insert || op === Operation.UpdateAfter;
+}
 
 export function validateUUIDSuffix(rowId: string) {
   // UUID v4 is always 36 characters long
@@ -56,7 +74,24 @@ export function validateUUIDSuffix(rowId: string) {
   );
 }
 
+export interface ParseResultsProps {
+  columns: ColumnDetails[];
+  isAppendOnly: boolean;
+  limit?: number;
+  /** The flink statement result changelog rows returned from the results route call to parse into map form.*/
+  rows?: StatementResultsRow[] | null;
+  upsertColumns?: number[];
+  /**
+   * The results map, either brand new or from prior result fed back in again.
+   * The keys of the map are for internal use, the values can be converted to
+   * objects, representing the row results. The order of the map is the order
+   * of the rows as they should be displayed.
+   **/
+  map: Map<string, Map<string, any>>;
+}
+
 /**
+ * Parases Flink SQL results and updates a map of rows.
  * @param map A map to be updated.
  * @param columns Columns that will be mapped to each data item in order.
  * @param rows.n.op Flink operation:
@@ -66,21 +101,14 @@ export function validateUUIDSuffix(rowId: string) {
  * * 3 (DELETE) Deletion operation.
  * @returns An updated map.
  * */
-export const parseResults = ({
+export function parseResults({
   columns,
   isAppendOnly,
   limit = DEFAULT_RESULTS_LIMIT,
   map,
   rows,
   upsertColumns,
-}: {
-  columns: ColumnDetails[];
-  isAppendOnly: boolean;
-  limit?: number;
-  map: Map<string, Map<string, any>>;
-  rows?: StatementResultsRow[] | null;
-  upsertColumns?: number[];
-}) => {
+}: ParseResultsProps): Map<string, Map<string, any>> {
   if (!rows?.length || !columns?.length) {
     return map;
   }
@@ -88,7 +116,7 @@ export const parseResults = ({
   const hasUpsertColumns = Boolean(upsertColumns?.length);
 
   rows.forEach((item, index) => {
-    const rowId = generateRowId(item.row, upsertColumns);
+    let rowId = generateRowId(item.row, upsertColumns);
 
     // (jvoronin): special case for count query:
     // - the issue:
@@ -131,26 +159,29 @@ export const parseResults = ({
         }
       }
 
+      const hasRowId = map.has(rowId);
       if (
         // If no upsert_columns and (is_append_only mode or rowId already exists), append UUID to allow for duplicate row
-        (!hasUpsertColumns && (isAppendOnly || map.has(rowId))) ||
+        (!hasUpsertColumns && (isAppendOnly || hasRowId)) ||
         // another case: even if we have upsert_columns, and rowId already exists, but the op is Insert,
         // we want to create a new row with a new UUID to avoid overwriting the existing row
         // see https://confluentinc.atlassian.net/browse/EXP-16582 for more details
-        (map.has(rowId) && item.op === Operation.Insert && hasUpsertColumns)
+        (hasUpsertColumns && hasRowId && item.op === Operation.Insert)
       ) {
         const idSuffix = uuidv4();
-        const newRowId = `${rowId}-${idSuffix}`;
-        map.set(newRowId, data);
-      } else {
-        map.set(rowId, data);
+        rowId = `${rowId}-${idSuffix}`;
       }
+      map.set(rowId, data);
     } else {
-      const keyToDelete = Array.from(map.keys())
-        .filter((key) => {
-          return (key.startsWith(rowId) && validateUUIDSuffix(key)) || key === rowId;
-        })
-        .pop();
+      // delete operation, op=Operation.Delete.
+      // Scan keys once without allocating arrays; remember the last matching key.
+      let keyToDelete: string | undefined;
+      for (const key of map.keys()) {
+        if (key === rowId || (key.startsWith(rowId) && validateUUIDSuffix(key))) {
+          keyToDelete = key;
+        }
+      }
+      // And delete.
       if (keyToDelete) {
         map.delete(keyToDelete);
       }
@@ -158,4 +189,4 @@ export const parseResults = ({
   });
 
   return map;
-};
+}
