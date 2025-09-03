@@ -537,11 +537,6 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       return null;
     }
 
-    if (!uri) {
-      logger.trace("No URI provided, cannot start language client");
-      return null;
-    }
-
     // Check if we have a client for this URI and if we don't need to restart
     if (
       this.isLanguageClientConnected() &&
