@@ -20,6 +20,9 @@ export interface VSCodeFixture {
   electronApp: ElectronApplication;
 }
 
+// only log setup/.vsix paths once to reduce noise in test output
+let loggedPathInfo = false;
+
 export const test = testBase.extend<VSCodeFixture>({
   electronApp: async ({ trace }, use, testInfo) => {
     // create a temporary directory for this test run
@@ -28,7 +31,9 @@ export const test = testBase.extend<VSCodeFixture>({
     const vscodeInstallPath: string = await downloadAndUnzipVSCode(
       process.env.VSCODE_VERSION || "stable",
     );
-    console.log("VS Code install path:", vscodeInstallPath);
+    if (!loggedPathInfo) {
+      console.log("VS Code install path:", vscodeInstallPath);
+    }
 
     const vscodeVersion = process.env.VSCODE_VERSION || "stable";
 
@@ -45,7 +50,9 @@ export const test = testBase.extend<VSCodeFixture>({
       executablePath = directExecutable.endsWith(insidersOrStable)
         ? directExecutable
         : rootExecutable;
-      console.log("  Linux executable path:", executablePath);
+    }
+    if (!loggedPathInfo) {
+      console.log(`${process.platform} VS Code executable path:`, executablePath);
     }
 
     const extensionPath: string = path.normalize(path.resolve(__dirname, "..", ".."));
@@ -57,10 +64,13 @@ export const test = testBase.extend<VSCodeFixture>({
       throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
     }
 
-    console.log(`Launching VS Code (${vscodeVersion}) with:`);
-    console.log("  Executable:", executablePath);
-    console.log("  Extension path:", extensionPath);
-    console.log("  VSIX path:", vsixPath);
+    if (!loggedPathInfo) {
+      console.log(`Launching VS Code (${vscodeVersion}) with:`);
+      console.log("  Executable:", executablePath);
+      console.log("  Extension path:", extensionPath);
+      console.log("  VSIX path:", vsixPath);
+    }
+    loggedPathInfo = true;
 
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
@@ -68,7 +78,6 @@ export const test = testBase.extend<VSCodeFixture>({
       args: [
         // same as the Mocha test args in Gulpfile.js:
         "--no-sandbox",
-        "--profile-temp",
         "--skip-release-notes",
         "--skip-welcome",
         "--disable-gpu",
