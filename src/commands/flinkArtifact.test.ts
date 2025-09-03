@@ -13,12 +13,12 @@ import { IconNames } from "../constants";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
-import * as commands from "./index";
 import {
   deleteArtifactCommand,
   registerArtifactCommand,
   uploadArtifactCommand,
-} from "./uploadArtifact";
+} from "./flinkArtifact";
+import * as commands from "./index";
 import * as uploadArtifact from "./utils/uploadArtifact";
 
 describe("uploadArtifact Command", () => {
