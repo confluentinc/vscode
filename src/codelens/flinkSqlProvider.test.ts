@@ -54,8 +54,6 @@ describe("codelens/flinkSqlProvider.ts", () => {
     const fakeDocument: TextDocument = { uri: testUri } as unknown as TextDocument;
 
     beforeEach(async () => {
-      sandbox = sinon.createSandbox();
-
       // reset any stored metadata
       await getResourceManager().deleteAllUriMetadata();
       resourceManagerStub = sandbox.createStubInstance(ResourceManager);
@@ -74,7 +72,6 @@ describe("codelens/flinkSqlProvider.ts", () => {
     afterEach(async () => {
       provider.dispose();
       FlinkSqlCodelensProvider["instance"] = null;
-      sandbox.restore();
       // clean up any stored metadata
       await getResourceManager().deleteAllUriMetadata();
     });
