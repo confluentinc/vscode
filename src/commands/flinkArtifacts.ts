@@ -1,4 +1,4 @@
-import { Disposable, window, workspace } from "vscode";
+import { Disposable, SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkArtifactUDFViewMode } from "../emitters";
