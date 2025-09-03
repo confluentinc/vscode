@@ -222,14 +222,15 @@ describe("codelens/flinkSqlProvider.ts", () => {
       });
     }
 
-    for (const metadataDatabaseId of [undefined, "old-or-invalid-db-id"]) {
-      it(`should provide 'Set Catalog & Database' codelens when no database is found matching stored metadata (${UriMetadataKeys.FLINK_DATABASE_ID}=${metadataDatabaseId})`, async () => {
+    for (const metadataDatabaseName of [undefined, "old-or-invalid-db"]) {
+      it(`should provide 'Set Catalog & Database' codelens when no database is found matching stored metadata (${UriMetadataKeys.FLINK_DATABASE_NAME}=${metadataDatabaseName})`, async () => {
         const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
         // simulate stored compute pool metadata
         resourceManagerStub.getUriMetadata.resolves({
           [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: pool.id,
           // undefined or something that won't match a valid catalog+db
-          [UriMetadataKeys.FLINK_DATABASE_ID]: metadataDatabaseId,
+          [UriMetadataKeys.FLINK_CATALOG_NAME]: `${metadataDatabaseName}-catalog`,
+          [UriMetadataKeys.FLINK_DATABASE_NAME]: metadataDatabaseName,
         });
         const envWithoutPool: CCloudEnvironment = new CCloudEnvironment({
           ...TEST_CCLOUD_ENVIRONMENT,
@@ -434,7 +435,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
     });
 
-    it(`should return no catalog/database if no "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata is found and no default "${FLINK_CONFIG_DATABASE.id}" value is set`, async () => {
+    it(`should return no catalog/database if no "${UriMetadataKeys.FLINK_DATABASE_NAME}" metadata is found and no default "${FLINK_CONFIG_DATABASE.id}" value is set`, async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_DATABASE, undefined);
       const metadata: UriMetadata = {};
       const envs: CCloudEnvironment[] = [testFlinkEnv];
@@ -444,7 +445,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.strictEqual(catalogDb.database, undefined);
     });
 
-    it(`should return the default "${FLINK_CONFIG_DATABASE.id}" value if "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata is undefined`, async () => {
+    it(`should return the default "${FLINK_CONFIG_DATABASE.id}" value if "${UriMetadataKeys.FLINK_DATABASE_NAME}" metadata is undefined`, async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_DATABASE, TEST_CCLOUD_KAFKA_CLUSTER.id);
       const metadata: UriMetadata = {};
       const envs: CCloudEnvironment[] = [testFlinkEnv];
@@ -467,7 +468,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.strictEqual(catalogDb.database, undefined);
     });
 
-    it(`should return database from "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata if found`, async () => {
+    it(`should return database from "${UriMetadataKeys.FLINK_DATABASE_NAME}" metadata if found`, async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_DATABASE, undefined);
       const metadata: UriMetadata = {
         [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
@@ -481,7 +482,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
     });
 
-    it(`should favor stored "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata over default "${FLINK_CONFIG_DATABASE.id}" value`, async () => {
+    it(`should favor stored "${UriMetadataKeys.FLINK_DATABASE_NAME}" metadata over default "${FLINK_CONFIG_DATABASE.id}" value`, async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_DATABASE, "some-other-database-id");
       const metadata: UriMetadata = {
         [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
@@ -495,9 +496,10 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.strictEqual(catalogDb.database.id, TEST_CCLOUD_KAFKA_CLUSTER.id);
     });
 
-    it(`should return no catalog/database if the stored "${UriMetadataKeys.FLINK_DATABASE_ID}" metadata doesn't match any database`, async () => {
+    it(`should return no catalog/database if the stored "${UriMetadataKeys.FLINK_DATABASE_NAME}" metadata doesn't match any database`, async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_DATABASE, undefined);
       const metadata: UriMetadata = {
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: "non-existent-catalog-name",
         [UriMetadataKeys.FLINK_DATABASE_NAME]: "non-existent-database-name",
       };
       const envs: CCloudEnvironment[] = [testFlinkEnv];
