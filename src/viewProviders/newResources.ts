@@ -191,7 +191,6 @@ export abstract class SingleEnvironmentConnectionRow<
   ET extends ConcreteEnvironment,
   KCT extends LocalKafkaCluster | DirectKafkaCluster,
   SRT extends LocalSchemaRegistry | DirectSchemaRegistry,
-  MT extends LocalMedusa | undefined = LocalMedusa | undefined,
   LT extends ResourceLoader = LocalResourceLoader | DirectResourceLoader,
 > extends ConnectionRow<ET, LT> {
   /** Get my single environment (if loaded), otherwise undefined. */
@@ -216,21 +215,12 @@ export abstract class SingleEnvironmentConnectionRow<
     return this.environments[0].schemaRegistry as SRT | undefined;
   }
 
-  get medusa(): MT | undefined {
-    if (this.environments.length === 0) {
-      return undefined;
-    }
-    return (this.environments[0] as LocalEnvironment).medusa as MT | undefined;
-  }
-
   override get connected(): boolean {
     // connected if we have at least one environment AND that env
-    // has either Kafka cluster, Schema Registry, or Medusa visible.
+    // has either Kafka cluster or Schema Registry visible.
     return (
       this.environments.length > 0 &&
-      (this.kafkaCluster !== undefined ||
-        this.schemaRegistry !== undefined ||
-        this.medusa !== undefined)
+      (this.kafkaCluster !== undefined || this.schemaRegistry !== undefined)
     );
   }
 
@@ -248,9 +238,6 @@ export abstract class SingleEnvironmentConnectionRow<
     }
     if (environment.schemaRegistry) {
       children.push(environment.schemaRegistry as SRT);
-    }
-    if ((environment as LocalEnvironment).medusa) {
-      children.push((environment as LocalEnvironment).medusa as LocalMedusa);
     }
 
     return children;
@@ -326,7 +313,6 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
   DirectEnvironment,
   DirectKafkaCluster,
   DirectSchemaRegistry,
-  undefined,
   DirectResourceLoader
 > {
   constructor(loader: DirectResourceLoader) {
@@ -391,7 +377,6 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalEnvironment,
   LocalKafkaCluster,
   LocalSchemaRegistry,
-  LocalMedusa,
   LocalResourceLoader
 > {
   /**
@@ -417,6 +402,27 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
 
   get tooltip(): MarkdownString {
     return new MarkdownString("Local Kafka clusters discoverable at port `8082` are shown here.");
+  }
+
+  get medusa(): LocalMedusa | undefined {
+    if (this.environments.length === 0) {
+      return undefined;
+    }
+    return this.environments[0].medusa;
+  }
+
+  override get connected(): boolean {
+    // connected if we have at least one environment AND that env
+    // has either Kafka cluster, Schema Registry, or Medusa visible.
+    return super.connected || this.medusa !== undefined;
+  }
+
+  override get children(): ConnectionRowChildren[] {
+    const children: ConnectionRowChildren[] = super.children;
+    if (this.medusa) {
+      children.push(this.medusa);
+    }
+    return children;
   }
 
   override async refresh(deepRefresh: boolean): Promise<void> {
@@ -447,8 +453,13 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   }
 
   get status(): string {
-    // this method assumes that for the connection to be "connected" we must have at least a Kafka cluster, when only Medusa is present, it will still try to access kafkaCluster uri and fail
-    return this.connected ? this.kafkaCluster!.uri! : "(Not Running)";
+    if (this.kafkaCluster) {
+      return this.kafkaCluster.uri!;
+    }
+    if (this.medusa) {
+      return "Only Medusa available";
+    }
+    return "(No connection)";
   }
 }
 
@@ -710,24 +721,24 @@ export class NewResourceViewProvider
     }
 
     // Kick off the initial fetching for this connection.
-    await connectionRow.refresh(false).then(() => {
-      this.logger.debug("New connection row back from initial refresh", {
+    await connectionRow.refresh(false);
+
+    this.logger.debug("New connection row back from initial refresh", {
+      connectionId: connectionRow.connectionId,
+    });
+
+    if (!insertBeforeRefresh) {
+      // Codepath for direct connections, where we don't know the name, icon, etc.
+      // until after the initial refresh (and if we tried to make a TreeItem
+      // before the refresh, an error would be raised).
+      this.logger.debug("Storing connection row now that initial refresh has completed", {
         connectionId: connectionRow.connectionId,
       });
+      this.storeConnection(connectionRow);
+    }
 
-      if (!insertBeforeRefresh) {
-        // Codepath for direct connections, where we don't know the name, icon, etc.
-        // until after the initial refresh (and if we tried to make a TreeItem
-        // before the refresh, an error would be raised).
-        this.logger.debug("Storing connection row now that initial refresh has completed", {
-          connectionId: connectionRow.connectionId,
-        });
-        this.storeConnection(connectionRow);
-      }
-
-      // Indicate that we have a new happy toplevel child.
-      this.repaint();
-    });
+    // Indicate that we have a new happy toplevel child.
+    this.repaint();
   }
 
   private storeConnection(connectionRow: AnyConnectionRow): void {
