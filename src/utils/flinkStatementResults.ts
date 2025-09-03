@@ -91,7 +91,7 @@ export interface ParseResultsProps {
 }
 
 /**
- * Parases Flink SQL results and updates a map of rows.
+ * Parses Flink SQL results and updates a map of rows.
  * @param map A map to be updated.
  * @param columns Columns that will be mapped to each data item in order.
  * @param rows.n.op Flink operation:
