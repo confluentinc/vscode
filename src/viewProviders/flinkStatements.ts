@@ -241,4 +241,47 @@ export class FlinkStatementsViewProvider
       nonterminal_statements_to_poll: STATEMENT_POLLING_LIMIT.value,
     });
   }
+
+  /**
+   * Override the base updateTreeViewDescription from {@link ParentedBaseViewProvider} to show clear scope indicators.
+   * - Environment mode: "Env: {envName} | {envId}"
+   * - Single Flink compute pool mode: "FCP: {poolName} | {poolId}"
+   */
+  async updateTreeViewDescription(): Promise<void> {
+    const focusedResource = this.resource;
+    if (!focusedResource) {
+      this.logger.debug(
+        "updateTreeViewDescription() called with no focused resource, clearing view description",
+      );
+      this.treeView.description = "";
+      this.environment = null;
+      return;
+    }
+
+    this.logger.debug(
+      `updateTreeViewDescription() called with ${focusedResource.constructor.name}, checking for scope...`,
+    );
+
+    if (focusedResource instanceof CCloudFlinkComputePool) {
+      // Single compute pool mode: show pool name and ID
+      this.logger.debug(
+        "updateTreeViewDescription() focused on compute pool, setting FCP description",
+      );
+      this.treeView.description = `FCP: ${focusedResource.name} | ${focusedResource.id}`;
+
+      // Still need to set the environment for other functionality
+      const parentEnv = await ResourceLoader.getEnvironment(
+        focusedResource.connectionId,
+        focusedResource.environmentId,
+      );
+      this.environment = parentEnv ?? null;
+    } else if (focusedResource instanceof CCloudEnvironment) {
+      // Environment mode: show environment name and ID
+      this.logger.debug(
+        "updateTreeViewDescription() focused on environment, setting Env description",
+      );
+      this.treeView.description = `Env: ${focusedResource.name} | ${focusedResource.id}`;
+      this.environment = focusedResource;
+    }
+  }
 }
