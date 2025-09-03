@@ -5,6 +5,7 @@ import {
   test as testBase,
 } from "@playwright/test";
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
+import { stubAllDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
 import { globSync } from "glob";
 import { tmpdir } from "os";
@@ -19,6 +20,9 @@ export interface VSCodeFixture {
   electronApp: ElectronApplication;
 }
 
+// only log setup/.vsix paths once to reduce noise in test output
+let loggedPathInfo = false;
+
 export const test = testBase.extend<VSCodeFixture>({
   electronApp: async ({ trace }, use, testInfo) => {
     // create a temporary directory for this test run
@@ -27,20 +31,16 @@ export const test = testBase.extend<VSCodeFixture>({
     const vscodeInstallPath: string = await downloadAndUnzipVSCode(
       process.env.VSCODE_VERSION || "stable",
     );
-    console.log("VS Code install path:", vscodeInstallPath);
+    if (!loggedPathInfo) {
+      console.log("VS Code install path:", vscodeInstallPath);
+    }
 
     const vscodeVersion = process.env.VSCODE_VERSION || "stable";
 
     // locate the VS Code executable path based on the platform
     let executablePath: string;
-    if (process.platform === "darwin") {
-      // on macOS, the install path is already the full path to the executable
+    if (["win32", "darwin"].includes(process.platform)) {
       executablePath = vscodeInstallPath;
-    } else if (process.platform === "win32") {
-      executablePath = path.join(
-        vscodeInstallPath,
-        vscodeVersion === "insiders" ? "Code - Insiders.exe" : "Code.exe",
-      );
     } else {
       // may be in the install path or in the root directory; need to see which one exists and
       // is executable
@@ -51,21 +51,26 @@ export const test = testBase.extend<VSCodeFixture>({
         ? directExecutable
         : rootExecutable;
     }
+    if (!loggedPathInfo) {
+      console.log(`${process.platform} VS Code executable path:`, executablePath);
+    }
 
-    const extensionPath: string = path.resolve(__dirname, "..", "..");
-    const outPath: string = path.resolve(extensionPath, "out");
-    const vsixFiles: string[] = globSync(path.resolve(outPath, "*.vsix"));
-    const vsixPath = vsixFiles[0];
+    const extensionPath: string = path.normalize(path.resolve(__dirname, "..", ".."));
+    const outPath: string = path.normalize(path.resolve(extensionPath, "out"));
+    const vsixFiles: string[] = globSync("*.vsix", { cwd: outPath });
+    const vsixPath = vsixFiles.length > 0 ? path.join(outPath, vsixFiles[0]) : undefined;
     if (!vsixPath) {
       // shouldn't happen during normal `gulp e2e`
       throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
     }
 
-    console.log(`Launching VS Code (${vscodeVersion}) with:`);
-    console.log("  Executable:", executablePath);
-    console.log("  Extension path:", extensionPath);
-    console.log("  VSIX path:", vsixPath);
-    console.log("  Temp dir:", tempDir);
+    if (!loggedPathInfo) {
+      console.log(`Launching VS Code (${vscodeVersion}) with:`);
+      console.log("  Executable:", executablePath);
+      console.log("  Extension path:", extensionPath);
+      console.log("  VSIX path:", vsixPath);
+    }
+    loggedPathInfo = true;
 
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
@@ -73,23 +78,27 @@ export const test = testBase.extend<VSCodeFixture>({
       args: [
         // same as the Mocha test args in Gulpfile.js:
         "--no-sandbox",
-        "--profile-temp",
         "--skip-release-notes",
         "--skip-welcome",
         "--disable-gpu",
         "--disable-updates",
         "--disable-workspace-trust",
         "--disable-extensions",
-        // additional args needed for the Electron launch:
+        // required to prevent test resources being saved to user's real profile
         `--user-data-dir=${tempDir}`,
+        // additional args needed for the Electron launch:
         `--extensionDevelopmentPath=${outPath}`,
-        "--new-window",
       ],
     });
 
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
+
+    // Stub all dialogs by default; tests can still override as needed.
+    // For available `method` values to use with `stubMultipleDialogs`, see:
+    // https://www.electronjs.org/docs/latest/api/dialog
+    await stubAllDialogs(electronApp);
 
     // on*, retain-on*
     if (trace.toString().includes("on")) {
