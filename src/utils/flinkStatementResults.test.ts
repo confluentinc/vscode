@@ -633,7 +633,7 @@ describe("utils/flinkStatementResults", () => {
         rows,
         upsertColumns: [0],
       });
-      const res = Array.from(resMap.values().map((data) => Object.fromEntries(data)));
+      const res = Array.from(resMap.values()).map((data) => Object.fromEntries(data));
       assert.equal(res.length, 3);
       assert.deepEqual(res[0], { sid: "1", name: "<name>", number: 1 });
       assert.deepEqual(res[1], { sid: "1", name: "<name>", number: 1 });
@@ -647,7 +647,7 @@ describe("utils/flinkStatementResults", () => {
         rows: rows2,
         upsertColumns: [0],
       });
-      const res2 = Array.from(resMap2.values().map((data) => Object.fromEntries(data)));
+      const res2 = Array.from(resMap2.values()).map((data) => Object.fromEntries(data));
       assert.equal(res2.length, 2);
       assert.deepEqual(res2[0], { sid: "1", name: "<name>", number: 1 });
       // the row in between should be removed
