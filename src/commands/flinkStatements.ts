@@ -81,16 +81,12 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
     [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
   };
   const { catalog, database } = await getCatalogDatabaseFromMetadata(metadata, envs, pool);
-  if (!(catalog && database)) {
-    return;
+  const updatedMetadata: UriMetadata = { ...metadata };
+  if (catalog && database) {
+    // update the URI metadata with the resolved catalog/database IDs and store it for the URI
+    updatedMetadata[UriMetadataKeys.FLINK_CATALOG_ID] = catalog.id;
+    updatedMetadata[UriMetadataKeys.FLINK_DATABASE_ID] = database.id;
   }
-
-  // update the URI metadata with the resolved catalog/database IDs and store it for the URI
-  const updatedMetadata: UriMetadata = {
-    ...metadata,
-    [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
-    [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
-  };
   const rm = ResourceManager.getInstance();
   await rm.setUriMetadata(uri, updatedMetadata);
 
