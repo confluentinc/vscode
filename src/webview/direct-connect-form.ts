@@ -124,8 +124,8 @@ class DirectConnectFormViewModel extends ViewModel {
   });
 
   /** Get valid auth types based on form connection type */
-  getValidKafkaAuthTypes = this.derive(() => {
-    switch (this.platformType()) {
+  getValidKafkaAuthTypesForPlatform = (platformType: FormConnectionType) => {
+    switch (platformType) {
       case "Confluent Cloud":
         return allAuthOptions.filter((auth) => ["API", "SCRAM", "OAuth"].includes(auth.value));
       case "WarpStream":
@@ -133,6 +133,9 @@ class DirectConnectFormViewModel extends ViewModel {
       default:
         return allAuthOptions;
     }
+  };
+  getValidKafkaAuthTypes = this.derive(() => {
+    return this.getValidKafkaAuthTypesForPlatform(this.platformType());
   });
 
   /** Form State */
@@ -210,7 +213,9 @@ class DirectConnectFormViewModel extends ViewModel {
           this.schemaSslEnabled(true);
         }
         // Update auth type if it isn't valid for platform choice
-        const validAuthTypes = this.getValidKafkaAuthTypes().map((option) => option.value);
+        const validAuthTypes = this.getValidKafkaAuthTypesForPlatform(
+          input.value as FormConnectionType,
+        ).map((option) => option.value);
         if (!validAuthTypes.includes(this.kafkaAuthType())) {
           this.kafkaAuthType(validAuthTypes[0]);
         }

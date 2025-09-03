@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-6",
+  "version": "1.7.0-9",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -719,6 +719,11 @@
         "icon": "$(confluent-logo)",
         "title": "View in Confluent Cloud",
         "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.artifacts.registerUDF",
+        "title": "Register Flink Artifact with Flink SQL",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.openCCloudApiKeysUrl",
@@ -1753,6 +1758,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.registerUDF",
+          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
