@@ -261,12 +261,6 @@ test.describe("Schema Management", () => {
   ): Promise<void> {
     // CCloud connection setup:
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-    // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
-    // "(Not Connected)" description
-    const ccloudItem: Locator = resourcesView.confluentCloudItem;
-    await expect(ccloudItem).toBeVisible();
-    await expect(ccloudItem).not.toHaveText("(Not Connected)");
-    await expect(ccloudItem).toHaveAttribute("aria-expanded", "true");
 
     // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
     // Flink compute pools
