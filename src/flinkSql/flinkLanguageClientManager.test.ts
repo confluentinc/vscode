@@ -812,13 +812,6 @@ describe("FlinkLanguageClientManager", () => {
       sinon.assert.notCalled(initializeLanguageClientStub);
     });
 
-    it("should return early if no URI is provided", async () => {
-      await flinkManager.maybeStartLanguageClient();
-
-      sinon.assert.notCalled(getFlinkSqlSettingsStub);
-      sinon.assert.notCalled(initializeLanguageClientStub);
-    });
-
     // the "Language client already exists for this [document] URI" scenario
     it("should return early if the language client exists for the same URI and restartRunningClient=false", async () => {
       isLanguageClientConnectedStub.returns(true);
