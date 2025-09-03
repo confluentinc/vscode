@@ -6,7 +6,9 @@ import {
 } from "@playwright/test";
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
 import { stubAllDialogs } from "electron-playwright-helpers";
+import { mkdtempSync } from "fs";
 import { globSync } from "glob";
+import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -20,6 +22,9 @@ export interface VSCodeFixture {
 
 export const test = testBase.extend<VSCodeFixture>({
   electronApp: async ({ trace }, use, testInfo) => {
+    // create a temporary directory for this test run
+    const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
+
     const vscodeInstallPath: string = await downloadAndUnzipVSCode(
       process.env.VSCODE_VERSION || "stable",
     );
@@ -70,6 +75,8 @@ export const test = testBase.extend<VSCodeFixture>({
         "--disable-updates",
         "--disable-workspace-trust",
         "--disable-extensions",
+        // required to prevent test resources being saved to user's real profile
+        `--user-data-dir=${tempDir}`,
         // additional args needed for the Electron launch:
         `--extensionDevelopmentPath=${outPath}`,
       ],
