@@ -16,7 +16,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
-import { IFlinkQueryable } from "../models/resource";
+import { EnvironmentId, IFlinkQueryable } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar, SidecarHandle } from "../sidecar";
 import { ObjectSet } from "../utils/objectset";
@@ -126,6 +126,37 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       return this.organization;
     }
     logger.withCallpoint("getOrganization()").error("No current organization found.");
+  }
+
+  /**
+   * Get all Flink compute pools in all environments, or in a specific environment if given.
+   * @param environmentId Optional environment ID to filter by.
+   * @returns Array of {@link CCloudFlinkComputePool} objects.
+   */
+  public async getFlinkComputePools(
+    environmentId?: EnvironmentId,
+  ): Promise<CCloudFlinkComputePool[]> {
+    const envs: CCloudEnvironment[] = await this.getEnvironments();
+    const pools: CCloudFlinkComputePool[] = [];
+    for (const env of envs) {
+      if (environmentId && env.id !== environmentId) {
+        continue;
+      }
+      pools.push(...env.flinkComputePools);
+    }
+    return pools;
+  }
+
+  /**
+   * Get a specific Flink compute pool by ID.
+   * @param computePoolId The compute pool ID to look for.
+   * @returns The {@link CCloudFlinkComputePool} with the given ID, or undefined if not found.
+   */
+  public async getFlinkComputePool(
+    computePoolId: string,
+  ): Promise<CCloudFlinkComputePool | undefined> {
+    const pools = await this.getFlinkComputePools();
+    return pools.find((p) => p.id === computePoolId);
   }
 
   /**

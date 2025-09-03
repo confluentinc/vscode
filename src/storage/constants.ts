@@ -18,7 +18,10 @@ export enum GlobalStorageKeys {
 /** Keys for use within UriMetadata records */
 export enum UriMetadataKeys {
   FLINK_COMPUTE_POOL_ID = "flinkComputePoolId",
+  FLINK_CATALOG_ID = "flinkCatalogId",
+  FLINK_CATALOG_NAME = "flinkCatalogName",
   FLINK_DATABASE_ID = "flinkDatabaseId",
+  FLINK_DATABASE_NAME = "flinkDatabaseName",
 }
 
 export enum SecretStorageKeys {

@@ -1,6 +1,7 @@
 import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import {
   FLINKSTATEMENT_URI_SCHEME,
   FlinkStatementDocumentProvider,
@@ -8,6 +9,7 @@ import {
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
@@ -19,6 +21,7 @@ import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
+import { UriMetadata } from "../storage/types";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
@@ -47,14 +50,45 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
     return;
   }
 
+  if (!statement.computePoolId) {
+    logger.error("viewStatementSqlCommand", "statement has no computePoolId");
+    return;
+  }
+
   const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
 
-  // make sure any relevant metadata for the Uri is set
-  const rm = ResourceManager.getInstance();
-  await rm.setUriMetadata(uri, {
+  const loader = CCloudResourceLoader.getInstance();
+  const envs = await loader.getEnvironments();
+  if (envs.length === 0) {
+    logger.error("viewStatementSqlCommand", "No environments available");
+    return;
+  }
+
+  const pool = await loader.getFlinkComputePool(statement.computePoolId);
+  if (!pool) {
+    logger.error(
+      "viewStatementSqlCommand",
+      `Could not find compute pool with ID ${statement.computePoolId}`,
+    );
+    return;
+  }
+
+  const metadata: UriMetadata = {
     [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: statement.computePoolId,
-    [UriMetadataKeys.FLINK_DATABASE_ID]: statement.database,
-  });
+    // we don't have the catalog ID at this point
+    [UriMetadataKeys.FLINK_CATALOG_NAME]: statement.catalog,
+    // ...nor do we have the database ID
+    [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
+  };
+  const { catalog, database } = await getCatalogDatabaseFromMetadata(metadata, envs, pool);
+  const updatedMetadata: UriMetadata = { ...metadata };
+  if (catalog && database) {
+    // update the URI metadata with the resolved catalog/database IDs and store it for the URI
+    updatedMetadata[UriMetadataKeys.FLINK_CATALOG_ID] = catalog.id;
+    updatedMetadata[UriMetadataKeys.FLINK_DATABASE_ID] = database.id;
+  }
+  const rm = ResourceManager.getInstance();
+  await rm.setUriMetadata(uri, updatedMetadata);
 
   const doc = await vscode.workspace.openTextDocument(uri);
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
