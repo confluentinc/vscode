@@ -322,8 +322,11 @@ test.describe("Schema Management", () => {
     // expand the first direct connection to show its Schema Registry
     await expect(resourcesView.directConnections).not.toHaveCount(0);
     const firstConnection: Locator = resourcesView.directConnections.first();
-    // direct connections are collapsed by default, so we need to expand it first
-    await firstConnection.click();
+    // direct connections are collapsed by default in the old Resources view, but expanded in the
+    // new Resources view
+    if ((await firstConnection.getAttribute("aria-expanded")) === "false") {
+      await firstConnection.click();
+    }
     await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
 
     // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
