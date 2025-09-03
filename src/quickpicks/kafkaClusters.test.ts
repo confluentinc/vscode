@@ -220,12 +220,17 @@ describe("flinkDatabaseQuickPick", () => {
     await flinkDatabaseQuickpick(computePool);
     const itemsCalledWith = showQuickPickStub.getCall(0).args[0];
     // one separator for the single environment, one for the single cloud
-    // cluster in same provider/region.
-    assert.strictEqual(itemsCalledWith.length, 2);
+    // cluster in same provider/region, plus separator with message and skip option
+    assert.strictEqual(itemsCalledWith.length, 4);
     assert.strictEqual(itemsCalledWith[0].kind, QuickPickItemKind.Separator);
-    // other two items are the clusters. Their description should be the id.
-    // and their .value should be the cluster.
+    // cluster item should be the second item (after environment separator)
     assert.strictEqual(itemsCalledWith[1].description, ccloudClusters[0].id);
     assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_KAFKA_CLUSTER);
+    // third item should be the separator before skip with message
+    assert.strictEqual(itemsCalledWith[2].kind, QuickPickItemKind.Separator);
+    assert.strictEqual(itemsCalledWith[2].label, "Must use fully qualified table name");
+    // fourth item should be the skip option
+    assert.strictEqual(itemsCalledWith[3].label, "Skip");
+    assert.strictEqual(itemsCalledWith[3].value, null);
   });
 });
