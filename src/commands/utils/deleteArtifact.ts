@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { artifactUploadDeleted } from "../../emitters";
 import { FlinkArtifact } from "../../models/flinkArtifact";
-import { EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { getSidecar } from "../../sidecar";
 
 export async function deleteArtifactCommand(
@@ -21,12 +20,12 @@ export async function deleteArtifactCommand(
     id: selectedArtifact.id,
   };
   const sidecarHandle = await getSidecar();
-  const providerRegion: IEnvProviderRegion = {
-    region: request.region,
-    environmentId: request.environment as EnvironmentId,
-    provider: request.cloud,
-  };
-  const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
+
+  const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
+    region: selectedArtifact.region,
+    environmentId: selectedArtifact.environmentId,
+    provider: selectedArtifact.provider,
+  });
 
   const yesButton = "Yes, delete";
   const confirmation = await vscode.window.showWarningMessage(

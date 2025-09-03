@@ -1,16 +1,21 @@
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { FlinkArtifactsArtifactV1Api } from "../../clients/flinkArtifacts";
 import { ConnectionType } from "../../clients/sidecar";
 import { IconNames } from "../../constants";
 import { FlinkArtifact } from "../../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
-import * as sidecarModule from "../../sidecar";
+import * as sidecar from "../../sidecar";
 import { deleteArtifactCommand } from "./deleteArtifact";
-
 describe("deleteArtifactCommand", () => {
   let sandbox: sinon.SinonSandbox;
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+      sandbox.createStubInstance(sidecar.SidecarHandle);
+    let flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+    mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
+    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
   });
   afterEach(() => {
     sandbox.restore();
@@ -35,14 +40,6 @@ describe("deleteArtifactCommand", () => {
       const showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
       const deleteArtifactV1FlinkArtifactStub = sandbox.stub().resolves();
 
-      const getSidecarStub = sandbox.stub().resolves({
-        getFlinkArtifactsApi: () => ({
-          deleteArtifactV1FlinkArtifact: deleteArtifactV1FlinkArtifactStub,
-        }),
-      });
-
-      sandbox.replace(sidecarModule, "getSidecar", getSidecarStub);
-
       await deleteArtifactCommand(mockArtifact);
 
       sinon.assert.notCalled(deleteArtifactV1FlinkArtifactStub);
@@ -51,14 +48,6 @@ describe("deleteArtifactCommand", () => {
     it("should call the sidecar to delete the artifact and show a success message", async () => {
       sandbox.stub(vscode.window, "showWarningMessage").resolves({ title: "Yes, delete" });
       const showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
-
-      const getSidecarStub = sandbox.stub().resolves({
-        getFlinkArtifactsApi: () => ({
-          deleteArtifactV1FlinkArtifact: sandbox.stub().resolves(),
-        }),
-      });
-
-      sandbox.replace(sidecarModule, "getSidecar", getSidecarStub);
 
       await deleteArtifactCommand(mockArtifact);
       sinon.assert.calledOnce(showInformationMessageStub);

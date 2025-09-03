@@ -96,7 +96,7 @@ export function registerUploadArtifactCommand(): vscode.Disposable {
   return registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand);
 }
 /**
- * Registers the "confluent.uploadArtifact" command with logging.
+ * Registers the "confluent.deleteArtifact" command with logging.
  */
 export function registerDeleteArtifactCommand(): vscode.Disposable {
   // Register only the delete command here

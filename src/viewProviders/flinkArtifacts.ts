@@ -1,7 +1,6 @@
 import { Disposable } from "vscode";
 import { ContextValues } from "../context/values";
 import {
-  artifactUploadCompleted,
   artifactUploadDeleted,
   currentFlinkArtifactsPoolChanged,
   flinkArtifactUDFViewMode,
@@ -57,17 +56,11 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
   setCustomEventListeners(): Disposable[] {
     return [
       flinkArtifactUDFViewMode.event(this.switchMode.bind(this)),
-      artifactUploadCompleted.event(this.artifactUploadCompletedHandler.bind(this)),
-      artifactUploadDeleted.event(this.artifactUploadDeletedHandler.bind(this)),
+      artifactUploadDeleted.event(this.artifactUploadEventHandler.bind(this)),
     ];
   }
 
-  private async artifactUploadDeletedHandler(): Promise<void> {
-    if (this.currentDelegate.mode === FlinkArtifactsViewProviderMode.Artifacts) {
-      await this.refresh();
-    }
-  }
-  private async artifactUploadCompletedHandler(): Promise<void> {
+  private async artifactUploadEventHandler(): Promise<void> {
     if (this.currentDelegate.mode === FlinkArtifactsViewProviderMode.Artifacts) {
       await this.refresh();
     }
