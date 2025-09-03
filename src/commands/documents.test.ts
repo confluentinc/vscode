@@ -1,7 +1,8 @@
 import * as sinon from "sinon";
 import { Uri, window } from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
-import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { uriMetadataSet } from "../emitters";
 import {
@@ -10,6 +11,7 @@ import {
   UPDATE_DEFAULT_DATABASE_FROM_LENS,
   UPDATE_DEFAULT_POOL_ID_FROM_LENS,
 } from "../extensionSettings/constants";
+import { CCloudResourceLoader } from "../loaders";
 import * as flinkComputePoolsQuickPick from "../quickpicks/flinkComputePools";
 import * as flinkDatabaseQuickpick from "../quickpicks/kafkaClusters";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
@@ -191,6 +193,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
   let flinkComputePoolQuickPickStub: sinon.SinonStub;
   let flinkDatabaseQuickpickStub: sinon.SinonStub;
+  let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
   let uriMetadataSetFireStub: sinon.SinonStub;
   let hasCCloudAuthSessionStub: sinon.SinonStub;
   let flinkConfigDatabaseUpdateStub: sinon.SinonStub;
@@ -208,6 +211,8 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
       "flinkComputePoolQuickPick",
     );
     flinkDatabaseQuickpickStub = sandbox.stub(flinkDatabaseQuickpick, "flinkDatabaseQuickpick");
+    stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+    stubbedLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
     uriMetadataSetFireStub = sandbox.stub(uriMetadataSet, "fire");
     flinkConfigDatabaseUpdateStub = sandbox.stub(FLINK_CONFIG_DATABASE, "update").resolves();
     // assume the user is signed in to CCloud for most tests
@@ -233,7 +238,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudDatabaseForUriCommand();
 
     sinon.assert.notCalled(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
+    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
@@ -244,7 +249,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudComputePoolForUriCommand(testUri);
 
     sinon.assert.notCalled(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
+    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
@@ -255,7 +260,7 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudDatabaseForUriCommand(testUri);
 
     sinon.assert.called(flinkComputePoolQuickPickStub);
-    sinon.assert.notCalled(stubResourceManager.setUriMetadataValue);
+    sinon.assert.notCalled(stubResourceManager.setUriMetadata);
     sinon.assert.notCalled(uriMetadataSetFireStub);
   });
 
@@ -267,14 +272,14 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudDatabaseForUriCommand(testUri);
 
     sinon.assert.calledOnce(flinkComputePoolQuickPickStub);
-    sinon.assert.calledOnce(stubResourceManager.setUriMetadataValue);
+    sinon.assert.calledOnce(stubResourceManager.setUriMetadata);
     // all metadata should be derived from the chosen compute pool
-    sinon.assert.calledWithExactly(
-      stubResourceManager.setUriMetadataValue,
-      testUri,
-      UriMetadataKeys.FLINK_DATABASE_ID,
-      TEST_CCLOUD_KAFKA_CLUSTER.id,
-    );
+    sinon.assert.calledWithExactly(stubResourceManager.setUriMetadata, testUri, {
+      [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_KAFKA_CLUSTER.name,
+    });
     sinon.assert.calledOnce(uriMetadataSetFireStub);
     sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);
   });
@@ -286,14 +291,14 @@ describe("commands/documents.ts setCCloudDatabaseForUriCommand()", () => {
     await setCCloudDatabaseForUriCommand(testUri, TEST_CCLOUD_FLINK_COMPUTE_POOL);
 
     sinon.assert.notCalled(flinkComputePoolQuickPickStub);
-    sinon.assert.calledOnce(stubResourceManager.setUriMetadataValue);
+    sinon.assert.calledOnce(stubResourceManager.setUriMetadata);
     // all metadata should be derived from the chosen compute pool
-    sinon.assert.calledWithExactly(
-      stubResourceManager.setUriMetadataValue,
-      testUri,
-      UriMetadataKeys.FLINK_DATABASE_ID,
-      TEST_CCLOUD_KAFKA_CLUSTER.id,
-    );
+    sinon.assert.calledWithExactly(stubResourceManager.setUriMetadata, testUri, {
+      [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT.name,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_KAFKA_CLUSTER.name,
+    });
     sinon.assert.calledOnce(uriMetadataSetFireStub);
     sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);
   });
@@ -420,8 +425,11 @@ describe("commands/documents.ts resetCCloudMetadataForUriCommand()", () => {
 
     sinon.assert.calledOnce(stubResourceManager.setUriMetadata);
     sinon.assert.calledWithExactly(stubResourceManager.setUriMetadata, testUri, {
-      [UriMetadataKeys.FLINK_DATABASE_ID]: null,
       [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: null,
+      [UriMetadataKeys.FLINK_CATALOG_ID]: null,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: null,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: null,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: null,
     });
     sinon.assert.calledOnce(uriMetadataSetFireStub);
     sinon.assert.calledOnceWithExactly(uriMetadataSetFireStub, testUri);

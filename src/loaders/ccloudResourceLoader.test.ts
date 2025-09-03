@@ -43,6 +43,7 @@ import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { restFlinkStatementToModel } from "../models/flinkStatement";
+import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
@@ -271,6 +272,148 @@ describe("CCloudResourceLoader", () => {
       queryables.forEach((q) => {
         assert.strictEqual(q.computePoolId, undefined);
       });
+    });
+  });
+
+  describe("getFlinkComputePools", () => {
+    let getEnvironmentsStub: sinon.SinonStub;
+
+    const envId1 = "env-target" as EnvironmentId;
+    const envId2 = "env-other" as EnvironmentId;
+    const computePool1 = new CCloudFlinkComputePool({
+      ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      id: "lfcp-1",
+      name: "Pool 1",
+      environmentId: envId1,
+    });
+    const computePool2 = new CCloudFlinkComputePool({
+      ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      id: "lfcp-2",
+      name: "Pool 2",
+      environmentId: envId1,
+    });
+    const computePool3 = new CCloudFlinkComputePool({
+      ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      id: "lfcp-3",
+      name: "Pool 3",
+      environmentId: envId2,
+    });
+    const env1 = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: envId1,
+      flinkComputePools: [computePool1, computePool2],
+    });
+    const env2 = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: envId2,
+      flinkComputePools: [computePool3],
+    });
+
+    beforeEach(() => {
+      getEnvironmentsStub = sandbox.stub(loader, "getEnvironments");
+    });
+
+    it("should return all Flink compute pools from all environments when no environmentId is provided", async () => {
+      getEnvironmentsStub.resolves([env1, env2]);
+
+      const pools: CCloudFlinkComputePool[] = await loader.getFlinkComputePools();
+
+      assert.strictEqual(pools.length, 3);
+      assert.ok(pools.includes(computePool1));
+      assert.ok(pools.includes(computePool2));
+      assert.ok(pools.includes(computePool3));
+      sinon.assert.calledOnce(getEnvironmentsStub);
+    });
+
+    it("should return only Flink compute pools from the specified environment", async () => {
+      getEnvironmentsStub.resolves([env1, env2]);
+
+      const pools: CCloudFlinkComputePool[] = await loader.getFlinkComputePools(envId1);
+
+      assert.strictEqual(pools.length, 2);
+      assert.ok(pools.includes(computePool1));
+      assert.ok(pools.includes(computePool2));
+      // shouldn't include pools from a different environment
+      assert.ok(!pools.includes(computePool3));
+      sinon.assert.calledOnce(getEnvironmentsStub);
+    });
+
+    it("should return an empty array when no environments exist", async () => {
+      getEnvironmentsStub.resolves([]);
+
+      const pools = await loader.getFlinkComputePools();
+      assert.strictEqual(pools.length, 0);
+      sinon.assert.calledOnce(getEnvironmentsStub);
+    });
+
+    it("should return an empty array when no available environments have Flink compute pools", async () => {
+      const envWithoutPools = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        flinkComputePools: [],
+      });
+      getEnvironmentsStub.resolves([envWithoutPools]);
+
+      const pools: CCloudFlinkComputePool[] = await loader.getFlinkComputePools();
+
+      assert.strictEqual(pools.length, 0);
+      sinon.assert.calledOnce(getEnvironmentsStub);
+    });
+
+    it("should return an empty array when filtering by non-existent environment", async () => {
+      getEnvironmentsStub.resolves([env1, env2]);
+
+      const pools: CCloudFlinkComputePool[] = await loader.getFlinkComputePools(
+        "some-other-env" as EnvironmentId,
+      );
+
+      assert.strictEqual(pools.length, 0);
+      sinon.assert.calledOnce(getEnvironmentsStub);
+    });
+  });
+
+  describe("getFlinkComputePool", () => {
+    let getFlinkComputePoolsStub: sinon.SinonStub;
+
+    const pool1 = new CCloudFlinkComputePool({
+      ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      id: "lfcp-1",
+      name: "Pool 1",
+    });
+    const pool2 = new CCloudFlinkComputePool({
+      ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      id: "lfcp-2",
+      name: "Pool 2",
+    });
+
+    beforeEach(() => {
+      getFlinkComputePoolsStub = sandbox.stub(loader, "getFlinkComputePools");
+    });
+
+    it("should return the Flink compute pool matching the provided ID", async () => {
+      getFlinkComputePoolsStub.resolves([pool1, pool2]);
+
+      const pool: CCloudFlinkComputePool | undefined = await loader.getFlinkComputePool(pool2.id);
+
+      assert.strictEqual(pool, pool2);
+      sinon.assert.calledOnce(getFlinkComputePoolsStub);
+    });
+
+    it("should return undefined when no compute pool matches the provided ID", async () => {
+      getFlinkComputePoolsStub.resolves([pool1, pool2]);
+
+      const pool: CCloudFlinkComputePool | undefined =
+        await loader.getFlinkComputePool("lfcp-nonexistent");
+      assert.strictEqual(pool, undefined);
+      sinon.assert.calledOnce(getFlinkComputePoolsStub);
+    });
+
+    it("should return undefined when no compute pools exist", async () => {
+      getFlinkComputePoolsStub.resolves([]);
+
+      const pool: CCloudFlinkComputePool | undefined = await loader.getFlinkComputePool("lfcp-any");
+
+      assert.strictEqual(pool, undefined);
+      sinon.assert.calledOnce(getFlinkComputePoolsStub);
     });
   });
 
