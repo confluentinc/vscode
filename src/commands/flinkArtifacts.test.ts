@@ -31,7 +31,11 @@ describe("flinkArtifacts", () => {
     const openTextDocStub = sandbox
       .stub(vscode.workspace, "openTextDocument")
       .resolves({} as vscode.TextDocument);
-    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves();
+    // Fix: stub showTextDocument to return an editor with insertSnippet stub
+    const insertSnippetStub = sandbox.stub().resolves();
+    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
+      insertSnippet: insertSnippetStub,
+    } as unknown as vscode.TextEditor);
 
     await queryArtifactWithFlink(artifact);
 
@@ -39,11 +43,13 @@ describe("flinkArtifacts", () => {
     const callArgs = openTextDocStub.getCall(0).args[0];
     assert.ok(callArgs, "openTextDocStub was not called with any arguments");
     assert.strictEqual(callArgs.language, "flinksql");
-    assert.ok(
-      typeof callArgs.content === "string" && callArgs.content.includes("CREATE FUNCTION"),
-      "callArgs.content should include the CREATE FUNCTION statement",
-    );
     sinon.assert.calledOnce(showTextDocStub);
+    sinon.assert.calledOnce(insertSnippetStub);
+    const snippetArg = insertSnippetStub.getCall(0).args[0];
+    assert.ok(
+      typeof snippetArg.value === "string" && snippetArg.value.includes("CREATE FUNCTION"),
+      "insertSnippet should be called with a snippet containing CREATE FUNCTION",
+    );
   });
   it("should return early if no artifact is provided", async () => {
     const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
