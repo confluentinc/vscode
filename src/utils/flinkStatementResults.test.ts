@@ -664,7 +664,7 @@ describe("utils/flinkStatementResults", () => {
       // Should be different results.
       assert.notEqual(rowId1, rowId2);
       assert.equal(rowId1.length, rowId2.length);
-      // 32 chars of SHA-256 hash prefix in hex goodness.
+      // 32 chars of MD5 hash prefix in hex goodness.
       assert.equal(rowId1.length, 32);
     });
 
