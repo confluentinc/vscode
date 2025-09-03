@@ -223,10 +223,6 @@ export async function getCatalogDatabaseFromMetadata(
   computePool?: CCloudFlinkComputePool,
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
-  if (envs.length === 0) {
-    logger.warn("no environments available to look up catalog/database");
-    return catalogDatabase;
-  }
 
   // first look up the default catalog/database from user settings
   let defaultCatalog: CCloudEnvironment | undefined;
@@ -241,13 +237,13 @@ export async function getCatalogDatabaseFromMetadata(
   // it was cleared via the "Clear Settings" codelens
   let catalogName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_NAME];
   let catalogId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_ID];
-  if (defaultCatalog && (catalogName === undefined || catalogId === undefined)) {
+  if (defaultCatalog && catalogName === undefined && catalogId === undefined) {
     catalogName = defaultCatalog.name;
     catalogId = defaultCatalog.id;
   }
   let databaseName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_NAME];
   let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
-  if (defaultDatabase && (databaseName === undefined || databaseId === undefined)) {
+  if (defaultDatabase && databaseName === undefined && databaseId === undefined) {
     databaseName = defaultDatabase.name;
     databaseId = defaultDatabase.id;
   }
@@ -278,7 +274,7 @@ export async function getCatalogDatabaseFromMetadata(
     return catalogDatabase;
   }
   if (matchingCatalogs.length === 1 && matchingDatabases.length === 1) {
-    logger.info("matched one catalog and one database from name-related metadata");
+    logger.debug("matched one catalog and one database from name-related metadata");
     // ideal scenario: exactly one catalog and one database found based on the names alone
     catalogDatabase.catalog = matchingCatalogs[0];
     catalogDatabase.database = matchingDatabases[0];
@@ -315,7 +311,7 @@ export async function getCatalogDatabaseFromMetadata(
     return catalogDatabase;
   }
 
-  logger.info(
+  logger.debug(
     "multiple catalog/database name matches, checking against compute pool region/provider",
     { provider: computePool.provider, region: computePool.region },
   );
@@ -340,16 +336,16 @@ export async function getCatalogDatabaseFromMetadata(
     if (matchedCatalog) {
       catalogDatabase.catalog = matchedCatalog;
       catalogDatabase.database = matchedDatabase;
-      logger.info(
+      logger.debug(
         "matched one catalog and one database from name-related metadata and compute pool provider/region",
       );
       return catalogDatabase;
     }
   }
 
-  // if we made it this far, we couldn't narrow down the matches to exactly one catalog and one database
+  // if we made it this far, we couldn't narrow down the matches to exactly one catalog and one
+  // database, so we're returning nothing and making no assumptions
   logger.warn("could not narrow down to one catalog and one database from stored metadata");
-
   return catalogDatabase;
 }
 
@@ -362,10 +358,6 @@ export async function getDefaultCatalogDatabase(
   envs: CCloudEnvironment[],
 ): Promise<CatalogDatabase> {
   let defaultCatalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
-  if (envs.length === 0) {
-    logger.warn("no environments available to look up default catalog/database");
-    return defaultCatalogDatabase;
-  }
 
   const defaultDatabaseId: string | undefined = FLINK_CONFIG_DATABASE.value;
   if (!defaultDatabaseId) {
