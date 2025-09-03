@@ -18,6 +18,8 @@ import { getContainersForImage } from "../../docker/containers";
 import {
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_MEDUSA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../../extensionSettings/constants";
@@ -139,6 +141,18 @@ export async function getLocalSchemaRegistryContainers(
   return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 
+/**
+ * Get Medusa containers based on the image name and tag in user/workspace settings.
+ * @param options {@link LocalResourceContainersOptions Options} to filter the containers returned.
+ */
+export async function getLocalMedusaContainers(
+  options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
+): Promise<ContainerSummary[]> {
+  const imageRepo: string = LOCAL_MEDUSA_IMAGE.value;
+  const imageTag: string = LOCAL_MEDUSA_IMAGE_TAG.value;
+  return await getLocalResourceContainers(imageRepo, imageTag, options);
+}
+
 /** Discover any running Schema Registry containers and return the URI to include the REST proxy port. */
 async function discoverSchemaRegistry(): Promise<string | undefined> {
   const dockerAvailable = await isDockerAvailable();
@@ -172,4 +186,19 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   }
   logger.debug("Discovered Schema Registry REST proxy port", { schemaRegistryPort });
   return `http://localhost:${restProxyPort}`;
+}
+
+/** Discover any running Medusa containers and return whether one exists. */
+export async function discoverMedusa(): Promise<boolean> {
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    return false;
+  }
+
+  const containers: ContainerSummary[] = await getLocalMedusaContainers({
+    onlyExtensionManaged: false, // Check both extension-managed and user-created containers
+    statuses: [ContainerStateStatusEnum.Running],
+  });
+
+  return containers.length > 0;
 }

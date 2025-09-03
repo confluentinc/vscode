@@ -17,6 +17,7 @@ import {
   connectionStable,
   directConnectionsChanged,
   localKafkaConnected,
+  localMedusaConnected,
   localSchemaRegistryConnected,
   resourceSearchSet,
 } from "../emitters";
@@ -45,6 +46,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { IdItem } from "../models/main";
+import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import { CCloudOrganization } from "../models/organization";
 import {
   ConnectionId,
@@ -76,6 +78,7 @@ type ConnectionRowChildren =
   | ConcreteEnvironment
   | ConcreteKafkaCluster
   | ConcreteSchemaRegistry
+  | LocalMedusa
   | CCloudFlinkComputePool;
 
 export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends ResourceLoader>
@@ -188,6 +191,7 @@ export abstract class SingleEnvironmentConnectionRow<
   ET extends ConcreteEnvironment,
   KCT extends LocalKafkaCluster | DirectKafkaCluster,
   SRT extends LocalSchemaRegistry | DirectSchemaRegistry,
+  MT extends LocalMedusa | undefined = LocalMedusa | undefined,
   LT extends ResourceLoader = LocalResourceLoader | DirectResourceLoader,
 > extends ConnectionRow<ET, LT> {
   /** Get my single environment (if loaded), otherwise undefined. */
@@ -212,29 +216,41 @@ export abstract class SingleEnvironmentConnectionRow<
     return this.environments[0].schemaRegistry as SRT | undefined;
   }
 
+  get medusa(): MT | undefined {
+    if (this.environments.length === 0) {
+      return undefined;
+    }
+    return (this.environments[0] as LocalEnvironment).medusa as MT | undefined;
+  }
+
   override get connected(): boolean {
     // connected if we have at least one environment AND that env
-    // has either Kafka cluster or a Schema Registry visible.
+    // has either Kafka cluster, Schema Registry, or Medusa visible.
     return (
       this.environments.length > 0 &&
-      (this.kafkaCluster !== undefined || this.schemaRegistry !== undefined)
+      (this.kafkaCluster !== undefined ||
+        this.schemaRegistry !== undefined ||
+        this.medusa !== undefined)
     );
   }
 
-  get children(): (KCT | SRT)[] {
+  get children(): ConnectionRowChildren[] {
     if (this.environments.length === 0) {
       return [];
     }
 
     const environment = this.environments[0];
 
-    const children: (KCT | SRT)[] = [];
+    const children: ConnectionRowChildren[] = [];
 
     if (environment.kafkaClusters.length > 0) {
       children.push(...(environment.kafkaClusters as KCT[]));
     }
     if (environment.schemaRegistry) {
       children.push(environment.schemaRegistry as SRT);
+    }
+    if ((environment as LocalEnvironment).medusa) {
+      children.push((environment as LocalEnvironment).medusa as LocalMedusa);
     }
 
     return children;
@@ -310,6 +326,7 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
   DirectEnvironment,
   DirectKafkaCluster,
   DirectSchemaRegistry,
+  undefined,
   DirectResourceLoader
 > {
   constructor(loader: DirectResourceLoader) {
@@ -374,6 +391,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalEnvironment,
   LocalKafkaCluster,
   LocalSchemaRegistry,
+  LocalMedusa,
   LocalResourceLoader
 > {
   /**
@@ -424,10 +442,12 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
         ContextValues.localSchemaRegistryAvailable,
         this.schemaRegistry !== undefined,
       ),
+      setContextValue(ContextValues.localMedusaAvailable, this.medusa !== undefined),
     ]);
   }
 
   get status(): string {
+    // this method assumes that for the connection to be "connected" we must have at least a Kafka cluster, when only Medusa is present, it will still try to access kafkaCluster uri and fail
     return this.connected ? this.kafkaCluster!.uri! : "(Not Running)";
   }
 }
@@ -437,6 +457,7 @@ type NewResourceViewProviderData =
   | ConcreteEnvironment
   | ConcreteKafkaCluster
   | ConcreteSchemaRegistry
+  | LocalMedusa
   | CCloudFlinkComputePool;
 
 export type AnyConnectionRow = ConnectionRow<ConcreteEnvironment, ResourceLoader>;
@@ -476,6 +497,7 @@ export class NewResourceViewProvider
       ccloudConnected.event(this.ccloudConnectedEventHandler.bind(this)),
       localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
+      localMedusaConnected.event(this.localConnectedEventHandler.bind(this)),
       directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
       connectionStable.event(this.refreshConnection.bind(this)),
       connectionDisconnected.event(this.refreshConnection.bind(this)),
@@ -653,6 +675,8 @@ export class NewResourceViewProvider
       treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
       treeItem = new SchemaRegistryTreeItem(element);
+    } else if (element instanceof LocalMedusa) {
+      treeItem = new MedusaTreeItem(element);
     } else if (element instanceof CCloudFlinkComputePool) {
       treeItem = new FlinkComputePoolTreeItem(element);
     } else {
