@@ -84,12 +84,15 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   if (!(catalog && database)) {
     return;
   }
-  metadata[UriMetadataKeys.FLINK_CATALOG_ID] = catalog.id;
-  metadata[UriMetadataKeys.FLINK_DATABASE_ID] = database.id;
 
-  // make sure any relevant metadata for the Uri is set
+  // update the URI metadata with the resolved catalog/database IDs and store it for the URI
+  const updatedMetadata: UriMetadata = {
+    ...metadata,
+    [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
+    [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+  };
   const rm = ResourceManager.getInstance();
-  await rm.setUriMetadata(uri, metadata);
+  await rm.setUriMetadata(uri, updatedMetadata);
 
   const doc = await vscode.workspace.openTextDocument(uri);
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");

@@ -120,7 +120,7 @@ export async function setCCloudDatabaseForUriCommand(uri?: Uri, pool?: CCloudFli
   }
   const catalog = env as CCloudEnvironment;
   const metadata: UriMetadata = {
-    [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.name,
+    [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
     [UriMetadataKeys.FLINK_CATALOG_NAME]: catalog.name,
     [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
     [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
