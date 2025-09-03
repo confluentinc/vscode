@@ -70,25 +70,27 @@ export class DocumentMetadataManager extends DisposableCollection {
 
     for (const [uriString, metadata] of allMetadata.entries()) {
       const uri: Uri = Uri.parse(uriString);
-      if (uri.scheme !== "untitled") continue;
 
-      const untitledDoc: TextDocument | undefined = workspace.textDocuments.find(
+      const scheme = uri.scheme;
+      if (!["untitled", FLINKSTATEMENT_URI_SCHEME].includes(scheme)) continue;
+
+      const unsavedDoc: TextDocument | undefined = workspace.textDocuments.find(
         (doc) => doc.uri.toString() === uriString,
       );
-      if (!untitledDoc) continue;
+      if (!unsavedDoc) continue;
 
-      logger.debug("found untitled document with metadata", {
+      logger.debug(`found ${scheme} document with metadata`, {
         uri: uri.toString(),
-        untitledDoc: untitledDoc.uri.toString(),
+        untitledDoc: unsavedDoc.uri.toString(),
         metadata,
       });
-      // try to match the previous 'untitled' document with this newly saved document
-      const untitledContent: string | undefined = await workspace
+      // try to match the previous unsaved document with this newly saved document
+      const unsavedContent: string | undefined = await workspace
         .openTextDocument(uri)
         .then((doc) => doc.getText());
 
-      if (document.getText().trim() === untitledContent?.trim()) {
-        logger.debug(`migrating metadata from untitled document to "${document.uri.toString()}"`);
+      if (document.getText().trim() === unsavedContent?.trim()) {
+        logger.debug(`migrating metadata from ${scheme} document to "${document.uri.toString()}"`);
         await this.resourceManager.setUriMetadata(document.uri, metadata);
         await this.resourceManager.deleteUriMetadata(uri);
         break;
