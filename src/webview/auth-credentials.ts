@@ -37,7 +37,7 @@ export class AuthCredentials extends HTMLElement {
   authType = this.os.signal<SupportedAuthTypes>("None");
   connectionType = this.os.signal<FormConnectionType>("Confluent Cloud");
   creds = this.os.signal<SupportedCredentialTypes | null>(null);
-
+  shouldValidateInputs = this.os.signal<boolean>(true);
   // Setters for component props
   set credentials(value: SupportedCredentialTypes) {
     this.creds(value);
@@ -50,6 +50,9 @@ export class AuthCredentials extends HTMLElement {
   }
   set platform(value: FormConnectionType) {
     this.connectionType(value);
+  }
+  set required(value: boolean) {
+    this.shouldValidateInputs(value);
   }
 
   getInputId(name: string) {
@@ -118,8 +121,10 @@ export class AuthCredentials extends HTMLElement {
     this.entries.set(name, value.toString());
     this._internals.setFormValue(this.entries);
 
-    // Validate the input
-    this.validateInput(input);
+    // Validate the input if auth is required
+    if (this.shouldValidateInputs()) {
+      this.validateInput(input);
+    }
 
     // Dispatch a change event to the parent html for other actions
     this.dispatchEvent(
@@ -132,6 +137,8 @@ export class AuthCredentials extends HTMLElement {
   // Check validity of all inputs in this (auth) section
   // Handles reporting validation to form before submit
   checkValidity() {
+    // Only need to check the validity if the inputs are required, otherwise we consider it valid
+    if (!this.shouldValidateInputs()) return true;
     const inputs: NodeListOf<HTMLInputElement> | undefined =
       this.shadowRoot?.querySelectorAll("input");
 
@@ -459,8 +466,9 @@ export class AuthCredentials extends HTMLElement {
       this._internals.form.addEventListener(
         "submit",
         () => {
-          // Validate all inputs on form submission
-          if (!this.checkValidity()) {
+          // Validate all inputs on form submission if this section is required
+          if (this.shouldValidateInputs()) {
+            this.checkValidity();
             // Don't prevent default. Since we send validation checks to _internals,
             // the parent form will see element is invalid and prevent submission
           }
