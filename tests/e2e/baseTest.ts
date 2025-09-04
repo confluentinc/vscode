@@ -62,6 +62,7 @@ export const test = testBase.extend<VSCodeFixture>({
     console.log("  Executable:", executablePath);
     console.log("  Extension path:", extensionPath);
     console.log("  VSIX path:", vsixPath);
+    console.log("  Temp dir:", tempDir);
 
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
