@@ -1,14 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { getSidecarStub } from "../../../tests/stubs/sidecar";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_FLINK_STATEMENT } from "../../../tests/unit/testResources/flinkStatement";
-import * as authnUtils from "../../authn/utils";
-import { CCloudResourceLoader } from "../../loaders";
-import * as flinkStatementModels from "../../models/flinkStatement";
-import { FlinkSpecProperties, FlinkStatement } from "../../models/flinkStatement";
-import * as sidecar from "../../sidecar";
-import { localTimezoneOffset } from "../../utils/timezone";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_FLINK_STATEMENT } from "../../tests/unit/testResources/flinkStatement";
+import * as authnUtils from "../authn/utils";
+import { CCloudResourceLoader } from "../loaders";
+import * as flinkStatementModels from "../models/flinkStatement";
+import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
+import * as sidecar from "../sidecar";
+import { localTimezoneOffset } from "../utils/timezone";
 import {
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,

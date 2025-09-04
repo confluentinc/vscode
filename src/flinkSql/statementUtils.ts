@@ -1,67 +1,26 @@
 import * as vscode from "vscode";
-import { getCCloudAuthSession } from "../../authn/utils";
+import { getCCloudAuthSession } from "../authn/utils";
 import {
   CreateSqlv1StatementOperationRequest,
   CreateSqlv1StatementRequest,
   CreateSqlv1StatementRequestApiVersionEnum,
   CreateSqlv1StatementRequestKindEnum,
-} from "../../clients/flinkSql";
-import { CCloudResourceLoader } from "../../loaders";
-import { Logger } from "../../logging";
-import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+} from "../clients/flinkSql";
+import { CCloudResourceLoader } from "../loaders";
+import { Logger } from "../logging";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
   FlinkSpecProperties,
   FlinkStatement,
   restFlinkStatementToModel,
   TERMINAL_PHASES,
-} from "../../models/flinkStatement";
-import { CCloudOrganization } from "../../models/organization";
-import { getSidecar } from "../../sidecar";
-import { WebviewPanelCache } from "../../webview-cache";
-import flinkStatementResults from "../../webview/flink-statement-results.html";
+} from "../models/flinkStatement";
+import { CCloudOrganization } from "../models/organization";
+import { getSidecar } from "../sidecar";
+import { WebviewPanelCache } from "../webview-cache";
+import flinkStatementResults from "../webview/flink-statement-results.html";
 
-const logger = new Logger("commands.utils.flinkStatements");
-
-/**
- * Return a suitable (and unique) name for a Flink statement to submit.
- *
- * @param statement
- * @returns string akin to "username-vscode-2023-10-01t12-00-00"
- */
-export async function determineFlinkStatementName(): Promise<string> {
-  const parts: string[] = [];
-
-  // If we're creating flink statements, then we're ccloud authed. Use their
-  // ccloud account name as primary part of the statement name.
-  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
-  if (ccloudAccountName) {
-    let userNamePart = ccloudAccountName.split("@")[0];
-    // strip anything to the right of any '+' character if present, don't want their
-    // email buckets involved.
-    userNamePart = userNamePart.split("+")[0];
-
-    parts.push(userNamePart);
-  } else {
-    // Wacky. Not ccloud authed?
-    parts.push("unknownuser");
-  }
-
-  parts.push("vscode");
-
-  const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
-  parts.push(dateString);
-
-  const proposed = parts
-    .join("-")
-    // Can only be lowercase; probably to simplify the uniqueness check on the backend.
-    .toLocaleLowerCase()
-    // Strip any non-alphanumeric characters, except for hyphens.
-    .replace(/[^a-z0-9-]/g, "")
-    // Strip leading numeric characters and hyphens.
-    .replace(/^[0-9-]+/, "");
-
-  return proposed;
-}
+const logger = new Logger("flinksql/statements");
 
 export interface IFlinkStatementSubmitParameters {
   statement: string;
@@ -196,6 +155,47 @@ async function waitForStatementState(
   throw new Error(
     `Statement ${statement.name} did not reach desired state within ${maxWaitTimeMs / 1000} seconds`,
   );
+}
+
+/**
+ * Return a suitable (and unique) name for a Flink statement to submit.
+ *
+ * @param statement
+ * @returns string akin to "username-vscode-2023-10-01t12-00-00"
+ */
+export async function determineFlinkStatementName(): Promise<string> {
+  const parts: string[] = [];
+
+  // If we're creating flink statements, then we're ccloud authed. Use their
+  // ccloud account name as primary part of the statement name.
+  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
+  if (ccloudAccountName) {
+    let userNamePart = ccloudAccountName.split("@")[0];
+    // strip anything to the right of any '+' character if present, don't want their
+    // email buckets involved.
+    userNamePart = userNamePart.split("+")[0];
+
+    parts.push(userNamePart);
+  } else {
+    // Wacky. Not ccloud authed?
+    parts.push("unknownuser");
+  }
+
+  parts.push("vscode");
+
+  const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
+  parts.push(dateString);
+
+  const proposed = parts
+    .join("-")
+    // Can only be lowercase; probably to simplify the uniqueness check on the backend.
+    .toLocaleLowerCase()
+    // Strip any non-alphanumeric characters, except for hyphens.
+    .replace(/[^a-z0-9-]/g, "")
+    // Strip leading numeric characters and hyphens.
+    .replace(/^[0-9-]+/, "");
+
+  return proposed;
 }
 
 /** Subclass of WebviewPanelCache for managing Flink statement results panels */
