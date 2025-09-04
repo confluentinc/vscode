@@ -6,8 +6,13 @@ export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */
 export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.packageJSON.version;
 
-/** The URI used when completing the CCloud authentication flow in the browser. */
-export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
+/**
+ * The URI used when completing the CCloud authentication flow in the browser.
+ * This is disabled for end-to-end (E2E) tests, which handle the auth callback differently.
+ */
+export const CCLOUD_AUTH_CALLBACK_URI = process.env.E2E_TESTING
+  ? ""
+  : `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 
 /**
  * The base path/domain to use when making CCloud requests. Configured by setting the
