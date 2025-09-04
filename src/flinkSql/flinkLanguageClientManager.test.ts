@@ -19,16 +19,16 @@ import {
 } from "../../tests/unit/testResources/flinkComputePool";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import * as flinkSqlProvider from "../codelens/flinkSqlProvider";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { EnvironmentId } from "../models/resource";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import * as ccloud from "../sidecar/connections/ccloud";
 import { SIDECAR_PORT } from "../sidecar/constants";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { SecretStorageKeys, UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import {
@@ -362,8 +362,8 @@ describe("FlinkLanguageClientManager", () => {
         .stubGet(FLINK_CONFIG_COMPUTE_POOL, "config-pool")
         .stubGet(FLINK_CONFIG_DATABASE, "config-db");
       resourceManagerStub.getUriMetadata.resolves({
-        flinkComputePoolId: "metadata-pool",
-        flinkDatabaseId: "metadata-db",
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "metadata-pool",
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: "metadata-db",
       });
 
       getCatalogDatabaseFromMetadataStub.resolves({
@@ -807,13 +807,6 @@ describe("FlinkLanguageClientManager", () => {
       hasCCloudAuthSessionStub.returns(false);
 
       await flinkManager.maybeStartLanguageClient(TEST_FILE_URI);
-
-      sinon.assert.notCalled(getFlinkSqlSettingsStub);
-      sinon.assert.notCalled(initializeLanguageClientStub);
-    });
-
-    it("should return early if no URI is provided", async () => {
-      await flinkManager.maybeStartLanguageClient();
 
       sinon.assert.notCalled(getFlinkSqlSettingsStub);
       sinon.assert.notCalled(initializeLanguageClientStub);

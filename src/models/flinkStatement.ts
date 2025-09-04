@@ -226,12 +226,22 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     return EXECUTION_STARTED_PHASES.includes(this.phase);
   }
 
-  /** @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model */
+  /**
+   * Usually the `name` of the catalog (environment) the statement was executed against.
+   * May sometimes be the `id` of the catalog, but for our purposes we should treat it as a name
+   * and look up the `id` separately if needed.
+   * @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model
+   */
   get catalog(): string | undefined {
     return this.spec.properties?.["sql.current-catalog"];
   }
 
-  /** @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model */
+  /**
+   * Usually the `name` of the database (Kafka cluster) the statement was executed against.
+   * May sometimes be the `id` of the database, but for our purposes we should treat it as a name
+   * and look up the `id` separately if needed.
+   * @see https://docs.confluent.io/cloud/current/api.html#tag/Statements-(sqlv1)/The-Statements-Model
+   */
   get database(): string | undefined {
     return this.spec.properties?.["sql.current-database"];
   }

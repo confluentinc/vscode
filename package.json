@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-6",
+  "version": "1.7.0-13",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -275,6 +275,12 @@
       {
         "command": "confluent.uploadArtifact",
         "title": "Confluent: Upload Artifact",
+        "category": "Confluent: Flink Artifacts",
+        "enablement": "isDevelopment"
+      },
+      {
+        "command": "confluent.deleteArtifact",
+        "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },
@@ -719,6 +725,11 @@
         "icon": "$(confluent-logo)",
         "title": "View in Confluent Cloud",
         "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.artifacts.registerUDF",
+        "title": "Register Flink Artifact with Flink SQL",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.openCCloudApiKeysUrl",
@@ -1681,6 +1692,11 @@
           "group": "schemas"
         },
         {
+          "command": "confluent.deleteArtifact",
+          "when": "view == confluent-flink-artifacts && viewItem =~ /.*-flink-artifact$/",
+          "group": "artifacts"
+        },
+        {
           "command": "confluent.schemas.upload",
           "when": "view == confluent-resources && viewItem =~ /.*-schema-registry/",
           "group": "inline@1"
@@ -1753,6 +1769,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.registerUDF",
+          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
