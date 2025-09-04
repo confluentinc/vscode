@@ -80,7 +80,6 @@ test-playwright-e2e: setup-test-env install-test-dependencies install-dependenci
 	else \
 			TEST_SUITE_ARG=""; \
 	fi; \
-	echo "Running E2E tests via: npx gulp e2e $$TEST_SUITE_ARG"; \
 	if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp e2e $$TEST_SUITE_ARG; \
 	else \
