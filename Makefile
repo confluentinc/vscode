@@ -75,11 +75,12 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 # Usage: make test-playwright-e2e TEST_SUITE=@regression
 .PHONY: test-playwright-e2e
 test-playwright-e2e: setup-test-env install-test-dependencies install-dependencies
-	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ]; then \
+	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ] && [ "$(TEST_SUITE)" != "TEST_SUITE" ]; then \
 			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
 	else \
 			TEST_SUITE_ARG=""; \
 	fi; \
+	echo "Running E2E tests via: npx gulp e2e $$TEST_SUITE_ARG"; \
 	if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp e2e $$TEST_SUITE_ARG; \
 	else \
