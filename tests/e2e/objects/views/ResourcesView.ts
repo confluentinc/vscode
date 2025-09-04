@@ -53,7 +53,10 @@ export class ResourcesView extends View {
    * extension through the Docker engine API (Kafka cluster, Schema Registry, etc.).
    */
   get localItem(): Locator {
-    return this.treeItems.filter({ hasText: "Local" });
+    return this.treeItems.filter({
+      hasText: "Local",
+      has: this.page.locator(".codicon-device-desktop"),
+    });
   }
 
   /** Locator for all root-level direct connection tree items. */
