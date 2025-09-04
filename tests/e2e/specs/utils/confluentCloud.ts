@@ -1,8 +1,7 @@
 import { ElectronApplication, chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
-import { readFile, unlink } from "fs/promises";
-import { tmpdir } from "os";
-import { join } from "path";
+import { readFile } from "fs/promises";
+import { CCLOUD_SIGNIN_URL_PATH } from "../../baseTest";
 import { Notification } from "../../objects/notifications/Notification";
 import { NotificationArea } from "../../objects/notifications/NotificationArea";
 import { ResourcesView } from "../../objects/views/ResourcesView";
@@ -43,12 +42,7 @@ async function handleAuthFlow(
     await authPage.locator("[name=password]").fill(password);
     await authPage.locator("[type=submit]").click();
 
-    // Wait for success page
-    try {
-      await authPage.waitForSelector("text=Authentication Complete");
-    } catch (error) {
-      throw new Error("Authentication failed.");
-    }
+    await expect(authPage.locator("text=Authentication Complete")).toBeVisible();
   } finally {
     // Ensure browser resources are closed even if there's an error
     await authPage.close().catch(() => {});
@@ -90,11 +84,10 @@ export async function login(
   await ccloudItem.clickInlineAction("Sign in to Confluent Cloud");
 
   // the auth provider will write to this once it gets the CCloud sign-in URL from the sidecar
-  const tempFilePath = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
   let authUrl: string | null = null;
   for (let attempt = 0; attempt < 20; attempt++) {
     try {
-      authUrl = await readFile(tempFilePath, "utf-8");
+      authUrl = await readFile(CCLOUD_SIGNIN_URL_PATH, "utf-8");
       if (authUrl.trim()) {
         break;
       }
@@ -109,13 +102,6 @@ export async function login(
 
   // Handle the authentication flow through the browser in a separate context
   await handleAuthFlow(authUrl, username, password, electronApp);
-
-  // delete the temp file with the sign-in URL
-  try {
-    await unlink(tempFilePath);
-  } catch (error) {
-    console.warn("Failed to clean up temp file:", error);
-  }
 
   // Unfortunately, the auth callback URI handling does not reliably work on all environments
   // we run these tests, so we have to work around it by cancelling the progress notification

@@ -7,6 +7,7 @@ import {
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
 import { stubAllDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
+import { unlink } from "fs/promises";
 import { globSync } from "glob";
 import { tmpdir } from "os";
 import path from "path";
@@ -155,3 +156,26 @@ export const test = testBase.extend<VSCodeFixture>({
     await use(page);
   },
 });
+
+export const CCLOUD_SIGNIN_URL_PATH = path.join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
+
+/** E2E global beforeAll hook */
+test.beforeAll(async () => {});
+
+/** E2E global beforeEach hook */
+test.beforeEach(async () => {
+  // reset the CCloud sign-in file before each test so we don't accidentally get a stale URL
+  try {
+    await unlink(CCLOUD_SIGNIN_URL_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Error deleting CCloud sign-in URL file:", error);
+    }
+  }
+});
+
+/** E2E global afterEach hook */
+test.afterEach(async () => {});
+
+/** E2E global afterAll hook */
+test.afterAll(async () => {});
