@@ -14,7 +14,7 @@ import {
   STATEMENT_POLLING_FREQUENCY_SECONDS,
   STATEMENT_POLLING_LIMIT,
 } from "../extensionSettings/constants";
-import { CCloudResourceLoader } from "../loaders";
+import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { FlinkStatement, FlinkStatementId, Phase } from "../models/flinkStatement";
 import * as telemetryEvents from "../telemetry/events";
 import { FlinkStatementsViewProvider } from "./flinkStatements";
@@ -538,6 +538,60 @@ describe("FlinkStatementsViewProvider", () => {
         // Should not have fired the repaint event.
         sinon.assert.notCalled(onDidChangeTreeDataFireStub);
       });
+    });
+  });
+
+  describe("updateTreeViewDescription()", () => {
+    let resourceLoaderGetEnvironmentStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      resourceLoaderGetEnvironmentStub = sandbox.stub(ResourceLoader, "getEnvironment");
+      // start each test with no selection, as users would initially see
+      viewProvider["resource"] = null;
+      viewProvider["treeView"].description = "";
+      viewProvider["environment"] = null;
+    });
+
+    it("handles initial state with no resource focused", async () => {
+      await viewProvider.updateTreeViewDescription();
+
+      assert.strictEqual(viewProvider["treeView"].description, "");
+      assert.strictEqual(viewProvider["environment"], null);
+      sinon.assert.notCalled(resourceLoaderGetEnvironmentStub);
+    });
+
+    it("updates to FCP description when user selects a compute pool", async () => {
+      viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      resourceLoaderGetEnvironmentStub.resolves(TEST_CCLOUD_ENVIRONMENT);
+
+      await viewProvider.updateTreeViewDescription();
+
+      assert.strictEqual(
+        viewProvider["treeView"].description,
+        `FCP: ${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_FLINK_COMPUTE_POOL.id}`,
+      );
+      assert.strictEqual(viewProvider["environment"], TEST_CCLOUD_ENVIRONMENT);
+
+      sinon.assert.calledOnce(resourceLoaderGetEnvironmentStub);
+      sinon.assert.calledWith(
+        resourceLoaderGetEnvironmentStub,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
+      );
+    });
+
+    it("updates to Env description when user selects an environment", async () => {
+      viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
+
+      await viewProvider.updateTreeViewDescription();
+
+      assert.strictEqual(
+        viewProvider["treeView"].description,
+        `ENV: ${TEST_CCLOUD_ENVIRONMENT.name} | ${TEST_CCLOUD_ENVIRONMENT.id}`,
+      );
+      assert.strictEqual(viewProvider["environment"], TEST_CCLOUD_ENVIRONMENT);
+
+      sinon.assert.notCalled(resourceLoaderGetEnvironmentStub);
     });
   });
 });
