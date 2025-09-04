@@ -160,6 +160,7 @@
               data-prop-platform="this.platformType()"
               data-prop-type="this.kafkaAuthType()"
               data-prop-credentials="this.kafkaCreds()"
+              data-prop-required="!this.kafkaBootstrapServers() ? false : true"
             />
           </div>
           <label class="checkbox" for="kafka_cluster.ssl.enabled">
@@ -237,6 +238,7 @@
               data-prop-platform="this.platformType()"
               data-prop-type="this.schemaAuthType()"
               data-prop-credentials="this.schemaCreds()"
+              data-prop-required="!this.schemaUri() ? false : true"
             />
           </div>
           <label class="checkbox" for="schema_registry.ssl.enabled">
