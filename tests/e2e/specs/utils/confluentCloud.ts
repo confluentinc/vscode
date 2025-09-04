@@ -1,30 +1,13 @@
-import { ElectronApplication, chromium } from "@playwright/test";
+import { ElectronApplication, chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
+import { readFile } from "fs/promises";
+import { CCLOUD_SIGNIN_URL_PATH } from "../../baseTest";
+import { Notification } from "../../objects/notifications/Notification";
+import { NotificationArea } from "../../objects/notifications/NotificationArea";
+import { ResourcesView } from "../../objects/views/ResourcesView";
+import { ViewItem } from "../../objects/views/viewItems/ViewItem";
 
-/**
- * Sets up dialog stubs for the authentication flow
- * @param electronApp The Electron application instance
- */
-async function stubAuthDialogs(electronApp: ElectronApplication): Promise<void> {
-  await stubMultipleDialogs(electronApp, [
-    // Asks whether to Allow signing in with Confluent Cloud
-    {
-      method: "showMessageBox",
-      value: {
-        response: 0, // Simulates clicking "Allow"
-        checkboxChecked: false,
-      },
-    },
-    // Asks for permission to open the URL
-    {
-      method: "showMessageBox",
-      value: {
-        response: 0, // Simulates clicking "Open"
-        checkboxChecked: false,
-      },
-    },
-  ]);
-}
+const NOT_CONNECTED_TEXT = "(No connection)";
 
 /**
  * Handles the Confluent Cloud authentication flow in a separate browser
@@ -59,29 +42,12 @@ async function handleAuthFlow(
     await authPage.locator("[name=password]").fill(password);
     await authPage.locator("[type=submit]").click();
 
-    // Wait for success page
-    try {
-      await authPage.waitForSelector("text=Authentication Complete", { timeout: 3000 });
-    } catch (error) {
-      throw new Error("Authentication failed.");
-    }
-
-    // If we reach here, that means auth has succeeded
-    // Trigger the callback URL in VS Code
-    await electronApp.evaluate(({ shell }) => {
-      shell.openExternal("vscode://confluentinc.vscode-confluent/authCallback?success=true");
-    });
-
-    // Close browser resources before returning
-    await authPage.close();
-    await context.close();
-    await browser.close();
-  } catch (error) {
+    await expect(authPage.locator("text=Authentication Complete")).toBeVisible();
+  } finally {
     // Ensure browser resources are closed even if there's an error
     await authPage.close().catch(() => {});
     await context.close().catch(() => {});
     await browser.close().catch(() => {});
-    throw error;
   }
 }
 
@@ -98,60 +64,64 @@ export async function login(
   username: string,
   password: string,
 ): Promise<void> {
+  const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
+  await stubMultipleDialogs(electronApp, [
+    // Handles both auth dialogs:
+    // 1. "Allow signing in with Confluent Cloud"
+    // 2. "Permission to open the URL"
+    {
+      method: "showMessageBox",
+      value: {
+        response: confirmButtonIndex, // Simulates clicking "Allow"/"Open"
+        checkboxChecked: false,
+      },
+    },
+  ]);
+
+  const resourcesView = new ResourcesView(page);
+  const ccloudItem = new ViewItem(page, resourcesView.confluentCloudItem);
+  await expect(ccloudItem.locator).toContainText(NOT_CONNECTED_TEXT);
+  await ccloudItem.clickInlineAction("Sign in to Confluent Cloud");
+
+  // the auth provider will write to this once it gets the CCloud sign-in URL from the sidecar
   let authUrl: string | null = null;
-
-  await stubAuthDialogs(electronApp);
-
-  // Intercept shell.openExternal calls
-  // TODO: In a try/finally, de-intercept and put original impl back
-  await electronApp.evaluate(({ shell }) => {
-    const originalOpenExternal = shell.openExternal;
-    shell.openExternal = (url: string) => {
-      console.log("Intercepted URL:", url);
-      if (url.includes("login.confluent.io")) {
-        // Store the URL somewhere we can access it
-        (global as any).__interceptedUrl = url;
-        // Don't actually open the URL
-        return Promise.resolve();
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      authUrl = await readFile(CCLOUD_SIGNIN_URL_PATH, "utf-8");
+      if (authUrl.trim()) {
+        break;
       }
-      return originalOpenExternal(url);
-    };
-  });
-
-  // Hover over "No Connection" to make sign-in button visible
-  const ccloudConnection = await page.getByText("Confluent Cloud(No connection)");
-  await ccloudConnection.click();
-
-  // Click the Sign in to Confluent Cloud button
-  const signInButton = await page.getByRole("button", { name: "Sign in to Confluent Cloud" });
-  await signInButton.click();
-
-  // Wait for dialogs to return
-  await page.waitForTimeout(200);
-
-  authUrl = await electronApp.evaluate(() => (global as any).__interceptedUrl);
-
+    } catch {
+      // file doesn't exist yet
+    }
+    await page.waitForTimeout(250);
+  }
   if (!authUrl) {
     throw new Error("Failed to capture OAuth URL from shell.openExternal");
   }
 
-  // Handle the authentication flow
+  // Handle the authentication flow through the browser in a separate context
   await handleAuthFlow(authUrl, username, password, electronApp);
 
-  // Wait for VS Code to process the authentication
-  // It will open up a confirmation dialog, click "Open"
-  const open = await page.getByRole("button", { name: "Open" });
-  await open.waitFor({ state: "visible" });
-  await open.click();
+  // Unfortunately, the auth callback URI handling does not reliably work on all environments
+  // we run these tests, so we have to work around it by cancelling the progress notification
+  // and clicking the sign-in action again. This is safe since handleAuthFlow completed successfully,
+  // which would normally trigger the URI handling and resolve the progress notification and refresh
+  // the Resources view / Confluent Cloud connection item.
+  const notifications = new NotificationArea(page);
+  const progressNotifications = notifications.progressNotifications.filter({
+    hasText: "Signing in to Confluent Cloud...",
+  });
+  await expect(progressNotifications).toHaveCount(1);
+  const signInNotification = new Notification(page, progressNotifications.first());
+  await signInNotification.clickActionButton("Cancel");
 
-  // Expect a notification that says "Successfully signed in to Confluent Cloud as "
-  await page
-    .getByLabel(/Successfully signed in to Confluent Cloud as .*/)
-    .locator("div")
-    .filter({ hasText: "Successfully signed in to" })
-    .nth(2)
-    .waitFor({
-      state: "visible",
-      timeout: 200,
-    });
+  // Click the "Sign in to Confluent Cloud" action from the Resources view to refresh the connection
+  // state and show available environments
+  await ccloudItem.clickInlineAction("Sign in to Confluent Cloud");
+  // Make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
+  // "(No connection)" description
+  await expect(ccloudItem.locator).toBeVisible();
+  await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
+  await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
 }
