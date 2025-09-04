@@ -121,7 +121,7 @@ export class AuthCredentials extends HTMLElement {
     this.entries.set(name, value.toString());
     this._internals.setFormValue(this.entries);
 
-    // Validate the input if auth is required
+    // Validate the input if this section of the form is required
     if (this.shouldValidateInputs()) {
       this.validateInput(input);
     }
