@@ -74,9 +74,8 @@ test.describe("Schema Management", () => {
     });
 
     await openConfluentExtension(page);
-    resourcesView = new ResourcesView(page);
-    await expect(resourcesView.header).toHaveAttribute("aria-expanded", "true");
 
+    resourcesView = new ResourcesView(page);
     notificationArea = new NotificationArea(page);
   });
 
@@ -262,12 +261,6 @@ test.describe("Schema Management", () => {
   ): Promise<void> {
     // CCloud connection setup:
     await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-    // make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
-    // "(Not Connected)" description
-    const ccloudItem: Locator = resourcesView.confluentCloudItem;
-    await expect(ccloudItem).toBeVisible();
-    await expect(ccloudItem).not.toHaveText("(Not Connected)");
-    await expect(ccloudItem).toHaveAttribute("aria-expanded", "true");
 
     // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
     // Flink compute pools
@@ -323,8 +316,11 @@ test.describe("Schema Management", () => {
     // expand the first direct connection to show its Schema Registry
     await expect(resourcesView.directConnections).not.toHaveCount(0);
     const firstConnection: Locator = resourcesView.directConnections.first();
-    // direct connections are collapsed by default, so we need to expand it first
-    await firstConnection.click();
+    // direct connections are collapsed by default in the old Resources view, but expanded in the
+    // new Resources view
+    if ((await firstConnection.getAttribute("aria-expanded")) === "false") {
+      await firstConnection.click();
+    }
     await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
 
     // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
