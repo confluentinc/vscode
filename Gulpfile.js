@@ -775,6 +775,13 @@ export function e2eRun(done) {
     }
   }
 
+  // set env var so extension knows it's in E2E test mode, which is mainly used for CCloud auth:
+  // - the auth provider will store the sign-in URL to a temp file for easier test handling of the
+  //   browser-based sign-in flow through Playwright
+  // - when creating the CCLOUD connection, we'll send an empty `ide_auth_callback_uri` string so
+  //   no URI handling has to happen
+  process.env.E2E_TESTING = "true";
+
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 

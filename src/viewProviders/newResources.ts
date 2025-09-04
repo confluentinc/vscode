@@ -50,6 +50,7 @@ import {
   ConnectionId,
   connectionIdToType,
   IResourceBase,
+  isDirect,
   ISearchable,
   IUpdatableResource,
 } from "../models/resource";
@@ -171,6 +172,11 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     item.iconPath = this.iconPath;
     item.description = this.status;
     item.tooltip = this.tooltip;
+
+    if (isDirect(this)) {
+      // mainly to help E2E tests distinguish direct connections from other tree items
+      item.accessibilityInformation = { label: `Direct connection: "${this.name}"` };
+    }
 
     return item;
   }
