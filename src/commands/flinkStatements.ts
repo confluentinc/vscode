@@ -1,6 +1,10 @@
 import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import {
+  GetSqlv1StatementResult200Response,
+  SqlV1StatementResultResults,
+} from "../clients/flinkSql";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import {
   FLINKSTATEMENT_URI_SCHEME,
@@ -24,6 +28,7 @@ import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
+import { parseResults } from "../utils/flinkStatementResults";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import {
@@ -333,8 +338,14 @@ async function openFlinkStatementResultsView(statement: FlinkStatement | undefin
 }
 
 /** Scratch command to test build out */
-export async function listFunctionsCommand(computePool: CCloudFlinkComputePool): Promise<void> {
+export async function listFunctionsCommand(): Promise<void> {
   void vscode.window.showInformationMessage("List functions command invoked");
+
+  const computePool = await flinkComputePoolQuickPick();
+  if (!computePool) {
+    logger.info("User cancelled compute pool quickpick");
+    return;
+  }
 
   const database = await flinkDatabaseQuickpick(computePool);
 
@@ -352,13 +363,89 @@ export async function listFunctionsCommand(computePool: CCloudFlinkComputePool):
   };
 
   // Submit statement
-  const statement = await submitFlinkStatement(statementParams);
+  let statement = await submitFlinkStatement(statementParams);
 
-  await waitForStatementCompletion(statement);
+  // Refresh the statement until it is in a terminal phase.
+  statement = await waitForStatementCompletion(statement);
 
-  logger.info(`Statement ${statement.id} completed with phase ${statement.status.phase}`);
+  if (statement.phase !== Phase.COMPLETED) {
+    logger.error(
+      `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
+    );
+  }
 
-  // TODO: fetch and digest results.
+  await parseAllFlinkStatementResults(statement);
+
+  // decode result changelog
+}
+
+export async function parseAllFlinkStatementResults(
+  statement: FlinkStatement,
+): Promise<Array<any>> {
+  const sidecar = await getSidecar();
+  const flinkSqlStatementResultsApi = sidecar.getFlinkSqlStatementResultsApi(statement);
+
+  const resultsMap: Map<string, Map<string, any>> = new Map();
+  let pageToken: string | undefined = undefined;
+  do {
+    const response = await flinkSqlStatementResultsApi.getSqlv1StatementResult({
+      environment_id: statement.environmentId,
+      organization_id: statement.organizationId,
+      name: statement.name,
+      page_token: pageToken,
+    });
+
+    // Writes into resultsMap
+    parseFlinkStatementResultsResponse(statement, response, resultsMap);
+
+    pageToken = extractPageToken(response?.metadata?.next);
+  } while (pageToken !== undefined);
+
+  // convert the maps in the values to objects
+  const results = Array.from(resultsMap.values()).map(Object.fromEntries);
+
+  logger.info("results", {
+    results: JSON.stringify(results, null, 2),
+  });
+
+  return [];
+}
+
+/**
+ * Drive the underlying parseResults() with a statement, a fetch statement results response payload, and the
+ * existing results map to update.
+ *
+ * Convenience function to extract the necessary parameters from the statement and results response.
+ * @param statement - The Flink statement whose results are being parsed.
+ * @param resultsResponse - The response from fetching statement results.
+ * @param resultsMap - The existing map of results to update with parsed data.
+ */
+export function parseFlinkStatementResultsResponse(
+  statement: FlinkStatement,
+  response: GetSqlv1StatementResult200Response,
+  resultsMap: Map<string, Map<string, any>>,
+): void {
+  const payload: SqlV1StatementResultResults = response.results;
+  parseResults({
+    columns: statement.status?.traits?.schema?.columns ?? [],
+    isAppendOnly: statement.status?.traits?.is_append_only ?? true,
+    upsertColumns: statement.status?.traits?.upsert_columns,
+    map: resultsMap,
+    rows: payload.data ?? [],
+  });
+}
+
+/**
+ * Extracts the page token from a next page URL.
+ */
+export function extractPageToken(nextUrl: string | undefined): string | undefined {
+  if (!nextUrl) return undefined;
+  try {
+    const url = new URL(nextUrl);
+    return url.searchParams.get("page_token") ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {

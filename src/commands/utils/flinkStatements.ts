@@ -12,8 +12,8 @@ import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import {
   FlinkSpecProperties,
   FlinkStatement,
-  Phase,
   restFlinkStatementToModel,
+  TERMINAL_PHASES,
 } from "../../models/flinkStatement";
 import { CCloudOrganization } from "../../models/organization";
 import { getSidecar } from "../../sidecar";
@@ -140,15 +140,18 @@ export const MAX_WAIT_TIME_MS = 60_000;
  * @returns Promise that resolves when the statement enters a phase where results can (try to) be fetched w/o error.
  * @throws Error if statement doesn't fulfil `statement.areResultsViewable` within MAX_WAIT_TIME_MS seconds, or if it is not found.
  */
-export async function waitForResultsFetchable(statement: FlinkStatement): Promise<void> {
+export async function waitForResultsFetchable(statement: FlinkStatement): Promise<FlinkStatement> {
   return waitForStatementState(statement, (s) => s.canRequestResults);
 }
 
 /**
  * Wait for a vscode-generated and just now-submitted 'hidden' Flink statement to complete.
+ * @returns Promise that resolves to the statement when it has entered a terminal phase.
  */
-export async function waitForStatementCompletion(statement: FlinkStatement): Promise<void> {
-  return waitForStatementState(statement, (s) => s.phase === Phase.COMPLETED);
+export async function waitForStatementCompletion(
+  statement: FlinkStatement,
+): Promise<FlinkStatement> {
+  return waitForStatementState(statement, (s) => TERMINAL_PHASES.includes(s.phase));
 }
 
 /**
@@ -156,19 +159,23 @@ export async function waitForStatementCompletion(statement: FlinkStatement): Pro
  *
  * @param statement The Flink statement to monitor
  * @param predicate A function that takes a Flink statement and returns true if the statement is in the desired state.
- * @returns Promise that resolves when the statement passes the predicate check.
- * @throws Error if statement doesn't fulfill the predicate within MAX_WAIT_TIME_MS seconds, or if the statement is not found, or
+ * @param maxWaitTimeMs Maximum time to wait in milliseconds. Defaults to MAX_WAIT_TIME_MS.
+ * @param pollingIntervalMs Time between polls in milliseconds. Defaults to DEFAULT_POLL_PERIOD_MS.
+ * @returns Promise that resolves when the statement passes the predicate check, returning the updated statement.
+ * @throws Error if statement doesn't fulfill the predicate within maxWaitTimeMs seconds, or if the statement is not found, or
  * if the predicate itself throws an error.
  */
 async function waitForStatementState(
   statement: FlinkStatement,
   predicate: (s: FlinkStatement) => boolean,
-): Promise<void> {
+  maxWaitTimeMs: number = MAX_WAIT_TIME_MS,
+  pollingIntervalMs: number = DEFAULT_POLL_PERIOD_MS,
+): Promise<FlinkStatement> {
   const startTime = Date.now();
 
   const ccloudLoader = CCloudResourceLoader.getInstance();
 
-  while (Date.now() - startTime < MAX_WAIT_TIME_MS) {
+  while (Date.now() - startTime < maxWaitTimeMs) {
     // Check if the statement is in a viewable state
     const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
 
@@ -179,15 +186,15 @@ async function waitForStatementState(
     }
 
     if (predicate(refreshedStatement)) {
-      return;
+      return refreshedStatement;
     }
 
     // Wait before polling again
-    await new Promise((resolve) => setTimeout(resolve, DEFAULT_POLL_PERIOD_MS));
+    await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
   }
 
   throw new Error(
-    `Statement ${statement.name} did not reach desired state within ${MAX_WAIT_TIME_MS / 1000} seconds`,
+    `Statement ${statement.name} did not reach desired state within ${maxWaitTimeMs / 1000} seconds`,
   );
 }
 

@@ -466,6 +466,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.flink.listFunctions",
+        "title": "List Flink Functions",
+        "category": "Confluent: Flink Statements",
+        "comment": "is scratch command not to commit"
+      },
+      {
         "command": "confluent.flinkStatementResults",
         "icon": "$(confluent-view-messages)",
         "title": "View Flink Statement Results",
