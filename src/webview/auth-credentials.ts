@@ -466,9 +466,8 @@ export class AuthCredentials extends HTMLElement {
       this._internals.form.addEventListener(
         "submit",
         () => {
-          // Validate all inputs on form submission if this section is required
-          if (this.shouldValidateInputs()) {
-            this.checkValidity();
+          // Validate all inputs on form submission
+          if (!this.checkValidity()) {
             // Don't prevent default. Since we send validation checks to _internals,
             // the parent form will see element is invalid and prevent submission
           }
