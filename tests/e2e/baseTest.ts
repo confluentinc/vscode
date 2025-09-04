@@ -95,6 +95,15 @@ export const test = testBase.extend<VSCodeFixture>({
       throw new Error("Failed to launch VS Code electron app");
     }
 
+    // wait for VS Code to be ready before trying to stub dialogs
+    const page = await electronApp.firstWindow();
+    if (!page) {
+      // usually this means the launch args were incorrect and/or the app didn't start correctly
+      throw new Error("Failed to get first window from VS Code");
+    }
+    await page.waitForLoadState("domcontentloaded");
+    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+
     // Stub all dialogs by default; tests can still override as needed.
     // For available `method` values to use with `stubMultipleDialogs`, see:
     // https://www.electronjs.org/docs/latest/api/dialog
@@ -139,13 +148,10 @@ export const test = testBase.extend<VSCodeFixture>({
 
     const page = await electronApp.firstWindow();
     if (!page) {
-      // usually this means the launch args were incorrect and/or the app didn't start correctly
+      // shouldn't happen since we waited for the workbench above
       throw new Error("Failed to get first window from VS Code");
     }
 
-    // wait for VS Code to be ready
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
     await use(page);
   },
 });
