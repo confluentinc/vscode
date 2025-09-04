@@ -34,7 +34,7 @@ async function handleAuthFlow(
     await authPage.waitForLoadState("domcontentloaded");
 
     // Wait for email input to be visible and ready
-    await authPage.waitForSelector("[name=email]", { state: "visible", timeout: 6000 });
+    await expect(authPage.locator("[name=email]")).toBeVisible();
 
     // Fill in credentials
     await authPage.locator("[name=email]").fill(username);
@@ -94,20 +94,26 @@ export async function login(
     } catch {
       // file doesn't exist yet
     }
-    await page.waitForTimeout(250);
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
   if (!authUrl) {
-    throw new Error("Failed to capture OAuth URL from shell.openExternal");
+    throw new Error(`Failed to load CCloud sign-in URL from ${CCLOUD_SIGNIN_URL_PATH}`);
   }
 
   // Handle the authentication flow through the browser in a separate context
   await handleAuthFlow(authUrl, username, password, electronApp);
 
   // Unfortunately, the auth callback URI handling does not reliably work on all environments
-  // we run these tests, so we have to work around it by cancelling the progress notification
-  // and clicking the sign-in action again. This is safe since handleAuthFlow completed successfully,
-  // which would normally trigger the URI handling and resolve the progress notification and refresh
-  // the Resources view / Confluent Cloud connection item.
+  // we run these tests, so we have to work around it:
+  // - when the E2E tests start via `gulp e2e`, we set the E2E_TESTING environment variable, which
+  //  sets the CCLOUD_AUTH_CALLBACK_URI to an empty string, which prevents the sidecar from using it
+  //  (see https://github.com/confluentinc/ide-sidecar/blob/f302286ff0f7234581b07cef4ec978e33030617f/src/main/resources/templates/callback.html#L13-L16)
+  // - since the extension's UriHandler is never triggered, we have to explicitly cancel the
+  //  "Signing in ..." progress notification and click the sign-in action again to refresh the
+  //  connection state and show the available environments
+  // NOTE: This is safe because handleAuthFlow() didn't throw any errors by this point, which means
+  // we saw an "Authentication Complete" message in the browser, so the sidecar should have done its
+  // own callback handling to update the CCloud connection to a fully authenticated state.
   const notifications = new NotificationArea(page);
   const progressNotifications = notifications.progressNotifications.filter({
     hasText: "Signing in to Confluent Cloud...",
