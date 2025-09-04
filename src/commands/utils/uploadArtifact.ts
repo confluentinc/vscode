@@ -18,8 +18,7 @@ import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegi
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
-import { uploadFileToAzure } from "./uploadToAzure";
-import { uploadFileToS3 } from "./uploadToS3";
+import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
 
 export interface ArtifactUploadParams {

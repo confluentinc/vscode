@@ -1,18 +1,22 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
+import { artifactUploadDeleted } from "../emitters";
 import { isResponseError, logError } from "../errors";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../notifications";
-import { deleteArtifactCommand } from "./utils/deleteArtifact";
+import { getSidecar } from "../sidecar";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   promptForArtifactUploadParams,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifact";
+
 /**
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
@@ -88,17 +92,59 @@ export async function uploadArtifactCommand(): Promise<void> {
     showErrorNotificationWithButtons(showNotificationMessage);
   }
 }
+
 /**
- * Registers the "confluent.uploadArtifact" command with logging.
+ * Registers the upload Artifact commands with logging.
  */
-export function registerUploadArtifactCommand(): vscode.Disposable {
+export function registerArtifactCommand(): vscode.Disposable[] {
   // Register only the upload command here
-  return registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand);
+  return [
+    registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
+    registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand),
+  ];
 }
-/**
- * Registers the "confluent.deleteArtifact" command with logging.
- */
-export function registerDeleteArtifactCommand(): vscode.Disposable {
-  // Register only the delete command here
-  return registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand);
+
+export async function deleteArtifactCommand(
+  selectedArtifact: FlinkArtifact | undefined,
+): Promise<void> {
+  if (!selectedArtifact) {
+    void vscode.window.showErrorMessage(
+      "Cannot delete artifact: missing required artifact properties.",
+    );
+    return;
+  }
+  const request: DeleteArtifactV1FlinkArtifactRequest = {
+    cloud: selectedArtifact.provider,
+    region: selectedArtifact.region,
+    environment: selectedArtifact.environmentId,
+    id: selectedArtifact.id,
+  };
+  const sidecarHandle = await getSidecar();
+
+  const artifactsClient = sidecarHandle.getFlinkArtifactsApi({
+    region: selectedArtifact.region,
+    environmentId: selectedArtifact.environmentId,
+    provider: selectedArtifact.provider,
+  });
+
+  const yesButton = "Yes, delete";
+  const confirmation = await vscode.window.showWarningMessage(
+    `Are you sure you want to delete "${selectedArtifact.name}"?`,
+    {
+      modal: true,
+      detail:
+        "Deleting this artifact will disable all User-Defined Functions (UDFs) created from it. Consequently, any Flink statements that utilize these UDFs will also fail. This action cannot be undone.",
+    },
+    { title: yesButton },
+    // "Cancel" is added by default
+  );
+  if (confirmation?.title !== yesButton) {
+    return;
+  }
+
+  await artifactsClient.deleteArtifactV1FlinkArtifact(request);
+  artifactUploadDeleted.fire();
+  void vscode.window.showInformationMessage(
+    `Artifact "${selectedArtifact.name}" deleted successfully from Confluent Cloud.`,
+  );
 }
