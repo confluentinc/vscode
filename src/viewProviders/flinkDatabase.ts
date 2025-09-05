@@ -30,10 +30,10 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   CCloudKafkaCluster,
   ArtifactOrUdf
 > {
-  viewId = "confluent-flink-artifacts";
+  viewId = "confluent-flink-database";
 
   parentResourceChangedEmitter = currentFlinkDatabaseChanged;
-  parentResourceChangedContextValue = ContextValues.flinkArtifactsDatabaseSelected;
+  parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
 
   children: ArtifactOrUdf[] = [];
 

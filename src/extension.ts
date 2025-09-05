@@ -389,7 +389,7 @@ async function setupContextValues() {
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",
-    "confluent-flink-artifacts",
+    "confluent-flink-database",
   ]);
 
   // enables the "Copy ID" command; these resources must have the "id" property
@@ -431,7 +431,7 @@ async function setupContextValues() {
   ]);
   // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
   const flinkViewMode = setContextValue(
-    ContextValues.flinkArtifactsUDFsViewMode,
+    ContextValues.flinkDatabaseViewMode,
     FlinkArtifactsViewProviderMode.Artifacts,
   );
   await Promise.all([

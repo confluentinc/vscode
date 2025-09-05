@@ -6,14 +6,14 @@ import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelega
 
 export async function setFlinkUDFViewModeCommand() {
   flinkArtifactUDFViewMode.fire(FlinkArtifactsViewProviderMode.UDFs);
-  await setContextValue(
-    ContextValues.flinkArtifactsUDFsViewMode,
-    FlinkArtifactsViewProviderMode.UDFs,
-  );
+  await setContextValue(ContextValues.flinkDatabaseViewMode, FlinkArtifactsViewProviderMode.UDFs);
 }
 
 export function registerFlinkUDFCommands(): Disposable[] {
   return [
-    registerCommandWithLogging("confluent.flink.setUDFsViewMode", setFlinkUDFViewModeCommand),
+    registerCommandWithLogging(
+      "confluent.flinkdatabase.setUDFsViewMode",
+      setFlinkUDFViewModeCommand,
+    ),
   ];
 }

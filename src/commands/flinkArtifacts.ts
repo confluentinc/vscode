@@ -1,7 +1,7 @@
 import { Disposable, SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { flinkArtifactUDFViewMode } from "../emitters";
+import { flinkArtifactUDFViewMode as flinkDatabaseViewMode } from "../emitters";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 
@@ -29,9 +29,9 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
 }
 
 export async function setFlinkArtifactsViewModeCommand() {
-  flinkArtifactUDFViewMode.fire(FlinkArtifactsViewProviderMode.Artifacts);
+  flinkDatabaseViewMode.fire(FlinkArtifactsViewProviderMode.Artifacts);
   await setContextValue(
-    ContextValues.flinkArtifactsUDFsViewMode,
+    ContextValues.flinkDatabaseViewMode,
     FlinkArtifactsViewProviderMode.Artifacts,
   );
 }
@@ -39,7 +39,7 @@ export async function setFlinkArtifactsViewModeCommand() {
 export function registerFlinkArtifactCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
-      "confluent.flink.setArtifactsViewMode",
+      "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
     registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
