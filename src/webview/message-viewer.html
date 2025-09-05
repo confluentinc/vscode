@@ -81,7 +81,7 @@
             </div>
 
             <template data-if="this.consumeMode() === 'timestamp'">
-              <div class="dropdown-container">
+              <div class="dropdown-container datetime-container">
                 <label for="consume-mode-timestamp">Start date and time</label>
                 <div class="datetime-input-group">
                   <input
@@ -534,6 +534,10 @@
         width: 100%;
       }
 
+      .datetime-container {
+        min-width: 16rem; /* Wider to accommodate full timestamp */
+      }
+
       [popover].partition-control {
         width: fit-content;
         min-width: 10rem;
@@ -698,6 +702,7 @@
         padding: 0;
         position: relative;
         flex-shrink: 0;
+        box-sizing: border-box; /* Ensure consistent box model with text input */
 
         /* Make text invisible but keep calendar icon */
         color: transparent;
