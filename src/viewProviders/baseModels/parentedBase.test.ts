@@ -103,14 +103,12 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
 
   describe("updateTreeViewDescription()", () => {
     it("should clear the description and clear .environment when no resource is focused", async () => {
-      provider.environment = TEST_CCLOUD_ENVIRONMENT;
       provider.resource = null;
       provider["treeView"].description = "this should go away";
 
       await provider.updateTreeViewDescription();
 
       assert.strictEqual(provider["treeView"].description, "");
-      assert.strictEqual(provider.environment, null);
     });
 
     it("should set the description and set .environment when a resource is focused", async () => {
@@ -120,7 +118,6 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
         getStubbedCCloudResourceLoader(sandbox);
       stubbedLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT);
 
-      provider.environment = TEST_CCLOUD_ENVIRONMENT;
       provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       provider["treeView"].description = "";
 
@@ -130,7 +127,6 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
         provider["treeView"].description,
         `${TEST_CCLOUD_ENVIRONMENT.name} | ${TEST_CCLOUD_FLINK_COMPUTE_POOL.id}`,
       );
-      assert.strictEqual(provider.environment, TEST_CCLOUD_ENVIRONMENT);
     });
 
     it("Should set the description to empty when environment is not found within loader", async () => {
@@ -139,27 +135,23 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
       stubbedLoader.getEnvironments.resolves([]);
 
       provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-      provider.environment = TEST_CCLOUD_ENVIRONMENT;
 
       provider["treeView"].description = "this should go away";
 
       await provider.updateTreeViewDescription();
 
       assert.strictEqual(provider["treeView"].description, "");
-      assert.strictEqual(provider.environment, null);
     });
   });
 
   describe("reset()", () => {
     it("should clear the tree view AND focused resources", async () => {
-      provider.environment = TEST_CCLOUD_ENVIRONMENT;
       provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       provider["treeView"].description = "this should go away";
       provider["treeView"].message = "this should go away too";
 
       await provider.reset();
 
-      assert.strictEqual(provider.environment, null);
       assert.strictEqual(provider.resource, null);
       assert.strictEqual(provider["treeView"].description, undefined);
       assert.strictEqual(provider["treeView"].message, undefined);
