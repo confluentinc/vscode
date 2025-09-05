@@ -37,10 +37,6 @@ export abstract class ParentedBaseViewProvider<
    * - Flink Artifacts view: `FlinkComputePool`
    */
   resource: P | null = null;
-
-  /** The parent {@link Environment} of the focused resource.  */
-  environment: Environment | null = null;
-
   /**
    * Required {@link EventEmitter} to listen for when this view provider's parent
    * {@linkcode resource} is set/unset. This is used in order to control the tree view description,
@@ -106,7 +102,6 @@ export abstract class ParentedBaseViewProvider<
 
   async reset(): Promise<void> {
     this.resource = null;
-    this.environment = null;
 
     await super.reset();
   }
@@ -124,7 +119,6 @@ export abstract class ParentedBaseViewProvider<
     if (!focusedResource) {
       subLogger.debug("called with no focused resource, clearing view description");
       this.treeView.description = "";
-      this.environment = null;
       return;
     }
 
@@ -136,7 +130,6 @@ export abstract class ParentedBaseViewProvider<
       focusedResource.environmentId,
     );
 
-    this.environment = parentEnv ?? null;
     if (parentEnv) {
       subLogger.debug("found environment, setting view description");
       this.treeView.description = `${parentEnv.name} | ${focusedResource.id}`;
