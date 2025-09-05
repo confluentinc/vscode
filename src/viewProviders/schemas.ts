@@ -136,7 +136,7 @@ export class SchemasViewProvider
 
   readonly viewId: string = "confluent-schemas";
   private treeView: TreeView<SchemasViewProviderData>;
-  /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. Includes parent Environment ID */
+  /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. Includes parent Environment ID */
   public schemaRegistry: SchemaRegistry | null = null;
 
   /** String to filter items returned by `getChildren`, if provided. */
