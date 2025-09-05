@@ -1,3 +1,6 @@
+import { writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import * as vscode from "vscode";
 import { CCloudStatus, ConnectedState, Connection, UserInfo } from "../clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
@@ -132,6 +135,18 @@ export class ConfluentCloudAuthProvider
         "createSession() no sign-in URI found in connection metadata; this should not happen",
       );
       throw new Error("Failed to create new connection. Please try again.");
+    }
+
+    if (process.env.CONFLUENT_VSCODE_E2E_TESTING) {
+      // write the CCloud sign-in URL to a temp file for E2E tests since we can't reliably intercept
+      // it across different platforms with Playwright+Electron
+      try {
+        const tempFilePath = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
+        await writeFile(tempFilePath, signInUri);
+        logger.info("E2E: wrote CCloud sign-in URL to temp file", { signInUri, tempFilePath });
+      } catch (error) {
+        logger.error("E2E: failed to write CCloud sign-in URL to temp file", error);
+      }
     }
 
     // this will block until we handle the URI event or the user cancels
@@ -467,7 +482,12 @@ export class ConfluentCloudAuthProvider
         cancellable: true,
       },
       async (_, token): Promise<AuthCallbackEvent | undefined> => {
-        await vscode.env.openExternal(vscode.Uri.parse(uri));
+        if (!process.env.CONFLUENT_VSCODE_E2E_TESTING) {
+          // E2E tests will handle the CCloud login browser interaction separately, and leaving this
+          // enabled will result in a new browser tab opened for every @ccloud-tagged test that's
+          // never filled, submitted, or closed
+          await vscode.env.openExternal(vscode.Uri.parse(uri));
+        }
         // keep progress notification open until one of two things happens:
         // - we handle the auth completion event and resolve with the callback query params
         // - user clicks the "Cancel" button from the notification
