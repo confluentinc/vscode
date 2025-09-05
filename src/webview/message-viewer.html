@@ -90,15 +90,15 @@
                     class="datetime-input"
                     placeholder="YYYY-MM-DD HH:mm:ss.sss or paste any datetime format"
                     data-prop-value="this.consumeModeTimestampFormatted()"
-                    data-on-change="this.handleConsumeModeTimestampFormattedChange(event.target.value)"
-                    data-on-blur="this.handleConsumeModeTimestampBlur(event.target.value)"
+                    data-on-change="this.handleDatetimeChange(event.target.value)"
+                    data-on-blur="this.handleDatetimeChange(event.target.value)"
                   />
                   <input
                     type="datetime-local"
                     id="datetime-picker-button"
                     class="datetime-picker-styled-button"
                     data-prop-value="this.consumeModeTimestampFormatted()"
-                    data-on-change="this.handleDatetimePickerChange(event.target.value)"
+                    data-on-change="this.handleDatetimeChange(event.target.value)"
                     step="0.001"
                     aria-label="Open date and time picker"
                     title="Open date and time picker"

@@ -470,51 +470,29 @@ export class MessageViewerViewModel extends ViewModel {
     this.selection(null);
   }
 
-  /** Handler to convert the webview's datetime string input to internal numeric timestamp. */
-  async handleConsumeModeTimestampFormattedChange(datetimeLocal: string) {
+  /** Handler for datetime input changes - always resets to last valid value on parse errors */
+  async handleDatetimeChange(datetimeLocal: string) {
     try {
       const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
       if (isNaN(timestamp)) {
-        // Invalid date - could show error feedback here
-        return;
+        throw new Error(`Invalid date: ${datetimeLocal}`);
       }
-      // Check if the new timestamp is different from the current one
       const currentTimestamp = this.consumeModeTimestamp();
       if (timestamp !== currentTimestamp) {
+        // only update if the value actually changed
         await this.handleConsumeModeTimestampChange(timestamp);
       }
     } catch {
-      // Handle parsing errors gracefully
-      console.warn("Invalid datetime format:", datetimeLocal);
-    }
-  }
-
-  /** Handler for blur event on text input to validate and reformat */
-  async handleConsumeModeTimestampBlur(datetimeLocal: string) {
-    try {
-      const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
-      if (!isNaN(timestamp)) {
-        // Check if the new timestamp is different from the current one
-        const currentTimestamp = this.consumeModeTimestamp();
-        if (timestamp !== currentTimestamp) {
-          // Reformat to standardized format on blur
-          await this.handleConsumeModeTimestampChange(timestamp);
-        }
-      }
-    } catch {
-      // Reset to last valid value on invalid input
       const currentTimestamp = this.consumeModeTimestamp();
       if (currentTimestamp != null) {
-        // Trigger UI update to reset to last valid formatted value
-        this.consumeModeTimestamp((prev) => prev);
+        // revert back to last valid value, but we can't just call this.consumeModeTimestamp(currentTimestamp)
+        // because that doesn't trigger any UI update since it's the same value as before
+        this.consumeModeTimestamp(null);
+        queueMicrotask(() => {
+          this.consumeModeTimestamp(currentTimestamp);
+        });
       }
     }
-  }
-
-  /** Handler for datetime picker input changes */
-  handleDatetimePickerChange(datetimeLocal: string) {
-    // Directly apply the datetime picker change to the main input
-    this.handleConsumeModeTimestampFormattedChange(datetimeLocal);
   }
 
   /** Numeric limit of messages that need to be consumed. */
