@@ -41,10 +41,6 @@ import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import {
-  registerDeleteArtifactCommand,
-  registerUploadArtifactCommand,
-} from "./commands/uploadArtifact";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
@@ -271,8 +267,6 @@ async function _activateExtension(
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
-    registerUploadArtifactCommand(),
-    registerDeleteArtifactCommand(),
     ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
