@@ -15,6 +15,7 @@ const storage = createWebviewStorage<{
   colWidth: number[];
   columnVisibilityFlags: number;
   timestamp: MessageTimestampFormat;
+  timestampDisplayMode: TimestampDisplayMode;
   page: number;
 }>();
 
@@ -29,6 +30,7 @@ type MessageCount = { total: number; filter: number | null };
 type MessageLimitType = "1m" | "100k" | "10k" | "1k" | "100";
 type MessageGridColumn = "timestamp" | "partition" | "offset" | "key" | "value";
 type MessageTimestampFormat = "iso" | "unix";
+type TimestampDisplayMode = "utc" | "local";
 
 const labels = ["1m", "100k", "10k", "1k", "100"];
 const numbers = [1_000_000, 100_000, 10_000, 1_000, 100];
@@ -280,7 +282,10 @@ export class MessageViewerViewModel extends ViewModel {
   columns: Record<MessageGridColumn, any> = {
     timestamp: {
       index: 0,
-      title: () => "Timestamp",
+      title: () => {
+        const displayMode = this.timestampDisplayMode();
+        return `Timestamp (${displayMode === "local" ? "Local" : "UTC"})`;
+      },
       children: (message: PartitionConsumeRecord) => this.formatTimestamp()(message.timestamp!),
       description: (message: PartitionConsumeRecord) => {
         return this.messageTimestampFormat() === "iso"
@@ -445,10 +450,22 @@ export class MessageViewerViewModel extends ViewModel {
   consumeMode = this.resolve<ConsumeMode>(() => post("GetConsumeMode"), "beginning");
   consumeModeTimestamp = this.resolve(() => post("GetConsumeModeTimestamp"), Date.now());
 
+  /** Timezone display mode for timestamps (local or UTC) */
+  timestampDisplayMode = this.signal(storage.get()?.timestampDisplayMode ?? "utc");
+
   /** Formatted timestamp for datetime-local input (YYYY-MM-DDTHH:mm:ss.sss) */
   consumeModeTimestampFormatted = this.derive(() => {
     const timestamp: number | null = this.consumeModeTimestamp();
-    return timestampToDatetimeLocal(timestamp ?? Date.now());
+    const displayMode = this.timestampDisplayMode();
+
+    if (!timestamp) return "";
+
+    if (displayMode === "local") {
+      return timestampToDatetimeLocal(timestamp);
+    } else {
+      // For UTC mode, use ISO string format with Z suffix to match message grid
+      return new Date(timestamp).toISOString();
+    }
   });
 
   async handleConsumeModeChange(value: ConsumeMode) {
@@ -470,17 +487,47 @@ export class MessageViewerViewModel extends ViewModel {
     this.selection(null);
   }
 
-  /** Handler for datetime input changes - always resets to last valid value on parse errors */
-  async handleDatetimeChange(datetimeLocal: string) {
+  /** Handler for datetime input changes - supports various formats including unix timestamps */
+  async handleDatetimeChange(input: string) {
     try {
-      const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
-      if (isNaN(timestamp)) {
-        throw new Error(`Invalid date: ${datetimeLocal}`);
+      let timestamp: number | null = null;
+      const trimmedInput = input.trim();
+
+      // Try parsing as unix timestamp first (10-13 digits)
+      if (/^\d{10,13}$/.test(trimmedInput)) {
+        const parsed = parseInt(trimmedInput, 10);
+        // Handle both seconds (10 digits) and milliseconds (13 digits)
+        timestamp = parsed < 10000000000 ? parsed * 1000 : parsed;
       }
-      const currentTimestamp = this.consumeModeTimestamp();
-      if (timestamp !== currentTimestamp) {
-        // only update if the value actually changed
-        await this.handleConsumeModeTimestampChange(timestamp);
+      // Try parsing as ISO string or other date formats
+      else if (trimmedInput) {
+        const displayMode = this.timestampDisplayMode();
+
+        if (displayMode === "local") {
+          // Parse as local time
+          timestamp = datetimeLocalToTimestamp(trimmedInput);
+        } else {
+          // Parse as UTC time - need to interpret the input as UTC
+          const parsed = new Date(trimmedInput);
+          if (!isNaN(parsed.getTime())) {
+            // If it looks like a datetime-local format, treat it as UTC
+            if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?$/.test(trimmedInput)) {
+              timestamp = new Date(trimmedInput + "Z").getTime();
+            } else {
+              timestamp = parsed.getTime();
+            }
+          }
+        }
+      }
+
+      if (timestamp && !isNaN(timestamp)) {
+        const currentTimestamp = this.consumeModeTimestamp();
+        if (timestamp !== currentTimestamp) {
+          // only update if the value actually changed
+          await this.handleConsumeModeTimestampChange(timestamp);
+        }
+      } else {
+        throw new Error(`Invalid date: ${input}`);
       }
     } catch {
       const currentTimestamp = this.consumeModeTimestamp();
@@ -540,15 +587,40 @@ export class MessageViewerViewModel extends ViewModel {
   }
 
   messageTimestampFormat = this.signal(storage.get()?.timestamp ?? "iso");
+
   updateTimestampFormat(format: MessageTimestampFormat) {
     this.messageTimestampFormat(format);
     storage.set({ ...storage.get()!, timestamp: format });
   }
+
+  toggleTimestampDisplayMode() {
+    const newMode = this.timestampDisplayMode() === "utc" ? "local" : "utc";
+    this.timestampDisplayMode(newMode);
+    storage.set({ ...storage.get()!, timestampDisplayMode: newMode });
+  }
+
   formatTimestamp = this.derive(() => {
     const format = this.messageTimestampFormat();
+    const displayMode = this.timestampDisplayMode();
+
     switch (format) {
       case "iso":
-        return (timestamp: number) => new Date(timestamp).toISOString();
+        return (timestamp: number) => {
+          const date = new Date(timestamp);
+          if (displayMode === "local") {
+            // Format as local ISO-like string (YYYY-MM-DDTHH:mm:ss.sss)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            const hours = String(date.getHours()).padStart(2, "0");
+            const minutes = String(date.getMinutes()).padStart(2, "0");
+            const seconds = String(date.getSeconds()).padStart(2, "0");
+            const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}`;
+          } else {
+            return date.toISOString();
+          }
+        };
       case "unix":
         return (timestamp: number) => String(timestamp);
     }

@@ -82,13 +82,18 @@
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container datetime-container">
-                <label for="consume-mode-timestamp">Start date and time</label>
+                <label for="consume-mode-timestamp">
+                  Start date and time (<span
+                    data-text="this.timestampDisplayMode() === 'local' ? 'Local' : 'UTC'"
+                  ></span
+                  >)
+                </label>
                 <div class="datetime-input-group">
                   <input
                     type="text"
                     id="consume-mode-timestamp"
                     class="datetime-input"
-                    placeholder="YYYY-MM-DD HH:mm:ss.sss or paste any datetime format"
+                    placeholder="YYYY-MM-DD HH:mm:ss.sss, unix timestamp, or paste any datetime format"
                     data-prop-value="this.consumeModeTimestampFormatted()"
                     data-on-change="this.handleDatetimeChange(event.target.value)"
                     data-on-blur="this.handleDatetimeChange(event.target.value)"
@@ -231,8 +236,9 @@
           <label class="histogram-label"
             ><span data-text="this.messageCount().total.toLocaleString()"></span> messages streamed
             since
-            <span data-text="this.formatTimestamp()(this.timestampExtent()[0])"></span> (UTC)</label
-          >
+            <span data-text="this.formatTimestamp()(this.timestampExtent()[0])"></span>
+            <span data-text="this.timestampDisplayMode() === 'local' ? 'Local' : 'UTC'"></span
+          ></label>
         </template>
         <template data-if="!this.shouldShowMessagesStat()">
           <label class="histogram-label">&nbsp;</label>
@@ -329,15 +335,20 @@
                 </template>
               </div>
               <hr />
-              <vscode-radio-group
-                orientation="vertical"
-                data-attr-value="this.messageTimestampFormat()"
-                data-on-change="this.updateTimestampFormat(event.target.value)"
-              >
-                <label slot="label">Timestamp format</label>
-                <vscode-radio value="iso">ISO</vscode-radio>
-                <vscode-radio value="unix">Unix epoch</vscode-radio>
-              </vscode-radio-group>
+              <div class="flex-column" style="--gap: 0.5rem">
+                <label>Timestamp display</label>
+                <div class="timezone-switch-container">
+                  <label class="timezone-switch-label">
+                    <vscode-checkbox
+                      data-prop-checked="this.timestampDisplayMode() === 'local'"
+                      data-on-change="this.toggleTimestampDisplayMode()"
+                    ></vscode-checkbox>
+                    <span
+                      data-text="this.timestampDisplayMode() === 'local' ? 'Local Time' : 'UTC'"
+                    ></span>
+                  </label>
+                </div>
+              </div>
             </section>
 
             <tbody>
@@ -774,6 +785,21 @@
 
       .datetime-picker-styled-button:hover::before {
         color: var(--vscode-button-foreground);
+      }
+
+      .timezone-switch-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .timezone-switch-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: var(--vscode-font-size);
+        color: var(--vscode-editor-foreground);
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
