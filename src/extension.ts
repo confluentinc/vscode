@@ -94,7 +94,7 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
-import { FlinkArtifactsUDFsViewProvider } from "./viewProviders/flinkArtifacts";
+import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
@@ -221,7 +221,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkArtifactsUDFsViewProvider.getInstance();
+  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProviderInstance,

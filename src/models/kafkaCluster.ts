@@ -58,6 +58,17 @@ export class CCloudKafkaCluster extends KafkaCluster {
     return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/clusters/${this.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
+  /**
+   * Can Flink things be done against this Kafka cluster (aka treat this cluster
+   *  as a Flink Database)?
+   *
+   * Currently, this is determined by whether or not there were any preexisting Flink Compute Pools
+   * available in the env/cloud provider/region of this cluster.
+   **/
+  get isFlinkable(): boolean {
+    return (this.flinkPools?.length ?? 0) > 0;
+  }
+
   searchableText(): string {
     return `${this.name} ${this.id} ${this.provider}/${this.region}`;
   }

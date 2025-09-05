@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { CCloudEnvironment } from "./models/environment";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId } from "./models/flinkStatement";
-import { KafkaCluster } from "./models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
@@ -112,12 +112,14 @@ export const currentFlinkStatementsResourceChanged = new vscode.EventEmitter<
   CCloudFlinkComputePool | CCloudEnvironment | null
 >();
 /**
- * Fired whenever a Flink compute pool is selected from the Resources view or the Flink Artifacts
- * view, chosen from the "Select Flink Compute Pool" action from the Flink Artifacts view or
+ * Fired whenever a Flink compute pool is selected from the Resources view or
  * command palette, or cleared out from a connection (or CCloud organization) change.
  */
-export const currentFlinkArtifactsPoolChanged =
-  new vscode.EventEmitter<CCloudFlinkComputePool | null>();
+export const currentFlinkArtifactsDatabaseChanged =
+  new vscode.EventEmitter<CCloudKafkaCluster | null>();
+
+/** Likewise, but for the currently chosen Flink Database (a Flinkable CCloud Kafka Cluster) */
+export const currentFlinkDatabaseChanged = new vscode.EventEmitter<CCloudKafkaCluster | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 

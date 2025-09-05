@@ -3,13 +3,13 @@ import { ContextValues } from "../context/values";
 import {
   artifactUploadCompleted,
   artifactUploadDeleted,
-  currentFlinkArtifactsPoolChanged,
+  currentFlinkDatabaseChanged,
   flinkArtifactUDFViewMode,
 } from "../emitters";
 import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkUdf } from "../models/flinkUDF";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { FlinkArtifactsViewProviderMode } from "./multiViewDelegates/constants";
@@ -22,16 +22,18 @@ export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
  * Multi-mode view provider for Flink artifacts and UDFs.
  * - When set to the "artifacts" mode, logic is delegated to the {@link FlinkArtifactsDelegate}.
  * - When set to the "udfs" mode, logic is delegated to the {@link FlinkUDFsDelegate}.
+ *
+ * The parent resource is a "Flinkable" CCloud Kafka cluster, which we refer to as a "Flink Database".
  */
-export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
+export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   FlinkArtifactsViewProviderMode,
-  CCloudFlinkComputePool,
+  CCloudKafkaCluster,
   ArtifactOrUdf
 > {
   viewId = "confluent-flink-artifacts";
 
-  parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
-  parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
+  parentResourceChangedEmitter = currentFlinkDatabaseChanged;
+  parentResourceChangedContextValue = ContextValues.flinkArtifactsDatabaseSelected;
 
   children: ArtifactOrUdf[] = [];
 
@@ -44,7 +46,7 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
 
     this.treeViewDelegates = new Map<
       FlinkArtifactsViewProviderMode,
-      ViewProviderDelegate<FlinkArtifactsViewProviderMode, CCloudFlinkComputePool, ArtifactOrUdf>
+      ViewProviderDelegate<FlinkArtifactsViewProviderMode, CCloudKafkaCluster, ArtifactOrUdf>
     >([
       [FlinkArtifactsViewProviderMode.Artifacts, artifactsDelegate],
       [FlinkArtifactsViewProviderMode.UDFs, udfsDelegate],
@@ -71,7 +73,7 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
   async refresh(): Promise<void> {
     this.children = [];
 
-    if (this.computePool) {
+    if (this.database) {
       // clear out the current delegate's children
       this._onDidChangeTreeData.fire();
 
@@ -79,7 +81,7 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            this.children = await this.currentDelegate.fetchChildren(this.computePool!);
+            this.children = await this.currentDelegate.fetchChildren(this.database!);
           } catch (error) {
             const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
             void logError(error, msg);
@@ -102,7 +104,7 @@ export class FlinkArtifactsUDFsViewProvider extends MultiModeViewProvider<
     return this.currentDelegate?.mode ?? "unknown";
   }
 
-  get computePool(): CCloudFlinkComputePool | null {
+  get database(): CCloudKafkaCluster | null {
     return this.resource;
   }
 }
