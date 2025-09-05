@@ -19,8 +19,7 @@ const logger = new Logger("commands.flinkComputePools");
  */
 export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkComputePool) {
   // the user either clicked a pool in the Flink Statements view or used the command palette
-  // (or selected a pool from the Resources view, under the guise of command
-  // 'confluent.resources.flink-compute-pool.select')
+  // (or selected a pool from the Resources view)
 
   // (If the user had a Flink Statement selected in the statements view, then hits the
   //  icon to select a different pool, the command is invoked with *the FlinkStatement*,
@@ -80,11 +79,6 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
       "confluent.statements.flink-compute-pool.select",
-      selectPoolForStatementsViewCommand,
-    ),
-    // Yes, same exact command, but when invoked from the Resources view compute pool items.
-    registerCommandWithLogging(
-      "confluent.resources.flink-compute-pool.select",
       selectPoolForStatementsViewCommand,
     ),
     registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),

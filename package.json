@@ -448,12 +448,6 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.resources.flink-compute-pool.select",
-        "icon": "$(confluent-flink-compute-pool)",
-        "title": "Select Flink Compute Pool",
-        "category": "Confluent: Resources"
-      },
-      {
         "command": "confluent.statements.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -1182,7 +1176,7 @@
       },
       {
         "view": "confluent-flink-database",
-        "contents": "No Flink databases (CCloud Kafka clusters).\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
+        "contents": "No Flink databases (CCloud Kafka clusters) available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
         "when": "config.confluent.flink.enableFlinkArtifacts && !confluent.ccloudConnectionAvailable"
       },
       {
