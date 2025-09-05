@@ -76,21 +76,34 @@
               >
                 <vscode-option value="latest">Latest</vscode-option>
                 <vscode-option value="beginning">From beginning</vscode-option>
-                <vscode-option value="timestamp">From specific date/time</vscode-option>
+                <vscode-option value="timestamp">From date/time</vscode-option>
               </vscode-dropdown>
             </div>
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container">
                 <label for="consume-mode-timestamp">Start date and time</label>
-                <input
-                  type="datetime-local"
-                  id="consume-mode-timestamp"
-                  class="datetime-input"
-                  data-prop-value="this.consumeModeTimestampFormatted()"
-                  data-on-change="this.handleConsumeModeTimestampFormattedChange(event.target.value)"
-                  step="0.001"
-                />
+                <div class="datetime-input-group">
+                  <input
+                    type="text"
+                    id="consume-mode-timestamp"
+                    class="datetime-input"
+                    placeholder="YYYY-MM-DD HH:mm:ss.sss or paste any datetime format"
+                    data-prop-value="this.consumeModeTimestampFormatted()"
+                    data-on-change="this.handleConsumeModeTimestampFormattedChange(event.target.value)"
+                    data-on-blur="this.handleConsumeModeTimestampBlur(event.target.value)"
+                  />
+                  <input
+                    type="datetime-local"
+                    id="datetime-picker-button"
+                    class="datetime-picker-styled-button"
+                    data-prop-value="this.consumeModeTimestampFormatted()"
+                    data-on-change="this.handleDatetimePickerChange(event.target.value)"
+                    step="0.001"
+                    aria-label="Open date and time picker"
+                    title="Open date and time picker"
+                  />
+                </div>
               </div>
             </template>
 
@@ -655,12 +668,107 @@
         padding: 2px 8px;
         width: 100%;
         box-sizing: border-box;
+        flex: 1;
       }
       .datetime-input:focus {
         outline: none;
+        border-color: var(--focus-border);
       }
       .datetime-input:hover {
         border-color: var(--vscode-input-border);
+      }
+
+      .datetime-input-group {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        width: 100%;
+      }
+
+      .datetime-picker-styled-button {
+        background: var(--vscode-button-background);
+        border: 1px solid var(--vscode-button-border, var(--vscode-button-background));
+        border-radius: calc(var(--corner-radius-round) * 1px);
+        cursor: pointer;
+        font-family: var(--font-family);
+        height: calc(var(--input-height) * 1px);
+        width: calc(var(--input-height) * 1px);
+        min-width: calc(var(--input-height) * 1px);
+        max-width: calc(var(--input-height) * 1px);
+        padding: 0;
+        position: relative;
+        flex-shrink: 0;
+
+        /* Make text invisible but keep calendar icon */
+        color: transparent;
+
+        /* Remove default appearance to better control styling */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+
+      .datetime-picker-styled-button:hover {
+        background: var(--vscode-button-hoverBackground);
+      }
+
+      .datetime-picker-styled-button:focus {
+        outline: none;
+        border-color: var(--focus-border);
+        background: var(--vscode-button-background);
+      }
+
+      /* Hide all text content */
+      .datetime-picker-styled-button::-webkit-datetime-edit {
+        display: none;
+      }
+
+      .datetime-picker-styled-button::-webkit-datetime-edit-text,
+      .datetime-picker-styled-button::-webkit-datetime-edit-month-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-day-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-year-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-hour-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-minute-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-second-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-millisecond-field,
+      .datetime-picker-styled-button::-webkit-datetime-edit-meridiem-field {
+        display: none;
+      }
+
+      /* Hide the native calendar picker indicator */
+      .datetime-picker-styled-button::-webkit-calendar-picker-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+        background: none;
+        opacity: 0;
+        /* Keep it invisible but still clickable */
+      }
+
+      /* Add VS Code calendar icon using a pseudo-element */
+      .datetime-picker-styled-button::before {
+        content: "\eab0"; /* codicon-calendar */
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: "codicon", monospace;
+        font-size: 16px;
+        color: var(--vscode-button-foreground);
+        pointer-events: none;
+        z-index: 1;
+        line-height: 1;
+      }
+
+      .datetime-picker-styled-button:hover::before {
+        color: var(--vscode-button-foreground);
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
