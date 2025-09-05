@@ -29,7 +29,7 @@ import { registerDockerCommands } from "./commands/docker";
 import { registerDocumentCommands } from "./commands/documents";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
-import { registerFlinkArtifactCommand } from "./commands/flinkArtifacts";
+import { registerFlinkArtifactCommands } from "./commands/flinkArtifacts";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
@@ -266,7 +266,7 @@ async function _activateExtension(
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
-    ...registerFlinkArtifactCommand(),
+    ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");

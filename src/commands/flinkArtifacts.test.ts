@@ -16,7 +16,7 @@ import * as sidecar from "../sidecar";
 import {
   deleteArtifactCommand,
   queryArtifactWithFlink,
-  registerFlinkArtifactCommand,
+  registerFlinkArtifactCommands,
   setFlinkArtifactsViewModeCommand,
   uploadArtifactCommand,
 } from "./flinkArtifacts";
@@ -245,7 +245,7 @@ describe("uploadArtifact Command", () => {
         .stub(commands, "registerCommandWithLogging")
         .returns({} as vscode.Disposable);
 
-      registerFlinkArtifactCommand();
+      registerFlinkArtifactCommands();
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,

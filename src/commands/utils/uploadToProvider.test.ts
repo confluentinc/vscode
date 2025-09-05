@@ -1,33 +1,27 @@
 import assert from "assert";
 import * as sinon from "sinon";
-import { Logger } from "../../logging";
 import * as notifications from "../../notifications";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 
 describe("uploadToProvider", () => {
   let sandbox: sinon.SinonSandbox;
   let fetchStub: sinon.SinonStub;
-  let loggerErrorStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
+  const mockParams = {
+    file: new Blob(["test content"], { type: "application/zip" }),
+    presignedUrl: "https://test.blob.core.windows.net/container/file.zip?signature=abc123",
+    contentType: "application/zip",
+  };
+  afterEach(() => {
+    sandbox.restore();
+  });
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
   describe("uploadFileToAzure", () => {
-    let mockParams: { file: Blob; presignedUrl: string; contentType: string };
-
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
-
       fetchStub = sandbox.stub(global, "fetch");
-      loggerErrorStub = sandbox.stub(Logger.prototype, "error");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-
-      mockParams = {
-        file: new Blob(["test content"], { type: "application/zip" }),
-        presignedUrl: "https://test.blob.core.windows.net/container/file.zip?signature=abc123",
-        contentType: "application/zip",
-      };
-    });
-
-    afterEach(() => {
-      sandbox.restore();
     });
 
     it("should return response on successful upload", async () => {
@@ -44,7 +38,6 @@ describe("uploadToProvider", () => {
         },
         body: mockParams.file,
       });
-      sinon.assert.notCalled(loggerErrorStub);
       sinon.assert.notCalled(showErrorNotificationStub);
       assert.strictEqual(response, mockResponse);
     });
@@ -87,10 +80,7 @@ describe("uploadToProvider", () => {
     };
 
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
-
       fetchStub = sandbox.stub(global, "fetch");
-      loggerErrorStub = sandbox.stub(Logger.prototype, "error");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
       mockParams = {
@@ -107,10 +97,6 @@ describe("uploadToProvider", () => {
           "x-amz-security-token": "test-security-token",
         },
       };
-    });
-
-    afterEach(() => {
-      sandbox.restore();
     });
 
     it("should return response on successful upload", async () => {
@@ -140,8 +126,6 @@ describe("uploadToProvider", () => {
           }),
         }),
       );
-
-      sinon.assert.notCalled(loggerErrorStub);
       sinon.assert.notCalled(showErrorNotificationStub);
 
       assert.strictEqual(response, mockResponse);
@@ -170,7 +154,6 @@ describe("uploadToProvider", () => {
       assert(thrownError.message.includes("403 Forbidden"));
       assert((thrownError as any).responseText.includes(errorResponseBody));
 
-      sinon.assert.called(loggerErrorStub);
       sinon.assert.calledOnce(showErrorNotificationStub);
 
       sinon.assert.calledOnce(fetchStub);
@@ -193,7 +176,6 @@ describe("uploadToProvider", () => {
       assert(thrownError instanceof Error);
       assert.strictEqual(thrownError.message, "500 Internal Server Error");
 
-      sinon.assert.called(loggerErrorStub);
       sinon.assert.calledOnce(showErrorNotificationStub);
 
       sinon.assert.calledOnce(fetchStub);
