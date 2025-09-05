@@ -276,13 +276,13 @@
         "command": "confluent.uploadArtifact",
         "title": "Confluent: Upload Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -1773,7 +1773,7 @@
         },
         {
           "command": "confluent.artifacts.registerUDF",
-          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
+          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts' && confluent.ccloudConnectionAvailable",
           "group": "z_openInCloud"
         },
         {
