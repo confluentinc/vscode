@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-13",
+  "version": "1.7.0-14",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -802,10 +802,13 @@
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
           },
-          "confluent.experimental.useNewResourcesViewProvider": {
+          "confluent.preview.useNewResourcesViewProvider": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Use the new resources view provider for displaying resources in the Confluent extension. This is an experimental feature and may change in future releases.\n\n---\n\n⚠️ **WARNING**: This setting is experimental and may not be fully functional or stable. Must restart extensions for change to take effect."
+            "markdownDescription": "Use the new Resources view provider for displaying resources in the Confluent extension.\n\n---\n\n⚠️ **WARNING**: This setting is currently in preview and may not be fully functional or stable. Must restart extensions for change to take effect.",
+            "tags": [
+              "preview"
+            ]
           }
         }
       },
@@ -1431,7 +1434,7 @@
         },
         {
           "command": "confluent.resources.refresh",
-          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources",
+          "when": "!config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources",
           "group": "navigation@3"
         },
         {
@@ -1573,7 +1576,7 @@
         },
         {
           "command": "confluent.resources.refreshConnection",
-          "when": "config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "when": "config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
           "group": "inline"
         },
         {

@@ -134,7 +134,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       });
 
       for (const connected of [true, false]) {
-        it(`ccloudConnectedHandler() should call onDidChangeCodeLenses.fire(): ${connected}`, () => {
+        it(`ccloudConnectedHandler(${connected}) should call onDidChangeCodeLenses.fire()`, () => {
           provider.ccloudConnectedHandler(connected);
 
           sinon.assert.calledOnce(onDidChangeCodeLensesFireStub);

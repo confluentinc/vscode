@@ -80,9 +80,6 @@ upload source maps.
 - Searching for schemas in the Topics and Schemas views is limited to the `subject` field only.
   Searching by other fields, such as `id` and `version`, is not supported due to cost and
   performance considerations.
-- The Message Viewer does not support consuming records that were compressed with `snappy` except
-  for Confluent Cloud connections
-  ([confluentinc/ide-sidecar#304](https://github.com/confluentinc/ide-sidecar/issues/304)).
 - Starting the extension in one IDE (e.g., VS Code) and then starting it in another IDE (e.g. VS
   Code Insiders) will cause conflicts with the sidecar process. The first IDE establishes a
   handshake with the sidecar and stores an access token, while the second IDE attempts to kill the
@@ -95,7 +92,6 @@ upload source maps.
   - macOS: macOS 14 and above (built on macOS 15)
   - Running the extension on older operating systems may result in the sidecar process failing to
     start, which prevents the extension from establishing a successful handshake.
-- We do not yet support private networking when working with Confluent Cloud for Apache Flink®.
 
 ## Support
 
