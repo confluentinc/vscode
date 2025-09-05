@@ -355,12 +355,12 @@ describe("directConnect.ts", () => {
         name: "WarpStream Connection",
         formConnectionType: "WarpStream",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
-        "kafka_cluster.client_id_suffix": "ws_host_override=localhost",
+        "kafka_cluster.client_id_suffix": ",ws_host_override=localhost",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
       assert.ok(spec.kafka_cluster);
-      assert.strictEqual(spec.kafka_cluster.client_id_suffix, "ws_host_override=localhost");
+      assert.strictEqual(spec.kafka_cluster.client_id_suffix, ",ws_host_override=localhost");
     });
   });
 
