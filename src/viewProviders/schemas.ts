@@ -25,7 +25,6 @@ import {
 import { ExtensionContextNotSetError, logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
@@ -137,9 +136,7 @@ export class SchemasViewProvider
 
   readonly viewId: string = "confluent-schemas";
   private treeView: TreeView<SchemasViewProviderData>;
-  /** The parent of the focused Schema Registry.  */
-  public environment: Environment | null = null;
-  /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
+  /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. Includes parent Environment ID */
   public schemaRegistry: SchemaRegistry | null = null;
 
   /** String to filter items returned by `getChildren`, if provided. */
@@ -500,7 +497,6 @@ export class SchemasViewProvider
     if (!schemaRegistry) {
       subLogger.debug("called with no schema registry, simple short-circuit");
       this.treeView.description = "";
-      this.environment = null;
       return;
     } else {
       subLogger.debug("called with schema registry");
@@ -511,7 +507,6 @@ export class SchemasViewProvider
     const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
     const envs = await loader.getEnvironments();
     const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
-    this.environment = parentEnv ?? null;
     if (parentEnv) {
       subLogger.debug("found environment.");
 
