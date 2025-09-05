@@ -10,8 +10,8 @@ All notable changes to this extension will be documented in this file.
 
 - Support for [Private Networking with Confluent Cloud for Apache Flink.](https://docs.confluent.io/cloud/current/flink/concepts/flink-private-networking.html)
 - New optional implementation of the Resources view, offering much better performance and per-connection
-  refresh capability. Currently guarded by the experimental setting "Use New Resources View Provider",
-  which is set to `true` by default.
+  refresh capability. Users can toggle this functionality through the `confluent.preview.useNewResourcesViewProvider`
+  setting, which is set to `true` by default.
 - New "Set Private Network Endpoint(s)" command for configuring private network endpoints for a
   specific CCloud environment.
 - Support for dark mode in the local Confluent Cloud OAuth callback page.
