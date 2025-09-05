@@ -472,8 +472,49 @@ export class MessageViewerViewModel extends ViewModel {
 
   /** Handler to convert the webview's datetime string input to internal numeric timestamp. */
   async handleConsumeModeTimestampFormattedChange(datetimeLocal: string) {
-    const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
-    await this.handleConsumeModeTimestampChange(timestamp);
+    try {
+      const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
+      if (isNaN(timestamp)) {
+        // Invalid date - could show error feedback here
+        return;
+      }
+      // Check if the new timestamp is different from the current one
+      const currentTimestamp = this.consumeModeTimestamp();
+      if (timestamp !== currentTimestamp) {
+        await this.handleConsumeModeTimestampChange(timestamp);
+      }
+    } catch {
+      // Handle parsing errors gracefully
+      console.warn("Invalid datetime format:", datetimeLocal);
+    }
+  }
+
+  /** Handler for blur event on text input to validate and reformat */
+  async handleConsumeModeTimestampBlur(datetimeLocal: string) {
+    try {
+      const timestamp: number = datetimeLocalToTimestamp(datetimeLocal);
+      if (!isNaN(timestamp)) {
+        // Check if the new timestamp is different from the current one
+        const currentTimestamp = this.consumeModeTimestamp();
+        if (timestamp !== currentTimestamp) {
+          // Reformat to standardized format on blur
+          await this.handleConsumeModeTimestampChange(timestamp);
+        }
+      }
+    } catch {
+      // Reset to last valid value on invalid input
+      const currentTimestamp = this.consumeModeTimestamp();
+      if (currentTimestamp != null) {
+        // Trigger UI update to reset to last valid formatted value
+        this.consumeModeTimestamp((prev) => prev);
+      }
+    }
+  }
+
+  /** Handler for datetime picker input changes */
+  handleDatetimePickerChange(datetimeLocal: string) {
+    // Directly apply the datetime picker change to the main input
+    this.handleConsumeModeTimestampFormattedChange(datetimeLocal);
   }
 
   /** Numeric limit of messages that need to be consumed. */
