@@ -195,3 +195,27 @@ export async function flinkDatabaseQuickpick(
     },
   });
 }
+
+/**
+ * Quickpick for selecting a Kafka cluster to use as the default database for a Flink statement.
+ * @param computePool The compute pool to use as the context for the quickpick (limits to clusters in same cloud provider/region).
+ * @param placeholder Optionally override the placeholder text for the quickpick.
+ *                    Defaults to "Select the Kafka cluster to use as the default database for the statement".
+ * @returns chosen Kafka cluster or undefined if the user cancels the quickpick.
+ */
+export async function anyFlinkDatabaseQuickpick(
+  placeholder: string = "Select the Kafka cluster to use as the default database for the statement",
+): Promise<KafkaCluster | undefined> {
+  return await kafkaClusterQuickPick({
+    placeHolder: placeholder,
+    filter: (cluster: KafkaCluster) => {
+      if (!isCCloud(cluster)) {
+        // Only CCloud clusters are supported for Flink compute pools.
+        return false;
+      }
+
+      // Only those clusters that are Flinkable (i.e. can be used as a Flink database).
+      return (cluster as CCloudKafkaCluster).isFlinkable;
+    },
+  });
+}

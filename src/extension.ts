@@ -90,9 +90,9 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
-import { FlinkArtifactsUDFsViewProvider } from "./viewProviders/flinkArtifacts";
+import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
-import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
+import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -217,7 +217,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkArtifactsUDFsViewProvider.getInstance();
+  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProviderInstance,
@@ -383,7 +383,7 @@ async function setupContextValues() {
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",
-    "confluent-flink-artifacts",
+    "confluent-flink-database",
   ]);
 
   // enables the "Copy ID" command; these resources must have the "id" property
@@ -425,8 +425,8 @@ async function setupContextValues() {
   ]);
   // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
   const flinkViewMode = setContextValue(
-    ContextValues.flinkArtifactsUDFsViewMode,
-    FlinkArtifactsViewProviderMode.Artifacts,
+    ContextValues.flinkDatabaseViewMode,
+    FlinkDatabaseViewProviderMode.Artifacts,
   );
   await Promise.all([
     chatParticipantEnabled,
