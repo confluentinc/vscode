@@ -176,7 +176,6 @@ export async function setFlinkArtifactsViewModeCommand() {
  * Registers the Flink Artifact commands with logging.
  */
 export function registerFlinkArtifactCommands(): vscode.Disposable[] {
-  // Register only the upload command here
   return [
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
     registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand),
