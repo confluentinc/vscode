@@ -1,12 +1,12 @@
 import { Disposable } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { flinkArtifactUDFViewMode } from "../emitters";
-import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { flinkDatabaseViewMode } from "../emitters";
+import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 
 export async function setFlinkUDFViewModeCommand() {
-  flinkArtifactUDFViewMode.fire(FlinkArtifactsViewProviderMode.UDFs);
-  await setContextValue(ContextValues.flinkDatabaseViewMode, FlinkArtifactsViewProviderMode.UDFs);
+  flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.UDFs);
+  await setContextValue(ContextValues.flinkDatabaseViewMode, FlinkDatabaseViewProviderMode.UDFs);
 }
 
 export function registerFlinkUDFCommands(): Disposable[] {

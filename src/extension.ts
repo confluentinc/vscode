@@ -41,10 +41,6 @@ import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import {
-  registerDeleteArtifactCommand,
-  registerUploadArtifactCommand,
-} from "./commands/uploadArtifact";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
@@ -96,7 +92,7 @@ import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
-import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
+import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -271,8 +267,6 @@ async function _activateExtension(
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
-    registerUploadArtifactCommand(),
-    registerDeleteArtifactCommand(),
     ...registerNewResourceViewCommands(),
   ];
   logger.info("Commands registered");
@@ -432,7 +426,7 @@ async function setupContextValues() {
   // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
   const flinkViewMode = setContextValue(
     ContextValues.flinkDatabaseViewMode,
-    FlinkArtifactsViewProviderMode.Artifacts,
+    FlinkDatabaseViewProviderMode.Artifacts,
   );
   await Promise.all([
     chatParticipantEnabled,

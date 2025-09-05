@@ -2,14 +2,14 @@ import { TreeItem } from "vscode";
 import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkUDF";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
-import { FlinkArtifactsViewProviderMode } from "./constants";
+import { FlinkDatabaseViewProviderMode } from "./constants";
 
 export class FlinkUDFsDelegate extends ViewProviderDelegate<
-  FlinkArtifactsViewProviderMode,
+  FlinkDatabaseViewProviderMode,
   CCloudKafkaCluster,
   FlinkUdf
 > {
-  readonly mode = FlinkArtifactsViewProviderMode.UDFs;
+  readonly mode = FlinkDatabaseViewProviderMode.UDFs;
   readonly viewTitle = "Flink UDFs (Preview)";
 
   children: FlinkUdf[] = [];

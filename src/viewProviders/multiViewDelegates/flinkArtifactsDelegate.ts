@@ -5,14 +5,14 @@ import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
-import { FlinkArtifactsViewProviderMode } from "./constants";
+import { FlinkDatabaseViewProviderMode } from "./constants";
 
 export class FlinkArtifactsDelegate extends ViewProviderDelegate<
-  FlinkArtifactsViewProviderMode,
+  FlinkDatabaseViewProviderMode,
   CCloudKafkaCluster,
   FlinkArtifact
 > {
-  readonly mode = FlinkArtifactsViewProviderMode.Artifacts;
+  readonly mode = FlinkDatabaseViewProviderMode.Artifacts;
   readonly viewTitle = "Flink Artifacts (Preview)";
 
   children: FlinkArtifact[] = [];

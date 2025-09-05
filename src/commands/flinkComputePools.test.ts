@@ -7,7 +7,6 @@ import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
 import * as commandsModule from "./flinkComputePools";
@@ -89,11 +88,6 @@ describe("flinkComputePools.ts", () => {
 
   describe("selectPoolForStatementsViewCommand", () => {
     let flinkComputePoolQuickPickWithViewProgressStub: sinon.SinonStub;
-    let fakeFlinkStatementsViewProvider: {
-      computePool: CCloudFlinkComputePool | null;
-      setParentResource: sinon.SinonStub;
-    };
-
     let currentFlinkStatementsResourceChangedFireStub: sinon.SinonStub;
 
     beforeEach(() => {

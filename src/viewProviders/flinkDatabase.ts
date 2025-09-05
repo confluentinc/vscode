@@ -4,7 +4,7 @@ import {
   artifactUploadCompleted,
   artifactUploadDeleted,
   currentFlinkDatabaseChanged,
-  flinkArtifactUDFViewMode,
+  flinkDatabaseViewMode,
 } from "../emitters";
 import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
@@ -12,7 +12,7 @@ import { FlinkUdf } from "../models/flinkUDF";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
-import { FlinkArtifactsViewProviderMode } from "./multiViewDelegates/constants";
+import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
@@ -26,7 +26,7 @@ export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
  * The parent resource is a "Flinkable" CCloud Kafka cluster, which we refer to as a "Flink Database".
  */
 export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
-  FlinkArtifactsViewProviderMode,
+  FlinkDatabaseViewProviderMode,
   CCloudKafkaCluster,
   ArtifactOrUdf
 > {
@@ -45,11 +45,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     const udfsDelegate = new FlinkUDFsDelegate();
 
     this.treeViewDelegates = new Map<
-      FlinkArtifactsViewProviderMode,
-      ViewProviderDelegate<FlinkArtifactsViewProviderMode, CCloudKafkaCluster, ArtifactOrUdf>
+      FlinkDatabaseViewProviderMode,
+      ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudKafkaCluster, ArtifactOrUdf>
     >([
-      [FlinkArtifactsViewProviderMode.Artifacts, artifactsDelegate],
-      [FlinkArtifactsViewProviderMode.UDFs, udfsDelegate],
+      [FlinkDatabaseViewProviderMode.Artifacts, artifactsDelegate],
+      [FlinkDatabaseViewProviderMode.UDFs, udfsDelegate],
     ]);
 
     this.defaultDelegate = artifactsDelegate;
@@ -58,14 +58,14 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   setCustomEventListeners(): Disposable[] {
     return [
-      flinkArtifactUDFViewMode.event(this.switchMode.bind(this)),
+      flinkDatabaseViewMode.event(this.switchMode.bind(this)),
       artifactUploadDeleted.event(this.artifactsChangedHandler.bind(this)),
       artifactUploadCompleted.event(this.artifactsChangedHandler.bind(this)),
     ];
   }
 
   private async artifactsChangedHandler(): Promise<void> {
-    if (this.currentDelegate.mode === FlinkArtifactsViewProviderMode.Artifacts) {
+    if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
       await this.refresh();
     }
   }
