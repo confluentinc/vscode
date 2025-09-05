@@ -34,8 +34,7 @@ import {
   promptForArtifactUploadParams,
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
-import * as uploadToAzure from "./uploadToAzure";
-import * as uploadToS3 from "./uploadToS3";
+import * as uploadToProvider from "./uploadToProvider";
 
 describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
@@ -304,11 +303,13 @@ describe("uploadArtifact", () => {
     beforeEach(() => {
       const mockAzureResponse = new Response(null, { status: 200, statusText: "OK" });
       uploadFileToAzureStub = sandbox
-        .stub(uploadToAzure, "uploadFileToAzure")
+        .stub(uploadToProvider, "uploadFileToAzure")
         .resolves(mockAzureResponse);
 
       const mockS3Response = new Response(null, { status: 204, statusText: "No Content" });
-      uploadFileToS3Stub = sandbox.stub(uploadToS3, "uploadFileToS3").resolves(mockS3Response);
+      uploadFileToS3Stub = sandbox
+        .stub(uploadToProvider, "uploadFileToS3")
+        .resolves(mockS3Response);
 
       sandbox.stub(uploadArtifactModule, "prepareUploadFileFromUri").resolves({
         blob: new Blob(["dummy"], { type: "application/java-archive" }),
