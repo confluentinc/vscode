@@ -89,7 +89,7 @@
                   class="datetime-input"
                   data-prop-value="this.consumeModeTimestampFormatted()"
                   data-on-change="this.handleConsumeModeTimestampFormattedChange(event.target.value)"
-                  step="1"
+                  step="0.001"
                 />
               </div>
             </template>
@@ -661,13 +661,6 @@
       }
       .datetime-input:hover {
         border-color: var(--vscode-input-border);
-      }
-      /* Override the default validation coloring for datetime-local input */
-      .datetime-input:user-invalid,
-      .datetime-input:invalid,
-      .datetime-input:valid {
-        border-color: var(--vscode-input-border);
-        box-shadow: none;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
