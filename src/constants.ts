@@ -10,7 +10,7 @@ export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.
  * The URI used when completing the CCloud authentication flow in the browser.
  * This is disabled for end-to-end (E2E) tests, which handle the auth callback differently.
  */
-export const CCLOUD_AUTH_CALLBACK_URI = process.env.E2E_TESTING
+export const CCLOUD_AUTH_CALLBACK_URI = process.env.CONFLUENT_VSCODE_E2E_TESTING
   ? ""
   : `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 

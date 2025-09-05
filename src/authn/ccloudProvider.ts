@@ -137,7 +137,7 @@ export class ConfluentCloudAuthProvider
       throw new Error("Failed to create new connection. Please try again.");
     }
 
-    if (process.env.E2E_TESTING) {
+    if (process.env.CONFLUENT_VSCODE_E2E_TESTING) {
       // write the CCloud sign-in URL to a temp file for E2E tests since we can't reliably intercept
       // it across different platforms with Playwright+Electron
       try {
@@ -482,7 +482,7 @@ export class ConfluentCloudAuthProvider
         cancellable: true,
       },
       async (_, token): Promise<AuthCallbackEvent | undefined> => {
-        if (!process.env.E2E_TESTING) {
+        if (!process.env.CONFLUENT_VSCODE_E2E_TESTING) {
           // E2E tests will handle the CCloud login browser interaction separately, and leaving this
           // enabled will result in a new browser tab opened for every @ccloud-tagged test that's
           // never filled, submitted, or closed

@@ -105,9 +105,9 @@ export async function login(
 
   // Unfortunately, the auth callback URI handling does not reliably work on all environments
   // we run these tests, so we have to work around it:
-  // - when the E2E tests start via `gulp e2e`, we set the E2E_TESTING environment variable, which
-  //  sets the CCLOUD_AUTH_CALLBACK_URI to an empty string, which prevents the sidecar from using it
-  //  (see https://github.com/confluentinc/ide-sidecar/blob/f302286ff0f7234581b07cef4ec978e33030617f/src/main/resources/templates/callback.html#L13-L16)
+  // - when the E2E tests start via `gulp e2e`, we set the CONFLUENT_VSCODE_E2E_TESTING environment
+  //  variable, which sets the CCLOUD_AUTH_CALLBACK_URI to an empty string, preventing the sidecar
+  //  from using it (see https://github.com/confluentinc/ide-sidecar/blob/f302286ff0f7234581b07cef4ec978e33030617f/src/main/resources/templates/callback.html#L13-L16)
   // - since the extension's UriHandler is never triggered, we have to explicitly cancel the
   //  "Signing in ..." progress notification and click the sign-in action again to refresh the
   //  connection state and show the available environments

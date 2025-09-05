@@ -780,7 +780,7 @@ export function e2eRun(done) {
   //   browser-based sign-in flow through Playwright
   // - when creating the CCLOUD connection, we'll send an empty `ide_auth_callback_uri` string so
   //   no URI handling has to happen
-  process.env.E2E_TESTING = "true";
+  process.env.CONFLUENT_VSCODE_E2E_TESTING = "true";
 
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
