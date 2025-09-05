@@ -255,7 +255,6 @@ export class FlinkStatementsViewProvider
         "updateTreeViewDescription() called with no focused resource, clearing view description",
       );
       this.treeView.description = "";
-      this.environment = null;
       return;
     }
 
@@ -269,20 +268,12 @@ export class FlinkStatementsViewProvider
         "updateTreeViewDescription() focused on compute pool, setting FCP description",
       );
       this.treeView.description = `FCP: ${focusedResource.name} | ${focusedResource.id}`;
-
-      // still need to set the environment for other functionality
-      const parentEnv = await ResourceLoader.getEnvironment(
-        focusedResource.connectionId,
-        focusedResource.environmentId,
-      );
-      this.environment = parentEnv ?? null;
     } else if (focusedResource instanceof CCloudEnvironment) {
       // environment mode: show environment name and ID
       this.logger.debug(
         "updateTreeViewDescription() focused on environment, setting Env description",
       );
       this.treeView.description = `ENV: ${focusedResource.name} | ${focusedResource.id}`;
-      this.environment = focusedResource;
     }
   }
 }
