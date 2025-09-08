@@ -12,7 +12,7 @@ import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
-  anyFlinkDatabaseQuickpick,
+  flinkDatabaseQuickpick,
   kafkaClusterQuickPick,
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
@@ -75,7 +75,8 @@ async function selectKafkaClusterFromFlinkDatabaseViewCommand(cluster?: CCloudKa
   const flinkDatabase: CCloudKafkaCluster | undefined =
     cluster instanceof CCloudKafkaCluster && cluster.isFlinkable
       ? cluster
-      : ((await anyFlinkDatabaseQuickpick(
+      : ((await flinkDatabaseQuickpick(
+          undefined, // do not limit to a specific compute pool
           "Select a Flink Database (a Flink-enabled Kafka cluster)",
         )) as CCloudKafkaCluster | undefined);
 
