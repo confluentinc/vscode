@@ -9,6 +9,7 @@ import {
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_MEDUSA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
@@ -21,6 +22,7 @@ import {
 } from "./environment";
 import { CCloudFlinkComputePool } from "./flinkComputePool";
 import { CCloudKafkaCluster, DirectKafkaCluster, LocalKafkaCluster } from "./kafkaCluster";
+import { LocalMedusa } from "./medusa";
 import { EnvironmentId } from "./resource";
 import { CCloudSchemaRegistry, DirectSchemaRegistry, LocalSchemaRegistry } from "./schemaRegistry";
 
@@ -89,21 +91,24 @@ describe("models/environment.ts LocalEnvironment", () => {
       id: TEST_LOCAL_ENVIRONMENT.id,
       kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
       schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+      medusa: TEST_LOCAL_MEDUSA,
     });
 
     assert.strictEqual(env.id, TEST_LOCAL_ENVIRONMENT.id);
     assert.ok(env.kafkaClusters[0] instanceof LocalKafkaCluster);
     assert.ok(env.schemaRegistry instanceof LocalSchemaRegistry);
+    assert.ok(env.medusa instanceof LocalMedusa);
 
     // Now go to / from JSON to end up with just plain objects all the way down.
     const rawFromStorage = JSON.parse(JSON.stringify(env));
     // Now reconstruct the LocalEnvironment from the plain object.
     const asReconstitutedFromStorage = new LocalEnvironment(rawFromStorage);
 
-    // Should have properly promoted the plain object kafka cluster and schema registry
+    // Should have properly promoted the plain object kafka cluster, schema registry, and medusa
     // to their respective classes.
     assert.ok(asReconstitutedFromStorage.kafkaClusters[0] instanceof LocalKafkaCluster);
     assert.ok(asReconstitutedFromStorage.schemaRegistry instanceof LocalSchemaRegistry);
+    assert.ok(asReconstitutedFromStorage.medusa instanceof LocalMedusa);
     assert.deepStrictEqual(asReconstitutedFromStorage, env);
   });
 
@@ -328,18 +333,21 @@ describe("models/environment.ts update() implementations", () => {
     const env = new LocalEnvironment(TEST_LOCAL_ENVIRONMENT);
     env.kafkaClusters = [];
     env.schemaRegistry = undefined;
+    env.medusa = undefined;
     env.isLoading = true;
 
     const updateWith = new LocalEnvironment(TEST_LOCAL_ENVIRONMENT);
 
     updateWith.kafkaClusters = [TEST_LOCAL_KAFKA_CLUSTER];
     updateWith.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+    updateWith.medusa = TEST_LOCAL_MEDUSA;
     updateWith.isLoading = false;
 
     env.update(updateWith);
 
     assert.deepStrictEqual(env.kafkaClusters, updateWith.kafkaClusters);
     assert.deepStrictEqual(env.schemaRegistry, updateWith.schemaRegistry);
+    assert.deepStrictEqual(env.medusa, updateWith.medusa);
     assert.strictEqual(env.isLoading, updateWith.isLoading);
     assert.strictEqual(env.name, LOCAL_ENVIRONMENT_NAME);
   });
