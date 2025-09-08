@@ -109,7 +109,7 @@ export async function getDirectResources(
     logger.debug("Done waiting for direct connection to stabilize, submitting GraphQL query", {
       connectionId,
     });
-    response = await sidecar.query(query, connectionId, { id: connectionId });
+    response = await sidecar.query(query, connectionId, true, { id: connectionId });
   } catch (error) {
     logError(error, "direct connection resources", {
       extra: { functionName: "getDirectResources" },

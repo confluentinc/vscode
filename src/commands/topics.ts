@@ -56,6 +56,7 @@ import { post } from "../webview/topic-config-form";
 import topicFormTemplate from "../webview/topic-config-form.html";
 import { createProduceRequestData } from "./utils/produceMessage";
 import { ProduceMessageSchemaOptions } from "./utils/types";
+import { CCloudResourceLoader } from "../loaders";
 
 const logger = new Logger("topics");
 
@@ -492,9 +493,12 @@ export async function queryTopicWithFlink(topic: KafkaTopic) {
   }
 
   // Get the environment and cluster for the topic to generate a fully qualified table name
-  const topicViewProvider = getTopicViewProvider();
-  const cluster = topicViewProvider.kafkaCluster;
-  const topicEnvironment = topicViewProvider.environment;
+  const loader = CCloudResourceLoader.getInstance();
+  const topicEnvironment = await loader.getEnvironment(topic.environmentId);
+  const clusters: CCloudKafkaCluster[] = await loader.getKafkaClustersForEnvironmentId(
+    topic.environmentId,
+  );
+  const cluster: CCloudKafkaCluster | undefined = clusters.find((c) => c.id === topic.clusterId);
 
   if (!topicEnvironment || !cluster) {
     return;
@@ -524,7 +528,10 @@ LIMIT 10;`;
     const rm = ResourceManager.getInstance();
     await rm.setUriMetadata(docUri, {
       [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: ccloudCluster.flinkPools[0].id,
+      [UriMetadataKeys.FLINK_CATALOG_ID]: topicEnvironment.id,
+      [UriMetadataKeys.FLINK_CATALOG_NAME]: topicEnvironment.name,
       [UriMetadataKeys.FLINK_DATABASE_ID]: ccloudCluster.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: ccloudCluster.name,
     });
   }
 }
