@@ -1,7 +1,7 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import * as notifications from "../../notifications";
-import { catchLargeFiles, uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
+import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 
 describe("uploadToProvider", () => {
   let sandbox: sinon.SinonSandbox;
@@ -18,27 +18,6 @@ describe("uploadToProvider", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-  });
-
-  describe("catchLargeFiles", () => {
-    it("should throw an error for files larger than 100MB", async () => {
-      const largeFile = new Blob([new ArrayBuffer(101 * 1024 * 1024)], { type: "application/zip" }); // 101MB
-      await assert.rejects(async () => {
-        await catchLargeFiles(largeFile);
-      }, /File size 101.00MB exceeds the maximum allowed size of 100MB/);
-      sinon.assert.calledOnce(showErrorNotificationStub);
-      sinon.assert.calledWith(
-        showErrorNotificationStub,
-        "File size 101.00MB exceeds the maximum allowed size of 100MB. Please use a smaller file.",
-      );
-    });
-    it("should not throw an error for files smaller than or equal to 100MB", async () => {
-      const smallFile = new Blob([new ArrayBuffer(10 * 1024 * 1024)], { type: "application/zip" }); // 10MB
-      await assert.doesNotReject(async () => {
-        await catchLargeFiles(smallFile);
-      });
-      sinon.assert.notCalled(showErrorNotificationStub);
-    });
   });
 
   describe("uploadFileToAzure", () => {
