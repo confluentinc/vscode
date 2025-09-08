@@ -11,6 +11,7 @@ import {
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_MEDUSA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
@@ -33,9 +34,10 @@ import {
   LocalEnvironment,
 } from "../models/environment";
 import { FlinkComputePoolTreeItem } from "../models/flinkComputePool";
-import { KafkaClusterTreeItem } from "../models/kafkaCluster";
+import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
+import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import { ConnectionId } from "../models/resource";
-import { SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as notifications from "../notifications";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
 import * as sidecarLocalConnections from "../sidecar/connections/local";
@@ -428,6 +430,100 @@ describe("viewProviders/newResources.ts", () => {
       );
     });
 
+    // Test environment with only Medusa for Medusa-specific scenarios
+    const TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY = new LocalEnvironment({
+      ...TEST_LOCAL_ENVIRONMENT,
+      kafkaClusters: [],
+      schemaRegistry: undefined,
+      medusa: TEST_LOCAL_MEDUSA,
+    });
+
+    describe("medusa getter", () => {
+      it("should return undefined when no environments loaded", () => {
+        assert.strictEqual(localConnectionRow.medusa, undefined);
+      });
+
+      it("should return undefined when environment has no medusa", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+        assert.strictEqual(localConnectionRow.medusa, undefined);
+      });
+
+      it("should return medusa when environment has medusa", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+        const medusa = localConnectionRow.medusa;
+        assert.ok(medusa instanceof LocalMedusa);
+        assert.strictEqual(medusa.name, "Medusa");
+      });
+    });
+
+    describe("connected getter", () => {
+      it("should return false when no environments", () => {
+        assert.strictEqual(localConnectionRow.connected, false);
+      });
+
+      it("should return false when environment has no resources", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+        assert.strictEqual(localConnectionRow.connected, false);
+      });
+
+      it("should return true when only Kafka cluster is available", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+        assert.strictEqual(localConnectionRow.connected, true);
+      });
+
+      it("should return true when only Medusa is available", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+        assert.strictEqual(localConnectionRow.connected, true);
+      });
+    });
+
+    describe("children getter with Medusa support", () => {
+      it("should return empty array when no environments", () => {
+        assert.deepStrictEqual(localConnectionRow.children, []);
+      });
+
+      it("should return empty array when environment has no resources", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+        assert.deepStrictEqual(localConnectionRow.children, []);
+      });
+
+      it("should include Medusa in children when available", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+        const children = localConnectionRow.children;
+        assert.strictEqual(children.length, 1);
+        assert.ok(children[0] instanceof LocalMedusa);
+      });
+
+      it("should include all resources when Kafka, Schema Registry, and Medusa are available", () => {
+        const envWithAll = new LocalEnvironment({
+          ...TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR,
+          medusa: TEST_LOCAL_MEDUSA,
+        });
+        localConnectionRow.environments.push(envWithAll);
+        const children = localConnectionRow.children;
+        assert.strictEqual(children.length, 3); // Kafka + Schema Registry + Medusa
+        assert.ok(children.some((child) => child instanceof LocalKafkaCluster));
+        assert.ok(children.some((child) => child instanceof LocalSchemaRegistry));
+        assert.ok(children.some((child) => child instanceof LocalMedusa));
+      });
+    });
+
+    describe("status getter", () => {
+      it("should return '(No connection)' when no resources available", () => {
+        assert.strictEqual(localConnectionRow.status, "(No connection)");
+      });
+
+      it("should return Kafka URI when Kafka is available", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+        assert.strictEqual(localConnectionRow.status, TEST_LOCAL_KAFKA_CLUSTER.uri);
+      });
+
+      it("should return 'Only Medusa available' when only Medusa is running", () => {
+        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+        assert.strictEqual(localConnectionRow.status, "Only Medusa available");
+      });
+    });
+
     describe("ConnectionRow methods via LocalConnectionRow", () => {
       describe("getEnvironments", () => {
         let loaderGetEnvironmentsStub: sinon.SinonStub;
@@ -558,6 +654,46 @@ describe("viewProviders/newResources.ts", () => {
           sinon.assert.calledWith(
             setContextValueStub,
             contextValues.ContextValues.localSchemaRegistryAvailable,
+            false,
+          );
+        });
+
+        it("sets localMedusaAvailable context value when Medusa is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_MEDUSA_ONLY);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localMedusaAvailable,
+            true,
+          );
+        });
+
+        it("sets localMedusaAvailable context value to false when no Medusa is available", async () => {
+          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
+          await localConnectionRow.refresh(false);
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localMedusaAvailable,
+            false,
+          );
+        });
+
+        it("sets all context values correctly when no resources are available", async () => {
+          await localConnectionRow.refresh(false);
+
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
+          );
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localSchemaRegistryAvailable,
+            false,
+          );
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localMedusaAvailable,
             false,
           );
         });
@@ -1180,6 +1316,11 @@ describe("viewProviders/newResources.ts", () => {
             label: "FlinkComputePool",
             element: TEST_CCLOUD_FLINK_COMPUTE_POOL,
             expectedType: FlinkComputePoolTreeItem,
+          },
+          {
+            label: "LocalMedusa",
+            element: TEST_LOCAL_MEDUSA,
+            expectedType: MedusaTreeItem,
           },
         ]) {
           it(`returns TreeItem for ${testCase.label}, search case variant ${shouldMatchSearch}`, () => {
