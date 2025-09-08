@@ -126,8 +126,16 @@ export class KafkaClusterTreeItem extends TreeItem {
 
     // internal properties
     this.resource = resource;
-    // currently only used to determine whether or not we can show the rename command
-    this.contextValue = `${this.resource.connectionType.toLowerCase()}-kafka-cluster`;
+    const contextParts = [this.resource.connectionType.toLowerCase()];
+    if (isCCloud(resource)) {
+      const ccloudCluster = resource as CCloudKafkaCluster;
+      // Can we do Flink things with this cluster?
+      if (ccloudCluster.isFlinkable) {
+        contextParts.push("flinkable");
+      }
+    }
+    contextParts.push("kafka-cluster");
+    this.contextValue = contextParts.join("-"); // e.g. "ccloud-flinkable-kafka-cluster" or "direct-kafka-cluster"
 
     // user-facing properties
     this.description = `${this.resource.id}`;
@@ -136,7 +144,7 @@ export class KafkaClusterTreeItem extends TreeItem {
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
     this.command = {
-      command: "confluent.resources.kafka-cluster.select",
+      command: "confluent.topics.kafka-cluster.select",
       title: "Set Current Kafka Cluster",
       arguments: [this.resource],
     };

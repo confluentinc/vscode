@@ -6,7 +6,6 @@ import {
   currentFlinkDatabaseChanged as flinkDatabaseViewResourceChanged,
   currentKafkaClusterChanged as topicsViewResourceChanged,
 } from "../emitters";
-import { ENABLE_FLINK_ARTIFACTS } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
@@ -28,36 +27,9 @@ async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) 
 }
 
 /**
- * Invoked when the user selects a Kafka cluster from the Resources view.
- * Will reset the Topics view to show topics from the selected cluster.
- * If the selected cluster is a Flinkable CCloud Kafka cluster, will also
- * set the Flink Database view to use that cluster as its database.
- * @param cluster The Kafka cluster to select, or undefined to prompt the user to pick one.
- */
-async function selectKafkaClusterFromResourcesViewCommand(cluster?: KafkaCluster): Promise<void> {
-  // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
-  const kafkaCluster: KafkaCluster | undefined =
-    cluster instanceof KafkaCluster ? cluster : await kafkaClusterQuickPickWithViewProgress();
-  if (!kafkaCluster) {
-    return;
-  }
-
-  // Inform the topics view that the user has selected a new Kafka cluster.
-  topicsViewResourceChanged.fire(kafkaCluster);
-  void vscode.commands.executeCommand("confluent-topics.focus");
-
-  // If was a ccloud + flinkable cluster, also update the Flink Database view to match,
-  // if the user has enabled Flink support.
-  if (ENABLE_FLINK_ARTIFACTS.value) {
-    if (kafkaCluster instanceof CCloudKafkaCluster && kafkaCluster.isFlinkable) {
-      flinkDatabaseViewResourceChanged.fire(kafkaCluster);
-      // But we don't focus, 'cause making two focus calls in a row is weird UX.
-    }
-  }
-}
-
-/** Invoked from the topics view to pick a new Kafka cluster to view topics for. */
-async function selectKafkaClusterFromTopicsViewCommand(cluster?: KafkaCluster) {
+ * Invoked from the topics view to pick a new Kafka cluster to view topics for,
+ * or from the Resources view default action when clicking on Kafka cluster. */
+async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster) {
   // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
   const kafkaCluster: KafkaCluster | undefined =
     cluster instanceof KafkaCluster ? cluster : await kafkaClusterQuickPickWithViewProgress();
@@ -70,7 +42,7 @@ async function selectKafkaClusterFromTopicsViewCommand(cluster?: KafkaCluster) {
 }
 
 /** Invoked from the Flink Database view  */
-async function selectKafkaClusterFromFlinkDatabaseViewCommand(cluster?: CCloudKafkaCluster) {
+async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaCluster) {
   // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
   const flinkDatabase: CCloudKafkaCluster | undefined =
     cluster instanceof CCloudKafkaCluster && cluster.isFlinkable
@@ -340,20 +312,15 @@ export async function copyBootstrapServers(item: KafkaCluster) {
 
 export function registerKafkaClusterCommands(): vscode.Disposable[] {
   return [
-    // Picked a Kafka cluster from the Resources view or general command palette.
-    registerCommandWithLogging(
-      "confluent.resources.kafka-cluster.select",
-      selectKafkaClusterFromResourcesViewCommand,
-    ),
-    // Picked a kafka cluster from the "Select Kafka Cluster" action in the Topics view.
+    // Pick a Kafka cluster for the Topics view.
     registerCommandWithLogging(
       "confluent.topics.kafka-cluster.select",
-      selectKafkaClusterFromTopicsViewCommand,
+      selectTopicsViewKafkaClusterCommand,
     ),
     // Picked a Flink Database (a Flinkable CCloud Kafka cluster) from the Artifacts/UDFs view.
     registerCommandWithLogging(
       "confluent.flinkdatabase.kafka-cluster.select",
-      selectKafkaClusterFromFlinkDatabaseViewCommand,
+      selectFlinkDatabaseViewKafkaClusterCommand,
     ),
 
     registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),

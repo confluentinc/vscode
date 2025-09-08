@@ -412,12 +412,6 @@
         "category": "Confluent: Kafka Clusters"
       },
       {
-        "command": "confluent.resources.kafka-cluster.select",
-        "icon": "$(confluent-kafka-cluster)",
-        "title": "Select Kafka Cluster",
-        "category": "Confluent: Resources"
-      },
-      {
         "command": "confluent.topics.kafka-cluster.select",
         "icon": "$(confluent-kafka-cluster)",
         "title": "Select Kafka Cluster",
@@ -1141,7 +1135,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No Kafka cluster selected. Click below to get started.\n[Select Kafka Cluster](command:confluent.resources.kafka-cluster.select)",
+        "contents": "No Kafka cluster selected. Click below to get started.\n[Select Kafka Cluster](command:confluent.topics.kafka-cluster.select)",
         "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && !confluent.kafkaClusterSelected"
       },
       {
@@ -1736,7 +1730,7 @@
         },
         {
           "command": "confluent.topics.create",
-          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
+          "when": "view == confluent-resources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == local-kafka-cluster)",
           "group": "topics"
         },
         {
@@ -1766,7 +1760,7 @@
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
-          "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
         },
         {

@@ -370,6 +370,7 @@ async function setupContextValues() {
     "ccloud-environment",
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
     "ccloud-schema-registry",
@@ -391,6 +392,7 @@ async function setupContextValues() {
     "ccloud-environment", // direct/local environments only have internal IDs
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
     "ccloud-flink-compute-pool",
     "ccloud-flink-artifact",
@@ -405,6 +407,7 @@ async function setupContextValues() {
     "ccloud-environment",
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
     "ccloud-flink-artifact",
@@ -414,6 +417,7 @@ async function setupContextValues() {
   ]);
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-schema-registry",
     "local-kafka-cluster",
     "local-schema-registry",
