@@ -27,7 +27,7 @@ const allAuthOptions: Array<{ label: string; value: SupportedAuthTypes }> = [
   { label: "SASL/OAUTHBEARER", value: "OAuth" },
   { label: "Kerberos (SASL/GSSAPI)", value: "Kerberos" },
 ];
-const WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX = "ws_host_override=localhost";
+const WARPSTREAM_PORT_FORWARDING_CLIENT_ID_SUFFIX = ",ws_host_override=localhost";
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
