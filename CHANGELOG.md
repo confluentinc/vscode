@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.6.1
+
+### Fixed
+
+- Fix connecting to WarpStream agents by Kubernetes port-forwarding by prefixing magic `client.id` suffix
+  with a comma. ([#2506](https://github.com/confluentinc/vscode/issues/2506))
+
 ## 1.6.0
 
 ### Added
