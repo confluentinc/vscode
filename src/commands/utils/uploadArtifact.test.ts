@@ -526,5 +526,117 @@ describe("uploadArtifact", () => {
         );
       });
     });
+    describe("uploadArtifactToCCloud error response parsing", () => {
+      let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+      let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
+      let errorNotificationStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+        stubbedSidecarHandle = getSidecarStub(sandbox);
+        stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+        errorNotificationStub = sandbox
+          .stub(notifications, "showErrorNotificationWithButtons")
+          .resolves();
+      });
+
+      it("should parse and display error detail from errors array", async () => {
+        const errorDetail = "Artifact name is invalid";
+        const responseError = createResponseError(400, "Bad Request", errorDetail);
+        sandbox.stub(responseError.response, "clone").returns({
+          json: async () => ({ errors: [{ detail: errorDetail }] }),
+          text: async () => "",
+        } as any);
+
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: ${errorDetail}`,
+        );
+      });
+
+      it("should parse and display error message from message property", async () => {
+        const errorMessage = "Artifact already exists";
+        const responseError = createResponseError(409, "Conflict", errorMessage);
+        sandbox.stub(responseError.response, "clone").returns({
+          json: async () => ({ message: errorMessage }),
+          text: async () => "",
+        } as any);
+
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: ${errorMessage}`,
+        );
+      });
+
+      it("should stringify and display arbitrary JSON error response", async () => {
+        const errorJson = { foo: "bar", code: 123 };
+        const responseError = createResponseError(500, "Internal Server Error", errorJson.foo);
+        sandbox.stub(responseError.response, "clone").returns({
+          json: async () => errorJson,
+          text: async () => "",
+        } as any);
+
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: ${JSON.stringify(errorJson)}`,
+        );
+      });
+
+      it("should fallback to text body if JSON parsing throws", async () => {
+        const textBody = "artifact error text fallback";
+        const responseError = createResponseError(500, "Internal Server Error", textBody);
+        sandbox.stub(responseError.response, "clone").returns({
+          json: async () => {
+            throw new Error("bad json");
+          },
+          text: async () => textBody,
+        } as any);
+
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          `Failed to create Flink artifact: ${textBody}`,
+        );
+      });
+
+      it("should fallback to default message if both JSON and text parsing fail", async () => {
+        const responseError = createResponseError(500, "Internal Server Error", "");
+        sandbox.stub(responseError.response, "clone").returns({
+          json: async () => {
+            throw new Error("bad json");
+          },
+          text: async () => "",
+        } as any);
+
+        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
+
+        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
+
+        sinon.assert.calledOnce(errorNotificationStub);
+        sinon.assert.calledWith(
+          errorNotificationStub,
+          "Failed to create Flink artifact: Failed to create Flink artifact. See logs for details.",
+        );
+      });
+    });
   });
 });

@@ -191,7 +191,6 @@ export async function handleUploadToCloudProvider(
           progress.report({ message: "Uploading to AWS storage..." });
           logger.debug("Uploading to AWS storage");
 
-          // build required form data for api request
           const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
 
           if (!uploadFormData) {
@@ -246,7 +245,7 @@ export async function uploadArtifactToCCloud(
     const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
 
     const response = await artifactsClient.createArtifactV1FlinkArtifact({
-      CreateArtifactV1FlinkArtifactRequest: createRequest,
+      CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(params, uploadId),
       cloud: params.cloud,
       region: params.region,
     });
@@ -265,26 +264,24 @@ export async function uploadArtifactToCCloud(
       cloud: params.cloud,
       region: params.region,
     };
-
     if (isResponseError(error)) {
       let errBody: string | undefined;
       try {
         const respJson = await error.response.clone().json();
-        if (respJson && typeof respJson === "object" && respJson.message) {
-          errBody = respJson.message;
+        if (respJson.errors && Array.isArray(respJson.errors) && respJson.errors[0]?.detail) {
+          userMessage = respJson.errors[0].detail;
+        } else if (respJson.message) {
+          userMessage = respJson.message;
+        } else {
+          userMessage = JSON.stringify(respJson);
         }
       } catch {
         errBody = await error.response.clone().text();
-      }
-      if (errBody !== undefined) {
-        userMessage = `Failed to create Flink artifact: ${errBody}`;
+        userMessage = errBody || userMessage;
       }
     }
-    void showErrorNotificationWithButtons(userMessage);
+    void showErrorNotificationWithButtons(`Failed to create Flink artifact: ${userMessage}`);
     logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-    if (error && typeof error === "object" && "message" in error) {
-      (error as { message: string }).message = userMessage;
-    }
     throw error;
   }
 }
