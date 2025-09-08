@@ -7,10 +7,7 @@ import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkArtifactUDFViewMode } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import {
-  showErrorNotificationWithButtons,
-  showWarningNotificationWithButtons,
-} from "../notifications";
+import { showWarningNotificationWithButtons } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
@@ -70,29 +67,20 @@ export async function uploadArtifactCommand(): Promise<void> {
     );
   } catch (err) {
     let logErrMessage: string;
-    let showNotificationMessage: string;
     if (isResponseError(err)) {
       try {
         const respJson = await err.response.clone().json();
         logErrMessage = `Status: ${err.response.status}, Response: ${JSON.stringify(respJson)}`;
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
         if (respJson && typeof respJson === "object") {
           logErrMessage = JSON.stringify(respJson);
-          showNotificationMessage =
-            respJson.error?.message ||
-            respJson.message ||
-            `Failed to upload artifact: ${err.message}. See logs for details.`;
         }
       } catch {
         logErrMessage = await err.response.clone().text();
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
       }
     } else {
       logErrMessage = `Failed to upload artifact: ${err}`;
-      showNotificationMessage = "Failed to upload artifact. See logs for details.";
     }
     logError(logErrMessage, "Failed to upload artifact");
-    showErrorNotificationWithButtons(showNotificationMessage);
   }
 }
 
