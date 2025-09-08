@@ -259,7 +259,7 @@ describe("uploadArtifact Command", () => {
       );
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
-        "confluent.flink.setArtifactsViewMode",
+        "confluent.flinkdatabase.setArtifactsViewMode",
         setFlinkArtifactsViewModeCommand,
       );
       sinon.assert.calledWithExactly(
