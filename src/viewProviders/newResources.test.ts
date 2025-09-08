@@ -418,7 +418,7 @@ describe("viewProviders/newResources.ts", () => {
 
     it("status getter should return the correct status", () => {
       // w/o a connection ...
-      assert.strictEqual(localConnectionRow.status, "(Not Running)");
+      assert.strictEqual(localConnectionRow.status, "(No connection)");
 
       // ... and with a fully fleshed out connection
       localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
@@ -728,6 +728,7 @@ describe("viewProviders/newResources.ts", () => {
           ["ccloudConnected", "ccloudConnectedEventHandler"],
           ["localKafkaConnected", "localConnectedEventHandler"],
           ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+          ["localMedusaConnected", "localConnectedEventHandler"],
           // @ts-expect-error references private method.
           ["directConnectionsChanged", "reconcileDirectConnections"],
           ["connectionStable", "refreshConnection"],
