@@ -44,7 +44,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
   const localConnections = response.localConnections;
 
   // Check for Medusa independently of sidecar connections
-  const medusaRunning = await discoverMedusa();
+  const medusaUri = await discoverMedusa();
 
   // Handle case where we have sidecar-managed resources (Kafka/Schema Registry)
   let hasLocalResources = false;
@@ -79,8 +79,10 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
 
       // Only create Medusa if container is actually running
       let medusa: LocalMedusa | undefined;
-      if (medusaRunning) {
-        medusa = new LocalMedusa();
+      if (medusaUri) {
+        medusa = LocalMedusa.create({
+          uri: medusaUri,
+        });
       }
 
       envs.push(
@@ -97,13 +99,16 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
   }
 
   // Handle case where only Medusa is running (no sidecar-managed resources)
-  if (!hasLocalResources && medusaRunning) {
+  if (!hasLocalResources && medusaUri) {
+    const medusa = LocalMedusa.create({
+      uri: medusaUri,
+    });
     envs.push(
       new LocalEnvironment({
         id: LOCAL_CONNECTION_ID as unknown as EnvironmentId,
         kafkaClusters: [],
         schemaRegistry: undefined,
-        medusa: new LocalMedusa(),
+        medusa,
       }),
     );
   }

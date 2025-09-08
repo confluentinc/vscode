@@ -188,17 +188,33 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   return `http://localhost:${restProxyPort}`;
 }
 
-/** Discover any running Medusa containers and return whether one exists. */
-export async function discoverMedusa(): Promise<boolean> {
+/** Discover any running Medusa containers and return the URI to include the public port. */
+export async function discoverMedusa(): Promise<string | undefined> {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
-    return false;
+    return;
   }
 
   const containers: ContainerSummary[] = await getLocalMedusaContainers({
-    onlyExtensionManaged: false, // Check both extension-managed and user-created containers
+    onlyExtensionManaged: true,
     statuses: [ContainerStateStatusEnum.Running],
   });
+  if (containers.length === 0) {
+    return;
+  }
+  // we only care about the first container
+  const container: ContainerSummary = containers.filter((c) => !!c.Ports)[0];
+  const ports: Port[] = container.Ports?.filter((p) => !!p.PublicPort) || [];
+  if (!ports || ports.length === 0) {
+    logger.debug("No ports found on Medusa container", { container });
+    return;
+  }
+  const medusaPort: Port | undefined = ports.find((p) => !!p.PublicPort);
+  if (!medusaPort) {
+    logger.debug("No PublicPort found on Medusa container", { container });
+    return;
+  }
 
-  return containers.length > 0;
+  logger.debug("Discovered Medusa external port", medusaPort.PublicPort);
+  return `http://localhost:${medusaPort.PublicPort}`;
 }

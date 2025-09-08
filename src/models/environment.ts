@@ -328,7 +328,8 @@ export class LocalEnvironment extends Environment {
     if (!props.medusa) {
       this.medusa = undefined;
     } else {
-      this.medusa = props.medusa instanceof LocalMedusa ? props.medusa : new LocalMedusa();
+      this.medusa =
+        props.medusa instanceof LocalMedusa ? props.medusa : LocalMedusa.create(props.medusa);
     }
   }
   update(other: LocalEnvironment): void {
