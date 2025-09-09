@@ -1965,6 +1965,11 @@
           "group": "z_openInCloud"
         },
         {
+          "command": "confluent.uploadArtifact",
+          "when": "view == confluent-resources &&  viewItem =~ /.*compute-pool*/",
+          "group": "inline@3"
+        },
+        {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
           "when": "view == confluent-resources && viewItem =~ /.*ccloud-environment/",
           "group": "z_openInCloud"

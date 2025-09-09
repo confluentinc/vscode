@@ -7,6 +7,7 @@ import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
@@ -24,10 +25,11 @@ import {
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
  */
-export async function uploadArtifactCommand(): Promise<void> {
+
+export async function uploadArtifactCommand(item?: CCloudFlinkComputePool): Promise<void> {
   try {
-    const params = await promptForArtifactUploadParams();
-    if (!params) return; // User cancelled the input
+    const params = await promptForArtifactUploadParams(item);
+    if (!params) return; // User cancelled the prompt
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
       environment: params.environment,
