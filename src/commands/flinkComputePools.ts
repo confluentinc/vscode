@@ -1,10 +1,7 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import {
-  ENABLE_FLINK_ARTIFACTS,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../extensionSettings/constants";
+import { currentFlinkStatementsResourceChanged } from "../emitters";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -13,55 +10,16 @@ import {
   flinkComputePoolQuickPickWithViewProgress,
 } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
-import { FlinkArtifactsUDFsViewProvider } from "../viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 const logger = new Logger("commands.flinkComputePools");
-
-/**
- * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
- * "Artifacts" views.
- *
- * This is the same as selecting the same pool for both the
- * `confluent.statements.flink-compute-pool.select` and
- * `confluent.artifacts.flink-compute-pool.select` commands.
- */
-export async function selectPoolFromResourcesViewCommand(item?: CCloudFlinkComputePool) {
-  // the user either clicked a pool in the Resources view or used the command palette
-  const pool: CCloudFlinkComputePool | undefined =
-    item instanceof CCloudFlinkComputePool
-      ? item
-      : await flinkComputePoolQuickPickWithViewProgress("confluent-resources");
-  if (!pool) {
-    return;
-  }
-
-  // need to pass a new argument to prevent the views from being focused,
-  // see https://github.com/confluentinc/vscode/issues/1967
-
-  // Indirectly invoke selectPoolForStatementsViewCommand() and perhaps
-  // selectPoolForArtifactsViewCommand() to update the views with the selected pool.
-  // (The indirection is done for test mocking purposes -- cannot stub
-  // functions within the same module, but can always stub commands.executeCommand().)
-
-  const thenables: Thenable<void>[] = [
-    // Will invoke selectPoolForStatementsViewCommand().
-    commands.executeCommand("confluent.statements.flink-compute-pool.select", pool),
-  ];
-
-  // Only include artifacts view selection if Flink Artifacts feature is enabled
-  if (ENABLE_FLINK_ARTIFACTS.value) {
-    // Will invoke selectPoolForArtifactsViewCommand().
-    thenables.push(commands.executeCommand("confluent.artifacts.flink-compute-pool.select", pool));
-  }
-  await Promise.all(thenables);
-}
 
 /**
  * Select a {@link FlinkComputePool} to focus in the "Statements" view.
  */
 export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkComputePool) {
   // the user either clicked a pool in the Flink Statements view or used the command palette
+  // (or selected a pool from the Resources view)
 
   // (If the user had a Flink Statement selected in the statements view, then hits the
   //  icon to select a different pool, the command is invoked with *the FlinkStatement*,
@@ -83,44 +41,15 @@ export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkCompu
   // Focus the Flink Statements view to make sure it is visible.
   commands.executeCommand("confluent-flink-statements.focus");
 
-  // Inform the Flink Statements view that the user has selected a new compute pool, and wait
-  // for the view to load the new pool's statements.
-  const flinkStatementsView = FlinkStatementsViewProvider.getInstance();
-  await flinkStatementsView.setParentResource(pool);
-}
-
-/** Select a {@link FlinkComputePool} to focus in the "Artifacts" view. */
-export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComputePool) {
-  // the user either clicked a pool in the Flink Artifacts/UDFs view or used the command palette
-
-  // If invoked with a non-pool argument (e.g., an artifact item), prompt for a pool and preselect the
-  // current Artifacts view pool if exactly one is focused.
-  if (!item || !(item instanceof CCloudFlinkComputePool)) {
-    item = await flinkComputePoolQuickPickWithViewProgress(
-      "confluent-flink-artifacts",
-      FlinkArtifactsUDFsViewProvider.getInstance().computePool,
-    );
-  }
-
-  if (!item) {
-    // none provided by caller and then user canceled the quickpick
-    return;
-  }
-
-  // Focus the Flink Artifacts view to make sure it is visible.
-  commands.executeCommand("confluent-flink-artifacts.focus");
-
-  // Inform the Flink Artifacts view that the user has selected a new compute pool, and wait
-  // for the view to load the new pool's artifacts/UDFs.
-  const flinkArtifactsView = FlinkArtifactsUDFsViewProvider.getInstance();
-  await flinkArtifactsView.setParentResource(item);
+  // Inform the Flink Statements view (and any other listeners) that the current pool changed.
+  currentFlinkStatementsResourceChanged.fire(pool);
 }
 
 /**
  * Show a quickpick to select a default setting for {@link FlinkComputePool} and database
  * for Flink SQL operations.
  */
-export async function configureFlinkDefaults() {
+export async function configureFlinkDefaults(): Promise<void> {
   const computePool = await flinkComputePoolQuickPick();
   if (!computePool) {
     logger.debug("No compute pool selected & none found in configuration, skipping flink config");
@@ -149,16 +78,8 @@ export async function configureFlinkDefaults() {
 export function registerFlinkComputePoolCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
-      "confluent.resources.flink-compute-pool.select",
-      selectPoolFromResourcesViewCommand,
-    ),
-    registerCommandWithLogging(
       "confluent.statements.flink-compute-pool.select",
       selectPoolForStatementsViewCommand,
-    ),
-    registerCommandWithLogging(
-      "confluent.artifacts.flink-compute-pool.select",
-      selectPoolForArtifactsViewCommand,
     ),
     registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),
   ];

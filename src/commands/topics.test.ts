@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -12,13 +13,13 @@ import {
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
+import { KafkaTopic } from "../models/topic";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
@@ -987,7 +988,12 @@ LIMIT 10;`;
     openTextDocumentStub.resolves(mockDocument);
     showTextDocumentStub.resolves({ document: mockDocument });
 
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
+    const flinkableTopic = KafkaTopic.create({
+      ...TEST_CCLOUD_KAFKA_TOPIC,
+      clusterId: TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.id,
+    });
+
+    await queryTopicWithFlink(flinkableTopic);
 
     // verify document was opened
     sinon.assert.calledOnce(openTextDocumentStub);
