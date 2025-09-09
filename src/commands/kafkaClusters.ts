@@ -4,7 +4,7 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import {
   currentFlinkDatabaseChanged as flinkDatabaseViewResourceChanged,
-  currentKafkaClusterChanged as topicsViewResourceChanged,
+  topicsViewResourceChanged,
 } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -29,7 +29,7 @@ async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) 
 /**
  * Invoked from the topics view to pick a new Kafka cluster to view topics for,
  * or from the Resources view default action when clicking on Kafka cluster. */
-async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster) {
+export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster) {
   // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
   const kafkaCluster: KafkaCluster | undefined =
     cluster instanceof KafkaCluster ? cluster : await kafkaClusterQuickPickWithViewProgress();

@@ -93,7 +93,7 @@ export const environmentChanged = new vscode.EventEmitter<EnvironmentChangeEvent
  * Cluster" action from the Topics view, or cleared out from a connection (or CCloud organization)
  * change.
  */
-export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster | null>();
+export const topicsViewResourceChanged = new vscode.EventEmitter<KafkaCluster | null>();
 /**
  * Fired whenever a Schema Registry is selected from the Resources view, chosen from the
  * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
