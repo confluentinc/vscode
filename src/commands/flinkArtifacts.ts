@@ -24,15 +24,10 @@ import {
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
  */
-
 export async function uploadArtifactCommand(): Promise<void> {
   try {
     const params = await promptForArtifactUploadParams();
-
-    if (!params) {
-      // User cancelled the prompt
-      return;
-    }
+    if (!params) return;
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
       environment: params.environment,
@@ -44,11 +39,12 @@ export async function uploadArtifactCommand(): Promise<void> {
 
     const uploadUrl = await getPresignedUploadUrl(request);
 
-    await handleUploadToCloudProvider(params, uploadUrl);
-
     if (!uploadUrl.upload_id) {
       throw new Error("Upload ID is missing from the presigned URL response.");
     }
+
+    await handleUploadToCloudProvider(params, uploadUrl);
+
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -69,27 +65,29 @@ export async function uploadArtifactCommand(): Promise<void> {
       },
     );
   } catch (err) {
-    let logErrMessage: string;
-    let showNotificationMessage: string;
+    let logErrMessage = "An error occurred during artifact upload.";
+    let showNotificationMessage = "Failed to upload artifact. Please check logs for details.";
     if (isResponseError(err)) {
       try {
         const respJson = await err.response.clone().json();
-        logErrMessage = `Status: ${err.response.status}, Response: ${JSON.stringify(respJson)}`;
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
-        if (respJson && typeof respJson === "object") {
-          logErrMessage = JSON.stringify(respJson);
-          showNotificationMessage =
-            respJson.error?.message ||
-            respJson.message ||
-            `Failed to upload artifact: ${err.message}. See logs for details.`;
+        if (respJson.errors && Array.isArray(respJson.errors) && respJson.errors[0]?.detail) {
+          showNotificationMessage = respJson.errors[0].detail;
+        } else if (respJson.message) {
+          showNotificationMessage = respJson.message;
+        } else if (respJson.error?.message) {
+          showNotificationMessage = respJson.error.message;
+        } else {
+          showNotificationMessage = JSON.stringify(respJson);
         }
+        logErrMessage = showNotificationMessage;
       } catch {
-        logErrMessage = await err.response.clone().text();
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
+        const errBody = await err.response.clone().text();
+        showNotificationMessage = errBody || showNotificationMessage;
+        logErrMessage = showNotificationMessage;
       }
-    } else {
-      logErrMessage = `Failed to upload artifact: ${err}`;
-      showNotificationMessage = "Failed to upload artifact. See logs for details.";
+    } else if (err instanceof Error && err.message) {
+      showNotificationMessage = err.message;
+      logErrMessage = err.message;
     }
     logError(logErrMessage, "Failed to upload artifact");
     showErrorNotificationWithButtons(showNotificationMessage);

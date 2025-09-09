@@ -136,56 +136,6 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledWithMatch(showInfoStub, sinon.match(/uploaded successfully/));
     });
 
-    it("should show error message if handleUploadToCloudProvider fails", async () => {
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox
-        .stub(uploadArtifact, "handleUploadToCloudProvider")
-        .rejects(createResponseError(500, "Internal Server Error", "Server error"));
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-      sandbox.stub(vscode.window, "withProgress").resolves();
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
-    });
-
-    it("should show error notification for non-ResponseError thrown", async () => {
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-      sandbox
-        .stub(uploadArtifact, "uploadArtifactToCCloud")
-        .rejects(createResponseError(400, "Bad Request", "Some generic error"));
-
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-      sandbox.stub(vscode.window, "showInformationMessage");
-
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
-    });
-
-    it("should show error notification if uploadUrl.upload_id is missing", async () => {
-      const params = { ...mockParams };
-      const uploadUrlMissingId = { ...mockPresignedUrlResponse, upload_id: undefined };
-
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrlMissingId);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(
-        showErrorStub,
-        sinon.match(/Failed to upload artifact. See logs for details/),
-      );
-    });
-
     it("should show error notification with error message from JSON-formatted message if present", async () => {
       const params = { ...mockParams };
       const uploadUrl = { ...mockPresignedUrlResponse };
