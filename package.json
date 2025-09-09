@@ -1358,11 +1358,11 @@
         },
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "confluent.flinkArtifactsUDFsViewMode == 'UDFs'"
+          "when": "confluent.flinkDatabaseViewMode == 'UDFs'"
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "confluent.flinkArtifactsUDFsViewMode == 'artifacts'"
+          "when": "confluent.flinkDatabaseViewMode == 'artifacts'"
         }
       ],
       "editor/title": [
@@ -1760,7 +1760,7 @@
         },
         {
           "command": "confluent.artifacts.registerUDF",
-          "when": "view == confluent-flink-database && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
