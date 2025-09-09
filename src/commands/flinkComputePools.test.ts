@@ -46,6 +46,25 @@ describe("flinkComputePools.ts", () => {
       assert.ok(flinkDatabaseQuickpickStub.notCalled);
     });
 
+    it("should return early if no database is selected", async () => {
+      flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      flinkDatabaseQuickpickStub.resolves(undefined);
+
+      await commandsModule.configureFlinkDefaults();
+
+      sinon.assert.calledWithExactly(
+        stubbedConfigs.update,
+        FLINK_CONFIG_COMPUTE_POOL.id,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+        true,
+      );
+
+      // and just called once for the compute pool, not the database.
+      sinon.assert.calledOnce(stubbedConfigs.update);
+
+      sinon.assert.notCalled(showInformationMessageStub);
+    });
+
     it("should update config and show info message after pool and database are selected", async () => {
       flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);

@@ -49,7 +49,7 @@ export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkCompu
  * Show a quickpick to select a default setting for {@link FlinkComputePool} and database
  * for Flink SQL operations.
  */
-export async function configureFlinkDefaults() {
+export async function configureFlinkDefaults(): Promise<void> {
   const computePool = await flinkComputePoolQuickPick();
   if (!computePool) {
     logger.debug("No compute pool selected & none found in configuration, skipping flink config");

@@ -164,6 +164,7 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
   await editor.insertSnippet(snippetString);
 }
 
+/** Set the Flink Database view to Artifacts mode */
 export async function setFlinkArtifactsViewModeCommand() {
   flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
   await setContextValue(
