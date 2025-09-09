@@ -159,6 +159,27 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledWithMatch(showErrorStub, errorMessage);
     });
 
+    it("should show error notification with custom error message when Error has message property", async () => {
+      const params = { ...mockParams };
+      const uploadUrl = { ...mockPresignedUrlResponse };
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+
+      const customErrorMessage = "Custom error message from Error instance";
+      const error = new Error(customErrorMessage);
+
+      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(error);
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, customErrorMessage);
+    });
+
     it("should send the create artifact request to Confluent Cloud", async () => {
       const mockUploadId = "12345";
       const mockCreateResponse = {
