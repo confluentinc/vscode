@@ -209,6 +209,31 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnce(showErrorNotificationStub);
       });
+
+      it("handles null data parsing error without showing notification", async () => {
+        const stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader> =
+          getStubbedCCloudResourceLoader(sandbox);
+
+        const nullDataParsingError = new TypeError(
+          "Cannot read properties of null (reading 'map')",
+        );
+
+        stubbedLoader.getFlinkArtifacts.rejects(nullDataParsingError);
+
+        await assert.rejects(
+          () => artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          nullDataParsingError,
+        );
+
+        assert.deepStrictEqual(artifactsDelegate.children, []);
+        sinon.assert.calledOnce(logErrorStub);
+        sinon.assert.calledWithExactly(
+          logErrorStub,
+          nullDataParsingError,
+          "Failed to load Flink artifacts - empty response",
+        );
+        sinon.assert.notCalled(showErrorNotificationStub);
+      });
     });
   });
 });

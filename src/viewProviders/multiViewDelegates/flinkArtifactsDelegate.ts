@@ -24,9 +24,6 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
     try {
       const loader = CCloudResourceLoader.getInstance();
       this.children = await loader.getFlinkArtifacts(resource);
-      if (!this.children || this.children.length === 0) {
-        this.children = [];
-      }
       return this.children;
     } catch (error) {
       const { showNotification, message } = triageGetFlinkArtifactsError(error);
