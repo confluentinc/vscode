@@ -401,12 +401,6 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.kafka-clusters.item.rename",
-        "icon": "$(pencil)",
-        "title": "Rename Kafka Cluster",
-        "category": "Confluent: Kafka Clusters"
-      },
-      {
         "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
         "title": "Copy Bootstrap Server(s)",
         "category": "Confluent: Kafka Clusters"
@@ -1237,10 +1231,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.kafka-clusters.item.rename",
-          "when": "false"
-        },
-        {
           "command": "confluent.resources.refreshConnection",
           "when": "false"
         },
@@ -1604,11 +1594,6 @@
           "command": "confluent.diff.compareWithSelected",
           "when": "confluent.resourceSelectedForCompare && (view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "3_compare"
-        },
-        {
-          "command": "confluent.kafka-clusters.item.rename",
-          "when": "false",
-          "group": "inline@2"
         },
         {
           "command": "confluent.connections.ccloud.signIn",
