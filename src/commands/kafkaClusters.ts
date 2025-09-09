@@ -4,7 +4,7 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
@@ -16,11 +16,6 @@ import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) {
-  // TODO: implement this once the sidecar supports mutations via GraphQL
-}
 
 async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
   // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
@@ -288,7 +283,6 @@ export async function copyBootstrapServers(item: KafkaCluster) {
 
 export function registerKafkaClusterCommands(): vscode.Disposable[] {
   return [
-    registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),
     registerCommandWithLogging(
       "confluent.resources.kafka-cluster.select",
       selectKafkaClusterCommand,
