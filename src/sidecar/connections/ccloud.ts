@@ -2,7 +2,7 @@ import { tryToCreateConnection, tryToDeleteConnection, tryToGetConnection } from
 import { Connection } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../../constants";
 import { ContextValues, getContextValue } from "../../context/values";
-import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../../emitters";
+import { currentSchemaRegistryChanged, topicsViewResourceChanged } from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
@@ -37,7 +37,7 @@ export async function clearCurrentCCloudResources() {
   // If we are looking at a CCloud cluster in the Topics view, we need to clear the current cluster.
   const topicViewProvider = TopicViewProvider.getInstance();
   if (topicViewProvider.isFocusedOnCCloud()) {
-    currentKafkaClusterChanged.fire(null);
+    topicsViewResourceChanged.fire(null);
   }
 
   // Likewise for the Schema Registry view.
