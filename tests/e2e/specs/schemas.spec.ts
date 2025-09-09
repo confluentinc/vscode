@@ -3,7 +3,6 @@ import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
 import { TextDocument } from "../objects/editor/TextDocument";
-import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
@@ -11,14 +10,13 @@ import { ResourcesView } from "../objects/views/ResourcesView";
 import { SchemasView } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import {
-  DirectConnectionForm,
   FormConnectionType,
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
+import { ConnectionType, setupCCloudConnection, setupDirectConnection } from "../utils/connections";
 import { configureVSCodeSettings } from "../utils/settings";
-import { openConfluentExtension } from "./utils/confluent";
-import { login } from "./utils/confluentCloud";
+import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
@@ -72,7 +70,7 @@ test.describe("Schema Management", () => {
       "editor.linkedEditing": false,
     });
 
-    await openConfluentExtension(page);
+    await openConfluentSidebar(page);
 
     resourcesView = new ResourcesView(page);
     notificationArea = new NotificationArea(page);
@@ -129,14 +127,59 @@ test.describe("Schema Management", () => {
 
   // test dimensions:
   const connectionTypes: Array<
-    [string, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
+    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
   > = [
     [
-      "CCLOUD",
+      ConnectionType.Ccloud,
       Tag.CCloud,
-      async (page, electronApp) => await setupCCloudConnection(page, electronApp),
+      async (page, electronApp) => {
+        await setupCCloudConnection(
+          page,
+          electronApp,
+          process.env.E2E_USERNAME!,
+          process.env.E2E_PASSWORD!,
+        );
+
+        // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
+        // Flink compute pools
+        await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+        const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
+        // environments are collapsed by default, so we need to expand it first
+        await firstEnvironment.click();
+        await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
+
+        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+        await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
+        const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
+        await firstSchemaRegistry.click();
+        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+        // view for these tests, so we're just picking from the Resources view here
+      },
     ],
-    ["DIRECT", Tag.Direct, async (page) => await setupDirectConnection(page)],
+    [
+      ConnectionType.Direct,
+      Tag.Direct,
+      async (page) => {
+        await setupDirectConnection(page, {
+          formConnectionType: FormConnectionType.ConfluentCloud,
+          schemaRegistryConfig: {
+            uri: process.env.E2E_SR_URL!,
+            authType: SupportedAuthType.API,
+            credentials: {
+              apiKey: process.env.E2E_SR_API_KEY!,
+              apiSecret: process.env.E2E_SR_API_SECRET!,
+            },
+          },
+        });
+        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+        const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
+        await expect(directSchemaRegistries).not.toHaveCount(0);
+        const firstSchemaRegistry: Locator = directSchemaRegistries.first();
+        await firstSchemaRegistry.click();
+        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+        // view for these tests, so we're just picking from the Resources view here
+      },
+    ],
     // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
   ];
   const schemaTypes: Array<[string, string]> = [
@@ -246,88 +289,6 @@ test.describe("Schema Management", () => {
         });
       }
     });
-  }
-
-  /**
-   * Creates a CCloud connection by logging in to Confluent Cloud from the sidebar auth flow, then
-   * expands the "Confluent Cloud" item in the Resources view and selects the first Schema Registry
-   * item.
-   */
-  async function setupCCloudConnection(
-    page: Page,
-    electronApp: ElectronApplication,
-  ): Promise<void> {
-    // CCloud connection setup:
-    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-
-    // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
-    // Flink compute pools
-    await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-    const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
-    // environments are collapsed by default, so we need to expand it first
-    await firstEnvironment.click();
-    await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
-
-    // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-    await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
-    const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
-    await firstSchemaRegistry.click();
-    // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-    // view for these tests, so we're just picking from the Resources view here
-  }
-
-  /**
-   * Creates a direct connection to a Schema Registry instance via CCloud API key/secret, then
-   * expands the first direct connection in the Resources view and selects its Schema Registry item.
-   */
-  async function setupDirectConnection(page: Page): Promise<void> {
-    const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
-    const connectionName = "Playwright";
-    await connectionForm.fillConnectionName(connectionName);
-    await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
-    // only configure the Schema Registry connection
-    await connectionForm.fillSchemaRegistryUri(process.env.E2E_SR_URL!);
-    await connectionForm.selectSchemaRegistryAuthType(SupportedAuthType.API);
-    await connectionForm.fillSchemaRegistryCredentials({
-      api_key: process.env.E2E_SR_API_KEY!,
-      api_secret: process.env.E2E_SR_API_SECRET!,
-    });
-
-    await connectionForm.testButton.click();
-    await expect(connectionForm.successMessage).toBeVisible();
-    await connectionForm.saveButton.click();
-
-    // make sure we see the notification indicating the connection was created
-    const notifications: Locator = notificationArea.infoNotifications.filter({
-      hasText: "New Connection Created",
-    });
-    await expect(notifications).toHaveCount(1);
-    const notification = new Notification(page, notifications.first());
-    await notification.dismiss();
-    // don't wait for the "Waiting for <connection> to be usable..." progress notification since
-    // it may disappear quickly
-
-    // wait for the Resources view to refresh and show the new direct connection
-    await expect(resourcesView.directConnections).not.toHaveCount(0);
-    await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
-
-    // expand the first direct connection to show its Schema Registry
-    await expect(resourcesView.directConnections).not.toHaveCount(0);
-    const firstConnection: Locator = resourcesView.directConnections.first();
-    // direct connections are collapsed by default in the old Resources view, but expanded in the
-    // new Resources view
-    if ((await firstConnection.getAttribute("aria-expanded")) === "false") {
-      await firstConnection.click();
-    }
-    await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
-
-    // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-    const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
-    await expect(directSchemaRegistries).not.toHaveCount(0);
-    const firstSchemaRegistry: Locator = directSchemaRegistries.first();
-    await firstSchemaRegistry.click();
-    // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-    // view for these tests, so we're just picking from the Resources view here
   }
 
   /**
