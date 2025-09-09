@@ -275,7 +275,7 @@
       {
         "command": "confluent.uploadArtifact",
         "icon": "$(cloud-upload)",
-        "title": "Upload Artifact",
+        "title": "Upload Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
@@ -1788,6 +1788,11 @@
           "command": "confluent.artifacts.registerUDF",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.uploadArtifact",
+          "when": "view == confluent-resources &&  viewItem =~ /.*compute-pool*/",
+          "group": "inline@3"
         },
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",

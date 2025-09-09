@@ -9,6 +9,7 @@ import {
 import { artifactUploadCompleted } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
+import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
@@ -78,9 +79,25 @@ export async function getPresignedUploadUrl(
   return urlResponse;
 }
 
-export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
-  const environment = await flinkCcloudEnvironmentQuickPick();
-  const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+export async function promptForArtifactUploadParams(
+  compute?: CCloudFlinkComputePool,
+): Promise<ArtifactUploadParams | undefined> {
+  if (compute) {
+    logger.info("Uploading artifact using compute context", {
+      environment: compute.environmentId,
+      cloud: compute.provider,
+      region: compute.region,
+    });
+  }
+  // Use the compute's environment if provided, otherwise prompt for it
+  const environment = compute?.environmentId
+    ? { id: compute.environmentId }
+    : await flinkCcloudEnvironmentQuickPick();
+
+  // Use the compute's provider and region if provided, otherwise prompt for it
+  let cloudRegion = compute
+    ? { provider: compute.provider, region: compute.region, cloud: compute.provider }
+    : await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
   if (!environment || !environment.id || !cloudRegion) {
     return undefined;
