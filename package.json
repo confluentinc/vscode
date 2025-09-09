@@ -908,7 +908,7 @@
           },
           "confluent.localDocker.medusaImageTag": {
             "type": "string",
-            "default": "0.2.0",
+            "default": "0.2.1",
             "description": "Docker image tag to use when starting a local Medusa container"
           }
         }
