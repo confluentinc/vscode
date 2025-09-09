@@ -4,7 +4,7 @@ import { registerCommandWithLogging } from ".";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
-import { artifactUploadDeleted, flinkArtifactUDFViewMode } from "../emitters";
+import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import {
@@ -12,7 +12,7 @@ import {
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
-import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -165,10 +165,10 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
 }
 
 export async function setFlinkArtifactsViewModeCommand() {
-  flinkArtifactUDFViewMode.fire(FlinkArtifactsViewProviderMode.Artifacts);
+  flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
   await setContextValue(
-    ContextValues.flinkArtifactsUDFsViewMode,
-    FlinkArtifactsViewProviderMode.Artifacts,
+    ContextValues.flinkDatabaseViewMode,
+    FlinkDatabaseViewProviderMode.Artifacts,
   );
 }
 
@@ -180,7 +180,7 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
     registerCommandWithLogging("confluent.deleteArtifact", deleteArtifactCommand),
     registerCommandWithLogging(
-      "confluent.flink.setArtifactsViewMode",
+      "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
     registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),

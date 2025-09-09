@@ -597,7 +597,7 @@ describe("SchemasViewProvider", () => {
         const registeredHandler = emitterStub.event.firstCall.args[0];
 
         // Call the registered handler
-        registeredHandler();
+        registeredHandler(undefined); // pass some dummy arg
 
         // Verify the expected method stub was called,
         // proving that the expected handler was registered
