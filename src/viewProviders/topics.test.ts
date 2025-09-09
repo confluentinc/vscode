@@ -515,7 +515,7 @@ describe("TopicViewProvider", () => {
       ["environmentChanged", "environmentChangedHandler"],
       ["ccloudConnected", "ccloudConnectedHandler"],
       ["localKafkaConnected", "localKafkaConnectedHandler"],
-      ["currentKafkaClusterChanged", "currentKafkaClusterChangedHandler"],
+      ["topicsViewResourceChanged", "currentKafkaClusterChangedHandler"],
       ["topicSearchSet", "topicSearchSetHandler"],
       ["schemaSubjectChanged", "subjectChangeHandler"],
       ["schemaVersionsChanged", "subjectChangeHandler"],

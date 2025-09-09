@@ -190,7 +190,7 @@ export async function flinkDatabaseQuickpick(
       // (Flink can query cross-environment, but not cross-provider/region.)
       const ccloudCluster = cluster as CCloudKafkaCluster;
 
-      if (!ccloudCluster.isFlinkable) {
+      if (!ccloudCluster.isFlinkable()) {
         // Only those clusters that are Flinkable (i.e. can be used as a Flink database).
         // (implies that there's a Flink compute cluster in the env)
         return false;

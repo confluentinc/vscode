@@ -18,11 +18,6 @@ import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) {
-  // TODO: implement this once the sidecar supports mutations via GraphQL
-}
-
 /**
  * Invoked from the topics view to pick a new Kafka cluster to view topics for,
  * or from the Resources view default action when clicking on Kafka cluster. */
@@ -44,7 +39,7 @@ export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster
 export async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaCluster) {
   // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
   const flinkDatabase: CCloudKafkaCluster | undefined =
-    cluster instanceof CCloudKafkaCluster && cluster.isFlinkable
+    cluster instanceof CCloudKafkaCluster && cluster.isFlinkable()
       ? cluster
       : await flinkDatabaseQuickpick(
           undefined, // do not limit to a specific compute pool
@@ -325,9 +320,6 @@ export function registerKafkaClusterCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.kafka-cluster.select",
       selectFlinkDatabaseViewKafkaClusterCommand,
     ),
-
-    registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),
-
     registerCommandWithLogging("confluent.topics.create", createTopicCommand),
     registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
     registerCommandWithLogging(

@@ -65,7 +65,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
    * Currently, this is determined by whether or not there were any preexisting Flink Compute Pools
    * available in the env/cloud provider/region of this cluster.
    **/
-  get isFlinkable(): boolean {
+  isFlinkable(): this is this & { flinkPools: CCloudFlinkComputePool[] } {
     return (this.flinkPools?.length ?? 0) > 0;
   }
 
@@ -130,7 +130,7 @@ export class KafkaClusterTreeItem extends TreeItem {
     if (isCCloud(resource)) {
       const ccloudCluster = resource as CCloudKafkaCluster;
       // Can we do Flink things with this cluster?
-      if (ccloudCluster.isFlinkable) {
+      if (ccloudCluster.isFlinkable()) {
         contextParts.push("flinkable");
       }
     }

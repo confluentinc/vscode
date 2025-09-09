@@ -60,11 +60,11 @@ describe("Test CCloudKafkaCluster properties", () => {
 
   describe("isFlinkable", () => {
     it("should be true when there are flink pools", () => {
-      assert.strictEqual(true, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.isFlinkable);
+      assert.strictEqual(true, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.isFlinkable());
     });
 
     it("should be false when there are no flink pools", () => {
-      assert.strictEqual(false, TEST_CCLOUD_KAFKA_CLUSTER.isFlinkable);
+      assert.strictEqual(false, TEST_CCLOUD_KAFKA_CLUSTER.isFlinkable());
     });
   });
 });
