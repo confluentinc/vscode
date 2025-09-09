@@ -1,7 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
+import { CustomMarkdownString, IdItem, KeyValuePair } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 
@@ -29,11 +29,11 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
       | "connectionId"
       | "connectionType"
       | "environmentId"
-      | "provider"
-      | "region"
       | "id"
       | "name"
       | "description"
+      | "provider"
+      | "region"
       | "documentationLink"
       | "metadata"
     >,
@@ -88,6 +88,14 @@ export class FlinkArtifactTreeItem extends TreeItem {
 }
 
 export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkdownString {
+  let documentationLabel: KeyValuePair;
+  if (resource.documentationLink === undefined || resource.documentationLink === "") {
+    // Change to "Add documentation link" when we that command is implemented
+    documentationLabel = ["No documentation link", ""];
+  } else {
+    documentationLabel = ["See Documentation", resource.documentationLink];
+  }
+
   return CustomMarkdownString.resourceTooltip(
     "Flink Artifact",
     IconNames.FLINK_ARTIFACT,
@@ -98,6 +106,6 @@ export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkd
       ["Created At", resource.createdAt?.toLocaleString()],
       ["Updated At", resource.updatedAt?.toLocaleString()],
     ],
-    ["See Documentation", resource.documentationLink],
+    documentationLabel,
   );
 }
