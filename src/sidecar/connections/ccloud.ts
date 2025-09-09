@@ -2,9 +2,14 @@ import { tryToCreateConnection, tryToDeleteConnection, tryToGetConnection } from
 import { Connection } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../../constants";
 import { ContextValues, getContextValue } from "../../context/values";
-import { currentSchemaRegistryChanged, topicsViewResourceChanged } from "../../emitters";
+import {
+  currentSchemaRegistryChanged,
+  flinkDatabaseViewResourceChanged,
+  topicsViewResourceChanged,
+} from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
 import { TopicViewProvider } from "../../viewProviders/topics";
 
@@ -44,6 +49,13 @@ export async function clearCurrentCCloudResources() {
   const schemasViewProvider = SchemasViewProvider.getInstance();
   if (schemasViewProvider.isFocusedOnCCloud()) {
     currentSchemaRegistryChanged.fire(null);
+  }
+
+  // Likewise for the Flink Database view, which can only
+  // ever show CCloud resources.
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
+  if (flinkDatabaseViewProvider.resource != null) {
+    flinkDatabaseViewResourceChanged.fire(null);
   }
 }
 
