@@ -12,7 +12,6 @@ import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
-  currentKafkaClusterChanged,
   environmentChanged,
   EnvironmentChangeEvent,
   localKafkaConnected,
@@ -21,6 +20,7 @@ import {
   schemaVersionsChanged,
   SubjectChangeEvent,
   topicSearchSet,
+  topicsViewResourceChanged,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
@@ -233,7 +233,7 @@ export class TopicViewProvider
       environmentChanged.event(this.environmentChangedHandler.bind(this)),
       ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
       localKafkaConnected.event(this.localKafkaConnectedHandler.bind(this)),
-      currentKafkaClusterChanged.event(this.currentKafkaClusterChangedHandler.bind(this)),
+      topicsViewResourceChanged.event(this.currentKafkaClusterChangedHandler.bind(this)),
       topicSearchSet.event(this.topicSearchSetHandler.bind(this)),
       schemaSubjectChanged.event(this.subjectChangeHandler.bind(this)),
       schemaVersionsChanged.event(this.subjectChangeHandler.bind(this)),

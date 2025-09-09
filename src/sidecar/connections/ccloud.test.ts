@@ -7,7 +7,7 @@ import {
 } from "../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ContextValues, setContextValue } from "../../context/values";
-import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../../emitters";
+import { currentSchemaRegistryChanged, topicsViewResourceChanged } from "../../emitters";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
 import { TopicViewProvider } from "../../viewProviders/topics";
 import { clearCurrentCCloudResources, hasCCloudAuthSession } from "./ccloud";
@@ -29,7 +29,7 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     const mockedCCLoudLoader = getStubbedCCloudResourceLoader(sandbox);
 
-    const currentKafkaClusterChangedFireStub = sandbox.stub(currentKafkaClusterChanged, "fire");
+    const currentKafkaClusterChangedFireStub = sandbox.stub(topicsViewResourceChanged, "fire");
     const currentSchemaRegistryChangedFireStub = sandbox.stub(currentSchemaRegistryChanged, "fire");
 
     // Set the view controllers to be focused on CCloud resources
