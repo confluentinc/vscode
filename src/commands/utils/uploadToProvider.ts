@@ -3,6 +3,7 @@ import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 
 const logger = new Logger("commands/utils/uploadToProvider");
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // sets the max file size to 100 MB in 104,857,600 bytes
 
 export async function uploadFileToAzure({
   file,
@@ -142,7 +143,6 @@ export async function uploadFileToS3({
 }
 
 export async function catchLargeFiles(file: File | Blob): Promise<void> {
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // sets the max file size to 100 MB in 104,857,600 bytes
   if (file.size > MAX_FILE_SIZE) {
     const errorMessage = `File size ${(file.size / (1024 * 1024)).toFixed(
       2,
