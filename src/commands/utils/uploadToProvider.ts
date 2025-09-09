@@ -3,6 +3,7 @@ import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 
 const logger = new Logger("commands/utils/uploadToProvider");
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // sets the max file size to 100 MB in 104,857,600 bytes
 
 export async function uploadFileToAzure({
   file,
@@ -14,6 +15,7 @@ export async function uploadFileToAzure({
   presignedUrl: string;
   contentType: string;
 }): Promise<Response> {
+  await catchLargeFiles(file);
   logger.info("Starting Azure file upload", {
     fileSize: file.size,
     contentType,
@@ -74,6 +76,7 @@ export async function uploadFileToS3({
   contentType: string;
   uploadFormData: { [key: string]: string };
 }): Promise<Response> {
+  await catchLargeFiles(file);
   // non-sensitive form data values for logging
   const formDataDebugValues = {
     bucket: uploadFormData.bucket,
@@ -136,5 +139,16 @@ export async function uploadFileToS3({
     logError(error, "Failed to upload file to S3", sentryContext);
     void showErrorNotificationWithButtons("Failed to upload file to S3. See logs for details.");
     throw error;
+  }
+}
+
+export async function catchLargeFiles(file: File | Blob): Promise<void> {
+  if (file.size > MAX_FILE_SIZE) {
+    const errorMessage = `File size ${(file.size / (1024 * 1024)).toFixed(
+      2,
+    )}MB exceeds the maximum allowed size of 100MB. Please use a smaller file.`;
+    logger.warn("File too large", { fileSize: file.size });
+    void showErrorNotificationWithButtons(errorMessage);
+    throw new Error(errorMessage);
   }
 }
