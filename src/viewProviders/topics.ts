@@ -26,7 +26,6 @@ import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/loaderUtils";
 import { Logger } from "../logging";
-import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -74,9 +73,7 @@ export class TopicViewProvider
   }
 
   private treeView: TreeView<TopicViewProviderData>;
-  /** The parent of the focused Kafka cluster.  */
-  public environment: Environment | null = null;
-  /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
+  /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. Includes Environment ID*/
   public kafkaCluster: KafkaCluster | null = null;
 
   /** String to filter items returned by `getChildren`, if provided. */
@@ -358,7 +355,6 @@ export class TopicViewProvider
     const loader = ResourceLoader.getInstance(cluster.connectionId);
     const envs = await loader.getEnvironments();
     const parentEnv = envs.find((env) => env.id === cluster.environmentId);
-    this.environment = parentEnv ?? null;
     if (parentEnv) {
       this.treeView.description = `${parentEnv.name} | ${cluster.name}`;
     } else {

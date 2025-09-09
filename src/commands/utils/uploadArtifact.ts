@@ -1,4 +1,4 @@
-import path from "node:path";
+import path from "path";
 import * as vscode from "vscode";
 import {
   CreateArtifactV1FlinkArtifact201Response,
@@ -18,8 +18,7 @@ import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegi
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
-import { uploadFileToAzure } from "./uploadToAzure";
-import { uploadFileToS3 } from "./uploadToS3";
+import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
 
 export interface ArtifactUploadParams {
@@ -118,10 +117,14 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
   const selectedFile: vscode.Uri = selectedFiles[0];
   const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
 
+  // Default artifact name to the selected file's base name (without extension), but allow override.
+  const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
+
   const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name for the Artifact",
+    prompt: "Enter the artifact name",
+    value: defaultArtifactName,
     ignoreFocusOut: true,
-    validateInput: (value) => (value ? undefined : "Artifact name is required"),
+    validateInput: (value) => (value && value.trim() ? undefined : "Artifact name is required"),
   });
 
   if (!artifactName) {

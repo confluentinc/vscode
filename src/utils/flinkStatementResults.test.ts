@@ -55,14 +55,16 @@ describe("utils/flinkStatementResults", () => {
         map: new Map(),
         upsertColumns: [0, 1],
       });
-      const res = Array.from(resMap, ([INTERNAL_ID, data]) => ({
+      const res: any = Array.from(resMap, ([INTERNAL_ID, data]) => ({
         INTERNAL_ID,
         ...Object.fromEntries(data),
       }));
 
+      // Should have become just one row with id=2 and users=0
       assert.equal(res.length, 1);
-      assert.equal(res[0].INTERNAL_ID, "2-0");
-      assert.deepEqual(res[0], { INTERNAL_ID: "2-0", id: 2, users: 0 });
+      assert.strictEqual(res[0].INTERNAL_ID, generateRowId([2, 0]));
+      assert.strictEqual(res[0].id, 2); // the statement-level 'id' column
+      assert.strictEqual(res[0].users, 0); // the statement-level 'users' column
     });
 
     it("respects is_append_only property", () => {
@@ -242,7 +244,7 @@ describe("utils/flinkStatementResults", () => {
       });
       assert.equal(resMap.size, limit1);
       // first two items should be dropped
-      assert.equal(resMap.keys().next().value, "3-20");
+      assert.deepEqual(resMap.values().next().value?.get("id"), 3); // the [3, 20] row
 
       const limit2 = 4;
       const moreRows = [
@@ -258,7 +260,7 @@ describe("utils/flinkStatementResults", () => {
       });
       assert.equal(resMap2.size, limit2);
       // first item should be dropped
-      assert.equal(resMap2.keys().next().value, "4-20");
+      assert.equal(resMap2.values().next().value?.get("id"), 4); // the [4, 20] row
     });
 
     it("returns correct results with nested data", () => {
@@ -401,20 +403,10 @@ describe("utils/flinkStatementResults", () => {
       }));
 
       assert.equal(res.length, 4);
-      assert.equal(
-        res[0].INTERNAL_ID,
-        "x'31'-1-1016-1315-2021-12-12-accepted-37,pizza,3,14.62,43.86",
-      );
       // @ts-expect-error: test
       assert.equal(res[0].key, "x'31'");
       // @ts-expect-error: test
       assert.deepEqual(res[0].order_lines, [["37", "pizza", "3", "14.62", "43.86"]]);
-
-      // more complex ID example
-      assert.equal(
-        res[3].INTERNAL_ID,
-        "x'31'-1-1043-1009-2021-01-26-accepted-72,salad,5,24.97,124.85,78,pizza,2,11.45,22.9,97,dessert,4,6.62,26.48,36,calzone,4,3.23,12.92",
-      );
     });
 
     it("returns correct results for edge case with user selecting minimum columns resulting in colliding data from API", () => {
@@ -641,27 +633,12 @@ describe("utils/flinkStatementResults", () => {
         rows,
         upsertColumns: [0],
       });
-      const res = Array.from(resMap, ([INTERNAL_ID, data]) => ({
-        INTERNAL_ID,
-        ...Object.fromEntries(data),
-      }));
+      const res = Array.from(resMap.values()).map((data) => Object.fromEntries(data));
       assert.equal(res.length, 3);
-      assert.deepEqual(res[0], { INTERNAL_ID: "1", sid: "1", name: "<name>", number: 1 });
-      // UUID is always 36 characters long, plus `1-` prefix
-      // this will match the id which was composed from the previous row id plus uuid
-      // for example, `1-e4e5ade9-b7d2-4f02-9b1c-23c53b1922ba`
-      // this is done to avoid overwriting the previous row, which is desired behavior
-      assert.equal(res[1].INTERNAL_ID.length, 38);
-      assert.match(res[1].INTERNAL_ID, /^1-/);
-      // @ts-expect-error: test
-      assert.equal(res[1].sid, "1");
-      // @ts-expect-error: test
-      assert.equal(res[1].name, "<name>");
-      // @ts-expect-error: test
-      assert.equal(res[1].number, 1);
-      assert.deepEqual(res[2], { INTERNAL_ID: "2", sid: "2", name: "<name>", number: 2 });
+      assert.deepEqual(res[0], { sid: "1", name: "<name>", number: 1 });
+      assert.deepEqual(res[1], { sid: "1", name: "<name>", number: 1 });
+      assert.deepEqual(res[2], { sid: "2", name: "<name>", number: 2 });
 
-      // it should also reliably remove the latest row even though the ID has a UUID suffix
       const rows2 = [{ op: Operation.Delete, row: ["1", "<name>", 1] }];
       const resMap2 = parseResults({
         columns,
@@ -670,29 +647,36 @@ describe("utils/flinkStatementResults", () => {
         rows: rows2,
         upsertColumns: [0],
       });
-      const res2 = Array.from(resMap2, ([INTERNAL_ID, data]) => ({
-        INTERNAL_ID,
-        ...Object.fromEntries(data),
-      }));
+      const res2 = Array.from(resMap2.values()).map((data) => Object.fromEntries(data));
       assert.equal(res2.length, 2);
-      assert.deepEqual(res2[0], { INTERNAL_ID: "1", sid: "1", name: "<name>", number: 1 });
+      assert.deepEqual(res2[0], { sid: "1", name: "<name>", number: 1 });
       // the row in between should be removed
-      assert.deepEqual(res2[1], { INTERNAL_ID: "2", sid: "2", name: "<name>", number: 2 });
+      assert.deepEqual(res2[1], { sid: "2", name: "<name>", number: 2 });
     });
   });
 
   describe("generateRowId", () => {
-    it("returns correct row ID for simple row data without upsert columns", () => {
-      const rowData = ["1", "John Doe", 30];
-      const rowId = generateRowId(rowData);
-      assert.equal(rowId, "1-John Doe-30");
+    it("returns distinct row IDs for simple row data without upsert columns", () => {
+      const rowId1 = generateRowId(["1", "John Doe", 30]);
+      // vary the data slightly
+      const rowId2 = generateRowId(["1", "John Doe", 31]);
+
+      // Should be different results.
+      assert.notEqual(rowId1, rowId2);
+      assert.equal(rowId1.length, rowId2.length);
+      // 32 chars of MD5 hash prefix in hex goodness.
+      assert.equal(rowId1.length, 32);
     });
 
-    it("returns correct row ID for simple row data with upsert columns", () => {
+    it("returns row id based on upsert columns", () => {
       const rowData = ["1", "John Doe", 30];
+      const originalRowId = generateRowId(rowData);
+
       const upsertColumns = [0]; // Only use the first column for ID generation
-      const rowId = generateRowId(rowData, upsertColumns);
-      assert.equal(rowId, "1");
+      const upsertAwareRowId = generateRowId(rowData, upsertColumns);
+
+      // Should be different results.
+      assert.notEqual(originalRowId, upsertAwareRowId);
     });
   });
 

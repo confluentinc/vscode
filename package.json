@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-5",
+  "version": "1.7.0-17",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -275,6 +275,12 @@
       {
         "command": "confluent.uploadArtifact",
         "title": "Confluent: Upload Artifact",
+        "category": "Confluent: Flink Artifacts",
+        "enablement": "isDevelopment"
+      },
+      {
+        "command": "confluent.deleteArtifact",
+        "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },
@@ -721,6 +727,11 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.artifacts.registerUDF",
+        "title": "Register Flink Artifact with Flink SQL",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.openCCloudApiKeysUrl",
         "icon": "$(confluent-logo)",
         "title": "Manage API Keys in Confluent Cloud",
@@ -797,10 +808,13 @@
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
           },
-          "confluent.experimental.useNewResourcesViewProvider": {
+          "confluent.preview.useNewResourcesViewProvider": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Use the new resources view provider for displaying resources in the Confluent extension. This is an experimental feature and may change in future releases.\n\n---\n\n⚠️ **WARNING**: This setting is experimental and may not be fully functional or stable. Must restart extensions for change to take effect."
+            "markdownDescription": "Use the new Resources view provider for displaying resources in the Confluent extension.\n\n---\n\n⚠️ **WARNING**: This setting is currently in preview and may not be fully functional or stable. Must restart extensions for change to take effect.",
+            "tags": [
+              "preview"
+            ]
           }
         }
       },
@@ -1444,7 +1458,7 @@
         },
         {
           "command": "confluent.resources.refresh",
-          "when": "!config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources",
+          "when": "!config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources",
           "group": "navigation@3"
         },
         {
@@ -1586,7 +1600,7 @@
         },
         {
           "command": "confluent.resources.refreshConnection",
-          "when": "config.confluent.experimental.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "when": "config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
           "group": "inline"
         },
         {
@@ -1699,6 +1713,11 @@
           "group": "schemas"
         },
         {
+          "command": "confluent.deleteArtifact",
+          "when": "view == confluent-flink-artifacts && viewItem =~ /.*-flink-artifact$/",
+          "group": "artifacts"
+        },
+        {
           "command": "confluent.schemas.upload",
           "when": "view == confluent-resources && viewItem =~ /.*-schema-registry/",
           "group": "inline@1"
@@ -1771,6 +1790,11 @@
         {
           "command": "confluent.topics.query",
           "when": "view == confluent-topics && viewItem =~ /ccloud-kafka-topic.*-flinkable.*/",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.registerUDF",
+          "when": "view == confluent-flink-artifacts && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {

@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { TextDocument, Uri, workspace } from "vscode";
 import { DocumentMetadataManager } from "./documentMetadataManager";
+import { FLINKSTATEMENT_URI_SCHEME } from "./documentProviders/flinkStatement";
 import { UriMetadataKeys } from "./storage/constants";
 import { ResourceManager } from "./storage/resourceManager";
 import { UriMetadataMap } from "./storage/types";
@@ -63,91 +64,94 @@ describe("documentMetadataManager.ts", () => {
     sinon.assert.notCalled(stubResourceManager.getAllUriMetadata);
   });
 
-  it("handleDocumentSave() should migrate metadata from tracked 'untitled' document to newly-saved 'file' document when content matches", async () => {
-    // set up the "before save" untitled document
-    const fakeUntitledDoc: TextDocument = {
-      uri: Uri.parse("untitled:test.sql"),
-      getText: () => "SELECT * FROM test",
-    } as unknown as TextDocument;
-    sandbox.stub(workspace, "textDocuments").get(() => [fakeUntitledDoc]);
-    // set up the "after save" file document
-    const fakeFileDoc: TextDocument = {
-      uri: Uri.parse("file:///test.sql"),
-      getText: () => "SELECT * FROM test",
-    } as unknown as TextDocument;
-    sandbox.stub(workspace, "openTextDocument").resolves(fakeFileDoc);
+  for (const scheme of ["untitled", FLINKSTATEMENT_URI_SCHEME]) {
+    it(`handleDocumentSave() should migrate metadata to newly-saved 'file' document when content matches exactly (unsaved scheme='${scheme}')`, async () => {
+      // set up the unsaved document
+      const fakeUnsavedDoc: TextDocument = {
+        uri: Uri.parse(`${scheme}:test.sql`),
+        getText: () => "SELECT * FROM test",
+      } as unknown as TextDocument;
+      sandbox.stub(workspace, "textDocuments").get(() => [fakeUnsavedDoc]);
+      sandbox.stub(workspace, "openTextDocument").resolves(fakeUnsavedDoc);
+      // set up the "after save" file-scheme document
+      const fakeFileDoc: TextDocument = {
+        uri: Uri.parse("file:///test.sql"),
+        getText: () => "SELECT * FROM test",
+      } as unknown as TextDocument;
 
-    // set some initial metadata for the untitled document to be migrated
-    const metadata = {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
-    };
-    const metadataMap: UriMetadataMap = new Map();
-    metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
-    stubResourceManager.getAllUriMetadata.resolves(metadataMap);
+      // set some initial metadata for the untitled document to be migrated
+      const metadata = {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
+      };
+      const metadataMap: UriMetadataMap = new Map();
+      metadataMap.set(fakeUnsavedDoc.uri.toString(), metadata);
+      stubResourceManager.getAllUriMetadata.resolves(metadataMap);
 
-    await manager["handleDocumentSave"](fakeFileDoc);
+      await manager["handleDocumentSave"](fakeFileDoc);
 
-    // migration should have happened by setting the metadata for the file document and deleting the
-    // metadata for the untitled document
-    assert.ok(stubResourceManager.setUriMetadata.calledWith(fakeFileDoc.uri, metadata));
-    assert.ok(stubResourceManager.deleteUriMetadata.calledWith(fakeUntitledDoc.uri));
-  });
+      // migration should have happened by setting the metadata for the file document and deleting the
+      // metadata for the untitled document
+      sinon.assert.calledWith(stubResourceManager.setUriMetadata, fakeFileDoc.uri, metadata);
+      sinon.assert.calledWith(stubResourceManager.deleteUriMetadata, fakeUnsavedDoc.uri);
+    });
 
-  it("handleDocumentSave() should migrate metadata to newly-saved 'file' document when content matches aside from whitespace/newlines", async () => {
-    // set up the "before save" untitled document
-    const fakeUntitledDoc: TextDocument = {
-      uri: Uri.parse("untitled:test.sql"),
-      getText: () => "   SELECT * FROM test  ",
-    } as unknown as TextDocument;
-    sandbox.stub(workspace, "textDocuments").get(() => [fakeUntitledDoc]);
-    // set up the "after save" file document
-    const fakeFileDoc: TextDocument = {
-      uri: Uri.parse("file:///test.sql"),
-      getText: () => "SELECT * FROM test\n",
-    } as unknown as TextDocument;
-    sandbox.stub(workspace, "openTextDocument").resolves(fakeFileDoc);
+    it(`handleDocumentSave() should migrate metadata to newly-saved 'file' document when content matches aside from whitespace/newlines (unsaved scheme='${scheme}')`, async () => {
+      // set up the unsaved document
+      const fakeUnsavedDoc: TextDocument = {
+        uri: Uri.parse(`${scheme}:test.sql`),
+        getText: () => "   SELECT * FROM test  ",
+      } as unknown as TextDocument;
+      sandbox.stub(workspace, "textDocuments").get(() => [fakeUnsavedDoc]);
+      sandbox.stub(workspace, "openTextDocument").resolves(fakeUnsavedDoc);
+      // set up the "after save" file document
+      const fakeFileDoc: TextDocument = {
+        uri: Uri.parse("file:///test.sql"),
+        getText: () => "SELECT * FROM test\n",
+      } as unknown as TextDocument;
 
-    // set some initial metadata for the untitled document to be migrated
-    const metadata = {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
-    };
-    const metadataMap: UriMetadataMap = new Map();
-    metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
-    stubResourceManager.getAllUriMetadata.resolves(metadataMap);
+      // set some initial metadata for the untitled document to be migrated
+      const metadata = {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
+      };
+      const metadataMap: UriMetadataMap = new Map();
+      metadataMap.set(fakeUnsavedDoc.uri.toString(), metadata);
+      stubResourceManager.getAllUriMetadata.resolves(metadataMap);
 
-    await manager["handleDocumentSave"](fakeFileDoc);
+      await manager["handleDocumentSave"](fakeFileDoc);
 
-    // migration should have happened by setting the metadata for the file document and deleting the
-    // metadata for the untitled document
-    assert.ok(stubResourceManager.setUriMetadata.calledWith(fakeFileDoc.uri, metadata));
-    assert.ok(stubResourceManager.deleteUriMetadata.calledWith(fakeUntitledDoc.uri));
-  });
+      // migration should have happened by setting the metadata for the file document and deleting the
+      // metadata for the untitled document
+      sinon.assert.calledWith(stubResourceManager.setUriMetadata, fakeFileDoc.uri, metadata);
+      sinon.assert.calledWith(stubResourceManager.deleteUriMetadata, fakeUnsavedDoc.uri);
+    });
 
-  it("handleDocumentSave() should not migrate metadata when content does not match", async () => {
-    // set up the "before save" untitled document
-    const fakeUntitledDoc: TextDocument = {
-      uri: Uri.parse("untitled:test.sql"),
-      getText: () => "SELECT * FROM test",
-    } as unknown as TextDocument;
-    sandbox.stub(workspace, "textDocuments").get(() => [fakeUntitledDoc]);
-    // set up the "after save" file document
-    const fakeFileDoc: TextDocument = {
-      uri: Uri.parse("file:///test.sql"),
-      getText: () => "SELECT * FROM some_other_table",
-    } as unknown as TextDocument;
+    it(`handleDocumentSave() should not migrate metadata when content does not match (unsaved scheme='${scheme}')`, async () => {
+      // set up the unsaved document
+      const fakeUnsavedDoc: TextDocument = {
+        uri: Uri.parse(`${scheme}:test.sql`),
+        getText: () => "SELECT * FROM test",
+      } as unknown as TextDocument;
+      sandbox.stub(workspace, "textDocuments").get(() => [fakeUnsavedDoc]);
+      sandbox.stub(workspace, "openTextDocument").resolves(fakeUnsavedDoc);
+      // set up the "after save" file document
+      const fakeFileDoc: TextDocument = {
+        uri: Uri.parse("file:///test.sql"),
+        getText: () => "SELECT * FROM some_other_table",
+      } as unknown as TextDocument;
 
-    // set some initial metadata for the untitled document to (hopefully) not migrate
-    const metadata = {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
-    };
-    const metadataMap: UriMetadataMap = new Map();
-    metadataMap.set(fakeUntitledDoc.uri.toString(), metadata);
-    stubResourceManager.getAllUriMetadata.resolves(metadataMap);
+      // set some initial metadata for the untitled document to (hopefully) not migrate
+      const metadata = {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "test-compute-pool",
+      };
+      const metadataMap: UriMetadataMap = new Map();
+      metadataMap.set(fakeUnsavedDoc.uri.toString(), metadata);
+      stubResourceManager.getAllUriMetadata.resolves(metadataMap);
 
-    await manager["handleDocumentSave"](fakeFileDoc);
+      await manager["handleDocumentSave"](fakeFileDoc);
 
-    // migration should not have happened
-    assert.ok(stubResourceManager.setUriMetadata.notCalled);
-    assert.ok(stubResourceManager.deleteUriMetadata.notCalled);
-  });
+      // migration should not have happened
+      sinon.assert.notCalled(stubResourceManager.setUriMetadata);
+      sinon.assert.notCalled(stubResourceManager.deleteUriMetadata);
+    });
+  }
 });

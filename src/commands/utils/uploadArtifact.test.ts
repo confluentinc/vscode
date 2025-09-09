@@ -34,8 +34,7 @@ import {
   promptForArtifactUploadParams,
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
-import * as uploadToAzure from "./uploadToAzure";
-import * as uploadToS3 from "./uploadToS3";
+import * as uploadToProvider from "./uploadToProvider";
 
 describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
@@ -147,7 +146,8 @@ describe("uploadArtifact", () => {
       http_endpoint: "",
     };
     const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
-    const mockFileUri = vscode.Uri.file("/path/to/file.jar");
+    const mockFileName = "mock-file";
+    const mockFileUri = vscode.Uri.file(`/path/to/${mockFileName}.jar`);
     beforeEach(() => {
       flinkCcloudEnvironmentQuickPickStub = sandbox.stub(
         environments,
@@ -224,6 +224,23 @@ describe("uploadArtifact", () => {
       );
     });
 
+    it("should prefill artifact name with file base name when selecting a file", async () => {
+      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
+      cloudProviderRegionQuickPickStub.resolves({
+        ...fakeCloudProviderRegion,
+        provider: "AZURE",
+      });
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves(mockFileName);
+
+      const result = await promptForArtifactUploadParams();
+
+      sinon.assert.calledWithMatch(showInputBoxStub, sinon.match({ value: mockFileName }));
+      assert.deepStrictEqual(result?.selectedFile, mockFileUri);
+    });
+
     it("returns the correct Artifact upload parameters for Azure", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
       // reset the region quick pick stub to return a valid Azure region
@@ -286,11 +303,13 @@ describe("uploadArtifact", () => {
     beforeEach(() => {
       const mockAzureResponse = new Response(null, { status: 200, statusText: "OK" });
       uploadFileToAzureStub = sandbox
-        .stub(uploadToAzure, "uploadFileToAzure")
+        .stub(uploadToProvider, "uploadFileToAzure")
         .resolves(mockAzureResponse);
 
       const mockS3Response = new Response(null, { status: 204, statusText: "No Content" });
-      uploadFileToS3Stub = sandbox.stub(uploadToS3, "uploadFileToS3").resolves(mockS3Response);
+      uploadFileToS3Stub = sandbox
+        .stub(uploadToProvider, "uploadFileToS3")
+        .resolves(mockS3Response);
 
       sandbox.stub(uploadArtifactModule, "prepareUploadFileFromUri").resolves({
         blob: new Blob(["dummy"], { type: "application/java-archive" }),

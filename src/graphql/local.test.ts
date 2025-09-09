@@ -1,9 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 
-import { LOCAL_CONNECTION_ID } from "../constants";
-import { SidecarHandle } from "../sidecar";
-import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
@@ -11,7 +8,9 @@ import {
   TEST_LOCAL_MEDUSA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-
+import { LOCAL_CONNECTION_ID } from "../constants";
+import { SidecarHandle } from "../sidecar";
+import * as sidecarLocalConnections from "../sidecar/connections/local";
 import { getLocalResources } from "./local";
 
 describe("local.ts getLocalResources()", () => {
@@ -34,13 +33,23 @@ describe("local.ts getLocalResources()", () => {
     sandbox.restore();
   });
 
-  it("returns empty array ans shows notification if error making graphql call", async () => {
+  it("returns empty array and shows notification if error making graphql call", async () => {
     sidecarStub.query.rejects(new Error("Query failed"));
 
     const result = await getLocalResources();
 
     assert.deepStrictEqual(result, []);
     sinon.assert.calledOnce(showErrorNotificationStub);
+  });
+
+  it("calls query with showPartialErrors=false so that if we have kafka, but not schema reg, we won't show popup about it", async () => {
+    sidecarStub.query.resolves({ localConnections: [] });
+
+    await getLocalResources();
+
+    sinon.assert.calledOnce(sidecarStub.query);
+    assert.strictEqual(sidecarStub.query.firstCall.args[1], LOCAL_CONNECTION_ID);
+    assert.strictEqual(sidecarStub.query.firstCall.args[2], false); // suppress partial error notifications
   });
 
   it("returns empty array if no local connections are returned", async () => {
