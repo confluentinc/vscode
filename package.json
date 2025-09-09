@@ -420,7 +420,7 @@
       {
         "command": "confluent.flinkdatabase.kafka-cluster.select",
         "icon": "$(confluent-kafka-cluster)",
-        "title": "Select Kafka Cluster",
+        "title": "Select Kafka Cluster as Flink Database",
         "category": "Confluent: Resources"
       },
       {
@@ -1642,7 +1642,12 @@
         {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-resources && viewItem == flinkable-ccloud-environment",
-          "group": "1_flink@1"
+          "group": "4_flink@1"
+        },
+        {
+          "command": "confluent.flinkdatabase.kafka-cluster.select",
+          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/",
+          "group": "4_flink@1"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
@@ -1731,7 +1736,7 @@
         {
           "command": "confluent.topics.create",
           "when": "view == confluent-resources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == local-kafka-cluster)",
-          "group": "topics"
+          "group": "3_topics"
         },
         {
           "command": "confluent.topics.openlatestschemas",

@@ -39,9 +39,11 @@ async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster) {
 
   // Inform the topics view that the user has selected a new Kafka cluster.
   topicsViewResourceChanged.fire(kafkaCluster);
+  // And set focus to the topics view.
+  void vscode.commands.executeCommand("confluent-topics.focus");
 }
 
-/** Invoked from the Flink Database view  */
+/** Pick a Flinkable Kafka Cluster as the one to examine in the Flink Database view */
 async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaCluster) {
   // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
   const flinkDatabase: CCloudKafkaCluster | undefined =
@@ -56,8 +58,11 @@ async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaC
     return;
   }
 
-  // Inform the Flink Artifacts view that the current database changed.
+  // Inform the Flink Database view that the current database changed.
   flinkDatabaseViewResourceChanged.fire(flinkDatabase);
+
+  // And set focus to the flink DB view.
+  void vscode.commands.executeCommand("confluent-flink-database.focus");
 }
 
 async function deleteTopicCommand(topic: KafkaTopic) {
@@ -317,7 +322,8 @@ export function registerKafkaClusterCommands(): vscode.Disposable[] {
       "confluent.topics.kafka-cluster.select",
       selectTopicsViewKafkaClusterCommand,
     ),
-    // Picked a Flink Database (a Flinkable CCloud Kafka cluster) from the Artifacts/UDFs view.
+    // Picked a Flink Database (a Flinkable CCloud Kafka cluster) from the Artifacts/UDFs view title
+    // or from context menu item in resources view.
     registerCommandWithLogging(
       "confluent.flinkdatabase.kafka-cluster.select",
       selectFlinkDatabaseViewKafkaClusterCommand,
