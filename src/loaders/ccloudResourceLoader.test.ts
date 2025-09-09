@@ -216,6 +216,17 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getOrganizationStub);
     });
 
+    it("should return facts from provided ccloud kafka cluster", async () => {
+      const queryables = await loader.determineFlinkQueryables(TEST_CCLOUD_KAFKA_CLUSTER);
+      assert.strictEqual(queryables.length, 1);
+      assert.strictEqual(queryables[0].organizationId, TEST_CCLOUD_ORGANIZATION.id);
+      assert.strictEqual(queryables[0].environmentId, TEST_CCLOUD_KAFKA_CLUSTER.environmentId);
+      assert.strictEqual(queryables[0].computePoolId, undefined);
+      assert.strictEqual(queryables[0].provider, TEST_CCLOUD_KAFKA_CLUSTER.provider);
+      assert.strictEqual(queryables[0].region, TEST_CCLOUD_KAFKA_CLUSTER.region);
+      sinon.assert.calledOnce(getOrganizationStub);
+    });
+
     it("should reduce all of the compute pools in an environment to a reduced set of queryables", async () => {
       const computePool1: CCloudFlinkComputePool = new CCloudFlinkComputePool({
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,

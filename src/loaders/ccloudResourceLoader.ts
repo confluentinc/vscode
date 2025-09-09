@@ -160,7 +160,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Convert the given CCloudEnvironment or CCloudFlinkComputePool
+   * Convert the given CCloudEnvironment, CCloudFlinkComputePool, or CCloudKafkaCluster
    * into a list of distinct IFlinkQueryable objects. Each object
    * will be for a separate provider-region pair within the environment.
    */
@@ -175,16 +175,20 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     if (resource instanceof CCloudFlinkComputePool || resource instanceof CCloudKafkaCluster) {
       // If we have a single compute pool or kafka cluster, just reexpress it as a single
       // IFlinkQueryable .
-      return [
-        {
-          organizationId: org.id,
-          environmentId: resource.environmentId,
-          computePoolId: resource.id,
-          provider: resource.provider,
-          region: resource.region,
-        },
-      ];
+      const singleton: IFlinkQueryable = {
+        organizationId: org.id,
+        environmentId: resource.environmentId,
+        provider: resource.provider,
+        region: resource.region,
+      };
+
+      if (resource instanceof CCloudFlinkComputePool) {
+        // Only fix to a single compute pool if we were given a compute pool.
+        singleton.computePoolId = resource.id;
+      }
+      return [singleton];
     } else {
+      // Must be a CCloudEnvironment. Gather all provider-region pairs.
       // The environment may have many resources in the same
       // provider-region pair. We need to deduplicate them by provider-region.
       const providerRegionSet: ObjectSet<IFlinkQueryable> = new ObjectSet(
