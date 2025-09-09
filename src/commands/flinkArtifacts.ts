@@ -8,6 +8,7 @@ import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
@@ -26,7 +27,9 @@ import {
  * Returns an object with these values, or undefined if the user cancels.
  */
 
-export async function uploadArtifactCommand(item?: CCloudFlinkComputePool): Promise<void> {
+export async function uploadArtifactCommand(
+  item?: CCloudFlinkComputePool | CCloudKafkaCluster,
+): Promise<void> {
   try {
     const params = await promptForArtifactUploadParams(item);
     if (!params) return; // User cancelled the prompt

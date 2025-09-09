@@ -10,6 +10,7 @@ import { artifactUploadCompleted } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
@@ -80,23 +81,23 @@ export async function getPresignedUploadUrl(
 }
 
 export async function promptForArtifactUploadParams(
-  compute?: CCloudFlinkComputePool,
+  item?: CCloudKafkaCluster | CCloudFlinkComputePool,
 ): Promise<ArtifactUploadParams | undefined> {
-  if (compute) {
-    logger.info("Uploading artifact using compute context", {
-      environment: compute.environmentId,
-      cloud: compute.provider,
-      region: compute.region,
+  if (item) {
+    logger.info("Uploading artifact using provided context", {
+      environment: item.environmentId,
+      cloud: item.provider,
+      region: item.region,
     });
   }
-  // Use the compute's environment if provided, otherwise prompt for it
-  const environment = compute?.environmentId
-    ? { id: compute.environmentId }
+  // Use the item's environment if provided, otherwise prompt for it
+  const environment = item?.environmentId
+    ? { id: item.environmentId }
     : await flinkCcloudEnvironmentQuickPick();
 
-  // Use the compute's provider and region if provided, otherwise prompt for it
-  let cloudRegion = compute
-    ? { provider: compute.provider, region: compute.region, cloud: compute.provider }
+  // Use the item's provider and region if provided, otherwise prompt for it
+  let cloudRegion = item
+    ? { provider: item.provider, region: item.region, cloud: item.provider }
     : await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
   if (!environment || !environment.id || !cloudRegion) {
