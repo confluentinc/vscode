@@ -27,7 +27,7 @@ import {
 export async function uploadArtifactCommand(): Promise<void> {
   try {
     const params = await promptForArtifactUploadParams();
-    if (!params) return;
+    if (!params) return; // User cancelled the input
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
       environment: params.environment,
