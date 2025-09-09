@@ -274,7 +274,7 @@
     "commands": [
       {
         "command": "confluent.uploadArtifact",
-        "title": "Confluent: Upload Artifact",
+        "title": "Upload Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },
@@ -1788,6 +1788,13 @@
           "command": "confluent.flinkStatementResults",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "confluent.uploadArtifact",
+          "group": "inline@1",
+          "when": "config.confluent.flink.enableFlinkArtifacts && resourceExtname == .jar"
         }
       ]
     },
