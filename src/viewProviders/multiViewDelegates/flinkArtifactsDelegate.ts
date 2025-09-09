@@ -24,6 +24,9 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
     try {
       const loader = CCloudResourceLoader.getInstance();
       this.children = await loader.getFlinkArtifacts(resource);
+      if (!this.children || this.children.length === 0) {
+        this.children = [];
+      }
       return this.children;
     } catch (error) {
       const { showNotification, message } = triageGetFlinkArtifactsError(error);
@@ -75,6 +78,14 @@ export function triageGetFlinkArtifactsError(error: unknown): {
       }
     }
     void logError(error, "Failed to load Flink artifacts");
+  } else if (
+    error instanceof TypeError &&
+    error.message.includes("Cannot read properties of null (reading 'map')")
+  ) {
+    // Handle the specific case where the API returns null data and the OpenAPI client fails to parse it
+    message = "No artifacts found for this compute pool.";
+    showNotification = false; // Don't show notification for empty state
+    void logError(error, "Failed to load Flink artifacts - empty response");
   } else {
     message = "Failed to load Flink artifacts. Please check your connection and try again.";
     showNotification = true;

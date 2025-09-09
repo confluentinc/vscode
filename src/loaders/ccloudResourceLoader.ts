@@ -404,8 +404,11 @@ async function loadArtifactsForProviderRegion(
     try {
       const restResult = await artifactsClient.listArtifactV1FlinkArtifacts(request);
 
+      // Handle case where data might be null or undefined
+      const artifactData = restResult.data ? Array.from(restResult.data) : [];
+
       // Convert each Flink artifact from the REST API representation to our codebase model.
-      for (const restArtifact of restResult.data) {
+      for (const restArtifact of artifactData) {
         const artifact = restFlinkArtifactToModel(restArtifact, queryable);
         flinkArtifacts.push(artifact);
       }
@@ -428,11 +431,26 @@ async function loadArtifactsForProviderRegion(
         needMore = false;
       }
     } catch (error) {
-      logger.error(`Error loading Flink artifacts from ${queryable.provider}-${queryable.region}`, {
-        error,
-      });
-      // Re-throw to be handled by executeInWorkerPool
-      throw error;
+      // Handle the specific case where the API returns null data and the OpenAPI client fails to parse it
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Cannot read properties of null (reading 'map')")
+      ) {
+        logger.debug(
+          `No artifacts found for ${queryable.provider}-${queryable.region} (empty response)`,
+        );
+        // Return empty array for this case
+        needMore = false;
+      } else {
+        logger.error(
+          `Error loading Flink artifacts from ${queryable.provider}-${queryable.region}`,
+          {
+            error,
+          },
+        );
+        // Re-throw to be handled by executeInWorkerPool
+        throw error;
+      }
     }
   }
 
