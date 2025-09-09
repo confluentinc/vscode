@@ -1,3 +1,4 @@
+import { ArtifactV1FlinkArtifactMetadataFromJSON } from "../../../src/clients/flinkArtifacts";
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkArtifact } from "../../../src/models/flinkArtifact";
@@ -13,5 +14,15 @@ export function createFlinkArtifact(overrides: Partial<FlinkArtifact> = {}): Fli
     description: overrides.description || "Test artifact description",
     provider: overrides.provider || "aws",
     region: overrides.region || "us-east-1",
+    documentationLink: overrides.documentationLink || "https://confluent.io",
+    metadata:
+      overrides.metadata ||
+      ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
   });
 }

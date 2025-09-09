@@ -1,8 +1,9 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
-import { CustomMarkdownString, IdItem } from "./main";
+import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { CustomMarkdownString, IdItem, KeyValuePair } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 
 export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   connectionId!: ConnectionId;
@@ -18,6 +19,10 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   provider!: string; // cloud
   region!: string;
 
+  metadata: ArtifactV1FlinkArtifactMetadata;
+
+  documentationLink: string;
+
   constructor(
     props: Pick<
       FlinkArtifact,
@@ -29,6 +34,8 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
       | "description"
       | "provider"
       | "region"
+      | "documentationLink"
+      | "metadata"
     >,
   ) {
     this.connectionId = props.connectionId;
@@ -39,10 +46,25 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
     this.description = props.description;
     this.provider = props.provider;
     this.region = props.region;
+    this.documentationLink = props.documentationLink;
+
+    this.metadata = props.metadata;
   }
 
   searchableText(): string {
     return `${this.name} ${this.description}`;
+  }
+
+  get ccloudUrl(): string {
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/artifacts/flink?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  get createdAt(): Date | undefined {
+    return this.metadata?.created_at;
+  }
+
+  get updatedAt(): Date | undefined {
+    return this.metadata?.updated_at;
   }
 }
 
@@ -66,7 +88,24 @@ export class FlinkArtifactTreeItem extends TreeItem {
 }
 
 export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkdownString {
-  return CustomMarkdownString.resourceTooltip(resource.name, IconNames.FLINK_ARTIFACT, undefined, [
-    ["Description: ", resource.description],
-  ]);
+  let documentationLabel: KeyValuePair;
+  if (resource.documentationLink === undefined || resource.documentationLink === "") {
+    // Change to "Add documentation link" when we that command is implemented
+    documentationLabel = ["No documentation link", ""];
+  } else {
+    documentationLabel = ["See Documentation", resource.documentationLink];
+  }
+
+  return CustomMarkdownString.resourceTooltip(
+    "Flink Artifact",
+    IconNames.FLINK_ARTIFACT,
+    resource.ccloudUrl,
+    [
+      ["ID", resource.id],
+      ["Description", resource.description],
+      ["Created At", resource.createdAt?.toLocaleString()],
+      ["Updated At", resource.updatedAt?.toLocaleString()],
+    ],
+    documentationLabel,
+  );
 }

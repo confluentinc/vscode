@@ -87,6 +87,7 @@ export class CustomMarkdownString extends vscode.MarkdownString {
    * @param iconName Icon to use beside title, if any.
    * @param keyValuePairs attribute name + from-resource-value pairs. Any undefined value will be skipped.
    * @param ccloudUrl Optional URL to view this resource in Confluent Cloud.
+   * @param linkUrl Optional link label + URL pair to add a custom link at the bottom of the tooltip.
    * @returns
    */
   static resourceTooltip(
@@ -94,6 +95,7 @@ export class CustomMarkdownString extends vscode.MarkdownString {
     iconName: IconNames | undefined,
     ccloudUrl: string | undefined,
     keyValuePairs: KeyValuePairArray,
+    label?: KeyValuePair,
   ): CustomMarkdownString {
     const tooltip = new CustomMarkdownString();
 
@@ -111,6 +113,10 @@ export class CustomMarkdownString extends vscode.MarkdownString {
       }
       tooltip.appendMarkdown(`\n\n${key}: \`${value}\``);
     });
+
+    if (label) {
+      tooltip.appendMarkdown(`\n\n[${label[0]}](${label[1]})`);
+    }
 
     if (ccloudUrl) {
       // Ensure URL is vaguely valid
