@@ -24,6 +24,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
+import { LocalMedusa } from "./medusa";
 import {
   ConnectionId,
   connectionIdToType,
@@ -304,8 +305,9 @@ export class LocalEnvironment extends Environment {
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
   schemaRegistry?: LocalSchemaRegistry;
+  medusa?: LocalMedusa;
 
-  constructor(props: Pick<LocalEnvironment, "id" | "kafkaClusters" | "schemaRegistry">) {
+  constructor(props: Pick<LocalEnvironment, "id" | "kafkaClusters" | "schemaRegistry" | "medusa">) {
     super();
     this.id = props.id;
     this.kafkaClusters = props.kafkaClusters.map((cluster) =>
@@ -321,6 +323,18 @@ export class LocalEnvironment extends Environment {
           ? props.schemaRegistry
           : LocalSchemaRegistry.create(props.schemaRegistry);
     }
+    // Promote the medusa to a LocalMedusa instance if needed.
+    // If no medusa was provided, set it to undefined.
+    if (!props.medusa) {
+      this.medusa = undefined;
+    } else {
+      this.medusa =
+        props.medusa instanceof LocalMedusa ? props.medusa : LocalMedusa.create(props.medusa);
+    }
+  }
+  update(other: LocalEnvironment): void {
+    super.update(other);
+    this.medusa = other.medusa;
   }
 }
 
