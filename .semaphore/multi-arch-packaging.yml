@@ -16,169 +16,55 @@ queue:
     processing: parallel
 
 global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - . vault-setup
   env_vars:
     - name: NODE_ENV
       value: "production"
 
 blocks:
-  - name: "Package VSIX (MacOS AMD64)"
+  - name: "Package VSIX Files"
     dependencies: []
     task:
-      agent:
-        machine:
-          type: s1-macos-15-amd64-6
-      # Define the task prologue anchor for reuse (except Windows)
-      prologue: &packageVsixTaskPrologue
-        commands:
-          - checkout
-          - make ci-bin-sem-cache-restore
-          - . vault-setup
-          - make download-sidecar-executable
-          - make download-third-party-notices-sidecar || true
-          - make install-dependencies
-      env_vars:
-        # From https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions:
-        # The currently available platforms are: win32-x64, win32-arm64, linux-x64, linux-arm64, linux-armhf,
-        #                                        alpine-x64, alpine-arm64, darwin-x64, darwin-arm64 and web.
-        - name: TARGET
-          value: darwin-x64
-        - name: SIDECAR_OS_ARCH
-          value: macos-amd64
-      # Define the task jobs anchor for reuse (except Windows)
-      jobs: &packageVsixTaskJobs
-        - name: "Package VSIX"
-          commands:
-            - npx gulp bundle
-      # Define the task epilogue anchor for reuse (except Windows)
-      epilogue: &packageVsixTaskEpilogue
-        always:
-          commands:
-            - make ci-bin-sem-cache-store
-        on_pass:
-          commands:
-            - VSIX_FILE=$(find out/ -name "*.vsix")
-            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
-
-  - name: "Package VSIX (MacOS ARM64)"
-    dependencies: []
-    task:
-      agent:
-        machine:
-          type: s1-macos-15-arm64-8
-      env_vars:
-        - name: TARGET
-          value: darwin-arm64
-        - name: SIDECAR_OS_ARCH
-          value: macos-arm64
-      prologue: *packageVsixTaskPrologue
-      jobs: *packageVsixTaskJobs
-      epilogue: *packageVsixTaskEpilogue
-
-  - name: "Package VSIX (Linux AMD64)"
-    dependencies: []
-    task:
-      agent:
-        machine:
-          type: s1-prod-ubuntu24-04-amd64-1
-      env_vars:
-        - name: TARGET
-          value: linux-x64
-        - name: SIDECAR_OS_ARCH
-          value: linux-amd64
-      prologue: *packageVsixTaskPrologue
-      jobs: *packageVsixTaskJobs
-      epilogue: *packageVsixTaskEpilogue
-
-  - name: "Package VSIX (Linux ARM64)"
-    dependencies: []
-    task:
-      agent:
-        machine:
-          type: s1-prod-ubuntu24-04-arm64-1
-      env_vars:
-        - name: TARGET
-          value: linux-arm64
-        - name: SIDECAR_OS_ARCH
-          value: linux-arm64
-      prologue: *packageVsixTaskPrologue
-      jobs: *packageVsixTaskJobs
-      epilogue: *packageVsixTaskEpilogue
-
-  - name: "Package VSIX (Windows AMD64)"
-    dependencies: []
-    task:
-      agent:
-        machine:
-          type: s1-prod-windows
-      env_vars:
-        - name: TARGET
-          value: win32-x64
-        - name: WINDOWS
-          value: "true"
       prologue:
         commands:
-          - checkout
-          - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
-          - $Env:PATH += ";C:\Program Files\Git\bin"
-          - $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
-          - vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
-          # Ensure npm and npx are available
-          - npm --version
-          - npx --version
-          - choco install gh -y
-          - $Env:PATH += ";C:\Program Files\GitHub CLI\"
-          - gh --version
-          - |
-            if (Test-Path "$HOME/.gh-token") {
-              $Env:GH_TOKEN = Get-Content "$HOME/.gh-token" -Raw | ForEach-Object { $_.Trim() }
-              if ([string]::IsNullOrEmpty($Env:GH_TOKEN)) {
-                  Write-Error "Token file exists but is empty"
-                  exit 1
-              }
-              gh config set prompt disabled
-              $Env:GH_TOKEN | gh auth login --with-token
-              gh auth status
-            } else {
-                Write-Error "Token file not found at $HOME/.gh-token"
-                exit 1
-            }
-          - npm ci --include=dev
+          - make install-dependencies
       jobs:
-        - name: "Package VSIX"
+        - name: "Package VSIX Files"
+          matrix:
+            - env_var: TARGET
+              values:
+                - darwin-x64
+                - darwin-arm64
+                - linux-x64
+                - linux-arm64
+                - win32-x64
           commands:
-            # Download ide-sidecar third party notices to include in the VSIX
             - |
-              $IDE_SIDECAR_VERSION = Get-Content .versions/ide-sidecar.txt
-              gh release download $IDE_SIDECAR_VERSION --repo confluentinc/ide-sidecar --pattern=THIRD_PARTY_NOTICES.txt --output THIRD_PARTY_NOTICES_IDE_SIDECAR.txt --clobber
-            # Build the VSIX
+              case "$TARGET" in
+                darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
+                darwin-arm64) export SIDECAR_OS_ARCH=macos-arm64 ;;
+                linux-x64)   export SIDECAR_OS_ARCH=linux-amd64 ;;
+                linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
+                win32-x64)   export SIDECAR_OS_ARCH=windows-x64 ;;
+                *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
+              esac
+            - make download-sidecar-executable
+            - make download-third-party-notices-sidecar || true
             - npx gulp bundle
-      epilogue:
-        always:
-          commands:
-            - make ci-bin-sem-cache-store
-        on_pass:
-          commands:
-            # Single multi-line command because Powershell won't track $vsix between commands
-            - |
-              $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
-              artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
+            - VSIX_FILE=$(find out/ -name "*.vsix")
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
 
   - name: "Upload VSIX files to GitHub"
     run:
       when: "branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     dependencies:
-      - "Package VSIX (MacOS AMD64)"
-      - "Package VSIX (MacOS ARM64)"
-      - "Package VSIX (Linux AMD64)"
-      - "Package VSIX (Linux ARM64)"
-      - "Package VSIX (Windows AMD64)"
+      - "Package VSIX Files"
     task:
-      prologue:
-        commands:
-          - checkout
-          - . vault-setup
-          - artifact pull workflow packaged-vsix-files/
       jobs:
         - name: "Upload VSIX files to GitHub"
           commands:
+            - artifact pull workflow packaged-vsix-files/
             - make upload-vsix-files-to-gh-releases

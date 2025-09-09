@@ -540,4 +540,40 @@ describe("FlinkStatementsViewProvider", () => {
       });
     });
   });
+
+  describe("updateTreeViewDescription()", () => {
+    beforeEach(() => {
+      // start each test with no selection, as users would initially see
+      viewProvider["resource"] = null;
+      viewProvider["treeView"].description = "";
+    });
+
+    it("handles initial state with no resource focused", async () => {
+      await viewProvider.updateTreeViewDescription();
+
+      assert.strictEqual(viewProvider["treeView"].description, "");
+    });
+
+    it("updates to FCP description when user selects a compute pool", async () => {
+      viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      await viewProvider.updateTreeViewDescription();
+
+      assert.strictEqual(
+        viewProvider["treeView"].description,
+        `FCP: ${TEST_CCLOUD_FLINK_COMPUTE_POOL.name} | ${TEST_CCLOUD_FLINK_COMPUTE_POOL.id}`,
+      );
+    });
+
+    it("updates to Env description when user selects an environment", async () => {
+      viewProvider["resource"] = TEST_CCLOUD_ENVIRONMENT;
+
+      await viewProvider.updateTreeViewDescription();
+
+      assert.strictEqual(
+        viewProvider["treeView"].description,
+        `ENV: ${TEST_CCLOUD_ENVIRONMENT.name} | ${TEST_CCLOUD_ENVIRONMENT.id}`,
+      );
+    });
+  });
 });

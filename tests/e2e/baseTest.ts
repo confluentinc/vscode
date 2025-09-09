@@ -5,7 +5,9 @@ import {
   test as testBase,
 } from "@playwright/test";
 import { downloadAndUnzipVSCode } from "@vscode/test-electron";
+import { stubAllDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
+import { unlink } from "fs/promises";
 import { globSync } from "glob";
 import { tmpdir } from "os";
 import path from "path";
@@ -33,14 +35,8 @@ export const test = testBase.extend<VSCodeFixture>({
 
     // locate the VS Code executable path based on the platform
     let executablePath: string;
-    if (process.platform === "darwin") {
-      // on macOS, the install path is already the full path to the executable
+    if (["win32", "darwin"].includes(process.platform)) {
       executablePath = vscodeInstallPath;
-    } else if (process.platform === "win32") {
-      executablePath = path.join(
-        vscodeInstallPath,
-        vscodeVersion === "insiders" ? "Code - Insiders.exe" : "Code.exe",
-      );
     } else {
       // may be in the install path or in the root directory; need to see which one exists and
       // is executable
@@ -51,11 +47,12 @@ export const test = testBase.extend<VSCodeFixture>({
         ? directExecutable
         : rootExecutable;
     }
+    console.log(`${process.platform} VS Code executable path:`, executablePath);
 
-    const extensionPath: string = path.resolve(__dirname, "..", "..");
-    const outPath: string = path.resolve(extensionPath, "out");
-    const vsixFiles: string[] = globSync(path.resolve(outPath, "*.vsix"));
-    const vsixPath = vsixFiles[0];
+    const extensionPath: string = path.normalize(path.resolve(__dirname, "..", ".."));
+    const outPath: string = path.normalize(path.resolve(extensionPath, "out"));
+    const vsixFiles: string[] = globSync("*.vsix", { cwd: outPath });
+    const vsixPath = vsixFiles.length > 0 ? path.join(outPath, vsixFiles[0]) : undefined;
     if (!vsixPath) {
       // shouldn't happen during normal `gulp e2e`
       throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
@@ -73,23 +70,36 @@ export const test = testBase.extend<VSCodeFixture>({
       args: [
         // same as the Mocha test args in Gulpfile.js:
         "--no-sandbox",
-        "--profile-temp",
         "--skip-release-notes",
         "--skip-welcome",
         "--disable-gpu",
         "--disable-updates",
         "--disable-workspace-trust",
         "--disable-extensions",
-        // additional args needed for the Electron launch:
+        // required to prevent test resources being saved to user's real profile
         `--user-data-dir=${tempDir}`,
+        // additional args needed for the Electron launch:
         `--extensionDevelopmentPath=${outPath}`,
-        "--new-window",
       ],
     });
 
     if (!electronApp) {
       throw new Error("Failed to launch VS Code electron app");
     }
+
+    // wait for VS Code to be ready before trying to stub dialogs
+    const page = await electronApp.firstWindow();
+    if (!page) {
+      // usually this means the launch args were incorrect and/or the app didn't start correctly
+      throw new Error("Failed to get first window from VS Code");
+    }
+    await page.waitForLoadState("domcontentloaded");
+    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
+
+    // Stub all dialogs by default; tests can still override as needed.
+    // For available `method` values to use with `stubMultipleDialogs`, see:
+    // https://www.electronjs.org/docs/latest/api/dialog
+    await stubAllDialogs(electronApp);
 
     // on*, retain-on*
     if (trace.toString().includes("on")) {
@@ -130,13 +140,33 @@ export const test = testBase.extend<VSCodeFixture>({
 
     const page = await electronApp.firstWindow();
     if (!page) {
-      // usually this means the launch args were incorrect and/or the app didn't start correctly
+      // shouldn't happen since we waited for the workbench above
       throw new Error("Failed to get first window from VS Code");
     }
 
-    // wait for VS Code to be ready
-    await page.waitForLoadState("domcontentloaded");
-    await page.locator(".monaco-workbench").waitFor({ timeout: 30000 });
     await use(page);
   },
 });
+
+export const CCLOUD_SIGNIN_URL_PATH = path.join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
+
+/** E2E global beforeAll hook */
+test.beforeAll(async () => {});
+
+/** E2E global beforeEach hook */
+test.beforeEach(async () => {
+  // reset the CCloud sign-in file before each test so we don't accidentally get a stale URL
+  try {
+    await unlink(CCLOUD_SIGNIN_URL_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Error deleting CCloud sign-in URL file:", error);
+    }
+  }
+});
+
+/** E2E global afterEach hook */
+test.afterEach(async () => {});
+
+/** E2E global afterAll hook */
+test.afterAll(async () => {});
