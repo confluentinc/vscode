@@ -2,10 +2,7 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
-import {
-  currentFlinkDatabaseChanged as flinkDatabaseViewResourceChanged,
-  topicsViewResourceChanged,
-} from "../emitters";
+import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
@@ -44,15 +41,15 @@ export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster
 }
 
 /** Pick a Flinkable Kafka Cluster as the one to examine in the Flink Database view */
-async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaCluster) {
+export async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaCluster) {
   // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
   const flinkDatabase: CCloudKafkaCluster | undefined =
     cluster instanceof CCloudKafkaCluster && cluster.isFlinkable
       ? cluster
-      : ((await flinkDatabaseQuickpick(
+      : await flinkDatabaseQuickpick(
           undefined, // do not limit to a specific compute pool
           "Select a Flink Database (a Flink-enabled Kafka cluster)",
-        )) as CCloudKafkaCluster | undefined);
+        );
 
   if (!flinkDatabase) {
     return;

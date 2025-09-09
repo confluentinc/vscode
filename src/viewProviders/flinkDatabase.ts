@@ -3,8 +3,8 @@ import { ContextValues } from "../context/values";
 import {
   artifactUploadCompleted,
   artifactUploadDeleted,
-  currentFlinkDatabaseChanged,
   flinkDatabaseViewMode,
+  flinkDatabaseViewResourceChanged,
 } from "../emitters";
 import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
@@ -32,7 +32,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 > {
   viewId = "confluent-flink-database";
 
-  parentResourceChangedEmitter = currentFlinkDatabaseChanged;
+  parentResourceChangedEmitter = flinkDatabaseViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
 
   children: ArtifactOrUdf[] = [];

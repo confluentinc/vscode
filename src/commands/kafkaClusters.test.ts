@@ -2,24 +2,27 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
-import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
+import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+} from "../../tests/unit/testResources/kafkaCluster";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
-import { copyBootstrapServers, selectTopicsViewKafkaClusterCommand } from "./kafkaClusters";
+import {
+  copyBootstrapServers,
+  selectFlinkDatabaseViewKafkaClusterCommand,
+  selectTopicsViewKafkaClusterCommand,
+} from "./kafkaClusters";
 
 describe("kafkaClusters.ts", () => {
   let sandbox: sinon.SinonSandbox;
-  let kafkaClusterQuickPickWithViewProgressStub: sinon.SinonStub;
   let emitterStubs: StubbedEventEmitters;
+  let executeCommandStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    kafkaClusterQuickPickWithViewProgressStub = sandbox.stub(
-      kafkaClusterQuickpicks,
-      "kafkaClusterQuickPickWithViewProgress",
-    );
     emitterStubs = eventEmitterStubs(sandbox);
+    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
   });
 
   afterEach(() => {
@@ -28,11 +31,14 @@ describe("kafkaClusters.ts", () => {
 
   describe("selectTopicsViewKafkaClusterCommand", () => {
     let topicsViewResourceChangedFireStub: sinon.SinonStub;
-    let executeCommandStub: sinon.SinonStub;
+    let kafkaClusterQuickPickWithViewProgressStub: sinon.SinonStub;
 
     beforeEach(() => {
+      kafkaClusterQuickPickWithViewProgressStub = sandbox.stub(
+        kafkaClusterQuickpicks,
+        "kafkaClusterQuickPickWithViewProgress",
+      );
       topicsViewResourceChangedFireStub = emitterStubs.topicsViewResourceChanged!.fire;
-      executeCommandStub = sandbox.stub(vscode.commands, "executeCommand");
     });
 
     it("if no cluster provided and user cancels quick pick, should do nothing", async () => {
@@ -72,6 +78,69 @@ describe("kafkaClusters.ts", () => {
       sinon.assert.calledOnce(kafkaClusterQuickPickWithViewProgressStub);
       sinon.assert.calledOnceWithExactly(topicsViewResourceChangedFireStub, testCluster);
       sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent-topics.focus");
+    });
+  });
+
+  describe("selectFlinkDatabaseViewKafkaClusterCommand", () => {
+    let flinkDatabaseViewResourceChangedFireStub: sinon.SinonStub;
+    let flinkDatabaseQuickpickStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      flinkDatabaseQuickpickStub = sandbox.stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick");
+      flinkDatabaseViewResourceChangedFireStub =
+        emitterStubs.flinkDatabaseViewResourceChanged!.fire;
+    });
+
+    it("if no cluster provided and user cancels quick pick, should do nothing", async () => {
+      flinkDatabaseQuickpickStub.resolves(undefined);
+
+      await selectFlinkDatabaseViewKafkaClusterCommand();
+      sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
+      sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
+      sinon.assert.notCalled(executeCommandStub);
+    });
+
+    it("should use the provided cluster if valid", async () => {
+      const testCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+        id: "cluster-123",
+      });
+
+      await selectFlinkDatabaseViewKafkaClusterCommand(testCluster);
+      // skips call to kafkaClusterQuickPickWithViewProgress
+
+      sinon.assert.notCalled(flinkDatabaseQuickpickStub);
+      sinon.assert.calledOnceWithExactly(flinkDatabaseViewResourceChangedFireStub, testCluster);
+      sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent-flink-database.focus");
+    });
+
+    it("will call quickpick if somehow provided cluster is not Flinkable", async () => {
+      const nonFlinkableCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        id: "cluster-789",
+      });
+
+      flinkDatabaseQuickpickStub.resolves(undefined); // user cancels
+
+      await selectFlinkDatabaseViewKafkaClusterCommand(nonFlinkableCluster);
+      // skips call to kafkaClusterQuickPickWithViewProgress
+
+      sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
+      sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
+      sinon.assert.notCalled(executeCommandStub);
+    });
+
+    it("should use the selected cluster from quick pick if none provided", async () => {
+      const testCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+        id: "cluster-456",
+      });
+      flinkDatabaseQuickpickStub.resolves(testCluster);
+
+      await selectFlinkDatabaseViewKafkaClusterCommand();
+      sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
+      sinon.assert.calledOnceWithExactly(flinkDatabaseViewResourceChangedFireStub, testCluster);
+      sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent-flink-database.focus");
     });
   });
 

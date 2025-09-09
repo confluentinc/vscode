@@ -119,7 +119,8 @@ export const currentFlinkArtifactsDatabaseChanged =
   new vscode.EventEmitter<CCloudKafkaCluster | null>();
 
 /** Likewise, but for the currently chosen Flink Database (a Flinkable CCloud Kafka Cluster) */
-export const currentFlinkDatabaseChanged = new vscode.EventEmitter<CCloudKafkaCluster | null>();
+export const flinkDatabaseViewResourceChanged =
+  new vscode.EventEmitter<CCloudKafkaCluster | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 
