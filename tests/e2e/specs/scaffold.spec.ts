@@ -44,40 +44,42 @@ test.describe("Project Scaffolding", () => {
         page,
         electronApp,
       }) => {
-          // Given we navigate to the Support view and start the generate project flow
-          const supportView = new SupportView(page);
-          await (await supportView.body.getByText("Generate Project from Template")).click();
-          // and we choose a project template
-          const projectTemplateInput = await page.getByPlaceholder("Select a project template");
-          await expect(projectTemplateInput).toBeVisible();
-          await projectTemplateInput.fill(templateName);
-          await projectTemplateInput.click();
-          await pressKey(page, "Enter");
-          // and we provide a simple example configuration and submit the form
-          const scaffoldForm = new ProjectScaffoldWebview(page);
-          await (await scaffoldForm.bootstrapServersField).fill("localhost:9092");
-          await scaffoldForm.submitForm();
-          // and we store the generated project in a temporary directory
-          const tmpProjectDir = mkdtempSync(path.join(tmpdir(), "vscode-test-scaffold-"));
-          await stubMultipleDialogs(electronApp, [
-            {
-              method: "showOpenDialog",
-              value: {
-                filePaths: [tmpProjectDir]
-              },
+        // Stub the showOpen dialog
+        // Will lead to the generated project being stored in a temp directory
+        const tmpProjectDir = mkdtempSync(path.join(tmpdir(), "vscode-test-scaffold-"));
+        await stubMultipleDialogs(electronApp, [
+          {
+            method: "showOpenDialog",
+            value: {
+              filePaths: [tmpProjectDir]
             },
-          ]);
+          },
+        ]);
+        
+        // Given we navigate to the Support view and start the generate project flow
+        const supportView = new SupportView(page);
+        await (await supportView.body.getByText("Generate Project from Template")).click();
+        // and we choose a project template
+        const projectTemplateInput = await page.getByPlaceholder("Select a project template");
+        await expect(projectTemplateInput).toBeVisible();
+        await projectTemplateInput.fill(templateName);
+        await projectTemplateInput.click();
+        await pressKey(page, "Enter");
+        // and we provide a simple example configuration and submit the form
+        const scaffoldForm = new ProjectScaffoldWebview(page);
+        await (await scaffoldForm.bootstrapServersField).fill("localhost:9092");
+        await scaffoldForm.submitForm();
 
-          // When we open the generated project (the dialog stub is still in effect here)
-          await pressKey(page, "ControlOrMeta+O");
-          // and we open the configuration file `.env`
-          await (await page.getByText(projectDirName)).click();
-          await (await page.getByText(".env")).click();
+        // When we open the generated project (the dialog stub is still in effect here)
+        await pressKey(page, "ControlOrMeta+O");
+        // and we open the configuration file `.env`
+        await (await page.getByText(projectDirName)).click();
+        await (await page.getByText(".env")).click();
 
-          // Then we should see the generated configuration
-          await expect(await page.getByText(/CC_BOOTSTRAP_SERVER\s*=\s*"localhost:9092"/)).toBeVisible();
-          // and we should see a client.id starting with the expected prefix
-          await expect(await page.getByText(/CLIENT_ID\s*=\s*"vscode-/)).toBeVisible();
+        // Then we should see the generated configuration
+        await expect(await page.getByText(/CC_BOOTSTRAP_SERVER\s*=\s*"localhost:9092"/)).toBeVisible();
+        // and we should see a client.id starting with the expected prefix
+        await expect(await page.getByText(/CLIENT_ID\s*=\s*"vscode-/)).toBeVisible();
       });
     }
   });
