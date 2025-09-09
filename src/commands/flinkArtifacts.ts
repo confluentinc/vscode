@@ -5,7 +5,7 @@ import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkArtifactUDFViewMode } from "../emitters";
-import { isResponseError, logError } from "../errors";
+import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import {
   showErrorNotificationWithButtons,
@@ -69,21 +69,16 @@ export async function uploadArtifactCommand(): Promise<void> {
     let showNotificationMessage = "Failed to upload artifact. Please check logs for details.";
     if (isResponseError(err)) {
       try {
-        const respJson = await err.response.clone().json();
-        if (respJson.errors && Array.isArray(respJson.errors) && respJson.errors[0]?.detail) {
-          showNotificationMessage = respJson.errors[0].detail;
-        } else if (respJson.message) {
-          showNotificationMessage = respJson.message;
-        } else if (respJson.error?.message) {
-          showNotificationMessage = respJson.error.message;
-        } else {
-          showNotificationMessage = JSON.stringify(respJson);
-        }
+        const resp = await extractResponseBody(err);
+        const msg =
+          resp?.errors?.[0]?.detail ??
+          resp?.message ??
+          resp?.error?.message ??
+          (typeof resp === "string" ? resp : JSON.stringify(resp));
+        showNotificationMessage = msg || showNotificationMessage;
         logErrMessage = showNotificationMessage;
       } catch {
-        const errBody = await err.response.clone().text();
-        showNotificationMessage = errBody || showNotificationMessage;
-        logErrMessage = showNotificationMessage;
+        // fallback to default messages
       }
     } else if (err instanceof Error && err.message) {
       showNotificationMessage = err.message;
