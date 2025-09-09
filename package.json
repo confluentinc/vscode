@@ -1605,12 +1605,12 @@
         },
         {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable && confluent.localMedusaAvailable)",
           "group": "inline"
         },
         {
           "command": "confluent.docker.stopLocalResources",
-          "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
+          "when": "view == confluent-resources && viewItem == local-container-connected",
           "group": "inline"
         },
         {
