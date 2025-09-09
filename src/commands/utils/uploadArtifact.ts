@@ -7,7 +7,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactUploadCompleted } from "../../emitters";
-import { isResponseError, logError } from "../../errors";
+import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
@@ -259,28 +259,10 @@ export async function uploadArtifactToCCloud(
 
     return response;
   } catch (error) {
-    let userMessage = "Failed to create Flink artifact. See logs for details.";
     let extra: Record<string, unknown> = {
       cloud: params.cloud,
       region: params.region,
     };
-    if (isResponseError(error)) {
-      let errBody: string | undefined;
-      try {
-        const respJson = await error.response.clone().json();
-        if (respJson.errors && Array.isArray(respJson.errors) && respJson.errors[0]?.detail) {
-          userMessage = respJson.errors[0].detail;
-        } else if (respJson.message) {
-          userMessage = respJson.message;
-        } else {
-          userMessage = JSON.stringify(respJson);
-        }
-      } catch {
-        errBody = await error.response.clone().text();
-        userMessage = errBody || userMessage;
-      }
-    }
-    void showErrorNotificationWithButtons(`Failed to create Flink artifact: ${userMessage}`);
     logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
     throw error;
   }
