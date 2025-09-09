@@ -84,16 +84,18 @@ async function resourceScaffoldProjectRequest(
       },
       "topic",
     );
-  } else if (item instanceof CCloudFlinkComputePool) {
+    // TODO temporarily using "undefined" to signal call from Artifacts header, which only gives Table API examples
+    // Need to decide whether to make a new command for generating Artifacts specifically
+  } else if (item instanceof CCloudFlinkComputePool || item === undefined) {
     const organization: CCloudOrganization | undefined =
       await CCloudResourceLoader.getInstance().getOrganization();
     return await scaffoldProjectRequest(
       {
-        cc_environment_id: item.environmentId,
+        cc_environment_id: item?.environmentId,
         cc_organization_id: organization?.id,
-        cloud_region: item.region,
-        cloud_provider: item.provider,
-        cc_compute_pool_id: item.id,
+        cloud_region: item?.region,
+        cloud_provider: item?.provider,
+        cc_compute_pool_id: item?.id,
         templateType: "flink",
       },
       "compute pool",
