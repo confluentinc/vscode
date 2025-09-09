@@ -111,14 +111,11 @@ export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegist
 export const currentFlinkStatementsResourceChanged = new vscode.EventEmitter<
   CCloudFlinkComputePool | CCloudEnvironment | null
 >();
-/**
- * Fired whenever a Flink compute pool is selected from the Resources view or
- * command palette, or cleared out from a connection (or CCloud organization) change.
- */
-export const currentFlinkArtifactsDatabaseChanged =
-  new vscode.EventEmitter<CCloudKafkaCluster | null>();
 
-/** Likewise, but for the currently chosen Flink Database (a Flinkable CCloud Kafka Cluster) */
+/**
+ * Fired when Flink Database (a Flinkable CCloud Kafka Cluster) focus for the
+ * Flink Database view changes.
+ */
 export const flinkDatabaseViewResourceChanged =
   new vscode.EventEmitter<CCloudKafkaCluster | null>();
 
