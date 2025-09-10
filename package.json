@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-17",
+  "version": "1.7.0-20",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -399,12 +399,6 @@
         "icon": "$(sync)",
         "title": "Refresh Connection",
         "category": "Confluent: Resources"
-      },
-      {
-        "command": "confluent.kafka-clusters.item.rename",
-        "icon": "$(pencil)",
-        "title": "Rename Kafka Cluster",
-        "category": "Confluent: Kafka Clusters"
       },
       {
         "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
@@ -1255,10 +1249,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.kafka-clusters.item.rename",
-          "when": "false"
-        },
-        {
           "command": "confluent.resources.refreshConnection",
           "when": "false"
         },
@@ -1622,11 +1612,6 @@
           "command": "confluent.diff.compareWithSelected",
           "when": "confluent.resourceSelectedForCompare && (view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "3_compare"
-        },
-        {
-          "command": "confluent.kafka-clusters.item.rename",
-          "when": "false",
-          "group": "inline@2"
         },
         {
           "command": "confluent.connections.ccloud.signIn",
