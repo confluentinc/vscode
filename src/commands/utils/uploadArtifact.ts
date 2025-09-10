@@ -7,7 +7,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactUploadCompleted } from "../../emitters";
-import { isResponseError, logError } from "../../errors";
+import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
@@ -191,7 +191,6 @@ export async function handleUploadToCloudProvider(
           progress.report({ message: "Uploading to AWS storage..." });
           logger.debug("Uploading to AWS storage");
 
-          // build required form data for api request
           const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
 
           if (!uploadFormData) {
@@ -246,7 +245,7 @@ export async function uploadArtifactToCCloud(
     const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
 
     const response = await artifactsClient.createArtifactV1FlinkArtifact({
-      CreateArtifactV1FlinkArtifactRequest: createRequest,
+      CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(params, uploadId),
       cloud: params.cloud,
       region: params.region,
     });
@@ -260,31 +259,11 @@ export async function uploadArtifactToCCloud(
 
     return response;
   } catch (error) {
-    let userMessage = "Failed to create Flink artifact. See logs for details.";
     let extra: Record<string, unknown> = {
       cloud: params.cloud,
       region: params.region,
     };
-
-    if (isResponseError(error)) {
-      let errBody: string | undefined;
-      try {
-        const respJson = await error.response.clone().json();
-        if (respJson && typeof respJson === "object" && respJson.message) {
-          errBody = respJson.message;
-        }
-      } catch {
-        errBody = await error.response.clone().text();
-      }
-      if (errBody !== undefined) {
-        userMessage = `Failed to create Flink artifact: ${errBody}`;
-      }
-    }
-    void showErrorNotificationWithButtons(userMessage);
     logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-    if (error && typeof error === "object" && "message" in error) {
-      (error as { message: string }).message = userMessage;
-    }
     throw error;
   }
 }
