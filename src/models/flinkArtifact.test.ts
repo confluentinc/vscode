@@ -1,28 +1,34 @@
 import assert from "assert";
 import { describe, it } from "mocha";
-import { ConnectionType } from "../clients/sidecar/models/ConnectionType";
-import { createFlinkArtifactToolTip, FlinkArtifact } from "./flinkArtifact";
-import { ConnectionId, EnvironmentId } from "./resource";
+import {
+  createFlinkArtifact,
+  TEST_CCLOUD_FLINK_ARTIFACT,
+} from "../../tests/unit/testResources/flinkArtifact";
+import { createFlinkArtifactToolTip, FlinkArtifactTreeItem } from "./flinkArtifact";
 
 describe("FlinkArtifactTreeItem", () => {
+  it("should have the correct context value", () => {
+    const treeItem = new FlinkArtifactTreeItem(TEST_CCLOUD_FLINK_ARTIFACT);
+    assert.strictEqual(treeItem.contextValue, "ccloud-flink-artifact");
+  });
+
   describe("createFlinkArtifactToolTip", () => {
     it("should return a CustomMarkdownString with all artifact details", () => {
-      const artifact = new FlinkArtifact({
-        connectionId: "conn-2" as ConnectionId,
-        connectionType: ConnectionType.Ccloud,
-        environmentId: "env-2" as EnvironmentId,
-        id: "artifact-2",
-        name: "Another Artifact",
-        description: "Another description.",
-        provider: "Azure",
-        region: "australiaeast",
-      });
-
+      const artifact = createFlinkArtifact({ documentationLink: "https://confluent.io" });
       const tooltip = createFlinkArtifactToolTip(artifact);
       const tooltipValue = tooltip.value;
 
       assert.strictEqual(typeof tooltipValue, "string");
-      assert.match(tooltipValue, /Description: : `Another description\.`/);
+      assert.match(tooltipValue, /Description: `Test artifact description`/);
+      assert.match(tooltipValue, /\[See Documentation\]\(https:\/\/confluent\.io\)/);
+    });
+
+    it("should return a CustomMarkdownString with no documentation link", () => {
+      const tooltip = createFlinkArtifactToolTip(TEST_CCLOUD_FLINK_ARTIFACT);
+      const tooltipValue = tooltip.value;
+
+      assert.strictEqual(typeof tooltipValue, "string");
+      assert.match(tooltipValue, /\[No documentation link\]\(\)/);
     });
   });
 });
