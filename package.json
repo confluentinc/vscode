@@ -408,7 +408,7 @@
       {
         "command": "confluent.topics.kafka-cluster.select",
         "icon": "$(confluent-kafka-cluster)",
-        "title": "Select Kafka Cluster",
+        "title": "Select Kafka Cluster for Topics View",
         "category": "Confluent: Resources"
       },
       {
