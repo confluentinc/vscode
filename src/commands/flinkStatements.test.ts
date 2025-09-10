@@ -73,8 +73,6 @@ describe("commands/flinkStatements.ts", () => {
 
       await viewStatementSqlCommand(statement);
 
-      sinon.assert.calledOnce(stubbedLoader.getEnvironments);
-
       sinon.assert.calledOnce(stubbedLoader.getFlinkComputePool);
       sinon.assert.calledWithExactly(stubbedLoader.getFlinkComputePool, statement.computePoolId!);
 
@@ -86,7 +84,6 @@ describe("commands/flinkStatements.ts", () => {
           [UriMetadataKeys.FLINK_CATALOG_NAME]: statement.catalog,
           [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
         },
-        [testEnv],
         testPool,
       );
 
