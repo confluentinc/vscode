@@ -112,17 +112,26 @@ describe("uploadToProvider", () => {
 
       const response = await uploadFileToS3(mockParams);
 
-      // check that the form data is correct
-      const expectedFormDataKeys = [...Object.keys(mockParams.uploadFormData), "file"];
+      // check the request was made with correct parameters
       sinon.assert.calledWith(
         fetchStub,
         mockParams.presignedUrl,
         sinon.match({
           method: "POST",
           body: sinon.match((value) => {
-            if (!(value instanceof FormData)) return false;
-            const formDataKeys = Array.from(value.keys());
-            return expectedFormDataKeys.every((key) => formDataKeys.includes(key));
+            const bodyString = new TextDecoder().decode(value);
+            // check that all form data fields are present
+            const hasAllFormFields = Object.keys(mockParams.uploadFormData).every(
+              (key) =>
+                bodyString.includes(`name="${key}"`) &&
+                bodyString.includes(mockParams.uploadFormData[key]),
+            );
+            // check that file field is present
+            const hasFileField =
+              bodyString.includes('name="file"') &&
+              bodyString.includes("Content-Type: application/java-archive") &&
+              bodyString.includes("test content");
+            return hasAllFormFields && hasFileField;
           }),
         }),
       );
