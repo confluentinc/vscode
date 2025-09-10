@@ -763,13 +763,13 @@
         "command": "confluent.flinkdatabase.setUDFsViewMode",
         "title": "Switch to Flink UDFs",
         "icon": "$(code)",
-        "category": "Confluent: Flink Artifacts/UDFs View"
+        "category": "Confluent: Flink Database View"
       },
       {
         "command": "confluent.flinkdatabase.setArtifactsViewMode",
         "title": "Switch to Flink Artifacts",
         "icon": "$(folder-library)",
-        "category": "Confluent: Flink Artifacts/UDFs View"
+        "category": "Confluent: Flink Database View"
       }
     ],
     "configuration": [
@@ -1720,7 +1720,7 @@
         },
         {
           "command": "confluent.topics.create",
-          "when": "view == confluent-resources && (viewItem =~ /ccloud.*kafka-cluster/ || viewItem == local-kafka-cluster)",
+          "when": "view == confluent-resources && viewItem =~ /.*kafka-cluster.*/",
           "group": "3_topics"
         },
         {

@@ -314,7 +314,7 @@ export function registerKafkaClusterCommands(): vscode.Disposable[] {
       "confluent.topics.kafka-cluster.select",
       selectTopicsViewKafkaClusterCommand,
     ),
-    // Picked a Flink Database (a Flinkable CCloud Kafka cluster) from the Artifacts/UDFs view title
+    // Picked a Flink Database (a Flinkable CCloud Kafka cluster) from the Flink Database view title
     // or from context menu item in resources view.
     registerCommandWithLogging(
       "confluent.flinkdatabase.kafka-cluster.select",

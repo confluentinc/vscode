@@ -14,7 +14,7 @@ import {
   selectTopicsViewKafkaClusterCommand,
 } from "./kafkaClusters";
 
-describe("kafkaClusters.ts", () => {
+describe("commands/kafkaClusters.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let emitterStubs: StubbedEventEmitters;
   let executeCommandStub: sinon.SinonStub;
