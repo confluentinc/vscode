@@ -18,6 +18,8 @@ import { getContainersForImage } from "../../docker/containers";
 import {
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_MEDUSA_IMAGE_TAG,
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../../extensionSettings/constants";
@@ -139,6 +141,18 @@ export async function getLocalSchemaRegistryContainers(
   return await getLocalResourceContainers(imageRepo, imageTag, options);
 }
 
+/**
+ * Get Medusa containers based on the image name and tag in user/workspace settings.
+ * @param options {@link LocalResourceContainersOptions Options} to filter the containers returned.
+ */
+export async function getLocalMedusaContainers(
+  options: LocalResourceContainersOptions = { onlyExtensionManaged: false },
+): Promise<ContainerSummary[]> {
+  const imageRepo: string = LOCAL_MEDUSA_IMAGE.value;
+  const imageTag: string = LOCAL_MEDUSA_IMAGE_TAG.value;
+  return await getLocalResourceContainers(imageRepo, imageTag, options);
+}
+
 /** Discover any running Schema Registry containers and return the URI to include the REST proxy port. */
 async function discoverSchemaRegistry(): Promise<string | undefined> {
   const dockerAvailable = await isDockerAvailable();
@@ -172,4 +186,35 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   }
   logger.debug("Discovered Schema Registry REST proxy port", { schemaRegistryPort });
   return `http://localhost:${restProxyPort}`;
+}
+
+/** Discover any running Medusa containers and return the URI to include the public port. */
+export async function discoverMedusa(): Promise<string | undefined> {
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    return;
+  }
+
+  const containers: ContainerSummary[] = await getLocalMedusaContainers({
+    onlyExtensionManaged: true,
+    statuses: [ContainerStateStatusEnum.Running],
+  });
+  if (containers.length === 0) {
+    return;
+  }
+  // we only care about the first container
+  const container: ContainerSummary = containers.filter((c) => !!c.Ports)[0];
+  const ports: Port[] = container.Ports?.filter((p) => !!p.PublicPort) || [];
+  if (!ports || ports.length === 0) {
+    logger.debug("No ports found on Medusa container", { container });
+    return;
+  }
+  const medusaPort: Port | undefined = ports.find((p) => !!p.PublicPort);
+  if (!medusaPort) {
+    logger.debug("No PublicPort found on Medusa container", { container });
+    return;
+  }
+
+  logger.debug("Discovered Medusa external port", medusaPort.PublicPort);
+  return `http://localhost:${medusaPort.PublicPort}`;
 }

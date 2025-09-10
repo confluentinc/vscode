@@ -1,6 +1,10 @@
 import { CancellationToken, Progress, ProgressLocation, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
-import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+} from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
@@ -62,6 +66,8 @@ export abstract class LocalResourceWorkflow {
         return LocalResourceWorkflow.getKafkaWorkflow();
       case LocalResourceKind.SchemaRegistry:
         return LocalResourceWorkflow.getSchemaRegistryWorkflow();
+      case LocalResourceKind.Medusa:
+        return LocalResourceWorkflow.getMedusaWorkflow();
       default:
         throw new Error(`No workflow available for resource kind: ${kind}`);
     }
@@ -93,12 +99,27 @@ export abstract class LocalResourceWorkflow {
     return workflow;
   }
 
+  /** Get the Medusa workflow. */
+  public static getMedusaWorkflow(): LocalResourceWorkflow {
+    const imageRepo: string = LOCAL_MEDUSA_IMAGE.value;
+    const workflow: LocalResourceWorkflow | undefined =
+      LocalResourceWorkflow.workflowRegistry.get(imageRepo);
+    if (!workflow) {
+      const errorMsg = `Unsupported Medusa image repo: ${imageRepo}`;
+      window.showErrorMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+    return workflow;
+  }
+
   /** Start the workflow to launch the local resource(s). */
   abstract start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
     ...args: any[]
   ): Promise<void>;
+
+  abstract waitForReadiness(containerId: string): Promise<boolean>;
 
   /**
    * Common flow for attempting to start a container by its Start a specific container for a workflow by its provided ID. If any errors occur, a notification

@@ -10,11 +10,22 @@ import {
   SystemApi,
 } from "../clients/docker";
 import * as contextValues from "../context/values";
-import { localKafkaConnected } from "../emitters";
-import { LOCAL_KAFKA_IMAGE } from "../extensionSettings/constants";
+import {
+  localKafkaConnected,
+  localMedusaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+} from "../extensionSettings/constants";
 import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
 import { EventListener, SystemEventMessage } from "./eventListener";
+import { LocalResourceWorkflow } from "./workflows/base";
+import { ConfluentPlatformSchemaRegistryWorkflow } from "./workflows/cp-schema-registry";
+import { MedusaWorkflow } from "./workflows/medusa";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",
@@ -489,6 +500,81 @@ describe("docker/eventListener.ts EventListener methods", function () {
       ),
     );
     assert.ok(localKafkaConnectedFireStub.calledOnceWith(true));
+  });
+
+  it("handleContainerStartEvent() should set the 'localSchemaRegistryAvailable' context value and cause the 'localSchemaRegistryConnected' event emitter to fire if a container from the Schema Registry image starts successfully", async function () {
+    // stub the waitForContainerState method so we don't actually wait for it to resolve
+    const waitForContainerRunningStub = sandbox
+      .stub(eventListener, "waitForContainerState")
+      .resolves(true);
+    // stub the getWorkflowForKind method to return a mock workflow
+    const getWorkflowForKindStub = sandbox.stub(LocalResourceWorkflow, "getWorkflowForKind");
+    // create a mock workflow with a stubbed waitForReadiness method
+    const waitForReadinessStub = sandbox.stub().resolves(true);
+    const mockWorkflow = {
+      waitForReadiness: waitForReadinessStub,
+    } as unknown as ConfluentPlatformSchemaRegistryWorkflow;
+    getWorkflowForKindStub.returns(mockWorkflow);
+    // stub the setContextValue and localSchemaRegistryConnected.fire methods so we can assert that they're called
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
+    const localSchemaRegistryConnectedFireStub = sandbox.stub(localSchemaRegistryConnected, "fire");
+    // stub updateLocalConnection since we don't care about the actual connection update for this test
+    sandbox.stub(localConnections, "updateLocalConnection").resolves();
+
+    const schemaRegistryEvent: SystemEventMessage = {
+      ...TEST_CONTAINER_EVENT,
+      Actor: { Attributes: { image: LOCAL_SCHEMA_REGISTRY_IMAGE.defaultValue } },
+    };
+
+    await eventListener.handleContainerStartEvent(schemaRegistryEvent);
+
+    assert.ok(waitForContainerRunningStub.calledOnce);
+    // Verify that the workflow's waitForReadiness method was called
+    assert.ok(getWorkflowForKindStub.calledOnce);
+    assert.ok(waitForReadinessStub.calledOnceWith(TEST_CONTAINER_EVENT.id));
+    assert.ok(
+      setContextValueStub.calledOnceWith(
+        contextValues.ContextValues.localSchemaRegistryAvailable,
+        true,
+      ),
+    );
+    assert.ok(localSchemaRegistryConnectedFireStub.calledOnceWith(true));
+  });
+
+  it("handleContainerStartEvent() should set the 'localMedusaAvailable' context value and cause the 'localMedusaConnected' event emitter to fire if a container from the Medusa image starts successfully", async function () {
+    // stub the waitForContainerState method so we don't actually wait for it to resolve
+    const waitForContainerRunningStub = sandbox
+      .stub(eventListener, "waitForContainerState")
+      .resolves(true);
+    // stub the getMedusaWorkflow method to return a mock workflow
+    const getMedusaWorkflowStub = sandbox.stub(LocalResourceWorkflow, "getMedusaWorkflow");
+    // create a mock workflow with a stubbed waitForReadiness method
+    const waitForReadinessStub = sandbox.stub().resolves(true);
+    const mockWorkflow = {
+      waitForReadiness: waitForReadinessStub,
+    } as unknown as MedusaWorkflow;
+    getMedusaWorkflowStub.returns(mockWorkflow);
+    // stub the setContextValue and localMedusaConnected.fire methods so we can assert that they're called
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
+    const localMedusaConnectedFireStub = sandbox.stub(localMedusaConnected, "fire");
+    // stub updateLocalConnection since we don't care about the actual connection update for this test
+    sandbox.stub(localConnections, "updateLocalConnection").resolves();
+
+    const medusaEvent: SystemEventMessage = {
+      ...TEST_CONTAINER_EVENT,
+      Actor: { Attributes: { image: LOCAL_MEDUSA_IMAGE.defaultValue } },
+    };
+
+    await eventListener.handleContainerStartEvent(medusaEvent);
+
+    assert.ok(waitForContainerRunningStub.calledOnce);
+    // Verify that the workflow's waitForReadiness method was called
+    assert.ok(getMedusaWorkflowStub.calledOnce);
+    assert.ok(waitForReadinessStub.calledOnceWith(TEST_CONTAINER_EVENT.id));
+    assert.ok(
+      setContextValueStub.calledOnceWith(contextValues.ContextValues.localMedusaAvailable, true),
+    );
+    assert.ok(localMedusaConnectedFireStub.calledOnceWith(true));
   });
 
   it("handleContainerStartEvent() should exit early for containers from non-'confluent-local' images", async function () {

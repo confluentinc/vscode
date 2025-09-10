@@ -46,6 +46,7 @@
   ],
   "activationEvents": [
     "workspaceContains:**/*.confluent.*",
+    "workspaceContains:**/*.avsc",
     "onUri"
   ],
   "main": "./out/extension.js",
@@ -886,6 +887,24 @@
             "type": "string",
             "default": "7.9.0",
             "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
+          },
+          "confluent.localDocker.medusaEnable": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Enable Medusa container functionality for local development and testing.",
+            "tags": [
+              "preview"
+            ]
+          },
+          "confluent.localDocker.medusaImageRepo": {
+            "type": "string",
+            "default": "us-east1-docker.pkg.dev/medusa-prod-env/medusa/medusa",
+            "description": "Docker image repo to use when starting a local Medusa container"
+          },
+          "confluent.localDocker.medusaImageTag": {
+            "type": "string",
+            "default": "0.2.1",
+            "description": "Docker image tag to use when starting a local Medusa container"
           }
         }
       },
@@ -1577,12 +1596,12 @@
         },
         {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable && confluent.localMedusaAvailable)",
           "group": "inline"
         },
         {
           "command": "confluent.docker.stopLocalResources",
-          "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
+          "when": "view == confluent-resources && viewItem == local-container-connected",
           "group": "inline"
         },
         {

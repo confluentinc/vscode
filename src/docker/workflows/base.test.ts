@@ -3,15 +3,23 @@ import * as sinon from "sinon";
 import { window } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
-import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_MEDUSA_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+} from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import * as dockerContainers from "../containers";
 import * as dockerImages from "../images";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
 import { ConfluentLocalWorkflow } from "./confluent-local";
+import { MedusaWorkflow } from "./medusa";
 import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
 class TestWorkflow extends LocalResourceWorkflow {
+  waitForReadiness(containerId: string): Promise<boolean> {
+    throw new Error(containerId);
+  }
   protected logger = new Logger("test");
   resourceKind = "test";
 
@@ -246,5 +254,24 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
     const workflow = LocalResourceWorkflow.getSchemaRegistryWorkflow();
 
     assert.ok(workflow instanceof ConfluentLocalWorkflow);
+  });
+
+  it(`getMedusaWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_MEDUSA_IMAGE.id}" setting`, async () => {
+    const unsupportedImageRepo = "unsupported/image-name";
+    stubbedConfigs.stubGet(LOCAL_MEDUSA_IMAGE, unsupportedImageRepo);
+
+    assert.throws(
+      LocalResourceWorkflow.getMedusaWorkflow,
+      new Error(`Unsupported Medusa image repo: ${unsupportedImageRepo}`),
+    );
+    assert.ok(showErrorMessageStub.calledOnce);
+  });
+
+  it(`getMedusaWorkflow() should return a MedusaWorkflow instance for the correct "${LOCAL_MEDUSA_IMAGE.id}" setting`, async () => {
+    stubbedConfigs.stubGet(LOCAL_MEDUSA_IMAGE, MedusaWorkflow.imageRepo);
+
+    const workflow = LocalResourceWorkflow.getMedusaWorkflow();
+
+    assert.ok(workflow instanceof MedusaWorkflow);
   });
 });
