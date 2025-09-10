@@ -159,6 +159,24 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledWithMatch(showErrorStub, errorMessage);
     });
 
+    it("Should throw Error if upload_id is missing in presigned URL response", async () => {
+      const params = { ...mockParams };
+      const uploadUrl = { ...mockPresignedUrlResponse, upload_id: undefined };
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(
+        showErrorStub,
+        "Upload ID is missing from the presigned URL response.",
+      );
+    });
+
     it("should show error notification with custom error message when Error has message property", async () => {
       const params = { ...mockParams };
       const uploadUrl = { ...mockPresignedUrlResponse };
