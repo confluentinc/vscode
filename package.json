@@ -1771,7 +1771,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-resources &&  (viewItem =~ /.*compute-pool*/ || viewItem == ccloud-kafka-cluster)",
+          "when": "view == confluent-resources &&  (viewItem =~ /.*compute-pool*/ || viewItem == ccloud-kafka-cluster) && config.confluent.flink.enableFlinkArtifacts",
           "group": "inline@3"
         },
         {
