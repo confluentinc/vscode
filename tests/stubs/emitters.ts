@@ -13,7 +13,7 @@ export type StubbedEventEmitters = Partial<
  * enabling controlled testing and verification of event emission and handler registration.
  *
  * The returned object maps each emitter name to its corresponding stubbed instance, typed as
- * `SinonStubbedInstance<vscode.EventEmitter<void>>`, for use in assertions within tests
+ * `SinonStubbedInstance<vscode.EventEmitter<any>>`, for use in assertions within tests
  * proving that .event() was called with the right handler. The whole stubbed instance is returned,
  * not just the `.event()` method, allowing for more flexible testing scenarios.
  *
