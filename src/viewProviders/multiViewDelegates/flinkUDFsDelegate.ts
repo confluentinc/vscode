@@ -1,22 +1,22 @@
 import { TreeItem } from "vscode";
-import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkUDF";
+import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
-import { FlinkArtifactsViewProviderMode } from "./constants";
+import { FlinkDatabaseViewProviderMode } from "./constants";
 
 export class FlinkUDFsDelegate extends ViewProviderDelegate<
-  FlinkArtifactsViewProviderMode,
-  CCloudFlinkComputePool,
+  FlinkDatabaseViewProviderMode,
+  CCloudFlinkDbKafkaCluster,
   FlinkUdf
 > {
-  readonly mode = FlinkArtifactsViewProviderMode.UDFs;
+  readonly mode = FlinkDatabaseViewProviderMode.UDFs;
   readonly viewTitle = "Flink UDFs (Preview)";
 
   children: FlinkUdf[] = [];
 
   loadingMessage = "Loading Flink UDFs...";
 
-  async fetchChildren(resource: CCloudFlinkComputePool): Promise<FlinkUdf[]> {
+  async fetchChildren(resource: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[]> {
     this.children = [];
 
     // TODO: replace this when https://github.com/confluentinc/vscode/issues/2310 is done
