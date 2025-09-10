@@ -15,6 +15,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import * as contextValuesModule from "../context/values";
 import { flinkArtifactUDFViewMode } from "../emitters";
+import * as errors from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
@@ -352,5 +353,149 @@ describe("uploadArtifact Command", () => {
         FlinkArtifactsViewProviderMode.Artifacts,
       );
     });
+  });
+});
+
+describe("uploadArtifactCommand error message extraction", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  const mockParams = {
+    environment: "env-123456",
+    cloud: "Azure",
+    region: "australiaeast",
+    artifactName: "test-artifact",
+    fileFormat: "jar",
+    selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
+  };
+
+  const mockPresignedUrlResponse = {
+    upload_id: "12345",
+    url: "https://example.com/upload",
+    fields: {},
+    api_version:
+      "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
+    kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
+  };
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+    sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+    sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should extract error message from errors[0].detail", async () => {
+    // Setup
+    const responseError = createResponseError(400, "Bad Request", "");
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+    const errorDetail = "Error in detail field";
+    sandbox.stub(errors, "isResponseError").returns(true);
+    sandbox.stub(errors, "extractResponseBody").resolves({
+      errors: [{ detail: errorDetail }],
+    });
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    await uploadArtifactCommand();
+
+    sinon.assert.calledWithExactly(showErrorStub, errorDetail);
+  });
+
+  it("should extract error message from message property", async () => {
+    const responseError = createResponseError(400, "Bad Request", "");
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+    const messageText = "Message in message field";
+    sandbox.stub(errors, "isResponseError").returns(true);
+    sandbox.stub(errors, "extractResponseBody").resolves({
+      message: messageText,
+    });
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    await uploadArtifactCommand();
+
+    sinon.assert.calledWithExactly(showErrorStub, messageText);
+  });
+
+  it("should extract error message from error.message property", async () => {
+    const responseError = createResponseError(400, "Bad Request", "");
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+    const errorMessage = "Message in error.message field";
+    sandbox.stub(errors, "isResponseError").returns(true);
+    sandbox.stub(errors, "extractResponseBody").resolves({
+      error: { message: errorMessage },
+    });
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    // Execute
+    await uploadArtifactCommand();
+
+    // Verify
+    sinon.assert.calledWithExactly(showErrorStub, errorMessage);
+  });
+
+  it("should use string response directly when response is a string", async () => {
+    // Setup
+    const responseError = createResponseError(400, "Bad Request", "");
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+    const stringResponse = "Plain string error response";
+    sandbox.stub(errors, "isResponseError").returns(true);
+    sandbox.stub(errors, "extractResponseBody").resolves(stringResponse);
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    // Execute
+    await uploadArtifactCommand();
+
+    // Verify
+    sinon.assert.calledWithExactly(showErrorStub, stringResponse);
+  });
+
+  it("should use JSON.stringify for unknown response format", async () => {
+    // Setup
+    const responseError = createResponseError(400, "Bad Request", "");
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+    const unknownResponse = { foo: "bar", baz: 123 };
+    sandbox.stub(errors, "isResponseError").returns(true);
+    sandbox.stub(errors, "extractResponseBody").resolves(unknownResponse);
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    // Execute
+    await uploadArtifactCommand();
+
+    // Verify
+    sinon.assert.calledWithExactly(showErrorStub, JSON.stringify(unknownResponse));
+  });
+
+  it("should use default message when extractResponseBody throws", async () => {
+    // Setup
+    const responseError = createResponseError(400, "Bad Request", "");
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(responseError);
+
+    sandbox.stub(errors, "isResponseError").returns(true);
+    sandbox.stub(errors, "extractResponseBody").rejects(new Error("Failed to extract"));
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    // Execute
+    await uploadArtifactCommand();
+
+    // Verify
+    sinon.assert.calledWithExactly(
+      showErrorStub,
+      "Failed to upload artifact. Please check logs for details.",
+    );
   });
 });
