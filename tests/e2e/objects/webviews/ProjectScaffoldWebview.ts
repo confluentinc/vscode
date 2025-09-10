@@ -14,10 +14,10 @@ export class ProjectScaffoldWebview extends Webview {
   }
 
   get bootstrapServersField(): Locator {
-    return this.webview.locator('[name="cc_bootstrap_server"]');
+    return this.form.locator('[name="cc_bootstrap_server"]');
   }
 
   async submitForm(): Promise<void> {
-    return this.webview.locator('input[type="submit"]').click();
+    return this.form.locator('input[type="submit"]').click();
   }
 }

@@ -1,36 +1,30 @@
-import { expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { test } from "../baseTest";
+import { TextDocument } from "../objects/editor/TextDocument";
+import { Notification } from "../objects/notifications/Notification";
+import { NotificationArea } from "../objects/notifications/NotificationArea";
+import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SupportView } from "../objects/views/SupportView";
+import { View } from "../objects/views/View";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { openConfluentExtension } from "./utils/confluent";
-
-const DEFAULT_TIMEOUT_MS = 2000;
 
 /**
  * E2E test suite for testing the Project Scaffolding functionality.
  * {@see https://github.com/confluentinc/vscode/issues/1840}
  */
 
-/**
- * Waits for a specified amount of time and then presses a key on the Playwright page.
- * @param page - The Playwright page object.
- * @param key - The key to press, e.g., "Enter", "Escape", etc.
- * @param timeout - The time to wait before pressing the key, in milliseconds. Default is 2000ms.
- */
-async function pressKey(page: Page, key: string, timeout = DEFAULT_TIMEOUT_MS) {
-  await page.waitForTimeout(timeout);
-  await page.keyboard.press(key, { delay: 100 });
-}
-
 test.describe("Project Scaffolding", () => {
   test.beforeEach(async ({ page }) => {
     await openConfluentExtension(page);
   });
 
+  // Templates covered by the E2E tests
+  // Mapping of display names to template names
   const templates: Array<[string, string]> = [
     ["Kafka Client in Go", "go-client"],
     ["Kafka Client in Java", "java-client"],
@@ -56,30 +50,52 @@ test.describe("Project Scaffolding", () => {
           },
         ]);
         
-        // Given we navigate to the Support view and start the generate project flow
+        // Given we navigate to the Support view
         const supportView = new SupportView(page);
-        await (await supportView.body.getByText("Generate Project from Template")).click();
-        // and we choose a project template
-        const projectTemplateInput = await page.getByPlaceholder("Select a project template");
-        await expect(projectTemplateInput).toBeVisible();
-        await projectTemplateInput.fill(templateName);
-        await projectTemplateInput.click();
-        await pressKey(page, "Enter");
+        // and we start the generate project flow
+        const projectTreeItem = supportView.treeItems.filter({
+          hasText: "Generate Project from Template",
+        });
+        await expect(projectTreeItem).toHaveCount(1);
+        await projectTreeItem.click();
+        // and we choose a project template from the quickpick
+        const projectQuickpick = new Quickpick(page);
+        await projectQuickpick.textInput.fill(templateName);
+        const projectTemplateInput = projectQuickpick.items.filter({ hasText: templateName });
+        await expect(projectTemplateInput).not.toHaveCount(0);
+        await projectTemplateInput.first().click();
         // and we provide a simple example configuration and submit the form
         const scaffoldForm = new ProjectScaffoldWebview(page);
         await (await scaffoldForm.bootstrapServersField).fill("localhost:9092");
+
+        // When we submit the form
         await scaffoldForm.submitForm();
+        // Then we should see that the project was generated successfully
+        const notificationArea = new NotificationArea(page);
+        const infoNotifications = notificationArea.infoNotifications.filter({
+          hasText: "Project Generated",
+        });
+        await expect(infoNotifications).toHaveCount(1);
+        const successNotification = new Notification(page, infoNotifications.first());
+        await successNotification.clickActionButton("Open in Current Window");
 
-        // When we open the generated project (the dialog stub is still in effect here)
-        await pressKey(page, "ControlOrMeta+O");
-        // and we open the configuration file `.env`
-        await (await page.getByText(projectDirName)).click();
-        await (await page.getByText(".env")).click();
-
+        // When we open the configuration file .env
+        const configurationFile = ".env";
+        const explorerView = new View(page, "Explorer");
+        const envFile = explorerView.treeItems.filter({
+          hasText: configurationFile,
+        });
+        await expect(envFile).toBeVisible();
+        await envFile.click();
         // Then we should see the generated configuration
-        await expect(await page.getByText(/CC_BOOTSTRAP_SERVER\s*=\s*"localhost:9092"/)).toBeVisible();
-        // and we should see a client.id starting with the expected prefix
-        await expect(await page.getByText(/CLIENT_ID\s*=\s*"vscode-/)).toBeVisible();
+        const envDocument = new TextDocument(page, configurationFile);
+        await expect(envDocument.tab).toBeVisible();
+        await expect(envDocument.editorContent).toBeVisible();
+        await expect(envDocument.editorContent).toContainText(
+          /CC_BOOTSTRAP_SERVER\s*=\s*"localhost:9092"/,
+        );
+        // and we should see the client.id starting with the expected prefix
+        await expect(envDocument.editorContent).toContainText(/CLIENT_ID\s*=\s*"vscode-/);
       });
     }
   });
