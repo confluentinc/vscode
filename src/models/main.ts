@@ -115,9 +115,7 @@ export class CustomMarkdownString extends vscode.MarkdownString {
     });
 
     if (linkUrl) {
-      if (linkUrl[1] !== undefined && linkUrl[1] !== "") {
-        tooltip.appendMarkdown(`\n\n[${linkUrl[0]}](${linkUrl[1]})`);
-      }
+      tooltip.appendMarkdown(`\n\n[${linkUrl[0]}](${linkUrl[1]})`);
     }
 
     if (ccloudUrl) {
