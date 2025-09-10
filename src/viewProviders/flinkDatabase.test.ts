@@ -1,12 +1,12 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
-import { FlinkArtifactsUDFsViewProvider } from "./flinkArtifacts";
+import { FlinkDatabaseViewProvider } from "./flinkDatabase";
 
-describe("viewProviders/flinkArtifacts.ts", () => {
+describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -17,17 +17,17 @@ describe("viewProviders/flinkArtifacts.ts", () => {
     sandbox.restore();
   });
 
-  describe("FlinkArtifactsUDFsViewProvider", () => {
-    let viewProvider: FlinkArtifactsUDFsViewProvider;
+  describe("FlinkDatabaseViewProvider", () => {
+    let viewProvider: FlinkDatabaseViewProvider;
 
     beforeEach(() => {
-      viewProvider = FlinkArtifactsUDFsViewProvider.getInstance();
+      viewProvider = FlinkDatabaseViewProvider.getInstance();
     });
 
     afterEach(() => {
       viewProvider.dispose();
       // reset singleton instances between tests
-      FlinkArtifactsUDFsViewProvider["instanceMap"].clear();
+      FlinkDatabaseViewProvider["instanceMap"].clear();
     });
 
     describe("refresh()", () => {
@@ -65,7 +65,7 @@ describe("viewProviders/flinkArtifacts.ts", () => {
       });
 
       it("should call the current delegate to fetch children when a compute pool is selected", async () => {
-        const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+        const resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         viewProvider["resource"] = resource;
 
         const fakeChildren = [{ id: "x" }];
@@ -81,7 +81,7 @@ describe("viewProviders/flinkArtifacts.ts", () => {
       });
 
       it("should show an error notification when the delegate's fetchChildren() fails", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const fakeError = new Error("uh oh");
         delegateFetchStub.rejects(fakeError);
 
@@ -102,7 +102,7 @@ describe("viewProviders/flinkArtifacts.ts", () => {
       });
 
       it("should use the current delegate's loading message in progress indicator", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         delegateFetchStub.resolves([]);
 
         await viewProvider.refresh();
