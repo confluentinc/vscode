@@ -1,7 +1,12 @@
 import { FrameLocator, Page, expect } from "@playwright/test";
+import { Quickpick } from "../../objects/quickInputs/Quickpick";
+import { ResourcesView } from "../../objects/views/ResourcesView";
 import { FlinkStatementTestIds } from "./testIds";
 
 const DEFAULT_TIMEOUT_MS = 2000;
+const TEST_ENV_NAME = "main-test-env";
+const TEST_COMPUTE_POOL_NAME = "main-test-pool";
+const TEST_KAFKA_CLUSTER_NAME = "main-test-cluster";
 
 /**
  * Waits for a specified amount of time and then presses a key on the Playwright page.
@@ -21,36 +26,33 @@ async function pressKey(page: Page, key: string, timeout = DEFAULT_TIMEOUT_MS) {
  * @param fileName - The name of the Flink SQL file to submit. Must be present in the `tests/fixtures` directory.
  */
 export async function submitFlinkStatement(page: Page, fileName: string) {
+  const resourcesView = new ResourcesView(page);
   // First, expand the CCloud env
-  await (await page.getByText("main-test-env")).click();
-
+  await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+  await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
   // Click on a Flink compute pool
-  await (await page.getByText("GCP.us-west2")).click();
+  await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
+  await resourcesView.ccloudFlinkComputePools.getByText(TEST_COMPUTE_POOL_NAME).click();
 
   await openFixtureFile(page, fileName);
 
   // Select the Flink compute pool
-  await (await page.getByText("Set Compute Pool")).click();
-  const computePoolInput = await page.getByPlaceholder("Select a Flink compute pool");
-  await expect(computePoolInput).toBeVisible();
-  await computePoolInput.fill("GCP.us-west2");
-  await computePoolInput.click();
-  await pressKey(page, "Enter");
+  await page.waitForTimeout(DEFAULT_TIMEOUT_MS);
+  await page.getByText("Set Compute Pool").click();
+  const computePoolQuickpick = new Quickpick(page);
+  await computePoolQuickpick.selectItemByText(TEST_COMPUTE_POOL_NAME);
 
   // Select the Kafka cluster
   await page.waitForTimeout(DEFAULT_TIMEOUT_MS);
-  await (await page.getByText("Set Catalog & Database")).click();
-  const kafkaClusterInput = await page.getByPlaceholder("Select the Kafka cluster to use as the default database for the statement");
-  await expect(kafkaClusterInput).toBeVisible();
-  await kafkaClusterInput.fill("main-test-cluster");
-  await kafkaClusterInput.click();
-  await pressKey(page, "Enter");
+  await page.getByText("Set Catalog & Database").click();
+  const kafkaClusterQuickpick = new Quickpick(page);
+  await kafkaClusterQuickpick.selectItemByText(TEST_KAFKA_CLUSTER_NAME);
 
   // Submit the Flink statement
-  await (await page.getByText("Submit Statement")).click();
+  await page.getByText("Submit Statement").click();
 
   // Move the mouse and hover over Flink Statements
-  await (await page.getByLabel("Flink Statements (Preview) - main-test-env").all())[0].hover();
+  await (await page.getByLabel("Flink Statements").all())[0].hover();
 
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
   await page.waitForSelector("text=Statement:");
