@@ -25,9 +25,9 @@ import {
  * Returns an object with these values, or undefined if the user cancels.
  */
 
-export async function uploadArtifactCommand(): Promise<void> {
+export async function uploadArtifactCommand(file?: vscode.Uri): Promise<void> {
   try {
-    const params = await promptForArtifactUploadParams();
+    const params = await promptForArtifactUploadParams(file);
 
     if (!params) {
       // User cancelled the prompt

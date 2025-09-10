@@ -80,7 +80,9 @@ export async function getPresignedUploadUrl(
   return urlResponse;
 }
 
-export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
+export async function promptForArtifactUploadParams(
+  selectedFileUri?: vscode.Uri,
+): Promise<ArtifactUploadParams | undefined> {
   const environment = await flinkCcloudEnvironmentQuickPick();
   const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
@@ -100,22 +102,29 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
     return undefined;
   }
 
-  const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
-    openLabel: "Select",
-    canSelectFiles: true,
-    canSelectFolders: false,
-    canSelectMany: false,
-    filters: {
-      "Flink Artifact Files": ["jar"],
-    },
-  });
-  if (!selectedFiles || selectedFiles.length === 0) {
-    // if the user cancels the file selection, silently exit
-    return;
+  let selectedFile: vscode.Uri;
+  if (selectedFileUri) {
+    selectedFile = selectedFileUri;
+  } else {
+    const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
+      openLabel: "Select",
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        "Flink Artifact Files": ["jar"],
+      },
+    });
+
+    if (!selectedFiles || selectedFiles.length === 0) {
+      // if the user cancels the file selection, silently exit
+      return;
+    }
+
+    selectedFile = selectedFiles[0];
   }
 
-  const selectedFile: vscode.Uri = selectedFiles[0];
-  const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
+  const fileFormat: string = selectedFile.fsPath.split(".").pop()!;
 
   // Default artifact name to the selected file's base name (without extension), but allow override.
   const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
