@@ -1767,7 +1767,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-resources &&  viewItem =~ /.*compute-pool*/",
+          "when": "view == confluent-resources &&  viewItem =~ /.*compute-pool*/ && config.confluent.flink.enableFlinkArtifacts",
           "group": "inline@3"
         },
         {
