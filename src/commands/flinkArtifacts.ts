@@ -93,9 +93,7 @@ export async function deleteArtifactCommand(
   selectedArtifact: FlinkArtifact | undefined,
 ): Promise<void> {
   if (!selectedArtifact) {
-    void vscode.window.showErrorMessage(
-      "Cannot delete artifact: missing required artifact properties.",
-    );
+    showErrorNotificationWithButtons("No Flink artifact selected for deletion.");
     return;
   }
   const request: DeleteArtifactV1FlinkArtifactRequest = {

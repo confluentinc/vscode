@@ -307,7 +307,7 @@ describe("uploadArtifact Command", () => {
       it("should return early and show an error message if no selected artifact is provided", async () => {
         const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
         await deleteArtifactCommand(undefined);
-        sinon.assert.calledWithMatch(showErrorStub, "No artifact selected for deletion.");
+        sinon.assert.calledWithMatch(showErrorStub, "No Flink artifact selected for deletion.");
       });
     });
   });
