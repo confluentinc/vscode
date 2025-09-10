@@ -274,7 +274,8 @@
     "commands": [
       {
         "command": "confluent.uploadArtifact",
-        "title": "Confluent: Upload Artifact",
+        "icon": "$(cloud-upload)",
+        "title": "Upload Artifact",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },
@@ -1481,6 +1482,11 @@
         {
           "command": "confluent.topics.create",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.uploadArtifact",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
           "group": "navigation@2"
         },
         {
