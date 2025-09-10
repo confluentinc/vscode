@@ -494,6 +494,12 @@
         "category": "Confluent: Project"
       },
       {
+        "command": "confluent.artifacts.scaffold",
+        "icon": "$(plus)",
+        "title": "Generate Flink Artifact",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.schemaViewer.viewLocally",
         "icon": "$(file-code)",
         "title": "View Schema",
@@ -1176,7 +1182,7 @@
       },
       {
         "view": "confluent-flink-database",
-        "contents": "No Flink artifacts found.\n[Generate a Flink Artifact from template](command:confluent.resources.scaffold)",
+        "contents": "No Flink artifacts found.\n[Generate a Flink Artifact from template](command:confluent.artifacts.scaffold)",
         "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected"
       }
     ],
@@ -1348,6 +1354,10 @@
         },
         {
           "command": "confluent.resources.scaffold",
+          "when": "false"
+        },
+        {
+          "command": "confluent.artifacts.scaffold",
           "when": "false"
         },
         {
@@ -1550,13 +1560,13 @@
           "group": "navigation@3"
         },
         {
-          "command": "confluent.resources.scaffold",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable",
+          "command": "confluent.artifacts.scaffold",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "navigation@2"
         },
         {
           "command": "confluent.flink.setUDFsViewMode",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "navigation@2"
         }
       ],

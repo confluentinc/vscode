@@ -48,6 +48,7 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
     registerCommandWithLogging("confluent.resources.scaffold", resourceScaffoldProjectRequest),
+    registerCommandWithLogging("confluent.artifacts.scaffold", scaffoldFlinkArtifact),
   ];
 }
 
@@ -86,7 +87,7 @@ async function resourceScaffoldProjectRequest(
     );
     // TODO temporarily using "undefined" to signal call from Artifacts header, which only gives Table API examples
     // Need to decide whether to make a new command for generating Artifacts specifically
-  } else if (item instanceof CCloudFlinkComputePool || item === undefined) {
+  } else if (item instanceof CCloudFlinkComputePool) {
     const organization: CCloudOrganization | undefined =
       await CCloudResourceLoader.getInstance().getOrganization();
     return await scaffoldProjectRequest(
@@ -103,6 +104,15 @@ async function resourceScaffoldProjectRequest(
   }
 }
 
+// Simple wrapper to set the templateType to "artifact" for Flink Artifacts/UDFs scaffold command
+async function scaffoldFlinkArtifact() {
+  return await scaffoldProjectRequest(
+    {
+      templateType: "artifact",
+    },
+    "artifact",
+  );
+}
 export const scaffoldProjectRequest = async (
   templateRequestOptions?: PrefilledTemplateOptions,
   telemetrySource?: string,
@@ -125,6 +135,8 @@ export const scaffoldProjectRequest = async (
           return tags.includes("apache flink") || tags.includes("table api");
         } else if (templateType === "kafka") {
           return tags.includes("producer") || tags.includes("consumer");
+        } else if (templateType === "artifact") {
+          return tags.includes("udfs");
         }
 
         // If no specific type, show all templates with producer or consumer tags
