@@ -504,5 +504,7 @@ function restFlinkArtifactToModel(
     description: restArtifact.description || "",
     provider: restArtifact.cloud,
     region: restArtifact.region,
+    metadata: restArtifact.metadata,
+    documentationLink: restArtifact.documentation_link || "",
   });
 }
