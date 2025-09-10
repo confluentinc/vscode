@@ -1,19 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
-import {
-  ENABLE_FLINK_ARTIFACTS,
-  FLINK_CONFIG_COMPUTE_POOL,
-  FLINK_CONFIG_DATABASE,
-} from "../extensionSettings/constants";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
 import * as quickpicks from "../quickpicks/flinkComputePools";
 import * as kafkaQuickpicks from "../quickpicks/kafkaClusters";
-import * as flinkStatementsViewModule from "../viewProviders/flinkStatements";
 import * as commandsModule from "./flinkComputePools";
 
 describe("flinkComputePools.ts", () => {
@@ -49,6 +44,25 @@ describe("flinkComputePools.ts", () => {
 
       assert.ok(stubbedConfigs.update.notCalled);
       assert.ok(flinkDatabaseQuickpickStub.notCalled);
+    });
+
+    it("should return early if no database is selected", async () => {
+      flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      flinkDatabaseQuickpickStub.resolves(undefined);
+
+      await commandsModule.configureFlinkDefaults();
+
+      sinon.assert.calledWithExactly(
+        stubbedConfigs.update,
+        FLINK_CONFIG_COMPUTE_POOL.id,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+        true,
+      );
+
+      // and just called once for the compute pool, not the database.
+      sinon.assert.calledOnce(stubbedConfigs.update);
+
+      sinon.assert.notCalled(showInformationMessageStub);
     });
 
     it("should update config and show info message after pool and database are selected", async () => {
@@ -93,10 +107,7 @@ describe("flinkComputePools.ts", () => {
 
   describe("selectPoolForStatementsViewCommand", () => {
     let flinkComputePoolQuickPickWithViewProgressStub: sinon.SinonStub;
-    let fakeFlinkStatementsViewProvider: {
-      computePool: CCloudFlinkComputePool | null;
-      setParentResource: sinon.SinonStub;
-    };
+    let currentFlinkStatementsResourceChangedFireStub: sinon.SinonStub;
 
     beforeEach(() => {
       flinkComputePoolQuickPickWithViewProgressStub = sandbox.stub(
@@ -106,15 +117,10 @@ describe("flinkComputePools.ts", () => {
 
       sandbox.stub(vscode.commands, "executeCommand").resolves();
 
-      // stub FlinkStatementsViewProvider.getInstance()
-      fakeFlinkStatementsViewProvider = {
-        computePool: null,
-        setParentResource: sandbox.stub().resolves(),
-      };
-
-      sandbox
-        .stub(flinkStatementsViewModule.FlinkStatementsViewProvider, "getInstance")
-        .returns(fakeFlinkStatementsViewProvider as any);
+      // stub out all event emitters
+      const emitterStubs = eventEmitterStubs(sandbox);
+      currentFlinkStatementsResourceChangedFireStub =
+        emitterStubs.currentFlinkStatementsResourceChanged!.fire;
     });
 
     const testCases: Array<[string, any]> = [
@@ -130,7 +136,7 @@ describe("flinkComputePools.ts", () => {
         await commandsModule.selectPoolForStatementsViewCommand(param);
 
         sinon.assert.calledOnce(flinkComputePoolQuickPickWithViewProgressStub);
-        sinon.assert.calledWith(fakeFlinkStatementsViewProvider.setParentResource, testPool);
+        sinon.assert.calledWith(currentFlinkStatementsResourceChangedFireStub, testPool);
       });
     }
 
@@ -140,7 +146,7 @@ describe("flinkComputePools.ts", () => {
       await commandsModule.selectPoolForStatementsViewCommand();
 
       sinon.assert.calledOnce(flinkComputePoolQuickPickWithViewProgressStub);
-      sinon.assert.notCalled(fakeFlinkStatementsViewProvider.setParentResource);
+      sinon.assert.notCalled(currentFlinkStatementsResourceChangedFireStub);
     });
 
     it("should skip call to flinkComputePoolQuickPickWithViewProgress when passed a pool", async () => {
@@ -149,51 +155,7 @@ describe("flinkComputePools.ts", () => {
       await commandsModule.selectPoolForStatementsViewCommand(testPool);
 
       sinon.assert.notCalled(flinkComputePoolQuickPickWithViewProgressStub);
-      sinon.assert.calledWith(fakeFlinkStatementsViewProvider.setParentResource, testPool);
-    });
-  });
-
-  describe("selectPoolFromResourcesViewCommand", () => {
-    let executeCommandStub: sinon.SinonStub;
-    let stubbedConfigs: StubbedWorkspaceConfiguration;
-
-    beforeEach(() => {
-      executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
-      stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
-    });
-
-    it("should invoke both statements and artifacts pool selection commands when Flink Artifacts is enabled", async () => {
-      stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, true);
-
-      await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-
-      sinon.assert.calledWith(
-        executeCommandStub,
-        "confluent.statements.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-      sinon.assert.calledWith(
-        executeCommandStub,
-        "confluent.artifacts.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-    });
-
-    it("should only invoke statements pool selection command when Flink Artifacts is disabled", async () => {
-      stubbedConfigs.stubGet(ENABLE_FLINK_ARTIFACTS, false);
-
-      await commandsModule.selectPoolFromResourcesViewCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-
-      sinon.assert.calledWith(
-        executeCommandStub,
-        "confluent.statements.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
-      sinon.assert.neverCalledWith(
-        executeCommandStub,
-        "confluent.artifacts.flink-compute-pool.select",
-        TEST_CCLOUD_FLINK_COMPUTE_POOL,
-      );
+      sinon.assert.calledWith(currentFlinkStatementsResourceChangedFireStub, testPool);
     });
   });
 });
