@@ -340,6 +340,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(metadata);
 
       assert.strictEqual(pool, undefined);
+      sinon.assert.notCalled(ccloudLoaderStub.getFlinkComputePool);
     });
 
     it(`should return the default "${FLINK_CONFIG_COMPUTE_POOL.id}" value if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is undefined`, async () => {
@@ -350,6 +351,10 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.ok(pool);
       assert.ok(pool instanceof CCloudFlinkComputePool);
       assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+      sinon.assert.calledOnceWithExactly(
+        ccloudLoaderStub.getFlinkComputePool,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      );
     });
 
     it(`should return undefined if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" is 'null' as a result of clearing metadata, even if default "${FLINK_CONFIG_COMPUTE_POOL.id}" is set`, async () => {
@@ -360,6 +365,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(metadata);
 
       assert.strictEqual(pool, undefined);
+      sinon.assert.notCalled(ccloudLoaderStub.getFlinkComputePool);
     });
 
     it(`should return the stored value if "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata is found`, async () => {
@@ -372,6 +378,10 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.ok(pool);
       assert.ok(pool instanceof CCloudFlinkComputePool);
       assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+      sinon.assert.calledOnceWithExactly(
+        ccloudLoaderStub.getFlinkComputePool,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      );
     });
 
     it(`should favor stored "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata over default "${FLINK_CONFIG_COMPUTE_POOL.id}" value`, async () => {
@@ -384,18 +394,24 @@ describe("codelens/flinkSqlProvider.ts", () => {
       assert.ok(pool);
       assert.ok(pool instanceof CCloudFlinkComputePool);
       assert.strictEqual(pool.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+      sinon.assert.calledOnceWithExactly(
+        ccloudLoaderStub.getFlinkComputePool,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      );
     });
 
     it(`should return undefined if the stored "${UriMetadataKeys.FLINK_COMPUTE_POOL_ID}" metadata doesn't match any pools`, async () => {
       stubbedConfigs.stubGet(FLINK_CONFIG_COMPUTE_POOL, undefined);
       ccloudLoaderStub.getFlinkComputePool.resolves(undefined);
 
+      const otherPoolId: string = "non-existent-pool-id";
       const metadata: UriMetadata = {
-        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: "some-other-pool-id",
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: otherPoolId,
       };
       const pool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(metadata);
 
       assert.strictEqual(pool, undefined);
+      sinon.assert.calledOnceWithExactly(ccloudLoaderStub.getFlinkComputePool, otherPoolId);
     });
   });
 
