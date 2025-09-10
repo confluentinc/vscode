@@ -58,12 +58,6 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
 
   const loader = CCloudResourceLoader.getInstance();
-  const envs = await loader.getEnvironments();
-  if (envs.length === 0) {
-    logger.error("viewStatementSqlCommand", "No environments available");
-    return;
-  }
-
   const pool = await loader.getFlinkComputePool(statement.computePoolId);
   if (!pool) {
     logger.error(
@@ -80,7 +74,7 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
     // ...nor do we have the database ID
     [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
   };
-  const { catalog, database } = await getCatalogDatabaseFromMetadata(metadata, envs, pool);
+  const { catalog, database } = await getCatalogDatabaseFromMetadata(metadata, pool);
   const updatedMetadata: UriMetadata = { ...metadata };
   if (catalog && database) {
     // update the URI metadata with the resolved catalog/database IDs and store it for the URI
