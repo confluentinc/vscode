@@ -16,8 +16,13 @@ import libInstrument from "istanbul-lib-instrument";
 import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
+import {
+  applyEdits as applyEditsJSONC,
+  modify as modifyJSONC,
+  parse as parseJSONC,
+} from "jsonc-parser";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -26,7 +31,10 @@ import { rollup, watch } from "rollup";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
+
+// Digest .env file into process.env.
 configDotenv();
+
 const DESTINATION = "out";
 
 const IS_CI = process.env.CI != null;
@@ -38,7 +46,7 @@ export const liveTest = series(clean, build, testBuild);
 liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
 
-export const bundle = series(clean, build, pack);
+export const bundle = series(clean, generateManifest, build, pack);
 export const e2e = series(bundle, testBuild, e2eRun);
 
 export const clicktest = series(bundle, install);
@@ -73,6 +81,9 @@ export function pack(done) {
 
 build.description = "Build static assets for extension and webviews. Use -w for watch mode.";
 export function build(done) {
+  // ensure manifest (developers may run just `gulp build`)
+  generateManifest(() => {});
+
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
@@ -225,6 +236,9 @@ function handleBuildLog(level, log, handler) {
  * Combines our VSCode extension version as it appears in package.json, and adds the shortened SHA of the latest HEAD commit if not on a CI build.
  */
 function getSentryReleaseVersion() {
+  // ensure manifest for version reads (in case function called standalone)
+  if (!existsSync(PACKAGE_JSON) && existsSync(PACKAGE_JSONC)) generateManifest(() => {});
+
   let version = "0.0.0";
   let revision = "noRevision";
   try {
@@ -605,6 +619,9 @@ export async function lint() {
 testBuild.description =
   "Build test files for running tests via `gulp testRun` or through the VS Code test runner. Use --coverage to enable coverage reporting.";
 export async function testBuild() {
+  // Render package.json from package.jsonc if needed.
+  generateManifest(() => {});
+
   // make sure to download the appropriate sidecar executable before building for tests
   const result = downloadSidecar();
   if (result.error) throw result.error;
@@ -968,6 +985,7 @@ async function prettier() {
 
 icongen.description = "Generate font files from SVG icons, and update package.json accordingly.";
 export async function icongen() {
+  generateManifest(() => {});
   const result = await generateFonts({
     name: "icons",
     prefix: "confluenticon",
@@ -1004,6 +1022,19 @@ export async function icongen() {
   extensionManifest.contributes.icons = iconContributions.icons;
   await writeFile("package.json", JSON.stringify(extensionManifest, null, 2), "utf8");
   await appendFile("package.json", "\n", "utf8");
+
+  // Update contributes.icons in package.jsonc (canonical), preserving other comments.
+  const pkgJsoncText = await readFile(PACKAGE_JSONC, "utf8");
+  const formattingOptions = { insertSpaces: true, tabSize: 2, eol: "\n" };
+  // create edits (replace or add path ["contributes","icons"])
+  const edits = modifyJSONC(pkgJsoncText, ["contributes", "icons"], iconContributions.icons, {
+    formattingOptions,
+  });
+  const updatedJsonc = applyEditsJSONC(pkgJsoncText, edits);
+  await writeFile(PACKAGE_JSONC, updatedJsonc, "utf8");
+
+  // Re-generate plain package.json after mutation
+  generateManifest(() => {});
 }
 
 install.description = "Install the extension in VS Code for testing.";
@@ -1062,4 +1093,103 @@ export function downloadSidecar() {
   }
 
   return result;
+}
+
+// path constants for manifest handling
+const PACKAGE_JSON = "package.json";
+const PACKAGE_JSONC = "package.jsonc";
+const GULPFILE = "Gulpfile.js";
+/**
+ * Generate package.json (no comments) from package.jsonc (with comments).
+ * Idempotent: always overwrites package.json so it stays in sync.
+ */
+function generateManifest(done) {
+  try {
+    // No package.jsonc to read from? Error out.
+    if (!existsSync(PACKAGE_JSONC)) {
+      throw new Error("package.jsonc not found. Rename your package.json to package.jsonc first.");
+    }
+
+    // Bail if package.json is dirty but package.jsonc is not, indicating that the dev has
+    // made changes to package.json directly instead of package.jsonc. We want to avoid
+    // overwriting package.json in that case, as it would discard the dev's changes.
+    checkPackageJsonGitStatuses();
+
+    // If package.json exists and is newer than both package.jsonc and Gulpfile.js, skip generation
+    const packageJsonStats = existsSync(PACKAGE_JSON) && statSync(PACKAGE_JSON);
+    const packageJsoncStats = existsSync(PACKAGE_JSONC) && statSync(PACKAGE_JSONC);
+    const gulpfileStats = existsSync(GULPFILE) && statSync(GULPFILE);
+
+    if (
+      packageJsonStats &&
+      packageJsoncStats &&
+      gulpfileStats &&
+      packageJsonStats.mtime > packageJsoncStats.mtime &&
+      packageJsonStats.mtime > gulpfileStats.mtime
+    ) {
+      console.log("package.json is newer than package.jsonc and Gulpfile.js. Short-circuiting.");
+      return done?.(0);
+    } else {
+      console.log("Generating package.json from package.jsonc");
+    }
+
+    // Read package.jsonc, parse it, and write package.json
+    const raw = readFileSync(PACKAGE_JSONC, "utf8");
+    const fromJsonCFile = parseJSONC(raw);
+    // Add in _generatedFrom and _generatedWarning fields to indicate the source of truth
+    // to try to hint people away from editing package.json directly.
+    const data = {
+      _generatedWarning:
+        "EDIT package.jsonc ONLY. This file is overwritten by `gulp build` and friends.",
+      _generatedFrom: "package.jsonc",
+      ...fromJsonCFile,
+    };
+    writeFileSync(PACKAGE_JSON, JSON.stringify(data, null, 2) + "\n", "utf8");
+    done?.(0);
+  } catch (e) {
+    console.error("Failed to generate package.json from package.jsonc:", e);
+    done?.(1);
+  }
+  return 0;
+}
+
+/**
+ * Checks the git status of `package.json` and `package.jsonc` files to ensure consistency.
+ *
+ * This function verifies if `package.json` is marked as dirty (has uncommitted changes) in git,
+ * while `package.jsonc` is not. If this condition is met, it throws an error instructing the user
+ * to commit changes to `package.jsonc` first and then regenerate `package.json` using the build process.
+ *
+ * @throws {Error} If there is an issue checking the git status of either file.
+ * @throws {Error} If `package.json` is dirty but `package.jsonc` is not, prompting the user to commit changes.
+ */
+function checkPackageJsonGitStatuses() {
+  if (existsSync(PACKAGE_JSON)) {
+    const gitStatus = spawnSync("git", ["status", "--porcelain", PACKAGE_JSON], {
+      stdio: "pipe",
+      shell: IS_WINDOWS,
+      encoding: "utf-8",
+    });
+    if (gitStatus.error) throw gitStatus.error;
+    if (gitStatus.status !== 0)
+      throw new Error(`Failed to check git status of ${PACKAGE_JSON}: ${gitStatus.stderr}`);
+    const isPackageJsonDirty = gitStatus.stdout.trim().length > 0;
+
+    const gitStatusJsonc = spawnSync("git", ["status", "--porcelain", PACKAGE_JSONC], {
+      stdio: "pipe",
+      shell: IS_WINDOWS,
+      encoding: "utf-8",
+    });
+    if (gitStatusJsonc.error) throw gitStatusJsonc.error;
+    if (gitStatusJsonc.status !== 0)
+      throw new Error(`Failed to check git status of ${PACKAGE_JSONC}: ${gitStatusJsonc.stderr}`);
+
+    const isPackageJsoncDirty = gitStatusJsonc.stdout.trim().length > 0;
+
+    if (isPackageJsonDirty && !isPackageJsoncDirty) {
+      throw new Error(
+        `${PACKAGE_JSON} is dirty, but ${PACKAGE_JSONC} is not. Please commit your changes to ${PACKAGE_JSONC} first, then run 'gulp build' to regenerate ${PACKAGE_JSON}.`,
+      );
+    }
+  }
 }
