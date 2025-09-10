@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-20",
+  "version": "1.7.0-22",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -274,7 +274,8 @@
     "commands": [
       {
         "command": "confluent.uploadArtifact",
-        "title": "Confluent: Upload Artifact",
+        "icon": "$(cloud-upload)",
+        "title": "Upload Artifact",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment"
       },
@@ -1538,14 +1539,19 @@
           "group": "navigation@1"
         },
         {
+          "command": "confluent.uploadArtifact",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts",
+          "group": "navigation@2"
+        },
+        {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
-          "group": "navigation@2"
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
