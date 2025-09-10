@@ -2,14 +2,14 @@ import { TreeItem } from "vscode";
 import { isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
-import { CCloudKafkaCluster } from "../../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 
 export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   FlinkDatabaseViewProviderMode,
-  CCloudKafkaCluster,
+  CCloudFlinkDbKafkaCluster,
   FlinkArtifact
 > {
   readonly mode = FlinkDatabaseViewProviderMode.Artifacts;
@@ -19,7 +19,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
 
   loadingMessage = "Loading Flink artifacts...";
 
-  async fetchChildren(resource: CCloudKafkaCluster): Promise<FlinkArtifact[]> {
+  async fetchChildren(resource: CCloudFlinkDbKafkaCluster): Promise<FlinkArtifact[]> {
     this.children = [];
     try {
       const loader = CCloudResourceLoader.getInstance();

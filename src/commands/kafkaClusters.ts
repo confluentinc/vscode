@@ -4,7 +4,7 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
@@ -36,10 +36,12 @@ export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster
 }
 
 /** Pick a Flinkable Kafka Cluster as the one to examine in the Flink Database view */
-export async function selectFlinkDatabaseViewKafkaClusterCommand(cluster?: CCloudKafkaCluster) {
+export async function selectFlinkDatabaseViewKafkaClusterCommand(
+  cluster?: CCloudFlinkDbKafkaCluster,
+) {
   // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
-  const flinkDatabase: CCloudKafkaCluster | undefined =
-    cluster instanceof CCloudKafkaCluster && cluster.isFlinkable()
+  const flinkDatabase: CCloudFlinkDbKafkaCluster | undefined =
+    cluster !== undefined
       ? cluster
       : await flinkDatabaseQuickpick(
           undefined, // do not limit to a specific compute pool

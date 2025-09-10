@@ -8,8 +8,8 @@ import {
 } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
-  TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
   TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
@@ -181,15 +181,15 @@ describe("quickpicks/kafkaClusters", () => {
       const computePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
 
       // make sure these line up, else test assumptions are wrong
-      assert.equal(computePool.provider, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.provider);
-      assert.equal(computePool.region, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.region);
+      assert.equal(computePool.provider, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider);
+      assert.equal(computePool.region, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region);
 
       const localClusters = [TEST_LOCAL_KAFKA_CLUSTER];
       const ccloudClusters = [
-        TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         // One from a different provider/region, so should be filtered out.
         CCloudKafkaCluster.create({
-          ...TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+          ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
           id: "ccloud-kafka-cluster-xyz",
           // Different provider/region
           provider: "other-provider",
@@ -227,14 +227,14 @@ describe("quickpicks/kafkaClusters", () => {
       // other two items are the clusters. Their description should be the id.
       // and their .value should be the cluster.
       assert.strictEqual(itemsCalledWith[1].description, ccloudClusters[0].id);
-      assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL);
+      assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
     });
 
     it("Filters out non-flinkable clusters when called without a compute pool", async () => {
       ccloudLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]); // no flink.
       ccloudLoader.getKafkaClustersForEnvironmentId.callsFake(
         async (): Promise<CCloudKafkaCluster[]> => {
-          return [TEST_CCLOUD_KAFKA_CLUSTER, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL];
+          return [TEST_CCLOUD_KAFKA_CLUSTER, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER];
         },
       );
       await flinkDatabaseQuickpick();
@@ -245,8 +245,8 @@ describe("quickpicks/kafkaClusters", () => {
       assert.strictEqual(itemsCalledWith[0].kind, QuickPickItemKind.Separator);
       // other two items are the clusters. Their description should be the id.
       // and their .value should be the cluster.
-      assert.strictEqual(itemsCalledWith[1].description, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.id);
-      assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL);
+      assert.strictEqual(itemsCalledWith[1].description, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
     });
   });
 });
