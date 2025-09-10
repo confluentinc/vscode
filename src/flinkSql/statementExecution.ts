@@ -18,19 +18,36 @@ const logger = new Logger("flinkSql.statementExecution");
 /**
  * Execute a Flink SQL statement, returning the results as an array of objects of type RT.
  * Should be used for batch statements, such as system catalog queries, registering
- * UDFs, etc.
+ * or listing UDFs, etc.
  *
  * @param sqlStatement The SQL statement (string) to execute.
  * @param database The database (CCloudKafkaCluster) to execute the statement against.
- * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution
+ * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution, otherwise will default
+ * to the first compute pool in the database's flinkPools array.
  * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
  *
  */
 export async function executeFlinkStatement<RT>(
   sqlStatement: string,
   database: CCloudKafkaCluster,
-  computePool: CCloudFlinkComputePool,
+  computePool?: CCloudFlinkComputePool,
 ): Promise<Array<RT>> {
+  if (!database.isFlinkable()) {
+    throw new Error(`Cluster ${database.name} is not flinkable!`);
+  }
+
+  if (!computePool) {
+    // Default to the first compute pool if none is provided.
+    computePool = database.flinkPools[0];
+  } else {
+    // Ensure the provided compute pool is valid for this database.
+    if (!database.isSameCloudRegion(computePool)) {
+      throw new Error(
+        `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
+      );
+    }
+  }
+
   const statementParams: IFlinkStatementSubmitParameters = {
     statement: sqlStatement,
     statementName: await determineFlinkStatementName(),

@@ -7,6 +7,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { isResponseErrorWithStatus } from "../errors";
+import { executeFlinkStatement } from "../flinkSql/statementExecution";
 import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -14,6 +15,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkUdf } from "../models/flinkUDF";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
 import { EnvironmentId, IFlinkQueryable } from "../models/resource";
@@ -311,6 +313,47 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
     return flinkArtifacts;
   }
+
+  /**
+   *
+   * @param cluster The (Flinkable) CCloud Kafka cluster to get the UDFs for.
+   */
+  public async getFlinkUDFs(
+    cluster: CCloudKafkaCluster,
+    computePool?: CCloudFlinkComputePool,
+  ): Promise<FlinkUdf[]> {
+    // Run the statement to list UDFs.
+
+    // Will raise Error if the cluster isn't Flinkable, the optionally provided
+    // compute pool doesn't correspond with the cluster, or if the statement
+    // execution fails.
+    const rawResults = await executeFlinkStatement<FunctionNameRow>(
+      "SHOW USER FUNCTIONS",
+      cluster,
+      computePool,
+    );
+
+    const augmentedResults: FlinkUdf[] = rawResults.map((row) => {
+      return new FlinkUdf({
+        connectionId: cluster.connectionId,
+        connectionType: cluster.connectionType,
+        environmentId: cluster.environmentId,
+        id: row["Function Name"], // No unique ID available, so use name as ID.
+        name: row["Function Name"],
+        description: "", // No description available from SHOW FUNCTIONS.
+        provider: cluster.provider,
+        region: cluster.region,
+      });
+    });
+
+    return augmentedResults;
+  }
+}
+/**
+ * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
+ */
+export interface FunctionNameRow {
+  "Function Name": string;
 }
 
 /**

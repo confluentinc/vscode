@@ -8,7 +8,6 @@ import {
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { executeFlinkStatement } from "../flinkSql/statementExecution";
 import {
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
@@ -336,42 +335,11 @@ export interface FunctionNameRow {
   "Function Name": string;
 }
 
-/** Scratch command to test build out */
-export async function listFunctionsCommand(): Promise<void> {
-  void vscode.window.showInformationMessage("List functions command invoked");
-
-  const computePool = await flinkComputePoolQuickPick();
-  if (!computePool) {
-    logger.info("User cancelled compute pool quickpick");
-    return;
-  }
-
-  const database = await flinkDatabaseQuickpick(computePool);
-
-  if (!database) {
-    logger.info("User cancelled database quickpick");
-    return;
-  }
-
-  const results = await executeFlinkStatement<FunctionNameRow>(
-    "SHOW FUNCTIONS",
-    database,
-    computePool,
-  );
-
-  // extract just the function names
-  const functionNames = results.map((row) => row["Function Name"]);
-
-  logger.info("List of functions", { results: JSON.stringify(functionNames, null, 2) });
-}
-
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
     // Different naming scheme due to legacy telemetry reasons.
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
-    // temporary scratch command
-    registerCommandWithLogging("confluent.flink.listFunctions", listFunctionsCommand),
   ];
 }

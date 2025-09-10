@@ -80,6 +80,11 @@ export class CCloudKafkaCluster extends KafkaCluster {
     return (this.flinkPools?.length ?? 0) > 0;
   }
 
+  /** Is this compute pool in the same cloud provider/region as we are? */
+  isSameCloudRegion(other: CCloudFlinkComputePool): boolean {
+    return this.provider === other.provider && this.region === other.region;
+  }
+
   searchableText(): string {
     return `${this.name} ${this.id} ${this.provider}/${this.region}`;
   }
