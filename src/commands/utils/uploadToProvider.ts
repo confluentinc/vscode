@@ -90,22 +90,47 @@ export async function uploadFileToS3({
   });
 
   try {
-    /** Using FormData with POST instead of PUT to support multiple content types.
+    /** Using POST instead of PUT to support multiple content types.
      * This is required for future Python UDF support where we need to upload
      * multiple file formats in a single request. PUT requests are limited to
      * a single content type, while POST with FormData can handle multiple formats.
+     * NOTE: Using manual multipart construction to avoid FormData stream issues in debug mode.
      */
-    const formData = new FormData();
-    // add all the form fields from the presigned URL
-    Object.keys(uploadFormData).forEach((key) => {
-      formData.append(key, uploadFormData[key]);
-    });
-    logger.debug(`Added ${Object.keys(uploadFormData).length} formData fields`);
-    formData.append("file", file);
+
+    // Use manual multipart construction to avoid FormData stream issues in debug mode
+    // Read file data to avoid stream consumption issues
+    const fileArrayBuffer = await file.arrayBuffer();
+    // Create multipart/form-data manually to avoid FormData stream issues
+    const boundary = `----formdata-boundary-upload-artifact-file-${Date.now()}`;
+    const encoder = new TextEncoder();
+    let bodyText = "";
+    // Add all the form fields
+    for (const [key, value] of Object.entries(uploadFormData)) {
+      bodyText += `--${boundary}\r\n`;
+      bodyText += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
+      bodyText += `${value}\r\n`;
+    }
+    logger.debug(`Added ${Object.keys(uploadFormData).length} form fields`);
+    // Add the file
+    bodyText += `--${boundary}\r\n`;
+    bodyText += `Content-Disposition: form-data; name="file"\r\n`;
+    bodyText += `Content-Type: ${contentType}\r\n\r\n`;
+    // Convert body to bytes and append file data
+    const bodyPrefix = encoder.encode(bodyText);
+    const bodySuffix = encoder.encode(`\r\n--${boundary}--\r\n`);
+    const requestBody = new Uint8Array(
+      bodyPrefix.length + fileArrayBuffer.byteLength + bodySuffix.length,
+    );
+    requestBody.set(bodyPrefix, 0);
+    requestBody.set(new Uint8Array(fileArrayBuffer), bodyPrefix.length);
+    requestBody.set(bodySuffix, bodyPrefix.length + fileArrayBuffer.byteLength);
 
     const response = await fetch(presignedUrl, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      },
+      body: requestBody,
     });
 
     if (!response.ok) {
