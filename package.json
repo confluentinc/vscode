@@ -505,6 +505,12 @@
         "category": "Confluent: Project"
       },
       {
+        "command": "confluent.artifacts.scaffold",
+        "icon": "$(plus)",
+        "title": "Generate Flink Artifact",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.schemaViewer.viewLocally",
         "icon": "$(file-code)",
         "title": "View Schema",
@@ -1187,7 +1193,7 @@
       },
       {
         "view": "confluent-flink-artifacts",
-        "contents": "No Flink artifacts found.\n[Generate a Flink Artifact from template](command:confluent.resources.scaffold)",
+        "contents": "No Flink artifacts found.\n[Generate a Flink Artifact from template](command:confluent.artifacts.scaffold)",
         "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkArtifactsPoolSelected"
       }
     ],
@@ -1363,6 +1369,10 @@
         },
         {
           "command": "confluent.resources.scaffold",
+          "when": "false"
+        },
+        {
+          "command": "confluent.artifacts.scaffold",
           "when": "false"
         },
         {
@@ -1560,8 +1570,8 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.resources.scaffold",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable",
+          "command": "confluent.artifacts.scaffold",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkArtifactsUDFsViewMode == 'artifacts'",
           "group": "navigation@2"
         },
         {
