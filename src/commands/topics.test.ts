@@ -1,10 +1,11 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
-  TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -12,13 +13,13 @@ import {
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
+import { KafkaTopic } from "../models/topic";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
@@ -934,7 +935,7 @@ describe("commands/topics.ts queryTopicWithFlink()", function () {
 
   const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK = new CCloudEnvironment({
     ...TEST_CCLOUD_ENVIRONMENT,
-    kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL],
+    kafkaClusters: [TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER],
     flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
   });
   beforeEach(function () {
@@ -981,13 +982,18 @@ LIMIT 10;`;
 
   it("should set URI metadata correctly with compute pool ID and database ID", async function () {
     ccloudLoader.getEnvironment.resolves(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK);
-    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL]);
+    ccloudLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER]);
 
     const mockDocument = { uri: vscode.Uri.file("test.flink.sql") };
     openTextDocumentStub.resolves(mockDocument);
     showTextDocumentStub.resolves({ document: mockDocument });
 
-    await queryTopicWithFlink(TEST_CCLOUD_KAFKA_TOPIC);
+    const flinkableTopic = KafkaTopic.create({
+      ...TEST_CCLOUD_KAFKA_TOPIC,
+      clusterId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
+    });
+
+    await queryTopicWithFlink(flinkableTopic);
 
     // verify document was opened
     sinon.assert.calledOnce(openTextDocumentStub);
@@ -999,8 +1005,8 @@ LIMIT 10;`;
       [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
       [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.id,
       [UriMetadataKeys.FLINK_CATALOG_NAME]: TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_FLINK.name,
-      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.id,
-      [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.name,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name,
     });
   });
 

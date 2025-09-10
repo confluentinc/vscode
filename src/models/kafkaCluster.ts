@@ -58,10 +58,26 @@ export class CCloudKafkaCluster extends KafkaCluster {
     return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/clusters/${this.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
+  /**
+   * Can Flink things be done against this Kafka cluster (aka treat this cluster
+   *  as a Flink Database)?
+   *
+   * Currently, this is determined by whether or not there were any preexisting Flink Compute Pools
+   * available in the env/cloud provider/region of this cluster.
+   **/
+  isFlinkable(): this is this & { flinkPools: CCloudFlinkComputePool[] } {
+    return (this.flinkPools?.length ?? 0) > 0;
+  }
+
   searchableText(): string {
     return `${this.name} ${this.id} ${this.provider}/${this.region}`;
   }
 }
+
+/** A specialized {@link CCloudKafkaCluster} with non-empty flinkPools array. */
+export type CCloudFlinkDbKafkaCluster = CCloudKafkaCluster & {
+  flinkPools: CCloudFlinkComputePool[];
+};
 
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */
 export class DirectKafkaCluster extends KafkaCluster {
@@ -115,8 +131,16 @@ export class KafkaClusterTreeItem extends TreeItem {
 
     // internal properties
     this.resource = resource;
-    // currently only used to determine whether or not we can show the rename command
-    this.contextValue = `${this.resource.connectionType.toLowerCase()}-kafka-cluster`;
+    const contextParts = [this.resource.connectionType.toLowerCase()];
+    if (isCCloud(resource)) {
+      const ccloudCluster = resource as CCloudKafkaCluster;
+      // Can we do Flink things with this cluster?
+      if (ccloudCluster.isFlinkable()) {
+        contextParts.push("flinkable");
+      }
+    }
+    contextParts.push("kafka-cluster");
+    this.contextValue = contextParts.join("-"); // e.g. "ccloud-flinkable-kafka-cluster" or "direct-kafka-cluster"
 
     // user-facing properties
     this.description = `${this.resource.id}`;
@@ -125,7 +149,7 @@ export class KafkaClusterTreeItem extends TreeItem {
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
     this.command = {
-      command: "confluent.resources.kafka-cluster.select",
+      command: "confluent.topics.kafka-cluster.select",
       title: "Set Current Kafka Cluster",
       arguments: [this.resource],
     };
