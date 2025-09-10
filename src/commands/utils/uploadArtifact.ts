@@ -104,7 +104,6 @@ export async function promptForArtifactUploadParams(
 
   let selectedFile: vscode.Uri;
   if (selectedFileUri) {
-    // TODO add some validation for jar, size, etc?
     selectedFile = selectedFileUri;
   } else {
     const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
