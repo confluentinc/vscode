@@ -160,30 +160,35 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Convert the given CCloudEnvironment or CCloudFlinkComputePool
+   * Convert the given CCloudEnvironment, CCloudFlinkComputePool, or CCloudKafkaCluster
    * into a list of distinct IFlinkQueryable objects. Each object
    * will be for a separate provider-region pair within the environment.
    */
   public async determineFlinkQueryables(
-    resource: CCloudEnvironment | CCloudFlinkComputePool,
+    resource: CCloudEnvironment | CCloudFlinkComputePool | CCloudKafkaCluster,
   ): Promise<IFlinkQueryable[]> {
     const org: CCloudOrganization | undefined = await this.getOrganization();
     if (!org) {
       return [];
     }
 
-    if (resource instanceof CCloudFlinkComputePool) {
-      // If we have a single compute pool, just reexpress it.
-      return [
-        {
-          organizationId: org.id,
-          environmentId: resource.environmentId,
-          computePoolId: resource.id,
-          provider: resource.provider,
-          region: resource.region,
-        },
-      ];
+    if (resource instanceof CCloudFlinkComputePool || resource instanceof CCloudKafkaCluster) {
+      // If we have a single compute pool or kafka cluster, just reexpress it as a single
+      // IFlinkQueryable .
+      const singleton: IFlinkQueryable = {
+        organizationId: org.id,
+        environmentId: resource.environmentId,
+        provider: resource.provider,
+        region: resource.region,
+      };
+
+      if (resource instanceof CCloudFlinkComputePool) {
+        // Only fix to a single compute pool if we were given a compute pool.
+        singleton.computePoolId = resource.id;
+      }
+      return [singleton];
     } else {
+      // Must be a CCloudEnvironment. Gather all provider-region pairs.
       // The environment may have many resources in the same
       // provider-region pair. We need to deduplicate them by provider-region.
       const providerRegionSet: ObjectSet<IFlinkQueryable> = new ObjectSet(
@@ -281,7 +286,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @param resource The CCloud compute pool or environment to get the Flink artifacts for.
    */
   public async getFlinkArtifacts(
-    resource: CCloudEnvironment | CCloudFlinkComputePool,
+    resource: CCloudEnvironment | CCloudFlinkComputePool | CCloudKafkaCluster,
   ): Promise<FlinkArtifact[]> {
     const queryables: IFlinkQueryable[] = await this.determineFlinkQueryables(resource);
     const handle = await getSidecar();
