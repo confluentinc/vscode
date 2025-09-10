@@ -295,17 +295,17 @@ describe("uploadArtifact Command", () => {
       description: "",
       searchableText: () => "",
       connectionType: ConnectionType.Local,
-    ccloudUrl: "https://confluent.io",
-    documentationLink: "https://confluent.io",
-    metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
-      self: {},
-      resource_name: "test-artifact",
-      created_at: new Date(),
-      updated_at: new Date(),
-      deleted_at: new Date(),
-    }),
-    createdAt: new Date(),
-    updatedAt: new Date(),
+      ccloudUrl: "https://confluent.io",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     describe("deleteArtifactCommand", () => {
