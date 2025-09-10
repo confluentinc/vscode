@@ -309,5 +309,6 @@ describe("uploadArtifact Command", () => {
         await deleteArtifactCommand(undefined);
         sinon.assert.calledWithMatch(showErrorStub, "No artifact selected for deletion.");
       });
+    });
   });
 });
