@@ -25,7 +25,7 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   await (await page.getByText("main-test-env")).click();
 
   // Click on a Flink compute pool
-  await (await page.getByText("GCP.us-west2")).click();
+  await (await page.getByText("main-test-pool")).click();
 
   await openFixtureFile(page, fileName);
 
@@ -33,7 +33,7 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   await (await page.getByText("Set Compute Pool")).click();
   const computePoolInput = await page.getByPlaceholder("Select a Flink compute pool");
   await expect(computePoolInput).toBeVisible();
-  await computePoolInput.fill("GCP.us-west2");
+  await computePoolInput.fill("main-test-pool");
   await computePoolInput.click();
   await pressKey(page, "Enter");
 
@@ -50,7 +50,7 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
   await (await page.getByText("Submit Statement")).click();
 
   // Move the mouse and hover over Flink Statements
-  await (await page.getByLabel("Flink Statements (Preview) - main-test-env").all())[0].hover();
+  await (await page.getByLabel("Flink Statements").all())[0].hover();
 
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
   await page.waitForSelector("text=Statement:");
