@@ -1129,9 +1129,8 @@ function generateManifest(done) {
     ) {
       console.log("package.json is newer than package.jsonc and Gulpfile.js. Short-circuiting.");
       return done?.(0);
-    } else {
-      console.log("Generating package.json from package.jsonc");
     }
+    console.log("Generating package.json from package.jsonc");
 
     // Read package.jsonc, parse it, and write package.json
     const raw = readFileSync(PACKAGE_JSONC, "utf8");
@@ -1145,13 +1144,11 @@ function generateManifest(done) {
       ...fromJsonCFile,
     };
     writeFileSync(PACKAGE_JSON, JSON.stringify(data, null, 2) + "\n", "utf8");
-    done?.(0);
+    return done?.(0);
   } catch (e) {
     console.error("Failed to generate package.json from package.jsonc:", e);
-    done?.(1);
+    return done?.(1);
   }
-  return 0;
-}
 
 /**
  * Checks the git status of `package.json` and `package.jsonc` files to ensure consistency.
