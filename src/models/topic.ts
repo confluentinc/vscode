@@ -29,6 +29,7 @@ export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   // CCloud env IDs are unique, direct/local env IDs match their connection IDs
   environmentId!: EnvironmentId;
   hasSchema: boolean = false;
+  /** Belongs to a Flink-supporting CCloud Kafka cluster? */
   isFlinkable: boolean = false;
 
   /** Schema subjects; only used with Topics view search. */

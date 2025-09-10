@@ -16,12 +16,11 @@ const logger = new Logger("quickpicks.flinkComputePools");
 /** Wrapper for the Flink Compute Pool quickpick to accomodate data-fetching time and display a
  * progress indicator on the Resources or Flink Statements/Artifacts view(s). */
 export async function flinkComputePoolQuickPickWithViewProgress(
-  viewId: "confluent-resources" | "confluent-flink-statements" | "confluent-flink-artifacts",
   initiallySelectedPool: CCloudFlinkComputePool | null = null,
 ): Promise<CCloudFlinkComputePool | undefined> {
   return await window.withProgress(
     {
-      location: { viewId },
+      location: { viewId: "confluent-flink-statements" },
       title: "Loading Flink compute pools...",
     },
     async () => {

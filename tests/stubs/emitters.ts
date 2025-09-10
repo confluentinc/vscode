@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import * as emitters from "../../src/emitters";
 
 export type StubbedEventEmitters = Partial<
-  Record<keyof typeof emitters, sinon.SinonStubbedInstance<vscode.EventEmitter<void>>>
+  Record<keyof typeof emitters, sinon.SinonStubbedInstance<vscode.EventEmitter<any>>>
 >;
 /**
  * Create stubbed instances for all event emitters defined in the `emitters` module using the provided Sinon sandbox.
@@ -13,7 +13,7 @@ export type StubbedEventEmitters = Partial<
  * enabling controlled testing and verification of event emission and handler registration.
  *
  * The returned object maps each emitter name to its corresponding stubbed instance, typed as
- * `SinonStubbedInstance<vscode.EventEmitter<void>>`, for use in assertions within tests
+ * `SinonStubbedInstance<vscode.EventEmitter<any>>`, for use in assertions within tests
  * proving that .event() was called with the right handler. The whole stubbed instance is returned,
  * not just the `.event()` method, allowing for more flexible testing scenarios.
  *
@@ -26,7 +26,7 @@ export function eventEmitterStubs(sandbox: sinon.SinonSandbox): StubbedEventEmit
   // Will be record of emitter names to their stubbed instances.
   const stubs: Record<
     keyof typeof emitters,
-    sinon.SinonStubbedInstance<vscode.EventEmitter<void>>
+    sinon.SinonStubbedInstance<vscode.EventEmitter<any>>
   > = {} as any;
 
   // Introspect the emitters module to find all event emitters, capturing pairs of
@@ -34,7 +34,7 @@ export function eventEmitterStubs(sandbox: sinon.SinonSandbox): StubbedEventEmit
   const stubEntries: Array<[keyof typeof emitters, vscode.EventEmitter<any>]> = Object.entries(
     emitters,
   ).filter(([, value]) => value instanceof vscode.EventEmitter) as Array<
-    [keyof typeof emitters, vscode.EventEmitter<void>]
+    [keyof typeof emitters, vscode.EventEmitter<any>]
   >;
 
   // Iterate over the entries and create stubbed instances over each emitter.
