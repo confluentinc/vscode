@@ -46,6 +46,7 @@
   ],
   "activationEvents": [
     "workspaceContains:**/*.confluent.*",
+    "workspaceContains:**/*.avsc",
     "onUri"
   ],
   "main": "./out/extension.js",
