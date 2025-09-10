@@ -141,7 +141,7 @@ export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 /** Fires when an Artifact upload completes successfully. */
 export const artifactUploadCompleted = new vscode.EventEmitter<void>();
 
-/** Event emitter for switching Flink artifact/UDF view modes. */
+/** Event emitter for switching Flink Database view modes. */
 export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
 
 /** Fires when an Artifact upload deletes successfully. */
