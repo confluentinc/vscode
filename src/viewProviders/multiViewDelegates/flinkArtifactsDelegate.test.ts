@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
+import { TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL } from "../../../tests/unit/testResources";
 import { createFlinkArtifact } from "../../../tests/unit/testResources/flinkArtifact";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import { ResponseError } from "../../clients/flinkArtifacts";
 import * as errors from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
@@ -23,10 +23,10 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
   describe("FlinkArtifactsDelegate", () => {
     // Minimal fake parent providing only what's used by the delegate
     const fakeParent = {
-      computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      kafkaCluster: TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
       logger: { debug: () => undefined },
     } as unknown as {
-      computePool: typeof TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      kafkaCluster: typeof TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL;
       logger: { debug: (m: string, e: unknown) => void };
     };
 
@@ -56,12 +56,12 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
 
         stubbedLoader.getFlinkArtifacts.resolves(mockArtifacts);
 
-        const children = await artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+        const children = await artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL);
 
         assert.deepStrictEqual(children, mockArtifacts);
         assert.deepStrictEqual(artifactsDelegate["children"], mockArtifacts);
         sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
-        sinon.assert.calledWith(stubbedLoader.getFlinkArtifacts, fakeParent.computePool);
+        sinon.assert.calledWith(stubbedLoader.getFlinkArtifacts, fakeParent.kafkaCluster);
       });
 
       it("clears children and rethrows when loader fails (431 -> default message)", async () => {
@@ -71,7 +71,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
 
@@ -87,7 +87,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);
@@ -101,7 +101,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);
@@ -115,7 +115,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
 
@@ -134,7 +134,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         ];
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         assert.deepStrictEqual(artifactsDelegate["children"], []);
@@ -147,7 +147,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);
@@ -161,7 +161,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);
@@ -175,7 +175,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);
@@ -189,7 +189,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);
@@ -203,7 +203,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
 
         await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL),
+          artifactsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL),
           mockError,
         );
         sinon.assert.calledOnce(logErrorStub);

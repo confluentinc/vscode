@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { createResponseError } from "../../tests/unit/testUtils";
 import { FlinkArtifactsArtifactV1Api } from "../clients/flinkArtifacts";
@@ -10,9 +11,11 @@ import {
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
+import * as contextValues from "../context/values";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
+import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
   deleteArtifactCommand,
   queryArtifactWithFlink,
@@ -259,7 +262,7 @@ describe("uploadArtifact Command", () => {
       );
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
-        "confluent.flink.setArtifactsViewMode",
+        "confluent.flinkdatabase.setArtifactsViewMode",
         setFlinkArtifactsViewModeCommand,
       );
       sinon.assert.calledWithExactly(
@@ -315,6 +318,24 @@ describe("deleteArtifactCommand", () => {
 
       await deleteArtifactCommand(mockArtifact);
       sinon.assert.calledOnce(showInformationMessageStub);
+    });
+  });
+
+  describe("setFlinkArtifactsViewModeCommand", () => {
+    it("should set the Flink Database view to Artifacts mode", async () => {
+      const setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+      const stubbedEventEmitters: StubbedEventEmitters = eventEmitterStubs(sandbox);
+      const flinkDatabaseViewModeFireStub = stubbedEventEmitters.flinkDatabaseViewMode!.fire;
+
+      await setFlinkArtifactsViewModeCommand();
+
+      sinon.assert.calledOnce(flinkDatabaseViewModeFireStub);
+      sinon.assert.calledOnce(setContextValueStub);
+      sinon.assert.calledWithExactly(
+        setContextValueStub,
+        contextValues.ContextValues.flinkDatabaseViewMode,
+        FlinkDatabaseViewProviderMode.Artifacts,
+      );
     });
   });
 });

@@ -29,7 +29,7 @@ export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.
   environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
 });
 export const TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL: CCloudKafkaCluster = CCloudKafkaCluster.create({
-  id: "lkc-abc123",
+  id: "lkc-abc123-finkable",
   name: "test-ccloud-kafka-cluster",
   provider: TEST_CCLOUD_PROVIDER,
   region: TEST_CCLOUD_REGION,

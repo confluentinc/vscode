@@ -1,8 +1,8 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL } from "../../../tests/unit/testResources";
 import { FlinkUdf } from "../../models/flinkUDF";
-import { FlinkArtifactsUDFsViewProvider } from "../flinkArtifacts";
+import { FlinkDatabaseViewProvider } from "../flinkDatabase";
 import { FlinkUDFsDelegate } from "./flinkUDFsDelegate";
 
 describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
@@ -17,22 +17,22 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
   });
 
   describe("FlinkUDFsDelegate", () => {
-    let provider: FlinkArtifactsUDFsViewProvider;
+    let provider: FlinkDatabaseViewProvider;
     let udfsDelegate: FlinkUDFsDelegate;
 
     beforeEach(() => {
-      provider = FlinkArtifactsUDFsViewProvider.getInstance();
+      provider = FlinkDatabaseViewProvider.getInstance();
       udfsDelegate = new FlinkUDFsDelegate();
     });
 
     afterEach(() => {
       provider.dispose();
-      FlinkArtifactsUDFsViewProvider["instanceMap"].clear();
+      FlinkDatabaseViewProvider["instanceMap"].clear();
     });
 
-    it(".fetchChildren() should return a FlinkUdf array when a compute pool is provided", async () => {
+    it(".fetchChildren() should return a FlinkUdf array when a flinkable Kafka cluster is provided", async () => {
       // TODO: stub the actual loading here when https://github.com/confluentinc/vscode/issues/2310 is done
-      const items = await udfsDelegate.fetchChildren(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const items = await udfsDelegate.fetchChildren(TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL);
 
       assert.ok(items.length > 0);
       assert.ok(items[0] instanceof FlinkUdf);
