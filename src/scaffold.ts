@@ -85,8 +85,6 @@ async function resourceScaffoldProjectRequest(
       },
       "topic",
     );
-    // TODO temporarily using "undefined" to signal call from Artifacts header, which only gives Table API examples
-    // Need to decide whether to make a new command for generating Artifacts specifically
   } else if (item instanceof CCloudFlinkComputePool) {
     const organization: CCloudOrganization | undefined =
       await CCloudResourceLoader.getInstance().getOrganization();
