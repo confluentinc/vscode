@@ -90,7 +90,7 @@ export class FlinkArtifactTreeItem extends TreeItem {
 export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkdownString {
   let documentationLabel: KeyValuePair;
   if (resource.documentationLink === undefined || resource.documentationLink === "") {
-    // Change to "Add documentation link" when we that command is implemented
+    // Change to "Add documentation link" command for adding during upload is implemented
     documentationLabel = ["No documentation link", ""];
   } else {
     documentationLabel = ["See Documentation", resource.documentationLink];

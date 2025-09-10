@@ -95,7 +95,7 @@ export class CustomMarkdownString extends vscode.MarkdownString {
     iconName: IconNames | undefined,
     ccloudUrl: string | undefined,
     keyValuePairs: KeyValuePairArray,
-    label?: KeyValuePair,
+    linkUrl?: KeyValuePair,
   ): CustomMarkdownString {
     const tooltip = new CustomMarkdownString();
 
@@ -114,8 +114,10 @@ export class CustomMarkdownString extends vscode.MarkdownString {
       tooltip.appendMarkdown(`\n\n${key}: \`${value}\``);
     });
 
-    if (label) {
-      tooltip.appendMarkdown(`\n\n[${label[0]}](${label[1]})`);
+    if (linkUrl) {
+      if (linkUrl[1] !== undefined && linkUrl[1] !== "") {
+        tooltip.appendMarkdown(`\n\n[${linkUrl[0]}](${linkUrl[1]})`);
+      }
     }
 
     if (ccloudUrl) {
