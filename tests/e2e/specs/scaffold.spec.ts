@@ -80,15 +80,15 @@ test.describe("Project Scaffolding", () => {
         await successNotification.clickActionButton("Open in Current Window");
 
         // When we open the configuration file .env
-        const configurationFile = ".env";
+        const envFileName = ".env";
         const explorerView = new View(page, "Explorer");
         const envFile = explorerView.treeItems.filter({
-          hasText: configurationFile,
+          hasText: envFileName,
         });
         await expect(envFile).toBeVisible();
         await envFile.click();
         // Then we should see the generated configuration
-        const envDocument = new TextDocument(page, configurationFile);
+        const envDocument = new TextDocument(page, envFileName);
         await expect(envDocument.tab).toBeVisible();
         await expect(envDocument.editorContent).toBeVisible();
         await expect(envDocument.editorContent).toContainText(
