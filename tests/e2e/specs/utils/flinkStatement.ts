@@ -1,23 +1,14 @@
-import { FrameLocator, Page, expect } from "@playwright/test";
+import { ElectronApplication, FrameLocator, Page, expect } from "@playwright/test";
+import { stubMultipleDialogs } from "electron-playwright-helpers";
+import path from "path";
+import { TextDocument } from "../../objects/editor/TextDocument";
 import { Quickpick } from "../../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../../objects/views/ResourcesView";
 import { FlinkStatementTestIds } from "./testIds";
 
-const DEFAULT_TIMEOUT_MS = 2000;
 const TEST_ENV_NAME = "main-test-env";
 const TEST_COMPUTE_POOL_NAME = "main-test-pool";
 const TEST_KAFKA_CLUSTER_NAME = "main-test-cluster";
-
-/**
- * Waits for a specified amount of time and then presses a key on the Playwright page.
- * @param page - The Playwright page object.
- * @param key - The key to press, e.g., "Enter", "Escape", etc.
- * @param timeout - The time to wait before pressing the key, in milliseconds. Default is 2000ms.
- */
-async function pressKey(page: Page, key: string, timeout = DEFAULT_TIMEOUT_MS) {
-  await page.waitForTimeout(timeout);
-  await page.keyboard.press(key, { delay: 100 });
-}
 
 /**
  * Submit a Flink statement to Confluent Cloud.
@@ -25,31 +16,48 @@ async function pressKey(page: Page, key: string, timeout = DEFAULT_TIMEOUT_MS) {
  * @param page - The Playwright page object.
  * @param fileName - The name of the Flink SQL file to submit. Must be present in the `tests/fixtures` directory.
  */
-export async function submitFlinkStatement(page: Page, fileName: string) {
+export async function submitFlinkStatement(
+  page: Page,
+  fixtureFileName: string,
+  electronApp: ElectronApplication,
+) {
   const resourcesView = new ResourcesView(page);
   // First, expand the CCloud env
   await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
   await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
-  // Click on a Flink compute pool
+  // Then click on a Flink compute pool
   await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
   await resourcesView.ccloudFlinkComputePools.getByText(TEST_COMPUTE_POOL_NAME).click();
 
-  await openFixtureFile(page, fileName);
+  // Open the fixture file
+  await stubMultipleDialogs(electronApp, [
+    {
+      method: "showOpenDialog",
+      value: {
+        filePaths: [fixtureFileName]
+      },
+    },
+  ]);
+  await page.keyboard.press("ControlOrMeta+O");
+  const flinkSqlDoc = new TextDocument(page, path.basename(fixtureFileName));
+  // Wait for the CodeLens actions to show up
+  await expect(flinkSqlDoc.tab).toBeVisible();
+  const codeLens = flinkSqlDoc.codeLensActions;
 
   // Select the Flink compute pool
-  await page.waitForTimeout(DEFAULT_TIMEOUT_MS);
-  await page.getByText("Set Compute Pool").click();
+  await codeLens.getByText("Set Compute Pool").click();
   const computePoolQuickpick = new Quickpick(page);
   await computePoolQuickpick.selectItemByText(TEST_COMPUTE_POOL_NAME);
+  await expect(codeLens.getByText(TEST_COMPUTE_POOL_NAME)).toBeVisible();
 
   // Select the Kafka cluster
-  await page.waitForTimeout(DEFAULT_TIMEOUT_MS);
-  await page.getByText("Set Catalog & Database").click();
+  await codeLens.getByText("Set Catalog & Database").click();
   const kafkaClusterQuickpick = new Quickpick(page);
   await kafkaClusterQuickpick.selectItemByText(TEST_KAFKA_CLUSTER_NAME);
+  await expect(codeLens.getByText(TEST_KAFKA_CLUSTER_NAME)).toBeVisible();
 
   // Submit the Flink statement
-  await page.getByText("Submit Statement").click();
+  await flinkSqlDoc.codeLensActions.getByText("Submit Statement").click();
 
   // Move the mouse and hover over Flink Statements
   await (await page.getByLabel("Flink Statements").all())[0].hover();
@@ -59,15 +67,6 @@ export async function submitFlinkStatement(page: Page, fileName: string) {
 
   // We don't make assumptions about whether the statement will go into RUNNING state or not.
   // That's up to the caller to decide.
-}
-
-export async function openFixtureFile(page: Page, fileName: string) {
-  // Could be interrupted by other events while typing.
-  await pressKey(page, "ControlOrMeta+P");
-  const input = await page.getByPlaceholder("Search files by name");
-  await input.isVisible();
-  await input.fill(fileName);
-  await pressKey(page, "Enter");
 }
 
 /**
@@ -115,33 +114,4 @@ export async function verifyStatementStatus(webview: FrameLocator, status: strin
  */
 export async function verifyResultsStats(webview: FrameLocator, stats: string) {
   await expect(webview.getByTestId(FlinkStatementTestIds.resultsStats)).toHaveText(stats);
-}
-
-export interface FlinkStatementTestParams {
-  fileName: string;
-  eventualExpectedStatus: string;
-  expectedStats: string;
-  timeout?: number;
-}
-
-/**
- * Helper function to test Flink statement execution with common assertions.
- *
- * @param page - The Playwright page object
- * @param params - Test parameters including file name and expected results
- */
-export async function testFlinkStatement(page: Page, params: FlinkStatementTestParams) {
-  // Submit the statement
-  await submitFlinkStatement(page, params.fileName);
-
-  const webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
-
-  // Assert that we can see the columns immediately.
-  await expect(webview.getByTestId(FlinkStatementTestIds.columnRow)).toBeVisible();
-
-  // Wait for statement to run and verify status
-  await verifyStatementStatus(webview, params.eventualExpectedStatus);
-
-  // Verify results stats
-  await verifyResultsStats(webview, params.expectedStats);
 }
