@@ -9,7 +9,7 @@ import {
 import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
@@ -27,7 +27,7 @@ export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
  */
 export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   FlinkDatabaseViewProviderMode,
-  CCloudKafkaCluster,
+  CCloudFlinkDbKafkaCluster,
   ArtifactOrUdf
 > {
   viewId = "confluent-flink-database";
@@ -74,6 +74,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     this.children = [];
 
     if (this.database) {
+      // Capture the database in a local variable so that will never change
+      // while we're in the middle of this async operation.
+      const db = this.database;
+
+      this.logger.debug(`refreshing Flink Database view for ${db.name} (${db.id})`);
       // clear out the current delegate's children
       this._onDidChangeTreeData.fire();
 
@@ -81,7 +86,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            this.children = await this.currentDelegate.fetchChildren(this.database!);
+            this.children = await this.currentDelegate.fetchChildren(db);
           } catch (error) {
             const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
             void logError(error, msg);
@@ -104,7 +109,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     return this.currentDelegate?.mode ?? "unknown";
   }
 
-  get database(): CCloudKafkaCluster | null {
+  get database(): CCloudFlinkDbKafkaCluster | null {
     return this.resource;
   }
 }

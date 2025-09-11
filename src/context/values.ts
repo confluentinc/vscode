@@ -78,7 +78,7 @@ export enum ContextValues {
   /** The user applied a search string to the Flink Artifacts view. */
   flinkArtifactsSearchApplied = "confluent.flinkArtifactsSearchApplied",
 
-  /** The user changed the mode of the Flink Artifacts/UDFs view. */
+  /** The user changed the mode of the Flink Database view. */
   flinkDatabaseViewMode = "confluent.flinkDatabaseViewMode",
 
   /**

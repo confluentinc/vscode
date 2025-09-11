@@ -27,7 +27,6 @@ export async function selectPoolForStatementsViewCommand(pool?: CCloudFlinkCompu
   //  user to pick a new pool.)
   if (!pool || !(pool instanceof CCloudFlinkComputePool)) {
     pool = await flinkComputePoolQuickPickWithViewProgress(
-      "confluent-flink-statements",
       // Initially select whatever the view is currently set to. Will be null if not focused on exactly one pool.
       FlinkStatementsViewProvider.getInstance().computePool,
     );

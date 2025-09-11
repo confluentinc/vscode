@@ -90,6 +90,11 @@ export class CCloudKafkaCluster extends KafkaCluster {
   }
 }
 
+/** A specialized {@link CCloudKafkaCluster} with non-empty flinkPools array. */
+export type CCloudFlinkDbKafkaCluster = CCloudKafkaCluster & {
+  flinkPools: CCloudFlinkComputePool[];
+};
+
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */
 export class DirectKafkaCluster extends KafkaCluster {
   readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time

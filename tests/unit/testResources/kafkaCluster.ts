@@ -1,5 +1,6 @@
 import { CCLOUD_BASE_PATH } from "../../../src/constants";
 import {
+  CCloudFlinkDbKafkaCluster,
   CCloudKafkaCluster,
   DirectKafkaCluster,
   LocalKafkaCluster,
@@ -28,16 +29,17 @@ export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.
   uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:443`,
   environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
 });
-export const TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL: CCloudKafkaCluster = CCloudKafkaCluster.create({
-  id: "lkc-abc123-finkable",
-  name: "test-ccloud-kafka-cluster",
-  provider: TEST_CCLOUD_PROVIDER,
-  region: TEST_CCLOUD_REGION,
-  bootstrapServers: `SASL_SSL://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:9092`,
-  uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:443`,
-  environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
-  flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-});
+export const TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER: CCloudFlinkDbKafkaCluster =
+  CCloudKafkaCluster.create({
+    id: "lkc-abc123-finkable",
+    name: "test-ccloud-kafka-cluster",
+    provider: TEST_CCLOUD_PROVIDER,
+    region: TEST_CCLOUD_REGION,
+    bootstrapServers: `SASL_SSL://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:9092`,
+    uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.${CCLOUD_BASE_PATH}:443`,
+    environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
+    flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+  }) as CCloudFlinkDbKafkaCluster;
 
 export const TEST_DIRECT_KAFKA_CLUSTER = DirectKafkaCluster.create({
   connectionId: TEST_DIRECT_CONNECTION_ID,

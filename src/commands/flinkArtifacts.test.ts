@@ -4,7 +4,10 @@ import * as vscode from "vscode";
 import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { createResponseError } from "../../tests/unit/testUtils";
-import { FlinkArtifactsArtifactV1Api } from "../clients/flinkArtifacts";
+import {
+  ArtifactV1FlinkArtifactMetadataFromJSON,
+  FlinkArtifactsArtifactV1Api,
+} from "../clients/flinkArtifacts";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
@@ -47,6 +50,14 @@ describe("flinkArtifacts", () => {
       environmentId: "env-id" as EnvironmentId,
       provider: "aws",
       region: "us-west-2",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
     });
     const openTextDocStub = sandbox
       .stub(vscode.workspace, "openTextDocument")
@@ -299,6 +310,17 @@ describe("deleteArtifactCommand", () => {
     description: "",
     searchableText: () => "",
     connectionType: ConnectionType.Local,
+    ccloudUrl: "https://confluent.io",
+    documentationLink: "https://confluent.io",
+    metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+      self: {},
+      resource_name: "test-artifact",
+      created_at: new Date(),
+      updated_at: new Date(),
+      deleted_at: new Date(),
+    }),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   describe("deleteArtifactCommand", () => {

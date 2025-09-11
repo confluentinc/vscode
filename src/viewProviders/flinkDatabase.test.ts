@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
-import { TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import * as errors from "../errors";
 import * as notifications from "../notifications";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
@@ -65,7 +65,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       });
 
       it("should call the current delegate to fetch children when a compute pool is selected", async () => {
-        const resource = TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL;
+        const resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         viewProvider["resource"] = resource;
 
         const fakeChildren = [{ id: "x" }];
@@ -81,7 +81,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       });
 
       it("should show an error notification when the delegate's fetchChildren() fails", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL;
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const fakeError = new Error("uh oh");
         delegateFetchStub.rejects(fakeError);
 
@@ -102,7 +102,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       });
 
       it("should use the current delegate's loading message in progress indicator", async () => {
-        viewProvider["resource"] = TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL;
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         delegateFetchStub.resolves([]);
 
         await viewProvider.refresh();

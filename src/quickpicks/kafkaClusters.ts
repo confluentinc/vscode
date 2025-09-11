@@ -6,7 +6,11 @@ import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import {
+  CCloudFlinkDbKafkaCluster,
+  CCloudKafkaCluster,
+  KafkaCluster,
+} from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { QuickPickItemWithValue } from "./types";
@@ -177,7 +181,7 @@ export async function kafkaClusterQuickPick(
 export async function flinkDatabaseQuickpick(
   computePool?: CCloudFlinkComputePool,
   placeholder: string = "Select the Kafka cluster to use as the default database for the statement",
-): Promise<CCloudKafkaCluster | undefined> {
+): Promise<CCloudFlinkDbKafkaCluster | undefined> {
   return (await kafkaClusterQuickPick({
     placeHolder: placeholder,
     filter: (cluster: KafkaCluster) => {
@@ -207,5 +211,5 @@ export async function flinkDatabaseQuickpick(
         ccloudCluster.region === computePool.region
       );
     },
-  })) as CCloudKafkaCluster | undefined;
+  })) as CCloudFlinkDbKafkaCluster | undefined;
 }

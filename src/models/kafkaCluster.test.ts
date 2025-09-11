@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import {
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
-  TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
@@ -60,7 +60,7 @@ describe("Test CCloudKafkaCluster properties", () => {
 
   describe("isFlinkable", () => {
     it("should be true when there are flink pools", () => {
-      assert.strictEqual(true, TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL.isFlinkable());
+      assert.strictEqual(true, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.isFlinkable());
     });
 
     it("should be false when there are no flink pools", () => {

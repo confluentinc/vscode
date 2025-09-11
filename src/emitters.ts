@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { CCloudEnvironment } from "./models/environment";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId } from "./models/flinkStatement";
-import { CCloudKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
@@ -117,7 +117,7 @@ export const currentFlinkStatementsResourceChanged = new vscode.EventEmitter<
  * Flink Database view changes.
  */
 export const flinkDatabaseViewResourceChanged =
-  new vscode.EventEmitter<CCloudKafkaCluster | null>();
+  new vscode.EventEmitter<CCloudFlinkDbKafkaCluster | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 
@@ -141,7 +141,7 @@ export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 /** Fires when an Artifact upload completes successfully. */
 export const artifactUploadCompleted = new vscode.EventEmitter<void>();
 
-/** Event emitter for switching Flink artifact/UDF view modes. */
+/** Event emitter for switching Flink Database view modes. */
 export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
 
 /** Fires when an Artifact upload deletes successfully. */

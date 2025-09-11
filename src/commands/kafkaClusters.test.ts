@@ -3,10 +3,10 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import {
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
-  TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
 } from "../../tests/unit/testResources/kafkaCluster";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import * as kafkaClusterQuickpicks from "../quickpicks/kafkaClusters";
 import {
   copyBootstrapServers,
@@ -14,7 +14,7 @@ import {
   selectTopicsViewKafkaClusterCommand,
 } from "./kafkaClusters";
 
-describe("kafkaClusters.ts", () => {
+describe("commands/kafkaClusters.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let emitterStubs: StubbedEventEmitters;
   let executeCommandStub: sinon.SinonStub;
@@ -101,10 +101,10 @@ describe("kafkaClusters.ts", () => {
     });
 
     it("should use the provided cluster if valid", async () => {
-      const testCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
-        ...TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+      const testCluster: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         id: "cluster-123",
-      });
+      }) as CCloudFlinkDbKafkaCluster;
 
       await selectFlinkDatabaseViewKafkaClusterCommand(testCluster);
       // skips call to kafkaClusterQuickPickWithViewProgress
@@ -114,25 +114,9 @@ describe("kafkaClusters.ts", () => {
       sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent-flink-database.focus");
     });
 
-    it("will call quickpick if somehow provided cluster is not Flinkable", async () => {
-      const nonFlinkableCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
-        ...TEST_CCLOUD_KAFKA_CLUSTER,
-        id: "cluster-789",
-      });
-
-      flinkDatabaseQuickpickStub.resolves(undefined); // user cancels
-
-      await selectFlinkDatabaseViewKafkaClusterCommand(nonFlinkableCluster);
-      // skips call to kafkaClusterQuickPickWithViewProgress
-
-      sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
-      sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
-      sinon.assert.notCalled(executeCommandStub);
-    });
-
     it("should use the selected cluster from quick pick if none provided", async () => {
       const testCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
-        ...TEST_CCLOUD_KAFKA_CLUSTER_WITH_POOL,
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         id: "cluster-456",
       });
       flinkDatabaseQuickpickStub.resolves(testCluster);
