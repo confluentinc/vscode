@@ -312,7 +312,11 @@ export async function applyTemplate(
     // Notify the user that the project was generated successfully
     const selection = await vscode.window.showInformationMessage(
       `🎉 Project Generated`,
-      { modal: true, detail: `Location: ${destination.path}` },
+      {
+        // Do not show a modal dialog when running E2E tests
+        modal: !process.env.CONFLUENT_VSCODE_E2E_TESTING,
+        detail: `Location: ${destination.path}`,
+      },
       { title: "Open in New Window" },
       { title: "Open in Current Window" },
       { title: "Dismiss", isCloseAffordance: true },

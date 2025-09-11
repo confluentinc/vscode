@@ -50,4 +50,10 @@ export class View {
     await this.header.hover();
     await this.header.getByRole("button", { name: label }).click();
   }
+
+  /** Click the tree item with the given label. */
+  async clickTreeItem(label: string): Promise<void> {
+    const treeItem = this.treeItems.filter({ hasText: label });
+    await treeItem.click();
+  }
 }
