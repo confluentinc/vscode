@@ -6,6 +6,7 @@ import {
   CreateSqlv1StatementRequestApiVersionEnum,
   CreateSqlv1StatementRequestKindEnum,
 } from "../clients/flinkSql";
+import { isResponseErrorWithStatus } from "../errors";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
@@ -72,7 +73,7 @@ export async function submitFlinkStatement(
   }
 
   const request: CreateSqlv1StatementOperationRequest = {
-    organization_id: organization.id,
+    organization_id: params.organizationId,
     environment_id: params.computePool.environmentId,
     CreateSqlv1StatementRequest: requestInner,
   };
@@ -134,11 +135,9 @@ async function waitForStatementState(
 ): Promise<FlinkStatement> {
   const startTime = Date.now();
 
-  const ccloudLoader = CCloudResourceLoader.getInstance();
-
   while (Date.now() - startTime < maxWaitTimeMs) {
     // Check if the statement is in a viewable state
-    const refreshedStatement = await ccloudLoader.refreshFlinkStatement(statement);
+    const refreshedStatement = await refreshFlinkStatement(statement);
 
     if (!refreshedStatement) {
       // if the statement is no longer found, break to raise error
@@ -214,5 +213,39 @@ export class FlinkStatementWebviewPanelCache extends WebviewPanelCache {
       vscode.ViewColumn.One,
       { enableScripts: true },
     );
+  }
+}
+
+/**
+ * Re-fetch the provided FlinkStatement, returning an updated version if possible.
+ *
+ * @param statement The Flink statement to refresh.
+ * @returns Updated Flink statement or null if it was not found.
+ * @throws Error if there was an error while refreshing the Flink statement.
+ */
+export async function refreshFlinkStatement(
+  statement: FlinkStatement,
+): Promise<FlinkStatement | null> {
+  const handle = await getSidecar();
+
+  const statementsClient = handle.getFlinkSqlStatementsApi(statement);
+
+  try {
+    const routeResponse = await statementsClient.getSqlv1Statement({
+      environment_id: statement.environmentId,
+      organization_id: statement.organizationId,
+      statement_name: statement.name,
+    });
+    return restFlinkStatementToModel(routeResponse, statement);
+  } catch (error) {
+    if (isResponseErrorWithStatus(error, 404)) {
+      logger.info(`Flink statement ${statement.name} no longer exists`);
+      return null;
+    } else {
+      logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
+        error,
+      });
+      throw error;
+    }
   }
 }

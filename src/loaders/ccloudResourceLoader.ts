@@ -6,8 +6,8 @@ import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
-import { isResponseErrorWithStatus } from "../errors";
 import { executeFlinkStatement } from "../flinkSql/statementExecution";
+import { refreshFlinkStatement } from "../flinkSql/statementUtils";
 import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -262,28 +262,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @throws Error if there was an error while refreshing the Flink statement.
    */
   public async refreshFlinkStatement(statement: FlinkStatement): Promise<FlinkStatement | null> {
-    const handle = await getSidecar();
-
-    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
-
-    try {
-      const routeResponse = await statementsClient.getSqlv1Statement({
-        environment_id: statement.environmentId,
-        organization_id: statement.organizationId,
-        statement_name: statement.name,
-      });
-      return restFlinkStatementToModel(routeResponse, statement);
-    } catch (error) {
-      if (isResponseErrorWithStatus(error, 404)) {
-        logger.info(`Flink statement ${statement.name} no longer exists`);
-        return null;
-      } else {
-        logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
-          error,
-        });
-        throw error;
-      }
-    }
+    // Defer to core implementation in flinkSql/statementUtils.ts
+    return await refreshFlinkStatement(statement);
   }
 
   /**
