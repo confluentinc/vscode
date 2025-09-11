@@ -245,7 +245,7 @@ export async function uploadArtifactToCCloud(
     const artifactsClient = sidecarHandle.getFlinkArtifactsApi(providerRegion);
 
     const response = await artifactsClient.createArtifactV1FlinkArtifact({
-      CreateArtifactV1FlinkArtifactRequest: buildCreateArtifactRequest(params, uploadId),
+      CreateArtifactV1FlinkArtifactRequest: createRequest,
       cloud: params.cloud,
       region: params.region,
     });
