@@ -414,10 +414,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     // Look up the cluster & db name if we have a database id
     if (currentDatabaseName) {
       try {
-        const loader = CCloudResourceLoader.getInstance();
-        // Get all clusters from all environments since we don't know which environment the cluster belongs to
-        const environments = await loader.getEnvironments();
-        const settings = await getCatalogDatabaseFromMetadata(uriMetadata, environments);
+        const settings = await getCatalogDatabaseFromMetadata(uriMetadata);
         if (settings) {
           catalogName = settings.catalog?.name || null;
           databaseName = settings.database?.name || null;

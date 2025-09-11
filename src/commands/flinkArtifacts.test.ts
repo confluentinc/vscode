@@ -1,18 +1,24 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { createResponseError } from "../../tests/unit/testUtils";
-import { FlinkArtifactsArtifactV1Api } from "../clients/flinkArtifacts";
+import {
+  ArtifactV1FlinkArtifactMetadataFromJSON,
+  FlinkArtifactsArtifactV1Api,
+} from "../clients/flinkArtifacts";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
+import * as contextValues from "../context/values";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
+import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
   deleteArtifactCommand,
   queryArtifactWithFlink,
@@ -44,6 +50,14 @@ describe("flinkArtifacts", () => {
       environmentId: "env-id" as EnvironmentId,
       provider: "aws",
       region: "us-west-2",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
     });
     const openTextDocStub = sandbox
       .stub(vscode.workspace, "openTextDocument")
@@ -259,7 +273,7 @@ describe("uploadArtifact Command", () => {
       );
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub,
-        "confluent.flink.setArtifactsViewMode",
+        "confluent.flinkdatabase.setArtifactsViewMode",
         setFlinkArtifactsViewModeCommand,
       );
       sinon.assert.calledWithExactly(
@@ -296,6 +310,17 @@ describe("deleteArtifactCommand", () => {
     description: "",
     searchableText: () => "",
     connectionType: ConnectionType.Local,
+    ccloudUrl: "https://confluent.io",
+    documentationLink: "https://confluent.io",
+    metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+      self: {},
+      resource_name: "test-artifact",
+      created_at: new Date(),
+      updated_at: new Date(),
+      deleted_at: new Date(),
+    }),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   describe("deleteArtifactCommand", () => {
@@ -315,6 +340,24 @@ describe("deleteArtifactCommand", () => {
 
       await deleteArtifactCommand(mockArtifact);
       sinon.assert.calledOnce(showInformationMessageStub);
+    });
+  });
+
+  describe("setFlinkArtifactsViewModeCommand", () => {
+    it("should set the Flink Database view to Artifacts mode", async () => {
+      const setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+      const stubbedEventEmitters: StubbedEventEmitters = eventEmitterStubs(sandbox);
+      const flinkDatabaseViewModeFireStub = stubbedEventEmitters.flinkDatabaseViewMode!.fire;
+
+      await setFlinkArtifactsViewModeCommand();
+
+      sinon.assert.calledOnce(flinkDatabaseViewModeFireStub);
+      sinon.assert.calledOnce(setContextValueStub);
+      sinon.assert.calledWithExactly(
+        setContextValueStub,
+        contextValues.ContextValues.flinkDatabaseViewMode,
+        FlinkDatabaseViewProviderMode.Artifacts,
+      );
     });
   });
 });
