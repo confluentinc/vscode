@@ -182,10 +182,17 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getCurrentOrganizationStub);
     });
 
-    it("should return undefined if no organization is available", async () => {
+    it("should throw if no organization is available", async () => {
       getCurrentOrganizationStub.resolves(undefined);
-      const org = await loader.getOrganization();
-      assert.strictEqual(org, undefined);
+      await assert.rejects(
+        async () => {
+          await loader.getOrganization();
+        },
+        {
+          name: "Error",
+          message: "Could not determine the current CCloud organization!",
+        },
+      );
       sinon.assert.calledOnce(getCurrentOrganizationStub);
     });
   });
@@ -668,29 +675,18 @@ describe("CCloudResourceLoader", () => {
       getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
     });
 
-    it("should not throw any errors when no CCloud org is available", async () => {
+    it("will throw when no CCloud org is available", async () => {
       getEnvironmentsStub.resolves([]);
       getCurrentOrganizationStub.resolves(undefined);
 
-      await loader["doLoadCoarseResources"]();
-
-      sinon.assert.calledOnce(getEnvironmentsStub);
-      sinon.assert.calledOnce(getCurrentOrganizationStub);
-      assert.strictEqual(loader["organization"], null);
-      sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setEnvironments,
-        CCLOUD_CONNECTION_ID,
-        [],
-      );
-      sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setKafkaClusters,
-        CCLOUD_CONNECTION_ID,
-        [],
-      );
-      sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setSchemaRegistries,
-        CCLOUD_CONNECTION_ID,
-        [],
+      await assert.rejects(
+        async () => {
+          await loader["doLoadCoarseResources"]();
+        },
+        {
+          name: "Error",
+          message: "Could not determine the current CCloud organization!",
+        },
       );
     });
 
