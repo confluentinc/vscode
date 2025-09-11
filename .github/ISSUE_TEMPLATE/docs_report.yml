@@ -2,7 +2,8 @@ name: 'Report a documentation issue'
 description: Report an issue with the Confluent for VS Code documentation.
 title: 'Docs: '
 labels:
-  - 'docs'
+  - 'documentation'
+  - 'needs triage'
 body:
   - type: markdown
     attributes:
