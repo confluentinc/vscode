@@ -136,7 +136,7 @@ export class ResourcesView extends View {
 
   /**
    * Locator for CCloud Flink Compute Pool tree items.
-   * Only visible when a {@link ccloudFlinkComputePools CCloud Flink Compute Pool item} is expanded.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
    */
   get ccloudFlinkComputePools(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Flink Compute Pool item
