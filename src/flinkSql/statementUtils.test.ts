@@ -2,25 +2,41 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_FLINK_STATEMENT } from "../../tests/unit/testResources/flinkStatement";
+import {
+  createFlinkStatement,
+  TEST_CCLOUD_FLINK_STATEMENT,
+} from "../../tests/unit/testResources/flinkStatement";
+import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
+import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as authnUtils from "../authn/utils";
-import { CCloudResourceLoader } from "../loaders";
+import {
+  GetSqlv1Statement200Response,
+  GetSqlv1StatementResult200Response,
+  StatementResultsSqlV1Api,
+  StatementsSqlV1Api,
+} from "../clients/flinkSql";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
+import { Operation } from "../utils/flinkStatementResults";
 import { localTimezoneOffset } from "../utils/timezone";
 import {
+  determineFlinkStatementName,
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
   MAX_WAIT_TIME_MS,
-  determineFlinkStatementName,
+  parseAllFlinkStatementResults,
   submitFlinkStatement,
   waitForResultsFetchable,
   waitForStatementCompletion,
-} from "./flinkStatements";
+} from "./statementUtils";
 
-describe("commands/utils/flinkStatements.ts", function () {
+describe("flinkSql/statementUtils.ts", function () {
   let sandbox: sinon.SinonSandbox;
+
+  before(() => {
+    getTestExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -135,30 +151,18 @@ describe("commands/utils/flinkStatements.ts", function () {
 
   describe("submitFlinkStatement()", function () {
     let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
-    let getOrganizationStub: sinon.SinonStub;
 
     beforeEach(() => {
       mockSidecar = getSidecarStub(sandbox);
-
-      const ccloudLoader: CCloudResourceLoader = CCloudResourceLoader.getInstance();
-      getOrganizationStub = sandbox.stub(ccloudLoader, "getOrganization");
-    });
-
-    it("Raises an error if no organization is found", async function () {
-      getOrganizationStub.resolves(undefined);
-      await assert.rejects(async () => {
-        await submitFlinkStatement({} as IFlinkStatementSubmitParameters);
-      }, /User must be signed in to Confluent Cloud to submit Flink statements/);
     });
 
     for (const hidden of [false, true]) {
       it(`Submits a Flink statement with the correct parameters: hidden ${hidden}`, async function () {
-        getOrganizationStub.resolves({ id: "org-123", name: "Test Org" });
-
         const params: IFlinkStatementSubmitParameters = {
           statement: "SELECT * FROM my_table",
           statementName: "test-statement",
           computePool: TEST_CCLOUD_FLINK_COMPUTE_POOL,
+          organizationId: TEST_CCLOUD_ORGANIZATION_ID,
           hidden: hidden,
           properties: FlinkSpecProperties.fromProperties({
             "sql.current-catalog": "my_catalog",
@@ -206,27 +210,40 @@ describe("commands/utils/flinkStatements.ts", function () {
     }
   });
 
-  describe("waitForStatement* tests", function () {
-    let refreshFlinkStatementStub: sinon.SinonStub;
-    this.beforeEach(function () {
-      sandbox.useFakeTimers(new Date());
+  describe("waitForStatement* tests", () => {
+    let stubbedStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let mockRouteResponse: GetSqlv1Statement200Response;
 
-      const ccloudLoader = CCloudResourceLoader.getInstance();
-      refreshFlinkStatementStub = sandbox.stub(ccloudLoader, "refreshFlinkStatement");
+    beforeEach(function () {
+      sandbox.useFakeTimers({ now: new Date() });
+
+      const stubbedSidecarHandle = getSidecarStub(sandbox);
+      stubbedStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+      stubbedSidecarHandle.getFlinkSqlStatementsApi.returns(stubbedStatementsApi);
+
+      mockRouteResponse = {
+        status: { phase: "PENDING" },
+        metadata: { created_at: new Date() },
+      } as GetSqlv1Statement200Response;
+      stubbedStatementsApi.getSqlv1Statement.resolves(mockRouteResponse);
     });
+
+    function setReturnedStatementPhase(phase: string) {
+      // @ts-expect-error overwriting read-only member for testing
+      mockRouteResponse.status.phase = phase;
+    }
 
     describe("waitForResultsFetchable()", function () {
       it("returns when statement is running", async function () {
-        refreshFlinkStatementStub.resolves({
-          canRequestResults: true,
-        });
-
+        setReturnedStatementPhase("RUNNING");
         await waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT);
-        sinon.assert.calledOnce(refreshFlinkStatementStub);
+        sinon.assert.calledOnce(stubbedStatementsApi.getSqlv1Statement);
       });
 
       it("throws an error if statement is not found", async function () {
-        refreshFlinkStatementStub.resolves(null);
+        stubbedStatementsApi.getSqlv1Statement.rejects(
+          createResponseError(404, "Not Found", "test"),
+        );
 
         await assert.rejects(
           waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT),
@@ -235,9 +252,7 @@ describe("commands/utils/flinkStatements.ts", function () {
       });
 
       it("throws an error if statement is not running after MAX_WAIT_TIME_MS seconds", async function () {
-        refreshFlinkStatementStub.resolves({
-          canRequestResults: false,
-        });
+        setReturnedStatementPhase("FAILING");
 
         const clock = sandbox.clock;
 
@@ -253,27 +268,25 @@ describe("commands/utils/flinkStatements.ts", function () {
 
     describe("waitForStatementCompletion()", () => {
       it("returns when statement is completed", async function () {
-        refreshFlinkStatementStub.resolves({
-          isCompleted: true,
-        });
+        setReturnedStatementPhase("COMPLETED");
 
         await waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT);
-        sinon.assert.calledOnce(refreshFlinkStatementStub);
+        sinon.assert.calledOnce(stubbedStatementsApi.getSqlv1Statement);
       });
 
       it("throws an error if statement is not found", async function () {
-        refreshFlinkStatementStub.resolves(null);
+        stubbedStatementsApi.getSqlv1Statement.rejects(
+          createResponseError(404, "Not Found", "test"),
+        );
 
         await assert.rejects(
-          waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT),
+          waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT),
           /no longer exists/,
         );
       });
 
       it("throws an error if statement is not completed after MAX_WAIT_TIME_MS seconds", async function () {
-        refreshFlinkStatementStub.resolves({
-          isCompleted: false,
-        });
+        setReturnedStatementPhase(flinkStatementModels.Phase.RUNNING);
 
         const clock = sandbox.clock;
 
@@ -296,6 +309,89 @@ describe("commands/utils/flinkStatements.ts", function () {
       await instance.getPanelForStatement(TEST_CCLOUD_FLINK_STATEMENT);
 
       assert.strictEqual(findOrCreateStub.calledOnce, true, "findOrCreate should be called once");
+    });
+  });
+
+  describe("parseAllFlinkStatementResults()", () => {
+    // Set up a FlinkStatement with a schema to request results for ...
+    let statement: flinkStatementModels.FlinkStatement;
+
+    // and then set up the stubbed API to return results for it.
+    let stubbedResultsApi: sinon.SinonStubbedInstance<StatementResultsSqlV1Api>;
+
+    interface TestQueryRow {
+      col1: string;
+      col2: number | null;
+    }
+
+    beforeEach(function () {
+      sandbox.useFakeTimers({ now: new Date() });
+
+      const stubbedSidecarHandle = getSidecarStub(sandbox);
+      stubbedResultsApi = sandbox.createStubInstance(StatementResultsSqlV1Api);
+      stubbedSidecarHandle.getFlinkSqlStatementResultsApi.returns(stubbedResultsApi);
+
+      // Set up the statement to query for results with.
+      statement = createFlinkStatement({
+        schemaColumns: [
+          { name: "label", type: { type: "STRING", nullable: false } },
+          { name: "count", type: { type: "INT", nullable: true } },
+        ],
+        appendOnly: true,
+      });
+      statement.status.traits!.is_append_only = true;
+      statement.status.traits!.upsert_columns = [0];
+    });
+
+    it("should parse results with no following page token", async () => {
+      const singlePageRouteResponse = {
+        results: {
+          data: [
+            { op: Operation.Insert, row: ["value1", 123] },
+            { op: Operation.Insert, row: ["value2", 456] },
+            { op: Operation.Insert, row: ["value3", 789] },
+          ],
+        },
+      } as GetSqlv1StatementResult200Response;
+
+      stubbedResultsApi.getSqlv1StatementResult.resolves(singlePageRouteResponse);
+
+      const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
+      assert.deepStrictEqual(results, [
+        { label: "value1", count: 123 },
+        { label: "value2", count: 456 },
+        { label: "value3", count: 789 },
+      ]);
+    });
+
+    it("should parse results with multiple pages", async () => {
+      const firstPageRouteResponse = {
+        results: {
+          data: [
+            { op: Operation.Insert, row: ["foo", 123] },
+            { op: Operation.Insert, row: ["bar", 456] },
+          ],
+        },
+        metadata: { next: "https://localhost/?page_token=token123" },
+      } as GetSqlv1StatementResult200Response;
+
+      const secondPageRouteResponse = {
+        results: {
+          data: [{ op: Operation.Insert, row: ["blat", 890] }],
+        },
+      } as GetSqlv1StatementResult200Response;
+
+      stubbedResultsApi.getSqlv1StatementResult.onFirstCall().resolves(firstPageRouteResponse);
+      stubbedResultsApi.getSqlv1StatementResult.onSecondCall().resolves(secondPageRouteResponse);
+
+      const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
+      assert.deepStrictEqual(results, [
+        { label: "foo", count: 123 },
+        { label: "bar", count: 456 },
+        { label: "blat", count: 890 },
+      ]);
+
+      sinon.assert.calledTwice(stubbedResultsApi.getSqlv1StatementResult);
     });
   });
 });
