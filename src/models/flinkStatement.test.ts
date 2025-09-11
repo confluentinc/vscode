@@ -198,7 +198,7 @@ describe("FlinkStatement", () => {
           sqlKind: "SELECT",
           createdAt: yesterday,
         },
-        expected: false,
+        expected: Error,
       },
       {
         name: "should be viewable when statement is PENDING and less than a day old",
@@ -290,7 +290,13 @@ describe("FlinkStatement", () => {
           sqlKind: statement.sqlKind,
           createdAt: statement.createdAt,
         });
-        assert.strictEqual(flinkStatement.areResultsViewable, expected);
+        if (typeof expected === "boolean") {
+          assert.strictEqual(flinkStatement.canRequestResults, expected);
+        } else {
+          assert.throws(() => {
+            return flinkStatement.canRequestResults;
+          });
+        }
       });
     });
   });
