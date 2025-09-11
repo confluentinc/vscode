@@ -44,7 +44,13 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "setup",
+      testMatch: "**/global.setup.ts",
+      testDir: path.join(__dirname),
+    },
+    {
       name: vscodeVersion,
+      dependencies: ["setup"],
     },
   ],
 });
