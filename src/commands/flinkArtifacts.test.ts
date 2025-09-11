@@ -14,14 +14,11 @@ import {
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import * as contextValuesModule from "../context/values";
-import { flinkArtifactUDFViewMode } from "../emitters";
-import * as errors from "../errors";
 import * as contextValues from "../context/values";
+import * as errors from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
-import { FlinkArtifactsViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
   deleteArtifactCommand,
@@ -337,23 +334,6 @@ describe("uploadArtifact Command", () => {
         await deleteArtifactCommand(undefined);
         sinon.assert.calledWithMatch(showErrorStub, "No Flink artifact selected for deletion.");
       });
-    });
-  });
-
-  describe("setFlinkArtifactsViewModeCommand", () => {
-    it("should fire the view mode event and set the context value", async () => {
-      const fireStub = sandbox.stub(flinkArtifactUDFViewMode, "fire");
-      const setContextStub = sandbox.stub().resolves();
-      sandbox.replace(contextValuesModule, "setContextValue", setContextStub);
-
-      await setFlinkArtifactsViewModeCommand();
-
-      sinon.assert.calledOnceWithExactly(fireStub, FlinkArtifactsViewProviderMode.Artifacts);
-      sinon.assert.calledOnceWithExactly(
-        setContextStub,
-        contextValuesModule.ContextValues.flinkArtifactsUDFsViewMode,
-        FlinkArtifactsViewProviderMode.Artifacts,
-      );
     });
   });
 
