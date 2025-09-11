@@ -27,4 +27,11 @@ export class Quickpick {
   get items(): Locator {
     return this.locator.locator(".monaco-list-row");
   }
+
+  /** Selects the first quickpick item with the given text */
+  async selectItemByText(text: string): Promise<void> {
+    await this.textInput.fill(text);
+    const filteredItems = this.items.filter({ hasText: text });
+    await filteredItems.first().click();
+  }
 }
