@@ -250,6 +250,62 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledOnce(createArtifactStub);
       sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
     });
+
+    it("should show the original error message for file size errors", async () => {
+      const params = { ...mockParams };
+      const fileSizeErrorMessage =
+        "File size 101.00MB exceeds the maximum allowed size of 100MB. Please use a smaller file.";
+      const fileSizeError = new Error(fileSizeErrorMessage);
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").rejects(fileSizeError);
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+
+      sinon.assert.calledWithExactly(showErrorStub, fileSizeErrorMessage);
+    });
+
+    it("should format error message for standard Error objects", async () => {
+      const params = { ...mockParams };
+      const standardErrorMessage = "Something went wrong";
+      const standardError = new Error(standardErrorMessage);
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").rejects(standardError);
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+
+      sinon.assert.calledWithExactly(
+        showErrorStub,
+        `Failed to upload artifact: ${standardErrorMessage}`,
+      );
+    });
+
+    it("should handle non-Error object exceptions", async () => {
+      const params = { ...mockParams };
+      const nonErrorException = "This is a string exception";
+
+      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").rejects(nonErrorException);
+
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+      await uploadArtifactCommand();
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWithMatch(showErrorStub, sinon.match("Failed to upload artifact"));
+    });
   });
 
   describe("registerArtifactCommand", () => {
