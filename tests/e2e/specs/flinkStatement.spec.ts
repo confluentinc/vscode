@@ -16,7 +16,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-test.describe.skip("Flink Statements", { tag: [Tag.CCloud] }, () => {
+test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
   let webview: FrameLocator;
 
   test.beforeEach(async ({ page, electronApp }) => {
