@@ -9,7 +9,7 @@ import {
 import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
@@ -46,7 +46,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
     this.treeViewDelegates = new Map<
       FlinkDatabaseViewProviderMode,
-      ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudKafkaCluster, ArtifactOrUdf>
+      ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudFlinkDbKafkaCluster, ArtifactOrUdf>
     >([
       [FlinkDatabaseViewProviderMode.Artifacts, artifactsDelegate],
       [FlinkDatabaseViewProviderMode.UDFs, udfsDelegate],

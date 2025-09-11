@@ -100,6 +100,15 @@ describe("commands/kafkaClusters.ts", () => {
       sinon.assert.notCalled(executeCommandStub);
     });
 
+    it("if a non-ccloud-flinkable cluster is provided, should call quick pick", async () => {
+      flinkDatabaseQuickpickStub.resolves(undefined);
+
+      await selectFlinkDatabaseViewKafkaClusterCommand({} as any as CCloudKafkaCluster);
+      sinon.assert.calledOnce(flinkDatabaseQuickpickStub);
+      sinon.assert.notCalled(flinkDatabaseViewResourceChangedFireStub);
+      sinon.assert.notCalled(executeCommandStub);
+    });
+
     it("should use the provided cluster if valid", async () => {
       const testCluster: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
         ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
