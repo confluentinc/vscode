@@ -14,7 +14,7 @@ import { readFile } from "fs/promises";
 import { CCLOUD_SIGNIN_URL_PATH } from "../baseTest";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 
-const NOT_CONNECTED_TEXT = "(No connection)";
+export const NOT_CONNECTED_TEXT = "(No connection)";
 
 // same as in src/clients/sidecar/models/ConnectionType.ts
 export enum ConnectionType {
