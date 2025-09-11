@@ -23,6 +23,11 @@ export class TextDocument {
     return this.locator.getByRole("code");
   }
 
+  /** The CodeLens action elements in the document (if any). */
+  get codeLensActions(): Locator {
+    return this.locator.locator("span.codelens-decoration");
+  }
+
   /** Save the currently-focused document. */
   async save(): Promise<void> {
     await this.locator.click();
