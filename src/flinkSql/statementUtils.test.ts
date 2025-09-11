@@ -331,16 +331,15 @@ describe("flinkSql/statementUtils.ts", function () {
       stubbedResultsApi = sandbox.createStubInstance(StatementResultsSqlV1Api);
       stubbedSidecarHandle.getFlinkSqlStatementResultsApi.returns(stubbedResultsApi);
 
-      // Set up the statement to query for results with.
+      // Set up the statement to query for results from.
       statement = createFlinkStatement({
         schemaColumns: [
           { name: "label", type: { type: "STRING", nullable: false } },
           { name: "count", type: { type: "INT", nullable: true } },
         ],
         appendOnly: true,
+        upsertColumns: [0],
       });
-      statement.status.traits!.is_append_only = true;
-      statement.status.traits!.upsert_columns = [0];
     });
 
     it("should parse results with no following page token", async () => {
@@ -357,6 +356,7 @@ describe("flinkSql/statementUtils.ts", function () {
       stubbedResultsApi.getSqlv1StatementResult.resolves(singlePageRouteResponse);
 
       const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
+
       assert.deepStrictEqual(results, [
         { label: "value1", count: 123 },
         { label: "value2", count: 456 },
@@ -385,6 +385,7 @@ describe("flinkSql/statementUtils.ts", function () {
       stubbedResultsApi.getSqlv1StatementResult.onSecondCall().resolves(secondPageRouteResponse);
 
       const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
+
       assert.deepStrictEqual(results, [
         { label: "foo", count: 123 },
         { label: "bar", count: 456 },
