@@ -4,6 +4,7 @@ import * as os from "os";
 import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { Response } from "node-fetch";
 
 import { getShowErrorNotificationWithButtonsStub } from "../../../tests/stubs/notifications";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
