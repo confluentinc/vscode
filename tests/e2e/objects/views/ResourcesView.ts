@@ -240,8 +240,8 @@ export class ResourcesView extends View {
     await expect(kafkaClusters).not.toHaveCount(0);
 
     const kafkaCluster: Locator = clusterHasText
-      ? this.ccloudKafkaClusters.filter({ hasText: clusterHasText }).first()
-      : this.ccloudKafkaClusters.first();
+      ? kafkaClusters.filter({ hasText: clusterHasText }).first()
+      : kafkaClusters.first();
     await expect(kafkaCluster).toBeVisible();
     return kafkaCluster;
   }
