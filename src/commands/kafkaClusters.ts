@@ -45,7 +45,7 @@ export async function selectFlinkDatabaseViewKafkaClusterCommand(
 ) {
   // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
   const flinkDatabase: CCloudFlinkDbKafkaCluster | undefined =
-    cluster instanceof CCloudKafkaCluster
+    cluster instanceof CCloudKafkaCluster && cluster.isFlinkable()
       ? cluster
       : await flinkDatabaseQuickpick(
           undefined, // do not limit to a specific compute pool
