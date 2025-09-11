@@ -96,6 +96,42 @@ describe("uploadArtifact", () => {
       });
     });
 
+    it("should throw an error for files larger than 100MB", async () => {
+      // Create a mock buffer larger than 100MB
+      const largeBuffer = Buffer.alloc(101 * 1024 * 1024); // 101MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(largeBuffer);
+
+      const mockUri = { fsPath: "/path/to/large-file.jar" } as vscode.Uri;
+      const showErrorStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.rejects(
+        () => prepareUploadFileFromUri(mockUri),
+        /File size 101.00MB exceeds the maximum allowed size of 100MB/,
+      );
+
+      sinon.assert.calledWith(
+        showErrorStub,
+        "File size 101.00MB exceeds the maximum allowed size of 100MB. Please use a smaller file.",
+      );
+    });
+
+    it("should not throw an error for files smaller than or equal to 100MB", async () => {
+      // Create a mock buffer smaller than 100MB
+      const smallBuffer = Buffer.alloc(10 * 1024 * 1024); // 10MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(smallBuffer);
+
+      const mockUri = { fsPath: "/path/to/small-file.jar" } as vscode.Uri;
+      const showErrorStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.doesNotReject(() => prepareUploadFileFromUri(mockUri));
+
+      sinon.assert.notCalled(showErrorStub);
+    });
+
     it("should throw an error if the file does not exist", async () => {
       const mockUri = { fsPath: "/path/to/nonexistent.jar" } as vscode.Uri;
       await assert.rejects(() => prepareUploadFileFromUri(mockUri), Error);
