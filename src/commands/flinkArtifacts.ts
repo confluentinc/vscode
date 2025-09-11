@@ -84,7 +84,7 @@ export async function uploadArtifactCommand(): Promise<void> {
       showNotificationMessage = err.message;
       logErrMessage = err.message;
     }
-    logError(logErrMessage, "Failed to upload artifact");
+    logError(err, logErrMessage);
     showErrorNotificationWithButtons(showNotificationMessage);
   }
 }
