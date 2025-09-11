@@ -23,6 +23,7 @@ launch VS Code and interact with it programmatically.
 - `specs` directory contains the test files.
 - `specs/utils` directory contains utility functions for the tests.
 
+<!-- prettier-ignore -->
 > [!NOTE]
 > What's the difference between `gulp e2e` and `gulp functional`?
 >
@@ -33,6 +34,7 @@ launch VS Code and interact with it programmatically.
 
 ### Running the E2E tests
 
+<!-- prettier-ignore -->
 > [!IMPORTANT]
 > Please close any already-open VS Code windows before running the tests. This is
 > because the tests launch their own VS Code instance and need to properly handle browser auth
@@ -143,14 +145,14 @@ To create a new E2E test:
 1. Use this basic test structure as a starting point:
 
    ```typescript
-   import { test } from "vscode-test-playwright";
-   import { openConfluentExtension } from "./utils/confluent";
    import { expect } from "@playwright/test";
+   import { test } from "./baseTest";
+   import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
    test.describe("<feature-name>", () => {
      test.beforeEach(async ({ page }) => {
-       // This is a helper function that opens the extension in the VS Code window.
-       await openConfluentExtension(page);
+       // This is a helper function that opens the extension sidebar in the VS Code window.
+       await openConfluentSidebar(page);
      });
 
      test("should do something", async ({ page, electronApp }) => {

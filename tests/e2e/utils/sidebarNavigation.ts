@@ -1,26 +1,28 @@
 import { expect, Page } from "@playwright/test";
-import { ActivityBarItem } from "../../objects/ActivityBarItem";
-import { NotificationArea } from "../../objects/notifications/NotificationArea";
-import { ViewContainer } from "../../objects/ViewContainer";
-import { ResourcesView } from "../../objects/views/ResourcesView";
+import { ActivityBarItem } from "../objects/ActivityBarItem";
+import { NotificationArea } from "../objects/notifications/NotificationArea";
+import { ViewContainer } from "../objects/ViewContainer";
+import { ResourcesView } from "../objects/views/ResourcesView";
 
 /**
- * Clicks on the Confluent extension to load it. This is meant to be called
- * before any subsequent action is taken place.
- * @param page
+ * Clicks on the "Confluent" icon in the
+ * {@link https://code.visualstudio.com/api/ux-guidelines/activity-bar activity bar} to open the
+ * primary sidebar with the main Confluent
+ * {@link https://code.visualstudio.com/api/ux-guidelines/views#view-containers view container},
+ * which activates the extension if it isn't already activated.
+ *
+ * For most tests, this should be done first unless another explicit extension activation event is performed.
  */
-export async function openConfluentExtension(page: Page): Promise<void> {
+export async function openConfluentSidebar(page: Page): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
-
-  // make sure the activity bar item/icon is visible
-  const activityBarItem = new ActivityBarItem(page, "Confluent");
-  await expect(activityBarItem.locator).toBeVisible();
 
   // check if the view container is already visible in the primary sidebar first
   // and if not, click the activity bar item to show it
   const viewContainer = new ViewContainer(page, "confluent");
   const isVisible = await viewContainer.locator.isVisible();
   if (!isVisible) {
+    const activityBarItem = new ActivityBarItem(page, "Confluent");
+    await expect(activityBarItem.locator).toBeVisible();
     await activityBarItem.locator.click();
   }
 
