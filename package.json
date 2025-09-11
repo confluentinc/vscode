@@ -777,6 +777,11 @@
         "title": "Switch to Flink Artifacts",
         "icon": "$(folder-library)",
         "category": "Confluent: Flink Artifacts/UDFs View"
+      },
+      {
+        "command": "confluent.medusa.generateDataset",
+        "title": "Generate Medusa Dataset",
+        "category": "Confluent"
       }
     ],
     "configuration": [
