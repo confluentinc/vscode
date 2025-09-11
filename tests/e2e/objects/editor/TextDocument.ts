@@ -1,5 +1,6 @@
 import { Locator, Page } from "@playwright/test";
 import { executeVSCodeCommand } from "../../utils/commands";
+import { Quickpick } from "../quickInputs/Quickpick";
 
 /** Object representing a VS Code text editor document. */
 export class TextDocument {
@@ -64,5 +65,17 @@ export class TextDocument {
   async replaceContent(content: string): Promise<void> {
     await this.deleteAll();
     await this.insertContent(content);
+  }
+
+  /** Change the language mode of the document using the command palette. */
+  async setLanguageMode(language: string): Promise<void> {
+    await this.locator.click();
+    // use the command ID since "Change Language Mode" will fuzzy match with others
+    await executeVSCodeCommand(this.page, "workbench.action.editor.changeLanguageMode");
+
+    const languageQuickpick = new Quickpick(this.page);
+    await languageQuickpick.textInput.fill(language);
+    const languageItem = languageQuickpick.items.filter({ hasText: language });
+    await languageItem.first().click();
   }
 }
