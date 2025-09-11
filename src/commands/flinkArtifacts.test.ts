@@ -181,12 +181,11 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledWithMatch(showErrorStub, sinon.match(/Failed to upload artifact/));
     });
 
-    it("should show error notification if uploadUrl.upload_id is missing", async () => {
+    it("should show error notification if uploadUrl is missing", async () => {
       const params = { ...mockParams };
-      const uploadUrlMissingId = { ...mockPresignedUrlResponse, upload_id: undefined };
 
       sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrlMissingId);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(undefined);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
 
       const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
@@ -196,7 +195,7 @@ describe("uploadArtifact Command", () => {
       sinon.assert.calledOnce(showErrorStub);
       sinon.assert.calledWithMatch(
         showErrorStub,
-        sinon.match(/Failed to upload artifact. See logs for details/),
+        "Failed to upload artifact: Upload ID is missing from the presigned URL response.",
       );
     });
 
