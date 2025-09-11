@@ -1,22 +1,22 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { getSidecarStub } from "../../../tests/stubs/sidecar";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_FLINK_STATEMENT } from "../../../tests/unit/testResources/flinkStatement";
-import * as authnUtils from "../../authn/utils";
-import { CCloudResourceLoader } from "../../loaders";
-import * as flinkStatementModels from "../../models/flinkStatement";
-import { FlinkStatement } from "../../models/flinkStatement";
-import * as sidecar from "../../sidecar";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_FLINK_STATEMENT } from "../../tests/unit/testResources/flinkStatement";
+import * as authnUtils from "../authn/utils";
+import { CCloudResourceLoader } from "../loaders";
+import * as flinkStatementModels from "../models/flinkStatement";
+import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
+import * as sidecar from "../sidecar";
+import { localTimezoneOffset } from "../utils/timezone";
 import {
-  FlinkSpecProperties,
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
   MAX_WAIT_TIME_MS,
   determineFlinkStatementName,
-  localTimezoneOffset,
   submitFlinkStatement,
-  waitForStatementRunning,
+  waitForResultsFetchable,
+  waitForStatementCompletion,
 } from "./flinkStatements";
 
 describe("commands/utils/flinkStatements.ts", function () {
@@ -67,41 +67,6 @@ describe("commands/utils/flinkStatements.ts", function () {
           currentDatabase: "my_database",
         }),
       );
-    });
-  });
-
-  describe("localTimezoneOffset()", function () {
-    let originalTimezone: string | undefined;
-
-    beforeEach(() => {
-      originalTimezone = process.env.TZ;
-    });
-    afterEach(() => {
-      if (originalTimezone) {
-        process.env.TZ = originalTimezone;
-      } else {
-        delete process.env.TZ;
-      }
-    });
-
-    it("Should extract offset relative to GMT", async function () {
-      // Pin down timezone. May still be DST or not though based on the datetime.
-      // (Can only do this once; internals of Date will cache the timezone offset?)
-      process.env.TZ = "America/Los_Angeles";
-
-      // This should be GMT-0700 for PDT or GMT-0800 for PST
-      const offset = localTimezoneOffset();
-      assert.strictEqual(offset.startsWith("GMT"), true, "Offset should end with GMT");
-      // Fourth character should be + or -
-      assert.strictEqual(offset[3] === "+" || offset[3] === "-", true, "Offset should be + or -");
-
-      // Remainder will be either 0700 or 0800
-      assert.strictEqual(
-        offset.slice(4, 6) === "07" || offset.slice(4, 6) === "08",
-        true,
-        "Offset should be 0700 or 0800",
-      );
-      assert.strictEqual(offset.slice(6, 8) === "00", true, "Offset should be 00");
     });
   });
 
@@ -216,35 +181,17 @@ describe("commands/utils/flinkStatements.ts", function () {
 
         const statement: FlinkStatement = await submitFlinkStatement(params);
 
-        // resolves to whatever restFlinkStatementToModel() returns.
         assert.deepStrictEqual(statement, TEST_CCLOUD_FLINK_STATEMENT);
 
         sinon.assert.calledOnce(createSqlv1StatementStub);
-        if (hidden) {
-          // Prove that requestInner.metadata specifies the hidden label.
-          sinon.assert.calledWith(
-            createSqlv1StatementStub,
-            sinon.match({
-              CreateSqlv1StatementRequest: sinon.match({
-                metadata: {
-                  labels: {
-                    "user.confluent.io/hidden": "true",
-                  },
-                },
-              }),
+        sinon.assert.calledWith(
+          createSqlv1StatementStub,
+          sinon.match({
+            CreateSqlv1StatementRequest: sinon.match({
+              metadata: hidden ? { labels: { "user.confluent.io/hidden": "true" } } : undefined,
             }),
-          );
-        } else {
-          // Prove that requestInner.metadata is not set.
-          sinon.assert.calledWith(
-            createSqlv1StatementStub,
-            sinon.match({
-              CreateSqlv1StatementRequest: sinon.match({
-                metadata: undefined,
-              }),
-            }),
-          );
-        }
+          }),
+        );
 
         sinon.assert.calledWith(
           mockSidecar.getFlinkSqlStatementsApi,
@@ -259,7 +206,7 @@ describe("commands/utils/flinkStatements.ts", function () {
     }
   });
 
-  describe("waitForStatementRunning()", function () {
+  describe("waitForStatement* tests", function () {
     let refreshFlinkStatementStub: sinon.SinonStub;
     this.beforeEach(function () {
       sandbox.useFakeTimers(new Date());
@@ -268,38 +215,76 @@ describe("commands/utils/flinkStatements.ts", function () {
       refreshFlinkStatementStub = sandbox.stub(ccloudLoader, "refreshFlinkStatement");
     });
 
-    it("returns when statement is running", async function () {
-      refreshFlinkStatementStub.resolves({
-        areResultsViewable: true,
+    describe("waitForResultsFetchable()", function () {
+      it("returns when statement is running", async function () {
+        refreshFlinkStatementStub.resolves({
+          canRequestResults: true,
+        });
+
+        await waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT);
+        sinon.assert.calledOnce(refreshFlinkStatementStub);
       });
 
-      await waitForStatementRunning(TEST_CCLOUD_FLINK_STATEMENT);
-      sinon.assert.calledOnce(refreshFlinkStatementStub);
-    });
+      it("throws an error if statement is not found", async function () {
+        refreshFlinkStatementStub.resolves(null);
 
-    it("throws an error if statement is not found", async function () {
-      refreshFlinkStatementStub.resolves(null);
-
-      await assert.rejects(
-        waitForStatementRunning(TEST_CCLOUD_FLINK_STATEMENT),
-        /no longer exists/,
-      );
-    });
-
-    it("throws an error if statement is not running after MAX_WAIT_TIME_MS seconds", async function () {
-      refreshFlinkStatementStub.resolves({
-        areResultsViewable: false,
+        await assert.rejects(
+          waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT),
+          /no longer exists/,
+        );
       });
 
-      const clock = sandbox.clock;
+      it("throws an error if statement is not running after MAX_WAIT_TIME_MS seconds", async function () {
+        refreshFlinkStatementStub.resolves({
+          canRequestResults: false,
+        });
 
-      // Start the promise
-      const promise = waitForStatementRunning(TEST_CCLOUD_FLINK_STATEMENT);
+        const clock = sandbox.clock;
 
-      // Advance past the max wait time is reached.
-      await clock.tickAsync(MAX_WAIT_TIME_MS + 1);
+        // Start the promise
+        const promise = waitForResultsFetchable(TEST_CCLOUD_FLINK_STATEMENT);
 
-      await assert.rejects(promise, /did not reach RUNNING phase/);
+        // Advance past the max wait time is reached.
+        await clock.tickAsync(MAX_WAIT_TIME_MS + 1);
+
+        await assert.rejects(promise, /did not reach desired state/);
+      });
+    });
+
+    describe("waitForStatementCompletion()", () => {
+      it("returns when statement is completed", async function () {
+        refreshFlinkStatementStub.resolves({
+          isCompleted: true,
+        });
+
+        await waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT);
+        sinon.assert.calledOnce(refreshFlinkStatementStub);
+      });
+
+      it("throws an error if statement is not found", async function () {
+        refreshFlinkStatementStub.resolves(null);
+
+        await assert.rejects(
+          waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT),
+          /no longer exists/,
+        );
+      });
+
+      it("throws an error if statement is not completed after MAX_WAIT_TIME_MS seconds", async function () {
+        refreshFlinkStatementStub.resolves({
+          isCompleted: false,
+        });
+
+        const clock = sandbox.clock;
+
+        // Start the promise
+        const promise = waitForStatementCompletion(TEST_CCLOUD_FLINK_STATEMENT);
+
+        // Advance past the max wait time is reached.
+        await clock.tickAsync(MAX_WAIT_TIME_MS + 1);
+
+        await assert.rejects(promise, /did not reach desired state/);
+      });
     });
   });
 
