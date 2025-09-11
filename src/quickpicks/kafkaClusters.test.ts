@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import Sinon, * as sinon from "sinon";
+import * as sinon from "sinon";
 import { QuickPickItemKind, window } from "vscode";
 
 import {
@@ -42,7 +42,7 @@ describe("quickpicks/kafkaClusters", () => {
   });
 
   describe("kafkaClusterQuickPick", () => {
-    let loader: Sinon.SinonStubbedInstance<LocalResourceLoader>;
+    let loader: sinon.SinonStubbedInstance<LocalResourceLoader>;
 
     beforeEach(() => {
       loader = getStubbedLocalResourceLoader(sandbox);
@@ -167,7 +167,7 @@ describe("quickpicks/kafkaClusters", () => {
   });
 
   describe("flinkDatabaseQuickPick", () => {
-    let ccloudLoader: Sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
     beforeEach(() => {
       ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
