@@ -1,25 +1,26 @@
 import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
-import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
 import { TextDocument } from "../objects/editor/TextDocument";
-import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
-import { InputBox } from "../objects/quickInputs/InputBox";
-import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SchemasView } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import {
-  DirectConnectionForm,
   FormConnectionType,
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { executeVSCodeCommand } from "../utils/commands";
+import { ConnectionType, setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import {
+  createSchemaVersion,
+  deleteSchemaSubject,
+  SchemaType,
+  selectCurrentDocumentFromQuickpick,
+  selectSchemaTypeFromQuickpick,
+} from "../utils/schemas";
 import { configureVSCodeSettings } from "../utils/settings";
-import { openConfluentExtension } from "./utils/confluent";
-import { login } from "./utils/confluentCloud";
+import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
@@ -73,7 +74,7 @@ test.describe("Schema Management", () => {
       "editor.linkedEditing": false,
     });
 
-    await openConfluentExtension(page);
+    await openConfluentSidebar(page);
 
     resourcesView = new ResourcesView(page);
     notificationArea = new NotificationArea(page);
@@ -85,66 +86,71 @@ test.describe("Schema Management", () => {
 
     // delete the subject if it was created during the test
     if (subjectName) {
-      // stub the system dialog (warning modal) that appears when hard-deleting
-      // NOTE: "Yes, Hard Delete" is the first button on macOS/Windows, second on Linux
-      const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
-      await stubMultipleDialogs(electronApp, [
-        {
-          method: "showMessageBox",
-          value: {
-            response: confirmButtonIndex, // simulate clicking the "Yes, Hard Delete" button
-            checkboxChecked: false,
-          },
-        },
-      ]);
-
-      // replace this with right-click context actions once this issue is resolved:
-      // https://github.com/confluentinc/vscode/issues/1875
-      await executeVSCodeCommand(page, "Confluent: Delete All Schemas in Subject");
-
-      // select the subject to delete
-      const subjectInputBox = new InputBox(page);
-      await expect(subjectInputBox.placeholder).toBeVisible();
-      await subjectInputBox.input.fill(subjectName);
-      await subjectInputBox.confirm();
-
-      // select the Hard Delete option
-      const deletionQuickpick = new Quickpick(page);
-      const hardDelete = deletionQuickpick.items.filter({ hasText: "Hard Delete" });
-      await expect(hardDelete).not.toHaveCount(0);
-      await hardDelete.click();
-
-      // enter the confirmation text input
-      const confirmationBox = new InputBox(page);
-      await expect(confirmationBox.input).toBeVisible();
-      await confirmationBox.input.fill(deletionConfirmation);
-      await confirmationBox.confirm();
-
-      // the system dialog is automatically handled by the stub above, no need to handle it here
-
-      const deletionNotifications = notificationArea.infoNotifications.filter({
-        hasText: /hard deleted/,
-      });
-      await expect(deletionNotifications.first()).toBeVisible();
+      await deleteSchemaSubject(page, electronApp, subjectName, deletionConfirmation);
     }
   });
 
   // test dimensions:
   const connectionTypes: Array<
-    [string, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
+    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
   > = [
     [
-      "CCLOUD",
+      ConnectionType.Ccloud,
       Tag.CCloud,
-      async (page, electronApp) => await setupCCloudConnection(page, electronApp),
+      async (page, electronApp) => {
+        await setupCCloudConnection(
+          page,
+          electronApp,
+          process.env.E2E_USERNAME!,
+          process.env.E2E_PASSWORD!,
+        );
+
+        // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
+        // Flink compute pools
+        await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+        const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
+        // environments are collapsed by default, so we need to expand it first
+        await firstEnvironment.click();
+        await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
+
+        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+        await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
+        const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
+        await firstSchemaRegistry.click();
+        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+        // view for these tests, so we're just picking from the Resources view here
+      },
     ],
-    ["DIRECT", Tag.Direct, async (page) => await setupDirectConnection(page)],
+    [
+      ConnectionType.Direct,
+      Tag.Direct,
+      async (page) => {
+        await setupDirectConnection(page, {
+          formConnectionType: FormConnectionType.ConfluentCloud,
+          schemaRegistryConfig: {
+            uri: process.env.E2E_SR_URL!,
+            authType: SupportedAuthType.API,
+            credentials: {
+              api_key: process.env.E2E_SR_API_KEY!,
+              api_secret: process.env.E2E_SR_API_SECRET!,
+            },
+          },
+        });
+        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
+        const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
+        await expect(directSchemaRegistries).not.toHaveCount(0);
+        const firstSchemaRegistry: Locator = directSchemaRegistries.first();
+        await firstSchemaRegistry.click();
+        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
+        // view for these tests, so we're just picking from the Resources view here
+      },
+    ],
     // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
   ];
-  const schemaTypes: Array<[string, string]> = [
-    ["AVRO", "avsc"],
-    ["JSON", "json"],
-    ["PROTOBUF", "proto"],
+  const schemaTypes: Array<[SchemaType, string]> = [
+    [SchemaType.Avro, "avsc"],
+    [SchemaType.Json, "json"],
+    [SchemaType.Protobuf, "proto"],
   ];
 
   for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
@@ -248,164 +254,5 @@ test.describe("Schema Management", () => {
         });
       }
     });
-  }
-
-  /**
-   * Creates a CCloud connection by logging in to Confluent Cloud from the sidebar auth flow, then
-   * expands the "Confluent Cloud" item in the Resources view and selects the first Schema Registry
-   * item.
-   */
-  async function setupCCloudConnection(
-    page: Page,
-    electronApp: ElectronApplication,
-  ): Promise<void> {
-    // CCloud connection setup:
-    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
-
-    // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
-    // Flink compute pools
-    await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-    const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
-    // environments are collapsed by default, so we need to expand it first
-    await firstEnvironment.click();
-    await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
-
-    // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-    await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
-    const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
-    await firstSchemaRegistry.click();
-    // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-    // view for these tests, so we're just picking from the Resources view here
-  }
-
-  /**
-   * Creates a direct connection to a Schema Registry instance via CCloud API key/secret, then
-   * expands the first direct connection in the Resources view and selects its Schema Registry item.
-   */
-  async function setupDirectConnection(page: Page): Promise<void> {
-    const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
-    const connectionName = "Playwright";
-    await connectionForm.fillConnectionName(connectionName);
-    await connectionForm.selectConnectionType(FormConnectionType.ConfluentCloud);
-    // only configure the Schema Registry connection
-    await connectionForm.fillSchemaRegistryUri(process.env.E2E_SR_URL!);
-    await connectionForm.selectSchemaRegistryAuthType(SupportedAuthType.API);
-    await connectionForm.fillSchemaRegistryCredentials({
-      api_key: process.env.E2E_SR_API_KEY!,
-      api_secret: process.env.E2E_SR_API_SECRET!,
-    });
-
-    await connectionForm.testButton.click();
-    await expect(connectionForm.successMessage).toBeVisible();
-    await connectionForm.saveButton.click();
-
-    // make sure we see the notification indicating the connection was created
-    const notifications: Locator = notificationArea.infoNotifications.filter({
-      hasText: "New Connection Created",
-    });
-    await expect(notifications).toHaveCount(1);
-    const notification = new Notification(page, notifications.first());
-    await notification.dismiss();
-    // don't wait for the "Waiting for <connection> to be usable..." progress notification since
-    // it may disappear quickly
-
-    // wait for the Resources view to refresh and show the new direct connection
-    await expect(resourcesView.directConnections).not.toHaveCount(0);
-    await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
-
-    // expand the first direct connection to show its Schema Registry
-    await expect(resourcesView.directConnections).not.toHaveCount(0);
-    const firstConnection: Locator = resourcesView.directConnections.first();
-    // direct connections are collapsed by default in the old Resources view, but expanded in the
-    // new Resources view
-    if ((await firstConnection.getAttribute("aria-expanded")) === "false") {
-      await firstConnection.click();
-    }
-    await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
-
-    // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-    const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
-    await expect(directSchemaRegistries).not.toHaveCount(0);
-    const firstSchemaRegistry: Locator = directSchemaRegistries.first();
-    await firstSchemaRegistry.click();
-    // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-    // view for these tests, so we're just picking from the Resources view here
-  }
-
-  /**
-   * Creates a new schema version and subject by going through the full flow:
-   * 1. Opens schema creation workflow
-   * 2. Selects schema type
-   * 3. Enters schema content
-   * 4. Uploads and creates new subject
-   * @returns The generated subject name for cleanup
-   */
-  async function createSchemaVersion(
-    page: Page,
-    schemaType: string,
-    schemaFile: string,
-  ): Promise<string> {
-    await schemasView.clickCreateNewSchema();
-    await selectSchemaTypeFromQuickpick(page, schemaType);
-
-    // enter schema content into editor
-    const schemaContent: string = loadFixtureFromFile(schemaFile);
-    const untitledDocument = new TextDocument(page, "Untitled-1");
-    await expect(untitledDocument.locator).toBeVisible();
-    await untitledDocument.insertContent(schemaContent);
-
-    await schemasView.clickUploadSchema();
-
-    // select editor/file name in the first quickpick
-    await selectCurrentDocumentFromQuickpick(page, "Untitled");
-    await selectSchemaTypeFromQuickpick(page, schemaType);
-
-    // select "Create new subject" in the next quickpick
-    const subjectQuickpick = new Quickpick(page);
-    await expect(subjectQuickpick.locator).toBeVisible();
-    const createNewSubjectItem: Locator = subjectQuickpick.items.filter({
-      hasText: "Create new subject",
-    });
-    await expect(createNewSubjectItem).not.toHaveCount(0);
-    await createNewSubjectItem.click();
-
-    // enter subject name in the input box and submit
-    const randomValue: string = Math.random().toString(36).substring(2, 15);
-    const generatedSubjectName = `customer-${randomValue}-value`;
-    const subjectInputBox = new InputBox(page);
-    await expect(subjectInputBox.input).toBeVisible();
-    await subjectInputBox.input.fill(generatedSubjectName);
-    await subjectInputBox.confirm();
-
-    // clear out and close the untitled document after uploading so we only have one editor open
-    // during the rest of the tests'
-    await untitledDocument.deleteAll();
-    await untitledDocument.close();
-
-    // if we made it this far, we can return the subject so the .afterEach() hook can delete the
-    // subject (and schema version) that was just created
-    return generatedSubjectName;
-  }
-
-  /** Select an item from the document quickpick based on a title to match. */
-  async function selectCurrentDocumentFromQuickpick(
-    page: Page,
-    documentTitle: string,
-  ): Promise<void> {
-    const fileQuickpick = new Quickpick(page);
-    await expect(fileQuickpick.locator).toBeVisible();
-    const currentFileItem: Locator = fileQuickpick.items.filter({ hasText: documentTitle });
-    await expect(currentFileItem).not.toHaveCount(0);
-    await currentFileItem.click();
-  }
-
-  /** Select a schema type (AVRO/JSON/PROTOBUF) from the schema type quickpick. */
-  async function selectSchemaTypeFromQuickpick(page: Page, schemaType: string): Promise<void> {
-    const confirmSchemaTypeQuickpick = new Quickpick(page);
-    await expect(confirmSchemaTypeQuickpick.locator).toBeVisible();
-    const schemaTypeItem: Locator = confirmSchemaTypeQuickpick.items.filter({
-      hasText: schemaType,
-    });
-    await schemaTypeItem.click();
   }
 });
