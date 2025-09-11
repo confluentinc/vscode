@@ -11,7 +11,7 @@ import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SupportView } from "../objects/views/SupportView";
 import { View } from "../objects/views/View";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
-import { openConfluentExtension } from "./utils/confluent";
+import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the Project Scaffolding functionality.
@@ -20,7 +20,7 @@ import { openConfluentExtension } from "./utils/confluent";
 
 test.describe("Project Scaffolding", () => {
   test.beforeEach(async ({ page }) => {
-    await openConfluentExtension(page);
+    await openConfluentSidebar(page);
   });
 
   // Templates covered by the E2E tests
@@ -30,7 +30,7 @@ test.describe("Project Scaffolding", () => {
     "Kafka Client in JavaScript",
     "Kafka Client in .NET",
   ];
-  
+
   test.describe("Support view", () => {
     for (const templateName of templates) {
       test(`should generate ${templateName} template from Support view`, async ({
@@ -44,11 +44,11 @@ test.describe("Project Scaffolding", () => {
           {
             method: "showOpenDialog",
             value: {
-              filePaths: [tmpProjectDir]
+              filePaths: [tmpProjectDir],
             },
           },
         ]);
-        
+
         // Given we navigate to the Support view
         const supportView = new SupportView(page);
         // and we start the generate project flow
