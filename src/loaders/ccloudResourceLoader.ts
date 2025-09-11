@@ -116,8 +116,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    *
    * @returns The {@link CCloudOrganization} for the current CCloud connection, either from cached
    * value or deep fetch.
+   *
+   * @throws Error if there is no current organization.
    */
-  public async getOrganization(): Promise<CCloudOrganization | undefined> {
+  public async getOrganization(): Promise<CCloudOrganization> {
     if (this.organization) {
       return this.organization;
     }
@@ -126,8 +128,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     if (organization) {
       this.organization = organization;
       return this.organization;
+    } else {
+      logger.withCallpoint("getOrganization()").error("No current organization found.");
+      throw new Error("Could not determine the current CCloud organization!");
     }
-    logger.withCallpoint("getOrganization()").error("No current organization found.");
   }
 
   /**
@@ -330,6 +334,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     const rawResults = await executeFlinkStatement<FunctionNameRow>(
       "SHOW USER FUNCTIONS",
       cluster,
+      (await this.getOrganization()).id,
       computePool,
     );
 

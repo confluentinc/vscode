@@ -153,16 +153,21 @@ export async function submitFlinkStatementCommand(
   }
   const currentDatabase = currentDatabaseKafkaCluster.name;
 
-  // 5. Prep to submit, submit.
-  const submission: IFlinkStatementSubmitParameters = {
-    statement,
-    statementName,
-    computePool,
-    hidden: false, // Do not create a hidden statement, the user authored it.
-    properties: currentDatabaseKafkaCluster.toFlinkSpecProperties(),
-  };
-
   try {
+    // 5. Gotta grab the organization ID to submit as.
+    const ccloudLoader = CCloudResourceLoader.getInstance();
+    const organization = await ccloudLoader.getOrganization();
+
+    // 5. Prep to submit, submit.
+    const submission: IFlinkStatementSubmitParameters = {
+      statement,
+      statementName,
+      computePool,
+      organizationId: organization.id,
+      hidden: false, // Do not create a hidden statement, the user authored it.
+      properties: currentDatabaseKafkaCluster.toFlinkSpecProperties(),
+    };
+
     const newStatement = await submitFlinkStatement(submission);
 
     if (newStatement.status.phase === Phase.FAILED) {

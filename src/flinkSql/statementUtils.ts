@@ -6,7 +6,6 @@ import {
   CreateSqlv1StatementRequestApiVersionEnum,
   CreateSqlv1StatementRequestKindEnum,
 } from "../clients/flinkSql";
-import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
@@ -15,7 +14,6 @@ import {
   restFlinkStatementToModel,
   TERMINAL_PHASES,
 } from "../models/flinkStatement";
-import { CCloudOrganization } from "../models/organization";
 import { getSidecar } from "../sidecar";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
@@ -23,13 +21,24 @@ import flinkStatementResults from "../webview/flink-statement-results.html";
 const logger = new Logger("flinksql/statements");
 
 export interface IFlinkStatementSubmitParameters {
+  /** The SQL statement to submit */
   statement: string;
+
+  /** Name for the statement */
   statementName: string;
+
+  /** Where to get it evaluated */
   computePool: CCloudFlinkComputePool;
+
+  /** What organization id to submit the statement as? */
+  organizationId: string;
+
+  /** Metadata hints for the statement execution */
   properties: FlinkSpecProperties;
 
   /**
-   * False if user directly submitted this statement, true if it was created by the extension.
+   * False if user directly gestured / wrote this statement, true if it was created by the extension
+   * (system catalog queries to support our view providers, ...).
    */
   hidden: boolean;
 }
@@ -37,20 +46,13 @@ export interface IFlinkStatementSubmitParameters {
 export async function submitFlinkStatement(
   params: IFlinkStatementSubmitParameters,
 ): Promise<FlinkStatement> {
-  const ccloudLoader = CCloudResourceLoader.getInstance();
-
   const handle = await getSidecar();
-
-  const organization: CCloudOrganization | undefined = await ccloudLoader.getOrganization();
-  if (!organization) {
-    throw new Error("User must be signed in to Confluent Cloud to submit Flink statements.");
-  }
 
   const requestInner: CreateSqlv1StatementRequest = {
     api_version: CreateSqlv1StatementRequestApiVersionEnum.SqlV1,
     kind: CreateSqlv1StatementRequestKindEnum.Statement,
     name: params.statementName,
-    organization_id: organization.id,
+    organization_id: params.organizationId,
     environment_id: params.computePool.environmentId,
     spec: {
       statement: params.statement,

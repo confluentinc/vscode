@@ -3,6 +3,7 @@ import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { OrganizationId } from "../models/resource";
 import { getSidecar } from "../sidecar";
 import { parseResults } from "../utils/flinkStatementResults";
 import {
@@ -30,6 +31,7 @@ const logger = new Logger("flinkSql.statementExecution");
 export async function executeFlinkStatement<RT>(
   sqlStatement: string,
   database: CCloudKafkaCluster,
+  organizationId: OrganizationId,
   computePool?: CCloudFlinkComputePool,
 ): Promise<Array<RT>> {
   if (!database.isFlinkable()) {
@@ -51,6 +53,7 @@ export async function executeFlinkStatement<RT>(
   const statementParams: IFlinkStatementSubmitParameters = {
     statement: sqlStatement,
     statementName: await determineFlinkStatementName(),
+    organizationId,
     computePool,
     hidden: true, // Hidden statement, user didn't author it.
     properties: database.toFlinkSpecProperties(),
