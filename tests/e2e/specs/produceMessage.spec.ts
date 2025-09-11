@@ -40,7 +40,7 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  * 6. Clean up by deleting the subject, if created
  */
 
-test.describe("Produce Message(s) to Topic", () => {
+test.describe.only("Produce Message(s) to Topic", () => {
   let resourcesView: ResourcesView;
   let topicsView: TopicsView;
   let schemasView: SchemasView;
@@ -119,6 +119,14 @@ test.describe("Produce Message(s) to Topic", () => {
             credentials: {
               api_key: process.env.E2E_KAFKA_API_KEY!,
               api_secret: process.env.E2E_KAFKA_API_SECRET!,
+            },
+          },
+          schemaRegistryConfig: {
+            uri: process.env.E2E_SR_URL!,
+            authType: SupportedAuthType.API,
+            credentials: {
+              api_key: process.env.E2E_SR_API_KEY!,
+              api_secret: process.env.E2E_SR_API_SECRET!,
             },
           },
         });
