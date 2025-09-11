@@ -10,6 +10,7 @@ import {
 } from "./clients/flinkSql";
 import { showJsonPreview } from "./documentProviders/message";
 import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
+import { extractPageToken } from "./flinkSql/utils";
 import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
 import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
@@ -182,19 +183,6 @@ export class FlinkStatementResultsManager {
     });
   }
 
-  /**
-   * Extracts the page token from a next page URL.
-   */
-  private extractPageToken(nextUrl: string | undefined): string | undefined {
-    if (!nextUrl) return undefined;
-    try {
-      const url = new URL(nextUrl);
-      return url.searchParams.get("page_token") ?? undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
   private async refreshStatement() {
     const refreshedStatement = await this.resourceLoader.refreshFlinkStatement(this.statement);
     if (refreshedStatement) {
@@ -219,7 +207,7 @@ export class FlinkStatementResultsManager {
       if (
         this._state() !== "running" ||
         !this._moreResults() ||
-        !this.statement.areResultsViewable ||
+        !this.statement.canRequestResults ||
         this._getResultsAbortController.signal.aborted
       ) {
         // Self-destruct
@@ -234,7 +222,7 @@ export class FlinkStatementResultsManager {
       try {
         const priorResults = this._results();
         const priorRawResults = this._rawResults();
-        const pageToken = this.extractPageToken(this._latestResult()?.metadata?.next);
+        const pageToken = extractPageToken(this._latestResult()?.metadata?.next);
 
         const response = await this.retry(async () => {
           return await this._flinkStatementResultsSqlApi.getSqlv1StatementResult(
@@ -267,7 +255,7 @@ export class FlinkStatementResultsManager {
           });
           this._filteredResults(this.filterResultsBySearch());
           // Check if we have more results to fetch
-          if (this.extractPageToken(response?.metadata?.next) === undefined) {
+          if (extractPageToken(response?.metadata?.next) === undefined) {
             this._moreResults(false);
             this._state("completed");
           }
@@ -506,7 +494,7 @@ export class FlinkStatementResultsManager {
           detail: this.statement.status?.detail ?? null,
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
-          areResultsViewable: this.statement.areResultsViewable,
+          areResultsViewable: this.statement.canRequestResults,
           isForeground: this.statement.isForeground,
         };
       }
