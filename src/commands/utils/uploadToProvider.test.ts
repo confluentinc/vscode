@@ -17,11 +17,12 @@ describe("uploadToProvider", () => {
   });
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
   });
+
   describe("uploadFileToAzure", () => {
     beforeEach(() => {
       fetchStub = sandbox.stub(global, "fetch");
-      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     });
 
     it("should return response on successful upload", async () => {
@@ -81,7 +82,6 @@ describe("uploadToProvider", () => {
 
     beforeEach(() => {
       fetchStub = sandbox.stub(global, "fetch");
-      showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
       mockParams = {
         file: new Blob(["test content"], { type: "application/java-archive" }),
@@ -112,7 +112,6 @@ describe("uploadToProvider", () => {
 
       const response = await uploadFileToS3(mockParams);
 
-      // check that the form data is correct
       const expectedFormDataKeys = [...Object.keys(mockParams.uploadFormData), "file"];
       sinon.assert.calledWith(
         fetchStub,

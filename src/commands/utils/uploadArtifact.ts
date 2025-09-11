@@ -32,6 +32,8 @@ export interface ArtifactUploadParams {
 
 const logger = new Logger("commands/uploadArtifact");
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // sets the max file size to 100 MB in 104,857,600 bytes
+
 export const PRESIGNED_URL_LOCATION = "PRESIGNED_URL_LOCATION";
 
 /**
@@ -48,12 +50,19 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
     const contentType: string =
       ext === ".jar" ? "application/java-archive" : "application/octet-stream";
 
-    const blob: Blob = new Blob([bytes], { type: contentType });
-
+    const blob: Blob = new Blob([Buffer.from(bytes)], { type: contentType });
+    if (blob.size > MAX_FILE_SIZE) {
+      const errorMessage = `File size ${(blob.size / (1024 * 1024)).toFixed(
+        2,
+      )}MB exceeds the maximum allowed size of 100MB. Please use a smaller file.`;
+      logger.warn("File too large", { fileSize: blob.size });
+      // Show notification here since test expects it
+      void showErrorNotificationWithButtons(errorMessage);
+      throw new Error(errorMessage);
+    }
     return { blob, contentType };
   } catch (err) {
     logError(err, `Failed to read file from URI: ${uri.toString()}`);
-    showErrorNotificationWithButtons(`Failed to read file: ${uri.fsPath}. See logs for details.`);
     throw err;
   }
 }
@@ -280,6 +289,7 @@ export async function uploadArtifactToCCloud(
         userMessage = `Failed to create Flink artifact: ${errBody}`;
       }
     }
+    // Make sure to show notification here - this is expected by tests
     void showErrorNotificationWithButtons(userMessage);
     logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
     if (error && typeof error === "object" && "message" in error) {

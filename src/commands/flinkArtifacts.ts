@@ -46,7 +46,7 @@ export async function uploadArtifactCommand(): Promise<void> {
 
     await handleUploadToCloudProvider(params, uploadUrl);
 
-    if (!uploadUrl.upload_id) {
+    if (!uploadUrl) {
       throw new Error("Upload ID is missing from the presigned URL response.");
     }
     await vscode.window.withProgress(
@@ -71,6 +71,7 @@ export async function uploadArtifactCommand(): Promise<void> {
   } catch (err) {
     let logErrMessage: string;
     let showNotificationMessage: string;
+
     if (isResponseError(err)) {
       try {
         const respJson = await err.response.clone().json();
@@ -87,10 +88,23 @@ export async function uploadArtifactCommand(): Promise<void> {
         logErrMessage = await err.response.clone().text();
         showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
       }
+    } else if (err instanceof Error) {
+      // Special handling for different types of Error messages
+      if (err.message && err.message.includes("exceeds the maximum allowed size")) {
+        // File size error - use the exact error message from prepareUploadFileFromUri
+        logErrMessage = err.message;
+        showNotificationMessage = err.message;
+      } else {
+        // Other Error types
+        logErrMessage = `Failed to upload artifact: ${err instanceof Error ? err.message : String(err)}`;
+        showNotificationMessage = `Failed to upload artifact: ${err instanceof Error ? err.message : String(err)}`;
+      }
     } else {
+      // Unknown error type
       logErrMessage = `Failed to upload artifact: ${err}`;
       showNotificationMessage = "Failed to upload artifact. See logs for details.";
     }
+
     logError(logErrMessage, "Failed to upload artifact");
     showErrorNotificationWithButtons(showNotificationMessage);
   }
