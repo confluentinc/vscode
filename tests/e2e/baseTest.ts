@@ -1,6 +1,7 @@
 import {
   _electron as electron,
   ElectronApplication,
+  expect,
   Page,
   test as testBase,
 } from "@playwright/test";
@@ -12,6 +13,8 @@ import { globSync } from "glob";
 import { tmpdir } from "os";
 import path from "path";
 import { fileURLToPath } from "url";
+import { Notification } from "./objects/notifications/Notification";
+import { NotificationArea } from "./objects/notifications/NotificationArea";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -154,7 +157,16 @@ export const CCLOUD_SIGNIN_URL_PATH = path.join(tmpdir(), "vscode-e2e-ccloud-sig
 test.beforeAll(async () => {});
 
 /** E2E global beforeEach hook */
-test.beforeEach(async () => {
+test.beforeEach(async ({ page }) => {
+  // dismiss the "All installed extensions are temporarily disabled" notification if it appears
+  const notificationArea = new NotificationArea(page);
+  const infoNotifications = notificationArea.infoNotifications.filter({
+    hasText: "All installed extensions are temporarily disabled",
+  });
+  await expect(infoNotifications).not.toHaveCount(0);
+  const notification = new Notification(page, infoNotifications.first());
+  await notification.dismiss();
+
   // reset the CCloud sign-in file before each test so we don't accidentally get a stale URL
   try {
     await unlink(CCLOUD_SIGNIN_URL_PATH);
