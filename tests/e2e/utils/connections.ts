@@ -16,7 +16,7 @@ import { join } from "path";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
-const NOT_CONNECTED_TEXT = "(No connection)";
+export const NOT_CONNECTED_TEXT = "(No connection)";
 
 // same as in src/clients/sidecar/models/ConnectionType.ts
 export enum ConnectionType {
