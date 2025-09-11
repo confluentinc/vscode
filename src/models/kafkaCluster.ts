@@ -76,7 +76,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
    * Currently, this is determined by whether or not there were any preexisting Flink Compute Pools
    * available in the env/cloud provider/region of this cluster.
    **/
-  isFlinkable(): this is this & { flinkPools: CCloudFlinkComputePool[] } {
+  isFlinkable(): this is CCloudFlinkDbKafkaCluster {
     return (this.flinkPools?.length ?? 0) > 0;
   }
 
@@ -92,7 +92,8 @@ export class CCloudKafkaCluster extends KafkaCluster {
 
 /** A specialized {@link CCloudKafkaCluster} with non-empty flinkPools array. */
 export type CCloudFlinkDbKafkaCluster = CCloudKafkaCluster & {
-  flinkPools: CCloudFlinkComputePool[];
+  // at least one flink pool must be present.
+  flinkPools: [CCloudFlinkComputePool, ...CCloudFlinkComputePool[]];
 };
 
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */

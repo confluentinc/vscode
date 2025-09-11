@@ -31,7 +31,7 @@ export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.
 });
 export const TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER: CCloudFlinkDbKafkaCluster =
   CCloudKafkaCluster.create({
-    id: "lkc-abc123-finkable",
+    id: "lkc-abc123-flinkable",
     name: "test-ccloud-kafka-cluster",
     provider: TEST_CCLOUD_PROVIDER,
     region: TEST_CCLOUD_REGION,
