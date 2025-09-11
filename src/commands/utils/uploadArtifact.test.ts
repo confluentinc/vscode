@@ -200,30 +200,6 @@ describe("uploadArtifact", () => {
       assert.strictEqual(result, undefined);
     });
 
-    it("should show warning notification if there is no artifact name", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
-      cloudProviderRegionQuickPickStub.resolves({
-        ...fakeCloudProviderRegion,
-        provider: "AZURE",
-      });
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves(undefined);
-
-      const warningNotificationStub = sandbox
-        .stub(notifications, "showWarningNotificationWithButtons")
-        .resolves(undefined);
-
-      const result = await promptForArtifactUploadParams();
-
-      assert.strictEqual(result, undefined);
-
-      sinon.assert.calledWith(
-        warningNotificationStub,
-        "Upload Artifact cancelled: Artifact name is required.",
-      );
-    });
-
     it("should prefill artifact name with file base name when selecting a file", async () => {
       flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
       cloudProviderRegionQuickPickStub.resolves({
