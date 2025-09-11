@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-25",
+  "version": "1.7.0-28",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -277,13 +277,13 @@
         "icon": "$(cloud-upload)",
         "title": "Upload Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.connections.ccloud.signIn",
