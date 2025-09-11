@@ -43,7 +43,7 @@ export const FAILED_PHASES = [Phase.FAILED, Phase.FAILING];
 /**  List of terminal phases. Statements in terminal phase won't ever change on their own. */
 export const TERMINAL_PHASES = [Phase.COMPLETED, Phase.STOPPED, Phase.FAILED];
 
-const VIEWABLE_PHASES = [
+const EXECUTION_STARTED_PHASES = [
   Phase.PENDING,
   Phase.RUNNING,
   Phase.COMPLETED,
@@ -207,17 +207,23 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    * For statement results to be viewable, it must satisfy these conditions:
    * 1. The statement must have been created in the last 24 hours
    *    (which is the TTL for the statement result to be deleted.)
-   * 2. The statement phase indicates {@link VIEWABLE_PHASES viewability.}
+   * 2. The statement phase indicates {@link EXECUTION_STARTED_PHASES viewability.}
+   * 3. The results have not been fetched already (which we cannot ourselves determine, but
+   *    we document it here for posterity).
    */
-  get areResultsViewable(): boolean {
+  get canRequestResults(): boolean {
     if (!this.createdAt) {
       return false;
     }
 
-    return (
-      this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS &&
-      VIEWABLE_PHASES.includes(this.phase)
-    );
+    // If the statement is more than 24 hours old, results will never be viewable.
+    if (this.createdAt.getTime() < new Date().getTime() - ONE_DAY_MILLIS) {
+      throw new Error(
+        `Statement "${this.name}" is older than 24 hours and results are not viewable.`,
+      );
+    }
+
+    return EXECUTION_STARTED_PHASES.includes(this.phase);
   }
 
   /**
@@ -376,4 +382,59 @@ export function restFlinkStatementToModel(
     metadata: restFlinkStatement.metadata!,
     status: restFlinkStatement.status,
   });
+}
+
+export class FlinkSpecProperties {
+  currentCatalog: string | undefined = undefined;
+  currentDatabase: string | undefined = undefined;
+  localTimezone: string | undefined = undefined;
+
+  constructor(
+    options: Pick<
+      Partial<FlinkSpecProperties>,
+      "currentCatalog" | "currentDatabase" | "localTimezone"
+    >,
+  ) {
+    this.currentCatalog = options.currentCatalog;
+    this.currentDatabase = options.currentDatabase;
+    this.localTimezone = options.localTimezone;
+  }
+
+  static fromProperties(properties: Record<string, string>): FlinkSpecProperties {
+    const currentCatalog = properties["sql.current-catalog"];
+    const currentDatabase = properties["sql.current-database"];
+    const localTimezone = properties["sql.local-time-zone"];
+    return new FlinkSpecProperties({
+      currentCatalog,
+      currentDatabase,
+      localTimezone,
+    });
+  }
+
+  toProperties(): Record<string, string> {
+    const properties: Record<string, string> = {};
+    if (this.currentCatalog) {
+      properties["sql.current-catalog"] = this.currentCatalog;
+    }
+    if (this.currentDatabase) {
+      properties["sql.current-database"] = this.currentDatabase;
+    }
+    if (this.localTimezone) {
+      properties["sql.local-time-zone"] = this.localTimezone;
+    }
+    return properties;
+  }
+
+  /**
+   * Return new properties set based on union of this and provided other, preferring any value
+   * set in other over this.
+   */
+  union(other: FlinkSpecProperties): FlinkSpecProperties {
+    const merged = new FlinkSpecProperties({
+      currentCatalog: other.currentCatalog || this.currentCatalog,
+      currentDatabase: other.currentDatabase || this.currentDatabase,
+      localTimezone: other.localTimezone || this.localTimezone,
+    });
+    return merged;
+  }
 }
