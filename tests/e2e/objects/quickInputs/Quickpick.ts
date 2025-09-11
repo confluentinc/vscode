@@ -30,7 +30,7 @@ export class Quickpick {
 
   /** Selects the first quickpick item with the given text */
   async selectItemByText(text: string): Promise<void> {
-    this.textInput.fill(text);
+    await this.textInput.fill(text);
     const filteredItems = this.items.filter({ hasText: text });
     await filteredItems.first().click();
   }
