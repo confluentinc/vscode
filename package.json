@@ -277,13 +277,13 @@
         "icon": "$(cloud-upload)",
         "title": "Upload Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.connections.ccloud.signIn",
