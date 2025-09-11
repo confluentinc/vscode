@@ -24,16 +24,15 @@ test.describe("Project Scaffolding", () => {
   });
 
   // Templates covered by the E2E tests
-  // Mapping of display names to template names
-  const templates: Array<[string, string]> = [
-    ["Kafka Client in Go", "go-client"],
-    ["Kafka Client in Java", "java-client"],
-    ["Kafka Client in JavaScript", "javascript-client"],
-    ["Kafka Client in .NET", "dotnet-client"],
+  const templates: string[] = [
+    "Kafka Client in Go",
+    "Kafka Client in Java",
+    "Kafka Client in JavaScript",
+    "Kafka Client in .NET",
   ];
   
   test.describe("Support view", () => {
-    for (const [templateName, projectDirName] of templates) {
+    for (const templateName of templates) {
       test(`should generate ${templateName} template from Support view`, async ({
         page,
         electronApp,
@@ -53,20 +52,13 @@ test.describe("Project Scaffolding", () => {
         // Given we navigate to the Support view
         const supportView = new SupportView(page);
         // and we start the generate project flow
-        const projectTreeItem = supportView.treeItems.filter({
-          hasText: "Generate Project from Template",
-        });
-        await expect(projectTreeItem).toHaveCount(1);
-        await projectTreeItem.click();
+        await supportView.clickTreeItem("Generate Project from Template");
         // and we choose a project template from the quickpick
         const projectQuickpick = new Quickpick(page);
-        await projectQuickpick.textInput.fill(templateName);
-        const projectTemplateInput = projectQuickpick.items.filter({ hasText: templateName });
-        await expect(projectTemplateInput).not.toHaveCount(0);
-        await projectTemplateInput.first().click();
+        await projectQuickpick.selectItemByText(templateName);
         // and we provide a simple example configuration and submit the form
         const scaffoldForm = new ProjectScaffoldWebview(page);
-        await (await scaffoldForm.bootstrapServersField).fill("localhost:9092");
+        await scaffoldForm.bootstrapServersField.fill("localhost:9092");
 
         // When we submit the form
         await scaffoldForm.submitForm();
