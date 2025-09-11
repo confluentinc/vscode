@@ -5,6 +5,7 @@ import {
   CreateSqlv1StatementRequest,
   CreateSqlv1StatementRequestApiVersionEnum,
   CreateSqlv1StatementRequestKindEnum,
+  SqlV1StatementResultResults,
 } from "../clients/flinkSql";
 import { isResponseErrorWithStatus } from "../errors";
 import { Logger } from "../logging";
@@ -16,8 +17,10 @@ import {
   TERMINAL_PHASES,
 } from "../models/flinkStatement";
 import { getSidecar } from "../sidecar";
+import { parseResults } from "../utils/flinkStatementResults";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
+import { extractPageToken } from "./utils";
 
 const logger = new Logger("flinksql/statements");
 
@@ -248,4 +251,47 @@ export async function refreshFlinkStatement(
       throw error;
     }
   }
+}
+
+/**
+ * Consume all of the results from a Flink statement, handling pagination as needed.
+ * Drives the underlying parseResults() function to accumulate results, then
+ * extracts and returns them as an array of objects of type RT.
+ *
+ * @param statement - The Flink statement whose results are to be parsed.
+ * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure of the query.
+ */
+export async function parseAllFlinkStatementResults<RT>(
+  statement: FlinkStatement,
+): Promise<Array<RT>> {
+  const sidecar = await getSidecar();
+  const flinkSqlStatementResultsApi = sidecar.getFlinkSqlStatementResultsApi(statement);
+
+  const resultsMap: Map<string, Map<string, any>> = new Map();
+  let pageToken: string | undefined = undefined;
+  do {
+    const response = await flinkSqlStatementResultsApi.getSqlv1StatementResult({
+      environment_id: statement.environmentId,
+      organization_id: statement.organizationId,
+      name: statement.name,
+      page_token: pageToken,
+    });
+
+    // Writes into resultsMap
+    const payload: SqlV1StatementResultResults = response.results;
+    parseResults({
+      columns: statement.status?.traits?.schema?.columns ?? [],
+      isAppendOnly: statement.status?.traits?.is_append_only ?? true,
+      upsertColumns: statement.status?.traits?.upsert_columns,
+      map: resultsMap,
+      rows: payload.data ?? [],
+    });
+
+    pageToken = extractPageToken(response?.metadata?.next);
+  } while (pageToken !== undefined);
+
+  // convert the maps in the values to objects, hopefully conforming to RT.
+  const results = Array.from(resultsMap.values()).map(Object.fromEntries);
+
+  return results as Array<RT>;
 }
