@@ -16,7 +16,6 @@ const NOT_CONNECTED_TEXT = "(No connection)";
  * @param authUrl The OAuth URL to authenticate with
  * @param username The username to authenticate with
  * @param password The password to authenticate with
- * @param electronApp The Electron application instance
  */
 async function handleAuthFlow(authUrl: string, username: string, password: string): Promise<void> {
   const browser = await chromium.launch(); // headless by default
