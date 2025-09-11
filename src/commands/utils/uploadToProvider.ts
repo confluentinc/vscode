@@ -1,6 +1,8 @@
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
+import FormData from "form-data";
+import fetch, { Response } from "node-fetch";
 
 const logger = new Logger("commands/utils/uploadToProvider");
 
@@ -90,18 +92,22 @@ export async function uploadFileToS3({
   });
 
   try {
-    /** Using FormData with POST instead of PUT to support multiple content types.
+    /** Using POST instead of PUT to support multiple content types.
      * This is required for future Python UDF support where we need to upload
      * multiple file formats in a single request. PUT requests are limited to
      * a single content type, while POST with FormData can handle multiple formats.
+     * NOTE: Using the node-fetch library to avoid FormData stream bug in Node.js 18 version.
      */
+
     const formData = new FormData();
-    // add all the form fields from the presigned URL
     Object.keys(uploadFormData).forEach((key) => {
       formData.append(key, uploadFormData[key]);
     });
-    logger.debug(`Added ${Object.keys(uploadFormData).length} formData fields`);
-    formData.append("file", file);
+    logger.debug(`Added ${Object.keys(uploadFormData).length} form fields`);
+
+    // Convert Blob to Buffer for form-data compatibility
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    formData.append("file", fileBuffer);
 
     const response = await fetch(presignedUrl, {
       method: "POST",

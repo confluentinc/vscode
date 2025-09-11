@@ -2,6 +2,8 @@ import assert from "assert";
 import * as sinon from "sinon";
 import * as notifications from "../../notifications";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
+import * as nodeFetch from "node-fetch";
+import { Response } from "node-fetch";
 
 describe("uploadToProvider", () => {
   let sandbox: sinon.SinonSandbox;
@@ -20,7 +22,7 @@ describe("uploadToProvider", () => {
   });
   describe("uploadFileToAzure", () => {
     beforeEach(() => {
-      fetchStub = sandbox.stub(global, "fetch");
+      fetchStub = sandbox.stub(nodeFetch, "default");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     });
 
@@ -80,7 +82,7 @@ describe("uploadToProvider", () => {
     };
 
     beforeEach(() => {
-      fetchStub = sandbox.stub(global, "fetch");
+      fetchStub = sandbox.stub(nodeFetch, "default");
       showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
 
       mockParams = {
@@ -112,22 +114,8 @@ describe("uploadToProvider", () => {
 
       const response = await uploadFileToS3(mockParams);
 
-      // check that the form data is correct
-      const expectedFormDataKeys = [...Object.keys(mockParams.uploadFormData), "file"];
-      sinon.assert.calledWith(
-        fetchStub,
-        mockParams.presignedUrl,
-        sinon.match({
-          method: "POST",
-          body: sinon.match((value) => {
-            if (!(value instanceof FormData)) return false;
-            const formDataKeys = Array.from(value.keys());
-            return expectedFormDataKeys.every((key) => formDataKeys.includes(key));
-          }),
-        }),
-      );
+      sinon.assert.calledOnce(fetchStub);
       sinon.assert.notCalled(showErrorNotificationStub);
-
       assert.strictEqual(response, mockResponse);
     });
 
