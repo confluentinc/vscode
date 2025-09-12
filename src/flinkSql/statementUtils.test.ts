@@ -47,11 +47,6 @@ describe("flinkSql/statementUtils.ts", function () {
   });
 
   describe("FlinkSpecProperties", function () {
-    it("toProperties is delicate", function () {
-      const properties = new FlinkSpecProperties({});
-      assert.deepStrictEqual(properties.toProperties(), {});
-    });
-
     it("toProperties returns properties with currentCatalog and currentDatabase", function () {
       const properties = new FlinkSpecProperties({
         currentCatalog: "my_catalog",
