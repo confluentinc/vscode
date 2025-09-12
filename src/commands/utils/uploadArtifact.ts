@@ -9,6 +9,8 @@ import {
 import { artifactUploadCompleted } from "../../emitters";
 import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
+import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import {
   showErrorNotificationWithButtons,
@@ -80,9 +82,25 @@ export async function getPresignedUploadUrl(
   return urlResponse;
 }
 
-export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
-  const environment = await flinkCcloudEnvironmentQuickPick();
-  const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+export async function promptForArtifactUploadParams(
+  item?: CCloudKafkaCluster | CCloudFlinkComputePool,
+): Promise<ArtifactUploadParams | undefined> {
+  if (item) {
+    logger.info("Uploading artifact using provided context", {
+      environment: item.environmentId,
+      cloud: item.provider,
+      region: item.region,
+    });
+  }
+  // Use the item's environment if provided, otherwise prompt for it
+  const environment = item?.environmentId
+    ? { id: item.environmentId }
+    : await flinkCcloudEnvironmentQuickPick();
+
+  // Use the item's provider and region if provided, otherwise prompt for it
+  let cloudRegion = item
+    ? { provider: item.provider, region: item.region, cloud: item.provider }
+    : await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
 
   if (!environment || !environment.id || !cloudRegion) {
     return undefined;
