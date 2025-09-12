@@ -30,7 +30,7 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
  *    b. DIRECT: Fill out the Add New Connection form and submit with Kafka connection details
  * 2. Select a Kafka cluster with at least one topic
- * 3. Select a topic
+ * 3. Create a topic
  * 4. Set up schema, if necessary:
  *    a. Skip for no-schema scenario
  *    b. Create a new subject with an initial schema version
@@ -39,7 +39,7 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  *    b. Bad scenario: should raise a basic JSON validation error and show a diagnostic in the editor
  *  (if we're working with a schema):
  *    c. Ugly scenario: should raise a schema validation error and show a diagnostic in the editor
- * 6. Clean up by deleting the subject, if created
+ * 6. Clean up by deleting the topic, and any schema+subject that was created
  */
 
 test.describe("Produce Message(s) to Topic", () => {
