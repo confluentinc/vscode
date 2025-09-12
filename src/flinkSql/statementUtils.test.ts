@@ -47,7 +47,7 @@ describe("flinkSql/statementUtils.ts", function () {
   });
 
   describe("FlinkSpecProperties", function () {
-    it("toProperties is delicate", function () {
+    it("toProperties() returns empty object if FlinkSpecProperties is constructed with empty object.", function () {
       const properties = new FlinkSpecProperties({});
       assert.deepStrictEqual(properties.toProperties(), {});
     });
