@@ -1520,13 +1520,13 @@
           "command": "confluent.artifacts.scaffold",
           "when": "false"
         },
-        { 
+        {
           "command": "confluent.artifacts.registerUDF",
           "when": "false"
         },
         {
           "command": "confluent.flink.statements.search",
-          "when": "!confluent.flinkStatementsSearchApplied" 
+          "when": "!confluent.flinkStatementsSearchApplied"
         },
         {
           "command": "confluent.flink.statements.search.clear",
