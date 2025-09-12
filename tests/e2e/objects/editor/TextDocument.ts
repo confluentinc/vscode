@@ -64,8 +64,8 @@ export class TextDocument {
   /**
    * Insert content at the current cursor position.
    *
-   * NOTE: Use `configureVSCodeSettings()` during test setup to disable auto-formatting for more
-   * reliable test results.
+   * NOTE: You may need to use `configureVSCodeSettings()` during test setup to disable
+   * auto-formatting for more reliable test results if the defaults are not suitable.
    */
   async insertContent(content: string): Promise<void> {
     await this.locator.click();
