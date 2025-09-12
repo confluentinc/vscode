@@ -1,4 +1,5 @@
 import { TreeItem } from "vscode";
+import { CCloudResourceLoader } from "../../loaders";
 import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkUDF";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
@@ -16,22 +17,11 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
 
   loadingMessage = "Loading Flink UDFs...";
 
-  async fetchChildren(resource: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[]> {
+  async fetchChildren(database: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[]> {
     this.children = [];
 
-    // TODO: replace this when https://github.com/confluentinc/vscode/issues/2310 is done
-    this.children = [
-      new FlinkUdf({
-        connectionId: resource.connectionId,
-        connectionType: resource.connectionType,
-        environmentId: resource.environmentId,
-        id: "example-udf",
-        name: "Example UDF",
-        description: "This is an example UDF for demonstration purposes.",
-        provider: resource.provider,
-        region: resource.region,
-      }),
-    ];
+    const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+    this.children = await ccloudResourceLoader.getFlinkUDFs(database);
 
     return this.children;
   }
