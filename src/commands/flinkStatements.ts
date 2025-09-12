@@ -20,7 +20,7 @@ import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
@@ -140,17 +140,26 @@ export async function submitFlinkStatementCommand(
 
   // 4. Choose the current / default database for the expression to be evaluated against.
   // (a kafka cluster in the same provider/region as the compute pool)
-  const validDatabaseProvided: boolean =
-    database instanceof CCloudKafkaCluster &&
-    database.provider === computePool.provider &&
-    database.region === computePool.region;
-  const currentDatabaseKafkaCluster: CCloudKafkaCluster | undefined = validDatabaseProvided
-    ? database
-    : await flinkDatabaseQuickpick(computePool);
-  if (!currentDatabaseKafkaCluster) {
-    funcLogger.debug("User canceled the default database quickpick");
-    return;
+  let currentDatabaseKafkaCluster: CCloudFlinkDbKafkaCluster | undefined;
+
+  if (
+    !(
+      database instanceof CCloudKafkaCluster &&
+      database.isFlinkable() &&
+      database.isSameCloudRegion(computePool)
+    )
+  ) {
+    // Provided param wasn't valid, so have to show the quickpick.
+    currentDatabaseKafkaCluster = await flinkDatabaseQuickpick(computePool);
+    if (!currentDatabaseKafkaCluster) {
+      funcLogger.debug("User canceled the default database quickpick");
+      return;
+    }
+  } else {
+    // Good to go, caller provided a valid database for this compute pool.
+    currentDatabaseKafkaCluster = database;
   }
+
   const currentDatabase = currentDatabaseKafkaCluster.name;
 
   try {
