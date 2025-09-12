@@ -1566,7 +1566,7 @@
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "navigation@2"
         }
       ],
