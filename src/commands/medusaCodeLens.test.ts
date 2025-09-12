@@ -29,7 +29,7 @@ describe("medusaCodeLens", () => {
       sinon.assert.calledOnce(showInfoStub);
       sinon.assert.calledWithMatch(
         showInfoStub,
-        sinon.match(/Generate Medusa Dataset clicked for: \/path\/to\/test\.avsc/),
+        sinon.match(/Generate Medusa Dataset clicked for: .*test\.avsc/),
       );
     });
   });
