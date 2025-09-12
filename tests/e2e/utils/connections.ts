@@ -84,7 +84,7 @@ export async function setupCCloudConnection(
   const authPage = await context.newPage();
   try {
     // Navigate to the auth URL and wait for the page to be fully loaded
-    await authPage.goto(authUrl, { waitUntil: "domcontentloaded", timeout: 3000 });
+    await authPage.goto(authUrl, { waitUntil: "domcontentloaded" });
     // Additional wait to ensure page is interactive
     await authPage.waitForLoadState("domcontentloaded");
     // Wait for email input to be visible and ready
