@@ -54,7 +54,6 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
         2,
       )}MB exceeds the maximum allowed size of 100MB. Please use a smaller file.`;
       logger.warn("File too large", { fileSize: blob.size });
-      void showErrorNotificationWithButtons(errorMessage);
       throw new Error(errorMessage);
     }
     return { blob, contentType };
