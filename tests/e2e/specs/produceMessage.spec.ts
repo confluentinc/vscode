@@ -257,7 +257,7 @@ test.describe("Produce Message(s) to Topic", () => {
             await currentDocumentItem.click();
             // no schema quickpick since we should show an error notification before getting to that point
 
-            // TODO: check for error diagnostic in the editor
+            await expect(document.errorDiagnostics).not.toHaveCount(0);
 
             // expect error notification about basic JSON validation failure
             const errorNotifications = notificationArea.errorNotifications.filter({
@@ -293,7 +293,7 @@ test.describe("Produce Message(s) to Topic", () => {
               // value, key+value, etc) but that isn't necessary for now
               await schemaQuickpick.confirm();
 
-              // TODO: check for error diagnostic in the editor
+              await expect(document.errorDiagnostics).not.toHaveCount(0);
 
               // expect error notification about schema validation failure
               const errorNotifications = notificationArea.errorNotifications.filter({
