@@ -4,8 +4,9 @@ import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
+import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
-import { SchemasView } from "../objects/views/SchemasView";
+import { SchemasView, SchemaType } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import {
   FormConnectionType,
@@ -13,14 +14,6 @@ import {
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
 import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
-import {
-  createSchemaVersion,
-  deleteSchemaSubject,
-  SchemaType,
-  selectCurrentDocumentFromQuickpick,
-  selectSchemaTypeFromQuickpick,
-} from "../utils/schemas";
-import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
@@ -53,28 +46,6 @@ test.describe("Schema Management", () => {
   test.beforeEach(async ({ page, electronApp }) => {
     subjectName = "";
 
-    // disable auto-formatting and language detection to avoid issues with the editor
-    // NOTE: this can't be done in a .beforeAll hook since it won't persist for each test run
-    await configureVSCodeSettings(page, electronApp, {
-      // this is to avoid VS Code incorrectly setting the language of .proto files as C# so they
-      // appear correctly (as "plaintext") in the URI quickpick
-      "workbench.editor.languageDetection": false,
-      // we also have to disable a lot of auto-formatting so the .insertContent() method properly
-      // adds the schema content as it exists in the fixture files
-      "editor.autoClosingBrackets": "never",
-      "editor.autoClosingQuotes": "never",
-      "editor.autoIndent": "none",
-      "editor.autoSurround": "never",
-      "editor.formatOnType": false,
-      "editor.insertSpaces": false,
-      "json.format.enable": false,
-      "json.validate.enable": false,
-      // XXX: this must be set to prevent skipping newlines/commas while content is added to the editor
-      "editor.acceptSuggestionOnEnter": "off",
-      // this prevents VS Code from converting the `http` to `https` in `$schema` URIs:
-      "editor.linkedEditing": false,
-    });
-
     await openConfluentSidebar(page);
 
     resourcesView = new ResourcesView(page);
@@ -82,14 +53,9 @@ test.describe("Schema Management", () => {
   });
 
   test.afterEach(async ({ page, electronApp }) => {
-    await configureVSCodeSettings(page, electronApp, {
-      // required for right-click context menu action to delete subject schemas
-      "window.menuStyle": "custom",
-    });
-
     // delete the subject if it was created during the test
     if (subjectName) {
-      await deleteSchemaSubject(page, electronApp, subjectName, deletionConfirmation);
+      await schemasView.deleteSchemaSubject(page, electronApp, subjectName, deletionConfirmation);
     }
   });
 
@@ -171,7 +137,7 @@ test.describe("Schema Management", () => {
         test(`${schemaType}: should create a new subject and upload the first schema version`, async ({
           page,
         }) => {
-          subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+          subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
 
           const successNotifications: Locator = notificationArea.infoNotifications.filter({
             hasText: /Schema registered to new subject/,
@@ -185,7 +151,7 @@ test.describe("Schema Management", () => {
         test(`${schemaType}: should create a new schema version with valid/compatible changes`, async ({
           page,
         }) => {
-          subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+          subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
           // try to evolve the newly-created schema
           const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
           const subjectItem = new SubjectItem(page, subjectLocator.first());
@@ -205,9 +171,15 @@ test.describe("Schema Management", () => {
           await evolutionDocument.replaceContent(schemaContent);
 
           // attempt to upload from the subject item (instead of the Schemas view nav action)
-          await subjectItem.uploadSchemaForSubject();
-          await selectCurrentDocumentFromQuickpick(page, expectedTabName);
-          await selectSchemaTypeFromQuickpick(page, schemaType);
+          await subjectItem.clickUploadSchemaForSubject();
+          // select editor/file name in the first quickpick
+          const documentQuickpick = new Quickpick(page);
+          await expect(documentQuickpick.locator).toBeVisible();
+          await documentQuickpick.selectItemByText(expectedTabName);
+          // select schema type in the next quickpick
+          const uploadSchemaTypeQuickpick = new Quickpick(page);
+          await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
+          await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
           const successNotifications = notificationArea.infoNotifications.filter({
             hasText: /New version 2 registered to existing subject/,
@@ -222,7 +194,7 @@ test.describe("Schema Management", () => {
         test(`${schemaType}: should reject invalid/incompatible schema evolution and not create a second version`, async ({
           page,
         }) => {
-          subjectName = await createSchemaVersion(page, schemaType, schemaFile);
+          subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
           // try to evolve the newly-created schema
           const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
           const subjectItem = new SubjectItem(page, subjectLocator.first());
@@ -242,9 +214,15 @@ test.describe("Schema Management", () => {
           await badEvolutionDocument.replaceContent(schemaContent);
 
           // attempt to upload from the subject item (instead of the Schemas view nav action)
-          await subjectItem.uploadSchemaForSubject();
-          await selectCurrentDocumentFromQuickpick(page, expectedTabName);
-          await selectSchemaTypeFromQuickpick(page, schemaType);
+          await subjectItem.clickUploadSchemaForSubject();
+          // select editor/file name in the first quickpick
+          const documentQuickpick = new Quickpick(page);
+          await expect(documentQuickpick.locator).toBeVisible();
+          await documentQuickpick.selectItemByText(expectedTabName);
+          // select schema type in the next quickpick
+          const uploadSchemaTypeQuickpick = new Quickpick(page);
+          await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
+          await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
           const errorNotifications: Locator = notificationArea.errorNotifications.filter({
             hasText: "Conflict with prior schema version",
