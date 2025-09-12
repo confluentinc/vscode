@@ -6,7 +6,7 @@ import {
   ViewMode,
   createColumnDefinitions,
   getColumnOrder,
-} from "../utils/flinkStatementResultColumns";
+} from "../flinkSql/flinkStatementResultColumns";
 import { ViewModel } from "./bindings/view-model";
 import { WebviewStorage, createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
