@@ -11,6 +11,8 @@ export enum SelectKafkaCluster {
   FromTopicsViewButton = "Topics view nav action",
 }
 
+export const DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR = 3;
+
 /**
  * Object representing the "Topics"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
@@ -113,6 +115,8 @@ export class TopicsView extends View {
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
+    await expect(this.header).toHaveAttribute("aria-expanded", "true");
+    await expect(this.body).toBeVisible();
   }
 
   /**

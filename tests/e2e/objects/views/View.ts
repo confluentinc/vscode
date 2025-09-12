@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import { expect, Locator, Page } from "@playwright/test";
 
 /**
  * Object representing a
@@ -68,5 +68,6 @@ export class View {
     if (isExpanded !== "true") {
       await this.header.click();
     }
+    await expect(this.header).toHaveAttribute("aria-expanded", "true");
   }
 }
