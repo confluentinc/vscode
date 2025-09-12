@@ -53,11 +53,12 @@ test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
   ];
 
   for (const testCase of testCases) {
-    test(`${testCase.name}: should submit Flink Statement`, async ({ page }) => {
+    test(`${testCase.name}: should submit Flink Statement`, async ({ page, electronApp }) => {
       // Submit the statement
       await submitFlinkStatement(
         page,
         path.join(__dirname, `../../fixtures/flinksql/${testCase.fileName}`),
+        electronApp,
       );
 
       webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();

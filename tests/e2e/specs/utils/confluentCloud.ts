@@ -1,12 +1,14 @@
 import { ElectronApplication, chromium, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
-import { readFile } from "fs/promises";
-import { CCLOUD_SIGNIN_URL_PATH } from "../../baseTest";
+import { readFile, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import { Notification } from "../../objects/notifications/Notification";
 import { NotificationArea } from "../../objects/notifications/NotificationArea";
 import { ResourcesView } from "../../objects/views/ResourcesView";
 import { ViewItem } from "../../objects/views/viewItems/ViewItem";
 
+export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
 const NOT_CONNECTED_TEXT = "(No connection)";
 
 /**
@@ -14,14 +16,8 @@ const NOT_CONNECTED_TEXT = "(No connection)";
  * @param authUrl The OAuth URL to authenticate with
  * @param username The username to authenticate with
  * @param password The password to authenticate with
- * @param electronApp The Electron application instance
  */
-async function handleAuthFlow(
-  authUrl: string,
-  username: string,
-  password: string,
-  electronApp: ElectronApplication,
-): Promise<void> {
+async function handleAuthFlow(authUrl: string, username: string, password: string): Promise<void> {
   const browser = await chromium.launch(); // headless by default
   const context = await browser.newContext();
   const authPage = await context.newPage();
@@ -64,6 +60,15 @@ export async function login(
   username: string,
   password: string,
 ): Promise<void> {
+  // reset the CCloud sign-in file before the sign-in flow even starts so we don't use a stale URL
+  try {
+    await unlink(CCLOUD_SIGNIN_URL_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn("Error deleting CCloud sign-in URL file:", error);
+    }
+  }
+
   const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
   await stubMultipleDialogs(electronApp, [
     // Handles both auth dialogs:
@@ -101,7 +106,7 @@ export async function login(
   }
 
   // Handle the authentication flow through the browser in a separate context
-  await handleAuthFlow(authUrl, username, password, electronApp);
+  await handleAuthFlow(authUrl, username, password);
 
   // Unfortunately, the auth callback URI handling does not reliably work on all environments
   // we run these tests, so we have to work around it:

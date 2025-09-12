@@ -1,20 +1,38 @@
 import {
   _electron as electron,
   ElectronApplication,
+  expect,
   Page,
   test as testBase,
 } from "@playwright/test";
-import { downloadAndUnzipVSCode } from "@vscode/test-electron";
 import { stubAllDialogs } from "electron-playwright-helpers";
-import { mkdtempSync } from "fs";
-import { unlink } from "fs/promises";
-import { globSync } from "glob";
+import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import { fileURLToPath } from "url";
+import { Notification } from "./objects/notifications/Notification";
+import { NotificationArea } from "./objects/notifications/NotificationArea";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// NOTE: we can't import these two directly from 'global.setup.ts'
+// cached test setup file path that's shared across worker processes
+const TEST_SETUP_CACHE_FILE = path.join(tmpdir(), "vscode-e2e-test-setup-cache.json");
+
+interface TestSetupCache {
+  vscodeExecutablePath: string;
+  outPath: string;
+}
+
+/** Get the test setup cache created by the global setup, avoiding repeated VS Code setup logging. */
+function getTestSetupCache(): TestSetupCache {
+  if (!existsSync(TEST_SETUP_CACHE_FILE)) {
+    throw new Error(`Test setup cache file not found at ${TEST_SETUP_CACHE_FILE}.`);
+  }
+  try {
+    const cacheContent = readFileSync(TEST_SETUP_CACHE_FILE, "utf-8");
+    return JSON.parse(cacheContent);
+  } catch (error) {
+    throw new Error(`Failed to read test setup cache: ${error}`);
+  }
+}
 
 export interface VSCodeFixture {
   page: Page;
@@ -23,50 +41,14 @@ export interface VSCodeFixture {
 
 export const test = testBase.extend<VSCodeFixture>({
   electronApp: async ({ trace }, use, testInfo) => {
+    const testConfigs = getTestSetupCache();
+
     // create a temporary directory for this test run
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
 
-    const vscodeInstallPath: string = await downloadAndUnzipVSCode(
-      process.env.VSCODE_VERSION || "stable",
-    );
-    console.log("VS Code install path:", vscodeInstallPath);
-
-    const vscodeVersion = process.env.VSCODE_VERSION || "stable";
-
-    // locate the VS Code executable path based on the platform
-    let executablePath: string;
-    if (["win32", "darwin"].includes(process.platform)) {
-      executablePath = vscodeInstallPath;
-    } else {
-      // may be in the install path or in the root directory; need to see which one exists and
-      // is executable
-      const directExecutable = vscodeInstallPath;
-      const insidersOrStable = vscodeVersion === "insiders" ? "code-insiders" : "code";
-      const rootExecutable = path.join(vscodeInstallPath, insidersOrStable);
-      executablePath = directExecutable.endsWith(insidersOrStable)
-        ? directExecutable
-        : rootExecutable;
-    }
-    console.log(`${process.platform} VS Code executable path:`, executablePath);
-
-    const extensionPath: string = path.normalize(path.resolve(__dirname, "..", ".."));
-    const outPath: string = path.normalize(path.resolve(extensionPath, "out"));
-    const vsixFiles: string[] = globSync("*.vsix", { cwd: outPath });
-    const vsixPath = vsixFiles.length > 0 ? path.join(outPath, vsixFiles[0]) : undefined;
-    if (!vsixPath) {
-      // shouldn't happen during normal `gulp e2e`
-      throw new Error("No VSIX file found in the out/ directory. Run 'npx gulp bundle' first.");
-    }
-
-    console.log(`Launching VS Code (${vscodeVersion}) with:`);
-    console.log("  Executable:", executablePath);
-    console.log("  Extension path:", extensionPath);
-    console.log("  VSIX path:", vsixPath);
-    console.log("  Temp dir:", tempDir);
-
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
-      executablePath,
+      executablePath: testConfigs.vscodeExecutablePath,
       args: [
         // same as the Mocha test args in Gulpfile.js:
         "--no-sandbox",
@@ -79,7 +61,7 @@ export const test = testBase.extend<VSCodeFixture>({
         // required to prevent test resources being saved to user's real profile
         `--user-data-dir=${tempDir}`,
         // additional args needed for the Electron launch:
-        `--extensionDevelopmentPath=${outPath}`,
+        `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
     });
 
@@ -103,7 +85,6 @@ export const test = testBase.extend<VSCodeFixture>({
 
     // on*, retain-on*
     if (trace.toString().includes("on")) {
-      console.log("Starting trace capture for test:", testInfo.title);
       await electronApp.context().tracing.start({
         screenshots: true,
         snapshots: true,
@@ -144,29 +125,16 @@ export const test = testBase.extend<VSCodeFixture>({
       throw new Error("Failed to get first window from VS Code");
     }
 
+    // dismiss the "All installed extensions are temporarily disabled" notification that will
+    // always appear since we launch with --disable-extensions
+    const notificationArea = new NotificationArea(page);
+    const infoNotifications = notificationArea.infoNotifications.filter({
+      hasText: "All installed extensions are temporarily disabled",
+    });
+    await expect(infoNotifications).not.toHaveCount(0);
+    const notification = new Notification(page, infoNotifications.first());
+    await notification.dismiss();
+
     await use(page);
   },
 });
-
-export const CCLOUD_SIGNIN_URL_PATH = path.join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
-
-/** E2E global beforeAll hook */
-test.beforeAll(async () => {});
-
-/** E2E global beforeEach hook */
-test.beforeEach(async () => {
-  // reset the CCloud sign-in file before each test so we don't accidentally get a stale URL
-  try {
-    await unlink(CCLOUD_SIGNIN_URL_PATH);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn("Error deleting CCloud sign-in URL file:", error);
-    }
-  }
-});
-
-/** E2E global afterEach hook */
-test.afterEach(async () => {});
-
-/** E2E global afterAll hook */
-test.afterAll(async () => {});

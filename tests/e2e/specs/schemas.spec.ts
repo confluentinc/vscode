@@ -16,7 +16,6 @@ import {
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { executeVSCodeCommand } from "../utils/commands";
 import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentExtension } from "./utils/confluent";
 import { login } from "./utils/confluentCloud";
@@ -80,8 +79,10 @@ test.describe("Schema Management", () => {
   });
 
   test.afterEach(async ({ page, electronApp }) => {
-    // reset VS Code settings to defaults
-    await configureVSCodeSettings(page, electronApp, {});
+    await configureVSCodeSettings(page, electronApp, {
+      // required for right-click context menu action to delete subject schemas
+      "window.menuStyle": "custom",
+    });
 
     // delete the subject if it was created during the test
     if (subjectName) {
@@ -98,15 +99,12 @@ test.describe("Schema Management", () => {
         },
       ]);
 
-      // replace this with right-click context actions once this issue is resolved:
-      // https://github.com/confluentinc/vscode/issues/1875
-      await executeVSCodeCommand(page, "Confluent: Delete All Schemas in Subject");
-
-      // select the subject to delete
-      const subjectInputBox = new InputBox(page);
-      await expect(subjectInputBox.placeholder).toBeVisible();
-      await subjectInputBox.input.fill(subjectName);
-      await subjectInputBox.confirm();
+      // find the schema item in the Schemas view
+      const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+      const subjectItem = new SubjectItem(page, subjectLocator.first());
+      await subjectItem.locator.scrollIntoViewIfNeeded();
+      await expect(subjectItem.locator).toBeVisible();
+      await subjectItem.rightClickContextMenuAction("Delete All Schemas in Subject");
 
       // select the Hard Delete option
       const deletionQuickpick = new Quickpick(page);

@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-23",
+  "version": "1.7.0-32",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -277,13 +277,13 @@
         "icon": "$(cloud-upload)",
         "title": "Upload Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts",
-        "enablement": "isDevelopment"
+        "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -485,12 +485,19 @@
       {
         "command": "confluent.resources.scaffold",
         "title": "Generate Project From Resource",
-        "category": "Confluent: Resource Project"
+        "category": "Confluent: Resource Project",
+        "icon": "$(plus)"
       },
       {
         "command": "confluent.scaffold",
         "title": "Generate New Project",
         "category": "Confluent: Project"
+      },
+      {
+        "command": "confluent.artifacts.scaffold",
+        "icon": "$(plus)",
+        "title": "Generate Flink Artifact",
+        "category": "Confluent: Flink Artifacts"
       },
       {
         "command": "confluent.schemaViewer.viewLocally",
@@ -1175,7 +1182,7 @@
       },
       {
         "view": "confluent-flink-database",
-        "contents": "No Flink artifacts found.",
+        "contents": "No Flink artifacts found.\n[Generate a Flink Artifact from template](command:confluent.artifacts.scaffold)",
         "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected"
       }
     ],
@@ -1270,6 +1277,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.deleteSubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolveSchemaSubject",
           "when": "false"
         },
@@ -1347,6 +1358,10 @@
         },
         {
           "command": "confluent.resources.scaffold",
+          "when": "false"
+        },
+        {
+          "command": "confluent.artifacts.scaffold",
           "when": "false"
         },
         {
@@ -1549,9 +1564,14 @@
           "group": "navigation@3"
         },
         {
-          "command": "confluent.flinkdatabase.setUDFsViewMode",
+          "command": "confluent.artifacts.scaffold",
           "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
-          "group": "navigation@3"
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.flinkdatabase.setUDFsViewMode",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
