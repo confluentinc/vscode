@@ -1,5 +1,6 @@
 import { CodeLens, CodeLensProvider, Command, Position, Range, TextDocument } from "vscode";
 import { MEDUSA_COMMANDS } from "../commands/medusaCodeLens";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { DisposableCollection } from "../utils/disposables";
 
@@ -21,6 +22,9 @@ export class AvroCodelensProvider extends DisposableCollection implements CodeLe
 
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
     const codeLenses: CodeLens[] = [];
+    if (!ENABLE_MEDUSA_CONTAINER.value) {
+      return [];
+    }
 
     // Show code lens at the top of the file
     const range = new Range(new Position(0, 0), new Position(0, 0));

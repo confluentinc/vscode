@@ -59,7 +59,6 @@ import { logError } from "./errors";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER,
-  ENABLE_MEDUSA_CONTAINER,
   USE_NEW_RESOURCES_VIEW_PROVIDER,
 } from "./extensionSettings/constants";
 import { createConfigChangeListener } from "./extensionSettings/listener";
@@ -268,7 +267,7 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
-    ...(ENABLE_MEDUSA_CONTAINER ? registerMedusaCodeLensCommands() : []),
+    ...registerMedusaCodeLensCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
@@ -350,15 +349,13 @@ async function _activateExtension(
     flinkProvider,
   );
 
-  // conditionally register the Avro code lens provider based on the Medusa container feature flag
-  if (ENABLE_MEDUSA_CONTAINER.value) {
-    const avroProvider = AvroCodelensProvider.getInstance();
+  // register the Avro code lens provider (it will check the feature flag internally)
+  const avroProvider = AvroCodelensProvider.getInstance();
 
-    context.subscriptions.push(
-      vscode.languages.registerCodeLensProvider({ pattern: "**/*.avsc" }, avroProvider),
-      avroProvider,
-    );
-  }
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider({ pattern: "**/*.avsc" }, avroProvider),
+    avroProvider,
+  );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
