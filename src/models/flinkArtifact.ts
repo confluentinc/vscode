@@ -1,9 +1,9 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import { CustomMarkdownString, IdItem, KeyValuePair } from "./main";
+import { CustomMarkdownString, IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
-import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 
 export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   connectionId!: ConnectionId;
@@ -88,24 +88,20 @@ export class FlinkArtifactTreeItem extends TreeItem {
 }
 
 export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkdownString {
-  let documentationLabel: KeyValuePair;
-  if (resource.documentationLink === undefined || resource.documentationLink === "") {
-    // Change to "Add documentation link" command for adding during upload is implemented
-    documentationLabel = ["No documentation link", ""];
+  const tooltip = new CustomMarkdownString()
+    .addHeader("Flink Artifact", IconNames.FLINK_ARTIFACT)
+    .addField("ID", resource.id)
+    .addField("Description", resource.description)
+    .addField("Created At", resource.createdAt?.toLocaleString())
+    .addField("Updated At", resource.updatedAt?.toLocaleString());
+
+  if (!resource.documentationLink || resource.documentationLink === "") {
+    tooltip.addLink("No documentation link", "");
   } else {
-    documentationLabel = ["See Documentation", resource.documentationLink];
+    tooltip.addLink("See Documentation", resource.documentationLink);
   }
 
-  return CustomMarkdownString.resourceTooltip(
-    "Flink Artifact",
-    IconNames.FLINK_ARTIFACT,
-    resource.ccloudUrl,
-    [
-      ["ID", resource.id],
-      ["Description", resource.description],
-      ["Created At", resource.createdAt?.toLocaleString()],
-      ["Updated At", resource.updatedAt?.toLocaleString()],
-    ],
-    documentationLabel,
-  );
+  tooltip.addCCloudLink(resource.ccloudUrl);
+
+  return tooltip;
 }

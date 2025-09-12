@@ -108,36 +108,28 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 function createKafkaTopicTooltip(
   resource: KafkaTopic,
   missingAuthz: KafkaTopicOperation[],
-): vscode.MarkdownString {
+): CustomMarkdownString {
   const iconName = resource.hasSchema ? IconNames.TOPIC : IconNames.TOPIC_WITHOUT_SCHEMA;
 
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${iconName}) Kafka Topic`)
-    .appendMarkdown("\n\n---")
-    .appendMarkdown(`\n\nName: \`${resource.name}\``)
-    .appendMarkdown(`\n\nReplication Factor: \`${resource.replication_factor}\``)
-    .appendMarkdown(`\n\nPartition Count: \`${resource.partition_count}\``)
-    .appendMarkdown(`\n\nInternal: \`${resource.is_internal}\``);
+    .addHeader("Kafka Topic", iconName)
+    .addField("Name", resource.name)
+    .addField("Replication Factor", resource.replication_factor.toString())
+    .addField("Partition Count", resource.partition_count.toString())
+    .addField("Internal", resource.is_internal.toString());
 
   if (!resource.hasSchema) {
-    tooltip
-      .appendMarkdown("\n\n---")
-      .appendMarkdown("\n\n$(warning) No schema(s) found for topic.");
+    tooltip.addWarning("No schema(s) found for topic.");
   }
 
   // list any missing authorized operations
   if (missingAuthz.length > 0) {
-    tooltip
-      .appendMarkdown("\n\n---")
-      .appendMarkdown("\n\n$(warning) Missing authorization for the following actions:");
+    tooltip.addWarning("Missing authorization for the following actions:");
     missingAuthz.forEach((op) => tooltip.appendMarkdown(` - ${op}\n`));
   }
 
   if (isCCloud(resource)) {
-    tooltip.appendMarkdown("\n\n---");
-    tooltip.appendMarkdown(
-      `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
-    );
+    tooltip.addCCloudLink(resource.ccloudUrl);
   }
 
   return tooltip;

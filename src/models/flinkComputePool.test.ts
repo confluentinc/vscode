@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { CCLOUD_BASE_PATH, IconNames } from "../constants";
+import { CCLOUD_BASE_PATH, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import {
   CCloudFlinkComputePool,
   FlinkComputePoolTreeItem,
@@ -14,7 +14,7 @@ describe("models/flinkComputePool.ts CCloudFlinkComputePool", () => {
 
     assert.strictEqual(
       pool.ccloudUrl,
-      `https://${CCLOUD_BASE_PATH}/environments/${pool.environmentId}/flink/pools/${pool.id}/overview`,
+      `https://${CCLOUD_BASE_PATH}/environments/${pool.environmentId}/flink/pools/${pool.id}/overview?utm_source=${UTM_SOURCE_VSCODE}`,
     );
   });
 
