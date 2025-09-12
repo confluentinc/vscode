@@ -47,13 +47,26 @@ export class View {
    * {@link https://code.visualstudio.com/api/extension-guides/tree-view#view-actions view action}
    * (with `"group": "navigation"`) by its `label`. */
   async clickNavAction(label: string): Promise<void> {
+    // the view must be expanded before we can click a nav action, since the buttons aren't visible
+    // when the header is collapsed (even though the header is always visible by default)
+    await this.ensureExpanded();
     await this.header.hover();
     await this.header.getByRole("button", { name: label }).click();
   }
 
   /** Click the tree item with the given label. */
   async clickTreeItem(label: string): Promise<void> {
+    // the view must be expanded before we can click an item in it
+    await this.ensureExpanded();
     const treeItem = this.treeItems.filter({ hasText: label });
     await treeItem.click();
+  }
+
+  /** Ensure the view is expanded (not collapsed). */
+  async ensureExpanded(): Promise<void> {
+    const isExpanded = await this.header.getAttribute("aria-expanded");
+    if (isExpanded !== "true") {
+      await this.header.click();
+    }
   }
 }
