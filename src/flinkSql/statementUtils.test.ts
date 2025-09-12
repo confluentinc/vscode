@@ -34,8 +34,8 @@ import {
 describe("flinkSql/statementUtils.ts", function () {
   let sandbox: sinon.SinonSandbox;
 
-  before(() => {
-    getTestExtensionContext();
+  before(async () => {
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {
