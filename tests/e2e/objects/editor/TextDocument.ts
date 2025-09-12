@@ -1,5 +1,6 @@
 import { Locator, Page } from "@playwright/test";
 import { executeVSCodeCommand } from "../../utils/commands";
+import { Quickpick } from "../quickInputs/Quickpick";
 
 /** Object representing a VS Code text editor document. */
 export class TextDocument {
@@ -26,6 +27,13 @@ export class TextDocument {
   /** The CodeLens action elements in the document (if any). */
   get codeLensActions(): Locator {
     return this.locator.locator("span.codelens-decoration");
+  }
+
+  /** Error diagnostic squiggles in the document. */
+  get errorDiagnostics(): Locator {
+    // warning diagnostics are `.cdr.squiggly-warning` and info are `.cdr.squiggly-info`,
+    // but we don't use those anywhere yet
+    return this.locator.locator(".cdr.squiggly-error");
   }
 
   /** Save the currently-focused document. */
@@ -56,8 +64,8 @@ export class TextDocument {
   /**
    * Insert content at the current cursor position.
    *
-   * NOTE: Use `configureVSCodeSettings()` during test setup to disable auto-formatting for more
-   * reliable test results.
+   * NOTE: You may need to use `configureVSCodeSettings()` during test setup to disable
+   * auto-formatting for more reliable test results if the defaults are not suitable.
    */
   async insertContent(content: string): Promise<void> {
     await this.locator.click();
@@ -69,5 +77,15 @@ export class TextDocument {
   async replaceContent(content: string): Promise<void> {
     await this.deleteAll();
     await this.insertContent(content);
+  }
+
+  /** Change the language mode of the document using the command palette. */
+  async setLanguageMode(language: string): Promise<void> {
+    await this.locator.click();
+    // use the command ID since "Change Language Mode" will fuzzy match with others
+    await executeVSCodeCommand(this.page, "workbench.action.editor.changeLanguageMode");
+
+    const languageQuickpick = new Quickpick(this.page);
+    await languageQuickpick.selectItemByText(language);
   }
 }
