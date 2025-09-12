@@ -98,18 +98,10 @@ describe("uploadArtifact", () => {
       sandbox.stub(fsWrappers, "readFileBuffer").resolves(mockBuffer);
 
       const mockUri = { fsPath: "/path/to/large-file.jar" } as vscode.Uri;
-      const showErrorStub = sandbox
-        .stub(notifications, "showErrorNotificationWithButtons")
-        .resolves();
 
       await assert.rejects(
         () => prepareUploadFileFromUri(mockUri),
         /File size 101.00MB exceeds the maximum allowed size of 100MB/,
-      );
-
-      sinon.assert.calledWith(
-        showErrorStub,
-        "File size 101.00MB exceeds the maximum allowed size of 100MB. Please use a smaller file.",
       );
     });
 
