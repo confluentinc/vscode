@@ -1,10 +1,10 @@
 import { ElectronApplication, expect, Page } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
+import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
-import { ResourcesView } from "../objects/views/ResourcesView";
 import { SchemasView, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
@@ -13,7 +13,7 @@ import {
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { ConnectionType, setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
 import { openNewUntitledDocument } from "../utils/documents";
 import { createSchemaVersion, deleteSchemaSubject, SchemaType } from "../utils/schemas";
 import { configureVSCodeSettings } from "../utils/settings";
@@ -40,8 +40,7 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  * 6. Clean up by deleting the subject, if created
  */
 
-test.describe.only("Produce Message(s) to Topic", () => {
-  let resourcesView: ResourcesView;
+test.describe("Produce Message(s) to Topic", () => {
   let topicsView: TopicsView;
   let schemasView: SchemasView;
 
@@ -81,7 +80,6 @@ test.describe.only("Produce Message(s) to Topic", () => {
 
     await openConfluentSidebar(page);
 
-    resourcesView = new ResourcesView(page);
     topicsView = new TopicsView(page);
     notificationArea = new NotificationArea(page);
   });
@@ -158,11 +156,14 @@ test.describe.only("Produce Message(s) to Topic", () => {
             topicName = `produce-message-${schemaSuffix}`;
 
             // check if we need to create the topic first
-            const targetTopic = topicsView.topics.filter({ hasText: topicName });
+            let targetTopic = topicsView.topics.filter({ hasText: topicName });
+            await targetTopic.scrollIntoViewIfNeeded({ timeout: 1000 }).catch(() => {
+              // ignore timeout errors since it just means the topic doesn't exist
+              // if we can't scroll to it within 1sec
+            });
             if (!(await targetTopic.count())) {
               await topicsView.createTopic(topicName);
             }
-            topic = new TopicItem(page, targetTopic.first());
 
             // if we want to use a schema, create a new subject with an initial schema version to match
             // the topic we're using
@@ -184,12 +185,15 @@ test.describe.only("Produce Message(s) to Topic", () => {
               // (which, in the background, will associate the topic with the subject we created,
               // which then informs the schema key/value/etc quickpick during the produce flow)
               await topicsView.clickRefresh();
-              const targetTopicWithSchema = topicsView.topicsWithSchemas.filter({
+              targetTopic = topicsView.topicsWithSchemas.filter({
                 hasText: topicName,
               });
-              topic = new TopicItem(page, targetTopicWithSchema.first());
             }
 
+            // until we can delete topics, we may have too many to show at once in the view, so
+            // scroll the target topic into view before trying to click it
+            await targetTopic.scrollIntoViewIfNeeded();
+            topic = new TopicItem(page, targetTopic.first());
             await expect(topic.locator).toBeVisible();
           });
 
