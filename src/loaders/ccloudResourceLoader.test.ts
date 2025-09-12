@@ -4,7 +4,11 @@ import * as sinon from "sinon";
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import { StubbedEventEmitters, eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
-import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
@@ -38,11 +42,12 @@ import {
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
 import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID } from "../constants";
+import * as statementUtils from "../flinkSql/statementUtils";
 import * as graphqlCCloud from "../graphql/ccloud";
 import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
 import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
@@ -182,10 +187,17 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getCurrentOrganizationStub);
     });
 
-    it("should return undefined if no organization is available", async () => {
+    it("should throw if no organization is available", async () => {
       getCurrentOrganizationStub.resolves(undefined);
-      const org = await loader.getOrganization();
-      assert.strictEqual(org, undefined);
+      await assert.rejects(
+        async () => {
+          await loader.getOrganization();
+        },
+        {
+          name: "Error",
+          message: "Could not determine the current CCloud organization!",
+        },
+      );
       sinon.assert.calledOnce(getCurrentOrganizationStub);
     });
   });
@@ -668,29 +680,18 @@ describe("CCloudResourceLoader", () => {
       getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
     });
 
-    it("should not throw any errors when no CCloud org is available", async () => {
+    it("will throw when no CCloud org is available", async () => {
       getEnvironmentsStub.resolves([]);
       getCurrentOrganizationStub.resolves(undefined);
 
-      await loader["doLoadCoarseResources"]();
-
-      sinon.assert.calledOnce(getEnvironmentsStub);
-      sinon.assert.calledOnce(getCurrentOrganizationStub);
-      assert.strictEqual(loader["organization"], null);
-      sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setEnvironments,
-        CCLOUD_CONNECTION_ID,
-        [],
-      );
-      sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setKafkaClusters,
-        CCLOUD_CONNECTION_ID,
-        [],
-      );
-      sinon.assert.calledOnceWithExactly(
-        stubbedResourceManager.setSchemaRegistries,
-        CCLOUD_CONNECTION_ID,
-        [],
+      await assert.rejects(
+        async () => {
+          await loader["doLoadCoarseResources"]();
+        },
+        {
+          name: "Error",
+          message: "Could not determine the current CCloud organization!",
+        },
       );
     });
 
@@ -926,5 +927,89 @@ describe("CCloudResourceLoader", () => {
         data: new Set(regions),
       };
     }
+  });
+
+  describe("executeFlinkStatement", () => {
+    let submitFlinkStatementStub: sinon.SinonStub;
+    let waitForStatementCompletionStub: sinon.SinonStub;
+    let parseAllFlinkStatementResultsStub: sinon.SinonStub;
+
+    interface TestResult {
+      EXPR0: number;
+    }
+
+    beforeEach(() => {
+      submitFlinkStatementStub = sandbox.stub(statementUtils, "submitFlinkStatement");
+      waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
+      parseAllFlinkStatementResultsStub = sandbox.stub(
+        statementUtils,
+        "parseAllFlinkStatementResults",
+      );
+      sinon.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+    });
+
+    it("should throw if provided compute pool is for different cloud/region", async () => {
+      const differentCloudComputePool = new CCloudFlinkComputePool({
+        ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        provider: "nonexistent",
+        region: "us-central1",
+      });
+
+      await assert.rejects(
+        loader.executeFlinkStatement(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          differentCloudComputePool,
+        ),
+        /is not in the same cloud/,
+      );
+    });
+
+    it("should default to first compute pool if none provided then run successfully through", async () => {
+      // Sanity check to ensure test setup is correct.
+      assert.strictEqual(
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.flinkPools[0].id,
+        TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+      );
+
+      const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+      waitForStatementCompletionStub.resolves(completedStatement);
+
+      const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+      parseAllFlinkStatementResultsStub.returns(parseResults);
+
+      const returnedResults = await loader.executeFlinkStatement<TestResult>(
+        "SELECT 1",
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      );
+
+      assert.deepStrictEqual(returnedResults, parseResults);
+
+      sinon.assert.calledOnce(submitFlinkStatementStub);
+
+      const callArgs = submitFlinkStatementStub.getCall(0).args[0];
+      assert.strictEqual(callArgs.computePool?.id, TEST_CCLOUD_FLINK_COMPUTE_POOL.id);
+
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      sinon.assert.calledOnce(parseAllFlinkStatementResultsStub);
+      assert.deepStrictEqual(
+        parseAllFlinkStatementResultsStub.getCall(0).args[0],
+        completedStatement,
+      );
+    });
+
+    it("should throw if statement does not complete successfully", async () => {
+      const failedStatement = { phase: Phase.FAILED } as FlinkStatement;
+      waitForStatementCompletionStub.resolves(failedStatement);
+
+      await assert.rejects(
+        loader.executeFlinkStatement<TestResult>("SELECT 1", TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
+        /did not complete successfully/,
+      );
+
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      sinon.assert.calledOnce(submitFlinkStatementStub);
+      sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+    });
   });
 });
