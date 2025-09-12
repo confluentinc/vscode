@@ -69,43 +69,26 @@ export async function uploadArtifactCommand(): Promise<void> {
       },
     );
   } catch (err) {
-    let logErrMessage: string;
-    let showNotificationMessage: string;
+    let logErrMessage: string = "";
+    let showNotificationMessage: string = "Failed to upload artifact. See logs for details.";
 
     if (isResponseError(err)) {
-      try {
-        const respJson = await err.response.clone().json();
-        logErrMessage = `Status: ${err.response.status}, Response: ${JSON.stringify(respJson)}`;
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
-        if (respJson && typeof respJson === "object") {
-          logErrMessage = JSON.stringify(respJson);
-          showNotificationMessage =
-            respJson.error?.message ||
-            respJson.message ||
-            `Failed to upload artifact: ${err.message}. See logs for details.`;
-        }
-      } catch {
-        logErrMessage = await err.response.clone().text();
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
+      const respJson = await err.response.clone().json();
+      logErrMessage = `Status: ${err.response.status}, Response: ${JSON.stringify(respJson)}`;
+      showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
+      if (respJson && typeof respJson === "object") {
+        logErrMessage = JSON.stringify(respJson);
+        showNotificationMessage =
+          respJson.error?.message ||
+          respJson.message ||
+          `Failed to upload artifact: ${err.message}. See logs for details.`;
       }
     } else if (err instanceof Error) {
-      // Special handling for different types of Error messages
-      if (err.message && err.message.includes("exceeds the maximum allowed size")) {
-        // File size error - use the exact error message from prepareUploadFileFromUri
-        logErrMessage = err.message;
-        showNotificationMessage = err.message;
-      } else {
-        // Other Error types
-        logErrMessage = `Failed to upload artifact: ${err instanceof Error ? err.message : String(err)}`;
-        showNotificationMessage = `Failed to upload artifact: ${err instanceof Error ? err.message : String(err)}`;
-      }
-    } else {
-      // Unknown error type
-      logErrMessage = `Failed to upload artifact: ${err}`;
-      showNotificationMessage = "Failed to upload artifact. See logs for details.";
+      // Other Error types
+      logErrMessage = `Failed to upload artifact: ${err.message}`;
+      showNotificationMessage = `Failed to upload artifact: ${err.message}`;
     }
-
-    logError(logErrMessage, "Failed to upload artifact");
+    logError(err, logErrMessage);
     showErrorNotificationWithButtons(showNotificationMessage);
   }
 }
