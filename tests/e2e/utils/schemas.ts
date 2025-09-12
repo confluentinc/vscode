@@ -6,7 +6,7 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView } from "../objects/views/SchemasView";
-import { executeVSCodeCommand } from "./commands";
+import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -92,15 +92,13 @@ export async function deleteSchemaSubject(
     },
   ]);
 
-  // replace this with right-click context actions once this issue is resolved:
-  // https://github.com/confluentinc/vscode/issues/1875
-  await executeVSCodeCommand(page, "Confluent: Delete All Schemas in Subject");
-
-  // select the subject to delete
-  const subjectInputBox = new InputBox(page);
-  await expect(subjectInputBox.placeholder).toBeVisible();
-  await subjectInputBox.input.fill(subjectName);
-  await subjectInputBox.confirm();
+  // find the schema item in the Schemas view
+  const schemasView = new SchemasView(page);
+  const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+  const subjectItem = new SubjectItem(page, subjectLocator.first());
+  await subjectItem.locator.scrollIntoViewIfNeeded();
+  await expect(subjectItem.locator).toBeVisible();
+  await subjectItem.rightClickContextMenuAction("Delete All Schemas in Subject");
 
   // select the Hard Delete option
   const deletionQuickpick = new Quickpick(page);
