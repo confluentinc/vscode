@@ -18,7 +18,7 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../notifications";
-import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
+import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
@@ -383,33 +383,6 @@ export async function deleteSchemaVersionCommand(schema: Schema) {
  * If the subject is deleted, all versions will be deleted.
  */
 export async function deleteSchemaSubjectCommand(subject: Subject) {
-  if (subject === undefined) {
-    // shoup: only used by E2E tests until https://github.com/confluentinc/vscode/issues/1875 is done
-    const schemaViewProvider = getSchemasViewProvider();
-    const registry = schemaViewProvider.schemaRegistry!;
-    if (!registry) {
-      logger.error("Could not determine schema registry");
-      return;
-    }
-
-    let subjectName: string | undefined = await schemaSubjectQuickPick(
-      registry,
-      false,
-      "Choose a subject to delete",
-    );
-    if (!subjectName) {
-      logger.error("Could not determine schema subject");
-      return;
-    }
-
-    subject = new Subject(
-      subjectName,
-      registry.connectionId,
-      registry.environmentId,
-      registry.schemaRegistryId,
-    );
-  }
-
   if (!(subject instanceof Subject)) {
     logger.error("deleteSchemaSubjectCommand called with invalid argument type", subject);
     return;
