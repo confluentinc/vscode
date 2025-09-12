@@ -29,6 +29,8 @@ export interface ArtifactUploadParams {
 
 const logger = new Logger("commands/uploadArtifact");
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // sets the max file size to 100 MB in 104,857,600 bytes
+
 export const PRESIGNED_URL_LOCATION = "PRESIGNED_URL_LOCATION";
 
 /**
@@ -46,12 +48,18 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
       ext === ".jar" ? "application/java-archive" : "application/octet-stream";
 
     const safeBytes = new Uint8Array(bytes);
-    const blob: Blob = new Blob([safeBytes], { type: contentType });
-
+    const blob: Blob = new Blob([Buffer.from(safeBytes)], { type: contentType });
+    if (blob.size > MAX_FILE_SIZE) {
+      const errorMessage = `File size ${(blob.size / (1024 * 1024)).toFixed(
+        2,
+      )}MB exceeds the maximum allowed size of 100MB. Please use a smaller file.`;
+      logger.warn("File too large", { fileSize: blob.size });
+      void showErrorNotificationWithButtons(errorMessage);
+      throw new Error(errorMessage);
+    }
     return { blob, contentType };
   } catch (err) {
     logError(err, `Failed to read file from URI: ${uri.toString()}`);
-    showErrorNotificationWithButtons(`Failed to read file: ${uri.fsPath}. See logs for details.`);
     throw err;
   }
 }

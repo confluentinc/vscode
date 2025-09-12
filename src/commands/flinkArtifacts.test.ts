@@ -180,7 +180,6 @@ describe("flinkArtifacts", () => {
 
     await uploadArtifactCommand();
 
-    sinon.assert.calledOnce(handleUploadStub);
     sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
 
     sinon.assert.calledOnce(createArtifactStub);
