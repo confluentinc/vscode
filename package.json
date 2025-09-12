@@ -1791,8 +1791,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view == confluent-resources &&  (viewItem =~ /.*compute-pool*/ || viewItem == ccloud-kafka-cluster)",
-          "group": "inline@3"
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)"
         },
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
@@ -1803,6 +1802,13 @@
           "command": "confluent.flinkStatementResults",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "confluent.uploadArtifact",
+          "group": "inline@1",
+          "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
         }
       ]
     },
