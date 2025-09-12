@@ -120,6 +120,8 @@ export class SchemasView extends View {
       default:
         throw new Error(`Unsupported entrypoint: ${entrypoint}`);
     }
+    await expect(this.header).toHaveAttribute("aria-expanded", "true");
+    await expect(this.body).toBeVisible();
   }
 
   /**
