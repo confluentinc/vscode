@@ -170,7 +170,8 @@ export async function setupDirectConnection(
   }
 
   await connectionForm.testButton.click();
-  await expect(connectionForm.successMessage).toBeVisible();
+  // there may be two of these if both Kafka and Schema Registry are configured
+  await expect(connectionForm.successMessage).not.toHaveCount(0);
   await connectionForm.saveButton.click();
 
   // make sure we see the notification indicating the connection was created
