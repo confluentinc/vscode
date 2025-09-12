@@ -9,7 +9,14 @@ import {
 import { artifactUploadCompleted } from "../../emitters";
 import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
-import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../../models/kafkaCluster";
+import {
+  CloudProvider,
+  EnvironmentId,
+  IEnvProviderRegion,
+  IProviderRegion,
+} from "../../models/resource";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
@@ -80,42 +87,72 @@ export async function getPresignedUploadUrl(
   return urlResponse;
 }
 
-export async function promptForArtifactUploadParams(): Promise<ArtifactUploadParams | undefined> {
-  const environment = await flinkCcloudEnvironmentQuickPick();
-  const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+export async function promptForArtifactUploadParams(
+  item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
+): Promise<ArtifactUploadParams | undefined> {
+  if (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster) {
+    logger.info("Starting upload artifact using provided context", {
+      environment: item.environmentId,
+      cloud: item.provider,
+      region: item.region,
+    });
+  }
+
+  // Use the item's environment if provided, otherwise prompt for it
+  const environment =
+    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster)
+      ? { id: item.environmentId }
+      : await flinkCcloudEnvironmentQuickPick();
+
+  // Use the item's provider and region if exists, otherwise prompt for it
+  let cloudRegion: IProviderRegion | undefined;
+  if (item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster)) {
+    cloudRegion = { provider: item.provider, region: item.region };
+  } else {
+    cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+  }
 
   if (!environment || !environment.id || !cloudRegion) {
     return undefined;
   }
 
+  const rawCloud = cloudRegion.provider.toUpperCase();
   let cloud: CloudProvider;
-  if (cloudRegion.provider === "AZURE") {
+  if (rawCloud === "AZURE") {
     cloud = CloudProvider.Azure;
-  } else if (cloudRegion.provider === "AWS") {
+  } else if (rawCloud === "AWS") {
     cloud = CloudProvider.AWS;
   } else {
     void showErrorNotificationWithButtons(
-      `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
+      `Upload Artifact cancelled: Unsupported cloud provider: ${rawCloud}`,
     );
     return undefined;
   }
 
-  const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
-    openLabel: "Select",
-    canSelectFiles: true,
-    canSelectFolders: false,
-    canSelectMany: false,
-    filters: {
-      "Flink Artifact Files": ["jar"],
-    },
-  });
-  if (!selectedFiles || selectedFiles.length === 0) {
-    // if the user cancels the file selection, silently exit
-    return;
+  // If the incoming item is a Uri, use it; otherwise prompt the user
+  let selectedFile: vscode.Uri | undefined;
+  if (item && item instanceof vscode.Uri) {
+    selectedFile = item;
+  } else {
+    const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
+      openLabel: "Select",
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        "Flink Artifact Files": ["jar"],
+      },
+    });
+
+    if (!selectedFiles || selectedFiles.length === 0) {
+      // if the user cancels the file selection, silently exit
+      return undefined;
+    }
+
+    selectedFile = selectedFiles[0];
   }
 
-  const selectedFile: vscode.Uri = selectedFiles[0];
-  const fileFormat: string = selectedFiles[0].fsPath.split(".").pop()!;
+  const fileFormat: string = selectedFile.fsPath.split(".").pop()!;
 
   // Default artifact name to the selected file's base name (without extension), but allow override.
   const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
