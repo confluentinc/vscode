@@ -5,8 +5,12 @@ import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
-import { SchemasView, SelectSchemaRegistry } from "../objects/views/SchemasView";
-import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
+import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
+import {
+  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
+  SelectKafkaCluster,
+  TopicsView,
+} from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import {
   FormConnectionType,
@@ -15,8 +19,6 @@ import {
 import { Tag } from "../tags";
 import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
 import { openNewUntitledDocument } from "../utils/documents";
-import { createSchemaVersion, deleteSchemaSubject, SchemaType } from "../utils/schemas";
-import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
@@ -40,7 +42,7 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  * 6. Clean up by deleting the subject, if created
  */
 
-test.describe("Produce Message(s) to Topic", () => {
+test.describe.only("Produce Message(s) to Topic", () => {
   let topicsView: TopicsView;
   let schemasView: SchemasView;
 
@@ -64,7 +66,7 @@ test.describe("Produce Message(s) to Topic", () => {
 
   // test dimensions:
   const connectionTypes: Array<
-    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
+    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>, number]
   > = [
     [
       ConnectionType.Ccloud,
@@ -77,6 +79,7 @@ test.describe("Produce Message(s) to Topic", () => {
           process.env.E2E_PASSWORD!,
         );
       },
+      DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
     ],
     [
       ConnectionType.Direct,
@@ -102,6 +105,7 @@ test.describe("Produce Message(s) to Topic", () => {
           },
         });
       },
+      DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
     ],
     // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
   ];
@@ -112,7 +116,12 @@ test.describe("Produce Message(s) to Topic", () => {
     [SchemaType.Protobuf, "proto"],
   ];
 
-  for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
+  for (const [
+    connectionType,
+    connectionTag,
+    connectionSetup,
+    newTopicReplicationFactor,
+  ] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       test.beforeEach(async ({ page, electronApp }) => {
         // set up the connection based on type
@@ -127,16 +136,9 @@ test.describe("Produce Message(s) to Topic", () => {
             // make sure we have a topic to produce messages to first
             const schemaSuffix = schemaType ? schemaType.toLowerCase() : "no-schema";
             topicName = `produce-message-${schemaSuffix}`;
-
-            // check if we need to create the topic first
-            let targetTopic = topicsView.topics.filter({ hasText: topicName });
-            await targetTopic.scrollIntoViewIfNeeded({ timeout: 1000 }).catch(() => {
-              // ignore timeout errors since it just means the topic doesn't exist
-              // if we can't scroll to it within 1sec
-            });
-            if (!(await targetTopic.count())) {
-              await topicsView.createTopic(topicName);
-            }
+            await topicsView.createTopic(topicName, 1, newTopicReplicationFactor);
+            let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
+            await targetTopic.scrollIntoViewIfNeeded();
 
             // if we want to use a schema, create a new subject with an initial schema version to match
             // the topic we're using
@@ -147,7 +149,7 @@ test.describe("Produce Message(s) to Topic", () => {
                 SelectSchemaRegistry.FromResourcesView,
               );
               // create the schema version and keep track of the subject name for cleanup later
-              subjectName = await createSchemaVersion(
+              subjectName = await schemasView.createSchemaVersion(
                 page,
                 schemaType,
                 `schemas/customer.${fileExtension}`,
@@ -171,12 +173,16 @@ test.describe("Produce Message(s) to Topic", () => {
           });
 
           test.afterEach(async ({ page, electronApp }) => {
-            // FUTURE: delete any topics created, requires this to be done first:
-            // https://github.com/confluentinc/vscode/issues/1875
+            await topicsView.deleteTopic(topicName);
 
             // delete the subject if it was created during the test
             if (subjectName) {
-              await deleteSchemaSubject(page, electronApp, subjectName, deletionConfirmation);
+              await schemasView.deleteSchemaSubject(
+                page,
+                electronApp,
+                subjectName,
+                deletionConfirmation,
+              );
             }
           });
 
