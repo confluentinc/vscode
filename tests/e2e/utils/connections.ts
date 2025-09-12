@@ -18,13 +18,6 @@ import { ViewItem } from "../objects/views/viewItems/ViewItem";
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
 export const NOT_CONNECTED_TEXT = "(No connection)";
 
-// same as in src/clients/sidecar/models/ConnectionType.ts
-export enum ConnectionType {
-  Local = "LOCAL",
-  Ccloud = "CCLOUD",
-  Direct = "DIRECT",
-}
-
 /**
  * Creates a CCloud connection by logging in to Confluent Cloud from the sidebar auth flow,
  * completing the OAuth flow in a browser, and handling the callback in the extension.

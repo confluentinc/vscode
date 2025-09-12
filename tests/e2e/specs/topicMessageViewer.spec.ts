@@ -1,5 +1,6 @@
 import { ElectronApplication, expect, Page } from "@playwright/test";
 import { test } from "../baseTest";
+import { ConnectionType } from "../connectionTypes";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
@@ -9,7 +10,7 @@ import {
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
-import { ConnectionType, setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
