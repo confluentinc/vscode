@@ -347,7 +347,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * Should be used for batch statements, such as system catalog queries, registering
    * or listing UDFs, etc.
    *
-   * This could/should be integrated directly into CCLoudResourceLoader in the future, simplifying
+   * This could/should be integrated directly into CCloudResourceLoader in the future, simplifying
    * the topology of things a bit, then omitting the organizationId parameter here.
    *
    * @param sqlStatement The SQL statement (string) to execute.
