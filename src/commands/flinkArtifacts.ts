@@ -5,7 +5,7 @@ import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
-import { isResponseError, logError } from "../errors";
+import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import {
   showErrorNotificationWithButtons,
@@ -24,15 +24,10 @@ import {
  * Prompts the user for environment, cloud provider, region, and artifact name.
  * Returns an object with these values, or undefined if the user cancels.
  */
-
 export async function uploadArtifactCommand(): Promise<void> {
   try {
     const params = await promptForArtifactUploadParams();
-
-    if (!params) {
-      // User cancelled the prompt
-      return;
-    }
+    if (!params) return; // User cancelled the input
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
       environment: params.environment,
@@ -44,11 +39,12 @@ export async function uploadArtifactCommand(): Promise<void> {
 
     const uploadUrl = await getPresignedUploadUrl(request);
 
-    await handleUploadToCloudProvider(params, uploadUrl);
-
     if (!uploadUrl.upload_id) {
       throw new Error("Upload ID is missing from the presigned URL response.");
     }
+
+    await handleUploadToCloudProvider(params, uploadUrl);
+
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -69,30 +65,19 @@ export async function uploadArtifactCommand(): Promise<void> {
       },
     );
   } catch (err) {
-    let logErrMessage: string;
-    let showNotificationMessage: string;
+    let errorMessage = "Failed to upload artifact: ";
     if (isResponseError(err)) {
+      const resp = await extractResponseBody(err);
       try {
-        const respJson = await err.response.clone().json();
-        logErrMessage = `Status: ${err.response.status}, Response: ${JSON.stringify(respJson)}`;
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
-        if (respJson && typeof respJson === "object") {
-          logErrMessage = JSON.stringify(respJson);
-          showNotificationMessage =
-            respJson.error?.message ||
-            respJson.message ||
-            `Failed to upload artifact: ${err.message}. See logs for details.`;
-        }
+        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
       } catch {
-        logErrMessage = await err.response.clone().text();
-        showNotificationMessage = `Failed to upload artifact: ${err.message}. See logs for details.`;
+        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
       }
-    } else {
-      logErrMessage = `Failed to upload artifact: ${err}`;
-      showNotificationMessage = "Failed to upload artifact. See logs for details.";
+    } else if (err instanceof Error) {
+      errorMessage = `${errorMessage} ${err.message}`;
     }
-    logError(logErrMessage, "Failed to upload artifact");
-    showErrorNotificationWithButtons(showNotificationMessage);
+    logError(err, errorMessage);
+    showErrorNotificationWithButtons(errorMessage);
   }
 }
 
@@ -100,9 +85,7 @@ export async function deleteArtifactCommand(
   selectedArtifact: FlinkArtifact | undefined,
 ): Promise<void> {
   if (!selectedArtifact) {
-    void vscode.window.showErrorMessage(
-      "Cannot delete artifact: missing required artifact properties.",
-    );
+    showErrorNotificationWithButtons("No Flink artifact selected for deletion.");
     return;
   }
   const request: DeleteArtifactV1FlinkArtifactRequest = {
