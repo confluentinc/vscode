@@ -6,15 +6,23 @@ import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
-import { isResponseErrorWithStatus } from "../errors";
+import {
+  determineFlinkStatementName,
+  IFlinkStatementSubmitParameters,
+  parseAllFlinkStatementResults,
+  refreshFlinkStatement,
+  submitFlinkStatement,
+  waitForStatementCompletion,
+} from "../flinkSql/statementUtils";
 import { getCCloudResources } from "../graphql/ccloud";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, restFlinkStatementToModel } from "../models/flinkStatement";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkUdf } from "../models/flinkUDF";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
 import { EnvironmentId, IFlinkQueryable } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
@@ -114,8 +122,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    *
    * @returns The {@link CCloudOrganization} for the current CCloud connection, either from cached
    * value or deep fetch.
+   *
+   * @throws Error if there is no current organization.
    */
-  public async getOrganization(): Promise<CCloudOrganization | undefined> {
+  public async getOrganization(): Promise<CCloudOrganization> {
     if (this.organization) {
       return this.organization;
     }
@@ -124,8 +134,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     if (organization) {
       this.organization = organization;
       return this.organization;
+    } else {
+      logger.withCallpoint("getOrganization()").error("No current organization found.");
+      throw new Error("Could not determine the current CCloud organization!");
     }
-    logger.withCallpoint("getOrganization()").error("No current organization found.");
   }
 
   /**
@@ -256,28 +268,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @throws Error if there was an error while refreshing the Flink statement.
    */
   public async refreshFlinkStatement(statement: FlinkStatement): Promise<FlinkStatement | null> {
-    const handle = await getSidecar();
-
-    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
-
-    try {
-      const routeResponse = await statementsClient.getSqlv1Statement({
-        environment_id: statement.environmentId,
-        organization_id: statement.organizationId,
-        statement_name: statement.name,
-      });
-      return restFlinkStatementToModel(routeResponse, statement);
-    } catch (error) {
-      if (isResponseErrorWithStatus(error, 404)) {
-        logger.info(`Flink statement ${statement.name} no longer exists`);
-        return null;
-      } else {
-        logger.error(`Error while refreshing Flink statement ${statement.name} (${statement.id})`, {
-          error,
-        });
-        throw error;
-      }
-    }
+    // Defer to core implementation in flinkSql/statementUtils.ts
+    return await refreshFlinkStatement(statement);
   }
 
   /**
@@ -311,6 +303,109 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
     return flinkArtifacts;
   }
+
+  /**
+   * Get the Flink UDFs for the given Flinkable CCloud Kafka cluster.
+   *
+   * @param cluster The Flink database to get the UDFs for.
+   * @param computePool Optional Flink compute pool to use for executing the statement. If not provided, will use the first compute pool in the cluster's flinkPools array.
+   * @returns Array of {@link FlinkUdf} objects representing the UDFs in the cluster.
+   */
+  public async getFlinkUDFs(
+    cluster: CCloudFlinkDbKafkaCluster,
+    computePool?: CCloudFlinkComputePool,
+  ): Promise<FlinkUdf[]> {
+    // Run the statement to list UDFs.
+
+    // Will raise Error if the cluster isn't Flinkable, the optionally provided
+    // compute pool doesn't correspond with the cluster, or if the statement
+    // execution fails.
+    const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
+      "SHOW USER FUNCTIONS",
+      cluster,
+      computePool,
+    );
+
+    const augmentedResults: FlinkUdf[] = rawResults.map((row) => {
+      return new FlinkUdf({
+        connectionId: cluster.connectionId,
+        connectionType: cluster.connectionType,
+        environmentId: cluster.environmentId,
+        id: row["Function Name"], // No unique ID available, so use name as ID.
+        name: row["Function Name"],
+        description: "", // No description available from SHOW FUNCTIONS.
+        provider: cluster.provider,
+        region: cluster.region,
+      });
+    });
+
+    return augmentedResults;
+  }
+
+  /**
+   * Execute a Flink SQL statement, returning the results as an array of objects of type RT.
+   * Should be used for batch statements, such as system catalog queries, registering
+   * or listing UDFs, etc.
+   *
+   * This could/should be integrated directly into CCloudResourceLoader in the future, simplifying
+   * the topology of things a bit, then omitting the organizationId parameter here.
+   *
+   * @param sqlStatement The SQL statement (string) to execute.
+   * @param database The database (CCloudKafkaCluster) to execute the statement against.
+   * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution, otherwise will default
+   * to the first compute pool in the database's flinkPools array.
+   * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
+   *
+   */
+  async executeFlinkStatement<RT>(
+    sqlStatement: string,
+    database: CCloudFlinkDbKafkaCluster,
+    computePool?: CCloudFlinkComputePool,
+  ): Promise<Array<RT>> {
+    if (!computePool) {
+      // Default to the first compute pool if none is provided.
+      computePool = database.flinkPools[0];
+    } else if (!database.isSameCloudRegion(computePool)) {
+      // Ensure the provided compute pool is valid for this database.
+      throw new Error(
+        `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
+      );
+    }
+
+    const organizationId = (await this.getOrganization()).id;
+
+    const statementParams: IFlinkStatementSubmitParameters = {
+      statement: sqlStatement,
+      statementName: await determineFlinkStatementName(),
+      organizationId,
+      computePool,
+      hidden: true, // Hidden statement, user didn't author it.
+      properties: database.toFlinkSpecProperties(),
+    };
+
+    // Submit statement
+    let statement = await submitFlinkStatement(statementParams);
+
+    // Refresh the statement until it is in a terminal phase.
+    statement = await waitForStatementCompletion(statement);
+
+    // If it didn't complete successfully, bail out.
+    if (statement.phase !== Phase.COMPLETED) {
+      logger.error(
+        `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
+      );
+      throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
+    }
+
+    // Parse and return all results.
+    return await parseAllFlinkStatementResults<RT>(statement);
+  }
+}
+/**
+ * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
+ */
+export interface FunctionNameRow {
+  "Function Name": string;
 }
 
 /**

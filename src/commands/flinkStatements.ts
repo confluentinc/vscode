@@ -8,12 +8,19 @@ import {
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import {
+  FlinkStatementWebviewPanelCache,
+  IFlinkStatementSubmitParameters,
+  determineFlinkStatementName,
+  submitFlinkStatement,
+  waitForResultsFetchable,
+} from "../flinkSql/statementUtils";
 import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
@@ -26,15 +33,6 @@ import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { handleWebviewMessage } from "../webview/comms/comms";
-import {
-  FlinkSpecProperties,
-  FlinkStatementWebviewPanelCache,
-  IFlinkStatementSubmitParameters,
-  determineFlinkStatementName,
-  localTimezoneOffset,
-  submitFlinkStatement,
-  waitForStatementRunning,
-} from "./utils/flinkStatements";
 
 const logger = new Logger("commands.flinkStatements");
 
@@ -142,33 +140,43 @@ export async function submitFlinkStatementCommand(
 
   // 4. Choose the current / default database for the expression to be evaluated against.
   // (a kafka cluster in the same provider/region as the compute pool)
-  const validDatabaseProvided: boolean =
-    database instanceof CCloudKafkaCluster &&
-    database.provider === computePool.provider &&
-    database.region === computePool.region;
-  const currentDatabaseKafkaCluster: KafkaCluster | undefined = validDatabaseProvided
-    ? database
-    : await flinkDatabaseQuickpick(computePool);
-  if (!currentDatabaseKafkaCluster) {
-    funcLogger.debug("User canceled the default database quickpick");
-    return;
+  let currentDatabaseKafkaCluster: CCloudFlinkDbKafkaCluster | undefined;
+
+  if (
+    !(
+      database instanceof CCloudKafkaCluster &&
+      database.isFlinkable() &&
+      database.isSameCloudRegion(computePool)
+    )
+  ) {
+    // Provided param wasn't valid, so have to show the quickpick.
+    currentDatabaseKafkaCluster = await flinkDatabaseQuickpick(computePool);
+    if (!currentDatabaseKafkaCluster) {
+      funcLogger.debug("User canceled the default database quickpick");
+      return;
+    }
+  } else {
+    // Good to go, caller provided a valid database for this compute pool.
+    currentDatabaseKafkaCluster = database;
   }
+
   const currentDatabase = currentDatabaseKafkaCluster.name;
 
-  // 5. Prep to submit, submit.
-  const submission: IFlinkStatementSubmitParameters = {
-    statement,
-    statementName,
-    computePool,
-    hidden: false, // Do not create a hidden statement, the user authored it.
-    properties: new FlinkSpecProperties({
-      currentDatabase,
-      currentCatalog: currentDatabaseKafkaCluster.environmentId,
-      localTimezone: localTimezoneOffset(),
-    }),
-  };
-
   try {
+    // 5. Gotta grab the organization ID to submit as.
+    const ccloudLoader = CCloudResourceLoader.getInstance();
+    const organization = await ccloudLoader.getOrganization();
+
+    // 5. Prep to submit, submit.
+    const submission: IFlinkStatementSubmitParameters = {
+      statement,
+      statementName,
+      computePool,
+      organizationId: organization.id,
+      hidden: false, // Do not create a hidden statement, the user authored it.
+      properties: currentDatabaseKafkaCluster.toFlinkSpecProperties(),
+    };
+
     const newStatement = await submitFlinkStatement(submission);
 
     if (newStatement.status.phase === Phase.FAILED) {
@@ -209,7 +217,7 @@ export async function submitFlinkStatementCommand(
     // Wait for the statement to start running, then open the results view.
     // Show a progress indicator over the Flink Statements view while we wait.
     await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
-      await waitForStatementRunning(newStatement);
+      await waitForResultsFetchable(newStatement);
       await openFlinkStatementResultsView(newStatement);
     });
 
