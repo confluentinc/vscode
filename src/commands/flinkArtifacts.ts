@@ -65,27 +65,19 @@ export async function uploadArtifactCommand(): Promise<void> {
       },
     );
   } catch (err) {
-    let logErrMessage = "An error occurred during artifact upload.";
-    let showNotificationMessage = "Failed to upload artifact. Please check logs for details.";
+    let errorMessage = "Failed to upload artifact: ";
     if (isResponseError(err)) {
+      const resp = await extractResponseBody(err);
       try {
-        const resp = await extractResponseBody(err);
-        const msg =
-          resp?.errors?.[0]?.detail ??
-          resp?.message ??
-          resp?.error?.message ??
-          (typeof resp === "string" ? resp : JSON.stringify(resp));
-        showNotificationMessage = msg || showNotificationMessage;
-        logErrMessage = showNotificationMessage;
+        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
       } catch {
-        // fallback to default messages
+        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
       }
-    } else if (err instanceof Error && err.message) {
-      showNotificationMessage = err.message;
-      logErrMessage = err.message;
+    } else if (err instanceof Error) {
+      errorMessage = `${errorMessage} ${err.message}`;
     }
-    logError(err, logErrMessage);
-    showErrorNotificationWithButtons(showNotificationMessage);
+    logError(err, errorMessage);
+    showErrorNotificationWithButtons(errorMessage);
   }
 }
 
