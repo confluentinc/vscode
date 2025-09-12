@@ -17,6 +17,7 @@ import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/Pr
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
 import { CloudProvider } from "../../models/resource";
+import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
@@ -32,7 +33,6 @@ import {
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
 import * as uploadToProvider from "./uploadToProvider";
-
 describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
@@ -91,6 +91,42 @@ describe("uploadArtifact", () => {
         blob: new Blob([mockBuffer], { type: "application/java-archive" }),
         contentType: "application/java-archive",
       });
+    });
+
+    it("should throw an error for files larger than 100MB", async () => {
+      // Create a mock buffer larger than 100MB
+      const largeBuffer = Buffer.alloc(101 * 1024 * 1024); // 101MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(largeBuffer);
+
+      const mockUri = { fsPath: "/path/to/large-file.jar" } as vscode.Uri;
+      const showErrorStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.rejects(
+        () => prepareUploadFileFromUri(mockUri),
+        /File size 101.00MB exceeds the maximum allowed size of 100MB/,
+      );
+
+      sinon.assert.calledWith(
+        showErrorStub,
+        "File size 101.00MB exceeds the maximum allowed size of 100MB. Please use a smaller file.",
+      );
+    });
+
+    it("should not throw an error for files smaller than or equal to 100MB", async () => {
+      // Create a mock buffer smaller than 100MB
+      const smallBuffer = Buffer.alloc(10 * 1024 * 1024); // 10MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(smallBuffer);
+
+      const mockUri = { fsPath: "/path/to/small-file.jar" } as vscode.Uri;
+      const showErrorStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.doesNotReject(() => prepareUploadFileFromUri(mockUri));
+
+      sinon.assert.notCalled(showErrorStub);
     });
 
     it("should throw an error if the file does not exist", async () => {

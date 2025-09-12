@@ -179,7 +179,6 @@ describe("flinkArtifacts", () => {
     sandbox.stub(vscode.window, "showInformationMessage");
 
     await uploadArtifactCommand();
-
     sinon.assert.calledOnce(handleUploadStub);
     sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
 
