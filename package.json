@@ -275,7 +275,7 @@
       {
         "command": "confluent.uploadArtifact",
         "icon": "$(cloud-upload)",
-        "title": "Upload Artifact",
+        "title": "Upload Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       },
@@ -1790,6 +1790,10 @@
           "group": "z_openInCloud"
         },
         {
+          "command": "confluent.uploadArtifact",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)"
+        },
+        {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
           "when": "view == confluent-resources && viewItem =~ /.*ccloud-environment/",
           "group": "z_openInCloud"
@@ -1798,6 +1802,13 @@
           "command": "confluent.flinkStatementResults",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "confluent.uploadArtifact",
+          "group": "inline@1",
+          "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
         }
       ]
     },
