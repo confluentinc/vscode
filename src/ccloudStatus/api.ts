@@ -15,16 +15,8 @@ export async function fetchCCloudStatus(): Promise<CCloudStatusSummary | undefin
     const data = await response.json();
     return CCloudStatusSummaryFromJSON(data);
   } catch (error) {
-    const fetchError: boolean = error instanceof TypeError && error.message === "fetch failed";
-    const jsonError: boolean =
-      error instanceof SyntaxError && error.message.includes("Unexpected token");
-    // only send to Sentry if it's not a fetch or JSON parsing error, but still log it
-    let sentryContext: Record<string, unknown> = {};
-    if (!fetchError && !jsonError) {
-      sentryContext = {
-        extra: { functionName: "fetchCCloudStatus" },
-      };
-    }
-    logError(error, "CCloud status", sentryContext);
+    // don't send these to Sentry since any network errors or Statuspage service issues are out of
+    // our control, and at worst mean the status bar item won't show the latest status
+    logError(error, "CCloud status");
   }
 }
