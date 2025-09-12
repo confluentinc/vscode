@@ -1,14 +1,17 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
+import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MEDUSA_COMMANDS } from "../commands/medusaCodeLens";
+import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { AvroCodelensProvider } from "./avroProvider";
 
 const testUri = Uri.parse("file:///test/schema.avsc");
 
 describe("codelens/avroProvider.ts", () => {
   let sandbox: sinon.SinonSandbox;
+  let stubbedConfigs: StubbedWorkspaceConfiguration;
 
   before(async () => {
     await getTestExtensionContext();
@@ -16,6 +19,7 @@ describe("codelens/avroProvider.ts", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
   });
 
   afterEach(() => {
@@ -58,7 +62,8 @@ describe("codelens/avroProvider.ts", () => {
       }
     });
 
-    it("should provide 'Generate Medusa Dataset' codelens", async () => {
+    it("should provide 'Generate Medusa Dataset' codelens when feature flag is true", async () => {
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
       assert.strictEqual(codeLenses.length, 1);
@@ -74,7 +79,16 @@ describe("codelens/avroProvider.ts", () => {
       assert.deepStrictEqual(generateLens.command?.arguments, [fakeDocument.uri]);
     });
 
+    it("should not provide 'Generate Medusa Dataset' codelens when feature flag is false", async () => {
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, false);
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
+
+      assert.strictEqual(codeLenses.length, 0);
+    });
+
     it("should create codelens with correct range at document start", async () => {
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
       assert.strictEqual(codeLenses.length, 1);
