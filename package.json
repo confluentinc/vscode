@@ -1189,6 +1189,42 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "confluent.showOutputChannel",
+          "when": "true"
+        },
+        {
+          "command": "confluent.showSidecarOutputChannel",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.confluent-walkthrough.launch",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.saveLogs",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.saveSidecarLogs",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.saveSupportZip",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.feedback",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.issue",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.openSettings",
+          "when": "true"
+        },
+        {
           "command": "confluent.connections.ccloud.signIn",
           "when": "!confluent.ccloudConnectionAvailable"
         },
