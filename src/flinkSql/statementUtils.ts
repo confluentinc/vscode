@@ -103,7 +103,7 @@ export const MAX_WAIT_TIME_MS = 60_000;
  *
  * @param statement The Flink statement to monitor
  * @returns Promise that resolves when the statement enters a phase where results can (try to) be fetched w/o error.
- * @throws Error if statement doesn't fulfil `statement.areResultsViewable` within MAX_WAIT_TIME_MS seconds, or if it is not found.
+ * @throws Error if statement doesn't fulfil `statement.canRequestResults` within MAX_WAIT_TIME_MS seconds, or if it is not found.
  */
 export async function waitForResultsFetchable(statement: FlinkStatement): Promise<FlinkStatement> {
   return waitForStatementState(statement, (s) => s.canRequestResults);
