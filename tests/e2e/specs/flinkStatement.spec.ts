@@ -3,7 +3,6 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { Tag } from "../tags";
-
 import { setupCCloudConnection } from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import {

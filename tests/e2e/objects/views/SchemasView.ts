@@ -183,7 +183,7 @@ export class SchemasView extends View {
     await subjectInputBox.confirm();
 
     // clear out and close the untitled document after uploading so we only have one editor open
-    // during the rest of the tests'
+    // during the rest of the tests
     await untitledDocument.deleteAll();
     await untitledDocument.close();
 
