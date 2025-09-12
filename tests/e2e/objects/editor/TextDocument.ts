@@ -86,8 +86,6 @@ export class TextDocument {
     await executeVSCodeCommand(this.page, "workbench.action.editor.changeLanguageMode");
 
     const languageQuickpick = new Quickpick(this.page);
-    await languageQuickpick.textInput.fill(language);
-    const languageItem = languageQuickpick.items.filter({ hasText: language });
-    await languageItem.first().click();
+    await languageQuickpick.selectItemByText(language);
   }
 }
