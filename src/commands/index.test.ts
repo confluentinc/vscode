@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { getCommandArgsContext, RESOURCE_ID_FIELDS } from ".";
+import { getCommandArgsContext, registerCommandWithLogging, RESOURCE_ID_FIELDS } from ".";
 import { ConnectionType } from "../clients/sidecar";
 import { ConnectionId, IResourceBase } from "../models/resource";
 import { titleCase } from "../utils";
@@ -8,7 +8,7 @@ describe("commands/index.ts", () => {
   describe("registerCommandWithLogging", () => {
     it("should throw if command name does not start with 'confluent.'", () => {
       assert.throws(() => {
-        getCommandArgsContext(["not-a-valid-command"]);
+        registerCommandWithLogging("not-a-valid-command", () => {});
       }, /must start with "confluent."/);
     });
   });
