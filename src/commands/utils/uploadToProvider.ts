@@ -3,6 +3,7 @@ import { Logger } from "../../logging";
 import { showErrorNotificationWithButtons } from "../../notifications";
 
 const logger = new Logger("commands/utils/uploadToProvider");
+
 export async function uploadFileToAzure({
   file,
   presignedUrl,
