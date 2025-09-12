@@ -1565,7 +1565,7 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.flink.setUDFsViewMode",
+          "command": "confluent.flinkdatabase.setUDFsViewMode",
           "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkArtifactsPoolSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "navigation@2"
         }
