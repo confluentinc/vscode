@@ -1189,6 +1189,42 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "confluent.showOutputChannel",
+          "when": "true"
+        },
+        {
+          "command": "confluent.showSidecarOutputChannel",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.confluent-walkthrough.launch",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.saveLogs",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.saveSidecarLogs",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.saveSupportZip",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.feedback",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.issue",
+          "when": "true"
+        },
+        {
+          "command": "confluent.support.openSettings",
+          "when": "true"
+        },
+        {
           "command": "confluent.connections.ccloud.signIn",
           "when": "!confluent.ccloudConnectionAvailable"
         },
@@ -1249,6 +1285,42 @@
           "when": "false"
         },
         {
+          "command": "confluent.connections.addSSLPemPath",
+          "when": "true"
+        },
+        {
+          "command": "confluent.connections.setKrb5ConfigPath",
+          "when": "true"
+        },
+        {
+          "command": "confluent.deleteArtifact",
+          "when": "false"
+        },
+        {
+          "command": "confluent.diff.compareWithSelected",
+          "when": "false"
+        },
+        {
+          "command": "confluent.diff.selectForCompare",
+          "when": "false"
+        },
+        {
+          "command": "confluent.docker.setSocketPath",
+          "when": "true"
+        },
+        {
+          "command": "confluent.docker.startLocalResources",
+          "when": "false"
+        },
+        {
+          "command": "confluent.docker.stopLocalResources",
+          "when": "false"
+        },
+        {
+          "command": "confluent.flink.configureFlinkDefaults",
+          "when": "true"
+        },
+        {
           "command": "confluent.statements.create",
           "when": "false"
         },
@@ -1271,6 +1343,90 @@
         {
           "command": "confluent.schemas.evolve",
           "when": "false"
+        },
+        {
+          "command": "confluent.connections.direct",
+          "when": "true"
+        },
+        {
+          "command": "confluent.flinkStatementResults",
+          "when": "false"
+        },
+        {
+          "command": "confluent.flinkdatabase.kafka-cluster.select",
+          "when": "true"
+        },
+        {
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+          "when": "true"
+        },
+        {
+          "command": "confluent.resources.refresh",
+          "when": "true"
+        },
+        {
+          "command": "confluent.organizations.use",
+          "when": "confluent.ccloudConnectionAvailable"
+        },
+        {
+          "command": "confluent.resources.schema-registry.select",
+          "when": "true"
+        },
+        {
+          "command": "confluent.scaffold",
+          "when": "true"
+        },
+        {
+          "command": "confluent.schemas.create",
+          "when": "true"
+        },
+        {
+          "command": "confluent.schemas.search",
+          "when": "true"
+        },
+        {
+          "command": "confluent.statements.flink-compute-pool.select",
+          "when": "confluent.ccloudConnectionAvailable"
+        },
+        {
+          "command": "confluent.resources.search",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topic.consume",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topic.consume.duplicate",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topic.consume.fromUri",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topic.consume.getUri",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topics.create",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topics.kafka-cluster.select",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topics.refresh",
+          "when": "true"
+        },
+        {
+          "command": "confluent.topics.search",
+          "when": "true"
+        },
+        {
+          "command": "confluent.uploadArtifact",
+          "when": "true"
         },
         {
           "command": "confluent.schemas.deleteVersion",
@@ -1363,6 +1519,14 @@
         {
           "command": "confluent.artifacts.scaffold",
           "when": "false"
+        },
+        {
+          "command": "confluent.artifacts.registerUDF",
+          "when": "false"
+        },
+        {
+          "command": "confluent.flink.statements.search",
+          "when": "!confluent.flinkStatementsSearchApplied"
         },
         {
           "command": "confluent.flink.statements.search.clear",
