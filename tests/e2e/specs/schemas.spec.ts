@@ -1,6 +1,7 @@
 import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
+import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { ResourcesView } from "../objects/views/ResourcesView";
@@ -11,7 +12,7 @@ import {
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { ConnectionType, setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
 import {
   createSchemaVersion,
   deleteSchemaSubject,
