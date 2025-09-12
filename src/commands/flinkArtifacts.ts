@@ -28,7 +28,7 @@ import {
  */
 
 export async function uploadArtifactCommand(
-  item?: CCloudFlinkComputePool | CCloudKafkaCluster,
+  item?: CCloudFlinkComputePool | CCloudKafkaCluster | vscode.Uri,
 ): Promise<void> {
   try {
     const params = await promptForArtifactUploadParams(item);
