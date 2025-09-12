@@ -29,6 +29,13 @@ export class TextDocument {
     return this.locator.locator("span.codelens-decoration");
   }
 
+  /** Error diagnostic squiggles in the document. */
+  get errorDiagnostics(): Locator {
+    // warning diagnostics are `.cdr.squiggly-warning` and info are `.cdr.squiggly-info`,
+    // but we don't use those anywhere yet
+    return this.locator.locator(".cdr.squiggly-error");
+  }
+
   /** Save the currently-focused document. */
   async save(): Promise<void> {
     await this.locator.click();
