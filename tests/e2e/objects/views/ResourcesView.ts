@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from "@playwright/test";
+import { ConnectionType } from "../../connectionTypes";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { DirectConnectionForm } from "../webviews/DirectConnectionFormWebview";
 import { View } from "./View";
@@ -158,5 +159,134 @@ export class ResourcesView extends View {
     await expect(enterManuallyItem).not.toHaveCount(0);
     await enterManuallyItem.first().click();
     return new DirectConnectionForm(this.page);
+  }
+
+  /**
+   * Expand a connection's environment in the Resources view.
+   *
+   * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion, etc.) so that the environment item is present.
+   */
+  async expandConnectionEnvironment(
+    connectionType: ConnectionType,
+    label?: string | RegExp,
+  ): Promise<void> {
+    switch (connectionType) {
+      case ConnectionType.Ccloud: {
+        await expect(this.ccloudEnvironments).not.toHaveCount(0);
+        const ccloudEnv: Locator = label
+          ? this.ccloudEnvironments.filter({ hasText: label }).first()
+          : this.ccloudEnvironments.first();
+        // CCloud environments are always collapsed by default, but we may have opened it already
+        if ((await ccloudEnv.getAttribute("aria-expanded")) === "false") {
+          await ccloudEnv.click();
+        }
+        await expect(ccloudEnv).toHaveAttribute("aria-expanded", "true");
+        break;
+      }
+      case ConnectionType.Direct: {
+        await expect(this.directConnections).not.toHaveCount(0);
+        const directEnv: Locator = label
+          ? this.directConnections.filter({ hasText: label }).first()
+          : this.directConnections.first();
+        // direct connections are only collapsed by default in the old Resources view
+        if ((await directEnv.getAttribute("aria-expanded")) === "false") {
+          await directEnv.click();
+        }
+        await expect(directEnv).toHaveAttribute("aria-expanded", "true");
+        break;
+      }
+      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      default:
+        throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
+  }
+
+  /**
+   * Locate a Kafka cluster item in the view for a given {@link ConnectionType connection type}.
+   * If there are multiple clusters for the connection type, you can optionally provide a
+   * `clusterHasText` string or regex to filter the results.
+   *
+   * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion, etc.) so that the cluster item is present.
+   *
+   * @param connectionType The type of connection (CCloud or Direct)
+   * @param clusterHasText Optional string or regex to filter the located clusters
+   * @returns A Locator for the Kafka cluster item
+   */
+  async getKafkaCluster(
+    connectionType: ConnectionType,
+    clusterHasText?: string | RegExp,
+  ): Promise<Locator> {
+    let kafkaClusters: Locator;
+
+    // whatever connection we're using needs to be expanded so any Kafka clusters are visible
+    await this.expandConnectionEnvironment(connectionType);
+
+    switch (connectionType) {
+      case ConnectionType.Ccloud: {
+        kafkaClusters = this.ccloudKafkaClusters;
+        break;
+      }
+      case ConnectionType.Direct: {
+        kafkaClusters = this.directKafkaClusters;
+        break;
+      }
+      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      default:
+        throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
+
+    await expect(kafkaClusters).not.toHaveCount(0);
+
+    const kafkaCluster: Locator = clusterHasText
+      ? kafkaClusters.filter({ hasText: clusterHasText }).first()
+      : kafkaClusters.first();
+    await expect(kafkaCluster).toBeVisible();
+    return kafkaCluster;
+  }
+
+  /**
+   * Locate a Schema Registry item in the view for a given {@link ConnectionType connection type}.
+   * If there are multiple registries for the connection type, you can optionally provide a
+   * `registryHasText` string or regex to filter the results.
+   *
+   * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion, etc.) so that the registry item is present.
+   *
+   * @param connectionType The type of connection (CCloud or Direct)
+   * @param registryHasText Optional string or regex to filter the located registries
+   * @returns A Locator for the Schema Registry item
+   */
+  async getSchemaRegistry(
+    connectionType: ConnectionType,
+    registryHasText?: string | RegExp,
+  ): Promise<Locator> {
+    let schemaRegistries: Locator;
+
+    // whatever connection we're using needs to be expanded so any Schema Registries are visible
+    await this.expandConnectionEnvironment(connectionType);
+
+    switch (connectionType) {
+      case ConnectionType.Ccloud: {
+        schemaRegistries = this.ccloudSchemaRegistries;
+        break;
+      }
+      case ConnectionType.Direct: {
+        schemaRegistries = this.directSchemaRegistries;
+        break;
+      }
+      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      default:
+        throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
+
+    await expect(schemaRegistries).not.toHaveCount(0);
+
+    const schemaRegistry: Locator = registryHasText
+      ? schemaRegistries.filter({ hasText: registryHasText }).first()
+      : schemaRegistries.first();
+    await expect(schemaRegistry).toBeVisible();
+    return schemaRegistry;
   }
 }
