@@ -18,6 +18,12 @@ export enum SupportedAuthType {
   Kerberos = "Kerberos",
 }
 
+/** Configuration options for setting up a direct connection. */
+export interface DirectConnectionConfig {
+  authType: SupportedAuthType;
+  credentials: Record<string, any>;
+}
+
 /**
  * Object representing the Direct Connection form {@link https://code.visualstudio.com/api/ux-guidelines/webviews webview}.
  * This form is used to set up a direct connection to a Kafka cluster and/or Schema Registry.

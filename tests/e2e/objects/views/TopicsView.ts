@@ -1,5 +1,14 @@
-import { Locator, Page } from "@playwright/test";
+import { expect, Locator, Page } from "@playwright/test";
+import { ConnectionType } from "../../connectionTypes";
+import { InputBox } from "../quickInputs/InputBox";
+import { Quickpick } from "../quickInputs/Quickpick";
+import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
+
+export enum SelectKafkaCluster {
+  FromResourcesView = "Kafka cluster action from the Resources view",
+  FromTopicsViewButton = "Topics view nav action",
+}
 
 /**
  * Object representing the "Topics"
@@ -67,5 +76,78 @@ export class TopicsView extends View {
   get schemaVersions(): Locator {
     // we don't use `this.subjects` because these are sibling elements to subjects in the DOM
     return this.body.locator("[role='treeitem'][aria-level='3']");
+  }
+
+  /**
+   * Once a connection is established, load topics into the view using the specified
+   * {@link SelectKafkaCluster entrypoint}.
+   *
+   * If using the {@link SelectKafkaCluster.FromTopicsViewButton "Select Kafka Cluster" nav action}
+   * entrypoint, you can optionally provide a `clusterLabel` to select a specific cluster from the
+   * quickpick list. If not provided, the first cluster in the list will be selected.
+   */
+  async loadTopics(
+    connectionType: ConnectionType,
+    entrypoint: SelectKafkaCluster,
+    clusterLabel?: string | RegExp,
+  ): Promise<void> {
+    switch (entrypoint) {
+      case SelectKafkaCluster.FromResourcesView: {
+        const resourcesView = new ResourcesView(this.page);
+        const cluster = await resourcesView.getKafkaCluster(connectionType);
+        await cluster.click();
+        break;
+      }
+      case SelectKafkaCluster.FromTopicsViewButton: {
+        await this.clickSelectKafkaCluster();
+        const kafkaClusterQuickpick = new Quickpick(this.page);
+        await expect(kafkaClusterQuickpick.locator).toBeVisible();
+        await expect(kafkaClusterQuickpick.items).not.toHaveCount(0);
+        const clusterItem = clusterLabel
+          ? kafkaClusterQuickpick.items.filter({ hasText: clusterLabel }).first()
+          : kafkaClusterQuickpick.items.first();
+        await clusterItem.click();
+        break;
+      }
+      default:
+        throw new Error(`Unsupported entrypoint: ${entrypoint}`);
+    }
+  }
+
+  /**
+   * Create a new topic using the "Create Topic" nav action in the view title area, filling out the
+   * required inputs in the subsequent input boxes.
+   *
+   * @param topicName The name of the new topic to create.
+   * @param numPartitions (Optional) The number of partitions for the new topic. If not provided,
+   *   the default value will be used.
+   * @param replicationFactor (Optional) The replication factor for the new topic. If not provided,
+   *   the default value will be used.
+   */
+  async createTopic(
+    topicName: string,
+    numPartitions?: number,
+    replicationFactor?: number,
+  ): Promise<void> {
+    await this.clickCreateTopic();
+
+    const topicNameInput = new InputBox(this.page);
+    await expect(topicNameInput.input).toBeVisible();
+    await topicNameInput.input.fill(topicName);
+    await topicNameInput.confirm();
+
+    const partitionsInput = new InputBox(this.page);
+    await expect(partitionsInput.input).toBeVisible();
+    if (numPartitions !== undefined) {
+      await partitionsInput.input.fill(numPartitions.toString());
+    }
+    await partitionsInput.confirm();
+
+    const replicationInput = new InputBox(this.page);
+    await expect(replicationInput.input).toBeVisible();
+    if (replicationFactor !== undefined) {
+      await replicationInput.input.fill(replicationFactor.toString());
+    }
+    await replicationInput.confirm();
   }
 }
