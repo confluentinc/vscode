@@ -10,7 +10,7 @@ export const MEDUSA_COMMANDS = {
 /**
  * Command handler for generating a Medusa dataset from an Avro schema file.
  */
-async function generateMedusaDatasetCommand(documentUri: Uri): Promise<void> {
+export async function generateMedusaDatasetCommand(documentUri: Uri): Promise<void> {
   logger.info("Generate Medusa Dataset command triggered", {
     documentUri: documentUri?.toString(),
   });
