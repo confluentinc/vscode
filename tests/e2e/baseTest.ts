@@ -125,7 +125,8 @@ export const test = testBase.extend<VSCodeFixture>({
       throw new Error("Failed to get first window from VS Code");
     }
 
-    // dismiss the "All installed extensions are temporarily disabled" notification if it appears
+    // dismiss the "All installed extensions are temporarily disabled" notification that will
+    // always appear since we launch with --disable-extensions
     const notificationArea = new NotificationArea(page);
     const infoNotifications = notificationArea.infoNotifications.filter({
       hasText: "All installed extensions are temporarily disabled",
