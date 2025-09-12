@@ -217,10 +217,9 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
     }
 
     // If the statement is more than 24 hours old, results will never be viewable.
+    // (This should be a different check)
     if (this.createdAt.getTime() < new Date().getTime() - ONE_DAY_MILLIS) {
-      throw new Error(
-        `Statement "${this.name}" is older than 24 hours and results are not viewable.`,
-      );
+      return false;
     }
 
     return EXECUTION_STARTED_PHASES.includes(this.phase);
