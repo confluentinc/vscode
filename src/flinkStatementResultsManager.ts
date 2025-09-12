@@ -16,8 +16,8 @@ import { Logger } from "./logging";
 import { FlinkStatement } from "./models/flinkStatement";
 import { showErrorNotificationWithButtons } from "./notifications";
 import { SidecarHandle } from "./sidecar";
-import { ViewMode } from "./utils/flinkStatementResultColumns";
-import { StatementResultsRow, parseResults } from "./utils/flinkStatementResults";
+import { ViewMode } from "./flinkSql/flinkStatementResultColumns";
+import { StatementResultsRow, parseResults } from "./flinkSql/flinkStatementResults";
 
 const logger = new Logger("flink-statement-results");
 
