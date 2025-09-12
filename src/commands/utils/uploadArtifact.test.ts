@@ -94,9 +94,8 @@ describe("uploadArtifact", () => {
     });
 
     it("should throw an error for files larger than 100MB", async () => {
-      // Create a mock buffer larger than 100MB
-      const largeBuffer = Buffer.alloc(101 * 1024 * 1024); // 101MB
-      sandbox.stub(fsWrappers, "readFileBuffer").resolves(largeBuffer);
+      const mockBuffer = Buffer.alloc(101 * 1024 * 1024); // 101MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(mockBuffer);
 
       const mockUri = { fsPath: "/path/to/large-file.jar" } as vscode.Uri;
       const showErrorStub = sandbox
@@ -115,9 +114,8 @@ describe("uploadArtifact", () => {
     });
 
     it("should not throw an error for files smaller than or equal to 100MB", async () => {
-      // Create a mock buffer smaller than 100MB
-      const smallBuffer = Buffer.alloc(10 * 1024 * 1024); // 10MB
-      sandbox.stub(fsWrappers, "readFileBuffer").resolves(smallBuffer);
+      const mockBuffer = Buffer.alloc(10 * 1024 * 1024); // 10MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(mockBuffer);
 
       const mockUri = { fsPath: "/path/to/small-file.jar" } as vscode.Uri;
       const showErrorStub = sandbox
