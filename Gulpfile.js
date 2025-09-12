@@ -1149,6 +1149,7 @@ function generateManifest(done) {
     console.error("Failed to generate package.json from package.jsonc:", e);
     return done?.(1);
   }
+}
 
 /**
  * Checks the git status of `package.json` and `package.jsonc` files to ensure consistency.
