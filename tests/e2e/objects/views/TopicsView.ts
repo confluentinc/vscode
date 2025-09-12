@@ -4,6 +4,7 @@ import { InputBox } from "../quickInputs/InputBox";
 import { Quickpick } from "../quickInputs/Quickpick";
 import { ResourcesView } from "./ResourcesView";
 import { View } from "./View";
+import { TopicItem } from "./viewItems/TopicItem";
 
 export enum SelectKafkaCluster {
   FromResourcesView = "Kafka cluster action from the Resources view",
@@ -149,5 +150,23 @@ export class TopicsView extends View {
       await replicationInput.input.fill(replicationFactor.toString());
     }
     await replicationInput.confirm();
+  }
+
+  /**
+   * Delete the specified topic from the view using the "Delete Topic" context menu action on the
+   * topic item.
+   */
+  async deleteTopic(topicName: string): Promise<void> {
+    const topicLocator: Locator = this.topics.filter({ hasText: topicName });
+    await expect(topicLocator).toHaveCount(1);
+    const topicItem = new TopicItem(this.page, topicLocator.first());
+    await topicItem.locator.scrollIntoViewIfNeeded();
+    await expect(topicItem.locator).toBeVisible();
+    await topicItem.rightClickContextMenuAction("Delete Topic");
+
+    const deletionConfirmationBox = new InputBox(this.page);
+    await expect(deletionConfirmationBox.input).toBeVisible();
+    await deletionConfirmationBox.input.fill(topicName);
+    await deletionConfirmationBox.confirm();
   }
 }
