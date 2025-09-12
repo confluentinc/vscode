@@ -1,5 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
-import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_BASE_PATH,
@@ -119,22 +119,17 @@ export class SchemaRegistryTreeItem extends TreeItem {
   }
 }
 
-// todo easy peasy make this a method of SchemaRegistry family.
-function createSchemaRegistryTooltip(resource: SchemaRegistry): MarkdownString {
+export function createSchemaRegistryTooltip(resource: SchemaRegistry): CustomMarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) Schema Registry`)
-    .appendMarkdown("\n\n---")
-    .appendMarkdown(`\n\nID: \`${resource.id}\``)
-    .appendMarkdown(`\n\nURI: \`${resource.uri}\``);
+    .addHeader("Schema Registry", resource.iconName)
+    .addField("ID", resource.id)
+    .addField("URI", resource.uri);
   if (isCCloud(resource)) {
     const ccloudSchemaRegistry = resource as CCloudSchemaRegistry;
     tooltip
-      .appendMarkdown(`\n\nProvider: \`${ccloudSchemaRegistry.provider}\``)
-      .appendMarkdown(`\n\nRegion: \`${ccloudSchemaRegistry.region}\``)
-      .appendMarkdown("\n\n---")
-      .appendMarkdown(
-        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudSchemaRegistry.ccloudUrl})`,
-      );
+      .addField("Provider", ccloudSchemaRegistry.provider)
+      .addField("Region", ccloudSchemaRegistry.region)
+      .addCCloudLink(ccloudSchemaRegistry.ccloudUrl);
   }
   return tooltip;
 }

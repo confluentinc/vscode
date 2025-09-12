@@ -294,20 +294,7 @@ export class FlinkStatementTreeItem extends TreeItem {
       : resource.phase;
     this.iconPath = this.getThemeIcon();
 
-    this.tooltip = CustomMarkdownString.resourceTooltip(
-      "Flink Statement",
-      this.iconPath.id as IconNames,
-      resource.ccloudUrl,
-      [
-        ["Kind", resource.sqlKindDisplay],
-        ["Status", resource.phase],
-        ["Created At", resource.createdAt?.toLocaleString()],
-        ["Updated At", resource.updatedAt?.toLocaleString()],
-        ["Environment", resource.environmentId],
-        ["Compute Pool", resource.computePoolId],
-        ["Detail", resource.status.detail],
-      ],
-    );
+    this.tooltip = createFlinkStatementTooltip(resource);
 
     this.command = {
       command: "confluent.statements.viewstatementsql",
@@ -320,26 +307,7 @@ export class FlinkStatementTreeItem extends TreeItem {
    * Determine icon + color based on the `phase` of the statement.
    */
   getThemeIcon(): ThemeIcon {
-    switch (this.resource.phase.toUpperCase()) {
-      case Phase.FAILED:
-      case Phase.FAILING:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, STATUS_RED);
-      case Phase.DEGRADED:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, STATUS_YELLOW);
-      case Phase.RUNNING:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, STATUS_GREEN);
-      case Phase.COMPLETED:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, STATUS_GRAY);
-      case Phase.DELETING:
-      case Phase.STOPPING:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, STATUS_GRAY);
-      case Phase.STOPPED:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, STATUS_BLUE);
-      case Phase.PENDING:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
-      default:
-        return new ThemeIcon(IconNames.FLINK_STATEMENT);
-    }
+    return getFlinkStatementThemeIcon(this.resource.phase);
   }
 }
 
@@ -352,6 +320,32 @@ export const STATUS_BLUE = new ThemeColor("notificationsInfoIcon.foreground");
 // there aren't as many green or gray options to choose from without using `chart` colors
 export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
+
+/**
+ * Get the appropriate ThemeIcon for a Flink statement based on its phase.
+ */
+function getFlinkStatementThemeIcon(phase: Phase): ThemeIcon {
+  switch (phase.toUpperCase()) {
+    case Phase.FAILED:
+    case Phase.FAILING:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, STATUS_RED);
+    case Phase.DEGRADED:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, STATUS_YELLOW);
+    case Phase.RUNNING:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, STATUS_GREEN);
+    case Phase.COMPLETED:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, STATUS_GRAY);
+    case Phase.DELETING:
+    case Phase.STOPPING:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, STATUS_GRAY);
+    case Phase.STOPPED:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, STATUS_BLUE);
+    case Phase.PENDING:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
+    default:
+      return new ThemeIcon(IconNames.FLINK_STATEMENT);
+  }
+}
 
 /**
  * Convert a from-REST API depiction of a Flink statement to
@@ -381,6 +375,21 @@ export function restFlinkStatementToModel(
     metadata: restFlinkStatement.metadata!,
     status: restFlinkStatement.status,
   });
+}
+
+export function createFlinkStatementTooltip(resource: FlinkStatement) {
+  const tooltip = new CustomMarkdownString()
+    .addHeader("Flink Statement", getFlinkStatementThemeIcon(resource.phase).id as IconNames)
+    .addField("Kind", resource.sqlKindDisplay)
+    .addField("Status", resource.phase)
+    .addField("Created At", resource.createdAt?.toLocaleString())
+    .addField("Updated At", resource.updatedAt?.toLocaleString())
+    .addField("Environment", resource.environmentId)
+    .addField("Compute Pool", resource.computePoolId)
+    .addField("Detail", resource.status.detail)
+    .addCCloudLink(resource.ccloudUrl);
+
+  return tooltip;
 }
 
 export class FlinkSpecProperties {
