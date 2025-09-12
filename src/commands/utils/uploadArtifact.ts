@@ -10,10 +10,7 @@ import { artifactUploadCompleted } from "../../emitters";
 import { isResponseError, logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
-import {
-  showErrorNotificationWithButtons,
-  showWarningNotificationWithButtons,
-} from "../../notifications";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
@@ -128,9 +125,6 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
   });
 
   if (!artifactName) {
-    void showWarningNotificationWithButtons(
-      "Upload Artifact cancelled: Artifact name is required.",
-    );
     return undefined;
   }
 
