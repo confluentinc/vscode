@@ -132,106 +132,108 @@ test.describe("Schema Management", () => {
       });
 
       for (const [schemaType, fileExtension] of schemaTypes) {
-        const schemaFile = `schemas/customer.${fileExtension}`;
+        test.describe(`${schemaType} schema`, () => {
+          const schemaFile = `schemas/customer.${fileExtension}`;
 
-        test(`${schemaType}: should create a new subject and upload the first schema version`, async ({
-          page,
-        }) => {
-          subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+          test("should create a new subject and upload the first schema version", async ({
+            page,
+          }) => {
+            subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
 
-          const successNotifications: Locator = notificationArea.infoNotifications.filter({
-            hasText: /Schema registered to new subject/,
+            const successNotifications: Locator = notificationArea.infoNotifications.filter({
+              hasText: /Schema registered to new subject/,
+            });
+            await expect(successNotifications.first()).toBeVisible();
+
+            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+            await expect(subjectLocator).toBeVisible();
           });
-          await expect(successNotifications.first()).toBeVisible();
 
-          const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-          await expect(subjectLocator).toBeVisible();
-        });
+          test("should create a new schema version with valid/compatible changes", async ({
+            page,
+          }) => {
+            subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+            // try to evolve the newly-created schema
+            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+            const subjectItem = new SubjectItem(page, subjectLocator.first());
+            await subjectItem.clickEvolveLatestSchema();
 
-        test(`${schemaType}: should create a new schema version with valid/compatible changes`, async ({
-          page,
-        }) => {
-          subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
-          // try to evolve the newly-created schema
-          const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-          const subjectItem = new SubjectItem(page, subjectLocator.first());
-          await subjectItem.clickEvolveLatestSchema();
+            // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
+            const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
+            const evolutionDocument = new TextDocument(page, expectedTabName);
+            await expect(evolutionDocument.tab).toBeVisible();
+            // make sure the new document is focused before performing operations
+            await evolutionDocument.tab.click();
+            await expect(evolutionDocument.locator).toBeVisible();
 
-          // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
-          const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
-          const evolutionDocument = new TextDocument(page, expectedTabName);
-          await expect(evolutionDocument.tab).toBeVisible();
-          // make sure the new document is focused before performing operations
-          await evolutionDocument.tab.click();
-          await expect(evolutionDocument.locator).toBeVisible();
+            // enter new (valid) schema content into the new editor
+            const goodEvolutionFile = `schemas/customer_good_evolution.${fileExtension}`;
+            const schemaContent: string = loadFixtureFromFile(goodEvolutionFile);
+            await evolutionDocument.replaceContent(schemaContent);
 
-          // enter new (valid) schema content into the new editor
-          const goodEvolutionFile = `schemas/customer_good_evolution.${fileExtension}`;
-          const schemaContent: string = loadFixtureFromFile(goodEvolutionFile);
-          await evolutionDocument.replaceContent(schemaContent);
+            // attempt to upload from the subject item (instead of the Schemas view nav action)
+            await subjectItem.clickUploadSchemaForSubject();
+            // select editor/file name in the first quickpick
+            const documentQuickpick = new Quickpick(page);
+            await expect(documentQuickpick.locator).toBeVisible();
+            await documentQuickpick.selectItemByText(expectedTabName);
+            // select schema type in the next quickpick
+            const uploadSchemaTypeQuickpick = new Quickpick(page);
+            await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
+            await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
-          // attempt to upload from the subject item (instead of the Schemas view nav action)
-          await subjectItem.clickUploadSchemaForSubject();
-          // select editor/file name in the first quickpick
-          const documentQuickpick = new Quickpick(page);
-          await expect(documentQuickpick.locator).toBeVisible();
-          await documentQuickpick.selectItemByText(expectedTabName);
-          // select schema type in the next quickpick
-          const uploadSchemaTypeQuickpick = new Quickpick(page);
-          await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
-          await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
+            const successNotifications = notificationArea.infoNotifications.filter({
+              hasText: /New version 2 registered to existing subject/,
+            });
+            await expect(successNotifications.first()).toBeVisible();
 
-          const successNotifications = notificationArea.infoNotifications.filter({
-            hasText: /New version 2 registered to existing subject/,
+            // update deletion confirmation from "v1" to the subject name for proper cleanup
+            // since there are now two versions
+            deletionConfirmation = subjectName;
           });
-          await expect(successNotifications.first()).toBeVisible();
 
-          // update deletion confirmation from "v1" to the subject name for proper cleanup
-          // since there are now two versions
-          deletionConfirmation = subjectName;
-        });
+          test("should reject invalid/incompatible schema evolution and not create a second version", async ({
+            page,
+          }) => {
+            subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+            // try to evolve the newly-created schema
+            const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
+            const subjectItem = new SubjectItem(page, subjectLocator.first());
+            await subjectItem.clickEvolveLatestSchema();
 
-        test(`${schemaType}: should reject invalid/incompatible schema evolution and not create a second version`, async ({
-          page,
-        }) => {
-          subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
-          // try to evolve the newly-created schema
-          const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
-          const subjectItem = new SubjectItem(page, subjectLocator.first());
-          await subjectItem.clickEvolveLatestSchema();
+            // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
+            const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
+            const badEvolutionDocument = new TextDocument(page, expectedTabName);
+            await expect(badEvolutionDocument.tab).toBeVisible();
+            // make sure the new document is focused before performing operations
+            await badEvolutionDocument.tab.click();
+            await expect(badEvolutionDocument.locator).toBeVisible();
 
-          // new editor should open with a `<subject name>.v2-draft.confluent.<schema type>` title
-          const expectedTabName = `${subjectName}.v2-draft.confluent.${fileExtension}`;
-          const badEvolutionDocument = new TextDocument(page, expectedTabName);
-          await expect(badEvolutionDocument.tab).toBeVisible();
-          // make sure the new document is focused before performing operations
-          await badEvolutionDocument.tab.click();
-          await expect(badEvolutionDocument.locator).toBeVisible();
+            // enter new (invalid) schema content into the new editor
+            const badEvolutionFile = `schemas/customer_bad_evolution.${fileExtension}`;
+            const schemaContent: string = loadFixtureFromFile(badEvolutionFile);
+            await badEvolutionDocument.replaceContent(schemaContent);
 
-          // enter new (invalid) schema content into the new editor
-          const badEvolutionFile = `schemas/customer_bad_evolution.${fileExtension}`;
-          const schemaContent: string = loadFixtureFromFile(badEvolutionFile);
-          await badEvolutionDocument.replaceContent(schemaContent);
+            // attempt to upload from the subject item (instead of the Schemas view nav action)
+            await subjectItem.clickUploadSchemaForSubject();
+            // select editor/file name in the first quickpick
+            const documentQuickpick = new Quickpick(page);
+            await expect(documentQuickpick.locator).toBeVisible();
+            await documentQuickpick.selectItemByText(expectedTabName);
+            // select schema type in the next quickpick
+            const uploadSchemaTypeQuickpick = new Quickpick(page);
+            await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
+            await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
-          // attempt to upload from the subject item (instead of the Schemas view nav action)
-          await subjectItem.clickUploadSchemaForSubject();
-          // select editor/file name in the first quickpick
-          const documentQuickpick = new Quickpick(page);
-          await expect(documentQuickpick.locator).toBeVisible();
-          await documentQuickpick.selectItemByText(expectedTabName);
-          // select schema type in the next quickpick
-          const uploadSchemaTypeQuickpick = new Quickpick(page);
-          await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
-          await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
+            const errorNotifications: Locator = notificationArea.errorNotifications.filter({
+              hasText: "Conflict with prior schema version",
+            });
+            await expect(errorNotifications.first()).toBeVisible();
 
-          const errorNotifications: Locator = notificationArea.errorNotifications.filter({
-            hasText: "Conflict with prior schema version",
+            // since we didn't create a second schema version, we should still be able to delete
+            // the subject based on the fact that there is still only one version
+            deletionConfirmation = "v1";
           });
-          await expect(errorNotifications.first()).toBeVisible();
-
-          // since we didn't create a second schema version, we should still be able to delete
-          // the subject based on the fact that there is still only one version
-          deletionConfirmation = "v1";
         });
       }
     });
