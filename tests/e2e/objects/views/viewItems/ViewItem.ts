@@ -41,6 +41,7 @@ export class ViewItem {
    *
    * NOTE: This requires the VS Code setting `"window.menuStyle": "custom"` to be set first, because
    * otherwise Playwright will fail to interact with the OS-native context menu.
+   * {@see https://code.visualstudio.com/updates/v1_101#_custom-menus-with-native-window-title-bar}
    */
   async rightClickContextMenuAction(actionName: string): Promise<void> {
     await this.locator.hover();
