@@ -1,6 +1,5 @@
 import { Disposable, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.medusaCodeLens");
@@ -28,11 +27,7 @@ async function generateMedusaDatasetCommand(documentUri: Uri): Promise<void> {
  * @returns Array of disposables for the registered commands
  */
 export function registerMedusaCodeLensCommands(): Disposable[] {
-  if (ENABLE_MEDUSA_CONTAINER.value) {
-    return [
-      registerCommandWithLogging(MEDUSA_COMMANDS.GENERATE_DATASET, generateMedusaDatasetCommand),
-    ];
-  }
-
-  return [];
+  return [
+    registerCommandWithLogging(MEDUSA_COMMANDS.GENERATE_DATASET, generateMedusaDatasetCommand),
+  ];
 }
