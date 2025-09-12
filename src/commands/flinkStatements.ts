@@ -330,10 +330,6 @@ async function openFlinkStatementResultsView(statement: FlinkStatement | undefin
   });
 }
 
-export interface FunctionNameRow {
-  "Function Name": string;
-}
-
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
