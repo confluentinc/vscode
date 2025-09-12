@@ -12,7 +12,7 @@ export class SubjectItem extends ViewItem {
   }
 
   /** Click the "Upload Schema to Schema Registry for Subject" inline action. */
-  async uploadSchemaForSubject(): Promise<void> {
+  async clickUploadSchemaForSubject(): Promise<void> {
     await this.clickInlineAction("Upload Schema to Schema Registry for Subject");
   }
 }
