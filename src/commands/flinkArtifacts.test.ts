@@ -1,29 +1,18 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
-import {
-  ArtifactV1FlinkArtifactMetadataFromJSON,
-  FlinkArtifactsArtifactV1Api,
-} from "../clients/flinkArtifacts";
+import { ArtifactV1FlinkArtifactMetadataFromJSON } from "../clients/flinkArtifacts";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
-import * as contextValues from "../context/values";
-import * as errors from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../models/resource";
-import * as sidecar from "../sidecar";
-import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
-  deleteArtifactCommand,
   queryArtifactWithFlink,
   registerFlinkArtifactCommands,
-  setFlinkArtifactsViewModeCommand,
   uploadArtifactCommand,
 } from "./flinkArtifacts";
 import * as commands from "./index";
@@ -32,6 +21,22 @@ import * as uploadArtifact from "./utils/uploadArtifact";
 describe("flinkArtifacts", () => {
   let sandbox: sinon.SinonSandbox;
 
+  const mockParams = {
+    environment: "env-123456",
+    cloud: "Azure",
+    region: "australiaeast",
+    artifactName: "test-artifact",
+    fileFormat: "jar",
+    selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
+  };
+  const mockPresignedUrlResponse = {
+    upload_id: "12345",
+    url: "https://example.com/upload",
+    fields: {},
+    api_version:
+      "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
+    kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
+  };
   beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
@@ -91,259 +96,94 @@ describe("flinkArtifacts", () => {
     sinon.assert.notCalled(openTextDocStub);
     sinon.assert.notCalled(showTextDocStub);
   });
-});
 
-describe("uploadArtifact Command", () => {
-  let sandbox: sinon.SinonSandbox;
-  const mockParams = {
-    environment: "env-123456",
-    cloud: "Azure",
-    region: "australiaeast",
-    artifactName: "test-artifact",
-    fileFormat: "jar",
-    selectedFile: { fsPath: "/path/to/file.jar" } as vscode.Uri,
-  };
-  const mockPresignedUrlResponse = {
-    upload_id: "12345",
-    url: "https://example.com/upload",
-    fields: {},
-    api_version:
-      "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
-    kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
-  };
+  it("should register the uploadArtifact command", () => {
+    const registerCommandWithLoggingStub = sandbox
+      .stub(commands, "registerCommandWithLogging")
+      .returns({} as vscode.Disposable);
 
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
+    registerFlinkArtifactCommands();
+
+    sinon.assert.calledWithExactly(
+      registerCommandWithLoggingStub,
+      "confluent.uploadArtifact",
+      uploadArtifactCommand,
+    );
   });
 
-  afterEach(() => {
-    sandbox.restore();
+  it("should fail if there is no params", async () => {
+    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(undefined);
+    const result = await uploadArtifactCommand();
+
+    assert.strictEqual(result, undefined);
   });
 
-  describe("registerArtifactCommand", () => {
-    it("should register the uploadArtifact command", () => {
-      const registerCommandWithLoggingStub = sandbox
-        .stub(commands, "registerCommandWithLogging")
-        .returns({} as vscode.Disposable);
+  it("should show information message if uploadArtifactToCCloud is called successfully", async () => {
+    const mockCreateResponse = {
+      display_name: "test-artifact",
+      cloud: "Azure",
+      region: "australiaeast",
+      environment: " env-123456",
+    };
 
-      registerFlinkArtifactCommands();
+    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+    sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+    sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
 
-      sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub,
-        "confluent.uploadArtifact",
-        uploadArtifactCommand,
-      );
-    });
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+
+    await uploadArtifactCommand();
+
+    sinon.assert.calledOnce(showInfoStub);
+    sinon.assert.calledWithMatch(showInfoStub, sinon.match(/uploaded successfully/));
   });
 
-  describe("uploadArtifactCommand", () => {
-    it("should fail if there is no params", async () => {
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(undefined);
-      const result = await uploadArtifactCommand();
+  it("should show error notification with custom error message when Error has message property", async () => {
+    const params = { ...mockParams };
+    const uploadUrl = { ...mockPresignedUrlResponse };
 
-      assert.strictEqual(result, undefined);
-    });
+    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+    sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+    sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
 
-    it("should show information message if uploadArtifactToCCloud is called successfully", async () => {
-      const mockCreateResponse = {
-        display_name: "test-artifact",
-        cloud: "Azure",
-        region: "australiaeast",
-        environment: " env-123456",
-      };
+    const customErrorMessage = "Custom error message from Error instance";
+    const error = new Error(customErrorMessage);
 
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(error);
 
-      const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
 
-      await uploadArtifactCommand();
+    await uploadArtifactCommand();
 
-      sinon.assert.calledOnce(showInfoStub);
-      sinon.assert.calledWithMatch(showInfoStub, sinon.match(/uploaded successfully/));
-    });
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWithMatch(showErrorStub, customErrorMessage);
+  });
 
-    it("Should throw Error if upload_id is missing in presigned URL response", async () => {
-      const params = { ...mockParams };
-      const uploadUrl = { ...mockPresignedUrlResponse, upload_id: undefined };
+  it("should send the create artifact request to Confluent Cloud", async () => {
+    const mockUploadId = "12345";
+    const mockCreateResponse = {
+      display_name: "test-artifact",
+      id: "artifact-123",
+      environment: "env-123456",
+      region: "australiaeast",
+      cloud: "Azure",
+    };
 
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+    sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
+    const handleUploadStub = sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+    const createArtifactStub = sandbox
+      .stub(uploadArtifact, "uploadArtifactToCCloud")
+      .resolves(mockCreateResponse);
+    sandbox.stub(vscode.window, "showInformationMessage");
 
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+    await uploadArtifactCommand();
 
-      await uploadArtifactCommand();
+    sinon.assert.calledOnce(handleUploadStub);
+    sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
 
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(
-        showErrorStub,
-        "Upload ID is missing from the presigned URL response.",
-      );
-    });
-
-    it("should show error notification with custom error message when Error has message property", async () => {
-      const params = { ...mockParams };
-      const uploadUrl = { ...mockPresignedUrlResponse };
-
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
-      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-
-      const customErrorMessage = "Custom error message from Error instance";
-      const error = new Error(customErrorMessage);
-
-      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(error);
-
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithMatch(showErrorStub, customErrorMessage);
-    });
-
-    it("should send the create artifact request to Confluent Cloud", async () => {
-      const mockUploadId = "12345";
-      const mockCreateResponse = {
-        display_name: "test-artifact",
-        id: "artifact-123",
-        environment: "env-123456",
-        region: "australiaeast",
-        cloud: "Azure",
-      };
-
-      sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-      const handleUploadStub = sandbox
-        .stub(uploadArtifact, "handleUploadToCloudProvider")
-        .resolves();
-      const createArtifactStub = sandbox
-        .stub(uploadArtifact, "uploadArtifactToCCloud")
-        .resolves(mockCreateResponse);
-      sandbox.stub(vscode.window, "showInformationMessage");
-
-      await uploadArtifactCommand();
-
-      sinon.assert.calledOnce(handleUploadStub);
-      sinon.assert.calledWithExactly(handleUploadStub, mockParams, mockPresignedUrlResponse);
-
-      sinon.assert.calledOnce(createArtifactStub);
-      sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
-    });
-
-    describe("error handling", () => {
-      beforeEach(() => {
-        sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
-        sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-        sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-        sandbox.stub(errors, "logError").resolves();
-      });
-
-      describe("deleteArtifactCommand", () => {
-        let sandbox: sinon.SinonSandbox;
-        beforeEach(() => {
-          sandbox = sinon.createSandbox();
-          const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-            sandbox.createStubInstance(sidecar.SidecarHandle);
-          let flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
-          mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
-          sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
-        });
-        afterEach(() => {
-          sandbox.restore();
-        });
-
-        const mockArtifact: FlinkArtifact = {
-          id: "artifact-id",
-          name: "Test Artifact",
-          provider: "aws",
-          region: "us-west-2",
-          environmentId: "env-id" as EnvironmentId,
-          connectionId: "conn-id" as ConnectionId,
-          iconName: IconNames.FLINK_ARTIFACT,
-          description: "",
-          searchableText: () => "",
-          connectionType: ConnectionType.Local,
-          ccloudUrl: "https://confluent.io",
-          documentationLink: "https://confluent.io",
-          metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
-            self: {},
-            resource_name: "test-artifact",
-            created_at: new Date(),
-            updated_at: new Date(),
-            deleted_at: new Date(),
-          }),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        describe("deleteArtifactCommand", () => {
-          it("should exit silently if user does not confirm that they want to delete the artifact", async () => {
-            sandbox.stub(vscode.window, "showWarningMessage").resolves(undefined);
-            const showInformationMessageStub = sandbox.stub(
-              vscode.window,
-              "showInformationMessage",
-            );
-            const deleteArtifactV1FlinkArtifactStub = sandbox.stub().resolves();
-
-            await deleteArtifactCommand(mockArtifact);
-
-            sinon.assert.notCalled(deleteArtifactV1FlinkArtifactStub);
-            sinon.assert.notCalled(showInformationMessageStub);
-          });
-          it("should call the sidecar to delete the artifact and show a success message", async () => {
-            sandbox.stub(vscode.window, "showWarningMessage").resolves({ title: "Yes, delete" });
-            const showInformationMessageStub = sandbox.stub(
-              vscode.window,
-              "showInformationMessage",
-            );
-
-            await deleteArtifactCommand(mockArtifact);
-            sinon.assert.calledOnce(showInformationMessageStub);
-          });
-          it("should return early and show an error message if no selected artifact is provided", async () => {
-            const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-            await deleteArtifactCommand(undefined);
-            sinon.assert.calledWithMatch(showErrorStub, "No Flink artifact selected for deletion.");
-          });
-        });
-      });
-
-      describe("uploadArtifactCommand error message extraction", () => {
-        let sandbox: sinon.SinonSandbox;
-
-        beforeEach(() => {
-          sandbox = sinon.createSandbox();
-
-          sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
-          sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
-          sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
-        });
-
-        afterEach(() => {
-          sandbox.restore();
-        });
-      });
-
-      describe("setFlinkArtifactsViewModeCommand", () => {
-        it("should set the Flink Database view to Artifacts mode", async () => {
-          const setContextValueStub = sandbox.stub(contextValues, "setContextValue");
-          const stubbedEventEmitters: StubbedEventEmitters = eventEmitterStubs(sandbox);
-          const flinkDatabaseViewModeFireStub = stubbedEventEmitters.flinkDatabaseViewMode!.fire;
-
-          await setFlinkArtifactsViewModeCommand();
-
-          sinon.assert.calledOnce(flinkDatabaseViewModeFireStub);
-          sinon.assert.calledOnce(setContextValueStub);
-          sinon.assert.calledWithExactly(
-            setContextValueStub,
-            contextValues.ContextValues.flinkDatabaseViewMode,
-            FlinkDatabaseViewProviderMode.Artifacts,
-          );
-        });
-      });
-    });
+    sinon.assert.calledOnce(createArtifactStub);
+    sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
   });
 });
