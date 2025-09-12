@@ -56,37 +56,10 @@ test.describe("Produce Message(s) to Topic", () => {
   test.beforeEach(async ({ page, electronApp }) => {
     subjectName = "";
 
-    // disable auto-formatting and language detection to avoid issues with the editor
-    // NOTE: this can't be done in a .beforeAll hook since it won't persist for each test run
-    await configureVSCodeSettings(page, electronApp, {
-      // this is to avoid VS Code incorrectly setting the language of .proto files as C# so they
-      // appear correctly (as "plaintext") in the URI quickpick
-      "workbench.editor.languageDetection": false,
-      // we also have to disable a lot of auto-formatting so the .insertContent() method properly
-      // adds the schema content as it exists in the fixture files
-      "editor.autoClosingBrackets": "never",
-      "editor.autoClosingQuotes": "never",
-      "editor.autoIndent": "none",
-      "editor.autoSurround": "never",
-      "editor.formatOnType": false,
-      "editor.insertSpaces": false,
-      "json.format.enable": false,
-      "json.validate.enable": false,
-      // XXX: this must be set to prevent skipping newlines/commas while content is added to the editor
-      "editor.acceptSuggestionOnEnter": "off",
-      // this prevents VS Code from converting the `http` to `https` in `$schema` URIs:
-      "editor.linkedEditing": false,
-    });
-
     await openConfluentSidebar(page);
 
     topicsView = new TopicsView(page);
     notificationArea = new NotificationArea(page);
-  });
-
-  test.afterEach(async ({ page, electronApp }) => {
-    // reset VS Code settings to defaults
-    await configureVSCodeSettings(page, electronApp, {});
   });
 
   // test dimensions:
