@@ -305,8 +305,11 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
+   * Get the Flink UDFs for the given Flinkable CCloud Kafka cluster.
    *
-   * @param cluster The (Flinkable) CCloud Kafka cluster to get the UDFs for.
+   * @param cluster The Flink database to get the UDFs for.
+   * @param computePool Optional Flink compute pool to use for executing the statement. If not provided, will use the first compute pool in the cluster's flinkPools array.
+   * @returns Array of {@link FlinkUdf} objects representing the UDFs in the cluster.
    */
   public async getFlinkUDFs(
     cluster: CCloudFlinkDbKafkaCluster,
