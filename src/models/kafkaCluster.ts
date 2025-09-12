@@ -8,7 +8,9 @@ import {
   LOCAL_CONNECTION_ID,
   UTM_SOURCE_VSCODE,
 } from "../constants";
+import { localTimezoneOffset } from "../utils/timezone";
 import { CCloudFlinkComputePool } from "./flinkComputePool";
+import { FlinkSpecProperties } from "./flinkStatement";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -58,6 +60,15 @@ export class CCloudKafkaCluster extends KafkaCluster {
     return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/clusters/${this.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
+  /** Coerce this CCLoudKafkaCluster into a portion needed for submitting Flink statement */
+  toFlinkSpecProperties(): FlinkSpecProperties {
+    return new FlinkSpecProperties({
+      currentDatabase: this.name,
+      currentCatalog: this.environmentId,
+      localTimezone: localTimezoneOffset(),
+    });
+  }
+
   /**
    * Can Flink things be done against this Kafka cluster (aka treat this cluster
    *  as a Flink Database)?
@@ -67,6 +78,11 @@ export class CCloudKafkaCluster extends KafkaCluster {
    **/
   isFlinkable(): this is CCloudFlinkDbKafkaCluster {
     return (this.flinkPools?.length ?? 0) > 0;
+  }
+
+  /** Is this compute pool in the same cloud provider/region as we are? */
+  isSameCloudRegion(other: CCloudFlinkComputePool): boolean {
+    return this.provider === other.provider && this.region === other.region;
   }
 
   searchableText(): string {
