@@ -48,7 +48,8 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
     const contentType: string =
       ext === ".jar" ? "application/java-archive" : "application/octet-stream";
 
-    const blob: Blob = new Blob([bytes], { type: contentType });
+    const safeBytes = new Uint8Array(bytes);
+    const blob: Blob = new Blob([safeBytes], { type: contentType });
 
     return { blob, contentType };
   } catch (err) {
