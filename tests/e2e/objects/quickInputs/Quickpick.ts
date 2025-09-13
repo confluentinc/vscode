@@ -16,6 +16,19 @@ export class Quickpick {
     return this.locator.locator(".quick-input-header");
   }
 
+  /**
+   * Press Enter to confirm the current selection(s). This is mainly done with multi-select
+   * quickpicks since clicking a single item in a regular quickpick will automatically confirm it.
+   */
+  async confirm(): Promise<void> {
+    await this.locator.press("Enter");
+  }
+
+  /** Press Escape to cancel the input. */
+  async cancel(): Promise<void> {
+    await this.locator.press("Escape");
+  }
+
   /** The quickpick input field where you can type to filter items. */
   get textInput(): Locator {
     return this.header.locator(
