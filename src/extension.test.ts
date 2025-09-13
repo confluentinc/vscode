@@ -213,6 +213,27 @@ describe("Extension manifest tests", () => {
       `Commands that need to be registered during activate(): ${JSON.stringify(missingCommands, null, 2)}`,
     );
   });
+
+  it("should have commandPalette menu entries sorted by command name", () => {
+    interface CommandPaletteEntry {
+      command?: string;
+      when?: string;
+      [key: string]: unknown;
+    }
+
+    const entries = context.extension.packageJSON?.contributes?.menus
+      ?.commandPalette as CommandPaletteEntry[];
+
+    // Full sorted equivalence check
+    const expected = [...entries].sort((a, b) => (a.command ?? "").localeCompare(b.command ?? ""));
+    const actualCommands = entries.map((e) => e.command ?? "");
+    const expectedCommands = expected.map((e) => e.command ?? "");
+    assert.deepStrictEqual(
+      actualCommands,
+      expectedCommands,
+      "commandPalette entries are not in lexicographic order by command: Run `gulp organizePackageJson` to fix",
+    );
+  });
 });
 
 describe("ExtensionContext subscription tests", () => {
