@@ -775,8 +775,6 @@ export function e2eRun(done) {
     }
   }
 
-  // force TTY so playwright shows its full colored output in CI
-  process.env.PLAYWRIGHT_FORCE_TTY = "1";
   // set env var so extension knows it's in E2E test mode, which is mainly used for CCloud auth:
   // - the auth provider will store the sign-in URL to a temp file for easier test handling of the
   //   browser-based sign-in flow through Playwright

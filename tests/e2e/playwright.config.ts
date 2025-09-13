@@ -26,7 +26,6 @@ export default defineConfig({
   },
   reporter: process.env.CI
     ? [
-        ["list"],
         ["html"],
         [
           "junit",
