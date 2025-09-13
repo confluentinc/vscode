@@ -13,7 +13,10 @@ import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { readFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
+import { URI_SCHEME } from "../baseTest";
+import { InputBox } from "../objects/quickInputs/InputBox";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
+import { executeVSCodeCommand } from "./commands";
 
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
 export const NOT_CONNECTED_TEXT = "(No connection)";
@@ -107,23 +110,19 @@ export async function setupCCloudConnection(
   // - when the E2E tests start via `gulp e2e`, we set the CONFLUENT_VSCODE_E2E_TESTING environment
   //  variable, which sets the CCLOUD_AUTH_CALLBACK_URI to an empty string, preventing the sidecar
   //  from using it (see https://github.com/confluentinc/ide-sidecar/blob/f302286ff0f7234581b07cef4ec978e33030617f/src/main/resources/templates/callback.html#L13-L16)
-  // - since the extension's UriHandler is never triggered, we have to explicitly cancel the
-  //  "Signing in ..." progress notification and click the sign-in action again to refresh the
-  //  connection state and show the available environments
+  // - since the URI is not automatically handled, we have to manually trigger the command
+  //  that handles it and then provide the callback URI via an input box
   // NOTE: This is safe because handleAuthFlow() didn't throw any errors by this point, which means
   // we saw an "Authentication Complete" message in the browser, so the sidecar should have done its
   // own callback handling to update the CCloud connection to a fully authenticated state.
-  const notifications = new NotificationArea(page);
-  const progressNotifications = notifications.progressNotifications.filter({
-    hasText: "Signing in to Confluent Cloud...",
-  });
-  await expect(progressNotifications).toHaveCount(1);
-  const signInNotification = new Notification(page, progressNotifications.first());
-  await signInNotification.clickActionButton("Cancel");
+  await executeVSCodeCommand(page, "confluent.handleUri");
+  const uriInputBox = new InputBox(page);
+  await expect(uriInputBox.locator).toBeVisible();
+  await uriInputBox.input.fill(
+    `${URI_SCHEME}://confluentinc.vscode-confluent/authCallback?success=true`,
+  );
+  await uriInputBox.confirm();
 
-  // Click the "Sign in to Confluent Cloud" action from the Resources view to refresh the connection
-  // state and show available environments
-  await ccloudItem.clickInlineAction("Sign in to Confluent Cloud");
   // Make sure the "Confluent Cloud" item in the Resources view is expanded and doesn't show the
   // "(No connection)" description
   await expect(ccloudItem.locator).toBeVisible();
