@@ -1189,6 +1189,10 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "confluent.artifacts.scaffold",
+          "when": "false"
+        },
+        {
           "command": "confluent.connections.ccloud.signIn",
           "when": "!confluent.ccloudConnectionAvailable"
         },
@@ -1221,11 +1225,43 @@
           "when": "false"
         },
         {
-          "command": "confluent.topic.produce.fromDocument",
+          "command": "confluent.copyResourceUri",
           "when": "false"
         },
         {
-          "command": "confluent.copyResourceUri",
+          "command": "confluent.document.flinksql.resetCCloudMetadata",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.setCCloudComputePool",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.setCCloudDatabase",
+          "when": "false"
+        },
+        {
+          "command": "confluent.flink.statements.search.clear",
+          "when": "confluent.flinkStatementsSearchApplied"
+        },
+        {
+          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "when": "confluent.flinkDatabaseViewMode == 'UDFs'"
+        },
+        {
+          "command": "confluent.flinkdatabase.setUDFsViewMode",
+          "when": "confluent.flinkDatabaseViewMode == 'artifacts'"
+        },
+        {
+          "command": "confluent.openCCloudApiKeysUrl",
+          "when": "false"
+        },
+        {
+          "command": "confluent.openCCloudLink",
+          "when": "false"
+        },
+        {
+          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
           "when": "false"
         },
         {
@@ -1237,28 +1273,12 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.scaffold",
+          "when": "false"
+        },
+        {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
-        },
-        {
-          "command": "confluent.statements.viewstatementsql",
-          "when": "false"
-        },
-        {
-          "command": "confluent.statements.refresh",
-          "when": "false"
-        },
-        {
-          "command": "confluent.statements.create",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemaViewer.viewLocally",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemaViewer.viewLatestLocally",
-          "when": "false"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
@@ -1269,7 +1289,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemas.evolve",
+          "command": "confluent.schemas.deleteSubject",
           "when": "false"
         },
         {
@@ -1277,7 +1297,11 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemas.deleteSubject",
+          "command": "confluent.schemas.diffMostRecentVersions",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.evolve",
           "when": "false"
         },
         {
@@ -1301,19 +1325,31 @@
           "when": "false"
         },
         {
-          "command": "confluent.topics.delete",
+          "command": "confluent.schemaViewer.viewLatestLocally",
           "when": "false"
         },
         {
-          "command": "confluent.topics.edit",
+          "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
         {
-          "command": "confluent.topics.query",
+          "command": "confluent.statements.create",
           "when": "false"
         },
         {
-          "command": "confluent.topics.openlatestschemas",
+          "command": "confluent.statements.refresh",
+          "when": "false"
+        },
+        {
+          "command": "confluent.statements.viewstatementsql",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topic.produce.fromDocument",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "false"
         },
         {
@@ -1325,60 +1361,24 @@
           "when": "false"
         },
         {
-          "command": "confluent.topics.copyKafkaClusterBootstrapServers",
+          "command": "confluent.topics.delete",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.edit",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.openlatestschemas",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.query",
           "when": "false"
         },
         {
           "command": "confluent.topics.search.clear",
           "when": "confluent.topicSearchApplied"
-        },
-        {
-          "command": "confluent.schemas.diffMostRecentVersions",
-          "when": "false"
-        },
-        {
-          "command": "confluent.openCCloudLink",
-          "when": "false"
-        },
-        {
-          "command": "confluent.openCCloudApiKeysUrl",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.flinksql.setCCloudComputePool",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.flinksql.setCCloudDatabase",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.flinksql.resetCCloudMetadata",
-          "when": "false"
-        },
-        {
-          "command": "confluent.resources.scaffold",
-          "when": "false"
-        },
-        {
-          "command": "confluent.artifacts.scaffold",
-          "when": "false"
-        },
-        {
-          "command": "confluent.flink.statements.search.clear",
-          "when": "confluent.flinkStatementsSearchApplied"
-        },
-        {
-          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
-          "when": "false"
-        },
-        {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'UDFs'"
-        },
-        {
-          "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'artifacts'"
         }
       ],
       "editor/title": [
