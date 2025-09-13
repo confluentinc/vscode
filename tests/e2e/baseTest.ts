@@ -17,6 +17,9 @@ import { configureVSCodeSettings } from "./utils/settings";
 // cached test setup file path that's shared across worker processes
 const TEST_SETUP_CACHE_FILE = path.join(tmpdir(), "vscode-e2e-test-setup-cache.json");
 
+const VSCODE_VERSION = process.env.VSCODE_VERSION || "stable";
+export const URI_SCHEME = VSCODE_VERSION === "insiders" ? "vscode-insiders" : "vscode";
+
 interface TestSetupCache {
   vscodeExecutablePath: string;
   outPath: string;
