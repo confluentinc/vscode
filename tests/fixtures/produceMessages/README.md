@@ -5,4 +5,4 @@ topic:
   `tests/fixtures/schemas` directory
 - `bad_missing-key.json`: missing `key` field, should raise an basic JSON validation error
 - `ugly_schema-validation-error.json`: `value` field is not a valid `customer` object, should raise
-  a schema validationerror
+  a schema validation error
