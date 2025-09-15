@@ -1249,42 +1249,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.document.flinksql.resetCCloudMetadata",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.flinksql.setCCloudComputePool",
-          "when": "false"
-        },
-        {
-          "command": "confluent.document.flinksql.setCCloudDatabase",
-          "when": "false"
-        },
-        {
-          "command": "confluent.flink.statements.search.clear",
-          "when": "confluent.flinkStatementsSearchApplied"
-        },
-        {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'UDFs'"
-        },
-        {
-          "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'artifacts'"
-        },
-        {
-          "command": "confluent.openCCloudApiKeysUrl",
-          "when": "false"
-        },
-        {
-          "command": "confluent.openCCloudLink",
-          "when": "false"
-        },
-        {
-          "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
-          "when": "false"
-        },
-        {
           "command": "confluent.diff.compareWithSelected",
           "when": "false"
         },
