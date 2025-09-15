@@ -30,6 +30,7 @@ import { getSidecar, SidecarHandle } from "../sidecar";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import { generateFlinkStatementKey } from "./loaderUtils";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
@@ -343,12 +344,20 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Execute a Flink SQL statement, returning the results as an array of objects of type RT.
+   * Map of outstanding promises for calls to executeFlinkStatement(), keyed by hash
+   * of (databaseId, computePoolId, sqlStatement).
+   */
+  private readonly backgroundStatementPromises: Map<string, Promise<Array<any>>> = new Map();
+
+  /**
+   * Execute a system/hidden/background Flink SQL statement for VSCode Extension internals to
+   * then make use of, returning the results as an array of objects of type RT.
    * Should be used for batch statements, such as system catalog queries, registering
    * or listing UDFs, etc.
    *
-   * This could/should be integrated directly into CCloudResourceLoader in the future, simplifying
-   * the topology of things a bit, then omitting the organizationId parameter here.
+   * At most only one single promise for a given (sqlStatement, database, computePool) is
+   * outstanding at a time. If this function is called again with the same parameters
+   * while a previous call is still pending, the previous promise will be returned.
    *
    * @param sqlStatement The SQL statement (string) to execute.
    * @param database The database (CCloudKafkaCluster) to execute the statement against.
@@ -382,6 +391,37 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       hidden: true, // Hidden statement, user didn't author it.
       properties: database.toFlinkSpecProperties(),
     };
+
+    const promiseKey = generateFlinkStatementKey(statementParams);
+
+    if (this.backgroundStatementPromises.has(promiseKey)) {
+      // If we already have a pending promise for this same statement in this same database/compute pool,
+      // just return the existing promise.
+      logger.debug(
+        `executeFlinkStatement() deduplicating identical pending statement: ${sqlStatement}`,
+      );
+      return this.backgroundStatementPromises.get(promiseKey)!;
+    }
+
+    // Create a new promise for this statement execution, and store it in the map of pending promises.
+    const statementPromise = this.doExecuteFlinkStatement<RT>(statementParams).finally(() => {
+      // When the promise settles (either resolves or rejects), remove it from the map of pending promises.
+      this.backgroundStatementPromises.delete(promiseKey);
+    });
+
+    this.backgroundStatementPromises.set(promiseKey, statementPromise);
+
+    return statementPromise;
+  }
+
+  /** Actual implementation of executeFlinkStatement(), without deduplication logic. */
+  private async doExecuteFlinkStatement<RT>(
+    statementParams: IFlinkStatementSubmitParameters,
+  ): Promise<Array<RT>> {
+    const computePool = statementParams.computePool;
+    logger.info(
+      `Executing Flink statement on ${computePool?.provider}-${computePool?.region} in environment ${computePool?.environmentId} : ${statementParams.statement}`,
+    );
 
     // Submit statement
     let statement = await submitFlinkStatement(statementParams);
