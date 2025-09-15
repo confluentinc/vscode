@@ -450,7 +450,8 @@
         "command": "confluent.handleUri",
         "title": "Handle URI",
         "icon": "$(link)",
-        "category": "Confluent"
+        "category": "Confluent",
+        "enablement": "confluent.e2eTesting"
       },
       {
         "command": "confluent.openCCloudApiKeysUrl",
