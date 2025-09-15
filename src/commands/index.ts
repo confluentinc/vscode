@@ -13,6 +13,11 @@ export function registerCommandWithLogging(
   commandName: string,
   command: ((...args: any[]) => void) | ((...args: any[]) => Promise<void>),
 ): vscode.Disposable {
+  if (!commandName.startsWith("confluent.")) {
+    // developer error.
+    throw new Error(`Command name "${commandName}" must start with "confluent."`);
+  }
+
   const wrappedCommand = async (...args: any[]) => {
     // if the extension was disabled, we need to prevent any commands from running and show an error
     // notification to the user
