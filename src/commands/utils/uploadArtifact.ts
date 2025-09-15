@@ -122,15 +122,14 @@ export async function promptForArtifactUploadParams(
     return undefined;
   }
 
-  const rawCloud = cloudRegion.provider.toUpperCase();
   let cloud: CloudProvider;
-  if (rawCloud === "AZURE") {
+  if (cloudRegion.provider === "AZURE") {
     cloud = CloudProvider.Azure;
-  } else if (rawCloud === "AWS") {
+  } else if (cloudRegion.provider === "AWS") {
     cloud = CloudProvider.AWS;
   } else {
     void showErrorNotificationWithButtons(
-      `Upload Artifact cancelled: Unsupported cloud provider: ${rawCloud}`,
+      `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
     );
     return undefined;
   }
@@ -158,7 +157,7 @@ export async function promptForArtifactUploadParams(
     selectedFile = selectedFiles[0];
   }
 
-  const fileFormat: string = selectedFile.fsPath.split(".").pop()!;
+  const fileFormat: string = selectedFile.fsPath.split(".").pop() ?? "";
 
   // Default artifact name to the selected file's base name (without extension), but allow override.
   const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
