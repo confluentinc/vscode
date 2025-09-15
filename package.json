@@ -46,6 +46,7 @@
   ],
   "activationEvents": [
     "workspaceContains:**/*.confluent.*",
+    "workspaceContains:**/*.avsc",
     "onUri"
   ],
   "main": "./out/extension.js",
@@ -778,6 +779,12 @@
         "title": "Switch to Flink Artifacts",
         "icon": "$(folder-library)",
         "category": "Confluent: Flink Database View"
+      },
+      {
+        "command": "confluent.medusa.generateDataset",
+        "title": "Generate Medusa Dataset",
+        "category": "Confluent",
+        "enablement": "confluent.localDocker.medusaEnable"
       }
     ],
     "configuration": [
