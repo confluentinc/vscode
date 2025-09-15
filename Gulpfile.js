@@ -207,6 +207,43 @@ export function build(done) {
   }
 }
 
+export async function organizePackageJson() {
+  const manifestPath = "package.json";
+  let original;
+  try {
+    original = await readFile(manifestPath, "utf8");
+  } catch (e) {
+    console.error(`Failed to read ${manifestPath}:`, e);
+    throw e;
+  }
+
+  let pkg;
+  try {
+    pkg = JSON.parse(original);
+  } catch (e) {
+    console.error("package.json is not valid JSON:", e);
+    throw e;
+  }
+
+  const commandPalette = pkg?.contributes?.menus?.commandPalette;
+  if (!Array.isArray(commandPalette)) {
+    throw new Error("contributes.menus.commandPalette is missing or not an array.");
+  }
+
+  commandPalette.sort((a, b) => {
+    const ca = (a?.command ?? "").toString();
+    const cb = (b?.command ?? "").toString();
+    return ca.localeCompare(cb);
+  });
+
+  await writeFile(manifestPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  console.log(
+    `Sorted ${commandPalette.length} commandPalette entries in contributes.menus.commandPalette.`,
+  );
+  return 0;
+}
+organizePackageJson.description = "Order sections of package.json by command name.";
+
 /** @type {import("rollup").LogHandlerWithDefault} */
 function handleBuildLog(level, log, handler) {
   // skip log messages about circular dependencies inside node_modules

@@ -212,6 +212,27 @@ describe("Extension manifest tests", () => {
     );
   });
 
+  it("should have commandPalette menu entries sorted by command name", () => {
+    interface CommandPaletteEntry {
+      command?: string;
+      when?: string;
+      [key: string]: unknown;
+    }
+
+    const entries = context.extension.packageJSON?.contributes?.menus
+      ?.commandPalette as CommandPaletteEntry[];
+
+    // Full sorted equivalence check
+    const expected = [...entries].sort((a, b) => (a.command ?? "").localeCompare(b.command ?? ""));
+    const actualCommands = entries.map((e) => e.command ?? "");
+    const expectedCommands = expected.map((e) => e.command ?? "");
+    assert.deepStrictEqual(
+      actualCommands,
+      expectedCommands,
+      "commandPalette entries are not in lexicographic order by command: Run `gulp organizePackageJson` to fix",
+    );
+  });
+
   it("All extension commands should be mentioned in menus.commandPalette", async () => {
     // All command IDs mentioned in contributes.menus.commandPalette in package.json ...
     const commandPaletteCommands = packageJSON.contributes.menus["commandPalette"].map(
