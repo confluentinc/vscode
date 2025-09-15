@@ -93,19 +93,9 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
       uriMetadata,
     });
 
-    // look up all environments since we'll need them to filter for compute pools and Kafka clusters
-    // (as databases to match whatever the selected compute pool is, based on provider/region)
-    const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
-
-    const computePool: CCloudFlinkComputePool | undefined = await getComputePoolFromMetadata(
-      uriMetadata,
-      envs,
-    );
-    const { catalog, database } = await getCatalogDatabaseFromMetadata(
-      uriMetadata,
-      envs,
-      computePool,
-    );
+    const computePool: CCloudFlinkComputePool | undefined =
+      await getComputePoolFromMetadata(uriMetadata);
+    const { catalog, database } = await getCatalogDatabaseFromMetadata(uriMetadata, computePool);
 
     // codelens for selecting a compute pool, which we'll use to derive the rest of the properties
     // needed for various Flink operations (env ID, provider/region, etc)
@@ -162,47 +152,23 @@ export class FlinkSqlCodelensProvider extends DisposableCollection implements Co
 /**
  * Get the compute pool from the metadata stored in the document.
  * @param metadata The metadata stored in the document.
- * @param envs The environments to look up the compute pool.
- * @returns The compute pool.
  */
 export async function getComputePoolFromMetadata(
   metadata: UriMetadata | undefined,
-  envs: CCloudEnvironment[],
 ): Promise<CCloudFlinkComputePool | undefined> {
   const defaultComputePoolId: string | undefined = FLINK_CONFIG_COMPUTE_POOL.value;
   // clearing will set the metadata to `null`, so we'll only fall back to the default value if
   // the metadata is `undefined` (not set at all)
-  let computePoolString: string | null | undefined =
-    metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
-  if (computePoolString === undefined) {
-    computePoolString = defaultComputePoolId;
+  let computePoolId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_COMPUTE_POOL_ID];
+  if (computePoolId === undefined) {
+    computePoolId = defaultComputePoolId;
   }
-  if (!computePoolString) {
+  if (!computePoolId) {
     return;
   }
 
-  // Replace this section with dedicated loader method for looking up compute pool by ID
-  // https://github.com/confluentinc/vscode/issues/1963
-  let computePool: CCloudFlinkComputePool | undefined;
-  const env: CCloudEnvironment | undefined = envs.find((e) =>
-    e.flinkComputePools.some((pool) => pool.id === computePoolString),
-  );
-  const computePools: CCloudFlinkComputePool[] = env?.flinkComputePools || [];
-  computePool = computePools.find((p) => p.id === computePoolString);
-  if (computePool) {
-    // explicitly turn into a CCloudFlinkComputePool since `submitFlinkStatementCommand` checks
-    // for a CCloudFlinkComputePool instance
-    logger.debug("compute pool found from stored pool ID", {
-      computePool,
-    });
-    computePool = new CCloudFlinkComputePool({ ...computePool });
-  } else {
-    // no need to clear pool metadata since we'll show "Set Compute Pool" codelens
-    // and the user can choose a new one to update the stored metadata
-    logger.warn("compute pool not found from stored pool ID");
-  }
-
-  return computePool;
+  const loader = CCloudResourceLoader.getInstance();
+  return await loader.getFlinkComputePool(computePoolId);
 }
 
 export interface CatalogDatabase {
@@ -213,16 +179,16 @@ export interface CatalogDatabase {
 /**
  * Get the catalog and database from the metadata stored in the document.
  * @param metadata The metadata stored in the document.
- * @param envs The environments to look up the catalog and database.
  * @param computePool Optional: the compute pool to match provider/region against the database.
  * @returns The catalog and database.
  */
 export async function getCatalogDatabaseFromMetadata(
   metadata: UriMetadata | undefined,
-  envs: CCloudEnvironment[],
   computePool?: CCloudFlinkComputePool,
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
+
+  const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
 
   // first look up the default catalog/database from user settings
   let defaultCatalog: CCloudEnvironment | undefined;

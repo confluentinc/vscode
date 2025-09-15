@@ -17,6 +17,7 @@ import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
@@ -56,7 +57,6 @@ import { post } from "../webview/topic-config-form";
 import topicFormTemplate from "../webview/topic-config-form.html";
 import { createProduceRequestData } from "./utils/produceMessage";
 import { ProduceMessageSchemaOptions } from "./utils/types";
-import { CCloudResourceLoader } from "../loaders";
 
 const logger = new Logger("topics");
 
@@ -517,21 +517,17 @@ LIMIT 10;`;
   });
 
   const editor = await vscode.window.showTextDocument(document, { preview: false });
-  if (!isCCloud(cluster)) {
-    // Only CCloud clusters are supported for Flink so really we should not get here
-    return;
-  }
+
   // Grab the first compute pool in the same region/provider as the topic cluster
-  const ccloudCluster = cluster as CCloudKafkaCluster; // we already know this is ccloud but TS doesn't believe it
-  if (ccloudCluster.flinkPools && ccloudCluster.flinkPools.length > 0) {
+  if (cluster.isFlinkable()) {
     const docUri = editor.document.uri;
     const rm = ResourceManager.getInstance();
     await rm.setUriMetadata(docUri, {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: ccloudCluster.flinkPools[0].id,
+      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: cluster.flinkPools[0].id,
       [UriMetadataKeys.FLINK_CATALOG_ID]: topicEnvironment.id,
       [UriMetadataKeys.FLINK_CATALOG_NAME]: topicEnvironment.name,
-      [UriMetadataKeys.FLINK_DATABASE_ID]: ccloudCluster.id,
-      [UriMetadataKeys.FLINK_DATABASE_NAME]: ccloudCluster.name,
+      [UriMetadataKeys.FLINK_DATABASE_ID]: cluster.id,
+      [UriMetadataKeys.FLINK_DATABASE_NAME]: cluster.name,
     });
   }
 }

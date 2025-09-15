@@ -2,12 +2,17 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
-import { currentKafkaClusterChanged } from "../emitters";
+import { flinkDatabaseViewResourceChanged, topicsViewResourceChanged } from "../emitters";
 import { Logger } from "../logging";
-import { KafkaCluster } from "../models/kafkaCluster";
+import {
+  CCloudFlinkDbKafkaCluster,
+  CCloudKafkaCluster,
+  KafkaCluster,
+} from "../models/kafkaCluster";
 import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
+  flinkDatabaseQuickpick,
   kafkaClusterQuickPick,
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
@@ -17,7 +22,10 @@ import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
 
-async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
+/**
+ * Invoked from the topics view to pick a new Kafka cluster to view topics for,
+ * or from the Resources view default action when clicking on Kafka cluster. */
+export async function selectTopicsViewKafkaClusterCommand(cluster?: KafkaCluster) {
   // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
   const kafkaCluster: KafkaCluster | undefined =
     cluster instanceof KafkaCluster ? cluster : await kafkaClusterQuickPickWithViewProgress();
@@ -25,10 +33,34 @@ async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
     return;
   }
 
-  // only called when clicking a Kafka cluster in the Resources view; not a dedicated view
-  // action or command palette option
-  currentKafkaClusterChanged.fire(kafkaCluster);
-  vscode.commands.executeCommand("confluent-topics.focus");
+  // Inform the topics view that the user has selected a new Kafka cluster.
+  topicsViewResourceChanged.fire(kafkaCluster);
+  // And set focus to the topics view.
+  void vscode.commands.executeCommand("confluent-topics.focus");
+}
+
+/** Pick a Flinkable Kafka Cluster as the one to examine in the Flink Database view */
+export async function selectFlinkDatabaseViewKafkaClusterCommand(
+  cluster?: CCloudFlinkDbKafkaCluster,
+) {
+  // ensure whatever was passed in is a flinkable CCloudKafkaCluster; if not, prompt the user to pick one
+  const flinkDatabase: CCloudFlinkDbKafkaCluster | undefined =
+    cluster instanceof CCloudKafkaCluster && cluster.isFlinkable()
+      ? cluster
+      : await flinkDatabaseQuickpick(
+          undefined, // do not limit to a specific compute pool
+          "Select a Flink Database (a Flink-enabled Kafka cluster)",
+        );
+
+  if (!flinkDatabase) {
+    return;
+  }
+
+  // Inform the Flink Database view that the current database changed.
+  flinkDatabaseViewResourceChanged.fire(flinkDatabase);
+
+  // And set focus to the flink DB view.
+  void vscode.commands.executeCommand("confluent-flink-database.focus");
 }
 
 async function deleteTopicCommand(topic: KafkaTopic) {
@@ -283,9 +315,16 @@ export async function copyBootstrapServers(item: KafkaCluster) {
 
 export function registerKafkaClusterCommands(): vscode.Disposable[] {
   return [
+    // Pick a Kafka cluster for the Topics view.
     registerCommandWithLogging(
-      "confluent.resources.kafka-cluster.select",
-      selectKafkaClusterCommand,
+      "confluent.topics.kafka-cluster.select",
+      selectTopicsViewKafkaClusterCommand,
+    ),
+    // Picked a Flink Database (a Flinkable CCloud Kafka cluster) from the Flink Database view title
+    // or from context menu item in resources view.
+    registerCommandWithLogging(
+      "confluent.flinkdatabase.kafka-cluster.select",
+      selectFlinkDatabaseViewKafkaClusterCommand,
     ),
     registerCommandWithLogging("confluent.topics.create", createTopicCommand),
     registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),

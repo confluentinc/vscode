@@ -48,6 +48,7 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
     registerCommandWithLogging("confluent.resources.scaffold", resourceScaffoldProjectRequest),
+    registerCommandWithLogging("confluent.artifacts.scaffold", scaffoldFlinkArtifact),
   ];
 }
 
@@ -101,6 +102,15 @@ async function resourceScaffoldProjectRequest(
   }
 }
 
+// Simple wrapper to set the templateType to "artifact" for Flink Artifacts/UDFs scaffold command
+async function scaffoldFlinkArtifact() {
+  return await scaffoldProjectRequest(
+    {
+      templateType: "artifact",
+    },
+    "artifact",
+  );
+}
 export const scaffoldProjectRequest = async (
   templateRequestOptions?: PrefilledTemplateOptions,
   telemetrySource?: string,
@@ -123,6 +133,8 @@ export const scaffoldProjectRequest = async (
           return tags.includes("apache flink") || tags.includes("table api");
         } else if (templateType === "kafka") {
           return tags.includes("producer") || tags.includes("consumer");
+        } else if (templateType === "artifact") {
+          return tags.includes("udfs");
         }
 
         // If no specific type, show all templates with producer or consumer tags
@@ -312,7 +324,11 @@ export async function applyTemplate(
     // Notify the user that the project was generated successfully
     const selection = await vscode.window.showInformationMessage(
       `🎉 Project Generated`,
-      { modal: true, detail: `Location: ${destination.path}` },
+      {
+        // Do not show a modal dialog when running E2E tests
+        modal: !process.env.CONFLUENT_VSCODE_E2E_TESTING,
+        detail: `Location: ${destination.path}`,
+      },
       { title: "Open in New Window" },
       { title: "Open in Current Window" },
       { title: "Dismiss", isCloseAffordance: true },

@@ -290,7 +290,7 @@ describe("FlinkStatement", () => {
           sqlKind: statement.sqlKind,
           createdAt: statement.createdAt,
         });
-        assert.strictEqual(flinkStatement.areResultsViewable, expected);
+        assert.strictEqual(flinkStatement.canRequestResults, expected);
       });
     });
   });

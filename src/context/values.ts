@@ -66,8 +66,8 @@ export enum ContextValues {
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
   /** The user focused a Flink compute pool for the Flink Statements view. */
   flinkStatementsPoolSelected = "confluent.flinkStatementsPoolSelected",
-  /** The user focused a Flink compute pool for the Flink Artifacts view. */
-  flinkArtifactsPoolSelected = "confluent.flinkArtifactsPoolSelected",
+  /** The user focused a Flinkable Kafka cluster for the Flink Database view. */
+  flinkDatabaseSelected = "confluent.flinkDatabaseSelected",
 
   /** The user applied a search string to the Resources view. */
   resourceSearchApplied = "confluent.resourceSearchApplied",
@@ -80,8 +80,8 @@ export enum ContextValues {
   /** The user applied a search string to the Flink Artifacts view. */
   flinkArtifactsSearchApplied = "confluent.flinkArtifactsSearchApplied",
 
-  /** The user changed the mode of the Flink Artifacts/UDFs view. */
-  flinkArtifactsUDFsViewMode = "confluent.flinkArtifactsUDFsViewMode",
+  /** The user changed the mode of the Flink Database view. */
+  flinkDatabaseViewMode = "confluent.flinkDatabaseViewMode",
 
   /**
    * EXPERIMENTAL: Is the chat participant enabled?
