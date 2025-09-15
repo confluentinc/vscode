@@ -782,7 +782,7 @@
       {
         "command": "confluent.uploadArtifact",
         "icon": "$(cloud-upload)",
-        "title": "Upload Artifact",
+        "title": "Upload Flink Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts",
         "enablement": "isDevelopment && confluent.ccloudConnectionAvailable"
       }
@@ -1553,7 +1553,7 @@
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "true"
+          "when": "confluent.ccloudConnectionAvailable"
         }
       ],
       "editor/title": [
