@@ -1526,7 +1526,10 @@
         },
         {
           "command": "confluent.flink.statements.search",
-          "when": "!confluent.flinkStatementsSearchApplied"
+        {
+          "command": "confluent.flink.statements.search",
+          "when": "true"
+        },
         },
         {
           "command": "confluent.flink.statements.search.clear",

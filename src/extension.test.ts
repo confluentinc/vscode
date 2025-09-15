@@ -213,7 +213,7 @@ describe("Extension manifest tests", () => {
   });
 
   it("All extension commands should be mentioned in menus.commandPalette", async () => {
-    // All command names mentioned in contributes.menus.commandPalette in package.json ...
+    // All command IDs mentioned in contributes.menus.commandPalette in package.json ...
     const commandPaletteCommands = packageJSON.contributes.menus["commandPalette"].map(
       (item: any) => item.command,
     );
