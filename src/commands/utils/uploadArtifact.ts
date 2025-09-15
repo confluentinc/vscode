@@ -96,15 +96,17 @@ export async function promptForArtifactUploadParams(
     });
   }
 
+  const isCcloudItem =
+    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster);
   // Use the item's environment if provided, otherwise prompt for it
   const environment =
-    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster)
+    isCcloudItem && item.environmentId
       ? { id: item.environmentId }
       : await flinkCcloudEnvironmentQuickPick();
 
   // Use the item's provider and region if exists, otherwise prompt for it
   let cloudRegion: IProviderRegion | undefined;
-  if (item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster)) {
+  if (isCcloudItem) {
     cloudRegion = { provider: item.provider, region: item.region };
   } else {
     cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
