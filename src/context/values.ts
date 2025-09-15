@@ -41,6 +41,8 @@ export enum ContextValues {
   RESOURCES_WITH_URIS = "confluent.resourcesWithURIs",
   /** Array of resources that can be selected for comparison and presented in a diff view. */
   DIFFABLE_RESOURCES = "confluent.diffableResources",
+  /** Whether the extension is running in an end-to-end testing environment. */
+  E2E_TESTING = "confluent.e2eTesting",
 
   // -- ADJUSTABLE CONTEXT VALUES --
   /** The user has a valid, authenticated connection to Confluent Cloud.
