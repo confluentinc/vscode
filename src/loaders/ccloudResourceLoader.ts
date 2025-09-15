@@ -437,8 +437,12 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
     }
 
-    // Parse and return all results.
-    return await parseAllFlinkStatementResults<RT>(statement);
+    // Consume all results.
+    const resultRows: Array<RT> = await parseAllFlinkStatementResults<RT>(statement);
+
+    // call to delete the statement here when doing issue 2597.
+
+    return resultRows;
   }
 }
 /**
