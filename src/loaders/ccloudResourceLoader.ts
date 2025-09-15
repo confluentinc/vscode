@@ -503,9 +503,9 @@ async function loadArtifactsForProviderRegion(
   while (needMore) {
     try {
       const restResult = await artifactsClient.listArtifactV1FlinkArtifacts(request);
-
+      const responseData = restResult.data ?? [];
       // Convert each Flink artifact from the REST API representation to our codebase model.
-      for (const restArtifact of restResult.data) {
+      for (const restArtifact of responseData) {
         const artifact = restFlinkArtifactToModel(restArtifact, queryable);
         flinkArtifacts.push(artifact);
       }

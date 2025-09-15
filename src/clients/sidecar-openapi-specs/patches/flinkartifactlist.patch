@@ -1,0 +1,13 @@
+diff --git a/src/clients/sidecar-openapi-specs/flink-artifacts.openapi.yaml b/src/clients/sidecar-openapi-specs/flink-artifacts.openapi.yaml
+index a01859ed..bba405f3 100644
+--- a/src/clients/sidecar-openapi-specs/flink-artifacts.openapi.yaml
++++ b/src/clients/sidecar-openapi-specs/flink-artifacts.openapi.yaml
+@@ -946,6 +946,8 @@ components:
+                   example: https://api.confluent.cloud/artifact/v1/flink-artifacts?page_token=UvmDWOB1iwfAIBPj6EYb
+         data:
+           type: array
++          # manually added due to TypeError when null
++          nullable: true
+           description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+           items:
+             allOf:
