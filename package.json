@@ -1526,10 +1526,7 @@
         },
         {
           "command": "confluent.flink.statements.search",
-        {
-          "command": "confluent.flink.statements.search",
           "when": "true"
-        },
         },
         {
           "command": "confluent.flink.statements.search.clear",
