@@ -82,53 +82,61 @@ export class CustomMarkdownString extends vscode.MarkdownString {
   }
 
   /**
-   * Construct a tooltip markdown string from a resource and a set of key-value pairs.
-   * @param title The kind of resource (e.g. "Kafka Cluster", "Compute Pool", etc.)
-   * @param iconName Icon to use beside title, if any.
-   * @param keyValuePairs attribute name + from-resource-value pairs. Any undefined value will be skipped.
-   * @param ccloudUrl Optional URL to view this resource in Confluent Cloud.
-   * @param linkUrl Optional link label + URL pair to add a custom link at the bottom of the tooltip.
-   * @returns
+   * Add a title with optional icon to the tooltip
    */
-  static resourceTooltip(
-    title: string,
-    iconName: IconNames | undefined,
-    ccloudUrl: string | undefined,
-    keyValuePairs: KeyValuePairArray,
-    linkUrl?: KeyValuePair,
-  ): CustomMarkdownString {
-    const tooltip = new CustomMarkdownString();
-
+  addHeader(title: string, iconName?: IconNames): this {
     if (iconName) {
-      tooltip.appendMarkdown(`#### $(${iconName}) ${title}\n`);
+      this.appendMarkdown(`#### $(${iconName}) ${title}\n`);
     } else {
-      tooltip.appendMarkdown(`#### ${title}\n`);
+      this.appendMarkdown(`#### ${title}\n`);
     }
-    tooltip.appendMarkdown("\n\n---");
+    this.appendMarkdown("\n\n---");
+    return this;
+  }
 
-    keyValuePairs.forEach(([key, value]) => {
-      // Skip undefined or empty values
-      if (value === undefined || value === "") {
-        return;
-      }
-      tooltip.appendMarkdown(`\n\n${key}: \`${value}\``);
-    });
-
-    if (linkUrl) {
-      tooltip.appendMarkdown(`\n\n[${linkUrl[0]}](${linkUrl[1]})`);
+  /**
+   * Add a standard field (key: value) to the tooltip
+   */
+  addField(label: string, value: string | undefined): this {
+    if (value !== undefined && value !== "") {
+      this.appendMarkdown(`\n\n${label}: \`${value}\``);
     }
+    return this;
+  }
 
-    if (ccloudUrl) {
-      // Ensure URL is vaguely valid
-      if (!ccloudUrl.startsWith("https://")) {
-        throw new Error(`Invalid URL: ${ccloudUrl}`);
-      }
-      tooltip.appendMarkdown("\n\n---");
-      tooltip.appendMarkdown(
-        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudUrl})`,
-      );
+  /**
+   * Add a warning message with icon. Automatically adds a divider before each warning.
+   */
+  addWarning(message: string, icon: string = "warning"): this {
+    this.addDivider();
+    this.appendMarkdown(`\n\n$(${icon}) ${message}`);
+    return this;
+  }
+
+  /**
+   * Add a divider line
+   */
+  addDivider(): this {
+    this.appendMarkdown("\n\n---");
+    return this;
+  }
+
+  /**
+   * Add Confluent Cloud link
+   */
+  addCCloudLink(url: string): this {
+    if (url && url.startsWith("https://")) {
+      this.addDivider();
+      this.appendMarkdown(`\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${url})`);
     }
+    return this;
+  }
 
-    return tooltip;
+  /**
+   * Add a custom link
+   */
+  addLink(label: string, url: string): this {
+    this.appendMarkdown(`\n\n[${label}](${url})`);
+    return this;
   }
 }
