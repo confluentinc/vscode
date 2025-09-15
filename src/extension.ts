@@ -20,6 +20,7 @@ import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
+import { AvroCodelensProvider } from "./codelens/avroProvider";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
@@ -34,6 +35,7 @@ import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
+import { registerMedusaCodeLensCommands } from "./commands/medusaCodeLens";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
@@ -265,6 +267,7 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
+    ...registerMedusaCodeLensCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
@@ -340,10 +343,18 @@ async function _activateExtension(
   const docManager = DocumentMetadataManager.getInstance();
   context.subscriptions.push(docManager);
 
-  const provider = FlinkSqlCodelensProvider.getInstance();
+  const flinkProvider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", provider),
-    provider,
+    vscode.languages.registerCodeLensProvider("flinksql", flinkProvider),
+    flinkProvider,
+  );
+
+  // register the Avro code lens provider (it will check the feature flag internally)
+  const avroProvider = AvroCodelensProvider.getInstance();
+
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider({ pattern: "**/*.avsc" }, avroProvider),
+    avroProvider,
   );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
