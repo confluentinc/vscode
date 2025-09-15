@@ -214,8 +214,8 @@ describe("Extension manifest tests", () => {
 
   it("should have commandPalette menu entries sorted by command name", () => {
     interface CommandPaletteEntry {
-      command?: string;
-      when?: string;
+      command: string;
+      when: string;
       [key: string]: unknown;
     }
 
