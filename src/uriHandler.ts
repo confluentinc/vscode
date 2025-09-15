@@ -25,6 +25,7 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
   }
 
   public async handleUri(uri: vscode.Uri) {
+    logger.info(`Handling URI: ${uri.toString()}`);
     const { path } = uri;
     switch (path) {
       case "/authCallback":

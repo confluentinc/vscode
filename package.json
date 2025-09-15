@@ -447,6 +447,13 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.handleUri",
+        "title": "Handle URI",
+        "icon": "$(link)",
+        "category": "Confluent",
+        "enablement": "confluent.e2eTesting"
+      },
+      {
         "command": "confluent.openCCloudApiKeysUrl",
         "icon": "$(confluent-logo)",
         "title": "Manage API Keys in Confluent Cloud",
@@ -1307,6 +1314,10 @@
         {
           "command": "confluent.flinkStatementResults",
           "when": "false"
+        },
+        {
+          "command": "confluent.handleUri",
+          "when": "confluent.e2eTesting"
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
