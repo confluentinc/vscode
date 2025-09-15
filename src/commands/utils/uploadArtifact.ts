@@ -7,13 +7,10 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactUploadCompleted } from "../../emitters";
-import { isResponseError, logError } from "../../errors";
+import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
-import {
-  showErrorNotificationWithButtons,
-  showWarningNotificationWithButtons,
-} from "../../notifications";
+import { showErrorNotificationWithButtons } from "../../notifications";
 import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
@@ -48,7 +45,8 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
     const contentType: string =
       ext === ".jar" ? "application/java-archive" : "application/octet-stream";
 
-    const blob: Blob = new Blob([bytes], { type: contentType });
+    const safeBytes = new Uint8Array(bytes);
+    const blob: Blob = new Blob([safeBytes], { type: contentType });
 
     return { blob, contentType };
   } catch (err) {
@@ -128,9 +126,6 @@ export async function promptForArtifactUploadParams(): Promise<ArtifactUploadPar
   });
 
   if (!artifactName) {
-    void showWarningNotificationWithButtons(
-      "Upload Artifact cancelled: Artifact name is required.",
-    );
     return undefined;
   }
 
@@ -191,7 +186,6 @@ export async function handleUploadToCloudProvider(
           progress.report({ message: "Uploading to AWS storage..." });
           logger.debug("Uploading to AWS storage");
 
-          // build required form data for api request
           const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
 
           if (!uploadFormData) {
@@ -260,31 +254,11 @@ export async function uploadArtifactToCCloud(
 
     return response;
   } catch (error) {
-    let userMessage = "Failed to create Flink artifact. See logs for details.";
     let extra: Record<string, unknown> = {
       cloud: params.cloud,
       region: params.region,
     };
-
-    if (isResponseError(error)) {
-      let errBody: string | undefined;
-      try {
-        const respJson = await error.response.clone().json();
-        if (respJson && typeof respJson === "object" && respJson.message) {
-          errBody = respJson.message;
-        }
-      } catch {
-        errBody = await error.response.clone().text();
-      }
-      if (errBody !== undefined) {
-        userMessage = `Failed to create Flink artifact: ${errBody}`;
-      }
-    }
-    void showErrorNotificationWithButtons(userMessage);
     logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
-    if (error && typeof error === "object" && "message" in error) {
-      (error as { message: string }).message = userMessage;
-    }
     throw error;
   }
 }

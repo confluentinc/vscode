@@ -1,4 +1,4 @@
-import { SqlV1StatementStatus } from "../../../src/clients/flinkSql";
+import { ColumnDetails, SqlV1StatementStatus } from "../../../src/clients/flinkSql";
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import { FlinkStatement, Phase } from "../../../src/models/flinkStatement";
@@ -23,6 +23,10 @@ export interface CreateFlinkStatementArgs {
 
   createdAt?: Date;
   updatedAt?: Date;
+
+  appendOnly?: boolean;
+  upsertColumns?: number[];
+  schemaColumns?: ColumnDetails[];
 }
 
 export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): FlinkStatement {
@@ -47,8 +51,9 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       traits: {
         sql_kind: overrides.sqlKind || "SELECT",
         is_bounded: true,
-        is_append_only: true,
-        schema: {},
+        upsert_columns: overrides.upsertColumns,
+        is_append_only: overrides.appendOnly || true,
+        schema: overrides.schemaColumns ? { columns: overrides.schemaColumns } : {},
       },
       scaling_status: {},
     },

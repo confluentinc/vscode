@@ -134,7 +134,16 @@ export class ResourcesView extends View {
     return this.schemaRegistries.filter({ hasText: "Schema Registry" });
   }
 
-  // FUTURE: add Flink compute pool getter methods
+  /**
+   * Locator for CCloud Flink Compute Pool tree items.
+   * Only visible when a {@link ccloudEnvironments CCloud environment item} is expanded.
+   */
+  get ccloudFlinkComputePools(): Locator {
+    // third nested element: Confluent Cloud item -> environment item -> Flink Compute Pool item
+    return this.body
+      .locator("[role='treeitem'][aria-level='3']")
+      .filter({ has: this.page.locator(".codicon-confluent-flink-compute-pool") });
+  }
 
   /**
    * Open the Direct Connection form by clicking "Add New Connection" -> "Enter manually".
