@@ -5,10 +5,8 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { getShowErrorNotificationWithButtonsStub } from "../../../tests/stubs/notifications";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
-import { createResponseError } from "../../../tests/unit/testUtils";
 import {
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
@@ -19,7 +17,6 @@ import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/Pr
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
 import { CloudProvider } from "../../models/resource";
-import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
@@ -198,30 +195,6 @@ describe("uploadArtifact", () => {
       sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
       const result = await promptForArtifactUploadParams();
       assert.strictEqual(result, undefined);
-    });
-
-    it("should show warning notification if there is no artifact name", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
-      cloudProviderRegionQuickPickStub.resolves({
-        ...fakeCloudProviderRegion,
-        provider: "AZURE",
-      });
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves(undefined);
-
-      const warningNotificationStub = sandbox
-        .stub(notifications, "showWarningNotificationWithButtons")
-        .resolves(undefined);
-
-      const result = await promptForArtifactUploadParams();
-
-      assert.strictEqual(result, undefined);
-
-      sinon.assert.calledWith(
-        warningNotificationStub,
-        "Upload Artifact cancelled: Artifact name is required.",
-      );
     });
 
     it("should prefill artifact name with file base name when selecting a file", async () => {
@@ -468,62 +441,6 @@ describe("uploadArtifact", () => {
           cloud: mockAzureParams.cloud,
           region: mockAzureParams.region,
         });
-      });
-
-      it("should show an error notification if the upload fails", async () => {
-        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(
-          createResponseError(500, "Internal Server Error", "Upload failed"),
-        );
-
-        const errorNotificationStub = getShowErrorNotificationWithButtonsStub(sandbox);
-
-        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, "upload-id-123"));
-
-        sinon.assert.calledOnce(errorNotificationStub);
-        sinon.assert.calledWith(
-          errorNotificationStub,
-          "Failed to create Flink artifact: Upload failed",
-        );
-      });
-
-      it("should parse and display JSON error details from ResponseError", async () => {
-        const mockUploadId = "upload-id-123";
-
-        const responseError = createResponseError(409, "Conflict", "artifact already exists");
-
-        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
-
-        const errorNotificationStub = sandbox
-          .stub(notifications, "showErrorNotificationWithButtons")
-          .resolves();
-
-        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, mockUploadId), responseError);
-
-        sinon.assert.calledOnce(errorNotificationStub);
-        sinon.assert.calledWith(
-          errorNotificationStub,
-          `Failed to create Flink artifact: artifact already exists`,
-        );
-      });
-
-      it("should parse and display text error details from ResponseError", async () => {
-        const mockUploadId = "upload-id-123";
-        const textBody = "artifact already exists";
-
-        const responseError = createResponseError(409, "Conflict", textBody);
-        stubbedFlinkArtifactsApi.createArtifactV1FlinkArtifact.rejects(responseError);
-
-        const errorNotificationStub = sandbox
-          .stub(notifications, "showErrorNotificationWithButtons")
-          .resolves();
-
-        await assert.rejects(uploadArtifactToCCloud(mockAzureParams, mockUploadId), responseError);
-
-        sinon.assert.calledOnce(errorNotificationStub);
-        sinon.assert.calledWith(
-          errorNotificationStub,
-          `Failed to create Flink artifact: ${textBody}`,
-        );
       });
     });
   });

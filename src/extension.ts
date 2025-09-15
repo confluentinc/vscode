@@ -20,6 +20,7 @@ import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
+import { AvroCodelensProvider } from "./codelens/avroProvider";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
@@ -34,6 +35,7 @@ import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
+import { registerMedusaCodeLensCommands } from "./commands/medusaCodeLens";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
@@ -90,9 +92,9 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
-import { FlinkArtifactsUDFsViewProvider } from "./viewProviders/flinkArtifacts";
+import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
-import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
+import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -217,7 +219,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkArtifactsUDFsViewProvider.getInstance();
+  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProviderInstance,
@@ -265,6 +267,7 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
+    ...registerMedusaCodeLensCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
@@ -340,10 +343,18 @@ async function _activateExtension(
   const docManager = DocumentMetadataManager.getInstance();
   context.subscriptions.push(docManager);
 
-  const provider = FlinkSqlCodelensProvider.getInstance();
+  const flinkProvider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", provider),
-    provider,
+    vscode.languages.registerCodeLensProvider("flinksql", flinkProvider),
+    flinkProvider,
+  );
+
+  // register the Avro code lens provider (it will check the feature flag internally)
+  const avroProvider = AvroCodelensProvider.getInstance();
+
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider({ pattern: "**/*.avsc" }, avroProvider),
+    avroProvider,
   );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
@@ -370,6 +381,7 @@ async function setupContextValues() {
     "ccloud-environment",
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
     "ccloud-schema-registry",
@@ -383,7 +395,7 @@ async function setupContextValues() {
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",
-    "confluent-flink-artifacts",
+    "confluent-flink-database",
   ]);
 
   // enables the "Copy ID" command; these resources must have the "id" property
@@ -391,6 +403,7 @@ async function setupContextValues() {
     "ccloud-environment", // direct/local environments only have internal IDs
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
     "ccloud-flink-compute-pool",
     "ccloud-flink-artifact",
@@ -405,6 +418,7 @@ async function setupContextValues() {
     "ccloud-environment",
     "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
     "ccloud-flink-artifact",
@@ -414,6 +428,7 @@ async function setupContextValues() {
   ]);
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-kafka-cluster",
+    "ccloud-flinkable-kafka-cluster",
     "ccloud-schema-registry",
     "local-kafka-cluster",
     "local-schema-registry",
@@ -425,8 +440,8 @@ async function setupContextValues() {
   ]);
   // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
   const flinkViewMode = setContextValue(
-    ContextValues.flinkArtifactsUDFsViewMode,
-    FlinkArtifactsViewProviderMode.Artifacts,
+    ContextValues.flinkDatabaseViewMode,
+    FlinkDatabaseViewProviderMode.Artifacts,
   );
   await Promise.all([
     chatParticipantEnabled,

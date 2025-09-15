@@ -556,8 +556,6 @@ describe("commands/schemas.ts", function () {
 
   describe("deleteSchemaSubjectCommand()", function () {
     let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-    let getSchemasViewProviderStub: sinon.SinonStub;
-    let schemaSubjectQuickPickStub: sinon.SinonStub;
     let hardDeletionQuickPickStub: sinon.SinonStub;
     let confirmSchemaSubjectDeletionStub: sinon.SinonStub;
     let confirmSchemaVersionDeletionStub: sinon.SinonStub;
@@ -568,8 +566,6 @@ describe("commands/schemas.ts", function () {
 
     beforeEach(function () {
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
-      getSchemasViewProviderStub = sandbox.stub(schemasViewProvider, "getSchemasViewProvider");
-      schemaSubjectQuickPickStub = sandbox.stub(quickpicks, "schemaSubjectQuickPick").resolves();
       hardDeletionQuickPickStub = sandbox
         .stub(schemaManagementDeletion, "hardDeletionQuickPick")
         .resolves();
@@ -587,50 +583,6 @@ describe("commands/schemas.ts", function () {
         .resolves();
       withProgressStub = sandbox.stub(window, "withProgress").resolves();
       logUsageStub = sandbox.stub(telemetry, "logUsage");
-    });
-
-    // shoup: we won't need this once https://github.com/confluentinc/vscode/issues/1875 is done
-    // and the quickpick is removed
-    it("should show a subject quickpick when no subject is provided", async function () {
-      getSchemasViewProviderStub.returns({ schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY });
-      schemaSubjectQuickPickStub.resolves("test-subject");
-      stubbedLoader.getSchemasForSubject.resolves([TEST_CCLOUD_SCHEMA]);
-      hardDeletionQuickPickStub.resolves(false);
-      confirmSchemaVersionDeletionStub.resolves(true);
-      withProgressStub.callsFake(async (options, task) => await task());
-
-      await schemas.deleteSchemaSubjectCommand(undefined as any);
-
-      sinon.assert.calledOnceWithExactly(
-        schemaSubjectQuickPickStub,
-        TEST_CCLOUD_SCHEMA_REGISTRY,
-        false,
-        "Choose a subject to delete",
-      );
-      sinon.assert.calledOnce(stubbedLoader.deleteSchemaSubject);
-    });
-
-    // shoup: we won't need this once https://github.com/confluentinc/vscode/issues/1875 is done
-    // and the quickpick is removed
-    it("should return early if no schema registry is available when showing the subject quickpick", async function () {
-      getSchemasViewProviderStub.returns({ schemaRegistry: null });
-
-      await schemas.deleteSchemaSubjectCommand(undefined as any);
-
-      sinon.assert.notCalled(schemaSubjectQuickPickStub);
-      sinon.assert.notCalled(stubbedLoader.getSchemasForSubject);
-    });
-
-    // shoup: we won't need this once https://github.com/confluentinc/vscode/issues/1875 is done
-    // and the quickpick is removed
-    it("should return early if user cancels subject quickpick", async function () {
-      getSchemasViewProviderStub.returns({ schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY });
-      schemaSubjectQuickPickStub.resolves(undefined);
-
-      await schemas.deleteSchemaSubjectCommand(undefined as any);
-
-      sinon.assert.calledOnce(schemaSubjectQuickPickStub);
-      sinon.assert.notCalled(stubbedLoader.getSchemasForSubject);
     });
 
     it("should return early if the passed argument is not a Subject", async function () {

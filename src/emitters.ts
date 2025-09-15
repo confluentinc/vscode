@@ -2,11 +2,11 @@ import * as vscode from "vscode";
 import { CCloudEnvironment } from "./models/environment";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId } from "./models/flinkStatement";
-import { KafkaCluster } from "./models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
-import { FlinkArtifactsViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
+import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
@@ -94,7 +94,7 @@ export const environmentChanged = new vscode.EventEmitter<EnvironmentChangeEvent
  * Cluster" action from the Topics view, or cleared out from a connection (or CCloud organization)
  * change.
  */
-export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster | null>();
+export const topicsViewResourceChanged = new vscode.EventEmitter<KafkaCluster | null>();
 /**
  * Fired whenever a Schema Registry is selected from the Resources view, chosen from the
  * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
@@ -112,13 +112,13 @@ export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegist
 export const currentFlinkStatementsResourceChanged = new vscode.EventEmitter<
   CCloudFlinkComputePool | CCloudEnvironment | null
 >();
+
 /**
- * Fired whenever a Flink compute pool is selected from the Resources view or the Flink Artifacts
- * view, chosen from the "Select Flink Compute Pool" action from the Flink Artifacts view or
- * command palette, or cleared out from a connection (or CCloud organization) change.
+ * Fired when Flink Database (a Flinkable CCloud Kafka Cluster) focus for the
+ * Flink Database view changes.
  */
-export const currentFlinkArtifactsPoolChanged =
-  new vscode.EventEmitter<CCloudFlinkComputePool | null>();
+export const flinkDatabaseViewResourceChanged =
+  new vscode.EventEmitter<CCloudFlinkDbKafkaCluster | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 
@@ -142,8 +142,8 @@ export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 /** Fires when an Artifact upload completes successfully. */
 export const artifactUploadCompleted = new vscode.EventEmitter<void>();
 
-/** Event emitter for switching Flink artifact/UDF view modes. */
-export const flinkArtifactUDFViewMode = new vscode.EventEmitter<FlinkArtifactsViewProviderMode>();
+/** Event emitter for switching Flink Database view modes. */
+export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
 
 /** Fires when an Artifact upload deletes successfully. */
 export const artifactUploadDeleted = new vscode.EventEmitter<void>();

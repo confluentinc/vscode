@@ -12,7 +12,7 @@ auto_cancel:
     when: "branch != 'main'"
 
 execution_time_limit:
-  hours: 1
+  hours: 3
 
 queue:
   - when: "branch != 'main'"
