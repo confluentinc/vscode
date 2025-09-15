@@ -803,27 +803,6 @@ export function functional(done) {
 }
 
 export function e2eRun(done) {
-  // check if the E2E tests are being run from a VS Code terminal (stable and insiders both use "vscode" here)
-  if (process.env.TERM_PROGRAM === "vscode") {
-    const vscodeVersion = process.env.VSCODE_VERSION ?? "stable";
-    // check for VS Code stable vs Insiders based on TERM_PROGRAM_VERSION
-    // - stable: "1.x.x"
-    // - insiders: "1.x.x-insider"
-    const runningFromVSCodeInsidersTerminal =
-      process.env.TERM_PROGRAM_VERSION?.endsWith("insider") ?? false;
-    // the only way we should allow E2E tests to run is if we're starting them from a different
-    // terminal version than the specified in the VSCODE_VERSION env var
-    const runStableFromStable = vscodeVersion !== "insiders" && !runningFromVSCodeInsidersTerminal;
-    const runInsidersFromInsiders =
-      vscodeVersion === "insiders" && runningFromVSCodeInsidersTerminal;
-    if (runStableFromStable || runInsidersFromInsiders) {
-      console.error(
-        "If you want to run E2E tests from a VS Code terminal, you must set the VSCODE_VERSION env var to the opposite of what VS Code version you are currently using. (For example, if you are running VS Code Insiders, set VSCODE_VERSION=stable to run E2E tests.)",
-      );
-      return done(1);
-    }
-  }
-
   // set env var so extension knows it's in E2E test mode, which is mainly used for CCloud auth:
   // - the auth provider will store the sign-in URL to a temp file for easier test handling of the
   //   browser-based sign-in flow through Playwright
