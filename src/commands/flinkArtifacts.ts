@@ -39,7 +39,7 @@ export async function uploadArtifactCommand(): Promise<void> {
 
     const uploadUrl = await getPresignedUploadUrl(request);
 
-    if (!uploadUrl.upload_id) {
+    if (!uploadUrl) {
       throw new Error("Upload ID is missing from the presigned URL response.");
     }
 
