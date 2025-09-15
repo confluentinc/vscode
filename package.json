@@ -1316,6 +1316,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.handleUri",
+          "when": "confluent.e2eTesting"
+        },
+        {
           "command": "confluent.openCCloudApiKeysUrl",
           "when": "false"
         },
