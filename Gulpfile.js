@@ -231,6 +231,7 @@ function sortByCommandId(a, b) {
   return ca.localeCompare(cb);
 }
 
+organizePackageJson.description = "Order sections of package.json by command ID.";
 export async function organizePackageJson() {
   let pkg = loadPackageJson();
 
@@ -255,7 +256,6 @@ export async function organizePackageJson() {
   );
   return 0;
 }
-organizePackageJson.description = "Order sections of package.json by command name.";
 
 /** @type {import("rollup").LogHandlerWithDefault} */
 function handleBuildLog(level, log, handler) {
