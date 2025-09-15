@@ -5,7 +5,7 @@ import { FlinkStatementResultsManager, MessageType } from "../src/flinkStatement
 import { CCloudResourceLoader } from "../src/loaders/ccloudResourceLoader";
 import { FlinkStatement } from "../src/models/flinkStatement";
 import * as sidecar from "../src/sidecar";
-import { DEFAULT_RESULTS_LIMIT } from "../src/utils/flinkStatementResults";
+import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
 import { WebviewStorage } from "../src/webview/comms/comms";
 import {
   FlinkStatementResultsViewModel,

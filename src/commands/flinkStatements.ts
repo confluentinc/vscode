@@ -8,6 +8,7 @@ import {
 } from "../documentProviders/flinkStatement";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
+import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
 import {
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
@@ -15,7 +16,6 @@ import {
   submitFlinkStatement,
   waitForResultsFetchable,
 } from "../flinkSql/statementUtils";
-import { FlinkStatementResultsManager } from "../flinkStatementResultsManager";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
