@@ -3,8 +3,8 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
 import { Tag } from "../tags";
-import { openConfluentExtension } from "./utils/confluent";
-import { login } from "./utils/confluentCloud";
+import { setupCCloudConnection } from "../utils/connections";
+import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import {
   stopStatement,
   submitFlinkStatement,
@@ -19,11 +19,16 @@ test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
   let webview: FrameLocator;
 
   test.beforeEach(async ({ page, electronApp }) => {
-    // Open the extension
-    await openConfluentExtension(page);
+    // activate the extension by opening the primary sidebar
+    await openConfluentSidebar(page);
 
     // Login to Confluent Cloud
-    await login(page, electronApp, process.env.E2E_USERNAME!, process.env.E2E_PASSWORD!);
+    await setupCCloudConnection(
+      page,
+      electronApp,
+      process.env.E2E_USERNAME!,
+      process.env.E2E_PASSWORD!,
+    );
   });
 
   test.afterEach(async () => {
