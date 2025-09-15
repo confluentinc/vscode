@@ -158,13 +158,19 @@ describe("Refreshable views tests", () => {
 
 describe("Extension manifest tests", () => {
   let context: vscode.ExtensionContext;
+  let packageJSON: any;
+  let extensionCommands: string[];
 
   before(async () => {
     context = await getTestExtensionContext();
+    packageJSON = context.extension.packageJSON;
+
+    const allRegisteredCommands = await vscode.commands.getCommands();
+    extensionCommands = allRegisteredCommands.filter((cmd) => cmd.startsWith("confluent."));
   });
 
   it("should show the correct version format", async () => {
-    const version = context.extension.packageJSON.version;
+    const version = packageJSON.version;
     // if this fails, it's including additional characters that don't match the semver format
     // e.g. "v0.1.0" instead of "0.1.0"
     if (!process.env.CI) {
@@ -184,19 +190,11 @@ describe("Extension manifest tests", () => {
   // not checking any command functionality, just that the commands are registered during activation
   // and that we don't have any commands in package.json that aren't registered/used
   it("should register all commands defined in package.json's contributes.commands", async () => {
-    // everything available in VSCode after the extension is activated (including built-in commands)
-    const allRegisteredCommands = await vscode.commands.getCommands();
-    const registeredCommands = allRegisteredCommands.filter((cmd) => cmd.startsWith("confluent."));
-
     // just the commands in package.json `contributes.commands` that we're expecting to be registered
-    const manifestCommandIds = context.extension.packageJSON.contributes.commands.map(
-      (cmd: any) => cmd.command,
-    );
+    const manifestCommandIds = packageJSON.contributes.commands.map((cmd: any) => cmd.command);
 
     // check for commands that are registered but not in package.json
-    const extraCommands = registeredCommands.filter(
-      (cmd: any) => !manifestCommandIds.includes(cmd),
-    );
+    const extraCommands = extensionCommands.filter((cmd: any) => !manifestCommandIds.includes(cmd));
     assert.strictEqual(
       extraCommands.length,
       0,
@@ -205,12 +203,65 @@ describe("Extension manifest tests", () => {
 
     // check for commands in package.json that aren't registered during activate()
     const missingCommands = manifestCommandIds.filter(
-      (cmd: any) => !registeredCommands.includes(cmd),
+      (cmd: any) => !extensionCommands.includes(cmd),
     );
     assert.strictEqual(
       missingCommands.length,
       0,
       `Commands that need to be registered during activate(): ${JSON.stringify(missingCommands, null, 2)}`,
+    );
+  });
+
+  it("All extension commands should be mentioned in menus.commandPalette", async () => {
+    // All command IDs mentioned in contributes.menus.commandPalette in package.json ...
+    const commandPaletteCommands = packageJSON.contributes.menus["commandPalette"].map(
+      (item: any) => item.command,
+    );
+
+    // All commands mentioned in this section must be unique otherwise hilarity ensues
+    const uniqueCommandPaletteCommands = Array.from(new Set(commandPaletteCommands));
+    // Format the dupes nicely for the error message
+    const dupes = commandPaletteCommands.filter(
+      (cmd: any, index: number) => commandPaletteCommands.indexOf(cmd) !== index,
+    );
+    const formattedDupes = JSON.stringify(dupes, null, 2);
+    assert.strictEqual(
+      uniqueCommandPaletteCommands.length,
+      commandPaletteCommands.length,
+      `Duplicate command names found in contributes.menus.commandPalette in package.json: ${formattedDupes}`,
+    );
+
+    // ... should include all the commands actually registered by the extension, otherwise commands
+    // that may require arguments to work properly may be inadvertently exposed to the command
+    // palette and lead to errors if invoked without the required arguments.
+    //
+    // (Those that don't require args are fine to be in the command palette, and should
+    //  be mentioned in this section with a `"when": true` enablement.)
+
+    const missingFromCommandPalette = extensionCommands
+      .filter((cmd) => !commandPaletteCommands.includes(cmd))
+      .sort();
+
+    // Nicely format the array of missing commands for the error message
+    const formattedMissingCommands = JSON.stringify(missingFromCommandPalette, null, 2);
+
+    assert.strictEqual(
+      missingFromCommandPalette.length,
+      0,
+      `The following commands are missing from contributes.menus.commandPalette in package.json (perhaps need "when": true?): ${formattedMissingCommands}`,
+    );
+
+    // Also notice if there are command names mentioned in the command palette section that aren't actually registered
+    const extraInCommandPalette = commandPaletteCommands.filter(
+      (cmd: any) => !extensionCommands.includes(cmd),
+    );
+
+    const formattedExtraCommands = JSON.stringify(extraInCommandPalette, null, 2);
+
+    assert.strictEqual(
+      extraInCommandPalette.length,
+      0,
+      `The following commands are in contributes.menus.commandPalette in package.json but are not registered by the extension (spelling errors? Forgot to clean up?): ${formattedExtraCommands}`,
     );
   });
 });
