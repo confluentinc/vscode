@@ -219,8 +219,7 @@ describe("Extension manifest tests", () => {
       [key: string]: unknown;
     }
 
-    const entries = context.extension.packageJSON?.contributes?.menus
-      ?.commandPalette as CommandPaletteEntry[];
+    const entries = packageJSON.contributes.menus.commandPalette as CommandPaletteEntry[];
 
     // Full sorted equivalence check
     const expected = [...entries].sort((a, b) => (a.command ?? "").localeCompare(b.command ?? ""));
@@ -283,6 +282,27 @@ describe("Extension manifest tests", () => {
       extraInCommandPalette.length,
       0,
       `The following commands are in contributes.menus.commandPalette in package.json but are not registered by the extension (spelling errors? Forgot to clean up?): ${formattedExtraCommands}`,
+    );
+  });
+
+  it("should have `contributes.commands` sorted by command ID", () => {
+    interface ContributedCommand {
+      command: string;
+      title: string;
+      category?: string;
+      [key: string]: unknown;
+    }
+
+    const commands = packageJSON.contributes.commands as ContributedCommand[];
+
+    // Full sorted equivalence check
+    const expected = [...commands].sort((a, b) => a.command.localeCompare(b.command));
+    const actualCommands = commands.map((c) => c.command);
+    const expectedCommands = expected.map((c) => c.command);
+    assert.deepStrictEqual(
+      actualCommands,
+      expectedCommands,
+      "`contributes.commands` entries are not in lexicographic order by command ID: Run `gulp organizePackageJson` to fix",
     );
   });
 });
