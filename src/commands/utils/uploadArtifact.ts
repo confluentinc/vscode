@@ -88,16 +88,15 @@ export async function getPresignedUploadUrl(
 export async function promptForArtifactUploadParams(
   item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
 ): Promise<ArtifactUploadParams | undefined> {
-  if (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster) {
-    logger.info("Starting upload artifact using provided context", {
+  const isCcloudItem =
+    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster);
+  if (isCcloudItem) {
+    logger.debug("Starting upload artifact using provided context", {
       environment: item.environmentId,
       cloud: item.provider,
       region: item.region,
     });
   }
-
-  const isCcloudItem =
-    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster);
   // Use the item's environment if provided, otherwise prompt for it
   const environment =
     isCcloudItem && item.environmentId
