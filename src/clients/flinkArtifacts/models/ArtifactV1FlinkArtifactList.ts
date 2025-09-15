@@ -61,7 +61,7 @@ export interface ArtifactV1FlinkArtifactList {
    * @type {Set<ArtifactV1FlinkArtifactListDataInner>}
    * @memberof ArtifactV1FlinkArtifactList
    */
-  data: Set<ArtifactV1FlinkArtifactListDataInner>;
+  data: Set<ArtifactV1FlinkArtifactListDataInner> | null;
 }
 
 /**
@@ -107,7 +107,10 @@ export function ArtifactV1FlinkArtifactListFromJSONTyped(
     api_version: json["api_version"],
     kind: json["kind"],
     metadata: ArtifactV1FlinkArtifactListMetadataFromJSON(json["metadata"]),
-    data: new Set((json["data"] as Array<any>).map(ArtifactV1FlinkArtifactListDataInnerFromJSON)),
+    data:
+      json["data"] == null
+        ? null
+        : new Set((json["data"] as Array<any>).map(ArtifactV1FlinkArtifactListDataInnerFromJSON)),
   };
 }
 
@@ -125,6 +128,9 @@ export function ArtifactV1FlinkArtifactListToJSONTyped(
 
   return {
     metadata: ArtifactV1FlinkArtifactListMetadataToJSON(value["metadata"]),
-    data: Array.from(value["data"] as Set<any>).map(ArtifactV1FlinkArtifactListDataInnerToJSON),
+    data:
+      value["data"] == null
+        ? null
+        : Array.from(value["data"] as Set<any>).map(ArtifactV1FlinkArtifactListDataInnerToJSON),
   };
 }
