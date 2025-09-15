@@ -1,11 +1,14 @@
 import * as assert from "assert";
 import { ObservableScope } from "inertial";
 import { StatementResultsSqlV1Api, StatementsSqlV1Api } from "../src/clients/flinkSql";
-import { FlinkStatementResultsManager, MessageType } from "../src/flinkStatementResultsManager";
+import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
+import {
+  FlinkStatementResultsManager,
+  MessageType,
+} from "../src/flinkSql/flinkStatementResultsManager";
 import { CCloudResourceLoader } from "../src/loaders/ccloudResourceLoader";
 import { FlinkStatement } from "../src/models/flinkStatement";
 import * as sidecar from "../src/sidecar";
-import { DEFAULT_RESULTS_LIMIT } from "../src/flinkSql/flinkStatementResults";
 import { WebviewStorage } from "../src/webview/comms/comms";
 import {
   FlinkStatementResultsViewModel,
