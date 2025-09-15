@@ -207,42 +207,55 @@ export function build(done) {
   }
 }
 
-export async function organizePackageJson() {
-  const manifestPath = "package.json";
+/** Read and return the JSON-parsed contents of `./package.json` */
+function loadPackageJson() {
   let original;
   try {
-    original = await readFile(manifestPath, "utf8");
+    original = readFileSync("package.json", "utf8");
   } catch (e) {
-    console.error(`Failed to read ${manifestPath}:`, e);
+    console.error("Failed to read package.json:", e);
     throw e;
   }
 
-  let pkg;
   try {
-    pkg = JSON.parse(original);
+    return JSON.parse(original);
   } catch (e) {
     console.error("package.json is not valid JSON:", e);
     throw e;
   }
+}
 
-  const commandPalette = pkg?.contributes?.menus?.commandPalette;
+function sortByCommandId(a, b) {
+  const ca = a.command;
+  const cb = b.command;
+  return ca.localeCompare(cb);
+}
+
+organizePackageJson.description = "Order sections of package.json by command ID.";
+export async function organizePackageJson() {
+  let pkg = loadPackageJson();
+
+  // organize `contributes.commands` by command ID
+  const commands = pkg.contributes.commands;
+  if (!Array.isArray(commands)) {
+    throw new Error("contributes.commands is missing or not an array.");
+  }
+  commands.sort(sortByCommandId);
+  console.log(`Sorted ${commands.length} commands in contributes.commands.`);
+
+  // organize `contributes.menus.commandPalette` by command ID
+  const commandPalette = pkg.contributes.menus.commandPalette;
   if (!Array.isArray(commandPalette)) {
     throw new Error("contributes.menus.commandPalette is missing or not an array.");
   }
+  commandPalette.sort(sortByCommandId);
 
-  commandPalette.sort((a, b) => {
-    const ca = (a?.command ?? "").toString();
-    const cb = (b?.command ?? "").toString();
-    return ca.localeCompare(cb);
-  });
-
-  await writeFile(manifestPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  await writeFile("package.json", JSON.stringify(pkg, null, 2) + "\n", "utf8");
   console.log(
     `Sorted ${commandPalette.length} commandPalette entries in contributes.menus.commandPalette.`,
   );
   return 0;
 }
-organizePackageJson.description = "Order sections of package.json by command name.";
 
 /** @type {import("rollup").LogHandlerWithDefault} */
 function handleBuildLog(level, log, handler) {
@@ -285,8 +298,7 @@ function getSentryReleaseVersion() {
   }
 
   try {
-    const extensionManifest = JSON.parse(readFileSync("package.json", "utf8"));
-    version = extensionManifest.version;
+    version = loadPackageJson().version;
   } catch (e) {
     console.error("Failed to read version in package.json", e);
   }
@@ -1036,10 +1048,9 @@ export async function icongen() {
   if (html == null) throw new Error("Failed to find generated HTML file");
   const iconContributions = JSON.parse(html);
   // read package.json, add the `contributes.icons` section, then write it back
-  const extensionManifestString = await readFile("package.json", "utf8");
-  const extensionManifest = JSON.parse(extensionManifestString);
-  extensionManifest.contributes.icons = iconContributions.icons;
-  await writeFile("package.json", JSON.stringify(extensionManifest, null, 2), "utf8");
+  const manifest = loadPackageJson();
+  manifest.contributes.icons = iconContributions.icons;
+  await writeFile("package.json", JSON.stringify(manifest, null, 2), "utf8");
   await appendFile("package.json", "\n", "utf8");
 }
 
