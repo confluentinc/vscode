@@ -722,6 +722,35 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
+  describe("loadStatementsForProviderRegion", () => {
+    let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+    beforeEach(() => {
+      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+        sandbox.createStubInstance(sidecar.SidecarHandle);
+      flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+      mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
+      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+    });
+    it("should return empty array if response from 'listArtifactV1FlinkArtifacts' returns null data", async () => {
+      const mockResponse = {
+        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
+        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
+        metadata: {
+          next: "",
+        },
+        data: null,
+      } as unknown as ArtifactV1FlinkArtifactList;
+
+      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      assert.strictEqual(artifacts.length, 0);
+      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+  });
+
   describe("getFlinkArtifacts", () => {
     let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
 

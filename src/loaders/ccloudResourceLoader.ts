@@ -478,7 +478,7 @@ async function loadStatementsForProviderRegion(
  * (Sub-unit of getFlinkArtifacts(), factored out for concurrency
  *  via executeInWorkerPool())
  */
-async function loadArtifactsForProviderRegion(
+export async function loadArtifactsForProviderRegion(
   handle: SidecarHandle,
   queryable: IFlinkQueryable,
 ): Promise<FlinkArtifact[]> {
