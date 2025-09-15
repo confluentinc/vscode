@@ -1,12 +1,12 @@
 import { Scope, Signal } from "inertial";
 import { SqlV1ResultSchema } from "../clients/flinkSql";
-import { PostFunction, ResultCount, StreamState } from "../flinkStatementResultsManager";
 import {
   ColumnDefinitions,
   ViewMode,
   createColumnDefinitions,
   getColumnOrder,
 } from "../flinkSql/flinkStatementResultColumns";
+import { PostFunction, ResultCount, StreamState } from "../flinkSql/flinkStatementResultsManager";
 import { ViewModel } from "./bindings/view-model";
 import { WebviewStorage, createWebviewStorage, sendWebviewMessage } from "./comms/comms";
 
