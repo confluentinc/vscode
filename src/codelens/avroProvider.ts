@@ -54,43 +54,39 @@ export class AvroCodelensProvider extends DisposableCollection implements CodeLe
       return true;
     }
 
-    // For non-.avsc files, only show if language is avroavsc OR json with valid "type" field
+    // For non-.avsc files, only show if language is avroavsc OR has a valid "type" field
     if (document.languageId === "avroavsc") {
       return true;
     }
 
-    if (document.languageId === "json") {
-      try {
-        const content = document.getText();
-        const parsed = JSON.parse(content);
+    try {
+      const content = document.getText();
+      const parsed = JSON.parse(content);
 
-        // Check if it has a type field and it's a valid Avro type
-        if (parsed && typeof parsed.type === "string") {
-          const avroTypes = [
-            "null",
-            "boolean",
-            "int",
-            "long",
-            "float",
-            "double",
-            "bytes",
-            "string",
-            "record",
-            "enum",
-            "array",
-            "map",
-            "union",
-            "fixed",
-          ];
-          return avroTypes.includes(parsed.type);
-        }
-
-        return false;
-      } catch {
-        return false;
+      // Check if it has a type field and it's a valid Avro type
+      if (parsed && typeof parsed.type === "string") {
+        const avroTypes = [
+          "null",
+          "boolean",
+          "int",
+          "long",
+          "float",
+          "double",
+          "bytes",
+          "string",
+          "record",
+          "enum",
+          "array",
+          "map",
+          "union",
+          "fixed",
+        ];
+        return avroTypes.includes(parsed.type);
       }
-    }
 
-    return false;
+      return false;
+    } catch {
+      return false;
+    }
   }
 }

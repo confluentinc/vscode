@@ -76,6 +76,7 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import { getLanguageTypes, SchemaType } from "./models/schema";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -353,20 +354,8 @@ async function _activateExtension(
   const avroProvider = AvroCodelensProvider.getInstance();
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider(
-      // .avsc files
-      { scheme: "file", pattern: "**/*.avsc" },
-      avroProvider,
-    ),
-    vscode.languages.registerCodeLensProvider(
-      // untitled avroavsc files
-      { scheme: "untitled", language: "avroavsc" },
-      avroProvider,
-    ),
-    vscode.languages.registerCodeLensProvider(
-      // untitled json files
-      { scheme: "untitled", language: "json" },
-      avroProvider,
+    ...getLanguageTypes(SchemaType.Avro).map((language) =>
+      vscode.languages.registerCodeLensProvider({ language }, avroProvider),
     ),
     avroProvider,
   );

@@ -192,11 +192,11 @@ describe("codelens/avroProvider.ts", () => {
         }
       });
 
-      it("should not provide codelens for other language types", async () => {
+      it("should provide codelens for other language types", async () => {
         const nonAvscUri = Uri.parse("file:///test/data.txt"); // Use non-.avsc URI
         const doc = createFakeDocument(validAvroSchema, "plaintext", nonAvscUri);
         const codeLenses = await provider.provideCodeLenses(doc);
-        assert.strictEqual(codeLenses.length, 0);
+        assert.strictEqual(codeLenses.length, 1);
       });
 
       it("should not crash with undefined URI and validate JSON content", async () => {
