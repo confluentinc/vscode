@@ -1214,6 +1214,10 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "confluent.medusa.generateDataset",
+          "when": "false"
+        },
+        {
           "command": "confluent.showOutputChannel",
           "when": "true"
         },

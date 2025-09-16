@@ -353,7 +353,21 @@ async function _activateExtension(
   const avroProvider = AvroCodelensProvider.getInstance();
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider({ pattern: "**/*.avsc" }, avroProvider),
+    vscode.languages.registerCodeLensProvider(
+      // .avsc files
+      { scheme: "file", pattern: "**/*.avsc" },
+      avroProvider,
+    ),
+    vscode.languages.registerCodeLensProvider(
+      // untitled avroavsc files
+      { scheme: "untitled", language: "avroavsc" },
+      avroProvider,
+    ),
+    vscode.languages.registerCodeLensProvider(
+      // untitled json files
+      { scheme: "untitled", language: "json" },
+      avroProvider,
+    ),
     avroProvider,
   );
 
