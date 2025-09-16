@@ -18,6 +18,28 @@ export async function pauseWithJitter(minMs: number, maxMs: number): Promise<voi
 }
 
 /**
+ * Race the given promise against a timeout.
+ * @param promise The promise to race against the timeout.
+ * @param ms The timeout in milliseconds.
+ * @returns A new promise that resolves or rejects with the result of the given promise,
+ * or rejects with a timeout error if the timeout is exceeded.
+ */
+export function raceWithTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Timeout exceeded")), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+/**
  * Class to manage calling a function periodically either at a slower or a faster frequency interval.
  *
  * If `runImmediately` is set to `true`, the callback will be called immediately when the poller is
