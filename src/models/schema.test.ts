@@ -329,7 +329,7 @@ describe("getSubjectIcon", () => {
 describe("getLanguageTypes", () => {
   type SchemaLanguagePair = [SchemaType, string[]];
   const schemaLanguagePairs: SchemaLanguagePair[] = [
-    [SchemaType.Avro, ["avroavsc", "json"]],
+    [SchemaType.Avro, ["avroavsc", "json", "jsonc"]],
     [SchemaType.Json, ["json"]],
     [SchemaType.Protobuf, ["proto3", "proto"]],
   ];
