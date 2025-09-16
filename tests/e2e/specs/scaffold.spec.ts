@@ -9,7 +9,7 @@ import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SupportView } from "../objects/views/SupportView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
-import { ClusterItem } from "../objects/views/viewItems/ClusterItem";
+import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { FormConnectionType, SupportedAuthType } from "../objects/webviews/DirectConnectionFormWebview";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
@@ -157,7 +157,7 @@ test.describe("Project Scaffolding", () => {
           // Given we navigate to a cluster in the Resources view
           const resourcesView = new ResourcesView(page);
           const cluster = await resourcesView.getKafkaCluster(connectionType);
-          const clusterItem = new ClusterItem(page, cluster);
+          const clusterItem = new KafkaClusterItem(page, cluster);
           await expect(clusterItem.locator).toBeVisible();
           // and we start the generate project flow from the right-click context menu
           await clusterItem.rightClickContextMenuAction("Generate project from resource");
