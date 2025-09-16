@@ -15,6 +15,7 @@ import {
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
   getPresignedUploadUrl,
@@ -174,6 +175,10 @@ export async function stubCommandForFlinkCreation(selectedArtifact: FlinkArtifac
   try {
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
 
+    // Get the current environment and compute pool from the FlinkDatabaseViewProvider
+    const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
+    const selectedResource = flinkDatabaseProvider.resource;
+
     // Get all environments to find our database and compute pool
     const environments = await ccloudResourceLoader.getEnvironments();
     const environmentId = selectedArtifact.environmentId;
@@ -193,76 +198,152 @@ export async function stubCommandForFlinkCreation(selectedArtifact: FlinkArtifac
       throw new Error(`No Flink-capable databases found in environment ${environmentId}`);
     }
 
-    // First, find databases in the same region as the artifact
-    const compatibleDatabases = flinkDatabases.filter(
-      (db) => db.provider === selectedArtifact.provider && db.region === selectedArtifact.region,
-    );
+    // If we have a selected resource from the view provider, try to use it
+    let database: CCloudKafkaCluster | undefined;
+    let computePool: CCloudFlinkComputePool | undefined;
 
-    // Prioritize databases in the same region as the artifact
-    const database = compatibleDatabases.length > 0 ? compatibleDatabases[0] : flinkDatabases[0];
+    if (selectedResource) {
+      // Try to use the selected resource or its parent as appropriate
+      if (
+        selectedResource instanceof CCloudKafkaCluster &&
+        selectedResource.flinkPools &&
+        selectedResource.flinkPools.length > 0
+      ) {
+        // The selected resource is a Kafka cluster with Flink capabilities
+        database = selectedResource;
+        computePool = selectedResource.flinkPools[0];
+      } else if (selectedResource instanceof CCloudFlinkComputePool) {
+        // The selected resource is a compute pool, find its parent database
+        computePool = selectedResource;
+        // Find a compatible database for this compute pool
+        database = flinkDatabases.find(
+          (db) =>
+            db.provider === computePool?.provider &&
+            db.region === computePool?.region &&
+            Array.isArray(db.flinkPools) &&
+            db.flinkPools.some((pool) => pool.id === computePool?.id),
+        );
+      }
+    }
+
+    // If we couldn't find a database or compute pool from the selected resource,
+    // fall back to finding one in the same region as the artifact
+    if (!database) {
+      // Prioritize databases in the same region as the artifact
+      const compatibleDatabases = flinkDatabases.filter(
+        (db) => db.provider === selectedArtifact.provider && db.region === selectedArtifact.region,
+      );
+
+      database = compatibleDatabases.length > 0 ? compatibleDatabases[0] : flinkDatabases[0];
+    }
 
     if (!database.flinkPools || database.flinkPools.length === 0) {
       throw new Error(`Database ${database.name} has no associated compute pools`);
     }
 
-    // Find a compute pool in the same provider/region as the database to ensure compatibility
-    const computePool = database.flinkPools[0];
+    // If we don't have a compute pool yet, get one from the database
+    if (!computePool) {
+      computePool = database.flinkPools[0];
+    }
 
     console.log(`Selected database: ${database.name} (${database.provider}/${database.region})`);
     console.log(
       `Selected compute pool: ${computePool.name} (${computePool.provider}/${computePool.region})`,
     );
 
-    // Create a custom wrapper function to handle type conversion safely
-    const executeFlinkDDLWithDB = async (
-      sql: string,
-      db: CCloudKafkaCluster,
-      pool: CCloudFlinkComputePool,
-    ) => {
-      // Use a type assertion to bypass TypeScript's strict checking
-      // This is safe because we've already verified db has non-empty flinkPools array
-      return ccloudResourceLoader.executeFlinkDDL(
-        sql,
-        db as any, // Cast to any to bypass TypeScript's strict checking
-        pool,
-      );
-    };
+    // Show progress notification
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Creating UDF function from artifact",
+        cancellable: false,
+      },
+      async (progress) => {
+        progress.report({ message: "Preparing statement..." });
 
-    // Execute the DDL statement with properly matched database and compute pool
-    const result = await executeFlinkDDLWithDB(
-      `CREATE FUNCTION \`udf_from_${selectedArtifact.id.substring(0, 8)}\` AS 'io.confluent.udf.examples.log.LogSumScalarFunction' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
-      database,
-      computePool,
+        try {
+          // Create a custom wrapper function to handle type conversion safely
+          const executeFlinkDDLWithDB = async (
+            sql: string,
+            db: CCloudKafkaCluster,
+            pool: CCloudFlinkComputePool,
+          ) => {
+            // Use a type assertion to bypass TypeScript's strict checking
+            // This is safe because we've already verified db has non-empty flinkPools array
+            return ccloudResourceLoader.executeFlinkDDL(
+              sql,
+              db as any, // Cast to any to bypass TypeScript's strict checking
+              pool,
+            );
+          };
+
+          progress.report({ message: "Executing Flink DDL..." });
+
+          // Create a simpler function name to avoid potential naming issues
+          const functionName = `udf_${selectedArtifact.id.substring(0, 6)}`;
+
+          // Execute the DDL statement with properly matched database and compute pool
+          const result = await executeFlinkDDLWithDB(
+            `CREATE FUNCTION \`${functionName}\` AS 'io.confluent.udf.examples.log.LogSumScalarFunction' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
+            database,
+            computePool,
+          );
+
+          progress.report({ message: "Processing results..." });
+
+          if (result.length === 0) {
+            void showWarningNotificationWithButtons(
+              "Function created successfully, but no response was returned from Confluent Cloud.",
+            );
+            return;
+          }
+
+          // Show the results in a new editor
+          const document = await workspace.openTextDocument({
+            language: "flinksql",
+            content: result.join("\n") + "\n",
+          });
+
+          await window.showTextDocument(document, { preview: false });
+        } catch (error) {
+          // Handle specific statement error message
+          let detailedMessage = "An error occurred creating the UDF function.";
+
+          if (error instanceof Error) {
+            // Try to extract a more helpful error message
+            if (error.message.includes("phase FAILED")) {
+              detailedMessage =
+                "The UDF creation failed. Common causes include:\n" +
+                "- Invalid class name (the example class io.confluent.udf.examples.log.LogSumScalarFunction might not exist in this artifact)\n" +
+                "- The artifact may not contain Java UDFs\n" +
+                "- The artifact may not be accessible";
+            } else {
+              detailedMessage = error.message;
+            }
+          }
+
+          showErrorNotificationWithButtons(`Failed to create UDF function: ${detailedMessage}`);
+          throw error; // Re-throw to be handled by outer catch block
+        }
+      },
     );
-
-    if (result.length === 0) {
-      void showWarningNotificationWithButtons(
-        "No response was returned from Confluent Cloud for the provided SQL statement.",
-      );
-      return;
-    }
-
-    // Show the results in a new editor
-    const document = await workspace.openTextDocument({
-      language: "flinksql",
-      content: result.join("\n") + "\n",
-    });
-
-    await window.showTextDocument(document, { preview: false });
   } catch (err) {
-    let errorMessage = "Failed to create UDF function: ";
-    if (isResponseError(err)) {
-      const resp = await extractResponseBody(err);
-      try {
-        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
-      } catch {
-        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+    // This catch block handles errors that weren't already shown as notifications
+    if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
+      let errorMessage = "Failed to create UDF function: ";
+      if (isResponseError(err)) {
+        const resp = await extractResponseBody(err);
+        try {
+          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+        } catch {
+          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = `${errorMessage} ${err.message}`;
       }
-    } else if (err instanceof Error) {
-      errorMessage = `${errorMessage} ${err.message}`;
+      logError(err, errorMessage);
+      showErrorNotificationWithButtons(errorMessage);
     }
-    logError(err, errorMessage);
-    showErrorNotificationWithButtons(errorMessage);
   }
 }
 
