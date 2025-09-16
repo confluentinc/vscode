@@ -90,7 +90,7 @@ test.describe("Project Scaffolding", () => {
   ];
 
   for (const [templateDisplayName, templateName] of templates) {
-    test(`should generate ${templateDisplayName} template from Support view`, async ({ page }) => {
+    test(`should apply ${templateDisplayName} template from Support view`, async ({ page }) => {
       // Given we navigate to the Support view
       const supportView = new SupportView(page);
       // and we start the generate project flow
@@ -118,7 +118,7 @@ test.describe("Project Scaffolding", () => {
           });
         });
 
-        test(`should generate ${templateDisplayName} template from Kafka topic in Topics view`, async ({
+        test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
           page,
         }) => {
           // Given we navigate to a topic in the Topics view
@@ -145,7 +145,7 @@ test.describe("Project Scaffolding", () => {
           await verifyGeneratedProject(page, templateName, bootstrapServers, topic);
         });
 
-        test(`should generate ${templateDisplayName} template from Kafka cluster in Resource view`, async ({
+        test(`should apply ${templateDisplayName} template from Kafka cluster in Resource view`, async ({
           page,
         }) => {
           // Given we navigate to a cluster in the Resources view
