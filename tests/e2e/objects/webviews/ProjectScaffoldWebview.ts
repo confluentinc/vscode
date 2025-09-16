@@ -17,6 +17,10 @@ export class ProjectScaffoldWebview extends Webview {
     return this.form.locator('[name="cc_bootstrap_server"]');
   }
 
+  get topicField(): Locator {
+    return this.form.locator('[name="cc_topic"]');
+  }
+
   async submitForm(): Promise<void> {
     return this.form.locator('input[type="submit"]').click();
   }
