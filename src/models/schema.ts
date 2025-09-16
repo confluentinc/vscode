@@ -26,7 +26,7 @@ const extensionMap: { [key in SchemaType]: string } = {
 };
 
 const languageTypes: { [key in SchemaType]: string[] } = {
-  [SchemaType.Avro]: ["avroavsc", "json"],
+  [SchemaType.Avro]: ["avroavsc", "json", "jsonc"],
   [SchemaType.Json]: ["json"],
   [SchemaType.Protobuf]: ["proto3", "proto"],
 };

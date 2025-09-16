@@ -20,6 +20,7 @@ import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { handleFeedback } from "./chat/telemetry";
 import { registerChatTools } from "./chat/tools/registration";
+import { AvroCodelensProvider } from "./codelens/avroProvider";
 import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
@@ -34,6 +35,7 @@ import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
+import { registerMedusaCodeLensCommands } from "./commands/medusaCodeLens";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
@@ -74,6 +76,7 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import { getLanguageTypes, SchemaType } from "./models/schema";
 import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
@@ -265,6 +268,7 @@ async function _activateExtension(
     ...registerFlinkStatementCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
+    ...registerMedusaCodeLensCommands(),
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
@@ -340,10 +344,20 @@ async function _activateExtension(
   const docManager = DocumentMetadataManager.getInstance();
   context.subscriptions.push(docManager);
 
-  const provider = FlinkSqlCodelensProvider.getInstance();
+  const flinkProvider = FlinkSqlCodelensProvider.getInstance();
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider("flinksql", provider),
-    provider,
+    vscode.languages.registerCodeLensProvider("flinksql", flinkProvider),
+    flinkProvider,
+  );
+
+  // register the Avro code lens provider (it will check the feature flag internally)
+  const avroProvider = AvroCodelensProvider.getInstance();
+
+  context.subscriptions.push(
+    ...getLanguageTypes(SchemaType.Avro).map((language) =>
+      vscode.languages.registerCodeLensProvider({ language }, avroProvider),
+    ),
+    avroProvider,
   );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
