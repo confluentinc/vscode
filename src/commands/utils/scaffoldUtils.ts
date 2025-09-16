@@ -48,6 +48,7 @@ export const scaffoldProjectRequest = async (
   try {
     // should only be using a templateCollection if this came from a URI; by default all other uses
     // will default to the "vscode" collection
+    // Potential failure point 1: listing templates from the sidecar - caught, logged, user notified, no action available
     let templateList: ScaffoldV1Template[] = await getTemplatesList(
       templateRequestOptions?.templateCollection,
     );
@@ -100,6 +101,7 @@ export const scaffoldProjectRequest = async (
 
   if (!pickedTemplate) {
     // user canceled the quickpick
+    // OK here. Not a failure point - user action. No notification happens.
     return { success: false, message: "Project generation cancelled." };
   }
 
@@ -113,6 +115,7 @@ export const scaffoldProjectRequest = async (
 
   const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
 
+  // Not a failure point - webview panel opening is vscode internals not worth trying to notify/action
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
     { id: templateSpec.name!, template: scaffoldFormTemplate },
     "template-options-form",
@@ -194,6 +197,7 @@ export const scaffoldProjectRequest = async (
   return { success: true, message: "Form opened" };
 };
 
+// Called on Form Submit
 export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
@@ -213,8 +217,9 @@ export async function applyTemplate(
   };
 
   try {
+    // Potential failure point 2: calling the apply op in scaffold service.
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
-
+    // Potential failure point 3: buffer extraction
     const arrayBuffer = await applyTemplateResponse.arrayBuffer();
 
     const SAVE_LABEL = "Save to directory";
@@ -235,12 +240,12 @@ export async function applyTemplate(
         templateName: pickedTemplate.spec!.display_name,
         itemType: telemetrySource,
       });
-
+      // Not a failure point - user action. Form remains open and shows X + message at bottom.
       return { success: false, message: "Project generation cancelled before save." };
     }
-
+    // Not a failure point we control - calls vscode internals
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
-
+    // Potential failure point 4: extracting the zip contents to the filesystem
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
@@ -281,6 +286,7 @@ export async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
+    // Catches failure points 2, 3, and 4 and gives generic notification with details in output channel
     logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
