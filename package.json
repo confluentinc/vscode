@@ -1982,7 +1982,7 @@
       "explorer/context": [
         {
           "command": "confluent.uploadArtifact",
-          "group": "inline@1",
+          "group": "confluent@1",
           "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
         }
       ]
