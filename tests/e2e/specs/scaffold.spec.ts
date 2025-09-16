@@ -45,6 +45,7 @@ test.describe("Project Scaffolding", () => {
   });
 
   // Templates covered by the E2E tests
+  // Each item holds the display name and the name/identifier of a template
   const templates: Array<[string, string]> = [
     ["Kafka Client in Go", "go-client"],
     ["Kafka Client in Java", "java-client"],
@@ -85,7 +86,7 @@ test.describe("Project Scaffolding", () => {
         });
       },
     ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+    // TODO: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
   ];
 
   for (const [templateDisplayName, templateName] of templates) {
