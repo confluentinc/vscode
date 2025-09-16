@@ -588,7 +588,7 @@ describe("CCloudResourceLoader", () => {
     }
   }); // getFlinkStatements
 
-  describe("refreshFlinkStatement()", () => {
+  describe("ccloudResourceLoader.refreshFlinkStatement()", () => {
     let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
 
     beforeEach(() => {

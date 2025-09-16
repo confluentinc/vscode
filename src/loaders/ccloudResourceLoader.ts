@@ -359,6 +359,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * outstanding at a time. If this function is called again with the same parameters
    * while a previous call is still pending, the previous promise will be returned.
    *
+   * All such queries should complete within 10s, or an error will be raised.
+   *
    * @param sqlStatement The SQL statement (string) to execute.
    * @param database The database (CCloudKafkaCluster) to execute the statement against.
    * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution, otherwise will default
@@ -426,8 +428,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     // Submit statement
     let statement = await submitFlinkStatement(statementParams);
 
-    // Refresh the statement until it is in a terminal phase.
-    statement = await waitForStatementCompletion(statement);
+    // Refresh the statement at 150ms intervals for at most 10s until it is in a terminal phase.
+    statement = await waitForStatementCompletion(statement, 10_000, 150);
 
     // If it didn't complete successfully, bail out.
     if (statement.phase !== Phase.COMPLETED) {
