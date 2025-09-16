@@ -52,7 +52,11 @@ import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
-import { CCloudResourceLoader, loadProviderRegions } from "./ccloudResourceLoader";
+import {
+  CCloudResourceLoader,
+  loadArtifactsForProviderRegion,
+  loadProviderRegions,
+} from "./ccloudResourceLoader";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -719,6 +723,41 @@ describe("CCloudResourceLoader", () => {
         CCLOUD_CONNECTION_ID,
         TEST_CCLOUD_ENVIRONMENT.schemaRegistry ? [TEST_CCLOUD_ENVIRONMENT.schemaRegistry] : [],
       );
+    });
+  });
+
+  describe("loadArtifactsForProviderRegion", () => {
+    let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+    let stubbedSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    beforeEach(() => {
+      stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+      stubbedSidecarHandle = getSidecarStub(sandbox);
+
+      stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+
+      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+    });
+    it("should return empty array if response from 'loadArtifactsForProviderRegion' returns null data", async () => {
+      const mockResponse = {
+        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
+        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
+        metadata: {
+          next: "",
+        },
+        data: null,
+      } satisfies ArtifactV1FlinkArtifactList;
+
+      stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+
+      const artifacts = await loadArtifactsForProviderRegion(stubbedSidecarHandle, {
+        provider: "aws",
+        region: "us-west-2",
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: "env-12345" as EnvironmentId,
+      });
+      assert.ok(Array.isArray(artifacts));
+      assert.strictEqual(artifacts.length, 0);
+      sinon.assert.calledOnce(stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts);
     });
   });
 
