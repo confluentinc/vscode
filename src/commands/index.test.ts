@@ -53,10 +53,6 @@ describe("commands/index.ts", () => {
       sandbox.stub(errors, "logError");
     });
 
-    afterEach(() => {
-      sandbox.restore();
-    });
-
     it("should call showErrorNotificationWithButtons when async command rejects with Error", async () => {
       // set extension to be enabled by default
       checkForExtensionDisabledReasonStub.resolves(undefined);
