@@ -42,6 +42,8 @@ describe("commands/index.ts", () => {
         featureFlags,
         "checkForExtensionDisabledReason",
       );
+      // default to extension being enabled unless explicitly set otherwise in individual tests
+      checkForExtensionDisabledReasonStub.resolves(undefined);
 
       showErrorNotificationWithButtonsStub = sandbox.stub(
         notifications,
@@ -54,8 +56,6 @@ describe("commands/index.ts", () => {
     });
 
     it("should call showErrorNotificationWithButtons when async command rejects with Error", async () => {
-      // set extension to be enabled by default
-      checkForExtensionDisabledReasonStub.resolves(undefined);
       const testError = new Error("Async command failed");
       const asyncCommand = sandbox.stub().rejects(testError);
       const wrappedCommand = createWrappedCommand("confluent.test", asyncCommand);
@@ -69,7 +69,8 @@ describe("commands/index.ts", () => {
     });
 
     it("should show extension disabled notification and not execute command when extension is disabled", async () => {
-      // set extension to be disabled
+      // force extension to be disabled by resetting the stub and setting the reason
+      checkForExtensionDisabledReasonStub.reset();
       checkForExtensionDisabledReasonStub.resolves("Extension has been disabled due to policy");
 
       const showExtensionDisabledNotificationStub = sandbox.stub(
