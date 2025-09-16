@@ -9,6 +9,12 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { titleCase } from "../utils";
 
+/**
+ * Registers a command with logging, telemetry, and error handling
+ *
+ * @param commandName - The name of the command, MUST start with "confluent."
+ * @param command - The command function to wrap
+ */
 export function registerCommandWithLogging(
   commandName: string,
   command: ((...args: any[]) => void) | ((...args: any[]) => Promise<void>),
@@ -18,7 +24,16 @@ export function registerCommandWithLogging(
     throw new Error(`Command name "${commandName}" must start with "confluent."`);
   }
 
-  const wrappedCommand = async (...args: any[]) => {
+  const wrappedCommand = createWrappedCommand(commandName, command);
+  return vscode.commands.registerCommand(commandName, wrappedCommand);
+}
+
+/** Wraps a command with extension disabled state checking, telemetry logging, and error handling */
+export function createWrappedCommand(
+  commandName: string,
+  command: ((...args: any[]) => void) | ((...args: any[]) => Promise<void>),
+): (...args: any[]) => Promise<void> {
+  return async (...args: any[]) => {
     // if the extension was disabled, we need to prevent any commands from running and show an error
     // notification to the user
     const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
@@ -43,7 +58,6 @@ export function registerCommandWithLogging(
       }
     }
   };
-  return vscode.commands.registerCommand(commandName, wrappedCommand);
 }
 
 // TODO: move this somewhere else if we need it other than telemetry:

@@ -1,15 +1,94 @@
 import * as assert from "assert";
-import { getCommandArgsContext, registerCommandWithLogging, RESOURCE_ID_FIELDS } from ".";
+import * as sinon from "sinon";
+import {
+  createWrappedCommand,
+  getCommandArgsContext,
+  registerCommandWithLogging,
+  RESOURCE_ID_FIELDS,
+} from ".";
 import { ConnectionType } from "../clients/sidecar";
+import * as errors from "../errors";
+import * as featureFlags from "../featureFlags/evaluation";
 import { ConnectionId, IResourceBase } from "../models/resource";
+import * as notifications from "../notifications";
+import * as telemetry from "../telemetry/events";
 import { titleCase } from "../utils";
 
 describe("commands/index.ts", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   describe("registerCommandWithLogging", () => {
     it("should throw if command name does not start with 'confluent.'", () => {
       assert.throws(() => {
         registerCommandWithLogging("not-a-valid-command", () => {});
       }, /must start with "confluent."/);
+    });
+  });
+
+  describe("createWrappedCommand", () => {
+    let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+    let checkForExtensionDisabledReasonStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      checkForExtensionDisabledReasonStub = sandbox.stub(
+        featureFlags,
+        "checkForExtensionDisabledReason",
+      );
+      // default to extension being enabled unless explicitly set otherwise in individual tests
+      checkForExtensionDisabledReasonStub.resolves(undefined);
+
+      showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+
+      // stub other dependencies to avoid side effects
+      sandbox.stub(telemetry, "logUsage");
+      sandbox.stub(errors, "logError");
+    });
+
+    it("should call showErrorNotificationWithButtons when async command rejects with Error", async () => {
+      const testError = new Error("Async command failed");
+      const asyncCommand = sandbox.stub().rejects(testError);
+      const wrappedCommand = createWrappedCommand("confluent.test", asyncCommand);
+
+      await wrappedCommand();
+
+      sinon.assert.calledOnceWithExactly(
+        showErrorNotificationWithButtonsStub,
+        `Error invoking command "confluent.test": ${testError}`,
+      );
+    });
+
+    it("should show extension disabled notification and not execute command when extension is disabled", async () => {
+      // force extension to be disabled by resetting the stub and setting the reason
+      checkForExtensionDisabledReasonStub.reset();
+      checkForExtensionDisabledReasonStub.resolves("Extension has been disabled due to policy");
+
+      const showExtensionDisabledNotificationStub = sandbox.stub(
+        featureFlags,
+        "showExtensionDisabledNotification",
+      );
+
+      const mockCommand = sandbox.stub();
+      const wrappedCommand = createWrappedCommand("confluent.test", mockCommand);
+
+      await wrappedCommand();
+
+      sinon.assert.calledOnce(checkForExtensionDisabledReasonStub);
+      sinon.assert.calledOnceWithExactly(
+        showExtensionDisabledNotificationStub,
+        "Extension has been disabled due to policy",
+      );
+      sinon.assert.notCalled(mockCommand);
     });
   });
 
