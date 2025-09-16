@@ -127,7 +127,7 @@ test.describe("Project Scaffolding", () => {
           const topicItem = new TopicItem(page, topicsView.topics.first());
           await expect(topicItem.locator).toBeVisible();
           // and we start the generate project flow from the right-click context menu
-          await topicItem.rightClickContextMenuAction("Generate project from resource");
+          await topicItem.generateProject();
           // and we choose a project template from the quickpick
           const projectQuickpick = new Quickpick(page);
           await projectQuickpick.selectItemByText(templateDisplayName);
@@ -153,7 +153,7 @@ test.describe("Project Scaffolding", () => {
           const clusterItem = new KafkaClusterItem(page, cluster);
           await expect(clusterItem.locator).toBeVisible();
           // and we start the generate project flow from the right-click context menu
-          await clusterItem.rightClickContextMenuAction("Generate project from resource");
+          await clusterItem.generateProject();
           // and we choose a project template from the quickpick
           const projectQuickpick = new Quickpick(page);
           await projectQuickpick.selectItemByText(templateDisplayName);
