@@ -342,29 +342,26 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     return augmentedResults;
   }
 
-  public async getFlinkCreateStatementResul(
-    cluster: CCloudFlinkDbKafkaCluster,
-    computePool?: CCloudFlinkComputePool,
-  ) {
-    // Run the statement to create the Flink job.
-
-    // Will raise Error if the cluster isn't Flinkable, the optionally provided
-    // compute pool doesn't correspond with the cluster, or if the statement
-    // execution fails.
-    const rawResults = await this.executeFlinkDDL(
-      "CREATE FUNCTION `yourFunctionNameHere56` AS 'io.confluent.udf.examples.log.LogSumScalarFunction' USING JAR 'confluent-artifact://cfa-19myw5';",
-      cluster,
-      computePool,
-    );
-
-    return rawResults;
-  }
-
-  async prepFlinkStatementExecution(
+  /**
+   * Execute a Flink SQL statement, returning the results as an array of objects of type RT.
+   * Should be used for batch statements, such as system catalog queries, registering
+   * or listing UDFs, etc.
+   *
+   * This could/should be integrated directly into CCloudResourceLoader in the future, simplifying
+   * the topology of things a bit, then omitting the organizationId parameter here.
+   *
+   * @param sqlStatement The SQL statement (string) to execute.
+   * @param database The database (CCloudKafkaCluster) to execute the statement against.
+   * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution, otherwise will default
+   * to the first compute pool in the database's flinkPools array.
+   * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
+   *
+   */
+  async executeFlinkStatement<RT>(
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
     computePool?: CCloudFlinkComputePool,
-  ): Promise<FlinkStatement> {
+  ): Promise<Array<RT>> {
     if (!computePool) {
       // Default to the first compute pool if none is provided.
       computePool = database.flinkPools[0];
@@ -397,30 +394,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       );
       throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
     }
-    return statement;
-  }
-
-  /**
-   * Execute a Flink SQL statement, returning the results as an array of objects of type RT.
-   * Should be used for batch statements, such as system catalog queries, registering
-   * or listing UDFs, etc.
-   *
-   * This could/should be integrated directly into CCloudResourceLoader in the future, simplifying
-   * the topology of things a bit, then omitting the organizationId parameter here.
-   *
-   * @param sqlStatement The SQL statement (string) to execute.
-   * @param database The database (CCloudKafkaCluster) to execute the statement against.
-   * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution, otherwise will default
-   * to the first compute pool in the database's flinkPools array.
-   * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
-   *
-   */
-  async executeFlinkStatement<RT>(
-    sqlStatement: string,
-    database: CCloudFlinkDbKafkaCluster,
-    computePool?: CCloudFlinkComputePool,
-  ): Promise<Array<RT>> {
-    const statement = await this.prepFlinkStatementExecution(sqlStatement, database, computePool);
     // Parse and return all results.
     return await parseAllFlinkStatementResults<RT>(statement);
   }
@@ -430,9 +403,37 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   async executeFlinkDDL(
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
-    computePool?: CCloudFlinkComputePool,
+    computePool: CCloudFlinkComputePool,
   ): Promise<string[]> {
-    const statement = await this.prepFlinkStatementExecution(sqlStatement, database, computePool);
+    // If computePool is provided, verify it's compatible with database
+    if (database.provider !== computePool.provider || database.region !== computePool.region) {
+      throw new Error(
+        `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
+      );
+    }
+
+    const organizationId = (await this.getOrganization()).id;
+
+    const statementParams: IFlinkStatementSubmitParameters = {
+      statement: sqlStatement,
+      statementName: await determineFlinkStatementName(),
+      organizationId,
+      computePool,
+      hidden: true, // Hidden statement, user didn't author it.
+      properties: database.toFlinkSpecProperties(),
+    };
+
+    let statement = await submitFlinkStatement(statementParams);
+
+    // Refresh the statement until it is in a terminal phase.
+    statement = await waitForStatementCompletion(statement);
+
+    if (statement.phase !== Phase.COMPLETED) {
+      logger.error(
+        `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
+      );
+      throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
+    }
     return await parseAllFlinkStatementResults<string>(statement);
   }
 }

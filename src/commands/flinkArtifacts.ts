@@ -6,6 +6,7 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
+import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
@@ -165,6 +166,106 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
   await editor.insertSnippet(snippetString);
 }
 
+export async function stubCommandForFlinkCreation(selectedArtifact: FlinkArtifact | undefined) {
+  if (!selectedArtifact) {
+    return;
+  }
+
+  try {
+    const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+
+    // Get all environments to find our database and compute pool
+    const environments = await ccloudResourceLoader.getEnvironments();
+    const environmentId = selectedArtifact.environmentId;
+
+    // Find the specified environment
+    const environment = environments.find((env) => env.id === environmentId);
+    if (!environment) {
+      throw new Error(`Environment ${environmentId} not found`);
+    }
+
+    // Get Kafka clusters from the environment that are Flink-capable
+    const flinkDatabases = environment.kafkaClusters.filter(
+      (cluster) => Array.isArray(cluster.flinkPools) && cluster.flinkPools.length > 0,
+    );
+
+    if (flinkDatabases.length === 0) {
+      throw new Error(`No Flink-capable databases found in environment ${environmentId}`);
+    }
+
+    // First, find databases in the same region as the artifact
+    const compatibleDatabases = flinkDatabases.filter(
+      (db) => db.provider === selectedArtifact.provider && db.region === selectedArtifact.region,
+    );
+
+    // Prioritize databases in the same region as the artifact
+    const database = compatibleDatabases.length > 0 ? compatibleDatabases[0] : flinkDatabases[0];
+
+    if (!database.flinkPools || database.flinkPools.length === 0) {
+      throw new Error(`Database ${database.name} has no associated compute pools`);
+    }
+
+    // Find a compute pool in the same provider/region as the database to ensure compatibility
+    const computePool = database.flinkPools[0];
+
+    console.log(`Selected database: ${database.name} (${database.provider}/${database.region})`);
+    console.log(
+      `Selected compute pool: ${computePool.name} (${computePool.provider}/${computePool.region})`,
+    );
+
+    // Create a custom wrapper function to handle type conversion safely
+    const executeFlinkDDLWithDB = async (
+      sql: string,
+      db: CCloudKafkaCluster,
+      pool: CCloudFlinkComputePool,
+    ) => {
+      // Use a type assertion to bypass TypeScript's strict checking
+      // This is safe because we've already verified db has non-empty flinkPools array
+      return ccloudResourceLoader.executeFlinkDDL(
+        sql,
+        db as any, // Cast to any to bypass TypeScript's strict checking
+        pool,
+      );
+    };
+
+    // Execute the DDL statement with properly matched database and compute pool
+    const result = await executeFlinkDDLWithDB(
+      `CREATE FUNCTION \`udf_from_${selectedArtifact.id.substring(0, 8)}\` AS 'io.confluent.udf.examples.log.LogSumScalarFunction' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
+      database,
+      computePool,
+    );
+
+    if (result.length === 0) {
+      void showWarningNotificationWithButtons(
+        "No response was returned from Confluent Cloud for the provided SQL statement.",
+      );
+      return;
+    }
+
+    // Show the results in a new editor
+    const document = await workspace.openTextDocument({
+      language: "flinksql",
+      content: result.join("\n") + "\n",
+    });
+
+    await window.showTextDocument(document, { preview: false });
+  } catch (err) {
+    let errorMessage = "Failed to create UDF function: ";
+    if (isResponseError(err)) {
+      const resp = await extractResponseBody(err);
+      try {
+        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+      } catch {
+        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+      }
+    } else if (err instanceof Error) {
+      errorMessage = `${errorMessage} ${err.message}`;
+    }
+    logError(err, errorMessage);
+    showErrorNotificationWithButtons(errorMessage);
+  }
+}
+
 /** Set the Flink Database view to Artifacts mode */
 export async function setFlinkArtifactsViewModeCommand() {
   flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
@@ -186,5 +287,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       setFlinkArtifactsViewModeCommand,
     ),
     registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
+    registerCommandWithLogging("confluent.artifacts.stubCreation", stubCommandForFlinkCreation),
   ];
 }

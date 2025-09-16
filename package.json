@@ -278,6 +278,11 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
+        "command": "confluent.artifacts.stubCreation",
+        "title": "Create Flink UDF Result Stub",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.artifacts.scaffold",
         "icon": "$(plus)",
         "title": "Generate Flink Artifact",
@@ -1200,6 +1205,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.artifacts.stubCreation",
+          "when": "true"
+        },
+        {
           "command": "confluent.artifacts.scaffold",
           "when": "false"
         },
@@ -1961,6 +1970,16 @@
         },
         {
           "command": "confluent.artifacts.registerUDF",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.stubCreation",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.scaffold",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
