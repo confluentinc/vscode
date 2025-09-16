@@ -255,13 +255,18 @@ describe("uploadArtifact", () => {
 
       sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
 
-      sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("test-artifact");
+      showInputBoxStub.onSecondCall().resolves(undefined); // description
+      showInputBoxStub.onThirdCall().resolves(undefined); // documentation link
 
       const result = await promptForArtifactUploadParams();
 
       assert.deepStrictEqual(result, {
         environment: mockEnvironment.id,
         cloud: "Azure",
+        description: undefined,
+        documentationLink: undefined,
         region: fakeCloudProviderRegion.region_name,
         artifactName: "test-artifact",
         fileFormat: "jar",
@@ -279,7 +284,39 @@ describe("uploadArtifact", () => {
       });
 
       sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("test-artifact");
+      showInputBoxStub.onSecondCall().resolves(undefined);
+      showInputBoxStub.onThirdCall().resolves(undefined);
+
+      const result = await promptForArtifactUploadParams();
+
+      assert.deepStrictEqual(result, {
+        environment: mockEnvironment.id,
+        cloud: "AWS",
+        description: undefined,
+        documentationLink: undefined,
+        region: fakeCloudProviderRegion.region_name,
+        artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: mockFileUri,
+      });
+    });
+
+    it("should add description and documentation link to params if provided", async () => {
+      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
+
+      cloudProviderRegionQuickPickStub.resolves({
+        ...fakeCloudProviderRegion,
+        provider: "AWS",
+        region: fakeCloudProviderRegion.region_name,
+      });
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("test-artifact");
+      showInputBoxStub.onSecondCall().resolves("This is a test artifact");
+      showInputBoxStub.onThirdCall().resolves("https://example.com/docs");
 
       const result = await promptForArtifactUploadParams();
 
@@ -288,6 +325,8 @@ describe("uploadArtifact", () => {
         cloud: "AWS",
         region: fakeCloudProviderRegion.region_name,
         artifactName: "test-artifact",
+        description: "This is a test artifact",
+        documentationLink: "https://example.com/docs",
         fileFormat: "jar",
         selectedFile: mockFileUri,
       });
@@ -297,9 +336,10 @@ describe("uploadArtifact", () => {
       const pool: any = TEST_CCLOUD_FLINK_COMPUTE_POOL;
 
       sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      const showInputBoxStub = sandbox
-        .stub(vscode.window, "showInputBox")
-        .resolves("pool-artifact");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("pool-artifact");
+      showInputBoxStub.onSecondCall().resolves(undefined);
+      showInputBoxStub.onThirdCall().resolves(undefined);
 
       const result = await promptForArtifactUploadParams(pool);
 
@@ -311,6 +351,8 @@ describe("uploadArtifact", () => {
       assert.deepStrictEqual(result, {
         environment: mockEnvironment.id,
         cloud: "AWS",
+        description: undefined,
+        documentationLink: undefined,
         region: "us-west-2",
         artifactName: "pool-artifact",
         fileFormat: "jar",
@@ -322,7 +364,10 @@ describe("uploadArtifact", () => {
       const cluster: any = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
 
       sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves("cluster-artifact");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("cluster-artifact");
+      showInputBoxStub.onSecondCall().resolves(undefined);
+      showInputBoxStub.onThirdCall().resolves(undefined);
 
       const result = await promptForArtifactUploadParams(cluster);
 
@@ -332,6 +377,8 @@ describe("uploadArtifact", () => {
       assert.deepStrictEqual(result, {
         environment: mockEnvironment.id,
         cloud: "AWS",
+        description: undefined,
+        documentationLink: undefined,
         region: "us-west-2",
         artifactName: "cluster-artifact",
         fileFormat: "jar",
@@ -347,7 +394,10 @@ describe("uploadArtifact", () => {
         provider: "AWS",
         region: fakeCloudProviderRegion.region_name,
       });
-      sandbox.stub(vscode.window, "showInputBox").resolves("mock-file");
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("mock-file");
+      showInputBoxStub.onSecondCall().resolves(undefined);
+      showInputBoxStub.onThirdCall().resolves(undefined);
       const filePicker = sandbox.stub(vscode.window, "showOpenDialog");
 
       const result = await promptForArtifactUploadParams(mockFileUri);
@@ -356,6 +406,8 @@ describe("uploadArtifact", () => {
       assert.deepStrictEqual(result, {
         environment: mockEnvironment.id,
         cloud: "AWS",
+        description: undefined,
+        documentationLink: undefined,
         region: fakeCloudProviderRegion.region_name,
         artifactName: "mock-file",
         fileFormat: "jar",
@@ -502,6 +554,8 @@ describe("uploadArtifact", () => {
           region: mockAzureParams.region,
           environment: mockAzureParams.environment,
           display_name: mockAzureParams.artifactName,
+          description: undefined,
+          documentation_link: undefined,
           content_format: mockAzureParams.fileFormat.toUpperCase(),
           upload_source: {
             location: PRESIGNED_URL_LOCATION,
