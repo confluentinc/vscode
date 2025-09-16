@@ -45,12 +45,12 @@ export async function verifyGeneratedProject(
   await expect(envDocument.editorContent).toBeVisible();
   // It should hold the configured bootstrapServers value
   await expect(envDocument.editorContent).toContainText(
-    new RegExp(`CC_BOOTSTRAP_SERVER\\s*=\\s*"?${bootstrapServers}"`),
+    new RegExp(`CC_BOOTSTRAP_SERVER\\s*=\\s*"${bootstrapServers}"`),
   );
   // If a topic was provided, the .env file should specify it
   if (topic) {
     await expect(envDocument.editorContent).toContainText(
-      new RegExp(`CC_TOPIC\\s*=\\s*"?${topic}"`),
+      new RegExp(`CC_TOPIC\\s*=\\s*"${topic}"`),
     );
   }
   // Also, we should see the client.id starting with `vscode-` and the template name/identifier
