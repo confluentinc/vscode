@@ -9,16 +9,11 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { titleCase } from "../utils";
 
-export function registerCommandWithLogging(
+export function createWrappedCommand(
   commandName: string,
   command: ((...args: any[]) => void) | ((...args: any[]) => Promise<void>),
-): vscode.Disposable {
-  if (!commandName.startsWith("confluent.")) {
-    // developer error.
-    throw new Error(`Command name "${commandName}" must start with "confluent."`);
-  }
-
-  const wrappedCommand = async (...args: any[]) => {
+): (...args: any[]) => Promise<void> {
+  return async (...args: any[]) => {
     // if the extension was disabled, we need to prevent any commands from running and show an error
     // notification to the user
     const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
@@ -43,6 +38,18 @@ export function registerCommandWithLogging(
       }
     }
   };
+}
+
+export function registerCommandWithLogging(
+  commandName: string,
+  command: ((...args: any[]) => void) | ((...args: any[]) => Promise<void>),
+): vscode.Disposable {
+  if (!commandName.startsWith("confluent.")) {
+    // developer error.
+    throw new Error(`Command name "${commandName}" must start with "confluent."`);
+  }
+
+  const wrappedCommand = createWrappedCommand(commandName, command);
   return vscode.commands.registerCommand(commandName, wrappedCommand);
 }
 
