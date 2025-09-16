@@ -18,7 +18,6 @@ import {
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
 import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
-import { configureVSCodeSettings } from "../utils/settings";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { verifyGeneratedProject } from "./utils/scaffold";
 
@@ -112,10 +111,6 @@ test.describe("Project Scaffolding", () => {
         test.beforeEach(async ({ page, electronApp }) => {
           // set up the connection based on type
           await connectionSetup(page, electronApp);
-          await configureVSCodeSettings(page, electronApp, {
-            // required for right-click context menu action
-            "window.menuStyle": "custom",
-          });
         });
 
         test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
