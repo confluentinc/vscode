@@ -495,6 +495,7 @@ export class FlinkStatementResultsManager {
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
           areResultsViewable: this.statement.canRequestResults,
+          possiblyViewable: this.statement.possiblyViewable,
           isForeground: this.statement.isForeground,
         };
       }
