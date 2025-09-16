@@ -11,7 +11,10 @@ import { SupportView } from "../objects/views/SupportView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import { FormConnectionType, SupportedAuthType } from "../objects/webviews/DirectConnectionFormWebview";
+import {
+  FormConnectionType,
+  SupportedAuthType,
+} from "../objects/webviews/DirectConnectionFormWebview";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
 import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
@@ -51,48 +54,42 @@ test.describe("Project Scaffolding", () => {
 
   // Connection types covered by the E2E tests
   const connectionTypes: Array<
-    [
-      ConnectionType,
-      Tag,
-      (page: Page, electronApp: ElectronApplication) => Promise<void>,
-    ]
+    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
   > = [
-      [
-        ConnectionType.Ccloud,
-        Tag.CCloud,
-        async (page, electronApp) => {
-          await setupCCloudConnection(
-            page,
-            electronApp,
-            process.env.E2E_USERNAME!,
-            process.env.E2E_PASSWORD!,
-          );
-        },
-      ],
-      [
-        ConnectionType.Direct,
-        Tag.Direct,
-        async (page) => {
-          await setupDirectConnection(page, {
-            formConnectionType: FormConnectionType.ConfluentCloud,
-            kafkaConfig: {
-              bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-              authType: SupportedAuthType.API,
-              credentials: {
-                api_key: process.env.E2E_KAFKA_API_KEY!,
-                api_secret: process.env.E2E_KAFKA_API_SECRET!,
-              },
+    [
+      ConnectionType.Ccloud,
+      Tag.CCloud,
+      async (page, electronApp) => {
+        await setupCCloudConnection(
+          page,
+          electronApp,
+          process.env.E2E_USERNAME!,
+          process.env.E2E_PASSWORD!,
+        );
+      },
+    ],
+    [
+      ConnectionType.Direct,
+      Tag.Direct,
+      async (page) => {
+        await setupDirectConnection(page, {
+          formConnectionType: FormConnectionType.ConfluentCloud,
+          kafkaConfig: {
+            bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
+            authType: SupportedAuthType.API,
+            credentials: {
+              api_key: process.env.E2E_KAFKA_API_KEY!,
+              api_secret: process.env.E2E_KAFKA_API_SECRET!,
             },
-          });
-        },
-      ],
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
-    ];
+          },
+        });
+      },
+    ],
+    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+  ];
 
   for (const [templateDisplayName, templateName] of templates) {
-    test(`should generate ${templateDisplayName} template from Support view`, async ({
-      page,
-    }) => {
+    test(`should generate ${templateDisplayName} template from Support view`, async ({ page }) => {
       // Given we navigate to the Support view
       const supportView = new SupportView(page);
       // and we start the generate project flow
@@ -109,11 +106,7 @@ test.describe("Project Scaffolding", () => {
       await verifyGeneratedProject(page, templateName, "localhost:9092");
     });
 
-    for (const [
-      connectionType,
-      connectionTag,
-      connectionSetup,
-    ] of connectionTypes) {
+    for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
       test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
         test.beforeEach(async ({ page, electronApp }) => {
           // set up the connection based on type
