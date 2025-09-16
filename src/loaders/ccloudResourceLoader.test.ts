@@ -781,7 +781,7 @@ describe("CCloudResourceLoader", () => {
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
 
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       assert.strictEqual(artifacts.length, 0);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
 
@@ -800,7 +800,7 @@ describe("CCloudResourceLoader", () => {
       const mockResponse = makeFakeListArtifactsResponse(false, 3);
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       assert.strictEqual(artifacts.length, 3);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
     });
@@ -814,7 +814,7 @@ describe("CCloudResourceLoader", () => {
         .resolves(mockResponse)
         .onSecondCall()
         .resolves(mockResponse2);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       assert.strictEqual(artifacts.length, 5);
       sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
     });
