@@ -215,7 +215,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Convert the given CCloudFlinkComputePool CCloudKafkaCluster
+   * Convert the given CCloudFlinkComputePool or CCloudKafkaCluster
    * into a single IFlinkQueryable object.
    */
   public async toFlinkQueryable(
