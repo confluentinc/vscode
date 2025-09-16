@@ -2,11 +2,17 @@ import { ElectronApplication, Page } from "@playwright/test";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { executeVSCodeCommand } from "./commands";
 
-const DEFAULT_UI_SETTINGS = {
-  // required for right-click context menu action to delete subject schemas
-  // (see https://code.visualstudio.com/updates/v1_101#_custom-menus-with-native-window-title-bar)
-  "window.menuStyle": "custom",
-};
+// `window.menuStyle` must be set to "custom" for right-click context menu actions (e.g. deleting
+// schemas, generating projects from sidebar resources, etc), but Windows already sets this to
+// inherit the "custom" setting value from `window.titleBarStyle`, so we shouldn't set it or it will
+// require a restart to take effect. (Also, based on our system dialog stubbing, if we updated this
+// on Windows, we would auto-reload the window and lose our Electron/page context, which will cause
+// all sorts of odd test failures.)
+//
+// see:
+//   - https://code.visualstudio.com/updates/v1_101#_custom-menus-with-native-window-title-bar
+//   - https://github.com/confluentinc/vscode/issues/2609#issuecomment-3300206479
+const DEFAULT_UI_SETTINGS = process.platform === "win32" ? {} : { "window.menuStyle": "custom" };
 
 const DEFAULT_EDITOR_SETTINGS = {
   // this is to avoid VS Code incorrectly setting the language of .proto files as C# so they
