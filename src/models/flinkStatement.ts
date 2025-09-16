@@ -204,6 +204,18 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
   }
 
   /**
+   * Returns true if the statement is less than 24 hours old
+   */
+  get possiblyViewable(): boolean {
+    if (!this.createdAt) {
+      return false;
+    }
+
+    // If the statement is more than 24 hours old, results will never be viewable.
+    return this.createdAt.getTime() >= new Date().getTime() - ONE_DAY_MILLIS;
+  }
+
+  /**
    * For statement results to be viewable, it must satisfy these conditions:
    * 1. The statement must have been created in the last 24 hours
    *    (which is the TTL for the statement result to be deleted.)
@@ -212,13 +224,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable, IEnvP
    *    we document it here for posterity).
    */
   get canRequestResults(): boolean {
-    if (!this.createdAt) {
-      return false;
-    }
-
-    // If the statement is more than 24 hours old, results will never be viewable.
-    // (This should be a different check)
-    if (this.createdAt.getTime() < new Date().getTime() - ONE_DAY_MILLIS) {
+    if (!this.possiblyViewable) {
       return false;
     }
 
@@ -284,7 +290,10 @@ export class FlinkStatementTreeItem extends TreeItem {
 
     // internal properties
     this.resource = resource;
-    this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
+
+    // encode viewability into context value for command binding
+    const viewabilityModifier = resource.possiblyViewable ? "" : "-not-viewable";
+    this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement${viewabilityModifier}`;
 
     // user-facing properties
 

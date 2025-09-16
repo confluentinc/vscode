@@ -294,6 +294,65 @@ describe("FlinkStatement", () => {
       });
     });
   });
+
+  describe("possiblyViewable", () => {
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - ONE_DAY_MS * 1.5);
+    const today = new Date(now.getTime() - ONE_DAY_MS * 0.5);
+
+    const testCases = [
+      {
+        name: "should be possibly viewable when statement is less than a day old",
+        statement: {
+          phase: Phase.FAILED,
+          sqlKind: "SELECT",
+          createdAt: today,
+        },
+        expected: true,
+      },
+      {
+        name: "should not be possibly viewable when statement is more than a day old",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "SELECT",
+          createdAt: yesterday,
+        },
+        expected: false,
+      },
+      {
+        name: "should not be possibly viewable when createdAt is undefined",
+        statement: {
+          phase: Phase.RUNNING,
+          sqlKind: "SELECT",
+          createdAt: undefined,
+        },
+        expected: false,
+      },
+    ];
+
+    testCases.forEach(({ name, statement, expected }) => {
+      it(name, () => {
+        let flinkStatement: FlinkStatement;
+
+        if (statement.createdAt === undefined) {
+          flinkStatement = createFlinkStatement({
+            phase: statement.phase,
+            sqlKind: statement.sqlKind,
+          });
+          flinkStatement.metadata.created_at = undefined;
+        } else {
+          flinkStatement = createFlinkStatement({
+            phase: statement.phase,
+            sqlKind: statement.sqlKind,
+            createdAt: statement.createdAt,
+          });
+        }
+
+        assert.strictEqual(flinkStatement.possiblyViewable, expected);
+      });
+    });
+  });
 });
 
 describe("FlinkStatementTreeItem", () => {
@@ -303,6 +362,16 @@ describe("FlinkStatementTreeItem", () => {
 
     const treeItem = new FlinkStatementTreeItem(statement);
     assert.strictEqual(treeItem.contextValue, "ccloud-flink-statement");
+  });
+
+  it("has the correct context value for old statements", () => {
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const oldStatement = createFlinkStatement({
+      createdAt: new Date(Date.now() - oneDayMs * 2),
+    });
+
+    const treeItem = new FlinkStatementTreeItem(oldStatement);
+    assert.strictEqual(treeItem.contextValue, "ccloud-flink-statement-not-viewable");
   });
 
   it("tooltip hits the major properties", () => {
