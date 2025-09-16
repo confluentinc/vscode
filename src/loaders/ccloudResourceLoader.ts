@@ -179,30 +179,15 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async determineFlinkQueryables(
     resource: CCloudEnvironment | CCloudFlinkComputePool | CCloudKafkaCluster,
   ): Promise<IFlinkQueryable[]> {
-    const org: CCloudOrganization | undefined = await this.getOrganization();
-    if (!org) {
-      return [];
-    }
-
     if (resource instanceof CCloudFlinkComputePool || resource instanceof CCloudKafkaCluster) {
-      // If we have a single compute pool or kafka cluster, just reexpress it as a single
-      // IFlinkQueryable .
-      const singleton: IFlinkQueryable = {
-        organizationId: org.id,
-        environmentId: resource.environmentId,
-        provider: resource.provider,
-        region: resource.region,
-      };
-
-      if (resource instanceof CCloudFlinkComputePool) {
-        // Only fix to a single compute pool if we were given a compute pool.
-        singleton.computePoolId = resource.id;
-      }
-      return [singleton];
+      return [await this.toFlinkQueryable(resource)];
     } else {
       // Must be a CCloudEnvironment. Gather all provider-region pairs.
       // The environment may have many resources in the same
       // provider-region pair. We need to deduplicate them by provider-region.
+
+      const org: CCloudOrganization = await this.getOrganization();
+
       const providerRegionSet: ObjectSet<IFlinkQueryable> = new ObjectSet(
         (queryable) => `${queryable.provider}-${queryable.region}`,
       );
@@ -227,6 +212,29 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
       return providerRegionSet.items();
     }
+  }
+
+  /**
+   * Convert the given CCloudFlinkComputePool or CCloudKafkaCluster
+   * into a single IFlinkQueryable object.
+   */
+  public async toFlinkQueryable(
+    resource: CCloudFlinkComputePool | CCloudKafkaCluster,
+  ): Promise<IFlinkQueryable> {
+    const org: CCloudOrganization = await this.getOrganization();
+
+    const singleton: IFlinkQueryable = {
+      organizationId: org.id,
+      environmentId: resource.environmentId,
+      provider: resource.provider,
+      region: resource.region,
+    };
+
+    if (resource instanceof CCloudFlinkComputePool) {
+      // Only fix to a single compute pool if we were given a compute pool.
+      singleton.computePoolId = resource.id;
+    }
+    return singleton;
   }
 
   /**
@@ -273,35 +281,15 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Query the Flink artifacts for the given CCloud environment + provider-region.
+   * Query the Flink artifacts for the given CCloudFlinkDbKafkaCluster's CCloud environment + provider-region.
    * @returns The Flink artifacts for the given environment + provider-region.
-   * @param resource The CCloud compute pool or environment to get the Flink artifacts for.
+   * @param resource The CCloud Flink Database (a Flink-enabled Kafka Cluster) to get the Flink artifacts for.
    */
-  public async getFlinkArtifacts(
-    resource: CCloudEnvironment | CCloudFlinkComputePool | CCloudKafkaCluster,
-  ): Promise<FlinkArtifact[]> {
-    const queryables: IFlinkQueryable[] = await this.determineFlinkQueryables(resource);
+  public async getFlinkArtifacts(resource: CCloudFlinkDbKafkaCluster): Promise<FlinkArtifact[]> {
+    const queryable = await this.toFlinkQueryable(resource);
     const handle = await getSidecar();
 
-    // For each provider-region pair, get the Flink artifacts with reasonable concurrency.
-    const concurrentResults: ExecutionResult<FlinkArtifact[]>[] = await executeInWorkerPool(
-      (queryable: IFlinkQueryable) => loadArtifactsForProviderRegion(handle, queryable),
-      queryables,
-      { maxWorkers: 5 },
-    );
-
-    logger.debug(`getFlinkArtifacts() loaded ${concurrentResults.length} provider-region pairs`);
-
-    // Assemble the results into a single array of Flink artifacts.
-    const flinkArtifacts: FlinkArtifact[] = [];
-
-    // extract will raise first error if any error was encountered.
-    const blocks: FlinkArtifact[][] = extract(concurrentResults);
-    for (const block of blocks) {
-      flinkArtifacts.push(...block);
-    }
-
-    return flinkArtifacts;
+    return await loadArtifactsForProviderRegion(handle, queryable);
   }
 
   /**
