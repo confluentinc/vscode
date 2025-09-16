@@ -30,6 +30,8 @@ export interface ArtifactUploadParams {
   cloud: string;
   region: string;
   artifactName: string;
+  description?: string;
+  documentationLink?: string;
   fileFormat: string;
   selectedFile: vscode.Uri;
 }
@@ -173,11 +175,36 @@ export async function promptForArtifactUploadParams(
     return undefined;
   }
 
+  const description = await vscode.window.showInputBox({
+    prompt: "Enter an optional description for the artifact (max 256 characters)",
+    value: "",
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value) return undefined;
+      return value.length <= 256 ? undefined : "Description must be 256 characters or fewer";
+    },
+  });
+
+  const documentationLink = await vscode.window.showInputBox({
+    prompt:
+      "Enter an optional documentation link for the artifact (must start with http:// or https://, max 512 characters)",
+    value: "",
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      if (!value) return undefined;
+      if (value.length > 512) return "Documentation link must be 512 characters or fewer";
+      const re = /^(?:http:\/\/|https:\/\/).+/i;
+      return re.test(value) ? undefined : "Documentation link must start with http:// or https://";
+    },
+  });
+
   return {
     environment: environment.id,
     cloud,
     region: cloudRegion.region,
     artifactName,
+    description: description ?? undefined,
+    documentationLink: documentationLink ?? undefined,
     fileFormat,
     selectedFile,
   };
@@ -316,6 +343,8 @@ export function buildCreateArtifactRequest(
     region: params.region,
     environment: params.environment,
     display_name: params.artifactName,
+    description: params.description,
+    documentation_link: params.documentationLink,
     content_format: params.fileFormat.toUpperCase(),
     upload_source: {
       location: PRESIGNED_URL_LOCATION,
