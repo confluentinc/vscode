@@ -70,7 +70,6 @@ describe("commands/index.ts", () => {
 
     it("should show extension disabled notification and not execute command when extension is disabled", async () => {
       // force extension to be disabled by resetting the stub and setting the reason
-      checkForExtensionDisabledReasonStub.reset();
       checkForExtensionDisabledReasonStub.resolves("Extension has been disabled due to policy");
 
       const showExtensionDisabledNotificationStub = sandbox.stub(

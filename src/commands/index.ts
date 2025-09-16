@@ -28,7 +28,10 @@ export function registerCommandWithLogging(
   return vscode.commands.registerCommand(commandName, wrappedCommand);
 }
 
-/** Wraps a command with extension disabled state checking, telemetry logging, and error handling */
+/**
+ *  Wraps a command's function with extension disabled state checking, telemetry logging, and error handling
+ *  Intended to only be called by {@link registerCommandWithLogging}.
+ */
 export function createWrappedCommand(
   commandName: string,
   command: ((...args: any[]) => void) | ((...args: any[]) => Promise<void>),
