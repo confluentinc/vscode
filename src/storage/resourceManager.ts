@@ -12,10 +12,12 @@ import { FormConnectionType } from "../directConnections/types";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment, EnvironmentType, getEnvironmentClass } from "../models/environment";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import { KafkaClusterType, getKafkaClusterClass } from "../models/kafkaCluster";
 import {
   ConnectionId,
   EnvironmentId,
+  IEnvProviderRegion,
   IResourceBase,
   ISchemaRegistryResource,
 } from "../models/resource";
@@ -62,6 +64,7 @@ export enum GeneratedKeyResourceType {
   SCHEMA_REGISTRIES = "schemaRegistries",
   TOPICS = "topics",
   SUBJECTS = "subjects",
+  FLINK_ARTIFACTS = "flinkArtifacts",
 }
 
 /**
@@ -486,6 +489,114 @@ export class ResourceManager {
     // (Empty list will be returned as is, indicating that we know there are
     //  no topics in this cluster.)
     return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic as KafkaTopic));
+  }
+
+  // Flink Artifacts
+
+  getEnvProviderRegionKey(envProviderRegion: IEnvProviderRegion): string {
+    return `${envProviderRegion.environmentId}-${envProviderRegion.provider}-${envProviderRegion.region}`;
+  }
+
+  /**
+   * Cache Flink Artifacts for a (CCloud) connection grouped by provider+region.
+   *
+   * Stored similarly to subjects:
+   * - Per-connection workspace storage key generated with GeneratedKeyResourceType.FLINK_ARTIFACTS
+   * - The value is a JSON-stringified map: "<envId>-<provider>-<region>" -> FlinkArtifact[] (possibly empty)
+   *
+   * An empty artifacts array will still be stored (indicating we know there are no artifacts for that provider/region).
+   *
+   * @param artifacts All FlinkArtifact instances (must share connectionId, provider, and region)
+   */
+  async setFlinkArtifacts(
+    envProviderRegion: IEnvProviderRegion,
+    artifacts: FlinkArtifact[],
+  ): Promise<void> {
+    // Validate uniformprovider, region.
+    for (const art of artifacts) {
+      if (
+        art.environmentId !== envProviderRegion.environmentId ||
+        art.provider !== envProviderRegion.provider ||
+        art.region !== envProviderRegion.region
+      ) {
+        throw new Error(
+          `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}${envProviderRegion.provider}/${envProviderRegion.region}, found ${art.provider}/${art.region}`,
+        );
+      }
+    }
+
+    const providerRegionKey = this.getEnvProviderRegionKey(envProviderRegion);
+
+    logger.debug(`Setting ${artifacts.length} Flink artifacts under ${providerRegionKey}.`);
+
+    await this.runWithMutex(WorkspaceStorageKeys.FLINK_ARTIFACTS, async () => {
+      const existingString: string | undefined = await this.workspaceState.get(
+        WorkspaceStorageKeys.FLINK_ARTIFACTS,
+      );
+      const artifactsByProviderRegion: Map<string, object[]> = existingString
+        ? stringToMap(existingString)
+        : new Map<string, object[]>();
+
+      // Store the raw artifact objects (they will be JSON-stringified).
+      artifactsByProviderRegion.set(providerRegionKey, artifacts);
+
+      await this.workspaceState.update(
+        WorkspaceStorageKeys.FLINK_ARTIFACTS,
+        mapToString(artifactsByProviderRegion),
+      );
+    });
+  }
+
+  /**
+   * Get cached Flink Artifacts for a (CCloud) connection grouped by provider+region.
+   *
+   * @param envProviderRegion Environment / provider / region triple
+   * @returns FlinkArtifact[] (possibly empty) if known, else undefined indicating a cache miss
+   */
+  async getFlinkArtifacts(
+    envProviderRegion: IEnvProviderRegion,
+  ): Promise<FlinkArtifact[] | undefined> {
+    const providerRegionKey = this.getEnvProviderRegionKey(envProviderRegion);
+
+    let artifactsByProviderRegionString: string | undefined;
+
+    // Guard read with mutex to avoid reading during a concurrent write.
+    await this.runWithMutex(WorkspaceStorageKeys.FLINK_ARTIFACTS, async () => {
+      artifactsByProviderRegionString = await this.workspaceState.get(
+        WorkspaceStorageKeys.FLINK_ARTIFACTS,
+      );
+    });
+
+    const artifactsByProviderRegion: Map<string, object[]> = artifactsByProviderRegionString
+      ? stringToMap(artifactsByProviderRegionString)
+      : new Map<string, object[]>();
+
+    const vanillaJSONArtifacts: object[] | undefined =
+      artifactsByProviderRegion.get(providerRegionKey);
+
+    if (vanillaJSONArtifacts === undefined) {
+      // Cache miss for this env/provider/region
+      return undefined;
+    }
+
+    logger.debug(`Found ${vanillaJSONArtifacts.length} Flink artifacts under ${providerRegionKey}`);
+
+    // Rehydrate plain objects into FlinkArtifact instances.
+    return vanillaJSONArtifacts.map((raw) => {
+      const obj = raw as any;
+      return new FlinkArtifact({
+        connectionId: obj.connectionId,
+        connectionType: obj.connectionType,
+        environmentId: obj.environmentId,
+        id: obj.id,
+        name: obj.name,
+        description: obj.description,
+        provider: obj.provider,
+        region: obj.region,
+        documentationLink: obj.documentationLink,
+        metadata: obj.metadata,
+      });
+    });
   }
 
   // AUTH PROVIDER
