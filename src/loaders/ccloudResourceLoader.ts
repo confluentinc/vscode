@@ -27,6 +27,7 @@ import { CCloudOrganization } from "../models/organization";
 import { EnvironmentId, IFlinkQueryable } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar, SidecarHandle } from "../sidecar";
+import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
@@ -283,14 +284,29 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /**
    * Query the Flink artifacts for the given CCloudFlinkDbKafkaCluster's CCloud environment + provider-region.
+   * Looks to the resource manager cache first, and only does a deep fetch if not found (or told to force refresh).
    * @returns The Flink artifacts for the given environment + provider-region.
    * @param resource The CCloud Flink Database (a Flink-enabled Kafka Cluster) to get the Flink artifacts for.
    */
-  public async getFlinkArtifacts(resource: CCloudFlinkDbKafkaCluster): Promise<FlinkArtifact[]> {
+  public async getFlinkArtifacts(
+    resource: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkArtifact[]> {
     const queryable = await this.toFlinkQueryable(resource);
-    const handle = await getSidecar();
 
-    return await loadArtifactsForProviderRegion(handle, queryable);
+    // Look to see if we have cached artifacts for this environment/provider/region already.
+    const rm = getResourceManager();
+    let artifacts = await rm.getFlinkArtifacts(queryable);
+    if (artifacts === undefined || forceDeepRefresh) {
+      // Nope, deep fetch them (or was told to ignore cache and refetch).
+      const handle = await getSidecar();
+      artifacts = await loadArtifactsForProviderRegion(handle, queryable);
+
+      // Cache them in the resource manager for future reference.
+      await rm.setFlinkArtifacts(queryable, artifacts);
+    }
+
+    return artifacts;
   }
 
   /**

@@ -3,12 +3,12 @@ import { randomUUID } from "crypto";
 import { Uri } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
   TEST_DIRECT_ENVIRONMENT,
-  TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA_REGISTRY,
@@ -19,21 +19,19 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 import {
   ConnectionSpec,
+  ConnectionType,
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../models/resource";
-import { Subject } from "../models/schema";
-import {
-  CCloudSchemaRegistry,
-  LocalSchemaRegistry,
-  SchemaRegistry,
-} from "../models/schemaRegistry";
+import { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
+import { CCloudSchemaRegistry, LocalSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { UriMetadataKeys } from "./constants";
 import {
@@ -446,6 +444,189 @@ describe("ResourceManager Schema Registry methods", function () {
   });
 });
 
+describe("ResourceManager Flink Artifact methods", function () {
+  const baseEnvId = TEST_CCLOUD_ENVIRONMENT_ID;
+  const provider = "aws";
+  const region1 = "us-east-1";
+  const region2 = "us-west-2";
+
+  let rm: ResourceManager;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
+    rm = getResourceManager();
+    await clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    await clearWorkspaceState();
+  });
+
+  function makeArtifact(
+    id: string,
+    envId: EnvironmentId,
+    prov: string,
+    reg: string,
+    name?: string,
+  ): FlinkArtifact {
+    return new FlinkArtifact({
+      connectionId: CCLOUD_CONNECTION_ID,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: envId,
+      id,
+      name: name ?? `artifact-${id}`,
+      description: `Description for ${id}`,
+      provider: prov,
+      region: reg,
+      documentationLink: "https://example.com/docs",
+      metadata: {
+        created_at: new Date(),
+        updated_at: new Date(),
+      } as ArtifactV1FlinkArtifactMetadata,
+    });
+  }
+
+  it("getFlinkArtifacts() should return undefined (cache miss) when none stored", async () => {
+    const envProviderRegion: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const artifacts = await rm.getFlinkArtifacts(envProviderRegion);
+    assert.strictEqual(artifacts, undefined);
+  });
+
+  it("setFlinkArtifacts() then getFlinkArtifacts() should return stored artifacts", async () => {
+    const envProviderRegion: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const artifactsToStore = [
+      makeArtifact("fa-1", baseEnvId, provider, region1),
+      makeArtifact("fa-2", baseEnvId, provider, region1),
+    ];
+
+    await rm.setFlinkArtifacts(envProviderRegion, artifactsToStore);
+
+    const stored: FlinkArtifact[] | undefined = await rm.getFlinkArtifacts(envProviderRegion);
+    assert.ok(stored);
+    assert.deepStrictEqual(
+      stored.map((a) => a.id),
+      artifactsToStore.map((a) => a.id),
+    );
+    for (const art of stored) {
+      assert.ok(art instanceof FlinkArtifact, "Expected instance of FlinkArtifact");
+      assert.strictEqual(art.provider, provider);
+      assert.strictEqual(art.region, region1);
+      assert.strictEqual(art.environmentId, baseEnvId);
+    }
+  });
+
+  it("setFlinkArtifacts() with empty array should persist empty list (not cache miss)", async () => {
+    const envProviderRegion: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+
+    await rm.setFlinkArtifacts(envProviderRegion, []);
+    const stored = await rm.getFlinkArtifacts(envProviderRegion);
+    assert.deepStrictEqual(stored, []);
+  });
+
+  it("setFlinkArtifacts() should isolate different provider/region keys", async () => {
+    const key1: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const key2: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region2,
+    };
+
+    const artifactsKey1 = [makeArtifact("fa-a", baseEnvId, provider, region1)];
+    const artifactsKey2 = [
+      makeArtifact("fa-b", baseEnvId, provider, region2),
+      makeArtifact("fa-c", baseEnvId, provider, region2),
+    ];
+
+    await rm.setFlinkArtifacts(key1, artifactsKey1);
+    await rm.setFlinkArtifacts(key2, artifactsKey2);
+
+    const stored1 = await rm.getFlinkArtifacts(key1);
+    const stored2 = await rm.getFlinkArtifacts(key2);
+
+    assert.deepStrictEqual(
+      stored1?.map((a) => a.id),
+      artifactsKey1.map((a) => a.id),
+    );
+    assert.deepStrictEqual(
+      stored2?.map((a) => a.id),
+      artifactsKey2.map((a) => a.id),
+    );
+  });
+
+  for (const { label, artifact: mismatchedArtifact } of [
+    {
+      label: "environment mismatch",
+      artifact: makeArtifact("fa-y", "other-env-id" as EnvironmentId, provider, region1),
+    },
+    {
+      label: "provider mismatch",
+      artifact: makeArtifact("fa-y", baseEnvId, "gcp", region1),
+    },
+    {
+      label: "region mismatch",
+      artifact: makeArtifact("fa-y", baseEnvId, provider, "eu-central-1"),
+    },
+  ]) {
+    it(`setFlinkArtifacts() should throw on ${label}`, async () => {
+      const envProviderRegion: IEnvProviderRegion = {
+        environmentId: baseEnvId,
+        provider,
+        region: region1,
+      };
+      const artifacts = [
+        // Valid one...
+        makeArtifact("fa-x", baseEnvId, provider, region1),
+        // ... and one with the deliberate mismatch.
+        mismatchedArtifact,
+      ];
+      await assert.rejects(
+        rm.setFlinkArtifacts(envProviderRegion, artifacts),
+        (err: unknown) =>
+          err instanceof Error && err.message.includes("Environment/Provider/Region mismatch"),
+        `Expected ${label} error`,
+      );
+    });
+  }
+
+  it("getFlinkArtifacts() should not leak artifacts across different regions", async () => {
+    const key1: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+
+    const artifactsKey1 = [makeArtifact("fa-a", baseEnvId, provider, region1)];
+    await rm.setFlinkArtifacts(key1, artifactsKey1);
+
+    const key2: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region2,
+    };
+    const missingInKey2 = await rm.getFlinkArtifacts(key2);
+    assert.strictEqual(missingInKey2, undefined);
+  });
+});
+
 describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;
 
@@ -551,154 +732,6 @@ describe("ResourceManager direct connection methods", function () {
     // make sure they're gone
     storedSpecs = await rm.getDirectConnections();
     assert.deepStrictEqual(storedSpecs, new Map());
-  });
-});
-
-describe("ResourceManager SR subject methods", function () {
-  let resourceManager: ResourceManager;
-
-  before(async () => {
-    // extension needs to be activated before any storage management can be done
-    resourceManager = getResourceManager();
-  });
-
-  this.beforeEach(async () => {
-    // fresh slate for each test
-    await clearWorkspaceState();
-  });
-
-  this.afterEach(async () => {
-    // clean up after each test
-    await clearWorkspaceState();
-  });
-
-  function createTestSubjects(schemaRegistry: SchemaRegistry, count: number): Subject[] {
-    const subjects: Subject[] = [];
-    for (let i = 0; i < count; i++) {
-      const subjectName = `test-subject-${i + 1}`;
-      const subject = new Subject(
-        subjectName,
-        schemaRegistry.connectionId,
-        schemaRegistry.environmentId,
-        schemaRegistry.id,
-        null,
-      );
-      // Add the subject to the list of subjects
-      subjects.push(subject);
-    }
-    return subjects;
-  }
-
-  it("getSubjects() should return undefined if no cached subjects for this schema registry", async () => {
-    for (const sr of [
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      TEST_LOCAL_SCHEMA_REGISTRY,
-      TEST_DIRECT_SCHEMA_REGISTRY,
-    ]) {
-      const subjects = await resourceManager.getSubjects(sr);
-      assert.deepStrictEqual(subjects, undefined);
-    }
-  });
-
-  it("getSubjects() should return undefined if one ccloud SR is set but not the other", async () => {
-    // Set up the cloud topics.
-
-    const otherCCloudSR = CCloudSchemaRegistry.create({
-      ...TEST_CCLOUD_SCHEMA_REGISTRY,
-      id: "other-cluster-id",
-    });
-
-    // Set some subjects for the other cloud SR
-    await resourceManager.setSubjects(otherCCloudSR, createTestSubjects(otherCCloudSR, 2));
-
-    // But our main cloud SR should not have any.
-    const subjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(subjects, undefined);
-  });
-
-  it("getSubjects() should return empty array of subjects if empty array is set", async () => {
-    for (const sr of [
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      TEST_LOCAL_SCHEMA_REGISTRY,
-      TEST_DIRECT_SCHEMA_REGISTRY,
-    ]) {
-      await resourceManager.setSubjects(sr, []);
-      const subjects = await resourceManager.getSubjects(sr);
-      assert.deepStrictEqual(subjects, []);
-    }
-  });
-
-  it("getSubjects() should return the correct subjects for the schema registry", async () => {
-    const testSubjects = createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2);
-    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, testSubjects);
-    let retrievedSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(retrievedSubjects, testSubjects, "first comparison");
-
-    // and rewriting to new subjects should work
-    const newTestSubjects = createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 3);
-    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, newTestSubjects);
-    retrievedSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(retrievedSubjects, newTestSubjects, "second comparison");
-  });
-
-  it("setSubjects() with undefined should clear out just that single schema registry's subjects", async () => {
-    // setSubjects(..., undefined) is way to clear out a single schema registry's subjects.
-
-    // Set subjects for two different ccloud-based registries
-    await resourceManager.setSubjects(
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
-    );
-
-    const otherCCloudSR = CCloudSchemaRegistry.create({
-      ...TEST_CCLOUD_SCHEMA_REGISTRY,
-      id: "other-ccloud-env-id-registry",
-      environmentId: "other-ccloud-env-id" as EnvironmentId,
-    });
-
-    const otherCCloudSRSubjects = createTestSubjects(otherCCloudSR, 3);
-    await resourceManager.setSubjects(otherCCloudSR, otherCCloudSRSubjects);
-
-    // Verify that the subjects were set correctly
-    let retrievedSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.ok(retrievedSubjects);
-    assert.equal(retrievedSubjects.length, 2);
-
-    retrievedSubjects = await resourceManager.getSubjects(otherCCloudSR);
-    assert.ok(retrievedSubjects);
-    assert.equal(retrievedSubjects.length, 3);
-
-    // Now clear out the first one
-    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, undefined);
-    // Verify that the first one is gone
-    const missingSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(missingSubjects, undefined);
-    // Verify that the second one is still there
-    const otherSubjects = await resourceManager.getSubjects(otherCCloudSR);
-    assert.ok(otherSubjects);
-    assert.equal(otherSubjects.length, 3);
-    assert.deepStrictEqual(otherSubjects, otherCCloudSRSubjects);
-  });
-
-  it("purgeConnectionResources(LOCAL_CONNECTION_ID) should correctly delete only local SR subjects", async () => {
-    // set the subjects in extension storage before deleting them
-    await resourceManager.setSubjects(
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
-    );
-    const localSubjects = createTestSubjects(TEST_LOCAL_SCHEMA_REGISTRY, 2);
-    await resourceManager.setSubjects(TEST_LOCAL_SCHEMA_REGISTRY, localSubjects);
-
-    // clear all local resources
-    await resourceManager.purgeConnectionResources(LOCAL_CONNECTION_ID);
-
-    // verify the local topics were deleted correctly.
-    const missingLocalSubjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
-    assert.deepStrictEqual(missingLocalSubjects, undefined);
-
-    // verify the ccloud topics were not deleted.
-    const fetchedCCloudSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.ok(fetchedCCloudSubjects);
   });
 });
 

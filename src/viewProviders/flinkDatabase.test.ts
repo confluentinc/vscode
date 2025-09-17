@@ -80,6 +80,16 @@ describe("viewProviders/flinkDatabase.ts", () => {
         assert.deepStrictEqual(viewProvider["children"], fakeChildren);
       });
 
+      for (const forceDeepRefresh of [true, false]) {
+        it(`should pass forceDeepRefresh:${forceDeepRefresh} to delegate::fetchChildren()`, async () => {
+          const resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+          viewProvider["resource"] = resource;
+
+          await viewProvider.refresh(forceDeepRefresh);
+          sinon.assert.calledWith(delegateFetchStub, resource, forceDeepRefresh);
+        });
+      }
+
       it("should show an error notification when the delegate's fetchChildren() fails", async () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
         const fakeError = new Error("uh oh");
