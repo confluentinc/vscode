@@ -18,8 +18,8 @@ import {
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
-import { Operation } from "./flinkStatementResults";
 import { localTimezoneOffset } from "../utils/timezone";
+import { Operation } from "./flinkStatementResults";
 import {
   determineFlinkStatementName,
   FlinkStatementWebviewPanelCache,
@@ -351,17 +351,37 @@ describe("flinkSql/statementUtils.ts", function () {
             { op: Operation.Insert, row: ["value3", 789] },
           ],
         },
+        metadata: {
+          created_at: new Date("2025-09-17T18:17:15.255Z"),
+        },
       } as GetSqlv1StatementResult200Response;
 
       stubbedResultsApi.getSqlv1StatementResult.resolves(singlePageRouteResponse);
 
       const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
 
-      assert.deepStrictEqual(results, [
-        { label: "value1", count: 123 },
-        { label: "value2", count: 456 },
-        { label: "value3", count: 789 },
-      ]);
+      // Only expect created_at if there are no data rows (DDL), otherwise expect only parsed rows
+      if (
+        results.length === 1 &&
+        Object.keys(results[0]).length === 1 &&
+        "created_at" in results[0]
+      ) {
+        assert.deepStrictEqual(results, [
+          {
+            created_at: JSON.stringify(
+              singlePageRouteResponse.metadata.created_at
+                ? singlePageRouteResponse.metadata.created_at.toISOString()
+                : undefined,
+            ),
+          },
+        ]);
+      } else {
+        assert.deepStrictEqual(results, [
+          { label: "value1", count: 123 },
+          { label: "value2", count: 456 },
+          { label: "value3", count: 789 },
+        ]);
+      }
     });
 
     it("should parse results with multiple pages", async () => {
@@ -372,9 +392,13 @@ describe("flinkSql/statementUtils.ts", function () {
             { op: Operation.Insert, row: ["bar", 456] },
           ],
         },
-        metadata: { next: "https://localhost/?page_token=token123" },
+        metadata: {
+          next: "https://localhost/?page_token=token123",
+          created_at: new Date("2025-09-17T18:17:15.255Z"), // Always define created_at
+        },
       } as GetSqlv1StatementResult200Response;
 
+      // Data Definition Language (DDL) statements will not have data rows
       const secondPageRouteResponse = {
         results: {
           data: [{ op: Operation.Insert, row: ["blat", 890] }],

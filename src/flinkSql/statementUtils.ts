@@ -269,6 +269,9 @@ export async function parseAllFlinkStatementResults<RT>(
 
   const resultsMap: Map<string, Map<string, any>> = new Map();
   let pageToken: string | undefined = undefined;
+  let isFirstPage = true;
+  let createdAt: string | undefined;
+  let hasDataRows = false;
   do {
     const response = await flinkSqlStatementResultsApi.getSqlv1StatementResult({
       environment_id: statement.environmentId,
@@ -276,14 +279,16 @@ export async function parseAllFlinkStatementResults<RT>(
       name: statement.name,
       page_token: pageToken,
     });
-    // to return in case the DDL statement is successful but has no results
 
-    resultsMap.set(
-      "created_at",
-      new Map([["created_at", JSON.stringify(response.metadata.created_at?.toISOString())]]),
-    );
-    // Writes into resultsMap
+    // Only read created_at from the first page (DDL will only ever have one page)
+    if (isFirstPage && response.metadata?.created_at) {
+      createdAt = JSON.stringify(response.metadata.created_at.toISOString());
+    }
+
     const payload: SqlV1StatementResultResults = response.results;
+    if (payload.data && payload.data.length > 0) {
+      hasDataRows = true;
+    }
     parseResults({
       columns: statement.status?.traits?.schema?.columns ?? [],
       isAppendOnly: statement.status?.traits?.is_append_only ?? true,
@@ -295,7 +300,13 @@ export async function parseAllFlinkStatementResults<RT>(
       `parseAllFlinkStatementResults: parsed ${JSON.stringify(response)} response for statement ${statement.name} FROM STATEMENTSUTILS`,
     );
     pageToken = extractPageToken(response?.metadata?.next);
+    isFirstPage = false;
   } while (pageToken !== undefined);
+
+  // For DDL: only inject created_at if there were no data rows
+  if (!hasDataRows && createdAt) {
+    resultsMap.set("created_at", new Map([["created_at", createdAt]]));
+  }
 
   // convert the maps in the values to objects, hopefully conforming to RT.
   const results = Array.from(resultsMap.values()).map(Object.fromEntries);

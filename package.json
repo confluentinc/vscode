@@ -278,14 +278,14 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
-        "command": "confluent.artifacts.UDFCreation",
-        "title": "Create Flink UDF",
-        "category": "Confluent: Flink Artifacts"
-      },
-      {
         "command": "confluent.artifacts.scaffold",
         "icon": "$(plus)",
         "title": "Generate Flink Artifact",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
+        "command": "confluent.artifacts.UDFCreation",
+        "title": "Create Flink UDF",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -1205,12 +1205,12 @@
           "when": "false"
         },
         {
-          "command": "confluent.artifacts.UDFCreation",
-          "when": "true"
-        },
-        {
           "command": "confluent.artifacts.scaffold",
           "when": "false"
+        },
+        {
+          "command": "confluent.artifacts.UDFCreation",
+          "when": "true"
         },
         {
           "command": "confluent.connections.addSSLPemPath",
@@ -1974,12 +1974,12 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.UDFCreation",
+          "command": "confluent.artifacts.scaffold",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.scaffold",
+          "command": "confluent.artifacts.UDFCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
