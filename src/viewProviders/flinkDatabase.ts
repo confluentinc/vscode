@@ -1,8 +1,7 @@
 import { Disposable } from "vscode";
 import { ContextValues } from "../context/values";
 import {
-  artifactUploadCompleted,
-  artifactUploadDeleted,
+  artifactsChanged,
   flinkDatabaseViewMode,
   flinkDatabaseViewResourceChanged,
 } from "../emitters";
@@ -10,6 +9,7 @@ import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
@@ -59,14 +59,29 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   setCustomEventListeners(): Disposable[] {
     return [
       flinkDatabaseViewMode.event(this.switchMode.bind(this)),
-      artifactUploadDeleted.event(this.artifactsChangedHandler.bind(this)),
-      artifactUploadCompleted.event(this.artifactsChangedHandler.bind(this)),
+      artifactsChanged.event(this.artifactsChangedHandler.bind(this)),
     ];
   }
 
-  private async artifactsChangedHandler(): Promise<void> {
-    if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
-      await this.refresh(true);
+  /**
+   * The list of artifacts in the given env/provider/region has just changed.
+   * If it matches our current database, we may need to refresh.
+   **/
+  private async artifactsChangedHandler(envRegion: IEnvProviderRegion): Promise<void> {
+    // if the artfacts changed in the env/provider/region of our current database, take action!
+    if (this.database?.isSameEnvCloudRegion(envRegion)) {
+      if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
+        // We're in artifacts mode, so deep fetch children + repaint now.
+        await this.refresh(true);
+      } else {
+        // Not viewing artifacts right this second, but we're the entity responsible for cache busting
+        // in response to this event.
+        // Tell the artifacts delegate to preemptively refresh its cache for next time we switch to it
+        const artifactsDelegate = this.treeViewDelegates.get(
+          FlinkDatabaseViewProviderMode.Artifacts,
+        )!;
+        await artifactsDelegate.fetchChildren(this.database, true);
+      }
     }
   }
 

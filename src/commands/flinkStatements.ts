@@ -146,7 +146,7 @@ export async function submitFlinkStatementCommand(
     !(
       database instanceof CCloudKafkaCluster &&
       database.isFlinkable() &&
-      database.isSameCloudRegion(computePool)
+      database.isSameEnvCloudRegion(computePool)
     )
   ) {
     // Provided param wasn't valid, so have to show the quickpick.
