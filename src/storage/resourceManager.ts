@@ -494,7 +494,7 @@ export class ResourceManager {
   // Flink Artifacts
 
   /**
-   * Cache Flink Artifacts for a (CCloud) connection grouped by env-provider+region.
+   * Cache Flink Artifacts for a (CCloud) connection grouped by env-provider-region.
    *
    * Stored similarly to subjects:
    * - Per-connection workspace storage key generated with GeneratedKeyResourceType.FLINK_ARTIFACTS

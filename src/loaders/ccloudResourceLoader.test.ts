@@ -765,12 +765,10 @@ describe("CCloudResourceLoader", () => {
     let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
 
     beforeEach(() => {
-      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        sandbox.createStubInstance(sidecar.SidecarHandle);
+      const mockSidecarHandle = getSidecarStub(sandbox);
       flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
       mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
 
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
 
       // By default, cache misses for Flink artifacts.
