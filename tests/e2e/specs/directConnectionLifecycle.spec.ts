@@ -68,7 +68,6 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
   const connectionTypes: Array<
     [
       string,
-      Tag,
       FormConnectionType,
       // function for setting up the Kafka config
       (page: Page) => DirectConnectionKafkaConfig | Promise<DirectConnectionKafkaConfig>,
@@ -80,7 +79,6 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
   > = [
     [
       "CCloud API key+secret",
-      Tag.Direct,
       FormConnectionType.ConfluentCloud,
       () => {
         return {
@@ -114,12 +112,11 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
 
   for (const [
     connectionTypeName,
-    connectionTag,
     formConnectionType,
     loadKafkaConfig,
     loadSchemaRegistryConfig,
   ] of connectionTypes) {
-    test.describe(connectionTypeName, { tag: [connectionTag] }, () => {
+    test.describe(connectionTypeName, { tag: [Tag.Direct] }, () => {
       for (const configType of configTypes) {
         test.describe(configType, () => {
           let kafkaConfig: DirectConnectionKafkaConfig | undefined;
@@ -140,7 +137,7 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
             }
           });
 
-          test("should create, edit, export, and delete a valid direct connection", async ({
+          test("should create, edit, export, delete, and import a valid direct connection config", async ({
             page,
             electronApp,
           }) => {
@@ -203,7 +200,7 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
               },
             ]);
             const importForm: DirectConnectionForm =
-              await resourcesView.importNewConnectionFromFile();
+              await resourcesView.addNewConnectionFromFileImport();
             await expect(importForm.formHeader).toContainText("Import connection");
             await importForm.nameField.clear();
             const importName = `Imported ${newName}`;
@@ -220,6 +217,40 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
             await expect(resourcesView.directConnections).toHaveCount(0);
             await expect(topicsView.topics).toHaveCount(0);
             await expect(schemasView.subjects).toHaveCount(0);
+          });
+
+          test("should show error information for an invalid connection config", async ({
+            page,
+          }) => {
+            const connectionName = `INVALID Playwright ${connectionTypeName} (${configType})`;
+            const connectionItem: DirectConnectionItem = await setupDirectConnection(
+              page,
+              {
+                name: connectionName,
+                formConnectionType,
+                kafkaConfig: kafkaConfig
+                  ? { ...kafkaConfig, bootstrapServers: "invalid:1234" }
+                  : undefined,
+                schemaRegistryConfig: schemaRegistryConfig
+                  ? { ...schemaRegistryConfig, uri: "http://invalid:1234" }
+                  : undefined,
+              },
+              true, // expect an error after clicking "Test" and confirm the view item isn't expandable
+            );
+            // connection should still be visible, but:
+            // - it should have a warning icon
+            // - its tooltip should show "Unable to connect to" with other details
+            await expect(connectionItem.icon).toHaveClass(/warning/);
+            const tooltip = await connectionItem.showTooltip();
+            await expect(tooltip).toContainText("Unable to connect to");
+
+            const notificationArea = new NotificationArea(page);
+            const errorNotifications = notificationArea.errorNotifications.filter({
+              hasText: "Failed to establish connection",
+            });
+            await expect(errorNotifications).toHaveCount(1);
+            const notification = new Notification(page, errorNotifications.first());
+            await notification.dismiss();
           });
         });
       }
