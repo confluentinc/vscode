@@ -1,6 +1,8 @@
 import { Disposable, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { LocalResourceKind } from "../docker/constants";
 import { Logger } from "../logging";
+import { runWorkflowWithProgress } from "./docker";
 
 const logger = new Logger("commands.medusaCodeLens");
 
@@ -29,9 +31,14 @@ export async function generateMedusaDatasetCommand(documentUri: Uri): Promise<vo
 export async function startMedusaCommand(): Promise<void> {
   logger.info("Start Medusa command triggered");
 
-  // For now, just show an alert
-  // TODO Patrick: Implement actual Medusa container start logic
-  await window.showInformationMessage("Start Local Medusa clicked!");
+  try {
+    // Start the Medusa container using the existing workflow
+    await runWorkflowWithProgress(true, [LocalResourceKind.Medusa]);
+    logger.info("Medusa container start workflow completed");
+  } catch (error) {
+    logger.error("Failed to start Medusa container:", error);
+    await window.showErrorMessage("Failed to start Medusa container. Check the logs for details.");
+  }
 }
 
 /**
