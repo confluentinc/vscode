@@ -10,7 +10,11 @@ import {
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import {
+  setupCCloudConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
@@ -72,7 +76,13 @@ test.describe("Topics Listing & Message Viewer", () => {
         });
       },
     ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+    [
+      ConnectionType.Local,
+      Tag.Local,
+      async (page) => {
+        await setupLocalConnection(page, { kafka: true });
+      },
+    ],
   ];
   const entrypoints = [
     SelectKafkaCluster.FromResourcesView,

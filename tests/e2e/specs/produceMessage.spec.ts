@@ -17,7 +17,11 @@ import {
   SupportedAuthType,
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import {
+  setupCCloudConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "../utils/connections";
 import { openNewUntitledDocument } from "../utils/documents";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
@@ -107,7 +111,14 @@ test.describe("Produce Message(s) to Topic", () => {
       },
       DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
     ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+    [
+      ConnectionType.Local,
+      Tag.Local,
+      async (page) => {
+        await setupLocalConnection(page, { kafka: true, schemaRegistry: true });
+      },
+      1,
+    ],
   ];
   const schemaTypes: Array<[SchemaType | null, string | null]> = [
     [null, null],
