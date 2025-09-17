@@ -134,6 +134,7 @@ export async function setupCCloudConnection(
 export async function setupDirectConnection(
   page: Page,
   options: DirectConnectionOptions,
+  expectError = false,
 ): Promise<DirectConnectionItem> {
   const resourcesView = new ResourcesView(page);
 
@@ -162,8 +163,8 @@ export async function setupDirectConnection(
   }
 
   await connectionForm.testButton.click();
-  // there may be two of these if both Kafka and Schema Registry are configured
-  await expect(connectionForm.successMessage).not.toHaveCount(0);
+  const status = expectError ? connectionForm.errorMessage : connectionForm.successMessage;
+  await expect(status).not.toHaveCount(0);
   await connectionForm.saveButton.click();
 
   // make sure we see the notification indicating the connection was created
@@ -184,12 +185,19 @@ export async function setupDirectConnection(
     resourcesView.directConnections.filter({ hasText: connectionName }).first(),
   );
   await expect(connectionItem.label).toHaveText(connectionName);
-  // direct connections are collapsed by default in the old Resources view, but expanded in the
-  // new Resources view
-  if ((await connectionItem.locator.getAttribute("aria-expanded")) === "false") {
-    await connectionItem.locator.click();
+
+  if (expectError) {
+    // invalid configurations won't be expandable at all
+    await expect(connectionItem.locator).not.toHaveAttribute("aria-expanded");
+  } else {
+    // direct connections are collapsed by default in the old Resources view, but expanded in the
+    // new Resources view
+    if ((await connectionItem.locator.getAttribute("aria-expanded")) === "false") {
+      await connectionItem.locator.click();
+    }
+    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
   }
-  await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
   return connectionItem;
 }
 
