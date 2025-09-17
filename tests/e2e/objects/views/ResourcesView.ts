@@ -216,7 +216,16 @@ export class ResourcesView extends View {
         await expect(directEnv).toHaveAttribute("aria-expanded", "true");
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        const localItem = this.localItem.first();
+        await expect(localItem).toBeVisible();
+        // the local connection item is always expanded by default, but we may have opened it already
+        if ((await localItem.getAttribute("aria-expanded")) === "false") {
+          await localItem.click();
+        }
+        await expect(localItem).toHaveAttribute("aria-expanded", "true");
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
@@ -252,7 +261,10 @@ export class ResourcesView extends View {
         kafkaClusters = this.directKafkaClusters;
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        kafkaClusters = this.localKafkaClusters;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
@@ -296,7 +308,10 @@ export class ResourcesView extends View {
         schemaRegistries = this.directSchemaRegistries;
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        schemaRegistries = this.localSchemaRegistries;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }

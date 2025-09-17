@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 import { test } from "../baseTest";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { ResourcesView } from "../objects/views/ResourcesView";
-import { ViewItem } from "../objects/views/viewItems/ViewItem";
+import { CCloudConnectionItem } from "../objects/views/viewItems/CCloudConnectionItem";
 import { Tag } from "../tags";
 import { NOT_CONNECTED_TEXT, setupCCloudConnection } from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
@@ -29,7 +29,7 @@ test.describe(() => {
       );
 
       const resourcesView = new ResourcesView(page);
-      const ccloudItem = new ViewItem(page, resourcesView.confluentCloudItem);
+      const ccloudItem = new CCloudConnectionItem(page, resourcesView.confluentCloudItem);
       await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
     },
   );
