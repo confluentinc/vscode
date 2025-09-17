@@ -165,7 +165,8 @@ describe("medusaCodeLens", () => {
       // Verify file write
       sinon.assert.calledOnce(writeFileStub);
       const [savedUri, savedContent] = writeFileStub.getCall(0).args;
-      assert.strictEqual(savedUri.fsPath, "/workspace/my-dataset.dataset.json");
+      const expectedUri = vscode.Uri.file("/workspace/my-dataset.dataset.json");
+      assert.strictEqual(savedUri.path, expectedUri.path);
       const savedData = JSON.parse(savedContent.toString());
       assert.deepStrictEqual(savedData, mockDataset);
 
@@ -234,7 +235,8 @@ describe("medusaCodeLens", () => {
         await generateMedusaDatasetCommand(mockUri);
 
         const [savedUri] = writeFileStub.getCall(0).args;
-        assert.strictEqual(savedUri.fsPath, "/workspace/myfile.dataset.json");
+        const expectedUri = vscode.Uri.file("/workspace/myfile.dataset.json");
+        assert.strictEqual(savedUri.path, expectedUri.path);
       });
     });
 
