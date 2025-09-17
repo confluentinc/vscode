@@ -14,8 +14,10 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { URI_SCHEME } from "../baseTest";
 import { InputBox } from "../objects/quickInputs/InputBox";
+import { Quickpick } from "../objects/quickInputs/Quickpick";
+import { CCloudConnectionItem } from "../objects/views/viewItems/CCloudConnectionItem";
 import { DirectConnectionItem } from "../objects/views/viewItems/DirectConnectionItem";
-import { ViewItem } from "../objects/views/viewItems/ViewItem";
+import { LocalConnectionItem } from "../objects/views/viewItems/LocalConnectionItem";
 import { executeVSCodeCommand } from "./commands";
 
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
@@ -35,7 +37,7 @@ export async function setupCCloudConnection(
   electronApp: ElectronApplication,
   username: string,
   password: string,
-): Promise<void> {
+): Promise<CCloudConnectionItem> {
   // reset the CCloud sign-in file before the sign-in flow even starts so we don't use a stale URL
   try {
     await unlink(CCLOUD_SIGNIN_URL_PATH);
@@ -60,9 +62,9 @@ export async function setupCCloudConnection(
   ]);
 
   const resourcesView = new ResourcesView(page);
-  const ccloudItem = new ViewItem(page, resourcesView.confluentCloudItem);
+  const ccloudItem = new CCloudConnectionItem(page, resourcesView.confluentCloudItem);
   await expect(ccloudItem.locator).toContainText(NOT_CONNECTED_TEXT);
-  await ccloudItem.clickInlineAction("Sign in to Confluent Cloud");
+  await ccloudItem.clickSignIn();
 
   // the auth provider will write to this once it gets the CCloud sign-in URL from the sidecar
   let authUrl: string | null = null;
@@ -128,6 +130,7 @@ export async function setupCCloudConnection(
   await expect(ccloudItem.locator).toBeVisible();
   await expect(ccloudItem.locator).not.toContainText(NOT_CONNECTED_TEXT);
   await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
+  return ccloudItem;
 }
 
 /** Creates a direct connection and expands it in the Resources view. */
@@ -201,4 +204,72 @@ export async function setupDirectConnection(
   return connectionItem;
 }
 
-// FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+/** Starts local resources (Kafka, Schema Registry) through the Resources view. */
+export async function setupLocalConnection(
+  page: Page,
+  options: { kafka?: boolean; schemaRegistry?: boolean },
+): Promise<LocalConnectionItem> {
+  if (!options.kafka && !options.schemaRegistry) {
+    throw new Error("`kafka` or `schemaRegistry` must be set to true");
+  }
+
+  const resourcesView = new ResourcesView(page);
+  const localItem = new LocalConnectionItem(page, resourcesView.localItem);
+  await expect(localItem.locator).toBeVisible();
+
+  // TEMPORARY: until we can isolate test containers from real containers, we'll have to enforce
+  // no currently running containers
+  await expect(
+    localItem.locator,
+    "Local resources must be stopped before running @local tests.",
+  ).not.toHaveAttribute("aria-expanded");
+
+  await localItem.clickStartResources();
+  // multi-select quickpick to select which resources to start
+  const containerQuickpick = new Quickpick(page);
+  if (options.kafka) {
+    await containerQuickpick.selectItemByText("Kafka");
+  }
+  if (options.schemaRegistry) {
+    await containerQuickpick.selectItemByText("Schema Registry");
+  }
+  await containerQuickpick.confirm();
+
+  // if we're creating containers instead of just starting them, we'll need to provide a number of
+  // Kafka broker containers to start
+  const notificationArea = new NotificationArea(page);
+  const progressNotifications: Locator = notificationArea.progressNotifications.filter({
+    hasText: "Preparing for broker container creation",
+  });
+  try {
+    await expect(progressNotifications).toHaveCount(1, { timeout: 5000 });
+    // wait up to 5s for the broker input to appear, then accept the default if present
+    const brokerInput = new InputBox(page);
+    await brokerInput.confirm(); // accept the default of 1 broker/container
+  } catch {
+    // broker input did not appear within 5s — continue without confirming
+  }
+
+  await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
+  // local SR requires local Kafka, so we should always see local Kafka appear
+  await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
+  if (options.schemaRegistry) {
+    // if we pull the SR image, this could take a while
+    await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 60_000 });
+  }
+  return localItem;
+}
+
+export async function cleanupLocalConnection(page: Page, options: { schemaRegistry?: boolean }) {
+  const resourcesView = new ResourcesView(page);
+  const localItem = new LocalConnectionItem(page, resourcesView.localItem.first());
+  await localItem.clickStopResources();
+  if (options.schemaRegistry) {
+    // we only see the quickpick if both local Kafka and SR are running
+    const containerQuickpick = new Quickpick(page);
+    await containerQuickpick.selectItemByText("Kafka");
+    await containerQuickpick.selectItemByText("Schema Registry");
+  }
+  // once the resources are stopped, the local connection shouldn't be expandable
+  await expect(resourcesView.localItem).not.toHaveAttribute("aria-expanded");
+}
