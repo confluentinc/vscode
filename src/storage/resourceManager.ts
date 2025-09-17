@@ -493,12 +493,8 @@ export class ResourceManager {
 
   // Flink Artifacts
 
-  getEnvProviderRegionKey(envProviderRegion: IEnvProviderRegion): string {
-    return `${envProviderRegion.environmentId}-${envProviderRegion.provider}-${envProviderRegion.region}`;
-  }
-
   /**
-   * Cache Flink Artifacts for a (CCloud) connection grouped by provider+region.
+   * Cache Flink Artifacts for a (CCloud) connection grouped by env-provider+region.
    *
    * Stored similarly to subjects:
    * - Per-connection workspace storage key generated with GeneratedKeyResourceType.FLINK_ARTIFACTS
@@ -510,20 +506,18 @@ export class ResourceManager {
    */
   async setFlinkArtifacts(
     envProviderRegion: IEnvProviderRegion,
-    artifacts: FlinkArtifact[] | undefined,
+    artifacts: FlinkArtifact[],
   ): Promise<void> {
-    // Validate uniform provider, region.
-    if (artifacts) {
-      for (const art of artifacts) {
-        if (
-          art.environmentId !== envProviderRegion.environmentId ||
-          art.provider !== envProviderRegion.provider ||
-          art.region !== envProviderRegion.region
-        ) {
-          throw new Error(
-            `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}${envProviderRegion.provider}/${envProviderRegion.region}, found ${art.provider}/${art.region}`,
-          );
-        }
+    // Ensure all artifacts share the same env/provider/region as what we'll be storing them under.
+    for (const art of artifacts) {
+      if (
+        art.environmentId !== envProviderRegion.environmentId ||
+        art.provider !== envProviderRegion.provider ||
+        art.region !== envProviderRegion.region
+      ) {
+        throw new Error(
+          `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}${envProviderRegion.provider}/${envProviderRegion.region}, found ${art.provider}/${art.region}`,
+        );
       }
     }
 
@@ -533,11 +527,10 @@ export class ResourceManager {
       const existingString: string | undefined = await this.workspaceState.get(
         WorkspaceStorageKeys.FLINK_ARTIFACTS,
       );
-      const artifactsByProviderRegion: Map<string, object[] | undefined> = existingString
+      const artifactsByProviderRegion: Map<string, FlinkArtifact[]> = existingString
         ? stringToMap(existingString)
         : new Map();
 
-      // Store the raw artifact objects (or undefined) (they will be JSON-stringified).
       artifactsByProviderRegion.set(providerRegionKey, artifacts);
 
       await this.workspaceState.update(
@@ -567,36 +560,32 @@ export class ResourceManager {
       );
     });
 
-    const artifactsByProviderRegion: Map<string, object[]> = artifactsByProviderRegionString
+    const artifactsByProviderRegion: Map<string, FlinkArtifact[]> = artifactsByProviderRegionString
       ? stringToMap(artifactsByProviderRegionString)
-      : new Map<string, object[]>();
+      : new Map();
 
-    const vanillaJSONArtifacts: object[] | undefined =
-      artifactsByProviderRegion.get(providerRegionKey);
+    const vanillaJSONArtifacts = artifactsByProviderRegion.get(providerRegionKey);
 
     if (vanillaJSONArtifacts === undefined) {
       // Cache miss for this env/provider/region
+      logger.debug(`getFlinkArtifacts(): No Flink artifacts cached under ${providerRegionKey}`);
       return undefined;
     }
 
-    logger.debug(`Found ${vanillaJSONArtifacts.length} Flink artifacts under ${providerRegionKey}`);
+    logger.debug(
+      `getFlinkArtifacts(): Found ${vanillaJSONArtifacts.length} Flink artifacts under ${providerRegionKey}`,
+    );
 
-    // Rehydrate plain objects into FlinkArtifact instances.
+    // Rehydrate plain JSON object spellings into real FlinkArtifact instances, return
+    // resulting array (possibly empty).
     return vanillaJSONArtifacts.map((raw) => {
-      const obj = raw as any;
-      return new FlinkArtifact({
-        connectionId: obj.connectionId,
-        connectionType: obj.connectionType,
-        environmentId: obj.environmentId,
-        id: obj.id,
-        name: obj.name,
-        description: obj.description,
-        provider: obj.provider,
-        region: obj.region,
-        documentationLink: obj.documentationLink,
-        metadata: obj.metadata,
-      });
+      return new FlinkArtifact(raw);
     });
+  }
+
+  /** Generate a per-Flink-DB key for artifact, UDF caching. */
+  getEnvProviderRegionKey(envProviderRegion: IEnvProviderRegion): string {
+    return `${envProviderRegion.environmentId}-${envProviderRegion.provider}-${envProviderRegion.region}`;
   }
 
   // AUTH PROVIDER
