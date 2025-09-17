@@ -1,7 +1,9 @@
-import { QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { QuickPickItemKind, window } from "vscode";
 import { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
-import { loadProviderRegions } from "../loaders/ccloudResourceLoader";
+import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
+import { CCloudResourceLoader, loadProviderRegions } from "../loaders/ccloudResourceLoader";
 import { IProviderRegion } from "../models/resource";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { QuickPickItemWithValue } from "./types";
 
 export type regionFilter = (region: FcpmV2RegionListDataInner) => boolean;
@@ -17,6 +19,66 @@ export async function cloudProviderRegionQuickPick(
     return undefined;
   }
   let lastSeparator: string = "";
+  // Sorts regions so that:
+  //  (0) the selected database's provider+region appears first (if set),
+  //  (1) the default compute pool's provider+region appears first (if configured),
+  //  (2) regions that match existing compute pools come next,
+  //  (3) all others follow.
+  const loader = CCloudResourceLoader.getInstance();
+  const computePoolRegions = await loader.getComputePoolProviderRegions();
+
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
+  const selectedFlinkDatabase = flinkDatabaseViewProvider.database;
+  const matchesSelectedFlinkDatabase = (region: FcpmV2RegionListDataInner) =>
+    selectedFlinkDatabase?.provider === region.cloud &&
+    selectedFlinkDatabase?.region === region.region_name;
+
+  const defaultComputePoolId = FLINK_CONFIG_COMPUTE_POOL.value;
+  const defaultPool = defaultComputePoolId
+    ? await loader.getFlinkComputePool(defaultComputePoolId)
+    : undefined;
+  const matchesDefaultComputePool = (region: FcpmV2RegionListDataInner) =>
+    defaultPool?.provider === region.cloud && defaultPool?.region === region.region_name;
+
+  const hasComputePool = (region: FcpmV2RegionListDataInner) =>
+    computePoolRegions.some(
+      (pr) => pr.provider === region.cloud && pr.region === region.region_name,
+    );
+
+  const rankFor = (region: FcpmV2RegionListDataInner) => {
+    if (selectedFlinkDatabase != null && matchesSelectedFlinkDatabase(region)) {
+      return 0;
+    } else if (defaultPool != null && matchesDefaultComputePool(region)) {
+      return 1;
+    } else if (computePoolRegions.length > 0 && hasComputePool(region)) {
+      return 2;
+    }
+    return 3;
+  };
+
+  filteredRegions.sort((a, b) => {
+    const ra = rankFor(a);
+    const rb = rankFor(b);
+    if (ra !== rb) {
+      return ra - rb;
+    }
+    // Tie-breaker to keep grouping by cloud provider for separators.
+    if (a.cloud !== b.cloud) {
+      return a.cloud.localeCompare(b.cloud);
+    }
+    return a.region_name.localeCompare(b.region_name);
+  });
+
+  const getDetail = (region: FcpmV2RegionListDataInner): string | undefined => {
+    if (matchesSelectedFlinkDatabase(region)) {
+      return "matches currently selected database";
+    } else if (matchesDefaultComputePool(region)) {
+      return "matches default compute pool";
+    } else if (hasComputePool(region)) {
+      return "has compute pool";
+    }
+    return undefined;
+  };
 
   const regionItems: QuickPickItemWithValue<IProviderRegion>[] = [];
   filteredRegions.forEach((region) => {
@@ -31,7 +93,7 @@ export async function cloudProviderRegionQuickPick(
     regionItems.push({
       label: region.display_name,
       description: region.http_endpoint,
-      iconPath: new ThemeIcon("cloud"),
+      detail: getDetail(region),
       value: {
         region: region.region_name,
         provider: region.cloud,
