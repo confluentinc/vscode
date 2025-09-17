@@ -9,7 +9,7 @@ import {
   Range,
   TextDocument,
 } from "vscode";
-import { MEDUSA_COMMANDS } from "../commands/medusaCodeLens";
+import { COMMANDS } from "../commands/medusaCodeLens";
 import { localMedusaConnected } from "../emitters";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { Logger } from "../logging";
@@ -60,11 +60,6 @@ export class AvroCodelensProvider extends DisposableCollection implements CodeLe
       return [];
     }
 
-    // Check if Medusa container is actually available/running
-    if (!this.medusaAvailable) {
-      return [];
-    }
-
     // Only show CodeLens if this is actually an Avro document
     if (!this.isAvroDocument(document)) {
       return [];
@@ -73,15 +68,29 @@ export class AvroCodelensProvider extends DisposableCollection implements CodeLe
     // Show code lens at the top of the file
     const range = new Range(new Position(0, 0), new Position(0, 0));
 
-    const generateDatasetCommand: Command = {
-      title: "Generate Medusa Dataset",
-      command: MEDUSA_COMMANDS.GENERATE_DATASET,
-      tooltip: "Generate a Medusa dataset from this Avro schema file",
-      arguments: [document.uri],
-    };
+    if (this.medusaAvailable) {
+      // Medusa is running - show the dataset generation option
+      const generateDatasetCommand: Command = {
+        title: "Generate Medusa Dataset",
+        command: COMMANDS.GENERATE_DATASET,
+        tooltip: "Generate a Medusa dataset from this Avro schema file",
+        arguments: [document.uri],
+      };
 
-    const generateDatasetLens = new CodeLens(range, generateDatasetCommand);
-    codeLenses.push(generateDatasetLens);
+      const generateDatasetLens = new CodeLens(range, generateDatasetCommand);
+      codeLenses.push(generateDatasetLens);
+    } else {
+      // Medusa is not running - show the start option
+      const startMedusaCommand: Command = {
+        title: "Start Local Medusa",
+        command: COMMANDS.START_MEDUSA,
+        tooltip: "Start the local Medusa container",
+        arguments: [],
+      };
+
+      const startMedusaLens = new CodeLens(range, startMedusaCommand);
+      codeLenses.push(startMedusaLens);
+    }
 
     logger.info("AvroCodelensProvider returning code lenses", { count: codeLenses.length });
     return codeLenses;

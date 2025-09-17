@@ -2,9 +2,10 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as commands from "./index";
 import {
+  COMMANDS,
   generateMedusaDatasetCommand,
-  MEDUSA_COMMANDS,
   registerMedusaCodeLensCommands,
+  startMedusaCommand,
 } from "./medusaCodeLens";
 
 describe("medusaCodeLens", () => {
@@ -34,19 +35,35 @@ describe("medusaCodeLens", () => {
     });
   });
 
+  describe("startLocalMedusaCommand", () => {
+    it("should show information message", async () => {
+      const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+
+      await startMedusaCommand();
+
+      sinon.assert.calledOnce(showInfoStub);
+      sinon.assert.calledWith(showInfoStub, "Start Local Medusa clicked!");
+    });
+  });
+
   describe("registerMedusaCodeLensCommands", () => {
-    it("should register the generateDataset command", () => {
+    it("should register both generateDataset and start commands", () => {
       const registerCommandWithLoggingStub = sandbox
         .stub(commands, "registerCommandWithLogging")
         .returns({} as vscode.Disposable);
 
       registerMedusaCodeLensCommands();
 
-      sinon.assert.calledOnce(registerCommandWithLoggingStub);
+      sinon.assert.calledTwice(registerCommandWithLoggingStub);
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub,
-        MEDUSA_COMMANDS.GENERATE_DATASET,
+        registerCommandWithLoggingStub.firstCall,
+        COMMANDS.GENERATE_DATASET,
         generateMedusaDatasetCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub.secondCall,
+        COMMANDS.START_MEDUSA,
+        startMedusaCommand,
       );
     });
   });
