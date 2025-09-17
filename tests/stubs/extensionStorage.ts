@@ -1,5 +1,6 @@
-import { SinonSandbox, SinonStub } from "sinon";
+import { SinonSandbox, SinonStub, SinonStubbedInstance } from "sinon";
 import { ExtensionContext, Memento, SecretStorage } from "vscode";
+import { ResourceManager } from "../../src/storage/resourceManager";
 import { GlobalState, WorkspaceState } from "../../src/storage/types";
 import * as storageUtils from "../../src/storage/utils";
 
@@ -110,4 +111,13 @@ export function getStubbedSecretStorage(sandbox: SinonSandbox): StubbedSecretSto
   // can't stub ExtensionContext.secrets directly, so we stub our helper function
   sandbox.stub(storageUtils, "getSecretStorage").returns(stubbedSecretStorage);
   return stubbedSecretStorage;
+}
+
+/** Stub the singleton ResourceManager instance */
+export function getStubbedResourceManager(
+  sandbox: SinonSandbox,
+): SinonStubbedInstance<ResourceManager> {
+  const stubbed = sandbox.createStubInstance(ResourceManager);
+  sandbox.stub(ResourceManager, "getInstance").returns(stubbed);
+  return stubbed;
 }
