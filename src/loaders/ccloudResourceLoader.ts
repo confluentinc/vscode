@@ -284,7 +284,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
   /**
    * Query the Flink artifacts for the given CCloudFlinkDbKafkaCluster's CCloud environment + provider-region.
-   * Looks to the resource manager cache first, and only does a deep fetch if not found.
+   * Looks to the resource manager cache first, and only does a deep fetch if not found (or told to force refresh).
    * @returns The Flink artifacts for the given environment + provider-region.
    * @param resource The CCloud Flink Database (a Flink-enabled Kafka Cluster) to get the Flink artifacts for.
    */

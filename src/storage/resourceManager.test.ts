@@ -452,12 +452,18 @@ describe("ResourceManager Flink Artifact methods", function () {
 
   let rm: ResourceManager;
 
-  function makeMetadata(): ArtifactV1FlinkArtifactMetadata {
-    return {
-      created_at: new Date(),
-      updated_at: new Date(),
-    } as ArtifactV1FlinkArtifactMetadata;
-  }
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
+    rm = getResourceManager();
+    await clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    await clearWorkspaceState();
+  });
 
   function makeArtifact(
     id: string,
@@ -476,22 +482,12 @@ describe("ResourceManager Flink Artifact methods", function () {
       provider: prov,
       region: reg,
       documentationLink: "https://example.com/docs",
-      metadata: makeMetadata(),
+      metadata: {
+        created_at: new Date(),
+        updated_at: new Date(),
+      } as ArtifactV1FlinkArtifactMetadata,
     });
   }
-
-  before(async () => {
-    await getTestExtensionContext();
-  });
-
-  beforeEach(async () => {
-    rm = getResourceManager();
-    await clearWorkspaceState();
-  });
-
-  afterEach(async () => {
-    await clearWorkspaceState();
-  });
 
   it("getFlinkArtifacts() should return undefined (cache miss) when none stored", async () => {
     const envProviderRegion: IEnvProviderRegion = {
