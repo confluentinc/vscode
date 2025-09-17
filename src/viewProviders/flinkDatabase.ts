@@ -66,11 +66,11 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   private async artifactsChangedHandler(): Promise<void> {
     if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
-      await this.refresh();
+      await this.refresh(true);
     }
   }
 
-  async refresh(): Promise<void> {
+  async refresh(forceDeepRefresh: boolean = false): Promise<void> {
     this.children = [];
 
     if (this.database) {
@@ -86,7 +86,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         this.currentDelegate.loadingMessage,
         async () => {
           try {
-            this.children = await this.currentDelegate.fetchChildren(db);
+            this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
           } catch (error) {
             const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
             void logError(error, msg);

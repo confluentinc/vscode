@@ -15,7 +15,7 @@ export abstract class ViewProviderDelegate<
 
   abstract children: T[];
 
-  abstract fetchChildren(resource: P): Promise<T[]>;
+  abstract fetchChildren(resource: P, forceDeepRefresh: boolean): Promise<T[]>;
 
   getChildren(): T[] {
     return this.children;
