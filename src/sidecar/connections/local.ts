@@ -188,8 +188,26 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   return `http://localhost:${restProxyPort}`;
 }
 
-/** Discover any running Medusa containers and return the URI to include the public port. */
-export async function discoverMedusa(): Promise<string | undefined> {
+/** Return the first public port found on the container */
+export function getContainerPublicPort(container: ContainerSummary): number | undefined {
+  const ports: Port[] = container.Ports?.filter((p) => !!p.PublicPort) || [];
+  if (ports.length === 0) {
+    logger.debug("No ports found on container", { container });
+    return;
+  }
+
+  const publicPort: Port | undefined = ports.find((p) => !!p.PublicPort);
+  if (!publicPort) {
+    logger.debug("No PublicPort found on container", { container });
+    return;
+  }
+
+  logger.debug("Discovered container external port", publicPort.PublicPort);
+  return publicPort.PublicPort;
+}
+
+/** Discover any running Medusa containers and return a container summary of the first container found. */
+export async function getMedusaContainer(): Promise<ContainerSummary | undefined> {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     return;
@@ -202,19 +220,23 @@ export async function discoverMedusa(): Promise<string | undefined> {
   if (containers.length === 0) {
     return;
   }
-  // we only care about the first container
+
+  // we only care about the first container with ports
   const container: ContainerSummary = containers.filter((c) => !!c.Ports)[0];
-  const ports: Port[] = container.Ports?.filter((p) => !!p.PublicPort) || [];
-  if (!ports || ports.length === 0) {
-    logger.debug("No ports found on Medusa container", { container });
-    return;
-  }
-  const medusaPort: Port | undefined = ports.find((p) => !!p.PublicPort);
-  if (!medusaPort) {
-    logger.debug("No PublicPort found on Medusa container", { container });
+  return container;
+}
+
+/** Discover any running Medusa containers and return the URI to include the public port. */
+export async function discoverMedusa(): Promise<string | undefined> {
+  const container = await getMedusaContainer();
+  if (!container) {
     return;
   }
 
-  logger.debug("Discovered Medusa external port", medusaPort.PublicPort);
-  return `http://localhost:${medusaPort.PublicPort}`;
+  const port = getContainerPublicPort(container);
+  if (!port) {
+    return;
+  }
+
+  return `http://localhost:${port}`;
 }
