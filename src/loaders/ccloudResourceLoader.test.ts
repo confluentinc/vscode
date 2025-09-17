@@ -3,6 +3,7 @@ import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import { StubbedEventEmitters, eventEmitterStubs } from "../../tests/stubs/emitters";
+import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -66,10 +67,9 @@ describe("CCloudResourceLoader", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    loader = CCloudResourceLoader.getInstance();
+    stubbedResourceManager = getStubbedResourceManager(sandbox);
 
-    stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
-    sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
+    loader = CCloudResourceLoader.getInstance();
   });
 
   afterEach(() => {
@@ -765,14 +765,14 @@ describe("CCloudResourceLoader", () => {
     let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
 
     beforeEach(() => {
-      // stub the sidecar getFlinkArtifactsApi API
-      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        sandbox.createStubInstance(sidecar.SidecarHandle);
+      const mockSidecarHandle = getSidecarStub(sandbox);
       flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
       mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
 
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+
+      // By default, cache misses for Flink artifacts.
+      stubbedResourceManager.getFlinkArtifacts.resolves(undefined);
     });
 
     it("should handle zero artifacts to list", async () => {
@@ -781,9 +781,10 @@ describe("CCloudResourceLoader", () => {
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
 
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.strictEqual(artifacts.length, 0);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
 
       // Test the args passed to the API.
       const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
@@ -800,7 +801,7 @@ describe("CCloudResourceLoader", () => {
       const mockResponse = makeFakeListArtifactsResponse(false, 3);
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.strictEqual(artifacts.length, 3);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
     });
@@ -814,9 +815,38 @@ describe("CCloudResourceLoader", () => {
         .resolves(mockResponse)
         .onSecondCall()
         .resolves(mockResponse2);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
       assert.strictEqual(artifacts.length, 5);
+
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
       sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+
+    it("should handle resourcemanager cache hit, then skipping the route call", async () => {
+      stubbedResourceManager.getFlinkArtifacts.resolves([]); // empty array is easy cache fodder.
+
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+      assert.strictEqual(artifacts.length, 0);
+
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+      sinon.assert.notCalled(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+
+    it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
+      const mockResponse = makeFakeListArtifactsResponse(false, 3);
+      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+      stubbedResourceManager.getFlinkArtifacts.resolves([]); // would be a cache hit, but...
+
+      // call with forceDeepRefresh=true
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+      assert.strictEqual(artifacts.length, 3);
+
+      // Will have consulted the cache, but then ignored it, and called the API, then cached the results.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkArtifacts);
     });
 
     /** Make a fake list flink artifacts API response with requested artifact count and indicating next page available. */
@@ -856,7 +886,7 @@ describe("CCloudResourceLoader", () => {
         data: new Set(artifacts),
       };
     }
-  }); // getFlinkArtifacts
+  });
 
   describe("loadProviderRegions", () => {
     let regionsApiStub: sinon.SinonStubbedInstance<RegionsFcpmV2Api>;
