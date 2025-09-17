@@ -2,12 +2,14 @@ import * as assert from "assert";
 import sinon from "sinon";
 import { QuickPickItemKind, window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import {
   FcpmV2RegionListDataInner,
   FcpmV2RegionListDataInnerApiVersionEnum,
   FcpmV2RegionListDataInnerKindEnum,
 } from "../clients/flinkComputePool";
+
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import * as ccloudResourceLoader from "../loaders/ccloudResourceLoader";
 import { IProviderRegion } from "../models/resource";
 import { cloudProviderRegionQuickPick, regionFilter } from "./cloudProviderRegions";
@@ -16,11 +18,11 @@ import { QuickPickItemWithValue } from "./types";
 describe("quickpicks/cloudProviderRegions.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<ccloudResourceLoader.CCloudResourceLoader>;
-
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
     ccloudLoaderStub.getOrganization.resolves(TEST_CCLOUD_ORGANIZATION);
+    ccloudLoaderStub.getFlinkComputePool.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
   });
 
   afterEach(() => {
