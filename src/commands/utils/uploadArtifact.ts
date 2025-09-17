@@ -183,6 +183,224 @@ export async function promptForArtifactUploadParams(
   };
 }
 
+// PROTOTYPE: quickpick "form" for the whole artifact upload flow
+export async function artifactUploadQuickPickForm(): Promise<ArtifactUploadParams | undefined> {
+  // track quickpick form state
+  interface FormState {
+    environment?: { id: string; name: string };
+    cloudRegion?: { provider: string; region: string };
+    selectedFile?: vscode.Uri;
+    artifactName?: string;
+    description?: string;
+    documentationUrl?: string;
+  }
+  const state: FormState = {};
+
+  const completedIcon = "pass-filled";
+  const incompleteIcon = "circle-large-outline";
+
+  const createMenuItems = () => [
+    {
+      label: `1. Select Environment`,
+      description: state.environment
+        ? `${state.environment.name} (${state.environment.id})`
+        : "Not selected",
+      iconPath: new vscode.ThemeIcon(state.environment ? completedIcon : incompleteIcon),
+      value: "environment",
+    },
+    {
+      label: `2. Select Cloud Provider & Region`,
+      description: state.cloudRegion
+        ? `${state.cloudRegion.provider} - ${state.cloudRegion.region}`
+        : "Not selected",
+      iconPath: new vscode.ThemeIcon(state.cloudRegion ? completedIcon : incompleteIcon),
+      value: "cloudRegion",
+    },
+    {
+      label: `3. Select JAR File`,
+      description: state.selectedFile ? path.basename(state.selectedFile.fsPath) : "Not selected",
+      iconPath: new vscode.ThemeIcon(state.selectedFile ? completedIcon : incompleteIcon),
+      value: "file",
+    },
+    {
+      label: `4. Artifact Name`,
+      description: state.artifactName || "Not entered",
+      iconPath: new vscode.ThemeIcon(state.artifactName ? completedIcon : incompleteIcon),
+      value: "artifactName",
+    },
+    {
+      label: `5. Description (Optional)`,
+      description: state.description || "None",
+      iconPath: new vscode.ThemeIcon(state.description ? completedIcon : incompleteIcon),
+      value: "description",
+    },
+    {
+      label: `6. Documentation URL (Optional)`,
+      description: state.documentationUrl || "None",
+      iconPath: new vscode.ThemeIcon(state.documentationUrl ? completedIcon : incompleteIcon),
+      value: "documentationUrl",
+    },
+  ];
+
+  while (true) {
+    const menuItems = createMenuItems();
+
+    const canComplete =
+      state.environment && state.cloudRegion && state.selectedFile && state.artifactName;
+    // add new item to resolve the top-level quickpick if criteria is met
+    if (canComplete) {
+      menuItems.push({
+        label: "Upload Artifact",
+        description: "All required fields provided",
+        iconPath: new vscode.ThemeIcon("cloud-upload"),
+        value: "complete",
+      });
+    }
+
+    // top-level quickpick config
+    const selection = await vscode.window.showQuickPick(menuItems, {
+      title: "Upload Flink Artifact",
+      placeHolder: "Select a step to provide details",
+      ignoreFocusOut: true,
+    });
+    if (!selection) {
+      return;
+    }
+
+    // handle interactions at whatever step is chosen
+    switch (selection.value) {
+      case "environment": {
+        const environment = await flinkCcloudEnvironmentQuickPick();
+        if (environment) {
+          state.environment = { id: environment.id, name: environment.name };
+        }
+        break;
+      }
+
+      case "cloudRegion": {
+        const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+        if (cloudRegion) {
+          state.cloudRegion = {
+            provider: cloudRegion.provider,
+            region: cloudRegion.region,
+          };
+        }
+        break;
+      }
+
+      case "file": {
+        const selectedFiles = await vscode.window.showOpenDialog({
+          openLabel: "Select",
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: false,
+          filters: {
+            "Flink Artifact Files": ["jar"],
+          },
+        });
+        if (selectedFiles && selectedFiles.length > 0) {
+          state.selectedFile = selectedFiles[0];
+          // populate artifact name from filename if not already set
+          if (!state.artifactName) {
+            state.artifactName = path.basename(
+              state.selectedFile.fsPath,
+              path.extname(state.selectedFile.fsPath),
+            );
+          }
+        }
+        break;
+      }
+
+      case "artifactName": {
+        const defaultName = state.selectedFile
+          ? path.basename(state.selectedFile.fsPath, path.extname(state.selectedFile.fsPath))
+          : state.artifactName || "";
+
+        const artifactName = await vscode.window.showInputBox({
+          title: "Artifact Name",
+          prompt: "Enter the artifact name",
+          value: defaultName,
+          ignoreFocusOut: true,
+          validateInput: (value) =>
+            value && value.trim() ? undefined : "Artifact name is required",
+        });
+        if (artifactName !== undefined) {
+          state.artifactName = artifactName;
+        }
+        break;
+      }
+
+      case "description": {
+        const description = await vscode.window.showInputBox({
+          title: "Artifact Description",
+          prompt: "Enter an optional description for the artifact",
+          value: state.description || "",
+          ignoreFocusOut: true,
+        });
+        if (description !== undefined) {
+          state.description = description;
+        }
+        break;
+      }
+
+      case "documentationUrl": {
+        const documentationUrl = await vscode.window.showInputBox({
+          title: "Documentation URL",
+          prompt: "Enter an optional documentation URL for the artifact",
+          value: state.documentationUrl || "",
+          ignoreFocusOut: true,
+          validateInput: (value) => {
+            if (value && value.trim()) {
+              try {
+                new URL(value);
+                return undefined;
+              } catch {
+                return "Please enter a valid URL";
+              }
+            }
+            return undefined;
+          },
+        });
+        if (documentationUrl !== undefined) {
+          state.documentationUrl = documentationUrl;
+        }
+        break;
+      }
+
+      case "complete": {
+        if (!canComplete) {
+          vscode.window.showErrorMessage("Please complete all required fields before uploading.");
+          continue;
+        }
+
+        // convert to CloudProvider enum
+        let cloud: CloudProvider;
+        if (state.cloudRegion!.provider === "AZURE") {
+          cloud = CloudProvider.Azure;
+        } else if (state.cloudRegion!.provider === "AWS") {
+          cloud = CloudProvider.AWS;
+        } else {
+          void showErrorNotificationWithButtons(
+            `Upload Artifact cancelled: Unsupported cloud provider: ${state.cloudRegion!.provider}`,
+          );
+          continue;
+        }
+
+        const fileFormat = state.selectedFile!.fsPath.split(".").pop() ?? "";
+
+        return {
+          environment: state.environment!.id,
+          cloud,
+          region: state.cloudRegion!.region,
+          artifactName: state.artifactName!,
+          fileFormat,
+          selectedFile: state.selectedFile!,
+        };
+      }
+    }
+  }
+}
+
 export async function handleUploadToCloudProvider(
   params: ArtifactUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
