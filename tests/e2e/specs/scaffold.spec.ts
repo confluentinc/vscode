@@ -17,7 +17,11 @@ import {
 } from "../objects/webviews/DirectConnectionFormWebview";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import {
+  setupCCloudConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 import { verifyGeneratedProject } from "./utils/scaffold";
 
@@ -85,7 +89,13 @@ test.describe("Project Scaffolding", () => {
         });
       },
     ],
-    // TODO: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+    [
+      ConnectionType.Local,
+      Tag.Local,
+      async (page) => {
+        await setupLocalConnection(page, { kafka: true });
+      },
+    ],
   ];
 
   for (const [templateDisplayName, templateName] of templates) {
