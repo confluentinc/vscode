@@ -170,7 +170,7 @@ export class ResourcesView extends View {
    *
    * @returns A DirectConnectionForm instance for the imported connection
    */
-  async importNewConnectionFromFile(): Promise<DirectConnectionForm> {
+  async addNewConnectionFromFileImport(): Promise<DirectConnectionForm> {
     await this.clickAddNewConnection();
 
     const quickpick = new Quickpick(this.page);
