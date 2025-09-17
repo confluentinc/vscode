@@ -516,7 +516,7 @@ export class ResourceManager {
         art.region !== envProviderRegion.region
       ) {
         throw new Error(
-          `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}${envProviderRegion.provider}/${envProviderRegion.region}, found ${art.provider}/${art.region}`,
+          `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}-${envProviderRegion.provider}-${envProviderRegion.region}, found ${art.environmentId}-${art.provider}-${art.region}`,
         );
       }
     }
