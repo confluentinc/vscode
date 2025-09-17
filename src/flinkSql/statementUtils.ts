@@ -17,9 +17,9 @@ import {
   TERMINAL_PHASES,
 } from "../models/flinkStatement";
 import { getSidecar } from "../sidecar";
-import { parseResults } from "./flinkStatementResults";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
+import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 
 const logger = new Logger("flinksql/statements");
@@ -276,7 +276,12 @@ export async function parseAllFlinkStatementResults<RT>(
       name: statement.name,
       page_token: pageToken,
     });
+    // to return in case the DDL statement is successful but has no results
 
+    resultsMap.set(
+      "created_at",
+      new Map([["created_at", JSON.stringify(response.metadata.created_at?.toISOString())]]),
+    );
     // Writes into resultsMap
     const payload: SqlV1StatementResultResults = response.results;
     parseResults({
@@ -286,7 +291,9 @@ export async function parseAllFlinkStatementResults<RT>(
       map: resultsMap,
       rows: payload.data ?? [],
     });
-
+    logger.debug(
+      `parseAllFlinkStatementResults: parsed ${JSON.stringify(response)} response for statement ${statement.name} FROM STATEMENTSUTILS`,
+    );
     pageToken = extractPageToken(response?.metadata?.next);
   } while (pageToken !== undefined);
 

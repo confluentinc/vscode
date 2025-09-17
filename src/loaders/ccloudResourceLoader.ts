@@ -399,7 +399,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     // Parse and return all results.
     let results = await parseAllFlinkStatementResults<RT>(statement);
     logger.debug(
-      `executeFlinkStatement() got ${JSON.stringify(results)} results from statement ${statement.id}`,
+      `executeFlinkStatement() got ${JSON.stringify(results)} results from statement ${statement.id} FROM RLOADER`,
     );
     return results;
   }

@@ -12,6 +12,7 @@ import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
+  showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
@@ -171,13 +172,10 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
   if (!selectedArtifact) {
     return;
   }
-
   try {
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
     const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
     const selectedResource = flinkDatabaseProvider.resource;
-
-    // Get environment data
     const environments = await ccloudResourceLoader.getEnvironments();
     const environment = environments.find((env) => env.id === selectedArtifact.environmentId);
 
@@ -193,31 +191,8 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
         `No Flink-capable databases found in environment ${selectedArtifact.environmentId}`,
       );
     }
-
-    // Determine database and compute pool to use
-    let database: CCloudFlinkDbKafkaCluster | undefined;
-    let computePool: CCloudFlinkComputePool | undefined;
-
-    // First try to use the selected resource from view if available
-    //sketchy
-    if (selectedResource) {
-      if (selectedResource.isFlinkable?.()) {
-        // Resource is a Flink-capable database
-        database = selectedResource as CCloudFlinkDbKafkaCluster;
-        computePool = database.flinkPools[0];
-      } else if (selectedResource instanceof CCloudFlinkComputePool) {
-        // Resource is a compute pool, find compatible database
-        computePool = selectedResource;
-        database = flinkDatabases.find(
-          (db) =>
-            db.provider === computePool?.provider &&
-            db.region === computePool?.region &&
-            db.flinkPools?.some((pool) => pool.id === computePool?.id),
-        ) as CCloudFlinkDbKafkaCluster;
-      }
-    }
-
-    // Create UDF with progress notification
+    const database = selectedResource as CCloudFlinkDbKafkaCluster;
+    const computePool = database?.flinkPools[0];
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -229,17 +204,26 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
         //TODO LATER DEV HACK REMOVE MATH RANDOM FUNC
         const functionName = `udf_${selectedArtifact.id.substring(0, 6)}_${Math.random().toString(16).slice(2, 8)}`;
         // TODO show input box and allow name change
-        const result = await ccloudResourceLoader.executeFlinkStatement<string>(
+        const result = await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
           `CREATE FUNCTION \`${functionName}\` AS 'io.confluent.udf.examples.log.LogSumScalarFunction' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
           database!,
           computePool!,
         );
-
         progress.report({ message: "Processing results..." });
-        if (result.length === 0) {
-          void showWarningNotificationWithButtons(
-            "Function created successfully, but no response was returned from Confluent Cloud.",
-          );
+        if (result.length === 1) {
+          const createdAtRaw = result[0]?.created_at;
+          let createdAt: string | undefined;
+          if (createdAtRaw) {
+            try {
+              createdAt = JSON.parse(createdAtRaw);
+            } catch {
+              createdAt = createdAtRaw;
+            }
+          }
+          const createdMsg = createdAt
+            ? `Function created successfully at ${new Date(createdAt).toLocaleString()}.`
+            : "Function created successfully.";
+          void showInfoNotificationWithButtons(createdMsg);
           return;
         }
       },
@@ -288,6 +272,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       setFlinkArtifactsViewModeCommand,
     ),
     registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
-    registerCommandWithLogging("confluent.artifacts.stubCreation", fakeCommandForFlinkCreation),
+    registerCommandWithLogging("confluent.artifacts.UDFCreation", fakeCommandForFlinkCreation),
   ];
 }
