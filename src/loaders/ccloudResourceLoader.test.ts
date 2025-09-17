@@ -3,6 +3,7 @@ import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import { StubbedEventEmitters, eventEmitterStubs } from "../../tests/stubs/emitters";
+import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -66,10 +67,9 @@ describe("CCloudResourceLoader", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    loader = CCloudResourceLoader.getInstance();
+    stubbedResourceManager = getStubbedResourceManager(sandbox);
 
-    stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
-    sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
+    loader = CCloudResourceLoader.getInstance();
   });
 
   afterEach(() => {
@@ -761,102 +761,136 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
-  describe("getFlinkArtifacts", () => {
+  describe("getFlinkArtifacts and clearFlinkArtifactCache", () => {
     let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
 
     beforeEach(() => {
-      // stub the sidecar getFlinkArtifactsApi API
       const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
         sandbox.createStubInstance(sidecar.SidecarHandle);
       flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
       mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
+
       sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
-
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+
+      // By default, cache misses for Flink artifacts.
+      stubbedResourceManager.getFlinkArtifacts.resolves(undefined);
     });
 
-    it("should handle zero artifacts to list", async () => {
-      // Simulate zero available artifacts.
-      const mockResponse = makeFakeListArtifactsResponse(false, 0);
+    describe("getFlinkArtifacts", () => {
+      it("should handle zero artifacts to list", async () => {
+        // Simulate zero available artifacts.
+        const mockResponse = makeFakeListArtifactsResponse(false, 0);
 
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+        flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
 
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-      assert.strictEqual(artifacts.length, 0);
-      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+        const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+        assert.strictEqual(artifacts.length, 0);
+        sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+        sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
 
-      // Test the args passed to the API.
-      const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
-      assert.ok(args, "Expected args to be defined");
-      assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
-      assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
-      assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
-      assert.strictEqual(args.page_size, 100);
-      assert.strictEqual(args.page_token, "");
-    });
+        // Test the args passed to the API.
+        const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
+        assert.ok(args, "Expected args to be defined");
+        assert.strictEqual(args.cloud, TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
+        assert.strictEqual(args.region, TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
+        assert.strictEqual(args.environment, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
+        assert.strictEqual(args.page_size, 100);
+        assert.strictEqual(args.page_token, "");
+      });
 
-    it("should handle one page of artifacts", async () => {
-      // Simulate one page of artifacts.
-      const mockResponse = makeFakeListArtifactsResponse(false, 3);
+      it("should handle one page of artifacts", async () => {
+        // Simulate one page of artifacts.
+        const mockResponse = makeFakeListArtifactsResponse(false, 3);
 
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-      assert.strictEqual(artifacts.length, 3);
-      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
-    });
+        flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+        const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+        assert.strictEqual(artifacts.length, 3);
+        sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      });
 
-    it("should handle multiple pages of artifacts", async () => {
-      // Simulate multiple pages of artifacts.
-      const mockResponse = makeFakeListArtifactsResponse(true, 3);
-      const mockResponse2 = makeFakeListArtifactsResponse(false, 2);
-      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts
-        .onFirstCall()
-        .resolves(mockResponse)
-        .onSecondCall()
-        .resolves(mockResponse2);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
-      assert.strictEqual(artifacts.length, 5);
-      sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
-    });
+      it("should handle multiple pages of artifacts", async () => {
+        // Simulate multiple pages of artifacts.
+        const mockResponse = makeFakeListArtifactsResponse(true, 3);
+        const mockResponse2 = makeFakeListArtifactsResponse(false, 2);
+        flinkArtifactsApiStub.listArtifactV1FlinkArtifacts
+          .onFirstCall()
+          .resolves(mockResponse)
+          .onSecondCall()
+          .resolves(mockResponse2);
+        const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
 
-    /** Make a fake list flink artifacts API response with requested artifact count and indicating next page available. */
-    function makeFakeListArtifactsResponse(
-      hasNextPage: boolean,
-      artifactCount: number,
-    ): ArtifactV1FlinkArtifactList {
-      const artifacts: ArtifactV1FlinkArtifactListDataInner[] = [];
+        assert.strictEqual(artifacts.length, 5);
 
-      for (let i = 0; i < artifactCount; i++) {
-        artifacts.push({
-          api_version: ArtifactV1FlinkArtifactListDataInnerApiVersionEnum.ArtifactV1,
-          kind: ArtifactV1FlinkArtifactListDataInnerKindEnum.FlinkArtifact,
-          id: `artifact-${i}`,
+        sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+        sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      });
+
+      it("should handle resourcemanager cache hit, then skipping the route call", async () => {
+        stubbedResourceManager.getFlinkArtifacts.resolves([]); // empty array is easy cache fodder.
+
+        const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+        assert.strictEqual(artifacts.length, 0);
+
+        sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+        sinon.assert.notCalled(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      });
+
+      it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
+        const mockResponse = makeFakeListArtifactsResponse(false, 3);
+        flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+        stubbedResourceManager.getFlinkArtifacts.resolves([]); // would be a cache hit, but...
+
+        // call with forceDeepRefresh=true
+        const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+        assert.strictEqual(artifacts.length, 3);
+
+        // Will have consulted the cache, but then ignored it, and called the API, then cached the results.
+        sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+        sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+        sinon.assert.calledOnce(stubbedResourceManager.setFlinkArtifacts);
+      });
+
+      /** Make a fake list flink artifacts API response with requested artifact count and indicating next page available. */
+      function makeFakeListArtifactsResponse(
+        hasNextPage: boolean,
+        artifactCount: number,
+      ): ArtifactV1FlinkArtifactList {
+        const artifacts: ArtifactV1FlinkArtifactListDataInner[] = [];
+
+        for (let i = 0; i < artifactCount; i++) {
+          artifacts.push({
+            api_version: ArtifactV1FlinkArtifactListDataInnerApiVersionEnum.ArtifactV1,
+            kind: ArtifactV1FlinkArtifactListDataInnerKindEnum.FlinkArtifact,
+            id: `artifact-${i}`,
+            metadata: {
+              created_at: new Date(),
+              updated_at: new Date(),
+              self: undefined, // self link is not used in tests
+            },
+            cloud: "aws",
+            region: "us-east-1",
+            environment: "env-12345",
+            display_name: `Test Artifact ${i}`,
+            description: `Test artifact description ${i}`,
+            content_format: "JAR",
+            runtime_language: "JAVA",
+          });
+        }
+
+        const maybeNextPageLink: string = hasNextPage ? "https://foo.com/?page_token=foonly" : "";
+        return {
+          api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
+          kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
           metadata: {
-            created_at: new Date(),
-            updated_at: new Date(),
-            self: undefined, // self link is not used in tests
+            next: maybeNextPageLink,
           },
-          cloud: "aws",
-          region: "us-east-1",
-          environment: "env-12345",
-          display_name: `Test Artifact ${i}`,
-          description: `Test artifact description ${i}`,
-          content_format: "JAR",
-          runtime_language: "JAVA",
-        });
+          data: new Set(artifacts),
+        };
       }
-
-      const maybeNextPageLink: string = hasNextPage ? "https://foo.com/?page_token=foonly" : "";
-      return {
-        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
-        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
-        metadata: {
-          next: maybeNextPageLink,
-        },
-        data: new Set(artifacts),
-      };
-    }
-  }); // getFlinkArtifacts
+    }); // getFlinkArtifacts
+  }); // getFlinkArtifacts and clearFlinkArtifactCache
 
   describe("loadProviderRegions", () => {
     let regionsApiStub: sinon.SinonStubbedInstance<RegionsFcpmV2Api>;

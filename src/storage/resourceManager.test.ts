@@ -655,6 +655,54 @@ describe("ResourceManager Flink Artifact methods", function () {
     const missingInKey2 = await rm.getFlinkArtifacts(key2);
     assert.strictEqual(missingInKey2, undefined);
   });
+
+  it("setFlinkArtifacts() with undefined should clear only the targeted provider/region key while preserving others", async () => {
+    const key1: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const key2: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region2,
+    };
+
+    const artifactsKey1 = [
+      makeArtifact("fa-clear-a1", baseEnvId, provider, region1),
+      makeArtifact("fa-clear-a2", baseEnvId, provider, region1),
+    ];
+    const artifactsKey2 = [
+      makeArtifact("fa-stay-b1", baseEnvId, provider, region2),
+      makeArtifact("fa-stay-b2", baseEnvId, provider, region2),
+    ];
+
+    // Prime both cache entries
+    await rm.setFlinkArtifacts(key1, artifactsKey1);
+    await rm.setFlinkArtifacts(key2, artifactsKey2);
+
+    // Sanity check both are present
+    const before1 = await rm.getFlinkArtifacts(key1);
+    const before2 = await rm.getFlinkArtifacts(key2);
+    assert.ok(before1 && before1.length === artifactsKey1.length);
+    assert.ok(before2 && before2.length === artifactsKey2.length);
+
+    // Clear only key1 by setting undefined
+    await rm.setFlinkArtifacts(key1, undefined);
+
+    // key1 should now be a cache miss (undefined)
+    const afterClear1 = await rm.getFlinkArtifacts(key1);
+    assert.strictEqual(afterClear1, undefined, "Expected key1 artifacts to be cleared");
+
+    // key2 should remain intact
+    const afterClear2 = await rm.getFlinkArtifacts(key2);
+    assert.ok(afterClear2, "Expected key2 artifacts to remain");
+    assert.deepStrictEqual(
+      afterClear2?.map((a) => a.id),
+      artifactsKey2.map((a) => a.id),
+      "Expected key2 artifacts to be unchanged",
+    );
+  });
 });
 
 describe("ResourceManager direct connection methods", function () {

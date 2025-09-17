@@ -510,34 +510,34 @@ export class ResourceManager {
    */
   async setFlinkArtifacts(
     envProviderRegion: IEnvProviderRegion,
-    artifacts: FlinkArtifact[],
+    artifacts: FlinkArtifact[] | undefined,
   ): Promise<void> {
-    // Validate uniformprovider, region.
-    for (const art of artifacts) {
-      if (
-        art.environmentId !== envProviderRegion.environmentId ||
-        art.provider !== envProviderRegion.provider ||
-        art.region !== envProviderRegion.region
-      ) {
-        throw new Error(
-          `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}${envProviderRegion.provider}/${envProviderRegion.region}, found ${art.provider}/${art.region}`,
-        );
+    // Validate uniform provider, region.
+    if (artifacts) {
+      for (const art of artifacts) {
+        if (
+          art.environmentId !== envProviderRegion.environmentId ||
+          art.provider !== envProviderRegion.provider ||
+          art.region !== envProviderRegion.region
+        ) {
+          throw new Error(
+            `Environment/Provider/Region mismatch in artifacts list: expected ${envProviderRegion.environmentId}${envProviderRegion.provider}/${envProviderRegion.region}, found ${art.provider}/${art.region}`,
+          );
+        }
       }
     }
 
     const providerRegionKey = this.getEnvProviderRegionKey(envProviderRegion);
 
-    logger.debug(`Setting ${artifacts.length} Flink artifacts under ${providerRegionKey}.`);
-
     await this.runWithMutex(WorkspaceStorageKeys.FLINK_ARTIFACTS, async () => {
       const existingString: string | undefined = await this.workspaceState.get(
         WorkspaceStorageKeys.FLINK_ARTIFACTS,
       );
-      const artifactsByProviderRegion: Map<string, object[]> = existingString
+      const artifactsByProviderRegion: Map<string, object[] | undefined> = existingString
         ? stringToMap(existingString)
-        : new Map<string, object[]>();
+        : new Map();
 
-      // Store the raw artifact objects (they will be JSON-stringified).
+      // Store the raw artifact objects (or undefined) (they will be JSON-stringified).
       artifactsByProviderRegion.set(providerRegionKey, artifacts);
 
       await this.workspaceState.update(
