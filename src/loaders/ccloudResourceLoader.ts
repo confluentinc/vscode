@@ -392,52 +392,18 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       logger.error(
         `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
       );
-      throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
+      throw new Error(
+        `Statement did not complete successfully, phase ${statement.phase}, error ${statement.status.detail}`,
+      );
     }
     // Parse and return all results.
-    return await parseAllFlinkStatementResults<RT>(statement);
-  }
-
-  // Hm, two very nearly alike funcs. Can we unify them?
-
-  async executeFlinkDDL(
-    sqlStatement: string,
-    database: CCloudFlinkDbKafkaCluster,
-    computePool: CCloudFlinkComputePool,
-  ): Promise<string[]> {
-    // If computePool is provided, verify it's compatible with database
-    if (database.provider !== computePool.provider || database.region !== computePool.region) {
-      throw new Error(
-        `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
-      );
-    }
-
-    const organizationId = (await this.getOrganization()).id;
-
-    const statementParams: IFlinkStatementSubmitParameters = {
-      statement: sqlStatement,
-      statementName: await determineFlinkStatementName(),
-      organizationId,
-      computePool,
-      hidden: true, // Hidden statement, user didn't author it.
-      properties: database.toFlinkSpecProperties(),
-    };
-
-    let statement = await submitFlinkStatement(statementParams);
-
-    // Refresh the statement until it is in a terminal phase.
-    statement = await waitForStatementCompletion(statement);
-
-    if (statement.phase !== Phase.COMPLETED) {
-      logger.error(
-        `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
-      );
-      throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
-    }
-    return await parseAllFlinkStatementResults<string>(statement);
+    let results = await parseAllFlinkStatementResults<RT>(statement);
+    logger.debug(
+      `executeFlinkStatement() got ${JSON.stringify(results)} results from statement ${statement.id}`,
+    );
+    return results;
   }
 }
-
 /**
  * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
  */
@@ -449,7 +415,7 @@ export interface FunctionNameRow {
  * Load statements for a single provider/region and perhaps cluster-id
  * (Sub-unit of getFlinkStatements(), factored out for concurrency
  *  via executeInWorkerPool())
- * */
+ */
 
 async function loadStatementsForProviderRegion(
   handle: SidecarHandle,
