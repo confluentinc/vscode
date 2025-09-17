@@ -1,5 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
-import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_BASE_PATH,
@@ -173,29 +173,19 @@ export class KafkaClusterTreeItem extends TreeItem {
   }
 }
 
-// todo make this a method of KafkaCluster family.
-export function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
+export function createKafkaClusterTooltip(resource: KafkaCluster): CustomMarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) Kafka Cluster`)
-    .appendMarkdown("\n\n---");
-  if (resource.name) {
-    tooltip.appendMarkdown(`\n\nName: \`${resource.name}\``);
-  }
-  tooltip
-    .appendMarkdown(`\n\nID: \`${resource.id}\``) // TODO: remove this?
-    .appendMarkdown(`\n\nBootstrap Servers: \`${resource.bootstrapServers}\``);
-  if (resource.uri) {
-    tooltip.appendMarkdown(`\n\nURI: \`${resource.uri}\``);
-  }
+    .addHeader("Kafka Cluster", resource.iconName)
+    .addField("Name", resource.name)
+    .addField("ID", resource.id)
+    .addField("Bootstrap Servers", resource.bootstrapServers)
+    .addField("URI", resource.uri);
   if (isCCloud(resource)) {
     const ccloudCluster = resource as CCloudKafkaCluster;
     tooltip
-      .appendMarkdown(`\n\nProvider: \`${ccloudCluster.provider}\``)
-      .appendMarkdown(`\n\nRegion: \`${ccloudCluster.region}\``)
-      .appendMarkdown("\n\n---")
-      .appendMarkdown(
-        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
-      );
+      .addField("Provider", ccloudCluster.provider)
+      .addField("Region", ccloudCluster.region)
+      .addCCloudLink(ccloudCluster.ccloudUrl);
   }
   return tooltip;
 }

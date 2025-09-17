@@ -11,10 +11,14 @@ import { tmpdir } from "os";
 import path from "path";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
+import { configureVSCodeSettings } from "./utils/settings";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
 // cached test setup file path that's shared across worker processes
 const TEST_SETUP_CACHE_FILE = path.join(tmpdir(), "vscode-e2e-test-setup-cache.json");
+
+const VSCODE_VERSION = process.env.VSCODE_VERSION || "stable";
+export const URI_SCHEME = VSCODE_VERSION === "insiders" ? "vscode-insiders" : "vscode";
 
 interface TestSetupCache {
   vscodeExecutablePath: string;
@@ -125,16 +129,30 @@ export const test = testBase.extend<VSCodeFixture>({
       throw new Error("Failed to get first window from VS Code");
     }
 
-    // dismiss the "All installed extensions are temporarily disabled" notification that will
-    // always appear since we launch with --disable-extensions
-    const notificationArea = new NotificationArea(page);
-    const infoNotifications = notificationArea.infoNotifications.filter({
-      hasText: "All installed extensions are temporarily disabled",
-    });
-    await expect(infoNotifications).not.toHaveCount(0);
-    const notification = new Notification(page, infoNotifications.first());
-    await notification.dismiss();
+    await globalBeforeEach(page, electronApp);
 
     await use(page);
   },
 });
+
+/**
+ * Global setup that runs before each test.
+ *
+ * NOTE: Due to our Electron launch setup, this is more reliable than using
+ * {@linkcode https://playwright.dev/docs/api/class-test#test-before-each test.beforeEach()}, which
+ * did not consistently run before each test.
+ */
+async function globalBeforeEach(page: Page, electronApp: ElectronApplication): Promise<void> {
+  // make sure settings are set to defaults for each test
+  await configureVSCodeSettings(page, electronApp);
+
+  // dismiss the "All installed extensions are temporarily disabled" notification that will
+  // always appear since we launch with --disable-extensions
+  const notificationArea = new NotificationArea(page);
+  const infoNotifications = notificationArea.infoNotifications.filter({
+    hasText: "All installed extensions are temporarily disabled",
+  });
+  await expect(infoNotifications).not.toHaveCount(0);
+  const notification = new Notification(page, infoNotifications.first());
+  await notification.dismiss();
+}

@@ -1,11 +1,4 @@
-import {
-  MarkdownString,
-  ThemeColor,
-  ThemeIcon,
-  TreeItem,
-  TreeItemCollapsibleState,
-  Uri,
-} from "vscode";
+import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_BASE_PATH,
@@ -415,35 +408,30 @@ export class EnvironmentTreeItem extends TreeItem {
   }
 }
 
-export function createEnvironmentTooltip(resource: Environment): MarkdownString {
-  let resourceLabel = "Environment";
-  const isDirectResource = isDirect(resource);
-  if (isDirectResource) {
-    // Direct connections are treated like environments, but calling it an environment will feel weird
-    const directEnv = resource as DirectEnvironment;
-    resourceLabel = `${directEnv.formConnectionType} Connection`;
-  }
-
-  const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) ${resourceLabel}`)
-    .appendMarkdown("\n\n---")
-    .appendMarkdown(`\n\nID: \`${resource.id}\``)
-    .appendMarkdown(`\n\nName: \`${resource.name}\``);
+export function createEnvironmentTooltip(resource: Environment): CustomMarkdownString {
+  const tooltip = new CustomMarkdownString();
   if (isCCloud(resource)) {
+    tooltip
+      .addHeader(`Environment`, resource.iconName)
+      .addField("ID", resource.id)
+      .addField("Name", resource.name);
     const ccloudEnv = resource as CCloudEnvironment;
     tooltip
-      .appendMarkdown(`\n\nStream Governance Package: \`${ccloudEnv.streamGovernancePackage}\``)
-      .appendMarkdown("\n\n---")
-      .appendMarkdown(
-        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
-      );
-  } else if (isDirectResource) {
+      .addField("Stream Governance Package", ccloudEnv.streamGovernancePackage)
+      .addCCloudLink(ccloudEnv.ccloudUrl);
+  } else if (isDirect(resource)) {
+    // Direct connections are treated like environments, but calling it an environment will feel weird
+    const directEnv = resource as DirectEnvironment;
+    tooltip
+      .addHeader(`${directEnv.formConnectionType} Connection`, resource.iconName)
+      .addField("ID", resource.id)
+      .addField("Name", resource.name);
+
     // check for any resources that the sidecar reported a `FAILED` connection status.
     // ideally, the ResourceViewProvider would react to events pushed by the ConnectionStateWatcher
     // and update the environments' `kafkaConnectionFailed` and `schemaRegistryConnectionFailed`
     // properties, but in the event we didn't get those websocket events (e.g. new workspace),
     // we can check to see if they're just "missing" based on the expected configuration(s)
-    const directEnv = resource as DirectEnvironment;
     const { missingKafka, missingSR } = directEnv.checkForMissingResources();
 
     const failedResources = [];
@@ -462,7 +450,7 @@ export function createEnvironmentTooltip(resource: Environment): MarkdownString 
     }
 
     if (failedResources.length) {
-      tooltip.appendMarkdown("\n\n---").appendMarkdown("\n\n$(error) **Unable to connect to**:");
+      tooltip.addWarning("**Unable to connect to**:", "error");
       failedResources.forEach((error) => {
         tooltip.appendMarkdown(`\n\n- ${error}`);
       });
@@ -470,11 +458,9 @@ export function createEnvironmentTooltip(resource: Environment): MarkdownString 
       const commandUri = Uri.parse(
         `command:confluent.connections.direct.edit?${encodeURIComponent(JSON.stringify([resource.connectionId]))}`,
       );
-      tooltip.appendMarkdown(`\n\n[View Connection Details](${commandUri})`);
+      tooltip.addLink("View Connection Details", commandUri.toString());
     } else if (missingResources.length) {
-      tooltip
-        .appendMarkdown("\n\n---")
-        .appendMarkdown(`\n\n$(error) Unable to connect to ${missingResources.join(" and ")}.`);
+      tooltip.addWarning(`Unable to connect to ${missingResources.join(" and ")}.`, "error");
     }
   }
 

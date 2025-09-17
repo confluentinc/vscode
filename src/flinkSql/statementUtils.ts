@@ -17,7 +17,7 @@ import {
   TERMINAL_PHASES,
 } from "../models/flinkStatement";
 import { getSidecar } from "../sidecar";
-import { parseResults } from "../utils/flinkStatementResults";
+import { parseResults } from "./flinkStatementResults";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
 import { extractPageToken } from "./utils";

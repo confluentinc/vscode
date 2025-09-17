@@ -212,6 +212,26 @@ describe("Extension manifest tests", () => {
     );
   });
 
+  it("should have commandPalette menu entries sorted by command name", () => {
+    interface CommandPaletteEntry {
+      command: string;
+      when: string;
+      [key: string]: unknown;
+    }
+
+    const entries = packageJSON.contributes.menus.commandPalette as CommandPaletteEntry[];
+
+    // Full sorted equivalence check
+    const expected = [...entries].sort((a, b) => (a.command ?? "").localeCompare(b.command ?? ""));
+    const actualCommands = entries.map((e) => e.command ?? "");
+    const expectedCommands = expected.map((e) => e.command ?? "");
+    assert.deepStrictEqual(
+      actualCommands,
+      expectedCommands,
+      "commandPalette entries are not in lexicographic order by command: Run `gulp organizePackageJson` to fix",
+    );
+  });
+
   it("All extension commands should be mentioned in menus.commandPalette", async () => {
     // All command IDs mentioned in contributes.menus.commandPalette in package.json ...
     const commandPaletteCommands = packageJSON.contributes.menus["commandPalette"].map(
@@ -262,6 +282,27 @@ describe("Extension manifest tests", () => {
       extraInCommandPalette.length,
       0,
       `The following commands are in contributes.menus.commandPalette in package.json but are not registered by the extension (spelling errors? Forgot to clean up?): ${formattedExtraCommands}`,
+    );
+  });
+
+  it("should have `contributes.commands` sorted by command ID", () => {
+    interface ContributedCommand {
+      command: string;
+      title: string;
+      category?: string;
+      [key: string]: unknown;
+    }
+
+    const commands = packageJSON.contributes.commands as ContributedCommand[];
+
+    // Full sorted equivalence check
+    const expected = [...commands].sort((a, b) => a.command.localeCompare(b.command));
+    const actualCommands = commands.map((c) => c.command);
+    const expectedCommands = expected.map((c) => c.command);
+    assert.deepStrictEqual(
+      actualCommands,
+      expectedCommands,
+      "`contributes.commands` entries are not in lexicographic order by command ID: Run `gulp organizePackageJson` to fix",
     );
   });
 });

@@ -52,7 +52,11 @@ import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
-import { CCloudResourceLoader, loadProviderRegions } from "./ccloudResourceLoader";
+import {
+  CCloudResourceLoader,
+  loadArtifactsForProviderRegion,
+  loadProviderRegions,
+} from "./ccloudResourceLoader";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -722,6 +726,41 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
+  describe("loadArtifactsForProviderRegion", () => {
+    let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
+    let stubbedSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    beforeEach(() => {
+      stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
+      stubbedSidecarHandle = getSidecarStub(sandbox);
+
+      stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+
+      sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+    });
+    it("should return empty array if response from 'loadArtifactsForProviderRegion' returns null data", async () => {
+      const mockResponse = {
+        api_version: ArtifactV1FlinkArtifactListApiVersionEnum.ArtifactV1,
+        kind: ArtifactV1FlinkArtifactListKindEnum.FlinkArtifactList,
+        metadata: {
+          next: "",
+        },
+        data: null,
+      } satisfies ArtifactV1FlinkArtifactList;
+
+      stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+
+      const artifacts = await loadArtifactsForProviderRegion(stubbedSidecarHandle, {
+        provider: "aws",
+        region: "us-west-2",
+        organizationId: TEST_CCLOUD_ORGANIZATION.id,
+        environmentId: "env-12345" as EnvironmentId,
+      });
+      assert.ok(Array.isArray(artifacts));
+      assert.strictEqual(artifacts.length, 0);
+      sinon.assert.calledOnce(stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts);
+    });
+  });
+
   describe("getFlinkArtifacts", () => {
     let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
 
@@ -742,7 +781,7 @@ describe("CCloudResourceLoader", () => {
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
 
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       assert.strictEqual(artifacts.length, 0);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
 
@@ -761,7 +800,7 @@ describe("CCloudResourceLoader", () => {
       const mockResponse = makeFakeListArtifactsResponse(false, 3);
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       assert.strictEqual(artifacts.length, 3);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
     });
@@ -775,7 +814,7 @@ describe("CCloudResourceLoader", () => {
         .resolves(mockResponse)
         .onSecondCall()
         .resolves(mockResponse2);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
       assert.strictEqual(artifacts.length, 5);
       sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
     });

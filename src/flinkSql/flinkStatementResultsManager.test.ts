@@ -1,25 +1,25 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-import * as messageUtils from "../src/documentProviders/message";
 import {
   FlinkStatementResultsManagerTestContext,
   createTestResultsManagerContext,
-} from "../tests/createResultsManager";
-import { eventually } from "../tests/eventually";
-import { loadFixtureFromFile } from "../tests/fixtures/utils";
-import { createResponseError } from "../tests/unit/testUtils";
+} from "../../tests/createResultsManager";
+import { eventually } from "../../tests/eventually";
+import { loadFixtureFromFile } from "../../tests/fixtures/utils";
+import { createResponseError } from "../../tests/unit/testUtils";
 import {
   GetSqlv1StatementResult200Response,
   GetSqlv1StatementResult200ResponseApiVersionEnum,
   GetSqlv1StatementResult200ResponseKindEnum,
-} from "./clients/flinkSql";
-import { FlinkStatement, Phase } from "./models/flinkStatement";
-import { WebviewStorage } from "./webview/comms/comms";
+} from "../clients/flinkSql";
+import * as messageUtils from "../documentProviders/message";
+import { FlinkStatement, Phase } from "../models/flinkStatement";
+import { WebviewStorage } from "../webview/comms/comms";
 import {
   FlinkStatementResultsViewModel,
   ResultsViewerStorageState,
-} from "./webview/flink-statement-results";
+} from "../webview/flink-statement-results";
 
 function createMockStatement(): FlinkStatement {
   const fakeFlinkStatement = loadFixtureFromFile(
@@ -262,6 +262,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       failed: ctx.statement.failed,
       stoppable: ctx.statement.stoppable,
       areResultsViewable: ctx.statement.canRequestResults,
+      possiblyViewable: ctx.statement.possiblyViewable,
       isForeground: ctx.statement.isForeground,
     });
   });

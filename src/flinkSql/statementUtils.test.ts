@@ -18,7 +18,7 @@ import {
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
-import { Operation } from "../utils/flinkStatementResults";
+import { Operation } from "./flinkStatementResults";
 import { localTimezoneOffset } from "../utils/timezone";
 import {
   determineFlinkStatementName,

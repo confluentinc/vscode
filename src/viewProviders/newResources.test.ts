@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { MarkdownString, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { eventEmitterStubs, StubbedEventEmitters } from "../../tests/stubs/emitters";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -35,6 +35,7 @@ import {
 } from "../models/environment";
 import { FlinkComputePoolTreeItem } from "../models/flinkComputePool";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
+import { CustomMarkdownString } from "../models/main";
 import { LocalMedusa, MedusaTreeItem } from "../models/medusa";
 import { ConnectionId } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
@@ -316,7 +317,7 @@ describe("viewProviders/newResources.ts", () => {
       describe("tooltip", () => {
         it("calls + returns createEnvironmentTooltip() result when env set", () => {
           const envToolTipStub = sandbox.stub(environmentModels, "createEnvironmentTooltip");
-          envToolTipStub.returns(new MarkdownString("Test tooltip"));
+          envToolTipStub.returns(new CustomMarkdownString("Test tooltip"));
           directConnectionRow.environments.push(TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR);
           assert.strictEqual(directConnectionRow.tooltip.value, "Test tooltip");
           sinon.assert.calledOnce(envToolTipStub);

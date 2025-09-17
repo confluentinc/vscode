@@ -43,6 +43,7 @@ import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
+import { registerUriCommands } from "./commands/uris";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
@@ -272,6 +273,7 @@ async function _activateExtension(
     ...registerSearchCommands(),
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
+    ...registerUriCommands(),
   ];
   logger.info("Commands registered");
 
@@ -371,7 +373,13 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
+  // indicate to the UI that we are running in an end-to-end testing environment, since we can't
+  // easily use the "testing" extension mode like we can for Mocha tests
+  const e2eTestEnvironment = setContextValue(
+    ContextValues.E2E_TESTING,
+    process.env.CONFLUENT_VSCODE_E2E_TESTING === "true",
+  );
+  // EXPERIMENTAL/PREVIEW: set default values for any early opt-in/-out functionality
   const chatParticipantEnabled = setContextValue(
     ContextValues.chatParticipantEnabled,
     ENABLE_CHAT_PARTICIPANT.value,
@@ -394,7 +402,6 @@ async function setupContextValues() {
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
     "confluent-resources",
-    "new-confluent-resources",
     "confluent-topics",
     "confluent-schemas",
     "confluent-flink-statements",
@@ -447,6 +454,7 @@ async function setupContextValues() {
     FlinkDatabaseViewProviderMode.Artifacts,
   );
   await Promise.all([
+    e2eTestEnvironment,
     chatParticipantEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,

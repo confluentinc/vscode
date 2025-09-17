@@ -7,17 +7,17 @@ import {
   SqlV1StatementResultResults,
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
-} from "./clients/flinkSql";
-import { showJsonPreview } from "./documentProviders/message";
-import { isResponseError, isResponseErrorWithStatus, logError } from "./errors";
-import { extractPageToken } from "./flinkSql/utils";
-import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
-import { Logger } from "./logging";
-import { FlinkStatement } from "./models/flinkStatement";
-import { showErrorNotificationWithButtons } from "./notifications";
-import { SidecarHandle } from "./sidecar";
-import { ViewMode } from "./utils/flinkStatementResultColumns";
-import { StatementResultsRow, parseResults } from "./utils/flinkStatementResults";
+} from "../clients/flinkSql";
+import { showJsonPreview } from "../documentProviders/message";
+import { isResponseError, isResponseErrorWithStatus, logError } from "../errors";
+import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
+import { Logger } from "../logging";
+import { FlinkStatement } from "../models/flinkStatement";
+import { showErrorNotificationWithButtons } from "../notifications";
+import { SidecarHandle } from "../sidecar";
+import { ViewMode } from "./flinkStatementResultColumns";
+import { StatementResultsRow, parseResults } from "./flinkStatementResults";
+import { extractPageToken } from "./utils";
 
 const logger = new Logger("flink-statement-results");
 
@@ -495,6 +495,7 @@ export class FlinkStatementResultsManager {
           failed: this.statement.failed,
           stoppable: this.statement.stoppable,
           areResultsViewable: this.statement.canRequestResults,
+          possiblyViewable: this.statement.possiblyViewable,
           isForeground: this.statement.isForeground,
         };
       }

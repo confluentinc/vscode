@@ -7,6 +7,8 @@ import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
@@ -21,13 +23,26 @@ import {
 } from "./utils/uploadArtifact";
 
 /**
- * Prompts the user for environment, cloud provider, region, and artifact name.
- * Returns an object with these values, or undefined if the user cancels.
+ * Orchestrates the sub-functions from uploadArtifact.ts to complete the artifact upload process.
+ * Logs error and shows a user notification if sub-functions fail.
+ * Steps are:
+ * 1. Gathering request parameters from the user or a provided item.
+ * 2. Requesting a presigned URL from Confluent Cloud via Sidecar.
+ * 3. Uploading the artifact to the presigned URL (supports AWS or Azure).
+ * 4. Displaying progress while creating the Artifact in Confluent Cloud.
+ *
+ * @param item Optional. If command is invoked from a Flink Compute Pool, CCloud Kafka Cluster, or `.jar` file we use that to pre-fill upload options.
+ * If not provided, the user will be prompted for all necessary information.
+ * In the near future this will become a webview form with more inputs. See: https://github.com/confluentinc/vscode/issues/2539
  */
-export async function uploadArtifactCommand(): Promise<void> {
+
+export async function uploadArtifactCommand(
+  item?: CCloudFlinkComputePool | CCloudKafkaCluster | vscode.Uri,
+): Promise<void> {
   try {
-    const params = await promptForArtifactUploadParams();
-    if (!params) return; // User cancelled the input
+    // 1. Gather the request parameters from user or item
+    const params = await promptForArtifactUploadParams(item);
+    if (!params) return; // User cancelled the prompt
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
       environment: params.environment,
@@ -37,14 +52,17 @@ export async function uploadArtifactCommand(): Promise<void> {
       content_format: params.fileFormat,
     };
 
+    // 2. Get presigned URL from Confluent Cloud via Sidecar
     const uploadUrl = await getPresignedUploadUrl(request);
 
-    if (!uploadUrl.upload_id) {
+    if (!uploadUrl) {
       throw new Error("Upload ID is missing from the presigned URL response.");
     }
 
+    // 3. Upload the artifact to the presigned URL (either AWS or Azure)
     await handleUploadToCloudProvider(params, uploadUrl);
 
+    // 4/Last. Show our progress while creating the Artifact in Confluent Cloud (TODO should this wrap all the steps?)
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,

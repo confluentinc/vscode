@@ -1,6 +1,6 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_BASE_PATH, CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -50,7 +50,7 @@ export class CCloudFlinkComputePool extends FlinkComputePool implements IEnvProv
   }
 
   get ccloudUrl(): string {
-    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/flink/pools/${this.id}/overview`;
+    return `https://${CCLOUD_BASE_PATH}/environments/${this.environmentId}/flink/pools/${this.id}/overview?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
   searchableText(): string {
@@ -87,19 +87,17 @@ export class FlinkComputePoolTreeItem extends TreeItem {
 
 export function createFlinkComputePoolTooltip(resource: FlinkComputePool) {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) Flink Compute Pool\n`)
-    .appendMarkdown("\n\n---")
-    .appendMarkdown(`\n\nID: \`${resource.id}\``)
-    .appendMarkdown(`\n\nName: \`${resource.name}\``);
+    .addHeader("Flink Compute Pool", resource.iconName)
+    .addField("ID", resource.id)
+    .addField("Name", resource.name);
+
   if (isCCloud(resource)) {
     const ccloudPool = resource as CCloudFlinkComputePool;
-    tooltip.appendMarkdown(`\n\nProvider: \`${ccloudPool.provider}\``);
-    tooltip.appendMarkdown(`\n\nRegion: \`${ccloudPool.region}\``);
-    tooltip.appendMarkdown(`\n\nMax CFU: \`${ccloudPool.maxCfu}\``);
-    tooltip.appendMarkdown("\n\n---");
-    tooltip.appendMarkdown(
-      `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudPool.ccloudUrl})`,
-    );
+    tooltip
+      .addField("Provider", ccloudPool.provider)
+      .addField("Region", ccloudPool.region)
+      .addField("Max CFU", ccloudPool.maxCfu.toString());
+    tooltip.addCCloudLink(ccloudPool.ccloudUrl);
   }
 
   return tooltip;

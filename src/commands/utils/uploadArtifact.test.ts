@@ -6,7 +6,11 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
-import { TEST_CCLOUD_ENVIRONMENT } from "../../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+} from "../../../tests/unit/testResources";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import {
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
@@ -16,7 +20,10 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
+import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
+import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider } from "../../models/resource";
+import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
@@ -32,7 +39,6 @@ import {
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
 import * as uploadToProvider from "./uploadToProvider";
-
 describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
@@ -91,6 +97,32 @@ describe("uploadArtifact", () => {
         blob: new Blob([mockBuffer], { type: "application/java-archive" }),
         contentType: "application/java-archive",
       });
+    });
+
+    it("should throw an error for files larger than 100MB", async () => {
+      const mockBuffer = Buffer.alloc(101 * 1024 * 1024); // 101MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(mockBuffer);
+
+      const mockUri = { fsPath: "/path/to/large-file.jar" } as vscode.Uri;
+
+      await assert.rejects(
+        () => prepareUploadFileFromUri(mockUri),
+        /File size 101.00MB exceeds the maximum allowed size of 100MB/,
+      );
+    });
+
+    it("should not throw an error for files smaller than or equal to 100MB", async () => {
+      const mockBuffer = Buffer.alloc(10 * 1024 * 1024); // 10MB
+      sandbox.stub(fsWrappers, "readFileBuffer").resolves(mockBuffer);
+
+      const mockUri = { fsPath: "/path/to/small-file.jar" } as vscode.Uri;
+      const showErrorStub = sandbox
+        .stub(notifications, "showErrorNotificationWithButtons")
+        .resolves();
+
+      await assert.doesNotReject(() => prepareUploadFileFromUri(mockUri));
+
+      sinon.assert.notCalled(showErrorStub);
     });
 
     it("should throw an error if the file does not exist", async () => {
@@ -258,6 +290,73 @@ describe("uploadArtifact", () => {
         cloud: "AWS",
         region: fakeCloudProviderRegion.region_name,
         artifactName: "test-artifact",
+        fileFormat: "jar",
+        selectedFile: mockFileUri,
+      });
+    });
+
+    it("should use provided CCloudFlinkComputePool context without prompting for environment/region", async () => {
+      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+      sandbox.stub(vscode.window, "showInputBox").resolves(mockFileName);
+
+      const result = await promptForArtifactUploadParams(pool);
+
+      // environment and cloud/region should be derived from the item, not from quick picks
+      sinon.assert.notCalled(flinkCcloudEnvironmentQuickPickStub);
+      sinon.assert.notCalled(cloudProviderRegionQuickPickStub);
+
+      assert.deepStrictEqual(result, {
+        environment: mockEnvironment.id,
+        cloud: "AWS",
+        region: "us-west-2",
+        artifactName: "mock-file",
+        fileFormat: "jar",
+        selectedFile: mockFileUri,
+      });
+    });
+
+    it("should use provided CCloudKafkaCluster context without prompting for environment/region", async () => {
+      const cluster: CCloudKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
+      sandbox.stub(vscode.window, "showInputBox").resolves("cluster-artifact");
+
+      const result = await promptForArtifactUploadParams(cluster);
+
+      sinon.assert.notCalled(flinkCcloudEnvironmentQuickPickStub);
+      sinon.assert.notCalled(cloudProviderRegionQuickPickStub);
+
+      assert.deepStrictEqual(result, {
+        environment: mockEnvironment.id,
+        cloud: "AWS",
+        region: "us-west-2",
+        artifactName: "cluster-artifact",
+        fileFormat: "jar",
+        selectedFile: mockFileUri,
+      });
+    });
+
+    it("should accept a vscode.Uri item and not prompt for file selection", async () => {
+      // environment and region picks still happen when URI is provided
+      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
+      cloudProviderRegionQuickPickStub.resolves({
+        ...fakeCloudProviderRegion,
+        provider: "AWS",
+        region: fakeCloudProviderRegion.region_name,
+      });
+      sandbox.stub(vscode.window, "showInputBox").resolves("mock-file");
+      const filePicker = sandbox.stub(vscode.window, "showOpenDialog");
+
+      const result = await promptForArtifactUploadParams(mockFileUri);
+      // file picker should not be called if we provided a URI
+      sinon.assert.notCalled(filePicker);
+      assert.deepStrictEqual(result, {
+        environment: mockEnvironment.id,
+        cloud: "AWS",
+        region: fakeCloudProviderRegion.region_name,
+        artifactName: "mock-file",
         fileFormat: "jar",
         selectedFile: mockFileUri,
       });
