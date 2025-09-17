@@ -1,5 +1,16 @@
-import { CodeLens, CodeLensProvider, Command, Position, Range, TextDocument } from "vscode";
+import {
+  CodeLens,
+  CodeLensProvider,
+  Command,
+  Disposable,
+  Event,
+  EventEmitter,
+  Position,
+  Range,
+  TextDocument,
+} from "vscode";
 import { MEDUSA_COMMANDS } from "../commands/medusaCodeLens";
+import { localMedusaConnected } from "../emitters";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { DisposableCollection } from "../utils/disposables";
@@ -7,7 +18,12 @@ import { DisposableCollection } from "../utils/disposables";
 const logger = new Logger("codelens.avroProvider");
 
 export class AvroCodelensProvider extends DisposableCollection implements CodeLensProvider {
+  // controls refreshing the available codelenses
+  private _onDidChangeCodeLenses: EventEmitter<void> = new EventEmitter<void>();
+  readonly onDidChangeCodeLenses: Event<void> = this._onDidChangeCodeLenses.event;
+
   private static instance: AvroCodelensProvider | null = null;
+  private medusaAvailable: boolean = false;
 
   static getInstance(): AvroCodelensProvider {
     if (!AvroCodelensProvider.instance) {
@@ -18,11 +34,34 @@ export class AvroCodelensProvider extends DisposableCollection implements CodeLe
 
   private constructor() {
     super();
+
+    this.disposables.push(...this.setEventListeners());
+  }
+
+  protected setEventListeners(): Disposable[] {
+    return [localMedusaConnected.event(this.medusaConnectedHandler.bind(this))];
+  }
+
+  /**
+   * Refresh/update all codelenses for documents visible in the workspace when localMedusaConnected event fires.
+   * @param connected - whether the Medusa container is available
+   */
+  medusaConnectedHandler(connected: boolean): void {
+    logger.debug("medusaConnectedHandler called, updating codelenses", { connected });
+    this.medusaAvailable = connected;
+    this._onDidChangeCodeLenses.fire();
   }
 
   async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
     const codeLenses: CodeLens[] = [];
+
+    // Check if Medusa container feature is enabled in settings
     if (!ENABLE_MEDUSA_CONTAINER.value) {
+      return [];
+    }
+
+    // Check if Medusa container is actually available/running
+    if (!this.medusaAvailable) {
       return [];
     }
 
