@@ -5,4 +5,9 @@ export class KafkaClusterItem extends ViewItem {
   async generateProject(): Promise<void> {
     await this.rightClickContextMenuAction("Generate project from resource");
   }
+
+  /** Copy the Kafka cluster's bootstrap servers to the clipboard via the right-click context menu. */
+  async copyBootstrapServers(): Promise<void> {
+    await this.rightClickContextMenuAction("Copy Bootstrap Server(s)");
+  }
 }
