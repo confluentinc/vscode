@@ -592,7 +592,7 @@ describe("CCloudResourceLoader", () => {
     }
   }); // getFlinkStatements
 
-  describe("refreshFlinkStatement()", () => {
+  describe("ccloudResourceLoader.refreshFlinkStatement()", () => {
     let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
 
     beforeEach(() => {
@@ -1049,6 +1049,83 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(waitForStatementCompletionStub);
       sinon.assert.calledOnce(submitFlinkStatementStub);
       sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+    });
+
+    describe("concurrency handling", () => {
+      beforeEach(() => {
+        // Set up any submitted statement to complete successfully
+        const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+        waitForStatementCompletionStub.resolves(completedStatement);
+
+        const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+        parseAllFlinkStatementResultsStub.returns(parseResults);
+      });
+
+      it("should return same promise if called multiple times concurrently", async () => {
+        const promise1 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+        const promise2 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        await Promise.all([promise1, promise2]);
+
+        // waitForStatementCompletionStub, parseAllFlinkStatementResultsStub should have only be called once
+        // since both calls should share the same promise.
+        sinon.assert.calledOnce(waitForStatementCompletionStub);
+        sinon.assert.calledOnce(parseAllFlinkStatementResultsStub);
+      });
+
+      it("should issue separate calls if called with different statements concurrently", async () => {
+        const promise1 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+        const promise2 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 2",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        await Promise.all([promise1, promise2]);
+
+        // waitForStatementCompletionStub, parseAllFlinkStatementResultsStub should have been called twice
+        // since both calls should have been independent (separate statements).
+        sinon.assert.calledTwice(waitForStatementCompletionStub);
+        sinon.assert.calledTwice(parseAllFlinkStatementResultsStub);
+      });
+
+      it("pending promise map should be cleared after successful completion", async () => {
+        await loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        assert.strictEqual(
+          loader["backgroundStatementPromises"].size,
+          0,
+          "Expected pending promise map to be cleared",
+        );
+      });
+
+      it("pending promise map should be cleared after failure", async () => {
+        waitForStatementCompletionStub.rejects(new Error("Simulated failure"));
+
+        await assert.rejects(async () => {
+          await loader.executeFlinkStatement<TestResult>(
+            "SELECT 1",
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          );
+        });
+
+        assert.strictEqual(
+          loader["backgroundStatementPromises"].size,
+          0,
+          "Expected pending promise map to be cleared",
+        );
+      });
     });
   });
 });
