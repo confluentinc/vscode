@@ -18,10 +18,24 @@ export enum SupportedAuthType {
   Kerberos = "Kerberos",
 }
 
-/** Configuration options for setting up a direct connection. */
-export interface DirectConnectionConfig {
+/** Base requirements for Kafka and/or Schema Registry configurations. */
+interface DirectConnectionConfig {
   authType: SupportedAuthType;
   credentials: Record<string, any>;
+}
+export interface DirectConnectionKafkaConfig extends DirectConnectionConfig {
+  bootstrapServers: string;
+}
+export interface DirectConnectionSchemaRegistryConfig extends DirectConnectionConfig {
+  uri: string;
+}
+
+/** Configuration options for setting up a direct connection. */
+export interface DirectConnectionOptions {
+  name?: string;
+  formConnectionType?: FormConnectionType;
+  kafkaConfig?: DirectConnectionKafkaConfig;
+  schemaRegistryConfig?: DirectConnectionSchemaRegistryConfig;
 }
 
 /**
@@ -31,6 +45,11 @@ export interface DirectConnectionConfig {
 export class DirectConnectionForm extends Webview {
   constructor(page: Page) {
     super(page);
+  }
+
+  // form header+description area
+  get formHeader(): Locator {
+    return this.webview.locator(".form-header");
   }
 
   // top-level/general form fields
@@ -85,6 +104,9 @@ export class DirectConnectionForm extends Webview {
   }
   get saveButton(): Locator {
     return this.webview.getByRole("button", { name: "Save" });
+  }
+  get updateButton(): Locator {
+    return this.webview.getByRole("button", { name: "Update" });
   }
 
   // status and message elements
