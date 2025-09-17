@@ -6,6 +6,7 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
+import { findFlinkDatabases } from "../flinkSql/utils";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -22,6 +23,7 @@ import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   promptForArtifactUploadParams,
+  promptForFunctionAndClassName,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifact";
 
@@ -168,7 +170,9 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
   await editor.insertSnippet(snippetString);
 }
 
-export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifact | undefined) {
+export async function commandForUDFCreationFromArtifact(
+  selectedArtifact: FlinkArtifact | undefined,
+) {
   if (!selectedArtifact) {
     return;
   }
@@ -176,6 +180,7 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
     const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
     const selectedResource = flinkDatabaseProvider.resource;
+
     const environments = await ccloudResourceLoader.getEnvironments();
     const environment = environments.find((env) => env.id === selectedArtifact.environmentId);
 
@@ -183,16 +188,16 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
       throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
     }
 
-    // Find Flink-capable databases
-    // either fix in here or add ticket for util to filter out non-Flink clusters from environment API
-    const flinkDatabases = environment.kafkaClusters.filter((cluster) => cluster.isFlinkable());
+    const flinkDatabases = findFlinkDatabases(environment);
     if (flinkDatabases.length === 0) {
       throw new Error(
         `No Flink-capable databases found in environment ${selectedArtifact.environmentId}`,
       );
     }
+
     const database = selectedResource as CCloudFlinkDbKafkaCluster;
     const computePool = database?.flinkPools[0];
+    let userInput = await promptForFunctionAndClassName(selectedArtifact);
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -201,11 +206,9 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
       },
       async (progress) => {
         progress.report({ message: "Executing statement..." });
-        //TODO LATER DEV HACK REMOVE MATH RANDOM FUNC
-        const functionName = `udf_${selectedArtifact.id.substring(0, 6)}_${Math.random().toString(16).slice(2, 8)}`;
-        // TODO show input box and allow name change
+        // Prompt user for function name, default to generated name
         const result = await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
-          `CREATE FUNCTION \`${functionName}\` AS 'io.confluent.udf.examples.log.LogSumScalarFunction' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
+          `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
           database!,
           computePool!,
         );
@@ -229,8 +232,6 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
       },
     );
   } catch (err) {
-    // Handle errors not already shown as notifications
-    // todo: make sure errors clean as possible
     if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
       let errorMessage = "Failed to create UDF function: ";
 
@@ -243,7 +244,6 @@ export async function fakeCommandForFlinkCreation(selectedArtifact: FlinkArtifac
         }
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage} ${err.message}`;
-
         logError(err, errorMessage);
         showErrorNotificationWithButtons(errorMessage);
       }
@@ -272,6 +272,9 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       setFlinkArtifactsViewModeCommand,
     ),
     registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
-    registerCommandWithLogging("confluent.artifacts.UDFCreation", fakeCommandForFlinkCreation),
+    registerCommandWithLogging(
+      "confluent.artifacts.UDFCreation",
+      commandForUDFCreationFromArtifact,
+    ),
   ];
 }

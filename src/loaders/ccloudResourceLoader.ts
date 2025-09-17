@@ -363,10 +363,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     computePool?: CCloudFlinkComputePool,
   ): Promise<Array<RT>> {
     if (!computePool) {
-      // Default to the first compute pool if none is provided.
       computePool = database.flinkPools[0];
     } else if (!database.isSameCloudRegion(computePool)) {
-      // Ensure the provided compute pool is valid for this database.
       throw new Error(
         `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
       );
@@ -396,11 +394,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         `Statement did not complete successfully, phase ${statement.phase}, error ${statement.status.detail}`,
       );
     }
-    // Parse and return all results.
     let results = await parseAllFlinkStatementResults<RT>(statement);
-    logger.debug(
-      `executeFlinkStatement() got ${JSON.stringify(results)} results from statement ${statement.id} FROM RLOADER`,
-    );
     return results;
   }
 }
