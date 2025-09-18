@@ -553,7 +553,6 @@ describe("flinkArtifacts", () => {
       .rejects(responseError);
     await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
 
-    // The error message already includes "Failed to create UDF function", so showErrorNotificationWithButtons should not be called
-    sinon.assert.notCalled(showErrorStub);
+    sinon.assert.calledOnce(showErrorStub);
   });
 });

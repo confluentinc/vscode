@@ -341,6 +341,9 @@ export async function promptForFunctionAndClassName(
       return null;
     },
   });
+  if (functionName === undefined) {
+    return { functionName: undefined, className: undefined };
+  }
 
   const className = await vscode.window.showInputBox({
     prompt: "Enter the class name for the new UDF",
@@ -352,5 +355,8 @@ export async function promptForFunctionAndClassName(
       return null;
     },
   });
+  if (className === undefined) {
+    return { functionName, className: undefined };
+  }
   return { functionName, className };
 }

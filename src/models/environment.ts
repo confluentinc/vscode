@@ -148,7 +148,9 @@ export class CCloudEnvironment extends Environment {
       pool instanceof CCloudFlinkComputePool ? pool : new CCloudFlinkComputePool(pool),
     );
   }
-
+  /**
+   * Flinkable Kafka clusters, i.e. those with at least one associated Flink compute pool.
+   */
   get flinkDatabaseClusters(): CCloudFlinkDbKafkaCluster[] {
     return this.kafkaClusters.filter(
       (kc): kc is CCloudFlinkDbKafkaCluster =>
