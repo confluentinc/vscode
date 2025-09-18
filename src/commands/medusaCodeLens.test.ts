@@ -101,6 +101,14 @@ describe("medusaCodeLens", () => {
       writeFileStub = sandbox.stub(fsWrappers, "writeFile").resolves();
       showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument").resolves();
 
+      // Mock workspace folders
+      const mockWorkspaceFolder = {
+        uri: vscode.Uri.file("/workspace"),
+        name: "test-workspace",
+        index: 0,
+      };
+      sandbox.stub(vscode.workspace, "workspaceFolders").value([mockWorkspaceFolder]);
+
       // Mock the Medusa API
       mockSchemaManagementApi = sandbox.createStubInstance(SchemaManagementApi);
       getMedusaSchemaManagementApiStub = sandbox
@@ -130,7 +138,7 @@ describe("medusaCodeLens", () => {
       // Setup mocks
       mockSchemaManagementApi.convertAvroSchemaToDataset.resolves(mockDataset);
       withProgressStub.callsFake(async (options, callback) => await callback());
-      showSaveDialogStub.resolves(vscode.Uri.file("/workspace/my-dataset.dataset.json"));
+      showSaveDialogStub.resolves(vscode.Uri.file("/workspace/TestEvent.dataset.json"));
       showInformationMessageStub.resolves("Open File");
 
       await generateMedusaDatasetCommand(mockUri);
@@ -164,12 +172,12 @@ describe("medusaCodeLens", () => {
       // Verify save dialog
       sinon.assert.calledOnce(showSaveDialogStub);
       const saveOptions = showSaveDialogStub.getCall(0).args[0];
-      assert.deepStrictEqual(saveOptions.filters, { "Dataset Files": ["dataset.json"] });
+      assert.deepStrictEqual(saveOptions.filters, { "Medusa Dataset Files": ["dataset.json"] });
 
       // Verify file write
       sinon.assert.calledOnce(writeFileStub);
       const [savedUri, savedContent] = writeFileStub.getCall(0).args;
-      const expectedUri = vscode.Uri.file("/workspace/my-dataset.dataset.json");
+      const expectedUri = vscode.Uri.file("/workspace/TestEvent.dataset.json");
       assert.strictEqual(savedUri.path, expectedUri.path);
       const savedData = JSON.parse(savedContent.toString());
       assert.deepStrictEqual(savedData, mockDataset);

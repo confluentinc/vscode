@@ -118,13 +118,15 @@ async function saveDatasetToFile(dataset: DatasetDTO): Promise<void> {
     // Get the workspace folder as default location
     const workspaceFolder = workspace.workspaceFolders?.[0];
     const defaultUri = workspaceFolder ? workspaceFolder.uri : undefined;
-    const defaultFilename = `my-dataset.dataset.json`;
+    // when converting an avro schema there will only ever be one event in subsequent Dataset
+    const baseName = dataset.events[0].event_name;
+    const defaultFilename = `${baseName}.dataset.json`;
 
     // Show save dialog
     let saveUri = await window.showSaveDialog({
       defaultUri: defaultUri ? Uri.joinPath(defaultUri, defaultFilename) : undefined,
       filters: {
-        "Dataset Files": ["dataset.json"],
+        "Medusa Dataset Files": ["dataset.json"],
       },
       saveLabel: "Save Medusa Dataset",
     });
