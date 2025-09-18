@@ -24,14 +24,13 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
     let stubbedCCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
     const TEST_UDF: FlinkUdf = new FlinkUdf({
-      connectionId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.connectionId,
-      connectionType: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.connectionType,
       environmentId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId,
+      provider: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider,
+      region: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region,
+      databaseId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
       id: "TestUDF", // No unique ID available, so use name as ID.
       name: "TestUDF",
       description: "",
-      provider: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider,
-      region: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region,
     });
 
     beforeEach(() => {
@@ -45,13 +44,18 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
       FlinkDatabaseViewProvider["instanceMap"].clear();
     });
 
-    it(".fetchChildren() should return a FlinkUdf array when a flinkable Kafka cluster is provided", async () => {
-      stubbedCCloudResourceLoader.getFlinkUDFs.resolves([TEST_UDF]);
+    for (const deepRefresh of [true, false]) {
+      it(`.fetchChildren() should return a FlinkUdf array when a flinkable Kafka cluster is provided: deepRefresh ${deepRefresh}`, async () => {
+        stubbedCCloudResourceLoader.getFlinkUDFs.resolves([TEST_UDF]);
 
-      const udfs = await udfsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+        const udfs = await udfsDelegate.fetchChildren(
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          deepRefresh,
+        );
 
-      sinon.assert.calledOnce(stubbedCCloudResourceLoader.getFlinkUDFs);
-      assert.deepStrictEqual(udfs, [TEST_UDF]);
-    });
+        sinon.assert.calledOnce(stubbedCCloudResourceLoader.getFlinkUDFs);
+        assert.deepStrictEqual(udfs, [TEST_UDF]);
+      });
+    }
   });
 });

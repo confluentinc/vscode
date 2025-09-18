@@ -318,33 +318,41 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    */
   public async getFlinkUDFs(
     cluster: CCloudFlinkDbKafkaCluster,
-    computePool?: CCloudFlinkComputePool,
+    forceDeepRefresh: boolean,
   ): Promise<FlinkUdf[]> {
-    // Run the statement to list UDFs.
+    // Look to see if we have cached UDFs for this Flink database already.
+    const rm = getResourceManager();
+    let udfs = await rm.getFlinkUDFs(cluster);
 
-    // Will raise Error if the cluster isn't Flinkable, the optionally provided
-    // compute pool doesn't correspond with the cluster, or if the statement
-    // execution fails.
-    const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
-      "SHOW USER FUNCTIONS",
-      cluster,
-      computePool,
-    );
+    if (udfs === undefined || forceDeepRefresh) {
+      // Run the statement to list UDFs.
 
-    const augmentedResults: FlinkUdf[] = rawResults.map((row) => {
-      return new FlinkUdf({
-        connectionId: cluster.connectionId,
-        connectionType: cluster.connectionType,
-        environmentId: cluster.environmentId,
-        id: row["Function Name"], // No unique ID available, so use name as ID.
-        name: row["Function Name"],
-        description: "", // No description available from SHOW FUNCTIONS.
-        provider: cluster.provider,
-        region: cluster.region,
+      // Will raise Error if the cluster isn't Flinkable, the optionally provided
+      // compute pool doesn't correspond with the cluster, or if the statement
+      // execution fails.
+      const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
+        "SHOW USER FUNCTIONS",
+        cluster,
+      );
+
+      udfs = rawResults.map((row) => {
+        return new FlinkUdf({
+          environmentId: cluster.environmentId,
+          provider: cluster.provider,
+          region: cluster.region,
+          databaseId: cluster.id,
+
+          id: row["Function Name"], // No unique ID available, so use name as ID.
+          name: row["Function Name"],
+          description: "", // No description available from SHOW FUNCTIONS.
+        });
       });
-    });
 
-    return augmentedResults;
+      // Cache them in the resource manager for future reference.
+      await rm.setFlinkUDFs(cluster, udfs);
+    }
+
+    return udfs;
   }
 
   /**

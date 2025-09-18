@@ -17,11 +17,14 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
 
   loadingMessage = "Loading Flink UDFs...";
 
-  async fetchChildren(database: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[]> {
+  async fetchChildren(
+    database: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkUdf[]> {
     this.children = [];
 
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
-    this.children = await ccloudResourceLoader.getFlinkUDFs(database);
+    this.children = await ccloudResourceLoader.getFlinkUDFs(database, forceDeepRefresh);
 
     return this.children;
   }
