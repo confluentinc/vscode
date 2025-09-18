@@ -236,25 +236,37 @@ describe("flinkArtifacts", () => {
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
+
+    const mockCluster = {
+      id: "cluster-123",
+      name: "Flink DB Cluster",
+      connectionId: artifact.connectionId,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: artifact.environmentId,
+      bootstrapServers: "pkc-xyz",
+      provider: "aws",
+      region: "us-west-2",
+      flinkPools: [{ id: "compute-pool-1" }],
+      isFlinkable: true,
+      isSameCloudRegion: () => true,
+      toFlinkSpecProperties: () => ({
+        toProperties: () => ({}),
+      }),
+    } as unknown as CCloudFlinkDbKafkaCluster;
+
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
       name: "Test Environment",
       flinkComputePools: [],
-      kafkaClusters: [
-        {
-          id: "cluster-123",
-          name: "Flink DB Cluster",
-          connectionId: artifact.connectionId,
-          connectionType: ConnectionType.Ccloud,
-          environmentId: artifact.environmentId,
-          bootstrapServers: "pkc-xyz",
-          provider: "aws",
-          region: "us-west-2",
-          flinkPools: [{} as any],
-          isFlinkable: true,
-        } as unknown as CCloudFlinkDbKafkaCluster,
-      ],
+      kafkaClusters: [mockCluster],
     };
+
+    const mockFlinkDatabaseViewProvider = {
+      resource: mockCluster,
+    };
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns(mockFlinkDatabaseViewProvider as any);
 
     const getEnvironmentsStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
@@ -262,18 +274,32 @@ describe("flinkArtifacts", () => {
 
     const findFlinkDatabasesStub = sandbox
       .stub(flinkSqlUtils, "findFlinkDatabases")
-      .returns(mockEnvironment.kafkaClusters as any);
+      .returns([mockCluster]);
+
+    const executeStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
+    const withProgressStub = sandbox.stub(vscode.window, "withProgress");
+    withProgressStub.callsFake(async (options, callback) => {
+      return await callback(
+        {
+          report: () => {},
+        },
+        {} as any,
+      );
+    });
 
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
     sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
-
     sinon.assert.calledOnce(promptStub);
-
+    sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledOnce(withProgressStub);
     sinon.assert.calledOnce(showInfoStub);
     sinon.assert.notCalled(showErrorStub);
   });
+
   it("should show info message if registered successfully", async () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
