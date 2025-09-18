@@ -461,6 +461,12 @@
         "enablement": "confluent.localDocker.medusaEnable"
       },
       {
+        "command": "confluent.medusa.start",
+        "title": "Start Medusa container",
+        "category": "Confluent",
+        "enablement": "confluent.localDocker.medusaEnable"
+      },
+      {
         "command": "confluent.openCCloudApiKeysUrl",
         "icon": "$(confluent-logo)",
         "title": "Manage API Keys in Confluent Cloud",
@@ -1347,6 +1353,10 @@
         {
           "command": "confluent.medusa.generateDataset",
           "when": "false"
+        },
+        {
+          "command": "confluent.medusa.start",
+          "when": "confluent.localDocker.medusaEnable"
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
