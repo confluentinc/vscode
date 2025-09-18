@@ -135,12 +135,16 @@ describe("viewProviders/flinkDatabase.ts", () => {
         environmentId: "env-123" as EnvironmentId,
       };
 
-      beforeEach(() => {
+      beforeEach(async () => {
         refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
         const artifactsDelegate = viewProvider["treeViewDelegates"].get(
           FlinkDatabaseViewProviderMode.Artifacts,
         )!;
         artifactsDelegateFetchChildrenStub = sandbox.stub(artifactsDelegate, "fetchChildren");
+
+        // Ensure we're in artifacts mode
+        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
+        refreshStub.resetHistory(); // from the mode switch
       });
 
       it("should do nothing if no database is selected", async () => {
@@ -176,10 +180,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
         });
 
         it("should refresh if the changed env/provider/region matches and we're viewing artifacts", async () => {
-          // Ensure we're in artifacts mode
-          await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
-          refreshStub.resetHistory(); // from the mode switch
-
           await viewProvider.artifactsChangedHandler(sameDbEnvRegion);
 
           sinon.assert.calledOnce(refreshStub);
@@ -188,7 +188,6 @@ describe("viewProviders/flinkDatabase.ts", () => {
         });
 
         it("should tell the artifacts delegate to refresh its cache if the changed env/provider/region matches but we're NOT viewing artifacts", async () => {
-          // Ensure we're in artifacts mode
           await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
           refreshStub.resetHistory(); // from the mode switch
 
