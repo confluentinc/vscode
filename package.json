@@ -284,6 +284,11 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
+        "command": "confluent.artifacts.UDFCreation",
+        "title": "Create Flink UDF",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.connections.addSSLPemPath",
         "icon": "$(key)",
         "title": "Add SSL/TLS PEM Path",
@@ -1204,6 +1209,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.artifacts.UDFCreation",
+          "when": "true"
+        },
+        {
           "command": "confluent.connections.addSSLPemPath",
           "when": "true"
         },
@@ -1961,6 +1970,16 @@
         },
         {
           "command": "confluent.artifacts.registerUDF",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.scaffold",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.artifacts.UDFCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
