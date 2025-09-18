@@ -9,6 +9,7 @@ import {
 import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
+import { FlinkArtifact } from "../../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import {
@@ -324,4 +325,32 @@ export function buildCreateArtifactRequest(
       upload_id: uploadId,
     },
   };
+}
+
+export async function promptForFunctionAndClassName(
+  selectedArtifact: FlinkArtifact | undefined,
+): Promise<{ functionName: string | undefined; className: string | undefined }> {
+  const defaultFunctionName = `udf_${selectedArtifact?.id.substring(0, 6)}`;
+  const functionName = await vscode.window.showInputBox({
+    prompt: "Enter a name for the new UDF function",
+    value: defaultFunctionName,
+    validateInput: (input) => {
+      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(input)) {
+        return "Function name must start with a letter or underscore and contain only letters, numbers, or underscores.";
+      }
+      return null;
+    },
+  });
+
+  const className = await vscode.window.showInputBox({
+    prompt: "Enter the class name for the new UDF",
+    value: `your.class.NameHere`,
+    validateInput: (input) => {
+      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(input)) {
+        return "Class name must start with a letter or underscore and contain only letters, numbers, underscores, or dots.";
+      }
+      return null;
+    },
+  });
+  return { functionName, className };
 }
