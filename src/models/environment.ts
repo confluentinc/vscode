@@ -11,6 +11,7 @@ import {
 import { FormConnectionType } from "../directConnections/types";
 import { CCloudFlinkComputePool, FlinkComputePool } from "./flinkComputePool";
 import {
+  CCloudFlinkDbKafkaCluster,
   CCloudKafkaCluster,
   DirectKafkaCluster,
   KafkaCluster,
@@ -145,6 +146,13 @@ export class CCloudEnvironment extends Environment {
     }
     this.flinkComputePools = props.flinkComputePools.map((pool) =>
       pool instanceof CCloudFlinkComputePool ? pool : new CCloudFlinkComputePool(pool),
+    );
+  }
+
+  get flinkDatabaseClusters(): CCloudFlinkDbKafkaCluster[] {
+    return this.kafkaClusters.filter(
+      (kc): kc is CCloudFlinkDbKafkaCluster =>
+        kc.isFlinkable() && Array.isArray(kc.flinkPools) && kc.flinkPools.length > 0,
     );
   }
 

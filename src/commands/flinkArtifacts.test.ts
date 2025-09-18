@@ -22,7 +22,7 @@ import {
   uploadArtifactCommand,
 } from "./flinkArtifacts";
 import * as commands from "./index";
-import * as uploadArtifact from "./utils/uploadArtifact";
+import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
 
 describe("flinkArtifacts", () => {
   let sandbox: sinon.SinonSandbox;

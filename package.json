@@ -285,7 +285,7 @@
       },
       {
         "command": "confluent.artifacts.UDFCreation",
-        "title": "Create Flink UDF",
+        "title": "Register UDF",
         "category": "Confluent: Flink Artifacts"
       },
       {

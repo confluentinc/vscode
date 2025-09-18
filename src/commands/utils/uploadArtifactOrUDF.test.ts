@@ -31,7 +31,7 @@ import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
-import * as uploadArtifactModule from "./uploadArtifact";
+import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
   getPresignedUploadUrl,
@@ -41,7 +41,7 @@ import {
   promptForArtifactUploadParams,
   promptForFunctionAndClassName,
   uploadArtifactToCCloud,
-} from "./uploadArtifact";
+} from "./uploadArtifactOrUDF";
 import * as uploadToProvider from "./uploadToProvider";
 describe("uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;

@@ -6,7 +6,6 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
-import { findFlinkDatabases } from "../flinkSql/utils";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -25,7 +24,7 @@ import {
   promptForArtifactUploadParams,
   promptForFunctionAndClassName,
   uploadArtifactToCCloud,
-} from "./utils/uploadArtifact";
+} from "./utils/uploadArtifactOrUDF";
 
 /**
  * Orchestrates the sub-functions from uploadArtifact.ts to complete the artifact upload process.
@@ -188,7 +187,7 @@ export async function commandForUDFCreationFromArtifact(
       throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
     }
 
-    const flinkDatabases = findFlinkDatabases(environment);
+    const flinkDatabases = environment.flinkDatabaseClusters;
     if (flinkDatabases.length === 0) {
       throw new Error(
         `No Flink-capable databases found in environment ${selectedArtifact.environmentId}`,
