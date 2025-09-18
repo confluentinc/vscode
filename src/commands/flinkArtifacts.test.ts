@@ -372,4 +372,189 @@ describe("flinkArtifacts", () => {
     sinon.assert.calledOnce(showInfoStub);
     sinon.assert.notCalled(showErrorStub);
   });
+
+  it("should handle ResponseError with string response body in commandForUDFCreationFromArtifact", async () => {
+    getShowErrorNotificationWithButtonsStub(sandbox);
+    sandbox.stub(console, "error"); // Add this to prevent actual logging
+
+    sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
+    });
+
+    const mockCluster = {
+      id: "cluster-123",
+      name: "Flink DB Cluster",
+      connectionId: artifact.connectionId,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: artifact.environmentId,
+      bootstrapServers: "pkc-xyz",
+      provider: "aws",
+      region: "us-west-2",
+      flinkPools: [{ id: "compute-pool-1" }],
+      isFlinkable: true,
+      isSameCloudRegion: () => true,
+      toFlinkSpecProperties: () => ({
+        toProperties: () => ({}),
+      }),
+    } as unknown as CCloudFlinkDbKafkaCluster;
+
+    const mockEnvironment: Partial<CCloudEnvironment> = {
+      id: artifact.environmentId,
+      name: "Test Environment",
+      flinkComputePools: [],
+      kafkaClusters: [mockCluster],
+    };
+
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns({ resource: mockCluster } as any);
+
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
+      .resolves([mockEnvironment as CCloudEnvironment]);
+
+    sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([mockCluster]);
+
+    const responseError = {
+      name: "ResponseError",
+      message: "Failed to create UDF function: Response error without prefix",
+      isResponseError: true,
+      response: {
+        status: 400,
+        statusText: "Bad Request",
+        headers: new Headers(),
+        body: "Plain text error message",
+      },
+      statusCode: 400,
+    };
+
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .rejects(responseError);
+
+    await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
+  });
+
+  it("should handle plain Error objects in commandForUDFCreationFromArtifact", async () => {
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+    sandbox.stub(console, "error"); // Add this to prevent actual logging
+
+    sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
+    });
+
+    const mockCluster = {
+      id: "cluster-123",
+      name: "Flink DB Cluster",
+      connectionId: artifact.connectionId,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: artifact.environmentId,
+      bootstrapServers: "pkc-xyz",
+      provider: "aws",
+      region: "us-west-2",
+      flinkPools: [{ id: "compute-pool-1" }],
+      isFlinkable: true,
+      isSameCloudRegion: () => true,
+      toFlinkSpecProperties: () => ({
+        toProperties: () => ({}),
+      }),
+    } as unknown as CCloudFlinkDbKafkaCluster;
+
+    const mockEnvironment: Partial<CCloudEnvironment> = {
+      id: artifact.environmentId,
+      name: "Test Environment",
+      flinkComputePools: [],
+      kafkaClusters: [mockCluster],
+    };
+
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns({ resource: mockCluster } as any);
+
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
+      .resolves([mockEnvironment as CCloudEnvironment]);
+
+    sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([mockCluster]);
+
+    const error = new Error("Something went wrong with UDF creation");
+
+    sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
+
+    await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
+
+    // Also verify that error notification was shown with the error message
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWithExactly(
+      showErrorStub,
+      "Failed to create UDF function:  Something went wrong with UDF creation",
+    );
+  });
+
+  it("should handle malformed error response JSON in commandForUDFCreationFromArtifact", async () => {
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+    sandbox.stub(console, "error"); // Add this to prevent actual logging
+
+    sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
+    });
+
+    const mockCluster = {
+      id: "cluster-123",
+      name: "Flink DB Cluster",
+      connectionId: artifact.connectionId,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: artifact.environmentId,
+      bootstrapServers: "pkc-xyz",
+      provider: "aws",
+      region: "us-west-2",
+      flinkPools: [{ id: "compute-pool-1" }],
+      isFlinkable: true,
+      isSameCloudRegion: () => true,
+      toFlinkSpecProperties: () => ({
+        toProperties: () => ({}),
+      }),
+    } as unknown as CCloudFlinkDbKafkaCluster;
+
+    const mockEnvironment: Partial<CCloudEnvironment> = {
+      id: artifact.environmentId,
+      name: "Test Environment",
+      flinkComputePools: [],
+      kafkaClusters: [mockCluster],
+    };
+
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns({ resource: mockCluster } as any);
+
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
+      .resolves([mockEnvironment as CCloudEnvironment]);
+
+    sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([mockCluster]);
+
+    const responseError = {
+      name: "ResponseError",
+      message: "Failed to create UDF function: Malformed JSON",
+      isResponseError: true,
+      response: {
+        status: 400,
+        statusText: "Bad Request",
+        headers: new Headers(),
+        // This is an object that will be serialized
+        body: { malformedJson: true },
+      },
+      statusCode: 400,
+    };
+
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .rejects(responseError);
+    await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
+
+    sinon.assert.notCalled(showErrorStub);
+  });
 });
