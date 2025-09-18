@@ -4,6 +4,7 @@ import {
   artifactsChanged,
   flinkDatabaseViewMode,
   flinkDatabaseViewResourceChanged,
+  udfsChanged,
 } from "../emitters";
 import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
@@ -37,22 +38,22 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   children: ArtifactOrUdf[] = [];
 
+  private readonly artifactsDelegate = new FlinkArtifactsDelegate();
+  private readonly udfsDelegate = new FlinkUDFsDelegate();
+
+  treeViewDelegates = new Map<
+    FlinkDatabaseViewProviderMode,
+    ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudFlinkDbKafkaCluster, ArtifactOrUdf>
+  >([
+    [FlinkDatabaseViewProviderMode.Artifacts, this.artifactsDelegate],
+    [FlinkDatabaseViewProviderMode.UDFs, this.udfsDelegate],
+  ]);
+
   constructor() {
     super();
-    // pass the main provider into each mode so they can call its helpers without needing to extend
-    // the provider itself and causing circular dependencies / stack overflows
-    const artifactsDelegate = new FlinkArtifactsDelegate();
-    const udfsDelegate = new FlinkUDFsDelegate();
 
-    this.treeViewDelegates = new Map<
-      FlinkDatabaseViewProviderMode,
-      ViewProviderDelegate<FlinkDatabaseViewProviderMode, CCloudFlinkDbKafkaCluster, ArtifactOrUdf>
-    >([
-      [FlinkDatabaseViewProviderMode.Artifacts, artifactsDelegate],
-      [FlinkDatabaseViewProviderMode.UDFs, udfsDelegate],
-    ]);
-
-    this.defaultDelegate = artifactsDelegate;
+    // Start in artifacts mode by default.
+    this.defaultDelegate = this.artifactsDelegate;
     this.currentDelegate = this.defaultDelegate;
   }
 
@@ -60,6 +61,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
     return [
       flinkDatabaseViewMode.event(this.switchMode.bind(this)),
       artifactsChanged.event(this.artifactsChangedHandler.bind(this)),
+      udfsChanged.event(this.udfsChangedHandler.bind(this)),
     ];
   }
 
@@ -77,10 +79,24 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
         // Not viewing artifacts right this second, but we're the entity responsible for cache busting
         // in response to this event.
         // Tell the artifacts delegate to preemptively refresh its cache for next time we switch to it
-        const artifactsDelegate = this.treeViewDelegates.get(
-          FlinkDatabaseViewProviderMode.Artifacts,
-        )!;
-        await artifactsDelegate.fetchChildren(this.database, true);
+
+        await this.artifactsDelegate.fetchChildren(this.database, true);
+      }
+    }
+  }
+
+  /**
+   * The list of UDFs in the given Flink database has just changed.
+   * If it matches our current database, we may need to refresh.
+   **/
+  async udfsChangedHandler(dbWithUpdatedUdfs: CCloudFlinkDbKafkaCluster): Promise<void> {
+    if (this.database && this.database.id === dbWithUpdatedUdfs.id) {
+      if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.UDFs) {
+        // Currently viewing UDFs: deep refresh now.
+        await this.refresh(true);
+      } else {
+        // Not in UDFs mode: preemptively refresh the UDFs delegate cache.
+        await this.udfsDelegate.fetchChildren(this.database, true);
       }
     }
   }
