@@ -8,7 +8,7 @@ import {
 } from "../clients/medusa/apis";
 
 function createApi<T>(ApiClass: new (config: Configuration) => T) {
-  return function (port: string): T {
+  return function (port: number): T {
     const config = new Configuration({ basePath: `http://localhost:${port}` });
     return new ApiClass(config);
   };
