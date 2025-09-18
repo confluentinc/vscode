@@ -4,6 +4,7 @@ import { Uri } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_ENVIRONMENT_ID,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -30,7 +31,12 @@ import {
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { FlinkUdf } from "../models/flinkUDF";
+import {
+  CCloudFlinkDbKafkaCluster,
+  CCloudKafkaCluster,
+  KafkaCluster,
+} from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { Subject } from "../models/schema";
 import {
@@ -632,6 +638,109 @@ describe("ResourceManager Flink Artifact methods", function () {
     assert.strictEqual(missingInKey2, undefined);
   });
 });
+
+describe("ResourceManager Flink UDF methods", function () {
+  let rm: ResourceManager;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
+    rm = getResourceManager();
+    await clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    await clearWorkspaceState();
+  });
+
+  const OTHER_FLINK_DB_CLUSTER = CCloudKafkaCluster.create({
+    ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+    id: "other-flink-db-id",
+  }) as CCloudFlinkDbKafkaCluster;
+
+  function makeUdf(
+    id: string,
+    flinkDbCluster: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  ): FlinkUdf {
+    return new FlinkUdf({
+      environmentId: flinkDbCluster.environmentId,
+      provider: flinkDbCluster.provider,
+      region: flinkDbCluster.region,
+      databaseId: flinkDbCluster.id,
+      id,
+      name: `udf-${id}`,
+      description: `Description for ${id}`,
+    });
+  }
+
+  it("getFlinkUDFs() should return undefined (cache miss) when none stored", async () => {
+    const udfs = await rm.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+    assert.strictEqual(udfs, undefined);
+  });
+
+  it("setFlinkUDFs() then getFlinkUDFs() should return stored UDFs", async () => {
+    const udfsToStore = [makeUdf("u-1"), makeUdf("u-2")];
+
+    await rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, udfsToStore);
+
+    const stored: FlinkUdf[] | undefined = await rm.getFlinkUDFs(
+      TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+    );
+    assert.ok(stored);
+    assert.deepStrictEqual(
+      stored.map((u) => u.id),
+      udfsToStore.map((u) => u.id),
+    );
+    for (const udf of stored) {
+      assert.ok(udf instanceof FlinkUdf, "Expected instance of FlinkUdf");
+      assert.strictEqual(udf.databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      assert.strictEqual(udf.environmentId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId);
+      assert.strictEqual(udf.provider, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider);
+      assert.strictEqual(udf.region, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region);
+    }
+  });
+
+  it("setFlinkUDFs() with empty array should persist empty list (not cache miss)", async () => {
+    await rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, []);
+    const stored = await rm.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+    assert.deepStrictEqual(stored, []);
+  });
+
+  it("getFlinkUDFs() should not leak UDFs across different databases", async () => {
+    const udfs = [makeUdf("u-iso-1")];
+    await rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, udfs);
+
+    const otherClusterUdfs = [makeUdf("u-iso-2", OTHER_FLINK_DB_CLUSTER)];
+    await rm.setFlinkUDFs(OTHER_FLINK_DB_CLUSTER, otherClusterUdfs);
+
+    const stored = await rm.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+    assert.deepStrictEqual(
+      stored?.map((u) => u.id),
+      udfs.map((u) => u.id),
+    );
+
+    const storedOther = await rm.getFlinkUDFs(OTHER_FLINK_DB_CLUSTER);
+    assert.deepStrictEqual(
+      storedOther?.map((u) => u.id),
+      otherClusterUdfs.map((u) => u.id),
+    );
+  });
+
+  it("setFlinkUDFs() should throw on cluster ID mismatch", async () => {
+    const good = makeUdf("u-good");
+    const mismatched = makeUdf("u-bad", OTHER_FLINK_DB_CLUSTER);
+
+    await assert.rejects(
+      rm.setFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, [good, mismatched]),
+      (err: unknown) =>
+        err instanceof Error && err.message.includes("Cluster ID mismatch in UDFs list"),
+      "Expected cluster ID mismatch error",
+    );
+  });
+});
+// ...existing code...
 
 describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;
