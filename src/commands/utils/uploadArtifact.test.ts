@@ -41,7 +41,7 @@ import {
 } from "./uploadArtifact";
 import * as uploadToProvider from "./uploadToProvider";
 
-describe("commmands/utils/uploadArtifact", () => {
+describe("commands/utils/uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
   let tempJarUri: vscode.Uri;
