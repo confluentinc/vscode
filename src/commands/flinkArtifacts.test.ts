@@ -42,13 +42,6 @@ describe("flinkArtifacts", () => {
       "v1" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
     kind: "kind" as unknown as PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
   };
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
 
   const artifact = new FlinkArtifact({
     id: "artifact-id",
@@ -67,6 +60,31 @@ describe("flinkArtifacts", () => {
       updated_at: new Date(),
       deleted_at: new Date(),
     }),
+  });
+
+  const mockCluster = {
+    id: "cluster-123",
+    name: "Flink DB Cluster",
+    connectionId: artifact.connectionId,
+    connectionType: ConnectionType.Ccloud,
+    environmentId: artifact.environmentId,
+    bootstrapServers: "pkc-xyz",
+    provider: "aws",
+    region: "us-west-2",
+    flinkPools: [{ id: "compute-pool-1" }],
+    isFlinkable: true,
+    isSameCloudRegion: () => true,
+    toFlinkSpecProperties: () => ({
+      toProperties: () => ({}),
+    }),
+  } as unknown as CCloudFlinkDbKafkaCluster;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
@@ -240,23 +258,6 @@ describe("flinkArtifacts", () => {
       className: "com.test.TestClass",
     });
 
-    const mockCluster = {
-      id: "cluster-123",
-      name: "Flink DB Cluster",
-      connectionId: artifact.connectionId,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: artifact.environmentId,
-      bootstrapServers: "pkc-xyz",
-      provider: "aws",
-      region: "us-west-2",
-      flinkPools: [{ id: "compute-pool-1" }],
-      isFlinkable: true,
-      isSameCloudRegion: () => true,
-      toFlinkSpecProperties: () => ({
-        toProperties: () => ({}),
-      }),
-    } as unknown as CCloudFlinkDbKafkaCluster;
-
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
       name: "Test Environment",
@@ -310,23 +311,6 @@ describe("flinkArtifacts", () => {
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
-
-    const mockCluster = {
-      id: "cluster-123",
-      name: "Flink DB Cluster",
-      connectionId: artifact.connectionId,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: artifact.environmentId,
-      bootstrapServers: "pkc-xyz",
-      provider: "aws",
-      region: "us-west-2",
-      flinkPools: [{ id: "compute-pool-1" }],
-      isFlinkable: true,
-      isSameCloudRegion: () => true,
-      toFlinkSpecProperties: () => ({
-        toProperties: () => ({}),
-      }),
-    } as unknown as CCloudFlinkDbKafkaCluster;
 
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
@@ -383,23 +367,6 @@ describe("flinkArtifacts", () => {
       className: "com.test.TestClass",
     });
 
-    const mockCluster = {
-      id: "cluster-123",
-      name: "Flink DB Cluster",
-      connectionId: artifact.connectionId,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: artifact.environmentId,
-      bootstrapServers: "pkc-xyz",
-      provider: "aws",
-      region: "us-west-2",
-      flinkPools: [{ id: "compute-pool-1" }],
-      isFlinkable: true,
-      isSameCloudRegion: () => true,
-      toFlinkSpecProperties: () => ({
-        toProperties: () => ({}),
-      }),
-    } as unknown as CCloudFlinkDbKafkaCluster;
-
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
       name: "Test Environment",
@@ -444,23 +411,6 @@ describe("flinkArtifacts", () => {
       className: "com.test.TestClass",
     });
 
-    const mockCluster = {
-      id: "cluster-123",
-      name: "Flink DB Cluster",
-      connectionId: artifact.connectionId,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: artifact.environmentId,
-      bootstrapServers: "pkc-xyz",
-      provider: "aws",
-      region: "us-west-2",
-      flinkPools: [{ id: "compute-pool-1" }],
-      isFlinkable: true,
-      isSameCloudRegion: () => true,
-      toFlinkSpecProperties: () => ({
-        toProperties: () => ({}),
-      }),
-    } as unknown as CCloudFlinkDbKafkaCluster;
-
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
       name: "Test Environment",
@@ -500,23 +450,6 @@ describe("flinkArtifacts", () => {
       className: "com.test.TestClass",
     });
 
-    const mockCluster = {
-      id: "cluster-123",
-      name: "Flink DB Cluster",
-      connectionId: artifact.connectionId,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: artifact.environmentId,
-      bootstrapServers: "pkc-xyz",
-      provider: "aws",
-      region: "us-west-2",
-      flinkPools: [{ id: "compute-pool-1" }],
-      isFlinkable: true,
-      isSameCloudRegion: () => true,
-      toFlinkSpecProperties: () => ({
-        toProperties: () => ({}),
-      }),
-    } as unknown as CCloudFlinkDbKafkaCluster;
-
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
       name: "Test Environment",
@@ -554,5 +487,48 @@ describe("flinkArtifacts", () => {
     await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
 
     sinon.assert.calledOnce(showErrorStub);
+  });
+  it("should exit silently if a user exits the function and class name prompt", async () => {
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
+
+    const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: undefined,
+      className: undefined,
+    });
+
+    const mockEnvironment: Partial<CCloudEnvironment> = {
+      id: artifact.environmentId,
+      name: "Test Environment",
+      flinkComputePools: [],
+      kafkaClusters: [mockCluster],
+      // Add the flinkDatabaseClusters getter property
+      flinkDatabaseClusters: [mockCluster],
+    };
+
+    const mockFlinkDatabaseViewProvider = {
+      resource: mockCluster,
+    };
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns(mockFlinkDatabaseViewProvider as any);
+
+    const getEnvironmentsStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
+      .resolves([mockEnvironment as CCloudEnvironment]);
+
+    const executeStub = sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement");
+
+    const withProgressStub = sandbox.stub(vscode.window, "withProgress");
+
+    await commandForUDFCreationFromArtifact(artifact);
+
+    sinon.assert.calledOnce(getEnvironmentsStub);
+
+    sinon.assert.calledOnce(promptStub);
+    sinon.assert.notCalled(executeStub);
+    sinon.assert.notCalled(withProgressStub);
+    sinon.assert.notCalled(showInfoStub);
+    sinon.assert.notCalled(showErrorStub);
   });
 });
