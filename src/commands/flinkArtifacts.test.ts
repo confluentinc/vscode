@@ -79,6 +79,14 @@ describe("flinkArtifacts", () => {
     }),
   } as unknown as CCloudFlinkDbKafkaCluster;
 
+  const mockEnvironment: Partial<CCloudEnvironment> = {
+    id: artifact.environmentId,
+    name: "Test Environment",
+    flinkComputePools: [],
+    kafkaClusters: [mockCluster],
+    flinkDatabaseClusters: [mockCluster],
+  };
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
@@ -258,15 +266,6 @@ describe("flinkArtifacts", () => {
       className: "com.test.TestClass",
     });
 
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
-      flinkComputePools: [],
-      kafkaClusters: [mockCluster],
-      // Add the flinkDatabaseClusters getter property
-      flinkDatabaseClusters: [mockCluster],
-    };
-
     const mockFlinkDatabaseViewProvider = {
       resource: mockCluster,
     };
@@ -311,15 +310,6 @@ describe("flinkArtifacts", () => {
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
-
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
-      flinkComputePools: [],
-      kafkaClusters: [mockCluster],
-      // Add the flinkDatabaseClusters getter property
-      flinkDatabaseClusters: [mockCluster],
-    };
 
     const mockFlinkDatabaseViewProvider = {
       resource: mockCluster,
@@ -496,15 +486,6 @@ describe("flinkArtifacts", () => {
       functionName: undefined,
       className: undefined,
     });
-
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
-      flinkComputePools: [],
-      kafkaClusters: [mockCluster],
-      // Add the flinkDatabaseClusters getter property
-      flinkDatabaseClusters: [mockCluster],
-    };
 
     const mockFlinkDatabaseViewProvider = {
       resource: mockCluster,
