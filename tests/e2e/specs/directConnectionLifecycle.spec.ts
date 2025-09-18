@@ -214,6 +214,13 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
             await focusConnectionResources(topicsView, schemasView, configType);
 
             // 7. disconnect again and verify Topics and/or Schemas views reset
+            const importedConnection = await resourcesView.getDirectConnection(importName);
+            await expect(importedConnection).toHaveCount(1);
+            const importedConnectionItem = new DirectConnectionItem(
+              page,
+              importedConnection.first(),
+            );
+            await expect(importedConnectionItem.locator).toBeVisible();
             await connectionItem.clickDisconnect();
             await expect(resourcesView.directConnections).toHaveCount(0);
             await expect(topicsView.topics).toHaveCount(0);
