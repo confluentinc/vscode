@@ -16,6 +16,7 @@ import {
   ConnectionId,
   connectionIdToType,
   EnvironmentId,
+  IEnvProviderRegion,
   IResourceBase,
   isCCloud,
   ISearchable,
@@ -80,9 +81,13 @@ export class CCloudKafkaCluster extends KafkaCluster {
     return (this.flinkPools?.length ?? 0) > 0;
   }
 
-  /** Is this compute pool in the same cloud provider/region as we are? */
-  isSameCloudRegion(other: CCloudFlinkComputePool): boolean {
-    return this.provider === other.provider && this.region === other.region;
+  /* Are we in the same env/provider/region as other? */
+  isSameEnvCloudRegion(other: IEnvProviderRegion): boolean {
+    return (
+      this.provider.toLowerCase() === other.provider.toLowerCase() &&
+      this.region.toLowerCase() === other.region.toLowerCase() &&
+      this.environmentId === other.environmentId
+    );
   }
 
   searchableText(): string {

@@ -3,8 +3,11 @@ import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import * as errors from "../errors";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import * as notifications from "../notifications";
 import { FlinkDatabaseViewProvider } from "./flinkDatabase";
+import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 
 describe("viewProviders/flinkDatabase.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -119,6 +122,82 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
         const firstArg = windowWithProgressStub.firstCall.args[0];
         assert.strictEqual(firstArg.title ?? firstArg, "Loading from delegate...");
+      });
+    });
+
+    describe("artifactsChangedHandler", () => {
+      let refreshStub: sinon.SinonStub;
+      let artifactsDelegateFetchChildrenStub: sinon.SinonStub;
+
+      const someOtherEnvRegion = {
+        provider: "aws",
+        region: "us-west-2",
+        environmentId: "env-123" as EnvironmentId,
+      };
+
+      beforeEach(() => {
+        refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
+        const artifactsDelegate = viewProvider["treeViewDelegates"].get(
+          FlinkDatabaseViewProviderMode.Artifacts,
+        )!;
+        artifactsDelegateFetchChildrenStub = sandbox.stub(artifactsDelegate, "fetchChildren");
+      });
+
+      it("should do nothing if no database is selected", async () => {
+        // no database selected
+        viewProvider["resource"] = null;
+        await viewProvider.artifactsChangedHandler(someOtherEnvRegion);
+
+        sinon.assert.notCalled(refreshStub);
+        sinon.assert.notCalled(artifactsDelegateFetchChildrenStub);
+      });
+
+      describe("when viewing a database", () => {
+        const sameDbEnvRegion = {
+          environmentId: "env-999" as EnvironmentId,
+          provider: "gcp",
+          region: "us-central1",
+        };
+        const db = CCloudKafkaCluster.create({
+          ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          ...sameDbEnvRegion,
+        }) as CCloudFlinkDbKafkaCluster;
+
+        beforeEach(() => {
+          viewProvider["resource"] = db;
+        });
+
+        it("should do nothing if the changed env/provider/region does not match the selected database", async () => {
+          // select a database in a different env/provider/region
+          await viewProvider.artifactsChangedHandler(someOtherEnvRegion);
+
+          sinon.assert.notCalled(refreshStub);
+          sinon.assert.notCalled(artifactsDelegateFetchChildrenStub);
+        });
+
+        it("should refresh if the changed env/provider/region matches and we're viewing artifacts", async () => {
+          // Ensure we're in artifacts mode
+          await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
+          refreshStub.resetHistory(); // from the mode switch
+
+          await viewProvider.artifactsChangedHandler(sameDbEnvRegion);
+
+          sinon.assert.calledOnce(refreshStub);
+          sinon.assert.calledWith(refreshStub, true); // deep refresh
+          sinon.assert.notCalled(artifactsDelegateFetchChildrenStub);
+        });
+
+        it("should tell the artifacts delegate to refresh its cache if the changed env/provider/region matches but we're NOT viewing artifacts", async () => {
+          // Ensure we're in artifacts mode
+          await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
+          refreshStub.resetHistory(); // from the mode switch
+
+          await viewProvider.artifactsChangedHandler(sameDbEnvRegion);
+
+          sinon.assert.notCalled(refreshStub);
+          sinon.assert.calledOnce(artifactsDelegateFetchChildrenStub);
+          sinon.assert.calledWith(artifactsDelegateFetchChildrenStub, db, true);
+        });
       });
     });
   });

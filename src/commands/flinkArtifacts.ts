@@ -4,7 +4,7 @@ import { registerCommandWithLogging } from ".";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
-import { artifactUploadDeleted, flinkDatabaseViewMode } from "../emitters";
+import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
@@ -136,7 +136,9 @@ export async function deleteArtifactCommand(
   }
 
   await artifactsClient.deleteArtifactV1FlinkArtifact(request);
-  artifactUploadDeleted.fire();
+
+  artifactsChanged.fire(selectedArtifact);
+
   void vscode.window.showInformationMessage(
     `Artifact "${selectedArtifact.name}" deleted successfully from Confluent Cloud.`,
   );

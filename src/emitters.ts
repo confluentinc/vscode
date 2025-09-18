@@ -3,7 +3,7 @@ import { CCloudEnvironment } from "./models/environment";
 import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { FlinkStatement, FlinkStatementId } from "./models/flinkStatement";
 import { CCloudFlinkDbKafkaCluster, KafkaCluster } from "./models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "./models/resource";
+import { ConnectionId, EnvironmentId, IEnvProviderRegion } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
@@ -138,11 +138,8 @@ export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 /** Metadata for a given {@link vscode.Uri} has been updated. */
 export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 
-/** Fires when an Artifact upload completes successfully. */
-export const artifactUploadCompleted = new vscode.EventEmitter<void>();
+/** Fires when an an action that mutates the Flink artifacts list in an env/provider/region has completed. */
+export const artifactsChanged = new vscode.EventEmitter<IEnvProviderRegion>();
 
 /** Event emitter for switching Flink Database view modes. */
 export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
-
-/** Fires when an Artifact upload deletes successfully. */
-export const artifactUploadDeleted = new vscode.EventEmitter<void>();
