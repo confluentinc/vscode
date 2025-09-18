@@ -262,6 +262,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
       failed: ctx.statement.failed,
       stoppable: ctx.statement.stoppable,
       areResultsViewable: ctx.statement.canRequestResults,
+      possiblyViewable: ctx.statement.possiblyViewable,
       isForeground: ctx.statement.isForeground,
     });
   });

@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { Uri } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -19,15 +20,18 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { ArtifactV1FlinkArtifactMetadata } from "../clients/flinkArtifacts";
 import {
   ConnectionSpec,
+  ConnectionType,
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigToJSON,
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, EnvironmentId } from "../models/resource";
+import { ConnectionId, EnvironmentId, IEnvProviderRegion } from "../models/resource";
 import { Subject } from "../models/schema";
 import {
   CCloudSchemaRegistry,
@@ -443,6 +447,189 @@ describe("ResourceManager Schema Registry methods", function () {
       both,
       "Expected stored registries to match after reassignment",
     );
+  });
+});
+
+describe("ResourceManager Flink Artifact methods", function () {
+  const baseEnvId = TEST_CCLOUD_ENVIRONMENT_ID;
+  const provider = "aws";
+  const region1 = "us-east-1";
+  const region2 = "us-west-2";
+
+  let rm: ResourceManager;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
+    rm = getResourceManager();
+    await clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    await clearWorkspaceState();
+  });
+
+  function makeArtifact(
+    id: string,
+    envId: EnvironmentId,
+    prov: string,
+    reg: string,
+    name?: string,
+  ): FlinkArtifact {
+    return new FlinkArtifact({
+      connectionId: CCLOUD_CONNECTION_ID,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: envId,
+      id,
+      name: name ?? `artifact-${id}`,
+      description: `Description for ${id}`,
+      provider: prov,
+      region: reg,
+      documentationLink: "https://example.com/docs",
+      metadata: {
+        created_at: new Date(),
+        updated_at: new Date(),
+      } as ArtifactV1FlinkArtifactMetadata,
+    });
+  }
+
+  it("getFlinkArtifacts() should return undefined (cache miss) when none stored", async () => {
+    const envProviderRegion: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const artifacts = await rm.getFlinkArtifacts(envProviderRegion);
+    assert.strictEqual(artifacts, undefined);
+  });
+
+  it("setFlinkArtifacts() then getFlinkArtifacts() should return stored artifacts", async () => {
+    const envProviderRegion: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const artifactsToStore = [
+      makeArtifact("fa-1", baseEnvId, provider, region1),
+      makeArtifact("fa-2", baseEnvId, provider, region1),
+    ];
+
+    await rm.setFlinkArtifacts(envProviderRegion, artifactsToStore);
+
+    const stored: FlinkArtifact[] | undefined = await rm.getFlinkArtifacts(envProviderRegion);
+    assert.ok(stored);
+    assert.deepStrictEqual(
+      stored.map((a) => a.id),
+      artifactsToStore.map((a) => a.id),
+    );
+    for (const art of stored) {
+      assert.ok(art instanceof FlinkArtifact, "Expected instance of FlinkArtifact");
+      assert.strictEqual(art.provider, provider);
+      assert.strictEqual(art.region, region1);
+      assert.strictEqual(art.environmentId, baseEnvId);
+    }
+  });
+
+  it("setFlinkArtifacts() with empty array should persist empty list (not cache miss)", async () => {
+    const envProviderRegion: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+
+    await rm.setFlinkArtifacts(envProviderRegion, []);
+    const stored = await rm.getFlinkArtifacts(envProviderRegion);
+    assert.deepStrictEqual(stored, []);
+  });
+
+  it("setFlinkArtifacts() should isolate different provider/region keys", async () => {
+    const key1: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+    const key2: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region2,
+    };
+
+    const artifactsKey1 = [makeArtifact("fa-a", baseEnvId, provider, region1)];
+    const artifactsKey2 = [
+      makeArtifact("fa-b", baseEnvId, provider, region2),
+      makeArtifact("fa-c", baseEnvId, provider, region2),
+    ];
+
+    await rm.setFlinkArtifacts(key1, artifactsKey1);
+    await rm.setFlinkArtifacts(key2, artifactsKey2);
+
+    const stored1 = await rm.getFlinkArtifacts(key1);
+    const stored2 = await rm.getFlinkArtifacts(key2);
+
+    assert.deepStrictEqual(
+      stored1?.map((a) => a.id),
+      artifactsKey1.map((a) => a.id),
+    );
+    assert.deepStrictEqual(
+      stored2?.map((a) => a.id),
+      artifactsKey2.map((a) => a.id),
+    );
+  });
+
+  for (const { label, artifact: mismatchedArtifact } of [
+    {
+      label: "environment mismatch",
+      artifact: makeArtifact("fa-y", "other-env-id" as EnvironmentId, provider, region1),
+    },
+    {
+      label: "provider mismatch",
+      artifact: makeArtifact("fa-y", baseEnvId, "gcp", region1),
+    },
+    {
+      label: "region mismatch",
+      artifact: makeArtifact("fa-y", baseEnvId, provider, "eu-central-1"),
+    },
+  ]) {
+    it(`setFlinkArtifacts() should throw on ${label}`, async () => {
+      const envProviderRegion: IEnvProviderRegion = {
+        environmentId: baseEnvId,
+        provider,
+        region: region1,
+      };
+      const artifacts = [
+        // Valid one...
+        makeArtifact("fa-x", baseEnvId, provider, region1),
+        // ... and one with the deliberate mismatch.
+        mismatchedArtifact,
+      ];
+      await assert.rejects(
+        rm.setFlinkArtifacts(envProviderRegion, artifacts),
+        (err: unknown) =>
+          err instanceof Error && err.message.includes("Environment/Provider/Region mismatch"),
+        `Expected ${label} error`,
+      );
+    });
+  }
+
+  it("getFlinkArtifacts() should not leak artifacts across different regions", async () => {
+    const key1: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region1,
+    };
+
+    const artifactsKey1 = [makeArtifact("fa-a", baseEnvId, provider, region1)];
+    await rm.setFlinkArtifacts(key1, artifactsKey1);
+
+    const key2: IEnvProviderRegion = {
+      environmentId: baseEnvId,
+      provider,
+      region: region2,
+    };
+    const missingInKey2 = await rm.getFlinkArtifacts(key2);
+    assert.strictEqual(missingInKey2, undefined);
   });
 });
 

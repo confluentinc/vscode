@@ -17,6 +17,7 @@ import {
   TERMINAL_PHASES,
 } from "../models/flinkStatement";
 import { getSidecar } from "../sidecar";
+import { raceWithTimeout } from "../utils/timing";
 import { WebviewPanelCache } from "../webview-cache";
 import flinkStatementResults from "../webview/flink-statement-results.html";
 import { parseResults } from "./flinkStatementResults";
@@ -115,8 +116,15 @@ export async function waitForResultsFetchable(statement: FlinkStatement): Promis
  */
 export async function waitForStatementCompletion(
   statement: FlinkStatement,
+  maxWaitTimeMs: number = MAX_WAIT_TIME_MS,
+  pollingIntervalMs: number = DEFAULT_POLL_PERIOD_MS,
 ): Promise<FlinkStatement> {
-  return waitForStatementState(statement, (s) => TERMINAL_PHASES.includes(s.phase));
+  return waitForStatementState(
+    statement,
+    (s) => TERMINAL_PHASES.includes(s.phase),
+    maxWaitTimeMs,
+    pollingIntervalMs,
+  );
 }
 
 /**
@@ -152,7 +160,7 @@ async function waitForStatementState(
       return refreshedStatement;
     }
 
-    // Wait before polling again
+    // Wait pollingIntervalMs before polling again
     await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
   }
 
@@ -220,6 +228,14 @@ export class FlinkStatementWebviewPanelCache extends WebviewPanelCache {
 }
 
 /**
+ * The max amount of time to wait for the route call used when
+ * refreshing a Flink statement to complete, in milliseconds.
+ *
+ * Two seconds.
+ */
+export const REFRESH_STATEMENT_MAX_WAIT_MS = 2_000;
+
+/**
  * Re-fetch the provided FlinkStatement, returning an updated version if possible.
  *
  * @param statement The Flink statement to refresh.
@@ -234,11 +250,14 @@ export async function refreshFlinkStatement(
   const statementsClient = handle.getFlinkSqlStatementsApi(statement);
 
   try {
-    const routeResponse = await statementsClient.getSqlv1Statement({
-      environment_id: statement.environmentId,
-      organization_id: statement.organizationId,
-      statement_name: statement.name,
-    });
+    const routeResponse = await raceWithTimeout(
+      statementsClient.getSqlv1Statement({
+        environment_id: statement.environmentId,
+        organization_id: statement.organizationId,
+        statement_name: statement.name,
+      }),
+      REFRESH_STATEMENT_MAX_WAIT_MS,
+    );
     return restFlinkStatementToModel(routeResponse, statement);
   } catch (error) {
     if (isResponseErrorWithStatus(error, 404)) {

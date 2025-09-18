@@ -27,9 +27,11 @@ import { CCloudOrganization } from "../models/organization";
 import { EnvironmentId, IFlinkQueryable } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar, SidecarHandle } from "../sidecar";
+import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import { generateFlinkStatementKey } from "./loaderUtils";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 
@@ -179,30 +181,15 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async determineFlinkQueryables(
     resource: CCloudEnvironment | CCloudFlinkComputePool | CCloudKafkaCluster,
   ): Promise<IFlinkQueryable[]> {
-    const org: CCloudOrganization | undefined = await this.getOrganization();
-    if (!org) {
-      return [];
-    }
-
     if (resource instanceof CCloudFlinkComputePool || resource instanceof CCloudKafkaCluster) {
-      // If we have a single compute pool or kafka cluster, just reexpress it as a single
-      // IFlinkQueryable .
-      const singleton: IFlinkQueryable = {
-        organizationId: org.id,
-        environmentId: resource.environmentId,
-        provider: resource.provider,
-        region: resource.region,
-      };
-
-      if (resource instanceof CCloudFlinkComputePool) {
-        // Only fix to a single compute pool if we were given a compute pool.
-        singleton.computePoolId = resource.id;
-      }
-      return [singleton];
+      return [await this.toFlinkQueryable(resource)];
     } else {
       // Must be a CCloudEnvironment. Gather all provider-region pairs.
       // The environment may have many resources in the same
       // provider-region pair. We need to deduplicate them by provider-region.
+
+      const org: CCloudOrganization = await this.getOrganization();
+
       const providerRegionSet: ObjectSet<IFlinkQueryable> = new ObjectSet(
         (queryable) => `${queryable.provider}-${queryable.region}`,
       );
@@ -227,6 +214,29 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
       return providerRegionSet.items();
     }
+  }
+
+  /**
+   * Convert the given CCloudFlinkComputePool or CCloudKafkaCluster
+   * into a single IFlinkQueryable object.
+   */
+  public async toFlinkQueryable(
+    resource: CCloudFlinkComputePool | CCloudKafkaCluster,
+  ): Promise<IFlinkQueryable> {
+    const org: CCloudOrganization = await this.getOrganization();
+
+    const singleton: IFlinkQueryable = {
+      organizationId: org.id,
+      environmentId: resource.environmentId,
+      provider: resource.provider,
+      region: resource.region,
+    };
+
+    if (resource instanceof CCloudFlinkComputePool) {
+      // Only fix to a single compute pool if we were given a compute pool.
+      singleton.computePoolId = resource.id;
+    }
+    return singleton;
   }
 
   /**
@@ -273,35 +283,30 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Query the Flink artifacts for the given CCloud environment + provider-region.
+   * Query the Flink artifacts for the given CCloudFlinkDbKafkaCluster's CCloud environment + provider-region.
+   * Looks to the resource manager cache first, and only does a deep fetch if not found (or told to force refresh).
    * @returns The Flink artifacts for the given environment + provider-region.
-   * @param resource The CCloud compute pool or environment to get the Flink artifacts for.
+   * @param resource The CCloud Flink Database (a Flink-enabled Kafka Cluster) to get the Flink artifacts for.
    */
   public async getFlinkArtifacts(
-    resource: CCloudEnvironment | CCloudFlinkComputePool | CCloudKafkaCluster,
+    resource: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
   ): Promise<FlinkArtifact[]> {
-    const queryables: IFlinkQueryable[] = await this.determineFlinkQueryables(resource);
-    const handle = await getSidecar();
+    const queryable = await this.toFlinkQueryable(resource);
 
-    // For each provider-region pair, get the Flink artifacts with reasonable concurrency.
-    const concurrentResults: ExecutionResult<FlinkArtifact[]>[] = await executeInWorkerPool(
-      (queryable: IFlinkQueryable) => loadArtifactsForProviderRegion(handle, queryable),
-      queryables,
-      { maxWorkers: 5 },
-    );
+    // Look to see if we have cached artifacts for this environment/provider/region already.
+    const rm = getResourceManager();
+    let artifacts = await rm.getFlinkArtifacts(queryable);
+    if (artifacts === undefined || forceDeepRefresh) {
+      // Nope, deep fetch them (or was told to ignore cache and refetch).
+      const handle = await getSidecar();
+      artifacts = await loadArtifactsForProviderRegion(handle, queryable);
 
-    logger.debug(`getFlinkArtifacts() loaded ${concurrentResults.length} provider-region pairs`);
-
-    // Assemble the results into a single array of Flink artifacts.
-    const flinkArtifacts: FlinkArtifact[] = [];
-
-    // extract will raise first error if any error was encountered.
-    const blocks: FlinkArtifact[][] = extract(concurrentResults);
-    for (const block of blocks) {
-      flinkArtifacts.push(...block);
+      // Cache them in the resource manager for future reference.
+      await rm.setFlinkArtifacts(queryable, artifacts);
     }
 
-    return flinkArtifacts;
+    return artifacts;
   }
 
   /**
@@ -343,12 +348,22 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Execute a Flink SQL statement, returning the results as an array of objects of type RT.
+   * Map of outstanding promises for calls to executeFlinkStatement(), keyed by hash
+   * of (databaseId, computePoolId, sqlStatement).
+   */
+  private readonly backgroundStatementPromises: Map<string, Promise<Array<any>>> = new Map();
+
+  /**
+   * Execute a system/hidden/background Flink SQL statement for VSCode Extension internals to
+   * then make use of, returning the results as an array of objects of type RT.
    * Should be used for batch statements, such as system catalog queries, registering
    * or listing UDFs, etc.
    *
-   * This could/should be integrated directly into CCloudResourceLoader in the future, simplifying
-   * the topology of things a bit, then omitting the organizationId parameter here.
+   * At most only one single promise for a given (sqlStatement, database, computePool) is
+   * outstanding at a time. If this function is called again with the same parameters
+   * while a previous call is still pending, the previous promise will be returned.
+   *
+   * All such queries should complete within 10s, or an error will be raised.
    *
    * @param sqlStatement The SQL statement (string) to execute.
    * @param database The database (CCloudKafkaCluster) to execute the statement against.
@@ -381,10 +396,41 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       properties: database.toFlinkSpecProperties(),
     };
 
+    const promiseKey = generateFlinkStatementKey(statementParams);
+
+    if (this.backgroundStatementPromises.has(promiseKey)) {
+      // If we already have a pending promise for this same statement in this same database/compute pool,
+      // just return the existing promise.
+      logger.debug(
+        `executeFlinkStatement() deduplicating identical pending statement: ${sqlStatement}`,
+      );
+      return this.backgroundStatementPromises.get(promiseKey)!;
+    }
+
+    // Create a new promise for this statement execution, and store it in the map of pending promises.
+    const statementPromise = this.doExecuteFlinkStatement<RT>(statementParams).finally(() => {
+      // When the promise settles (either resolves or rejects), remove it from the map of pending promises.
+      this.backgroundStatementPromises.delete(promiseKey);
+    });
+
+    this.backgroundStatementPromises.set(promiseKey, statementPromise);
+
+    return statementPromise;
+  }
+
+  /** Actual implementation of executeFlinkStatement(), without deduplication logic. */
+  private async doExecuteFlinkStatement<RT>(
+    statementParams: IFlinkStatementSubmitParameters,
+  ): Promise<Array<RT>> {
+    const computePool = statementParams.computePool;
+    logger.info(
+      `Executing Flink statement on ${computePool?.provider}-${computePool?.region} in environment ${computePool?.environmentId} : ${statementParams.statement}`,
+    );
+
     let statement = await submitFlinkStatement(statementParams);
 
-    // Refresh the statement until it is in a terminal phase.
-    statement = await waitForStatementCompletion(statement);
+    // Refresh the statement at 150ms intervals for at most 10s until it is in a terminal phase.
+    statement = await waitForStatementCompletion(statement, 10_000, 150);
 
     if (statement.phase !== Phase.COMPLETED) {
       logger.error(
@@ -394,8 +440,13 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         `Statement did not complete successfully, phase ${statement.phase}, error ${statement.status.detail}`,
       );
     }
-    let results = await parseAllFlinkStatementResults<RT>(statement);
-    return results;
+
+    // Consume all results.
+    const resultRows: Array<RT> = await parseAllFlinkStatementResults<RT>(statement);
+
+    // call to delete the statement here when doing issue 2597.
+
+    return resultRows;
   }
 }
 /**

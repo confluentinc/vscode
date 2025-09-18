@@ -26,6 +26,8 @@ import {
   IFlinkStatementSubmitParameters,
   MAX_WAIT_TIME_MS,
   parseAllFlinkStatementResults,
+  REFRESH_STATEMENT_MAX_WAIT_MS,
+  refreshFlinkStatement,
   submitFlinkStatement,
   waitForResultsFetchable,
   waitForStatementCompletion,
@@ -146,6 +148,67 @@ describe("flinkSql/statementUtils.ts", function () {
 
       const statementName = await determineFlinkStatementName();
       assert.strictEqual(statementName, `vscode-devs-vscode-${expectedDatePart}`);
+    });
+  });
+
+  describe("utils.refreshFlinkStatement", function () {
+    let stubbedStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let mockRouteResponse: GetSqlv1Statement200Response;
+    let mockSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+
+    let clock: sinon.SinonFakeTimers;
+
+    const requestStatement = createFlinkStatement({});
+
+    beforeEach(function () {
+      sandbox.useFakeTimers({ now: new Date() });
+      clock = sandbox.clock;
+
+      mockSidecar = getSidecarStub(sandbox);
+      stubbedStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+      mockSidecar.getFlinkSqlStatementsApi.returns(stubbedStatementsApi);
+
+      mockRouteResponse = {
+        status: { phase: "PENDING" },
+        metadata: { created_at: new Date() },
+      } as GetSqlv1Statement200Response;
+      stubbedStatementsApi.getSqlv1Statement.resolves(mockRouteResponse);
+    });
+
+    afterEach(() => {
+      clock.restore();
+    });
+
+    it("should return the statement if it exists", async function () {
+      const statement = await refreshFlinkStatement(requestStatement);
+      assert.ok(statement instanceof FlinkStatement);
+      sinon.assert.calledOnce(stubbedStatementsApi.getSqlv1Statement);
+    });
+
+    it("should return null if the statement is not found", async function () {
+      stubbedStatementsApi.getSqlv1Statement.rejects(createResponseError(404, "Not Found", "test"));
+
+      const shouldBeNull = await refreshFlinkStatement(requestStatement);
+      assert.strictEqual(shouldBeNull, null);
+
+      sinon.assert.calledOnce(stubbedStatementsApi.getSqlv1Statement);
+    });
+
+    it("should throw an error if the statement is not completed after REFRESH_STATEMENT_MAX_WAIT_MS milliseconds", async function () {
+      // wire up getSqlv1Statement to not resolve until REFRESH_STATEMENT_MAX_WAIT_MS * 2
+      // this will force the timeout case.
+      stubbedStatementsApi.getSqlv1Statement.callsFake(async () => {
+        await clock.tickAsync(REFRESH_STATEMENT_MAX_WAIT_MS * 2);
+        return mockRouteResponse;
+      });
+
+      // Start the promise
+      const promise = refreshFlinkStatement(requestStatement);
+
+      // Advance past the max wait time is reached.
+      await clock.tickAsync(REFRESH_STATEMENT_MAX_WAIT_MS + 1);
+
+      await assert.rejects(promise, /Timeout exceeded/);
     });
   });
 
