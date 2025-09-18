@@ -12,9 +12,7 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/out"
       ],
-      "outFiles": [
-        "${workspaceFolder}/out/**/*.js"
-      ],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
       "env": {
         "LOGGING_MODE": "development",
