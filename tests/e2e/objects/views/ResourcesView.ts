@@ -162,6 +162,26 @@ export class ResourcesView extends View {
   }
 
   /**
+   * Open the Direct Connection form by clicking "Add New Connection" -> "Import from file".
+   *
+   * To avoid saving off any sensitive connection details for these tests, the file picker dialog
+   * should be handled through a stub in the test that calls this method and provides the JSON
+   * content to import.
+   *
+   * @returns A DirectConnectionForm instance for the imported connection
+   */
+  async addNewConnectionFromFileImport(): Promise<DirectConnectionForm> {
+    await this.clickAddNewConnection();
+
+    const quickpick = new Quickpick(this.page);
+    // choices will be either "Enter manually" or "Import from file"
+    const importFromFileItem = quickpick.items.filter({ hasText: /Import from file/ });
+    await expect(importFromFileItem).not.toHaveCount(0);
+    await importFromFileItem.first().click();
+    return new DirectConnectionForm(this.page);
+  }
+
+  /**
    * Expand a connection's environment in the Resources view.
    *
    * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,

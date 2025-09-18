@@ -55,4 +55,12 @@ export class ViewItem {
     // clicking doesn't work here, so use keyboard navigation instead:
     await this.page.keyboard.press("Enter");
   }
+
+  /** Hover over the item to show its tooltip and return the tooltip locator. */
+  async showTooltip(): Promise<Locator> {
+    await this.locator.hover();
+    const tooltip = this.page.locator(".monaco-hover");
+    await tooltip.waitFor({ state: "visible" });
+    return tooltip;
+  }
 }
