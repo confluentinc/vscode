@@ -62,9 +62,8 @@ export class ResourcesView extends View {
 
   /** Locator for all root-level direct connection tree items. */
   get directConnections(): Locator {
-    // we can't use this.treeItems since we have to look for an attribute instead of filtering
-    // based on the existing selector
-    return this.body.locator('[role="treeitem"][aria-label^="Direct connection: "]');
+    // use the accessibilityInformation label we're adding instead of trying to filter by icons/names
+    return this.treeItems.and(this.page.locator('[aria-label^="DIRECT: connection "]'));
   }
 
   // Kafka cluster locators:
@@ -80,9 +79,9 @@ export class ResourcesView extends View {
    */
   get ccloudKafkaClusters(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
-    return this.body
-      .locator("[role='treeitem'][aria-level='3']")
-      .filter({ has: this.page.locator(".codicon-confluent-kafka-cluster") });
+    return this.kafkaClusters.and(
+      this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster']"),
+    );
   }
 
   /**
@@ -90,16 +89,22 @@ export class ResourcesView extends View {
    * Only visible when the {@link localItem "Local" item} is expanded.
    */
   get localKafkaClusters(): Locator {
-    return this.kafkaClusters.filter({ hasText: "confluent-local" });
+    // second nested element: Local connection item -> Kafka cluster item
+    return this.kafkaClusters.and(
+      this.page.locator("[aria-level='2'][aria-label^='LOCAL connection: Kafka Cluster']"),
+    );
   }
 
   /**
    * Locator for direct connection Kafka cluster tree items.
    * Only visible when a {@link directConnections "Direct Connections" item} is available and
-   * expanded.
+   * expanded with a Kafka cluster configured.
    */
   get directKafkaClusters(): Locator {
-    return this.kafkaClusters.filter({ hasText: "Kafka Cluster" });
+    // second nested element: Direct connection item -> Kafka cluster item
+    return this.kafkaClusters.and(
+      this.page.locator("[aria-level='2'][aria-label^='DIRECT connection: Kafka Cluster']"),
+    );
   }
 
   /** Locator for all Schema Registry tree items. */
@@ -113,9 +118,9 @@ export class ResourcesView extends View {
    */
   get ccloudSchemaRegistries(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Schema Registry item
-    return this.body
-      .locator("[role='treeitem'][aria-level='3']")
-      .filter({ has: this.page.locator(".codicon-confluent-schema-registry") });
+    return this.schemaRegistries.and(
+      this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Schema Registry']"),
+    );
   }
 
   /**
@@ -123,16 +128,30 @@ export class ResourcesView extends View {
    * Only visible when the {@link localItem "Local" item} is expanded.
    */
   get localSchemaRegistries(): Locator {
-    return this.schemaRegistries.filter({ hasText: "local-sr" });
+    // second nested element: Local connection item -> Schema Registry item
+    return this.schemaRegistries.and(
+      this.page.locator("[aria-level='2'][aria-label^='LOCAL connection: Schema Registry']"),
+    );
   }
 
   /**
    * Locator for direct connection Schema Registry tree items.
-   * Only visible when a {@link directConnections "Direct Connections" item} is available and
-   * expanded.
+   * Only visible when a {@link directConnections direct connection item} is available and
+   * expanded with a Schema Registry configured.
    */
   get directSchemaRegistries(): Locator {
-    return this.schemaRegistries.filter({ hasText: "Schema Registry" });
+    // second nested element: Direct connection item -> Schema Registry item
+    return this.schemaRegistries.and(
+      this.page.locator("[aria-level='2'][aria-label^='DIRECT connection: Schema Registry']"),
+    );
+  }
+
+  /** Locator for all Flink Compute Pool tree items.*/
+  get flinkComputePools(): Locator {
+    // only available for CCloud connections
+    return this.treeItems.filter({
+      has: this.page.locator(".codicon-confluent-flink-compute-pool"),
+    });
   }
 
   /**
@@ -141,9 +160,7 @@ export class ResourcesView extends View {
    */
   get ccloudFlinkComputePools(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Flink Compute Pool item
-    return this.body
-      .locator("[role='treeitem'][aria-level='3']")
-      .filter({ has: this.page.locator(".codicon-confluent-flink-compute-pool") });
+    return this.flinkComputePools.and(this.page.locator("[aria-level='3']"));
   }
 
   /**
