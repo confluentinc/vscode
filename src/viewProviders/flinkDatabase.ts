@@ -68,7 +68,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
    * If it matches our current database, we may need to refresh.
    **/
   async artifactsChangedHandler(envRegion: IEnvProviderRegion): Promise<void> {
-    // if the artfacts changed in the env/provider/region of our current database, take action!
+    // if the artifacts changed in the env/provider/region of our current database, take action!
     if (this.database?.isSameEnvCloudRegion(envRegion)) {
       if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
         // We're in artifacts mode, so deep fetch that delegate's children + repaint now.
