@@ -169,6 +169,11 @@ export class KafkaClusterTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createKafkaClusterTooltip(this.resource);
 
+    // mainly to help E2E tests more easily identify these items between different connection types
+    this.accessibilityInformation = {
+      label: `${this.resource.connectionType} connection: Kafka Cluster`,
+    };
+
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
     this.command = {
       command: "confluent.topics.kafka-cluster.select",
