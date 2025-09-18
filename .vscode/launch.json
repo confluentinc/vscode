@@ -9,7 +9,9 @@
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}/out", "--disable-extensions"],
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/out"
+      ],
       "outFiles": ["${workspaceFolder}/out/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
       "env": {

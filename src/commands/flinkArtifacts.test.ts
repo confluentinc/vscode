@@ -74,7 +74,6 @@ describe("flinkArtifacts", () => {
     const openTextDocStub = sandbox
       .stub(vscode.workspace, "openTextDocument")
       .resolves({} as vscode.TextDocument);
-    // Fix: stub showTextDocument to return an editor with insertSnippet stub
     const insertSnippetStub = sandbox.stub().resolves();
     const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
       insertSnippet: insertSnippetStub,
@@ -94,6 +93,7 @@ describe("flinkArtifacts", () => {
       "insertSnippet should be called with a snippet containing CREATE FUNCTION",
     );
   });
+
   it("should return early if no artifact is provided", async () => {
     const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
     const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
@@ -236,7 +236,6 @@ describe("flinkArtifacts", () => {
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
-    // as any? allowed in tests? See it in a couple other places
     const mockEnvironment: Partial<CCloudEnvironment> = {
       id: artifact.environmentId,
       name: "Test Environment",
@@ -263,7 +262,6 @@ describe("flinkArtifacts", () => {
 
     const findFlinkDatabasesStub = sandbox
       .stub(flinkSqlUtils, "findFlinkDatabases")
-      // as any? allowed in tests? See it in a couple other places
       .returns(mockEnvironment.kafkaClusters as any);
 
     await commandForUDFCreationFromArtifact(artifact);
@@ -284,7 +282,7 @@ describe("flinkArtifacts", () => {
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
-    // similar to as any, is as unknown allowed in tests?
+
     const mockCluster = {
       id: "cluster-123",
       name: "Flink DB Cluster",
@@ -328,12 +326,23 @@ describe("flinkArtifacts", () => {
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
 
+    const withProgressStub = sandbox.stub(vscode.window, "withProgress");
+    withProgressStub.callsFake(async (options, callback) => {
+      return await callback(
+        {
+          report: () => {},
+        },
+        {} as any,
+      );
+    });
+
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
     sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledOnce(withProgressStub);
     sinon.assert.calledOnce(showInfoStub);
     sinon.assert.notCalled(showErrorStub);
   });

@@ -947,6 +947,25 @@ describe("CCloudResourceLoader", () => {
       }, error);
     });
 
+    it("should handle pagination correctly", async () => {
+      const mockResponse1 = makeFakeListRegionsResponse(true, 2);
+      const mockResponse2 = makeFakeListRegionsResponse(false, 1);
+
+      regionsApiStub.listFcpmV2Regions
+        .onFirstCall()
+        .resolves(mockResponse1)
+        .onSecondCall()
+        .resolves(mockResponse2);
+
+      const regions = await loadProviderRegions();
+
+      assert.strictEqual(regions.length, 3);
+      sinon.assert.calledTwice(regionsApiStub.listFcpmV2Regions);
+
+      const secondCallArgs = regionsApiStub.listFcpmV2Regions.getCall(1).args[0];
+      assert.strictEqual(secondCallArgs?.page_token, "test-page-token");
+    });
+
     function makeFakeListRegionsResponse(
       hasNextPage: boolean,
       regionCount: number,
