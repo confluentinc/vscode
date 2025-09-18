@@ -379,7 +379,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   ): Promise<Array<RT>> {
     if (!computePool) {
       computePool = database.flinkPools[0];
-    } else if (!database.isSameCloudRegion(computePool)) {
+    } else if (!database.isSameEnvCloudRegion(computePool)) {
+      // Ensure the provided compute pool is valid for this database.
       throw new Error(
         `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
       );

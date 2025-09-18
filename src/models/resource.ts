@@ -95,7 +95,10 @@ export interface IProviderRegion {
   region: string;
 }
 
-/** Specifies a (Ccloud) environment/cloud provider/cloud region triplet. */
+/**
+ * Specifies a (Ccloud) environment/cloud provider/cloud region triplet.
+ * Most all of our CCloud resources will conform to this interface.
+ */
 export interface IEnvProviderRegion extends IProviderRegion {
   /** The CCloud environment ID for this resource. */
   environmentId: EnvironmentId;

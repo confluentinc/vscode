@@ -6,65 +6,103 @@ import {
 } from "../../tests/unit/testResources/kafkaCluster";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { createKafkaClusterTooltip, LocalKafkaCluster } from "./kafkaCluster";
-describe("createKafkaClusterTooltip()", () => {
-  it("should return the correct tooltip for a Confluent Cloud Kafka cluster", () => {
-    const tooltipString = createKafkaClusterTooltip(TEST_CCLOUD_KAFKA_CLUSTER).value;
-    assert.ok(tooltipString.includes(`Name: \`${TEST_CCLOUD_KAFKA_CLUSTER.name}\``));
-    assert.ok(tooltipString.includes("Open in Confluent Cloud"));
-    assert.ok(tooltipString.includes("URI:"));
-  });
+import { EnvironmentId } from "./resource";
 
-  it("Should handle nameless cluster (??)", () => {
-    const cluster = LocalKafkaCluster.create({
-      ...TEST_LOCAL_KAFKA_CLUSTER,
-      id: "local-kafka-cluster-abc123",
-      name: "",
+describe("models/kafkaCluster", () => {
+  describe("createKafkaClusterTooltip()", () => {
+    it("should return the correct tooltip for a Confluent Cloud Kafka cluster", () => {
+      const tooltipString = createKafkaClusterTooltip(TEST_CCLOUD_KAFKA_CLUSTER).value;
+      assert.ok(tooltipString.includes(`Name: \`${TEST_CCLOUD_KAFKA_CLUSTER.name}\``));
+      assert.ok(tooltipString.includes("Open in Confluent Cloud"));
+      assert.ok(tooltipString.includes("URI:"));
     });
 
-    const tooltipString = createKafkaClusterTooltip(cluster).value;
-    assert.ok(!tooltipString.includes("Name:"));
-  });
+    it("Should handle nameless cluster (??)", () => {
+      const cluster = LocalKafkaCluster.create({
+        ...TEST_LOCAL_KAFKA_CLUSTER,
+        id: "local-kafka-cluster-abc123",
+        name: "",
+      });
 
-  it("Should handle URI-less cluster (??)", () => {
-    const cluster = LocalKafkaCluster.create({
-      ...TEST_LOCAL_KAFKA_CLUSTER,
-      uri: undefined,
+      const tooltipString = createKafkaClusterTooltip(cluster).value;
+      assert.ok(!tooltipString.includes("Name:"));
     });
 
-    const tooltipString = createKafkaClusterTooltip(cluster).value;
-    assert.ok(!tooltipString.includes("URI:"));
-  });
-});
+    it("Should handle URI-less cluster (??)", () => {
+      const cluster = LocalKafkaCluster.create({
+        ...TEST_LOCAL_KAFKA_CLUSTER,
+        uri: undefined,
+      });
 
-describe("Test CCloudKafkaCluster properties", () => {
-  it("ccloudUrl should return the correct URL for ccloud kafka cluster", () => {
-    assert.strictEqual(
-      `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}?utm_source=${UTM_SOURCE_VSCODE}`,
-      TEST_CCLOUD_KAFKA_CLUSTER.ccloudUrl,
-    );
+      const tooltipString = createKafkaClusterTooltip(cluster).value;
+      assert.ok(!tooltipString.includes("URI:"));
+    });
   });
 
-  it("ccloudApiKeysUrl should return the correct URL for ccloud kafka cluster", () => {
-    assert.strictEqual(
-      `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
-      TEST_CCLOUD_KAFKA_CLUSTER.ccloudApiKeysUrl,
-    );
-  });
-
-  it("searchableText should return the correct string for ccloud kafka cluster", () => {
-    assert.strictEqual(
-      `${TEST_CCLOUD_KAFKA_CLUSTER.name} ${TEST_CCLOUD_KAFKA_CLUSTER.id} ${TEST_CCLOUD_KAFKA_CLUSTER.provider}/${TEST_CCLOUD_KAFKA_CLUSTER.region}`,
-      TEST_CCLOUD_KAFKA_CLUSTER.searchableText(),
-    );
-  });
-
-  describe("isFlinkable", () => {
-    it("should be true when there are flink pools", () => {
-      assert.strictEqual(true, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.isFlinkable());
+  describe("CCloudKafkaCluster", () => {
+    it("ccloudUrl should return the correct URL for ccloud kafka cluster", () => {
+      assert.strictEqual(
+        `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}?utm_source=${UTM_SOURCE_VSCODE}`,
+        TEST_CCLOUD_KAFKA_CLUSTER.ccloudUrl,
+      );
     });
 
-    it("should be false when there are no flink pools", () => {
-      assert.strictEqual(false, TEST_CCLOUD_KAFKA_CLUSTER.isFlinkable());
+    it("ccloudApiKeysUrl should return the correct URL for ccloud kafka cluster", () => {
+      assert.strictEqual(
+        `https://${CCLOUD_BASE_PATH}/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
+        TEST_CCLOUD_KAFKA_CLUSTER.ccloudApiKeysUrl,
+      );
+    });
+
+    it("searchableText should return the correct string for ccloud kafka cluster", () => {
+      assert.strictEqual(
+        `${TEST_CCLOUD_KAFKA_CLUSTER.name} ${TEST_CCLOUD_KAFKA_CLUSTER.id} ${TEST_CCLOUD_KAFKA_CLUSTER.provider}/${TEST_CCLOUD_KAFKA_CLUSTER.region}`,
+        TEST_CCLOUD_KAFKA_CLUSTER.searchableText(),
+      );
+    });
+
+    describe("isFlinkable", () => {
+      it("should be true when there are flink pools", () => {
+        assert.strictEqual(true, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.isFlinkable());
+      });
+
+      it("should be false when there are no flink pools", () => {
+        assert.strictEqual(false, TEST_CCLOUD_KAFKA_CLUSTER.isFlinkable());
+      });
+    });
+
+    describe("isSameEnvCloudRegion()", () => {
+      it("should be true when env and region match", () => {
+        assert.strictEqual(
+          true,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.isSameEnvCloudRegion({
+            environmentId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId,
+            provider: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider,
+            region: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region,
+          }),
+        );
+      });
+
+      // table driven tests for the false cases ...
+      [
+        {
+          label: "environmentId does not match",
+          override: { environmentId: "different-env-id" as EnvironmentId },
+        },
+        { label: "provider does not match", override: { provider: "different-provider" } },
+        { label: "region does not match", override: { region: "different-region" } },
+      ].forEach(({ label, override }) => {
+        it(`should be false when ${label}`, () => {
+          const params = {
+            ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+            ...override,
+          };
+          assert.strictEqual(
+            false,
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.isSameEnvCloudRegion(params),
+          );
+        });
+      });
     });
   });
 });
