@@ -3,6 +3,7 @@ import { join, parse } from "path";
 import { Disposable, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { DatasetDTO } from "../clients/medusa";
+import { extractResponseBody, isResponseError } from "../errors";
 import { Logger } from "../logging";
 import { getMedusaSchemaManagementApi } from "../medusa/api";
 import { getContainerPublicPort, getMedusaContainer } from "../sidecar/connections/local";
@@ -49,9 +50,9 @@ export async function generateMedusaDatasetCommand(documentUri: Uri): Promise<vo
     // Save the dataset to a file
     await saveDatasetToFile(dataset);
   } catch (error) {
-    logger.error("Failed to generate Medusa Dataset", error);
+    logger.error("Failed to generate Medusa dataset", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    await window.showErrorMessage(`Failed to generate Medusa Dataset: ${errorMessage}`);
+    await window.showErrorMessage(`Failed to generate Medusa dataset: ${errorMessage}`);
   }
 }
 
@@ -82,11 +83,26 @@ async function convertAvroSchemaToDataset(avroSchemaContent: string): Promise<Da
 
   // Call the Medusa API to convert the Avro schema to dataset
   const medusaApi = getMedusaSchemaManagementApi(medusaPort);
-  const dataset = await medusaApi.convertAvroSchemaToDataset({
-    body: parsedSchema,
-  });
+  let dataset: DatasetDTO;
 
-  logger.info("Successfully generated Medusa Dataset", {
+  try {
+    dataset = await medusaApi.convertAvroSchemaToDataset({
+      body: parsedSchema,
+    });
+  } catch (error) {
+    logger.error("Medusa API call failed", error);
+
+    // Extract better error message from ResponseError if available
+    if (isResponseError(error)) {
+      const responseBody = await extractResponseBody(error);
+      const errorMessage = responseBody?.message || responseBody;
+      throw new Error(`Medusa API error: ${errorMessage}`);
+    }
+
+    throw error; // Let the outer try/catch handle user messaging
+  }
+
+  logger.info("Successfully generated Medusa dataset", {
     eventsCount: dataset.events?.length || 0,
   });
 
@@ -129,7 +145,7 @@ async function saveDatasetToFile(dataset: DatasetDTO): Promise<void> {
     // Write the file
     await writeFile(saveUri, Buffer.from(datasetJson, "utf8"));
 
-    logger.info("Medusa Dataset saved successfully", {
+    logger.info("Medusa dataset saved successfully", {
       filePath: saveUri.fsPath,
       fileSize: datasetJson.length,
     });
@@ -145,9 +161,9 @@ async function saveDatasetToFile(dataset: DatasetDTO): Promise<void> {
       await window.showTextDocument(saveUri);
     }
   } catch (error) {
-    logger.error("Failed to save Medusa Dataset file", error);
+    logger.error("Failed to save dataset file", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    await window.showErrorMessage(`Failed to save Medusa Dataset file: ${errorMessage}`);
+    await window.showErrorMessage(`Failed to save dataset file: ${errorMessage}`);
   }
 }
 

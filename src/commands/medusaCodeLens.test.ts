@@ -8,6 +8,7 @@ import {
   FieldDTO,
   GenerationDTO,
   GenerationDTOGeneratorEnum,
+  ResponseError,
   SchemaManagementApi,
 } from "../clients/medusa";
 import * as medusaApi from "../medusa/api";
@@ -155,7 +156,10 @@ describe("medusaCodeLens", () => {
 
       // Verify success message (should be called once for file save)
       sinon.assert.calledOnce(showInformationMessageStub);
-      sinon.assert.calledWithMatch(showInformationMessageStub, /Dataset saved to.*\.dataset\.json/);
+      sinon.assert.calledWithMatch(
+        showInformationMessageStub,
+        /Medusa Dataset saved to.*\.dataset\.json/,
+      );
 
       // Verify save dialog
       sinon.assert.calledOnce(showSaveDialogStub);
@@ -206,6 +210,38 @@ describe("medusaCodeLens", () => {
       sinon.assert.calledWithMatch(
         showErrorMessageStub,
         /Failed to generate Medusa dataset: API connection failed/,
+      );
+      sinon.assert.notCalled(showSaveDialogStub);
+    });
+
+    it("should handle Medusa ResponseError with JSON body", async () => {
+      const mockResponse = new Response(
+        JSON.stringify({ message: "Invalid Avro schema: field 'name' is required" }),
+      );
+      const responseError = new ResponseError(mockResponse, "Response returned an error code");
+      mockSchemaManagementApi.convertAvroSchemaToDataset.rejects(responseError);
+      withProgressStub.callsFake(async (options, callback) => await callback());
+
+      await generateMedusaDatasetCommand(mockUri);
+
+      sinon.assert.calledWithMatch(
+        showErrorMessageStub,
+        /Failed to generate Medusa dataset: Medusa API error: Invalid Avro schema: field 'name' is required/,
+      );
+      sinon.assert.notCalled(showSaveDialogStub);
+    });
+
+    it("should handle Medusa ResponseError with text body", async () => {
+      const mockResponse = new Response("Service temporarily unavailable");
+      const responseError = new ResponseError(mockResponse, "Response returned an error code");
+      mockSchemaManagementApi.convertAvroSchemaToDataset.rejects(responseError);
+      withProgressStub.callsFake(async (options, callback) => await callback());
+
+      await generateMedusaDatasetCommand(mockUri);
+
+      sinon.assert.calledWithMatch(
+        showErrorMessageStub,
+        /Failed to generate Medusa dataset: Medusa API error: Service temporarily unavailable/,
       );
       sinon.assert.notCalled(showSaveDialogStub);
     });
