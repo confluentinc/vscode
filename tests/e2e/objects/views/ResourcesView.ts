@@ -162,44 +162,88 @@ export class ResourcesView extends View {
   }
 
   /**
-   * Expand a connection's environment in the Resources view.
+   * Open the Direct Connection form by clicking "Add New Connection" -> "Import from file".
    *
-   * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
-   * direct connection form completion, etc.) so that the environment item is present.
+   * To avoid saving off any sensitive connection details for these tests, the file picker dialog
+   * should be handled through a stub in the test that calls this method and provides the JSON
+   * content to import.
+   *
+   * @returns A DirectConnectionForm instance for the imported connection
    */
-  async expandConnectionEnvironment(
-    connectionType: ConnectionType,
-    label?: string | RegExp,
-  ): Promise<void> {
+  async addNewConnectionFromFileImport(): Promise<DirectConnectionForm> {
+    await this.clickAddNewConnection();
+
+    const quickpick = new Quickpick(this.page);
+    // choices will be either "Enter manually" or "Import from file"
+    const importFromFileItem = quickpick.items.filter({ hasText: /Import from file/ });
+    await expect(importFromFileItem).not.toHaveCount(0);
+    await importFromFileItem.first().click();
+    return new DirectConnectionForm(this.page);
+  }
+
+  /**
+   * Locate a connection environment item in the view for a given {@link ConnectionType connection type}.
+   * If there are multiple environments for the connection type, you can optionally provide a
+   * `label` string or regex to filter the results.
+   *
+   * This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion, etc.) so that the environment item is present.
+   *
+   * NOTE: CCloud connections may have multiple environments, but the local connection and direct
+   * connections are each treated as individual "environments" in the Resources view.
+   *
+   * @param connectionType The type of connection (CCloud or Direct)
+   * @param label Optional string or regex to filter the located environments
+   * @returns A Locator for the environment item
+   */
+  async getEnvironment(connectionType: ConnectionType, label?: string | RegExp): Promise<Locator> {
+    let environment: Locator;
+
     switch (connectionType) {
       case ConnectionType.Ccloud: {
         await expect(this.ccloudEnvironments).not.toHaveCount(0);
-        const ccloudEnv: Locator = label
+        environment = label
           ? this.ccloudEnvironments.filter({ hasText: label }).first()
           : this.ccloudEnvironments.first();
-        // CCloud environments are always collapsed by default, but we may have opened it already
-        if ((await ccloudEnv.getAttribute("aria-expanded")) === "false") {
-          await ccloudEnv.click();
-        }
-        await expect(ccloudEnv).toHaveAttribute("aria-expanded", "true");
         break;
       }
       case ConnectionType.Direct: {
         await expect(this.directConnections).not.toHaveCount(0);
-        const directEnv: Locator = label
+        environment = label
           ? this.directConnections.filter({ hasText: label }).first()
           : this.directConnections.first();
-        // direct connections are only collapsed by default in the old Resources view
-        if ((await directEnv.getAttribute("aria-expanded")) === "false") {
-          await directEnv.click();
-        }
-        await expect(directEnv).toHaveAttribute("aria-expanded", "true");
         break;
       }
       // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
+
+    await expect(environment).toBeVisible();
+    return environment;
+  }
+
+  /**
+   * Expand a connection's environment in the Resources view.
+   *
+   * NOTE: CCloud connections may have multiple environments, but the local connection and direct
+   * connections are each treated as individual "environments" in the Resources view.
+   */
+  async expandConnectionEnvironment(
+    connectionType: ConnectionType,
+    label?: string | RegExp,
+  ): Promise<void> {
+    const environment = await this.getEnvironment(connectionType, label);
+
+    if ((await environment.getAttribute("aria-expanded")) === "false") {
+      await environment.click();
+    }
+    await expect(environment).toHaveAttribute("aria-expanded", "true");
+  }
+
+  /** Locate a direct connection item in the view by its label. */
+  async getDirectConnection(label: string | RegExp): Promise<Locator> {
+    return await this.getEnvironment(ConnectionType.Direct, label);
   }
 
   /**
