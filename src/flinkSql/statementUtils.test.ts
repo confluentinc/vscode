@@ -405,7 +405,7 @@ describe("flinkSql/statementUtils.ts", function () {
       });
     });
 
-    it("should parse results with no following page token", async () => {
+    it("should parse DML results with no following page token", async () => {
       const singlePageRouteResponse = {
         results: {
           data: [
@@ -423,28 +423,36 @@ describe("flinkSql/statementUtils.ts", function () {
 
       const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
 
-      // Only expect created_at if there are no data rows (DDL), otherwise expect only parsed rows
-      if (
-        results.length === 1 &&
-        Object.keys(results[0]).length === 1 &&
-        "created_at" in results[0]
-      ) {
-        assert.deepStrictEqual(results, [
-          {
-            created_at: JSON.stringify(
-              singlePageRouteResponse.metadata.created_at
-                ? singlePageRouteResponse.metadata.created_at.toISOString()
-                : undefined,
-            ),
-          },
-        ]);
-      } else {
-        assert.deepStrictEqual(results, [
-          { label: "value1", count: 123 },
-          { label: "value2", count: 456 },
-          { label: "value3", count: 789 },
-        ]);
-      }
+      assert.deepStrictEqual(results, [
+        { label: "value1", count: 123 },
+        { label: "value2", count: 456 },
+        { label: "value3", count: 789 },
+      ]);
+    });
+
+    it("should parse DDL results with only metadata and no data rows", async () => {
+      const ddlRouteResponse = {
+        results: {
+          data: [], // DDL has no data rows
+        },
+        metadata: {
+          created_at: new Date("2025-09-17T18:17:15.255Z"),
+        },
+      } as GetSqlv1StatementResult200Response;
+
+      stubbedResultsApi.getSqlv1StatementResult.resolves(ddlRouteResponse);
+
+      const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
+
+      assert.deepStrictEqual(results, [
+        {
+          created_at: JSON.stringify(
+            ddlRouteResponse.metadata.created_at
+              ? ddlRouteResponse.metadata.created_at.toISOString()
+              : undefined,
+          ),
+        },
+      ]);
     });
 
     it("should parse results with multiple pages", async () => {
