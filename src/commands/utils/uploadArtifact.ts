@@ -294,6 +294,8 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
+    // Inform all interested parties that we just mutated the artifacts list
+    // in this env/region.
     artifactsChanged.fire(providerRegion);
 
     return response;
