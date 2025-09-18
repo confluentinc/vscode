@@ -35,7 +35,7 @@ export class AvroCodelensProvider extends DisposableCollection implements CodeLe
   private constructor() {
     super();
 
-    this.disposables.push(...this.setEventListeners());
+    this.disposables.push(this._onDidChangeCodeLenses, ...this.setEventListeners());
   }
 
   protected setEventListeners(): Disposable[] {
