@@ -12,6 +12,7 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import {
+  ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
@@ -20,9 +21,11 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
+import { ConnectionType } from "../../clients/sidecar/models/ConnectionType";
+import { FlinkArtifact } from "../../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import { CloudProvider } from "../../models/resource";
+import { CloudProvider, ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
@@ -36,6 +39,7 @@ import {
   prepareUploadFileFromUri,
   PRESIGNED_URL_LOCATION,
   promptForArtifactUploadParams,
+  promptForFunctionAndClassName,
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
 import * as uploadToProvider from "./uploadToProvider";
@@ -359,6 +363,50 @@ describe("uploadArtifact", () => {
         artifactName: "mock-file",
         fileFormat: "jar",
         selectedFile: mockFileUri,
+      });
+    });
+  });
+  describe("promptForFunctionAndClassName", () => {
+    const selectedArtifact = new FlinkArtifact({
+      id: "artifact-id",
+      name: "test-artifact",
+      description: "description",
+      connectionId: "conn-id" as ConnectionId,
+      connectionType: "ccloud" as ConnectionType,
+      environmentId: "env-id" as EnvironmentId,
+      provider: "aws",
+      region: "us-west-2",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
+    });
+
+    it("should reject malformed input", async () => {
+      //todo: write test for rejecting malformed input
+    });
+
+    it("should accept well-formed input", async () => {
+      // First showInputBox for function name
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("myFunction");
+
+      // Second showInputBox for class name
+      showInputBoxStub.onSecondCall().resolves("com.example.MyClass");
+
+      const result = await promptForFunctionAndClassName(selectedArtifact);
+
+      // Verify showInputBox was called exactly twice
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      // Check the result has the correct structure with proper values
+      assert.deepStrictEqual(result, {
+        functionName: "myFunction",
+        className: "com.example.MyClass",
       });
     });
   });
