@@ -54,6 +54,11 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
         );
 
         sinon.assert.calledOnce(stubbedCCloudResourceLoader.getFlinkUDFs);
+        sinon.assert.calledWithExactly(
+          stubbedCCloudResourceLoader.getFlinkUDFs,
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          deepRefresh,
+        );
         assert.deepStrictEqual(udfs, [TEST_UDF]);
       });
     }
