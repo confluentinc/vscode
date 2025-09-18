@@ -37,7 +37,7 @@ export class View {
     return this.body.locator(".welcome-view-content");
   }
 
-  /** Get all tree items in this view. Use Playwright's filter methods to narrow down the selection. */
+  /** Get all tree items in this view. */
   get treeItems(): Locator {
     return this.body.locator('[role="treeitem"]');
   }
