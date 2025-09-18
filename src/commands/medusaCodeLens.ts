@@ -66,7 +66,7 @@ async function convertAvroSchemaToDataset(avroSchemaContent: string): Promise<Da
     );
   }
 
-  const medusaContainer = await getMedusaContainer();
+  const medusaContainer = await getMedusaContainer(); //todo Patrick: add this and port look up to helper function
   if (!medusaContainer) {
     throw new Error("Medusa container not found. Please start the local Medusa service.");
   }
@@ -105,7 +105,7 @@ async function saveDatasetToFile(dataset: DatasetDTO): Promise<void> {
     const defaultFilename = `my-dataset.dataset.json`;
 
     // Show save dialog
-    const saveUri = await window.showSaveDialog({
+    let saveUri = await window.showSaveDialog({
       defaultUri: defaultUri ? Uri.joinPath(defaultUri, defaultFilename) : undefined,
       filters: {
         "Dataset Files": ["dataset.json"],
@@ -119,31 +119,30 @@ async function saveDatasetToFile(dataset: DatasetDTO): Promise<void> {
     }
 
     // Ensure the file has the correct .dataset.json extension
-    let finalUri = saveUri;
     const parsed = parse(saveUri.fsPath);
     const nameWithoutAnyExt = parsed.name.split(".")[0];
-    finalUri = Uri.file(join(parsed.dir, `${nameWithoutAnyExt}.dataset.json`));
+    saveUri = Uri.file(join(parsed.dir, `${nameWithoutAnyExt}.dataset.json`));
 
     // Convert dataset to JSON string with pretty formatting
     const datasetJson = JSON.stringify(dataset, null, 2);
 
     // Write the file
-    await writeFile(finalUri, Buffer.from(datasetJson, "utf8"));
+    await writeFile(saveUri, Buffer.from(datasetJson, "utf8"));
 
     logger.info("Dataset saved successfully", {
-      filePath: finalUri.fsPath,
+      filePath: saveUri.fsPath,
       fileSize: datasetJson.length,
     });
 
     // Show success message with option to open the file
     const openFile = "Open File";
     const result = await window.showInformationMessage(
-      `Dataset saved to ${path.basename(finalUri.fsPath)}`,
+      `Dataset saved to ${path.basename(saveUri.fsPath)}`,
       openFile,
     );
 
     if (result === openFile) {
-      await window.showTextDocument(finalUri);
+      await window.showTextDocument(saveUri);
     }
   } catch (error) {
     logger.error("Failed to save dataset file", error);
