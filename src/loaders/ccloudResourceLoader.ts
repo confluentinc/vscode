@@ -459,6 +459,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     return resultRows;
   }
 }
+
 /**
  * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
  */
