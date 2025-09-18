@@ -6,7 +6,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import { artifactUploadCompleted } from "../../emitters";
+import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
@@ -294,7 +294,9 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
-    artifactUploadCompleted.fire();
+    // Inform all interested parties that we just mutated the artifacts list
+    // in this env/region.
+    artifactsChanged.fire(providerRegion);
 
     return response;
   } catch (error) {

@@ -5,6 +5,7 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { eventEmitterStubs } from "../../../tests/stubs/emitters";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -22,7 +23,7 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/f
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import { CloudProvider } from "../../models/resource";
+import { CloudProvider, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
@@ -39,7 +40,8 @@ import {
   uploadArtifactToCCloud,
 } from "./uploadArtifact";
 import * as uploadToProvider from "./uploadToProvider";
-describe("uploadArtifact", () => {
+
+describe("commands/utils/uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
   let tempJarUri: vscode.Uri;
@@ -512,11 +514,15 @@ describe("uploadArtifact", () => {
     describe("uploadArtifactToCCloud", () => {
       let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
       let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
+      let stubbedArtifactsChangedEmitter: sinon.SinonStubbedInstance<vscode.EventEmitter<any>>;
 
       beforeEach(() => {
         stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
         stubbedSidecarHandle = getSidecarStub(sandbox);
         stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+
+        const stubbedEventEmitters = eventEmitterStubs(sandbox);
+        stubbedArtifactsChangedEmitter = stubbedEventEmitters.artifactsChanged!;
       });
 
       it("should upload the artifact to Confluent Cloud", async () => {
@@ -538,6 +544,12 @@ describe("uploadArtifact", () => {
             mockUploadId,
           ),
           cloud: mockAzureParams.cloud,
+          region: mockAzureParams.region,
+        });
+        sinon.assert.called(stubbedArtifactsChangedEmitter.fire);
+        sinon.assert.calledWith(stubbedArtifactsChangedEmitter.fire, {
+          environmentId: mockAzureParams.environment as EnvironmentId,
+          provider: mockAzureParams.cloud,
           region: mockAzureParams.region,
         });
       });
