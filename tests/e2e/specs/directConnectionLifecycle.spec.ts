@@ -180,7 +180,8 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
             await expect(notification.message).toContainText("Connection file saved at");
             // inspect exported file contents
             await notification.clickActionButton("Open File");
-            const exportFileName = `${newName.replaceAll(" ", "_")}.json`;
+            // same name transformation as what `confluent.connections.direct.export` uses
+            const exportFileName = `${newName.trim().replace(/\s+/g, "_")}.json`;
             const exportDoc = new TextDocument(page, exportFileName);
             await expect(exportDoc.tab).toBeVisible();
             await expect(exportDoc.editorContent).toContainText(`"name": "${newName}"`);
