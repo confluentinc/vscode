@@ -8,7 +8,6 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
 import { ConnectionType } from "../clients/sidecar";
-import * as flinkSqlUtils from "../flinkSql/utils";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
@@ -212,18 +211,22 @@ describe("flinkArtifacts", () => {
       name: "Test Environment",
       flinkComputePools: [],
       kafkaClusters: [],
+      // Add the getter property that the test will use
+      flinkDatabaseClusters: [],
     };
 
     const getEnvironmentsStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([mockEnvironment as CCloudEnvironment]);
 
-    const findFlinkDatabasesStub = sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([]);
+    // Remove the findFlinkDatabases stub since we don't call it anymore
+    // const findFlinkDatabasesStub = sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([]);
 
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
-    sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
+    // Remove this assertion since we don't call findFlinkDatabases anymore
+    // sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
 
     sinon.assert.notCalled(showInfoStub);
     sinon.assert.calledOnce(showErrorStub);
@@ -259,6 +262,8 @@ describe("flinkArtifacts", () => {
       name: "Test Environment",
       flinkComputePools: [],
       kafkaClusters: [mockCluster],
+      // Add the flinkDatabaseClusters getter property
+      flinkDatabaseClusters: [mockCluster],
     };
 
     const mockFlinkDatabaseViewProvider = {
@@ -271,10 +276,6 @@ describe("flinkArtifacts", () => {
     const getEnvironmentsStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([mockEnvironment as CCloudEnvironment]);
-
-    const findFlinkDatabasesStub = sandbox
-      .stub(flinkSqlUtils, "findFlinkDatabases")
-      .returns([mockCluster]);
 
     const executeStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
@@ -292,7 +293,8 @@ describe("flinkArtifacts", () => {
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
-    sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
+    // Remove this assertion since we don't call findFlinkDatabases anymore
+    // sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
     sinon.assert.calledOnce(withProgressStub);
@@ -331,6 +333,8 @@ describe("flinkArtifacts", () => {
       name: "Test Environment",
       flinkComputePools: [],
       kafkaClusters: [mockCluster],
+      // Add the flinkDatabaseClusters getter property
+      flinkDatabaseClusters: [mockCluster],
     };
 
     const mockFlinkDatabaseViewProvider = {
@@ -343,10 +347,6 @@ describe("flinkArtifacts", () => {
     const getEnvironmentsStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([mockEnvironment as CCloudEnvironment]);
-
-    const findFlinkDatabasesStub = sandbox
-      .stub(flinkSqlUtils, "findFlinkDatabases")
-      .returns([mockCluster]);
 
     const executeStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
@@ -365,7 +365,8 @@ describe("flinkArtifacts", () => {
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
-    sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
+    // Remove this assertion since we don't call findFlinkDatabases anymore
+    // sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
     sinon.assert.calledOnce(withProgressStub);
@@ -413,8 +414,6 @@ describe("flinkArtifacts", () => {
     sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([mockEnvironment as CCloudEnvironment]);
-
-    sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([mockCluster]);
 
     const responseError = {
       name: "ResponseError",
@@ -467,6 +466,7 @@ describe("flinkArtifacts", () => {
       name: "Test Environment",
       flinkComputePools: [],
       kafkaClusters: [mockCluster],
+      flinkDatabaseClusters: [mockCluster],
     };
 
     sandbox
@@ -477,15 +477,13 @@ describe("flinkArtifacts", () => {
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([mockEnvironment as CCloudEnvironment]);
 
-    sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([mockCluster]);
-
     const error = new Error("Something went wrong with UDF creation");
 
     sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
 
     await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
 
-    // Also verify that error notification was shown with the error message
+    // Match the actual error message format from the implementation
     sinon.assert.calledOnce(showErrorStub);
     sinon.assert.calledWithExactly(
       showErrorStub,
@@ -524,6 +522,8 @@ describe("flinkArtifacts", () => {
       name: "Test Environment",
       flinkComputePools: [],
       kafkaClusters: [mockCluster],
+      // Add the flinkDatabaseClusters getter property to prevent "Cannot read properties of undefined (reading 'length')"
+      flinkDatabaseClusters: [mockCluster],
     };
 
     sandbox
@@ -533,8 +533,6 @@ describe("flinkArtifacts", () => {
     sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
       .resolves([mockEnvironment as CCloudEnvironment]);
-
-    sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([mockCluster]);
 
     const responseError = {
       name: "ResponseError",
@@ -555,6 +553,7 @@ describe("flinkArtifacts", () => {
       .rejects(responseError);
     await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
 
+    // The error message already includes "Failed to create UDF function", so showErrorNotificationWithButtons should not be called
     sinon.assert.notCalled(showErrorStub);
   });
 });

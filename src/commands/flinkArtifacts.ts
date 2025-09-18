@@ -187,6 +187,7 @@ export async function commandForUDFCreationFromArtifact(
       throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
     }
 
+    // Use the flinkDatabaseClusters getter property instead of findFlinkDatabases
     const flinkDatabases = environment.flinkDatabaseClusters;
     if (flinkDatabases.length === 0) {
       throw new Error(

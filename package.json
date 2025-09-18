@@ -1974,11 +1974,6 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.scaffold",
-          "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
-          "group": "z_openInCloud"
-        },
-        {
           "command": "confluent.artifacts.UDFCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"

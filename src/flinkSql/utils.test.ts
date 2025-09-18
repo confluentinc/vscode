@@ -1,51 +1,7 @@
 import assert from "assert";
-import { extractPageToken, findFlinkDatabases } from "./utils";
+import { extractPageToken } from "./utils";
 
 describe("flinkSql/utils", () => {
-  describe("findFlinkDatabases", () => {
-    it("should throw an error when no Flink-capable databases are found", () => {
-      const mockEnvironment = {
-        id: "env-123",
-        kafkaClusters: [
-          {
-            id: "cluster-1",
-            name: "Non-Flink Cluster",
-            // This cluster does not have isFlinkable method
-          },
-          {
-            id: "cluster-2",
-            name: "Another Non-Flink Cluster",
-            // This cluster also does not have isFlinkable method
-          },
-        ],
-      } as any; // Cast to any to bypass type checking for the test
-
-      assert.throws(() => {
-        findFlinkDatabases(mockEnvironment);
-      }, /No Flink-capable databases found in environment env-123/);
-    });
-    it("should return Flink-capable databases when found", () => {
-      const mockEnvironment = {
-        id: "env-456",
-        kafkaClusters: [
-          {
-            id: "cluster-1",
-            name: "Flink Cluster",
-            isFlinkable: () => true,
-          },
-          {
-            id: "cluster-2",
-            name: "Non-Flink Cluster",
-            isFlinkable: () => false,
-          },
-        ],
-      } as any; // Cast to any to bypass type checking for the test
-
-      const result = findFlinkDatabases(mockEnvironment);
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].id, "cluster-1");
-    });
-  });
   describe("extractPageToken", () => {
     it("should return undefined when nextUrl is undefined", () => {
       const result = extractPageToken(undefined);

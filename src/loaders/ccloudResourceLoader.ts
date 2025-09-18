@@ -437,7 +437,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
         `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
       );
       throw new Error(
-        `Statement did not complete successfully, phase ${statement.phase}, error ${statement.status.detail}`,
+        `Statement did not complete successfully, phase ${statement.phase}. Error detail: ${statement.status.detail}`,
       );
     }
 
