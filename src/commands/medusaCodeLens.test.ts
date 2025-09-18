@@ -11,15 +11,18 @@ import {
   ResponseError,
   SchemaManagementApi,
 } from "../clients/medusa";
+import { LocalResourceKind } from "../docker/constants";
 import * as medusaApi from "../medusa/api";
 import * as localConnections from "../sidecar/connections/local";
 import * as fileUtils from "../utils/file";
 import * as fsWrappers from "../utils/fsWrappers";
+import * as dockerCommands from "./docker";
 import * as commands from "./index";
 import {
+  COMMANDS,
   generateMedusaDatasetCommand,
-  MEDUSA_COMMANDS,
   registerMedusaCodeLensCommands,
+  startMedusaCommand,
 } from "./medusaCodeLens";
 
 describe("medusaCodeLens", () => {
@@ -342,19 +345,53 @@ describe("medusaCodeLens", () => {
     });
   });
 
+  describe("startMedusaCommand", () => {
+    it("should call runWorkflowWithProgress with Medusa resource kind", async () => {
+      const runWorkflowStub = sandbox.stub(dockerCommands, "runWorkflowWithProgress").resolves();
+
+      await startMedusaCommand();
+
+      sinon.assert.calledOnce(runWorkflowStub);
+      sinon.assert.calledWith(runWorkflowStub, true, [LocalResourceKind.Medusa]);
+    });
+
+    it("should show error message when workflow fails", async () => {
+      const error = new Error("Docker not running");
+      const runWorkflowStub = sandbox
+        .stub(dockerCommands, "runWorkflowWithProgress")
+        .rejects(error);
+      const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
+
+      await startMedusaCommand();
+
+      sinon.assert.calledOnce(runWorkflowStub);
+      sinon.assert.calledWith(runWorkflowStub, true, [LocalResourceKind.Medusa]);
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(
+        showErrorStub,
+        "Failed to start Medusa container. Check the logs for details.",
+      );
+    });
+  });
+
   describe("registerMedusaCodeLensCommands", () => {
-    it("should register the generateDataset command", () => {
+    it("should register both generateDataset and start commands", () => {
       const registerCommandWithLoggingStub = sandbox
         .stub(commands, "registerCommandWithLogging")
         .returns({} as vscode.Disposable);
 
       registerMedusaCodeLensCommands();
 
-      sinon.assert.calledOnce(registerCommandWithLoggingStub);
+      sinon.assert.calledTwice(registerCommandWithLoggingStub);
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub,
-        MEDUSA_COMMANDS.GENERATE_DATASET,
+        registerCommandWithLoggingStub.firstCall,
+        COMMANDS.GENERATE_DATASET,
         generateMedusaDatasetCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub.secondCall,
+        COMMANDS.START_MEDUSA,
+        startMedusaCommand,
       );
     });
   });

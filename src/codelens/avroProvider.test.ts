@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import { CodeLens, Position, Range, TextDocument, Uri } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { MEDUSA_COMMANDS } from "../commands/medusaCodeLens";
+import { COMMANDS } from "../commands/medusaCodeLens";
 import { ENABLE_MEDUSA_CONTAINER } from "../extensionSettings/constants";
 import { AvroCodelensProvider } from "./avroProvider";
 
@@ -77,6 +77,9 @@ describe("codelens/avroProvider.ts", () => {
     });
 
     it("should create codelenses at the top of the document", async () => {
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+      provider.medusaConnectedHandler(true); // Ensure we get a code lens
+
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
       const expectedRange = new Range(new Position(0, 0), new Position(0, 0));
@@ -85,8 +88,12 @@ describe("codelens/avroProvider.ts", () => {
       }
     });
 
-    it("should provide 'Generate Medusa Dataset' codelens when feature flag is true and document is valid Avro", async () => {
+    it("should provide 'Generate Medusa Dataset' codelens when feature flag is true, Medusa is available, and document is valid Avro", async () => {
       stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+
+      // Simulate Medusa container being available
+      provider.medusaConnectedHandler(true);
+
       const validAvroDoc = createFakeDocument(validAvroSchema);
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(validAvroDoc);
 
@@ -94,13 +101,32 @@ describe("codelens/avroProvider.ts", () => {
 
       const generateLens = codeLenses[0];
       assert.ok(generateLens.command);
-      assert.strictEqual(generateLens.command?.command, MEDUSA_COMMANDS.GENERATE_DATASET);
+      assert.strictEqual(generateLens.command?.command, COMMANDS.GENERATE_DATASET);
       assert.strictEqual(generateLens.command?.title, "Generate Medusa Dataset");
       assert.strictEqual(
         generateLens.command?.tooltip,
         "Generate a Medusa dataset from this Avro schema file",
       );
       assert.deepStrictEqual(generateLens.command?.arguments, [validAvroDoc.uri]);
+    });
+
+    it("should provide 'Start Local Medusa' codelens when feature flag is true, Medusa is not available, and document is valid Avro", async () => {
+      stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+
+      // Simulate Medusa container being unavailable (default state)
+      provider.medusaConnectedHandler(false);
+
+      const validAvroDoc = createFakeDocument(validAvroSchema);
+      const codeLenses: CodeLens[] = await provider.provideCodeLenses(validAvroDoc);
+
+      assert.strictEqual(codeLenses.length, 1);
+
+      const startLens = codeLenses[0];
+      assert.ok(startLens.command);
+      assert.strictEqual(startLens.command?.command, COMMANDS.START_MEDUSA);
+      assert.strictEqual(startLens.command?.title, "Start Local Medusa");
+      assert.strictEqual(startLens.command?.tooltip, "Start the local Medusa container");
+      assert.deepStrictEqual(startLens.command?.arguments, []);
     });
 
     it("should not provide 'Generate Medusa Dataset' codelens when feature flag is false", async () => {
@@ -112,6 +138,7 @@ describe("codelens/avroProvider.ts", () => {
 
     it("should create codelens with correct range at document start", async () => {
       stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+      provider.medusaConnectedHandler(true); // Ensure we get a code lens
 
       const codeLenses: CodeLens[] = await provider.provideCodeLenses(fakeDocument);
 
@@ -125,6 +152,7 @@ describe("codelens/avroProvider.ts", () => {
     describe("isAvroDocument validation", () => {
       beforeEach(() => {
         stubbedConfigs.stubGet(ENABLE_MEDUSA_CONTAINER, true);
+        provider.medusaConnectedHandler(true); // Ensure we get code lenses for validation tests
       });
 
       it("should always provide codelens for .avsc files regardless of content", async () => {

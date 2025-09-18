@@ -3,17 +3,20 @@ import { join, parse } from "path";
 import { Disposable, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { DatasetDTO } from "../clients/medusa";
+import { LocalResourceKind } from "../docker/constants";
 import { extractResponseBody, isResponseError } from "../errors";
 import { Logger } from "../logging";
 import { getMedusaSchemaManagementApi } from "../medusa/api";
 import { getContainerPublicPort, getMedusaContainer } from "../sidecar/connections/local";
 import { getEditorOrFileContents } from "../utils/file";
 import { writeFile } from "../utils/fsWrappers";
+import { runWorkflowWithProgress } from "./docker";
 
 const logger = new Logger("commands.medusaCodeLens");
 
-export const MEDUSA_COMMANDS = {
+export const COMMANDS = {
   GENERATE_DATASET: "confluent.medusa.generateDataset",
+  START_MEDUSA: "confluent.medusa.start",
 } as const;
 /**
  * Command handler for generating a Medusa dataset from an Avro schema file.
@@ -170,11 +173,28 @@ async function saveDatasetToFile(dataset: DatasetDTO): Promise<void> {
 }
 
 /**
+ * Command handler for starting the local Medusa container.
+ */
+export async function startMedusaCommand(): Promise<void> {
+  logger.info("Start Medusa command triggered");
+
+  try {
+    // Start the Medusa container using the existing workflow
+    await runWorkflowWithProgress(true, [LocalResourceKind.Medusa]);
+    logger.info("Medusa container start workflow completed");
+  } catch (error) {
+    logger.error("Failed to start Medusa container:", error);
+    await window.showErrorMessage("Failed to start Medusa container. Check the logs for details.");
+  }
+}
+
+/**
  * Register all Medusa-related commands.
  * @returns Array of disposables for the registered commands
  */
 export function registerMedusaCodeLensCommands(): Disposable[] {
   return [
-    registerCommandWithLogging(MEDUSA_COMMANDS.GENERATE_DATASET, generateMedusaDatasetCommand),
+    registerCommandWithLogging(COMMANDS.GENERATE_DATASET, generateMedusaDatasetCommand),
+    registerCommandWithLogging(COMMANDS.START_MEDUSA, startMedusaCommand),
   ];
 }
