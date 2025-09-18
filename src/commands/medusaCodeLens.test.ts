@@ -1,5 +1,7 @@
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { LocalResourceKind } from "../docker/constants";
+import * as dockerCommands from "./docker";
 import * as commands from "./index";
 import {
   COMMANDS,
@@ -35,14 +37,32 @@ describe("medusaCodeLens", () => {
     });
   });
 
-  describe("startLocalMedusaCommand", () => {
-    it("should show information message", async () => {
-      const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+  describe("startMedusaCommand", () => {
+    it("should call runWorkflowWithProgress with Medusa resource kind", async () => {
+      const runWorkflowStub = sandbox.stub(dockerCommands, "runWorkflowWithProgress").resolves();
 
       await startMedusaCommand();
 
-      sinon.assert.calledOnce(showInfoStub);
-      sinon.assert.calledWith(showInfoStub, "Start Local Medusa clicked!");
+      sinon.assert.calledOnce(runWorkflowStub);
+      sinon.assert.calledWith(runWorkflowStub, true, [LocalResourceKind.Medusa]);
+    });
+
+    it("should show error message when workflow fails", async () => {
+      const error = new Error("Docker not running");
+      const runWorkflowStub = sandbox
+        .stub(dockerCommands, "runWorkflowWithProgress")
+        .rejects(error);
+      const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
+
+      await startMedusaCommand();
+
+      sinon.assert.calledOnce(runWorkflowStub);
+      sinon.assert.calledWith(runWorkflowStub, true, [LocalResourceKind.Medusa]);
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(
+        showErrorStub,
+        "Failed to start Medusa container. Check the logs for details.",
+      );
     });
   });
 
