@@ -405,7 +405,7 @@ describe("flinkSql/statementUtils.ts", function () {
       });
     });
 
-    it("should parse results with no following page token", async () => {
+    it("should parse DML results with no following page token", async () => {
       const singlePageRouteResponse = {
         results: {
           data: [
@@ -413,6 +413,9 @@ describe("flinkSql/statementUtils.ts", function () {
             { op: Operation.Insert, row: ["value2", 456] },
             { op: Operation.Insert, row: ["value3", 789] },
           ],
+        },
+        metadata: {
+          created_at: new Date("2025-09-17T18:17:15.255Z"),
         },
       } as GetSqlv1StatementResult200Response;
 
@@ -427,6 +430,31 @@ describe("flinkSql/statementUtils.ts", function () {
       ]);
     });
 
+    it("should parse DDL results with only metadata and no data rows", async () => {
+      const ddlRouteResponse = {
+        results: {
+          data: [], // DDL has no data rows
+        },
+        metadata: {
+          created_at: new Date("2025-09-17T18:17:15.255Z"),
+        },
+      } as GetSqlv1StatementResult200Response;
+
+      stubbedResultsApi.getSqlv1StatementResult.resolves(ddlRouteResponse);
+
+      const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
+
+      assert.deepStrictEqual(results, [
+        {
+          created_at: JSON.stringify(
+            ddlRouteResponse.metadata.created_at
+              ? ddlRouteResponse.metadata.created_at.toISOString()
+              : undefined,
+          ),
+        },
+      ]);
+    });
+
     it("should parse results with multiple pages", async () => {
       const firstPageRouteResponse = {
         results: {
@@ -435,9 +463,13 @@ describe("flinkSql/statementUtils.ts", function () {
             { op: Operation.Insert, row: ["bar", 456] },
           ],
         },
-        metadata: { next: "https://localhost/?page_token=token123" },
+        metadata: {
+          next: "https://localhost/?page_token=token123",
+          created_at: new Date("2025-09-17T18:17:15.255Z"), // Always define created_at
+        },
       } as GetSqlv1StatementResult200Response;
 
+      // Data Definition Language (DDL) statements will not have data rows
       const secondPageRouteResponse = {
         results: {
           data: [{ op: Operation.Insert, row: ["blat", 890] }],
