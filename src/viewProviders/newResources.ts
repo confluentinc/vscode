@@ -174,7 +174,7 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
 
     // mainly to help E2E tests distinguish direct connections from other tree items
     item.accessibilityInformation = {
-      label: `${this.connectionType} connection: "${this.name}"`,
+      label: `${this.connectionType}: connection "${this.name}"`,
     };
 
     return item;
