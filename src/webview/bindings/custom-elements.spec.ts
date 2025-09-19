@@ -16,7 +16,7 @@ test.use({
     return use({
       extensions: [],
       include: ["src/webview/**/*.ts"],
-      exclude: ["src/clients/**"],
+      exclude: [],
     });
   },
 });
