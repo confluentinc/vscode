@@ -251,8 +251,6 @@ export const test = testBase.extend<VSCodeFixtures>({
         connection = await setupDirectConnection(page, directConnectionConfig);
         break;
       case ConnectionType.Local:
-        // always set up both Kafka+SR for local tests since none of them require only having Kafka up
-        // (and SR can't be up on its own)
         connection = await setupLocalConnection(page, localConnectionConfig);
         break;
       default:
