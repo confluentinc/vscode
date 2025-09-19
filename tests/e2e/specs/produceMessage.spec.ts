@@ -1,7 +1,7 @@
 import { ElectronApplication, expect, Page } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
@@ -12,10 +12,6 @@ import {
   TopicsView,
 } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
 import {
   setupCCloudConnection,
