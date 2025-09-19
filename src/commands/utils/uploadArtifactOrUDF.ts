@@ -335,8 +335,8 @@ export async function promptForFunctionAndClassName(
     prompt: "Enter a name for the new UDF function",
     placeHolder: defaultFunctionName,
     validateInput: (input) => {
-      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(input)) {
-        return "Function name must start with a letter or underscore and contain only letters, numbers, or underscores.";
+      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(input)) {
+        return "Function name must start with a letter or underscore and contain only letters, numbers, underscores, or dashes.";
       }
       return null;
     },

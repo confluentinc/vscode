@@ -46,6 +46,9 @@ export interface IFlinkStatementSubmitParameters {
    * (system catalog queries to support our view providers, ...).
    */
   hidden: boolean;
+
+  /** Optional timeout override in milliseconds */
+  timeout?: number;
 }
 
 export async function submitFlinkStatement(

@@ -216,6 +216,7 @@ export async function commandForUDFCreationFromArtifact(
           `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
           database!,
           computePool!,
+          60000, // custom timeout of 60 seconds
         );
         progress.report({ message: "Processing results..." });
         if (result.length === 1) {

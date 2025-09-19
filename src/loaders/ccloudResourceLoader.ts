@@ -376,6 +376,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
     computePool?: CCloudFlinkComputePool,
+    timeout?: number,
   ): Promise<Array<RT>> {
     if (!computePool) {
       computePool = database.flinkPools[0];
@@ -395,6 +396,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       computePool,
       hidden: true, // Hidden statement, user didn't author it.
       properties: database.toFlinkSpecProperties(),
+      ...(timeout !== undefined ? { timeout } : {}),
     };
 
     const promiseKey = generateFlinkStatementKey(statementParams);
@@ -431,7 +433,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     let statement = await submitFlinkStatement(statementParams);
 
     // Refresh the statement at 150ms intervals for at most 10s until it is in a terminal phase.
-    statement = await waitForStatementCompletion(statement, 10_000, 150);
+    const timeout = statementParams.timeout ?? 10_000;
+    statement = await waitForStatementCompletion(statement, timeout, 150);
 
     if (statement.phase !== Phase.COMPLETED) {
       logger.error(
