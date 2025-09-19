@@ -726,7 +726,6 @@ describe("ResourceManager Flink UDF methods", function () {
     );
   });
 });
-// ...existing code...
 
 describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;

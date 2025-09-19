@@ -1,6 +1,6 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
@@ -60,7 +60,7 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
 
     // shoup: update this once https://github.com/confluentinc/vscode/issues/1385 is done
-    this.iconPath = new ThemeIcon("code" as IconNames);
+    this.iconPath = new ThemeIcon("code");
 
     this.description = resource.description;
   }
