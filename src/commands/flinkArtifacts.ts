@@ -6,21 +6,25 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
+import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
+  showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   promptForArtifactUploadParams,
+  promptForFunctionAndClassName,
   uploadArtifactToCCloud,
-} from "./utils/uploadArtifact";
+} from "./utils/uploadArtifactOrUDF";
 
 /**
  * Orchestrates the sub-functions from uploadArtifact.ts to complete the artifact upload process.
@@ -167,6 +171,91 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
   await editor.insertSnippet(snippetString);
 }
 
+export async function commandForUDFCreationFromArtifact(
+  selectedArtifact: FlinkArtifact | undefined,
+) {
+  if (!selectedArtifact) {
+    return;
+  }
+  try {
+    const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+    const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
+    const selectedResource = flinkDatabaseProvider.resource;
+
+    const environments = await ccloudResourceLoader.getEnvironments();
+    const environment = environments.find((env) => env.id === selectedArtifact.environmentId);
+
+    if (!environment) {
+      throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
+    }
+
+    // Use the flinkDatabaseClusters getter property instead of findFlinkDatabases
+    const flinkDatabases = environment.flinkDatabaseClusters;
+    if (flinkDatabases.length === 0) {
+      throw new Error(
+        `No Flink-capable databases found in environment ${selectedArtifact.environmentId}`,
+      );
+    }
+
+    const database = selectedResource as CCloudFlinkDbKafkaCluster;
+    let userInput = await promptForFunctionAndClassName(selectedArtifact);
+    if (!userInput?.functionName || !userInput?.className) {
+      return; // User cancelled the input
+    }
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Creating UDF function from artifact",
+        cancellable: false,
+      },
+      async (progress) => {
+        progress.report({ message: "Executing statement..." });
+        // Prompt user for function name, default to generated name
+        const result = await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
+          `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
+          database!,
+          undefined,
+          60000, // custom timeout of 60 seconds
+        );
+        progress.report({ message: "Processing results..." });
+        if (result.length === 1) {
+          const createdAtRaw = result[0]?.created_at;
+          let createdAt: string | undefined;
+          if (createdAtRaw) {
+            try {
+              createdAt = JSON.parse(createdAtRaw);
+            } catch {
+              createdAt = createdAtRaw;
+            }
+          }
+          const createdMsg = createdAt
+            ? `Function created successfully at ${new Date(createdAt).toLocaleString()}.`
+            : "Function created successfully.";
+          void showInfoNotificationWithButtons(createdMsg);
+          return;
+        }
+      },
+    );
+  } catch (err) {
+    if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
+      let errorMessage = "Failed to create UDF function: ";
+
+      if (isResponseError(err)) {
+        const resp = await extractResponseBody(err);
+        try {
+          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+        } catch {
+          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = `${errorMessage} ${err.message}`;
+        logError(err, errorMessage);
+      }
+      showErrorNotificationWithButtons(errorMessage);
+    }
+  }
+}
+
 /** Set the Flink Database view to Artifacts mode */
 export async function setFlinkArtifactsViewModeCommand() {
   flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.Artifacts);
@@ -188,5 +277,9 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       setFlinkArtifactsViewModeCommand,
     ),
     registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
+    registerCommandWithLogging(
+      "confluent.artifacts.UDFCreation",
+      commandForUDFCreationFromArtifact,
+    ),
   ];
 }
