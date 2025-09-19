@@ -13,8 +13,6 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
   readonly mode = FlinkDatabaseViewProviderMode.UDFs;
   readonly viewTitle = "Flink UDFs (Preview)";
 
-  children: FlinkUdf[] = [];
-
   loadingMessage = "Loading Flink UDFs...";
 
   async fetchChildren(

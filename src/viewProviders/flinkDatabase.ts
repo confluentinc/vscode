@@ -17,6 +17,7 @@ import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
+/** The row models used as view children */
 export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
 
 /**
