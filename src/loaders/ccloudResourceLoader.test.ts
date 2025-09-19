@@ -1024,15 +1024,19 @@ describe("CCloudResourceLoader", () => {
 
     it("should handle multiple pages of regions", async () => {
       const mockResponse = makeFakeListRegionsResponse(true, 3);
-      const mockResponse2 = makeFakeListRegionsResponse(false, 2);
+      const mockResponse2 = makeFakeListRegionsResponse(false, 1);
       regionsApiStub.listFcpmV2Regions
         .onFirstCall()
         .resolves(mockResponse)
         .onSecondCall()
         .resolves(mockResponse2);
       const regions = await loadProviderRegions();
-      assert.strictEqual(regions.length, 5);
+
+      assert.strictEqual(regions.length, 4);
       sinon.assert.calledTwice(regionsApiStub.listFcpmV2Regions);
+
+      const secondCallArgs = regionsApiStub.listFcpmV2Regions.getCall(1).args[0];
+      assert.strictEqual(secondCallArgs?.page_token, "test-page-token");
     });
 
     it("should handle errors during region loading", async () => {
@@ -1169,17 +1173,44 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should throw if statement does not complete successfully", async () => {
-      const failedStatement = { phase: Phase.FAILED } as FlinkStatement;
+      const failedStatement = {
+        phase: Phase.FAILED,
+        status: { detail: "Some error detail" },
+      } as FlinkStatement;
       waitForStatementCompletionStub.resolves(failedStatement);
 
       await assert.rejects(
         loader.executeFlinkStatement<TestResult>("SELECT 1", TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER),
-        /did not complete successfully/,
+        (err: Error) =>
+          err.message.includes("did not complete successfully") &&
+          err.message.includes("FAILED") &&
+          err.message.includes("Some error detail"),
       );
 
       sinon.assert.calledOnce(waitForStatementCompletionStub);
       sinon.assert.calledOnce(submitFlinkStatementStub);
       sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+    });
+
+    it("should override timeout if provided", async () => {
+      const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+      waitForStatementCompletionStub.resolves(completedStatement);
+
+      const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+      parseAllFlinkStatementResultsStub.returns(parseResults);
+
+      const customTimeout = 10;
+
+      await loader.executeFlinkStatement<TestResult>(
+        "SELECT 1",
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        undefined,
+        customTimeout,
+      );
+      sinon.assert.calledOnce(submitFlinkStatementStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      const waitCallArgs = waitForStatementCompletionStub.getCall(0).args;
+      assert.strictEqual(waitCallArgs[1], customTimeout);
     });
 
     describe("concurrency handling", () => {
