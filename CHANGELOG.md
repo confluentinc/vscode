@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Date/time picker for message viewer when consuming from a specific point in time.
+
 ## 1.6.0
 
 ### Added
