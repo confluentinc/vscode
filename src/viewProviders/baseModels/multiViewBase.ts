@@ -15,7 +15,7 @@ export abstract class ViewProviderDelegate<
   abstract readonly viewTitle: string;
 
   /** Message to display when fetching children */
-  abstract loadingMessage: string;
+  abstract readonly loadingMessage: string;
 
   /** The most recent results from fetchChildren() */
   children: T[] = [];

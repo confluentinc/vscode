@@ -12,8 +12,7 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
 > {
   readonly mode = FlinkDatabaseViewProviderMode.UDFs;
   readonly viewTitle = "Flink UDFs (Preview)";
-
-  loadingMessage = "Loading Flink UDFs...";
+  readonly loadingMessage = "Loading Flink UDFs...";
 
   async fetchChildren(
     database: CCloudFlinkDbKafkaCluster,

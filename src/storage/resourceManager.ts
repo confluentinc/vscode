@@ -642,12 +642,12 @@ export class ResourceManager {
     const vanillaJSONUdfs = udfsByCluster.get(flinkDatabase.id);
 
     if (vanillaJSONUdfs === undefined) {
-      logger.debug(`getFlinkUdfs(): No Flink UDFs cached for database ${flinkDatabase.id}`);
+      logger.debug(`getFlinkUDFs(): No Flink UDFs cached for database ${flinkDatabase.id}`);
       return undefined;
     }
 
     logger.debug(
-      `getFlinkUdfs(): Found ${vanillaJSONUdfs.length} Flink UDFs for database ${flinkDatabase.id}`,
+      `getFlinkUDFs(): Found ${vanillaJSONUdfs.length} Flink UDFs for database ${flinkDatabase.id}`,
     );
 
     return vanillaJSONUdfs.map((raw) => new FlinkUdf(raw));
