@@ -1091,6 +1091,27 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
     });
 
+    it("should override timeout if provided", async () => {
+      const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+      waitForStatementCompletionStub.resolves(completedStatement);
+
+      const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+      parseAllFlinkStatementResultsStub.returns(parseResults);
+
+      const customTimeout = 10;
+
+      await loader.executeFlinkStatement<TestResult>(
+        "SELECT 1",
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        undefined,
+        customTimeout,
+      );
+      sinon.assert.calledOnce(submitFlinkStatementStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      const waitCallArgs = waitForStatementCompletionStub.getCall(0).args;
+      assert.strictEqual(waitCallArgs[1], customTimeout);
+    });
+
     describe("concurrency handling", () => {
       beforeEach(() => {
         // Set up any submitted statement to complete successfully
