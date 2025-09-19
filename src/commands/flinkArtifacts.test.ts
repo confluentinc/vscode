@@ -119,6 +119,16 @@ describe("flinkArtifacts", () => {
     );
   });
 
+  it("should return early if no artifact is provided", async () => {
+    const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
+    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
+
+    await queryArtifactWithFlink(undefined as any);
+
+    sinon.assert.notCalled(openTextDocStub);
+    sinon.assert.notCalled(showTextDocStub);
+  });
+
   it("should register the uploadArtifact command", () => {
     const registerCommandWithLoggingStub = sandbox
       .stub(commands, "registerCommandWithLogging")
