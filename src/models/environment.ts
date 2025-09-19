@@ -153,8 +153,7 @@ export class CCloudEnvironment extends Environment {
    */
   get flinkDatabaseClusters(): CCloudFlinkDbKafkaCluster[] {
     return this.kafkaClusters.filter(
-      (kc): kc is CCloudFlinkDbKafkaCluster =>
-        kc.isFlinkable() && Array.isArray(kc.flinkPools) && kc.flinkPools.length > 0,
+      (kc): kc is CCloudFlinkDbKafkaCluster => kc.isFlinkable() && kc.flinkPools.length > 0,
     );
   }
 

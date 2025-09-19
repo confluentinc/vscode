@@ -200,7 +200,7 @@ export async function commandForUDFCreationFromArtifact(
     const database = selectedResource as CCloudFlinkDbKafkaCluster;
     const computePool = database?.flinkPools[0];
     let userInput = await promptForFunctionAndClassName(selectedArtifact);
-    if (!userInput.functionName || !userInput.className) {
+    if (!userInput?.functionName || !userInput?.className) {
       return; // User cancelled the input
     }
     await vscode.window.withProgress(
