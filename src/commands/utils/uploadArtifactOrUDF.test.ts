@@ -649,65 +649,64 @@ describe("commands/utils/uploadArtifact", () => {
       showInputBoxStub.onFirstCall().resolves("myFunction");
       showInputBoxStub.onSecondCall().resolves("com.example.MyClass");
 
-        const result = await promptForFunctionAndClassName(selectedArtifact);
+      const result = await promptForFunctionAndClassName(selectedArtifact);
 
-        sinon.assert.calledTwice(showInputBoxStub);
+      sinon.assert.calledTwice(showInputBoxStub);
 
-        assert.deepStrictEqual(result, {
-          functionName: "myFunction",
-          className: "com.example.MyClass",
-        });
+      assert.deepStrictEqual(result, {
+        functionName: "myFunction",
+        className: "com.example.MyClass",
+      });
+    });
+
+    it("should validate class name input according to regex pattern", async () => {
+      // Create a showInputBox stub that will let us test the validateInput function
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+
+      // Call the function so we can capture the validateInput function
+      showInputBoxStub.callsFake((options) => {
+        if (options?.prompt === "Enter the class name for the new UDF") {
+          // Test the validateInput function with various inputs
+          const validateFn = options.validateInput!;
+
+          // Valid inputs should return null
+          assert.strictEqual(validateFn("com.example.MyClass"), null);
+          assert.strictEqual(validateFn("valid_class.name"), null);
+          assert.strictEqual(validateFn("_startsWithUnderscore"), null);
+
+          // Invalid inputs should return error message
+          assert.strictEqual(
+            typeof validateFn("") === "string",
+            true,
+            "Empty string should be rejected",
+          );
+
+          assert.strictEqual(
+            typeof validateFn("123startsWithNumber") === "string",
+            true,
+            "Name starting with number should be rejected",
+          );
+
+          assert.strictEqual(
+            typeof validateFn("invalid-dash-character") === "string",
+            true,
+            "Name with dash should be rejected",
+          );
+
+          assert.strictEqual(
+            typeof validateFn("invalid space") === "string",
+            true,
+            "Name with space should be rejected",
+          );
+        }
+
+        // Return valid values to complete the test
+        return Promise.resolve("com.example.ValidClass");
       });
 
-      it("should validate class name input according to regex pattern", async () => {
-        // Create a showInputBox stub that will let us test the validateInput function
-        const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      await promptForFunctionAndClassName(selectedArtifact);
 
-        // Call the function so we can capture the validateInput function
-        showInputBoxStub.callsFake((options) => {
-          if (options?.prompt === "Enter the class name for the new UDF") {
-            // Test the validateInput function with various inputs
-            const validateFn = options.validateInput!;
-
-            // Valid inputs should return null
-            assert.strictEqual(validateFn("com.example.MyClass"), null);
-            assert.strictEqual(validateFn("valid_class.name"), null);
-            assert.strictEqual(validateFn("_startsWithUnderscore"), null);
-
-            // Invalid inputs should return error message
-            assert.strictEqual(
-              typeof validateFn("") === "string",
-              true,
-              "Empty string should be rejected",
-            );
-
-            assert.strictEqual(
-              typeof validateFn("123startsWithNumber") === "string",
-              true,
-              "Name starting with number should be rejected",
-            );
-
-            assert.strictEqual(
-              typeof validateFn("invalid-dash-character") === "string",
-              true,
-              "Name with dash should be rejected",
-            );
-
-            assert.strictEqual(
-              typeof validateFn("invalid space") === "string",
-              true,
-              "Name with space should be rejected",
-            );
-          }
-
-          // Return valid values to complete the test
-          return Promise.resolve("com.example.ValidClass");
-        });
-
-        await promptForFunctionAndClassName(selectedArtifact);
-
-        sinon.assert.called(showInputBoxStub);
-      });
+      sinon.assert.called(showInputBoxStub);
     });
   });
 });
