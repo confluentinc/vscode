@@ -232,13 +232,8 @@ export class ResourcesView extends View {
         break;
       }
       case ConnectionType.Local: {
-        const localItem = this.localItem.first();
-        await expect(localItem).toBeVisible();
-        // the local connection item is always expanded by default, but we may have opened it already
-        if ((await localItem.getAttribute("aria-expanded")) === "false") {
-          await localItem.click();
-        }
-        await expect(localItem).toHaveAttribute("aria-expanded", "true");
+        await expect(this.localItem).not.toHaveCount(0);
+        environment = this.localItem;
         break;
       }
       default:
