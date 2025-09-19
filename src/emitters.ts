@@ -138,8 +138,11 @@ export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 /** Metadata for a given {@link vscode.Uri} has been updated. */
 export const uriMetadataSet = new vscode.EventEmitter<vscode.Uri>();
 
-/** Fires when an an action that mutates the Flink artifacts list in an env/provider/region has completed. */
+/** Fires when an action that mutates the Flink artifacts list in an env/provider/region has completed. */
 export const artifactsChanged = new vscode.EventEmitter<IEnvProviderRegion>();
+
+/** Fires when an action that mutates the Flink UDFs list for a single Flink database (CCloud Flinkable Kafka Cluster) has completed. */
+export const udfsChanged = new vscode.EventEmitter<CCloudFlinkDbKafkaCluster>();
 
 /** Event emitter for switching Flink Database view modes. */
 export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();

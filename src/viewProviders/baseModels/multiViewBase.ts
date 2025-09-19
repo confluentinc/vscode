@@ -8,19 +8,39 @@ export abstract class ViewProviderDelegate<
   P extends EnvironmentedBaseViewProviderData,
   T extends BaseViewProviderData,
 > {
+  /** What view mode does this delegate handle? */
   abstract readonly mode: M;
 
+  /** Title for this view mode */
   abstract readonly viewTitle: string;
+
+  /** Message to display when fetching children */
   abstract loadingMessage: string;
 
-  abstract children: T[];
+  /** The most recent results from fetchChildren() */
+  children: T[] = [];
 
-  abstract fetchChildren(resource: P, forceDeepRefresh: boolean): Promise<T[]>;
-
+  /** Returns the most recent results from fetchChildren() */
   getChildren(): T[] {
     return this.children;
   }
 
+  /**
+   * Do whatever it takes to fetch children to display.
+   *
+   * Must assign to this.children before returning.
+   *
+   * @param resource The parent resource to fetch children for.
+   * @param forceDeepRefresh Whether to bypass any caches and fetch fresh data.
+   * @returns The fetched children.
+   */
+  abstract fetchChildren(resource: P, forceDeepRefresh: boolean): Promise<T[]>;
+
+  /**
+   * Convert a child element into a TreeItem for display.
+   * @param element The child element to convert.
+   * @returns The TreeItem representing the child element.
+   */
   abstract getTreeItem(element: T): TreeItem;
 }
 
