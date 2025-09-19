@@ -137,9 +137,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
 
       beforeEach(async () => {
         refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
-        const artifactsDelegate = viewProvider["treeViewDelegates"].get(
-          FlinkDatabaseViewProviderMode.Artifacts,
-        )!;
+        const artifactsDelegate = viewProvider["artifactsDelegate"];
         artifactsDelegateFetchChildrenStub = sandbox.stub(artifactsDelegate, "fetchChildren");
 
         // Ensure we're in artifacts mode
@@ -196,6 +194,62 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.notCalled(refreshStub);
           sinon.assert.calledOnce(artifactsDelegateFetchChildrenStub);
           sinon.assert.calledWith(artifactsDelegateFetchChildrenStub, db, true);
+        });
+      });
+    });
+
+    describe("udfsChangedHandler", () => {
+      let refreshStub: sinon.SinonStub;
+      let udfsDelegateFetchChildrenStub: sinon.SinonStub;
+
+      beforeEach(async () => {
+        refreshStub = sandbox.stub(viewProvider, "refresh").resolves();
+        const udfsDelegate = viewProvider["udfsDelegate"];
+        udfsDelegateFetchChildrenStub = sandbox.stub(udfsDelegate, "fetchChildren");
+
+        // Ensure we're in UDFs mode
+        await viewProvider.switchMode(FlinkDatabaseViewProviderMode.UDFs);
+        refreshStub.resetHistory(); // from the mode switch
+      });
+
+      it("should do nothing if no database is selected", async () => {
+        // no database selected
+        viewProvider["resource"] = null;
+        await viewProvider.udfsChangedHandler({ id: "db-123" } as CCloudFlinkDbKafkaCluster);
+        sinon.assert.notCalled(refreshStub);
+        sinon.assert.notCalled(udfsDelegateFetchChildrenStub);
+      });
+
+      describe("when viewing a database", () => {
+        const db = CCloudKafkaCluster.create({
+          ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          id: "db-999",
+        }) as CCloudFlinkDbKafkaCluster;
+
+        beforeEach(() => {
+          viewProvider["resource"] = db;
+        });
+
+        it("should do nothing if the changed database does not match the selected database", async () => {
+          await viewProvider.udfsChangedHandler({ id: "db-123" } as CCloudFlinkDbKafkaCluster);
+          sinon.assert.notCalled(refreshStub);
+          sinon.assert.notCalled(udfsDelegateFetchChildrenStub);
+        });
+
+        it("should refresh if the changed database matches and we're viewing UDFs", async () => {
+          await viewProvider.udfsChangedHandler(db);
+          sinon.assert.calledOnce(refreshStub);
+          sinon.assert.calledWith(refreshStub, true); // deep refresh
+          sinon.assert.notCalled(udfsDelegateFetchChildrenStub);
+        });
+
+        it("should tell the UDFs delegate to refresh its cache if the changed database matches but we're NOT viewing UDFs", async () => {
+          await viewProvider.switchMode(FlinkDatabaseViewProviderMode.Artifacts);
+          refreshStub.resetHistory(); // from the mode switch
+          await viewProvider.udfsChangedHandler(db);
+          sinon.assert.notCalled(refreshStub);
+          sinon.assert.calledOnce(udfsDelegateFetchChildrenStub);
+          sinon.assert.calledWith(udfsDelegateFetchChildrenStub, db, true);
         });
       });
     });
