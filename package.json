@@ -1210,7 +1210,7 @@
         },
         {
           "command": "confluent.artifacts.UDFCreation",
-          "when": "true"
+          "when": "false"
         },
         {
           "command": "confluent.connections.addSSLPemPath",

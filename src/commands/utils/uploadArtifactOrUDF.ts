@@ -105,13 +105,10 @@ export async function promptForArtifactUploadParams(
       region: item.region,
     });
   }
-  // Use the item's environment if provided, otherwise prompt for it
   const environment =
     isCcloudItem && item.environmentId
       ? { id: item.environmentId }
       : await flinkCcloudEnvironmentQuickPick();
-
-  // Use the item's provider and region if exists, otherwise prompt for it
   let cloudRegion: IProviderRegion | undefined;
   if (isCcloudItem) {
     cloudRegion = { provider: item.provider, region: item.region };
@@ -160,7 +157,6 @@ export async function promptForArtifactUploadParams(
 
   const fileFormat: string = selectedFile.fsPath.split(".").pop() ?? "";
 
-  // Default artifact name to the selected file's base name (without extension), but allow override.
   const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
 
   const artifactName = await vscode.window.showInputBox({
@@ -329,7 +325,7 @@ export function buildCreateArtifactRequest(
 
 export async function promptForFunctionAndClassName(
   selectedArtifact: FlinkArtifact | undefined,
-): Promise<{ functionName: string | undefined; className: string | undefined } | undefined> {
+): Promise<{ functionName: string; className: string } | undefined> {
   const defaultFunctionName = `udf_${selectedArtifact?.id?.substring(0, 6) ?? ""}`;
   const functionName = await vscode.window.showInputBox({
     prompt: "Enter a name for the new UDF function",

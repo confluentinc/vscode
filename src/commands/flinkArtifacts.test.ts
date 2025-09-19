@@ -123,7 +123,7 @@ describe("flinkArtifacts", () => {
     const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
     const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
 
-    await queryArtifactWithFlink(undefined);
+    await queryArtifactWithFlink(undefined as any);
 
     sinon.assert.notCalled(openTextDocStub);
     sinon.assert.notCalled(showTextDocStub);
@@ -222,7 +222,7 @@ describe("flinkArtifacts", () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-    const result = await commandForUDFCreationFromArtifact(undefined);
+    const result = await commandForUDFCreationFromArtifact(undefined as any);
 
     assert.strictEqual(result, undefined);
     sinon.assert.notCalled(showInfoStub);
@@ -232,30 +232,11 @@ describe("flinkArtifacts", () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
-      flinkComputePools: [],
-      kafkaClusters: [],
-      // Add the getter property that the test will use
-      flinkDatabaseClusters: [],
-    };
-
-    const getEnvironmentsStub = sandbox
-      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-      .resolves([mockEnvironment as CCloudEnvironment]);
-
-    // Remove the findFlinkDatabases stub since we don't call it anymore
-    // const findFlinkDatabasesStub = sandbox.stub(flinkSqlUtils, "findFlinkDatabases").returns([]);
-
     await commandForUDFCreationFromArtifact(artifact);
-
-    sinon.assert.calledOnce(getEnvironmentsStub);
-    // Remove this assertion since we don't call findFlinkDatabases anymore
-    // sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
 
     sinon.assert.notCalled(showInfoStub);
     sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWith(showErrorStub, "Failed to create UDF function:  No Flink database.");
   });
   it("should prompt for function name and classname and show info message on success", async () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
@@ -293,8 +274,6 @@ describe("flinkArtifacts", () => {
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
-    // Remove this assertion since we don't call findFlinkDatabases anymore
-    // sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
     sinon.assert.calledOnce(withProgressStub);
@@ -339,8 +318,6 @@ describe("flinkArtifacts", () => {
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
-    // Remove this assertion since we don't call findFlinkDatabases anymore
-    // sinon.assert.calledWith(findFlinkDatabasesStub, sinon.match.has("id", artifact.environmentId));
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
     sinon.assert.calledOnce(withProgressStub);
@@ -423,7 +400,6 @@ describe("flinkArtifacts", () => {
 
     await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
 
-    // Match the actual error message format from the implementation
     sinon.assert.calledOnce(showErrorStub);
     sinon.assert.calledWithExactly(
       showErrorStub,
@@ -445,7 +421,6 @@ describe("flinkArtifacts", () => {
       name: "Test Environment",
       flinkComputePools: [],
       kafkaClusters: [mockCluster],
-      // Add the flinkDatabaseClusters getter property to prevent "Cannot read properties of undefined (reading 'length')"
       flinkDatabaseClusters: [mockCluster],
     };
 
@@ -482,10 +457,9 @@ describe("flinkArtifacts", () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-    const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-      functionName: undefined,
-      className: undefined,
-    });
+    const promptStub = sandbox
+      .stub(uploadArtifact, "promptForFunctionAndClassName")
+      .resolves(undefined as any);
 
     const mockFlinkDatabaseViewProvider = {
       resource: mockCluster,

@@ -9,7 +9,7 @@ import { extractResponseBody, isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
@@ -148,7 +148,7 @@ export async function deleteArtifactCommand(
   );
 }
 
-export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | undefined) {
+export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
@@ -171,17 +171,17 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact | u
   await editor.insertSnippet(snippetString);
 }
 
-export async function commandForUDFCreationFromArtifact(
-  selectedArtifact: FlinkArtifact | undefined,
-) {
+export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
   try {
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
     const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
-    const selectedResource = flinkDatabaseProvider.resource;
-
+    const database = flinkDatabaseProvider.resource;
+    if (!database) {
+      throw new Error("No Flink database.");
+    }
     const environments = await ccloudResourceLoader.getEnvironments();
     const environment = environments.find((env) => env.id === selectedArtifact.environmentId);
 
@@ -189,7 +189,6 @@ export async function commandForUDFCreationFromArtifact(
       throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
     }
 
-    // Use the flinkDatabaseClusters getter property instead of findFlinkDatabases
     const flinkDatabases = environment.flinkDatabaseClusters;
     if (flinkDatabases.length === 0) {
       throw new Error(
@@ -197,9 +196,8 @@ export async function commandForUDFCreationFromArtifact(
       );
     }
 
-    const database = selectedResource as CCloudFlinkDbKafkaCluster;
     let userInput = await promptForFunctionAndClassName(selectedArtifact);
-    if (!userInput?.functionName || !userInput?.className) {
+    if (!userInput) {
       return; // User cancelled the input
     }
     await vscode.window.withProgress(
@@ -210,30 +208,15 @@ export async function commandForUDFCreationFromArtifact(
       },
       async (progress) => {
         progress.report({ message: "Executing statement..." });
-        // Prompt user for function name, default to generated name
-        const result = await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
+        await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
           `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
-          database!,
+          database,
           undefined,
           60000, // custom timeout of 60 seconds
         );
         progress.report({ message: "Processing results..." });
-        if (result.length === 1) {
-          const createdAtRaw = result[0]?.created_at;
-          let createdAt: string | undefined;
-          if (createdAtRaw) {
-            try {
-              createdAt = JSON.parse(createdAtRaw);
-            } catch {
-              createdAt = createdAtRaw;
-            }
-          }
-          const createdMsg = createdAt
-            ? `Function created successfully at ${new Date(createdAt).toLocaleString()}.`
-            : "Function created successfully.";
-          void showInfoNotificationWithButtons(createdMsg);
-          return;
-        }
+        const createdMsg = `Function created successfully at ${userInput.functionName}.`;
+        void showInfoNotificationWithButtons(createdMsg);
       },
     );
   } catch (err) {

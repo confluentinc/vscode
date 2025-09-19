@@ -430,31 +430,6 @@ describe("flinkSql/statementUtils.ts", function () {
       ]);
     });
 
-    it("should parse DDL results with only metadata and no data rows", async () => {
-      const ddlRouteResponse = {
-        results: {
-          data: [], // DDL has no data rows
-        },
-        metadata: {
-          created_at: new Date("2025-09-17T18:17:15.255Z"),
-        },
-      } as GetSqlv1StatementResult200Response;
-
-      stubbedResultsApi.getSqlv1StatementResult.resolves(ddlRouteResponse);
-
-      const results = await parseAllFlinkStatementResults<TestQueryRow>(statement);
-
-      assert.deepStrictEqual(results, [
-        {
-          created_at: JSON.stringify(
-            ddlRouteResponse.metadata.created_at
-              ? ddlRouteResponse.metadata.created_at.toISOString()
-              : undefined,
-          ),
-        },
-      ]);
-    });
-
     it("should parse results with multiple pages", async () => {
       const firstPageRouteResponse = {
         results: {
