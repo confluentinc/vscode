@@ -4,17 +4,13 @@ import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "../connectionTypes";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SupportView } from "../objects/views/SupportView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
 import {
