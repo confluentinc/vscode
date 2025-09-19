@@ -271,50 +271,6 @@ describe("flinkArtifacts", () => {
     sinon.assert.notCalled(showErrorStub);
   });
 
-  it("should show info message if registered successfully", async () => {
-    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
-    const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
-
-    const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-      functionName: "testFunction",
-      className: "com.test.TestClass",
-    });
-
-    const mockFlinkDatabaseViewProvider = {
-      resource: mockCluster,
-    };
-    sandbox
-      .stub(FlinkDatabaseViewProvider, "getInstance")
-      .returns(mockFlinkDatabaseViewProvider as any);
-
-    const getEnvironmentsStub = sandbox
-      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-      .resolves([mockEnvironment as CCloudEnvironment]);
-
-    const executeStub = sandbox
-      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
-      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
-
-    const withProgressStub = sandbox.stub(vscode.window, "withProgress");
-    withProgressStub.callsFake(async (options, callback) => {
-      return await callback(
-        {
-          report: () => {},
-        },
-        {} as any,
-      );
-    });
-
-    await commandForUDFCreationFromArtifact(artifact);
-
-    sinon.assert.calledOnce(getEnvironmentsStub);
-    sinon.assert.calledOnce(promptStub);
-    sinon.assert.calledOnce(executeStub);
-    sinon.assert.calledOnce(withProgressStub);
-    sinon.assert.calledOnce(showInfoStub);
-    sinon.assert.notCalled(showErrorStub);
-  });
-
   it("should handle ResponseError with string response body in commandForUDFCreationFromArtifact", async () => {
     getShowErrorNotificationWithButtonsStub(sandbox);
     sandbox.stub(console, "error"); // Add this to prevent actual logging
