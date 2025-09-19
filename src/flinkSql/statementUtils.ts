@@ -319,7 +319,7 @@ export async function parseAllFlinkStatementResults<RT>(
       rows: payload.data ?? [],
     });
     logger.debug(
-      `parseAllFlinkStatementResults: parsed ${JSON.stringify(response)} response for statement ${statement.name} FROM STATEMENTSUTILS`,
+      `parseAllFlinkStatementResults: statement=${statement.name}, rows_parsed=${payload.data ? payload.data.length : 0}, page_token=${pageToken ?? "none"}`,
     );
     pageToken = extractPageToken(response?.metadata?.next);
     isFirstPage = false;
