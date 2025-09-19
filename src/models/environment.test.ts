@@ -140,41 +140,6 @@ describe("models/environment.ts LocalEnvironment", () => {
       TEST_LOCAL_SCHEMA_REGISTRY,
     ]);
   });
-
-  it("should return the correct .children for a CCloudEnvironment", () => {
-    const env: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
-
-    // no children by default
-    assert.deepStrictEqual(env.children, []);
-
-    // add a Kafka cluster
-    const envWithKafka = new CCloudEnvironment({
-      ...env,
-      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
-    });
-    assert.deepStrictEqual(envWithKafka.children, [TEST_CCLOUD_KAFKA_CLUSTER]);
-
-    // add SR
-    const envWithKafkaSR = new CCloudEnvironment({
-      ...envWithKafka,
-      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
-    });
-    assert.deepStrictEqual(envWithKafkaSR.children, [
-      TEST_CCLOUD_KAFKA_CLUSTER,
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-    ]);
-
-    // add Flink
-    const envWithAll = new CCloudEnvironment({
-      ...envWithKafkaSR,
-      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    });
-    assert.deepStrictEqual(envWithAll.children, [
-      TEST_CCLOUD_KAFKA_CLUSTER,
-      TEST_CCLOUD_SCHEMA_REGISTRY,
-      TEST_CCLOUD_FLINK_COMPUTE_POOL,
-    ]);
-  });
 });
 
 describe("models/environment.ts CCloudEnvironment", () => {
@@ -240,6 +205,41 @@ describe("models/environment.ts CCloudEnvironment", () => {
       flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
     });
     assert.strictEqual(envNoKafka.flinkDatabaseClusters.length, 0);
+  });
+
+  it("should return the correct .children for a CCloudEnvironment", () => {
+    const env: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
+    // no children by default
+    assert.deepStrictEqual(env.children, []);
+
+    // add a Kafka cluster
+    const envWithKafka = new CCloudEnvironment({
+      ...env,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    assert.deepStrictEqual(envWithKafka.children, [TEST_CCLOUD_KAFKA_CLUSTER]);
+
+    // add SR
+    const envWithKafkaSR = new CCloudEnvironment({
+      ...envWithKafka,
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+    });
+    assert.deepStrictEqual(envWithKafkaSR.children, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+    ]);
+
+    // add Flink
+    const envWithAll = new CCloudEnvironment({
+      ...envWithKafkaSR,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    });
+    assert.deepStrictEqual(envWithAll.children, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL,
+    ]);
   });
 });
 
