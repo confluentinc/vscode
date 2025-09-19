@@ -1,19 +1,19 @@
 import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
-import { SchemasView, SchemaType } from "../objects/views/SchemasView";
+import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import {
+  setupCCloudConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
@@ -73,21 +73,10 @@ test.describe("Schema Management", () => {
           process.env.E2E_USERNAME!,
           process.env.E2E_PASSWORD!,
         );
-
-        // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
-        // Flink compute pools
-        await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-        const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
-        // environments are collapsed by default, so we need to expand it first
-        await firstEnvironment.click();
-        await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
-
-        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-        await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
-        const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
-        await firstSchemaRegistry.click();
-        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-        // view for these tests, so we're just picking from the Resources view here
+        await schemasView.loadSchemaSubjects(
+          ConnectionType.Ccloud,
+          SelectSchemaRegistry.FromResourcesView,
+        );
       },
     ],
     [
@@ -105,16 +94,23 @@ test.describe("Schema Management", () => {
             },
           },
         });
-        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-        const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
-        await expect(directSchemaRegistries).not.toHaveCount(0);
-        const firstSchemaRegistry: Locator = directSchemaRegistries.first();
-        await firstSchemaRegistry.click();
-        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-        // view for these tests, so we're just picking from the Resources view here
+        await schemasView.loadSchemaSubjects(
+          ConnectionType.Direct,
+          SelectSchemaRegistry.FromResourcesView,
+        );
       },
     ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+    [
+      ConnectionType.Local,
+      Tag.Local,
+      async (page) => {
+        await setupLocalConnection(page, { schemaRegistry: true });
+        await schemasView.loadSchemaSubjects(
+          ConnectionType.Local,
+          SelectSchemaRegistry.FromResourcesView,
+        );
+      },
+    ],
   ];
   const schemaTypes: Array<[SchemaType, string]> = [
     [SchemaType.Avro, "avsc"],

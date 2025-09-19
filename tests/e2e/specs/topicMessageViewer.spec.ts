@@ -1,17 +1,10 @@
-import { ElectronApplication, expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import { ResourcesView } from "../objects/views/ResourcesView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
@@ -31,64 +24,26 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  */
 
 test.describe("Topics Listing & Message Viewer", () => {
-  let resourcesView: ResourcesView;
-
-  test.beforeEach(async ({ page }) => {
-    await openConfluentSidebar(page);
-
-    resourcesView = new ResourcesView(page);
-  });
-
   // test dimensions:
-  const connectionTypes: Array<
-    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
-  > = [
-    [
-      ConnectionType.Ccloud,
-      Tag.CCloud,
-      async (page, electronApp) => {
-        await setupCCloudConnection(
-          page,
-          electronApp,
-          process.env.E2E_USERNAME!,
-          process.env.E2E_PASSWORD!,
-        );
-      },
-    ],
-    [
-      ConnectionType.Direct,
-      Tag.Direct,
-      async (page) => {
-        await setupDirectConnection(page, {
-          formConnectionType: FormConnectionType.ConfluentCloud,
-          kafkaConfig: {
-            bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-            authType: SupportedAuthType.API,
-            credentials: {
-              api_key: process.env.E2E_KAFKA_API_KEY!,
-              api_secret: process.env.E2E_KAFKA_API_SECRET!,
-            },
-          },
-        });
-      },
-    ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
   const entrypoints = [
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
 
-  for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
-    test.describe(`${connectionType} Connection`, { tag: [connectionTag] }, () => {
-      test.beforeEach(async ({ page, electronApp }) => {
-        // set up the connection based on type
-        await connectionSetup(page, electronApp);
-      });
+  for (const [connectionType, connectionTag] of connectionTypes) {
+    test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
+      // tell the `setupConnection` fixture which connection type to create
+      test.use({ connectionType });
 
       for (const entrypoint of entrypoints) {
         test(`should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`, async ({
           page,
+          setupConnection,
         }) => {
           const topicsView = new TopicsView(page);
           await topicsView.loadTopics(connectionType, entrypoint);

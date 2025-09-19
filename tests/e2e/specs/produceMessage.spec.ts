@@ -1,7 +1,7 @@
 import { ElectronApplication, expect, Page } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
+import { ConnectionType, FormConnectionType, SupportedAuthType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
@@ -12,12 +12,12 @@ import {
   TopicsView,
 } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
+import {
+  setupCCloudConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "../utils/connections";
 import { openNewUntitledDocument } from "../utils/documents";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
@@ -107,7 +107,14 @@ test.describe("Produce Message(s) to Topic", () => {
       },
       DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
     ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+    [
+      ConnectionType.Local,
+      Tag.Local,
+      async (page) => {
+        await setupLocalConnection(page, { kafka: true, schemaRegistry: true });
+      },
+      1,
+    ],
   ];
   const schemaTypes: Array<[SchemaType | null, string | null]> = [
     [null, null],

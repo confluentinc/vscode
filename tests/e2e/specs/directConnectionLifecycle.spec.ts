@@ -1,10 +1,16 @@
-import { expect, Page } from "@playwright/test";
+import { ElectronApplication, expect, Page } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
+import {
+  ConnectionType,
+  DirectConnectionKafkaConfig,
+  DirectConnectionSchemaRegistryConfig,
+  FormConnectionType,
+  SupportedAuthType,
+} from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
@@ -12,15 +18,15 @@ import { ResourcesView } from "../objects/views/ResourcesView";
 import { SchemasView, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { DirectConnectionItem } from "../objects/views/viewItems/DirectConnectionItem";
-import {
-  DirectConnectionForm,
-  DirectConnectionKafkaConfig,
-  DirectConnectionSchemaRegistryConfig,
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
+import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
+import { SchemaRegistryItem } from "../objects/views/viewItems/SchemaRegistryItem";
+import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { setupDirectConnection } from "../utils/connections";
+import {
+  cleanupLocalConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "../utils/connections";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
@@ -48,8 +54,14 @@ enum ConfigType {
 }
 
 test.describe("Direct Connection CRUD Lifecycle", () => {
+  let resourcesView: ResourcesView;
+  let withLocalKafka = false;
+  let withLocalSchemaRegistry = false;
+
   test.beforeEach(async ({ page, electronApp }) => {
     await openConfluentSidebar(page);
+
+    resourcesView = new ResourcesView(page);
 
     // stub the disconnect confirmation dialog
     const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
@@ -64,16 +76,29 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
     ]);
   });
 
+  test.afterEach(async ({ page }) => {
+    // if we set up a local connection to "shadow" its config, make sure to stop containers
+    if (withLocalKafka || withLocalSchemaRegistry) {
+      await cleanupLocalConnection(page, { schemaRegistry: withLocalSchemaRegistry });
+      withLocalKafka = false;
+      withLocalSchemaRegistry = false;
+    }
+  });
+
   // test dimensions:
   const connectionTypes: Array<
     [
       string,
       FormConnectionType,
       // function for setting up the Kafka config
-      (page: Page) => DirectConnectionKafkaConfig | Promise<DirectConnectionKafkaConfig>,
+      (
+        page: Page,
+        electronApp: ElectronApplication,
+      ) => DirectConnectionKafkaConfig | Promise<DirectConnectionKafkaConfig>,
       // function for setting up the Schema Registry config
       (
         page: Page,
+        electronApp: ElectronApplication,
       ) => DirectConnectionSchemaRegistryConfig | Promise<DirectConnectionSchemaRegistryConfig>,
     ]
   > = [
@@ -101,7 +126,46 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
         };
       },
     ],
-    // FUTURE: add support for LOCAL config, see https://github.com/confluentinc/vscode/issues/2140
+    [
+      "Local shadow",
+      FormConnectionType.ApacheKafka,
+      async (page: Page, electronApp: ElectronApplication) => {
+        withLocalKafka = true;
+        withLocalSchemaRegistry = true;
+        // set up a local connection first to "shadow" its config
+        await setupLocalConnection(page, { kafka: true, schemaRegistry: true });
+        // right-click to copy the bootstrap servers to the clipboard for pasting into the form
+        await electronApp.context().grantPermissions(["clipboard-read"]);
+        const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
+        await expect(localKafka).not.toHaveCount(0);
+        const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
+        await localKafkaItem.copyBootstrapServers();
+        const bootstrapServers = await page.evaluate(() => navigator.clipboard.readText());
+        return {
+          bootstrapServers,
+          authType: SupportedAuthType.None,
+          credentials: {},
+        };
+      },
+      async (page: Page, electronApp: ElectronApplication) => {
+        withLocalKafka = true;
+        withLocalSchemaRegistry = true;
+        // set up a local connection first to "shadow" its config
+        await setupLocalConnection(page, { kafka: true, schemaRegistry: true });
+        // right-click to copy the SR URI to the clipboard for pasting into the form
+        await electronApp.context().grantPermissions(["clipboard-read"]);
+        const localSchemaRegistry = await resourcesView.getSchemaRegistry(ConnectionType.Local);
+        await expect(localSchemaRegistry).not.toHaveCount(0);
+        const localSchemaRegistryItem = new SchemaRegistryItem(page, localSchemaRegistry.first());
+        await localSchemaRegistryItem.copyUri();
+        const uri = await page.evaluate(() => navigator.clipboard.readText());
+        return {
+          uri,
+          authType: SupportedAuthType.None,
+          credentials: {},
+        };
+      },
+    ],
     // FUTURE: add support for CP config
   ];
   const configTypes: Array<ConfigType> = [
@@ -122,18 +186,18 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
           let kafkaConfig: DirectConnectionKafkaConfig | undefined;
           let schemaRegistryConfig: DirectConnectionSchemaRegistryConfig | undefined;
 
-          test.beforeEach(async ({ page }) => {
+          test.beforeEach(async ({ page, electronApp }) => {
             if (
               configType === ConfigType.Kafka ||
               configType === ConfigType.KafkaAndSchemaRegistry
             ) {
-              kafkaConfig = await loadKafkaConfig(page);
+              kafkaConfig = await loadKafkaConfig(page, electronApp);
             }
             if (
               configType === ConfigType.SchemaRegistry ||
               configType === ConfigType.KafkaAndSchemaRegistry
             ) {
-              schemaRegistryConfig = await loadSchemaRegistryConfig(page);
+              schemaRegistryConfig = await loadSchemaRegistryConfig(page, electronApp);
             }
           });
 
