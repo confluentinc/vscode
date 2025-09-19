@@ -13,6 +13,7 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import {
+  ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
@@ -21,15 +22,17 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
+import { ConnectionType } from "../../clients/sidecar";
+import { FlinkArtifact } from "../../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import { CloudProvider, EnvironmentId } from "../../models/resource";
+import { CloudProvider, ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
-import * as uploadArtifactModule from "./uploadArtifact";
+import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
   getPresignedUploadUrl,
@@ -37,8 +40,9 @@ import {
   prepareUploadFileFromUri,
   PRESIGNED_URL_LOCATION,
   promptForArtifactUploadParams,
+  promptForFunctionAndClassName,
   uploadArtifactToCCloud,
-} from "./uploadArtifact";
+} from "./uploadArtifactOrUDF";
 import * as uploadToProvider from "./uploadToProvider";
 
 describe("commands/utils/uploadArtifact", () => {
@@ -552,6 +556,157 @@ describe("commands/utils/uploadArtifact", () => {
           provider: mockAzureParams.cloud,
           region: mockAzureParams.region,
         });
+      });
+    });
+  });
+  describe("promptForFunctionAndClassName", () => {
+    const selectedArtifact = new FlinkArtifact({
+      id: "artifact-id",
+      name: "test-artifact",
+      description: "description",
+      connectionId: "conn-id" as ConnectionId,
+      connectionType: "ccloud" as ConnectionType,
+      environmentId: "env-id" as EnvironmentId,
+      provider: "aws",
+      region: "us-west-2",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
+    });
+
+    it("should reject malformed input", async () => {
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+
+      // For the first call (function name), capture validation function
+      let functionNameValidateInput:
+        | ((
+            input: string,
+          ) =>
+            | string
+            | vscode.InputBoxValidationMessage
+            | Thenable<string | vscode.InputBoxValidationMessage | null | undefined>
+            | null
+            | undefined)
+        | undefined;
+      showInputBoxStub.onFirstCall().callsFake((options) => {
+        functionNameValidateInput = options?.validateInput;
+        // Return valid function name
+        return Promise.resolve("validFunction");
+      });
+
+      // For the second call (class name), capture validation function
+      let classNameValidateInput:
+        | ((
+            input: string,
+          ) =>
+            | string
+            | vscode.InputBoxValidationMessage
+            | Thenable<string | vscode.InputBoxValidationMessage | null | undefined>
+            | null
+            | undefined)
+        | undefined;
+      showInputBoxStub.onSecondCall().callsFake((options) => {
+        classNameValidateInput = options?.validateInput;
+        return Promise.resolve("invalid class name with spaces");
+      });
+
+      const result = await promptForFunctionAndClassName(selectedArtifact);
+
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      // Valid class names return null
+      if (functionNameValidateInput) {
+        assert.strictEqual(functionNameValidateInput("validFunction"), null);
+        assert.strictEqual(
+          typeof functionNameValidateInput("") === "string",
+          true,
+          "Empty function name should be rejected",
+        );
+
+        if (classNameValidateInput) {
+          assert.strictEqual(classNameValidateInput("com.example.MyClass"), null);
+          // Invalid class names return an error string while valid ones do not
+          assert.strictEqual(
+            typeof classNameValidateInput("invalid class name") === "string",
+            true,
+            "Invalid class name should return error message",
+          );
+        }
+        assert.deepStrictEqual(result, {
+          functionName: "validFunction",
+          className: "invalid class name with spaces",
+        });
+      }
+    });
+
+    it("should accept well-formed input", async () => {
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("myFunction");
+      showInputBoxStub.onSecondCall().resolves("com.example.MyClass");
+
+        const result = await promptForFunctionAndClassName(selectedArtifact);
+
+        sinon.assert.calledTwice(showInputBoxStub);
+
+        assert.deepStrictEqual(result, {
+          functionName: "myFunction",
+          className: "com.example.MyClass",
+        });
+      });
+
+      it("should validate class name input according to regex pattern", async () => {
+        // Create a showInputBox stub that will let us test the validateInput function
+        const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+
+        // Call the function so we can capture the validateInput function
+        showInputBoxStub.callsFake((options) => {
+          if (options?.prompt === "Enter the class name for the new UDF") {
+            // Test the validateInput function with various inputs
+            const validateFn = options.validateInput!;
+
+            // Valid inputs should return null
+            assert.strictEqual(validateFn("com.example.MyClass"), null);
+            assert.strictEqual(validateFn("valid_class.name"), null);
+            assert.strictEqual(validateFn("_startsWithUnderscore"), null);
+
+            // Invalid inputs should return error message
+            assert.strictEqual(
+              typeof validateFn("") === "string",
+              true,
+              "Empty string should be rejected",
+            );
+
+            assert.strictEqual(
+              typeof validateFn("123startsWithNumber") === "string",
+              true,
+              "Name starting with number should be rejected",
+            );
+
+            assert.strictEqual(
+              typeof validateFn("invalid-dash-character") === "string",
+              true,
+              "Name with dash should be rejected",
+            );
+
+            assert.strictEqual(
+              typeof validateFn("invalid space") === "string",
+              true,
+              "Name with space should be rejected",
+            );
+          }
+
+          // Return valid values to complete the test
+          return Promise.resolve("com.example.ValidClass");
+        });
+
+        await promptForFunctionAndClassName(selectedArtifact);
+
+        sinon.assert.called(showInputBoxStub);
       });
     });
   });
