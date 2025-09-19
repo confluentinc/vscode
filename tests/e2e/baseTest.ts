@@ -9,16 +9,30 @@ import { stubAllDialogs } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
+import {
+  ConnectionType,
+  DirectConnectionOptions,
+  FormConnectionType,
+  LocalConnectionOptions,
+  SupportedAuthType,
+} from "./connectionTypes";
 import { Notification } from "./objects/notifications/Notification";
 import { NotificationArea } from "./objects/notifications/NotificationArea";
+import { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
+import { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
+import { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import {
+  cleanupLocalConnection,
+  setupCCloudConnection,
+  setupDirectConnection,
+  setupLocalConnection,
+} from "./utils/connections";
 import { configureVSCodeSettings } from "./utils/settings";
+import { openConfluentSidebar } from "./utils/sidebarNavigation";
 
 // NOTE: we can't import these two directly from 'global.setup.ts'
 // cached test setup file path that's shared across worker processes
 const TEST_SETUP_CACHE_FILE = path.join(tmpdir(), "vscode-e2e-test-setup-cache.json");
-
-const VSCODE_VERSION = process.env.VSCODE_VERSION || "stable";
-export const URI_SCHEME = VSCODE_VERSION === "insiders" ? "vscode-insiders" : "vscode";
 
 interface TestSetupCache {
   vscodeExecutablePath: string;
@@ -38,12 +52,37 @@ function getTestSetupCache(): TestSetupCache {
   }
 }
 
-export interface VSCodeFixture {
-  page: Page;
+interface VSCodeFixtures {
+  /** The launched Electron application (VS Code). */
   electronApp: ElectronApplication;
+  /** The first window of the launched Electron application (VS Code). */
+  page: Page;
+
+  /** Open the Confluent view container from the primary sidebar, activating the extension if necessary. */
+  openExtensionSidebar: void;
+
+  /**
+   * Connection type to set up for parameterized tests.
+   * Used by the setupConnection fixture to determine which connection to create.
+   */
+  connectionType: ConnectionType;
+  /**
+   * Configuration options for setting up a direct connection with the {@linkcode directConnection} fixture.
+   */
+  directConnectionConfig: DirectConnectionOptions;
+  /**
+   * Configuration options for setting up a local connection with the {@linkcode localConnection} fixture.
+   * If not provided, the local connection will set up both Kafka and Schema Registry by default.
+   */
+  localConnectionConfig: LocalConnectionOptions;
+  /**
+   * Set up a connection based on the {@linkcode connectionType} option and returns the associated
+   * connection item ({@link CCloudConnectionItem}, {@link DirectConnectionItem}, or {@link LocalConnectionItem}).
+   */
+  setupConnection: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
 }
 
-export const test = testBase.extend<VSCodeFixture>({
+export const test = testBase.extend<VSCodeFixtures>({
   electronApp: async ({ trace }, use, testInfo) => {
     const testConfigs = getTestSetupCache();
 
@@ -132,6 +171,114 @@ export const test = testBase.extend<VSCodeFixture>({
     await globalBeforeEach(page, electronApp);
 
     await use(page);
+  },
+
+  openExtensionSidebar: [
+    async ({ page }, use) => {
+      await openConfluentSidebar(page);
+
+      await use();
+
+      // no explicit teardown needed
+    },
+    { auto: true }, // automatically run for all tests unless opted out
+  ],
+
+  directConnectionConfig: [
+    {
+      formConnectionType: FormConnectionType.ConfluentCloud,
+      kafkaConfig: {
+        bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
+        authType: SupportedAuthType.API,
+        credentials: {
+          api_key: process.env.E2E_KAFKA_API_KEY!,
+          api_secret: process.env.E2E_KAFKA_API_SECRET!,
+        },
+      },
+      schemaRegistryConfig: {
+        uri: process.env.E2E_SR_URL!,
+        authType: SupportedAuthType.API,
+        credentials: {
+          api_key: process.env.E2E_SR_API_KEY!,
+          api_secret: process.env.E2E_SR_API_SECRET!,
+        },
+      },
+    },
+    { option: true },
+  ],
+
+  localConnectionConfig: [
+    {
+      kafka: true,
+      schemaRegistry: true,
+    },
+    { option: true },
+  ],
+
+  // no default value, must be provided by test
+  connectionType: undefined as any,
+
+  setupConnection: async (
+    {
+      electronApp,
+      page,
+      openExtensionSidebar,
+      connectionType,
+      directConnectionConfig,
+      localConnectionConfig,
+    },
+    use,
+  ) => {
+    if (!connectionType) {
+      throw new Error(
+        "connectionType must be set, like `test.use({ connectionType: ConnectionType.Ccloud })`",
+      );
+    }
+
+    let connection: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
+
+    // setup
+    switch (connectionType) {
+      case ConnectionType.Ccloud:
+        connection = await setupCCloudConnection(
+          page,
+          electronApp,
+          process.env.E2E_USERNAME!,
+          process.env.E2E_PASSWORD!,
+        );
+        break;
+      case ConnectionType.Direct:
+        connection = await setupDirectConnection(page, directConnectionConfig);
+        break;
+      case ConnectionType.Local:
+        // always set up both Kafka+SR for local tests since none of them require only having Kafka up
+        // (and SR can't be up on its own)
+        connection = await setupLocalConnection(page, localConnectionConfig);
+        break;
+      default:
+        throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
+
+    await use(connection);
+
+    // teardown
+    switch (connectionType) {
+      case ConnectionType.Ccloud:
+        // no explicit teardown needed since shutting down the extension+sidecar will invalidate the
+        // CCloud auth session
+        break;
+      case ConnectionType.Direct:
+        // no teardown needed since each test will use its own storage, so any direct connections created
+        // will be cleaned up automatically (eventually)
+        break;
+      case ConnectionType.Local:
+        await cleanupLocalConnection(connection.page, {
+          schemaRegistry: localConnectionConfig.schemaRegistry,
+        });
+        break;
+      default:
+        throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
   },
 });
 
