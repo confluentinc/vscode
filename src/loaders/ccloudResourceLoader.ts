@@ -376,9 +376,9 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
     computePool?: CCloudFlinkComputePool,
+    timeout?: number,
   ): Promise<Array<RT>> {
     if (!computePool) {
-      // Default to the first compute pool if none is provided.
       computePool = database.flinkPools[0];
     } else if (!database.isSameEnvCloudRegion(computePool)) {
       // Ensure the provided compute pool is valid for this database.
@@ -396,6 +396,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       computePool,
       hidden: true, // Hidden statement, user didn't author it.
       properties: database.toFlinkSpecProperties(),
+      ...(timeout !== undefined ? { timeout } : {}),
     };
 
     const promiseKey = generateFlinkStatementKey(statementParams);
@@ -429,18 +430,19 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       `Executing Flink statement on ${computePool?.provider}-${computePool?.region} in environment ${computePool?.environmentId} : ${statementParams.statement}`,
     );
 
-    // Submit statement
     let statement = await submitFlinkStatement(statementParams);
 
     // Refresh the statement at 150ms intervals for at most 10s until it is in a terminal phase.
-    statement = await waitForStatementCompletion(statement, 10_000, 150);
+    const timeout = statementParams.timeout ?? 10_000;
+    statement = await waitForStatementCompletion(statement, timeout, 150);
 
-    // If it didn't complete successfully, bail out.
     if (statement.phase !== Phase.COMPLETED) {
       logger.error(
         `Statement ${statement.id} did not complete successfully, phase ${statement.phase}`,
       );
-      throw new Error(`Statement did not complete successfully, phase ${statement.phase}`);
+      throw new Error(
+        `Statement did not complete successfully, phase ${statement.phase}. Error detail: ${statement.status.detail}`,
+      );
     }
 
     // Consume all results.
@@ -462,7 +464,7 @@ export interface FunctionNameRow {
  * Load statements for a single provider/region and perhaps cluster-id
  * (Sub-unit of getFlinkStatements(), factored out for concurrency
  *  via executeInWorkerPool())
- * */
+ */
 
 async function loadStatementsForProviderRegion(
   handle: SidecarHandle,
