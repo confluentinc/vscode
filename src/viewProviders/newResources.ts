@@ -112,6 +112,10 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     // In-place merge of updated environments to the existing environments array, keeping
     // object
     mergeUpdates(this.environments, refreshedEnvironments);
+
+    this.logger.debug("Refreshed cache of environments", {
+      environments: this.environments.length,
+    });
   }
 
   /** Drive getting the environment(s) from the ResourceLoader. */
