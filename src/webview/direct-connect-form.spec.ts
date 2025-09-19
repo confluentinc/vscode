@@ -5,6 +5,7 @@ import { createFilter } from "@rollup/pluginutils";
 import { readFileSync } from "node:fs";
 import { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
+import { test } from "rollwright";
 import sanitize from "sanitize-html";
 import { SinonStub } from "sinon";
 import {
@@ -15,7 +16,6 @@ import {
   OAuthCredentials,
   ScramCredentials,
 } from "../clients/sidecar";
-import { test } from "./baseTest";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {
@@ -62,6 +62,14 @@ test.use({
     stylesheet({ include: ["**/*.css"], minify: false }),
     esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
   ],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  coverage: async ({ coverage }, use) => {
+    return use({
+      extensions: [],
+      include: ["src/webview/**/*.ts"],
+      exclude: [],
+    });
+  },
 });
 test("renders form html correctly", async ({ page }) => {
   const html = render(template, {

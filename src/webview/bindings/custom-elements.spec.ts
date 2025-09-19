@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import replace from "@rollup/plugin-replace";
 import esbuild from "rollup-plugin-esbuild";
-import { test } from "../baseTest";
+import { test } from "rollwright";
 
 test.use({
   plugins: [
@@ -11,6 +11,14 @@ test.use({
       preventAssignment: true,
     }),
   ],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  coverage: async ({ coverage }, use) => {
+    return use({
+      extensions: [],
+      include: ["src/webview/**/*.ts"],
+      exclude: [],
+    });
+  },
 });
 
 test("custom element with properties passed down", async ({ execute, page }) => {
