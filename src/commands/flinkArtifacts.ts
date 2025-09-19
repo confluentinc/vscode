@@ -198,7 +198,6 @@ export async function commandForUDFCreationFromArtifact(
     }
 
     const database = selectedResource as CCloudFlinkDbKafkaCluster;
-    const computePool = database?.flinkPools[0];
     let userInput = await promptForFunctionAndClassName(selectedArtifact);
     if (!userInput?.functionName || !userInput?.className) {
       return; // User cancelled the input
@@ -215,7 +214,7 @@ export async function commandForUDFCreationFromArtifact(
         const result = await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
           `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
           database!,
-          computePool!,
+          undefined,
           60000, // custom timeout of 60 seconds
         );
         progress.report({ message: "Processing results..." });
