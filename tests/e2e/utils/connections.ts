@@ -2,17 +2,15 @@ import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
 import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { ResourcesView } from "../objects/views/ResourcesView";
-import {
-  DirectConnectionForm,
-  DirectConnectionOptions,
-} from "../objects/webviews/DirectConnectionFormWebview";
+import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 
 import { chromium } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { readFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
-import { URI_SCHEME } from "../baseTest";
+import { DirectConnectionOptions, LocalConnectionOptions } from "../connectionTypes";
+import { URI_SCHEME } from "../constants";
 import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { CCloudConnectionItem } from "../objects/views/viewItems/CCloudConnectionItem";
@@ -207,7 +205,7 @@ export async function setupDirectConnection(
 /** Starts local resources (Kafka, Schema Registry) through the Resources view. */
 export async function setupLocalConnection(
   page: Page,
-  options: { kafka?: boolean; schemaRegistry?: boolean },
+  options: LocalConnectionOptions,
 ): Promise<LocalConnectionItem> {
   if (!options.kafka && !options.schemaRegistry) {
     throw new Error("`kafka` or `schemaRegistry` must be set to true");
@@ -269,7 +267,9 @@ export async function cleanupLocalConnection(page: Page, options: { schemaRegist
     const containerQuickpick = new Quickpick(page);
     await containerQuickpick.selectItemByText("Kafka");
     await containerQuickpick.selectItemByText("Schema Registry");
+    await containerQuickpick?.confirm();
   }
+
   // once the resources are stopped, the local connection shouldn't be expandable
   await expect(resourcesView.localItem).not.toHaveAttribute("aria-expanded");
 }
