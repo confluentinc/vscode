@@ -156,7 +156,9 @@ export function build(done) {
 
   /** @type {import("rollup").RollupOptions} */
   const webInput = {
-    input: globSync("src/webview/*.ts", { ignore: "src/webview/*.spec.ts" }),
+    input: globSync("src/webview/*.ts", {
+      ignore: ["src/webview/*.spec.ts", "src/webview/baseTest.ts"],
+    }),
     plugins: [
       stylesheet({
         include: ["**/*.css"],
