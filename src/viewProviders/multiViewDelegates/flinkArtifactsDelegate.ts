@@ -14,10 +14,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
 > {
   readonly mode = FlinkDatabaseViewProviderMode.Artifacts;
   readonly viewTitle = "Flink Artifacts (Preview)";
-
-  children: FlinkArtifact[] = [];
-
-  loadingMessage = "Loading Flink artifacts...";
+  readonly loadingMessage = "Loading Flink artifacts...";
 
   async fetchChildren(
     resource: CCloudFlinkDbKafkaCluster,
