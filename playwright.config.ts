@@ -27,6 +27,7 @@ export default defineConfig({
     viewport: { width: 1920, height: 1080 },
   },
   workers: 1,
-  testMatch: "src/**/*.spec.ts",
+  testDir: "src/webview/",
+  testMatch: "**/*.spec.ts",
   reporter: reporters,
 });
