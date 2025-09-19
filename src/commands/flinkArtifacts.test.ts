@@ -425,7 +425,6 @@ describe("flinkArtifacts", () => {
     await commandForUDFCreationFromArtifact(artifact);
 
     sinon.assert.calledOnce(getEnvironmentsStub);
-
     sinon.assert.calledOnce(promptStub);
     sinon.assert.notCalled(executeStub);
     sinon.assert.notCalled(withProgressStub);

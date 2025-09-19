@@ -107,39 +107,74 @@ describe("models/environment.ts LocalEnvironment", () => {
     assert.deepStrictEqual(asReconstitutedFromStorage, env);
   });
 
-  it("should return the correct .children for a LocalEnvironment", () => {
-    const env: LocalEnvironment = TEST_LOCAL_ENVIRONMENT;
+  it("should return the correct .children for a CCloudEnvironment", () => {
+    const env: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
 
     // no children by default
     assert.deepStrictEqual(env.children, []);
 
-    // add a child
-    const envWithKafka = new LocalEnvironment({
+    // add a Kafka cluster
+    const envWithKafka = new CCloudEnvironment({
       ...env,
-      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
     });
-    assert.deepStrictEqual(envWithKafka.children, [TEST_LOCAL_KAFKA_CLUSTER]);
+    assert.deepStrictEqual(envWithKafka.children, [TEST_CCLOUD_KAFKA_CLUSTER]);
 
     // add SR
-    const envWithKafkaSR = new LocalEnvironment({
+    const envWithKafkaSR = new CCloudEnvironment({
       ...envWithKafka,
-      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
     });
     assert.deepStrictEqual(envWithKafkaSR.children, [
-      TEST_LOCAL_KAFKA_CLUSTER,
-      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
     ]);
 
-    // try to add Flink, but it should be ignored
-    const envWithAll = new LocalEnvironment({
+    // add Flink
+    const envWithAll = new CCloudEnvironment({
       ...envWithKafkaSR,
       flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    } as any);
+    });
     assert.deepStrictEqual(envWithAll.children, [
-      TEST_LOCAL_KAFKA_CLUSTER,
-      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL,
     ]);
   });
+});
+
+it("should return the correct .children for a LocalEnvironment", () => {
+  const env: LocalEnvironment = TEST_LOCAL_ENVIRONMENT;
+
+  // no children by default
+  assert.deepStrictEqual(env.children, []);
+
+  // add a child
+  const envWithKafka = new LocalEnvironment({
+    ...env,
+    kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+  });
+  assert.deepStrictEqual(envWithKafka.children, [TEST_LOCAL_KAFKA_CLUSTER]);
+
+  // add SR
+  const envWithKafkaSR = new LocalEnvironment({
+    ...envWithKafka,
+    schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+  });
+  assert.deepStrictEqual(envWithKafkaSR.children, [
+    TEST_LOCAL_KAFKA_CLUSTER,
+    TEST_LOCAL_SCHEMA_REGISTRY,
+  ]);
+
+  // try to add Flink, but it should be ignored
+  const envWithAll = new LocalEnvironment({
+    ...envWithKafkaSR,
+    flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+  } as any);
+  assert.deepStrictEqual(envWithAll.children, [
+    TEST_LOCAL_KAFKA_CLUSTER,
+    TEST_LOCAL_SCHEMA_REGISTRY,
+  ]);
 });
 
 describe("models/environment.ts CCloudEnvironment", () => {
