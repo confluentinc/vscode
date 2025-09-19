@@ -5,10 +5,10 @@ import { createFilter } from "@rollup/pluginutils";
 import { readFileSync } from "node:fs";
 import { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
+import { test } from "rollwright";
 import sanitize from "sanitize-html";
 import { SinonStub } from "sinon";
 import { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
-import { test } from "./baseTest";
 import { ScaffoldV1TemplateSpecAlt } from "./scaffold-form";
 
 const template = readFileSync(new URL("scaffold-form.html", import.meta.url), "utf8");
@@ -55,6 +55,14 @@ test.use({
     stylesheet({ include: ["**/*.css"], minify: false }),
     esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
   ],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  coverage: async ({ coverage }, use) => {
+    return use({
+      extensions: [],
+      include: ["src/webview/**/*.ts"],
+      exclude: ["src/clients/**"],
+    });
+  },
 });
 
 test("empty form submission works", async ({ execute, page }) => {
