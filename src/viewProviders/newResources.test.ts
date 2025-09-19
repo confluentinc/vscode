@@ -700,6 +700,12 @@ describe("viewProviders/newResources.ts", () => {
   });
 
   describe("NewResourceViewProvider", () => {
+    const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+    });
+
     let provider: NewResourceViewProvider;
 
     beforeEach(() => {
@@ -962,8 +968,11 @@ describe("viewProviders/newResources.ts", () => {
           }),
         );
 
-        // shove into the provider's connections map.
-        provider["connections"].set(connectionRow.connectionId, connectionRow);
+        storeConnectionRow(connectionRow);
+      }
+
+      function storeConnectionRow(row: AnyConnectionRow) {
+        provider["connections"].set(row.connectionId, row);
       }
 
       beforeEach(() => {
@@ -995,6 +1004,38 @@ describe("viewProviders/newResources.ts", () => {
           );
         });
       }
+
+      it("Ignores non-direct connection rows", async () => {
+        // Add a local connection row with Kafka and Schema Registry
+        const localConnectionRow = new LocalConnectionRow();
+        localConnectionRow.environments.push(
+          new LocalEnvironment({
+            ...TEST_LOCAL_ENVIRONMENT,
+            kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+            schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+          }),
+        );
+        storeConnectionRow(localConnectionRow);
+
+        // Add a ccloud connection row with Kafka and Schema Registry
+        const ccloudConnectionRow = new CCloudConnectionRow();
+        ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR);
+        storeConnectionRow(ccloudConnectionRow);
+
+        await provider.updateEnvironmentContextValues();
+
+        // Both context values should be false, since there are no direct connection rows.
+        sinon.assert.calledWith(
+          setContextValueStub,
+          contextValues.ContextValues.directKafkaClusterAvailable,
+          false,
+        );
+        sinon.assert.calledWith(
+          setContextValueStub,
+          contextValues.ContextValues.directSchemaRegistryAvailable,
+          false,
+        );
+      });
     });
 
     describe("lazyInitializeConnections()", () => {
@@ -1109,12 +1150,6 @@ describe("viewProviders/newResources.ts", () => {
 
         const childrenOfRow = provider.getChildren(localConnectionRow);
         assert.deepStrictEqual(childrenOfRow, expectedLocalChildren);
-      });
-
-      const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
-        ...TEST_CCLOUD_ENVIRONMENT,
-        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
-        schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
       });
 
       const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR_AND_FLINK = new CCloudEnvironment({
