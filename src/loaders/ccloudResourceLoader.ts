@@ -313,7 +313,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * Get the Flink UDFs for the given Flinkable CCloud Kafka cluster.
    *
    * @param cluster The Flink database to get the UDFs for.
-   * @param computePool Optional Flink compute pool to use for executing the statement. If not provided, will use the first compute pool in the cluster's flinkPools array.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
    * @returns Array of {@link FlinkUdf} objects representing the UDFs in the cluster.
    */
   public async getFlinkUDFs(
@@ -327,9 +327,9 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     if (udfs === undefined || forceDeepRefresh) {
       // Run the statement to list UDFs.
 
-      // Will raise Error if the cluster isn't Flinkable, the optionally provided
-      // compute pool doesn't correspond with the cluster, or if the statement
-      // execution fails.
+      // Will raise Error if the cluster isn't Flinkable or if the statement
+      // execution fails. Will use the first compute pool in the cluster's
+      // flinkPools array to execute the statement.
       const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
         "SHOW USER FUNCTIONS",
         cluster,
