@@ -22,10 +22,10 @@ import { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnection
 import { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
 import { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
 import {
-  cleanupLocalConnection,
   setupCCloudConnection,
   setupDirectConnection,
   setupLocalConnection,
+  teardownLocalConnection,
 } from "./utils/connections";
 import { configureVSCodeSettings } from "./utils/settings";
 import { openConfluentSidebar } from "./utils/sidebarNavigation";
@@ -260,7 +260,7 @@ export const test = testBase.extend<VSCodeFixtures>({
       case ConnectionType.Local:
         // local resources are discovered automatically through the Docker engine API, so we need
         // to explicitly stop them to ensure the next tests can start them fresh
-        await cleanupLocalConnection(connection.page, {
+        await teardownLocalConnection(connection.page, {
           schemaRegistry: localConnectionConfig.schemaRegistry,
         });
         break;
