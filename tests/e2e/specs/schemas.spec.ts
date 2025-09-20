@@ -5,11 +5,9 @@ import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
-import { ResourcesView } from "../objects/views/ResourcesView";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
 import { Tag } from "../tags";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
@@ -26,29 +24,19 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  */
 
 test.describe("Schema Management", () => {
-  let resourcesView: ResourcesView;
-  // this is set after the connections are set up based on their beforeEach hooks
-  let schemasView: SchemasView;
-  let notificationArea: NotificationArea;
-
   let subjectName: string;
   // most tests only create one schema version, but the "should evolve schema to second version" test
   // should create a second version, which will change this to the subject name itself
   let deletionConfirmation = "v1";
 
-  test.beforeEach(async ({ page, electronApp }) => {
+  test.beforeEach(() => {
     subjectName = "";
-
-    await openConfluentSidebar(page);
-
-    resourcesView = new ResourcesView(page);
-    schemasView = new SchemasView(page);
-    notificationArea = new NotificationArea(page);
   });
 
   test.afterEach(async ({ page, electronApp }) => {
     // delete the subject if it was created during the test
     if (subjectName) {
+      const schemasView = new SchemasView(page);
       await schemasView.deleteSchemaSubject(page, electronApp, subjectName, deletionConfirmation);
     }
   });
@@ -70,7 +58,11 @@ test.describe("Schema Management", () => {
       // tell the `setupConnection` fixture which connection type to create
       test.use({ connectionType });
 
-      test.beforeEach(async () => {
+      test.beforeEach(async ({ page, connectionItem }) => {
+        // ensure connection tree item has resources available to work with
+        await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+        const schemasView = new SchemasView(page);
         await schemasView.loadSchemaSubjects(
           connectionType,
           SelectSchemaRegistry.FromResourcesView,
@@ -83,11 +75,11 @@ test.describe("Schema Management", () => {
 
           test("should create a new subject and upload the first schema version", async ({
             page,
-            // ensures connection is set up, but isn't explicitly used in this test
-            setupConnection,
           }) => {
+            const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
 
+            const notificationArea = new NotificationArea(page);
             const successNotifications: Locator = notificationArea.infoNotifications.filter({
               hasText: /Schema registered to new subject/,
             });
@@ -99,10 +91,10 @@ test.describe("Schema Management", () => {
 
           test("should create a new schema version with valid/compatible changes", async ({
             page,
-            // ensures connection is set up, but isn't explicitly used in this test
-            setupConnection,
           }) => {
+            const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+
             // try to evolve the newly-created schema
             const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
             const subjectItem = new SubjectItem(page, subjectLocator.first());
@@ -132,6 +124,7 @@ test.describe("Schema Management", () => {
             await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
             await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
+            const notificationArea = new NotificationArea(page);
             const successNotifications = notificationArea.infoNotifications.filter({
               hasText: /New version 2 registered to existing subject/,
             });
@@ -144,9 +137,8 @@ test.describe("Schema Management", () => {
 
           test("should reject invalid/incompatible schema evolution and not create a second version", async ({
             page,
-            // ensures connection is set up, but isn't explicitly used in this test
-            setupConnection,
           }) => {
+            const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
             // try to evolve the newly-created schema
             const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
@@ -177,6 +169,7 @@ test.describe("Schema Management", () => {
             await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
             await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
+            const notificationArea = new NotificationArea(page);
             const errorNotifications: Locator = notificationArea.errorNotifications.filter({
               hasText: "Conflict with prior schema version",
             });
