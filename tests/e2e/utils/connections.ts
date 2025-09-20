@@ -17,6 +17,7 @@ import { CCloudConnectionItem } from "../objects/views/viewItems/CCloudConnectio
 import { DirectConnectionItem } from "../objects/views/viewItems/DirectConnectionItem";
 import { LocalConnectionItem } from "../objects/views/viewItems/LocalConnectionItem";
 import { executeVSCodeCommand } from "./commands";
+import { openConfluentSidebar } from "./sidebarNavigation";
 
 export const CCLOUD_SIGNIN_URL_PATH = join(tmpdir(), "vscode-e2e-ccloud-signin-url.txt");
 export const NOT_CONNECTED_TEXT = "(No connection)";
@@ -253,7 +254,10 @@ export async function setupLocalConnection(
   return localItem;
 }
 
+/** Stops local resources (Schema Registry and optionally Kafka) through the Resources view. */
 export async function cleanupLocalConnection(page: Page, options: LocalConnectionOptions) {
+  await openConfluentSidebar(page);
+
   const resourcesView = new ResourcesView(page);
   const localItem = new LocalConnectionItem(page, resourcesView.localItem.first());
   await localItem.clickStopResources();
@@ -261,8 +265,8 @@ export async function cleanupLocalConnection(page: Page, options: LocalConnectio
   if (options.schemaRegistry) {
     // we only see the quickpick if both local Kafka and SR are running
     const containerQuickpick = new Quickpick(page);
-    await containerQuickpick.selectItemByText("Kafka");
     await containerQuickpick.selectItemByText("Schema Registry");
+    await containerQuickpick.selectItemByText("Kafka");
     await containerQuickpick?.confirm();
   }
 
