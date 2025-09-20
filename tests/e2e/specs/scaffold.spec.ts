@@ -1,10 +1,10 @@
-import { ElectronApplication, expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { test } from "../baseTest";
-import { ConnectionType, FormConnectionType, SupportedAuthType } from "../connectionTypes";
+import { ConnectionType } from "../connectionTypes";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SupportView } from "../objects/views/SupportView";
@@ -13,13 +13,8 @@ import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
-import {
-  setupCCloudConnection,
-  setupDirectConnection,
-  setupLocalConnection,
-} from "../utils/connections";
+import { verifyGeneratedProject } from "../utils/scaffold";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
-import { verifyGeneratedProject } from "./utils/scaffold";
 
 /**
  * E2E test suite for testing the Project Scaffolding functionality.
@@ -53,45 +48,10 @@ test.describe("Project Scaffolding", () => {
   ];
 
   // Connection types covered by the E2E tests
-  const connectionTypes: Array<
-    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
-  > = [
-    [
-      ConnectionType.Ccloud,
-      Tag.CCloud,
-      async (page, electronApp) => {
-        await setupCCloudConnection(
-          page,
-          electronApp,
-          process.env.E2E_USERNAME!,
-          process.env.E2E_PASSWORD!,
-        );
-      },
-    ],
-    [
-      ConnectionType.Direct,
-      Tag.Direct,
-      async (page) => {
-        await setupDirectConnection(page, {
-          formConnectionType: FormConnectionType.ConfluentCloud,
-          kafkaConfig: {
-            bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-            authType: SupportedAuthType.API,
-            credentials: {
-              api_key: process.env.E2E_KAFKA_API_KEY!,
-              api_secret: process.env.E2E_KAFKA_API_SECRET!,
-            },
-          },
-        });
-      },
-    ],
-    [
-      ConnectionType.Local,
-      Tag.Local,
-      async (page) => {
-        await setupLocalConnection(page, { kafka: true });
-      },
-    ],
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
 
   for (const [templateDisplayName, templateName] of templates) {
@@ -112,15 +72,15 @@ test.describe("Project Scaffolding", () => {
       await verifyGeneratedProject(page, templateName, "localhost:9092");
     });
 
-    for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
+    for (const [connectionType, connectionTag] of connectionTypes) {
       test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-        test.beforeEach(async ({ page, electronApp }) => {
-          // set up the connection based on type
-          await connectionSetup(page, electronApp);
-        });
+        // tell the `setupConnection` fixture which connection type to create
+        test.use({ connectionType });
 
         test(`should apply ${templateDisplayName} template from Kafka topic in Topics view`, async ({
           page,
+          // ensures connection is set up, but isn't explicitly used in this test
+          setupConnection,
         }) => {
           // Given we navigate to a topic in the Topics view
           const topicsView = new TopicsView(page);
@@ -148,6 +108,8 @@ test.describe("Project Scaffolding", () => {
 
         test(`should apply ${templateDisplayName} template from Kafka cluster in Resource view`, async ({
           page,
+          // ensures connection is set up, but isn't explicitly used in this test
+          setupConnection,
         }) => {
           // Given we navigate to a cluster in the Resources view
           const resourcesView = new ResourcesView(page);
