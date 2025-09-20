@@ -1,34 +1,23 @@
-import { FrameLocator } from "@playwright/test";
+import { expect, FrameLocator } from "@playwright/test";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { test } from "../baseTest";
+import { ConnectionType } from "../connectionTypes";
 import { Tag } from "../tags";
-import { setupCCloudConnection } from "../utils/connections";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
-import {
-  stopStatement,
-  submitFlinkStatement,
-  verifyResultsStats,
-  verifyStatementStatus,
-} from "./utils/flinkStatement";
+import { stopStatement, submitFlinkStatement } from "../utils/flinkStatement";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
+test.describe.only("Flink Statements", { tag: [Tag.CCloud] }, () => {
   let webview: FrameLocator;
 
-  test.beforeEach(async ({ page, electronApp }) => {
-    // activate the extension by opening the primary sidebar
-    await openConfluentSidebar(page);
+  // tell the `setupConnection` fixture to create a CCloud connection
+  test.use({ connectionType: ConnectionType.Ccloud });
 
-    // Login to Confluent Cloud
-    await setupCCloudConnection(
-      page,
-      electronApp,
-      process.env.E2E_USERNAME!,
-      process.env.E2E_PASSWORD!,
-    );
+  test.beforeEach(async ({ connectionItem }) => {
+    // ensure connection tree item has resources available to work with
+    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
   });
 
   test.afterEach(async () => {
@@ -68,11 +57,14 @@ test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
 
       webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
-      // Wait for statement to run and verify status
-      await verifyStatementStatus(webview, testCase.eventualExpectedStatus);
+      await expect(webview.getByTestId("statement-status")).toHaveText(status, {
+        // If the statement was just submitted, it may take a while to transition to the new status.
+        timeout: 30_000,
+      });
 
-      // Verify results stats
-      await verifyResultsStats(webview, testCase.expectedStats);
+      // Assert that the result stats are correct. This is the text that appears at the bottom of
+      // the Results Viewer tab, e.g. "Showing 1..100 of 200 results (total: 200)."
+      await expect(webview.getByTestId("results-stats")).toHaveText(testCase.expectedStats);
 
       // TODO: Verify results are correct for each test case
     });

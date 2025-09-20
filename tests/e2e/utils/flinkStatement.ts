@@ -1,10 +1,9 @@
 import { ElectronApplication, FrameLocator, Page, expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import path from "path";
-import { TextDocument } from "../../objects/editor/TextDocument";
-import { Quickpick } from "../../objects/quickInputs/Quickpick";
-import { ResourcesView } from "../../objects/views/ResourcesView";
-import { FlinkStatementTestIds } from "./testIds";
+import { TextDocument } from "../objects/editor/TextDocument";
+import { Quickpick } from "../objects/quickInputs/Quickpick";
+import { ResourcesView } from "../objects/views/ResourcesView";
 
 const TEST_ENV_NAME = "main-test-env";
 const TEST_COMPUTE_POOL_NAME = "main-test-pool";
@@ -34,7 +33,7 @@ export async function submitFlinkStatement(
     {
       method: "showOpenDialog",
       value: {
-        filePaths: [fixtureFileName]
+        filePaths: [fixtureFileName],
       },
     },
   ]);
@@ -63,7 +62,7 @@ export async function submitFlinkStatement(
   await (await page.getByLabel("Flink Statements").all())[0].hover();
 
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
-  await page.waitForSelector("text=Statement:");
+  await expect(page.getByRole("tab", { name: /^Statement : / })).toBeVisible();
 
   // We don't make assumptions about whether the statement will go into RUNNING state or not.
   // That's up to the caller to decide.
@@ -76,7 +75,7 @@ export async function submitFlinkStatement(
  */
 export async function stopStatement(webview: FrameLocator) {
   // Check if the stop button is disabled
-  const stopButton = webview.getByTestId(FlinkStatementTestIds.stopStatementButton);
+  const stopButton = webview.getByTestId("stop-statement-button");
   const disabled = await stopButton.getAttribute("disabled");
 
   if (disabled === "disabled") {
@@ -87,31 +86,13 @@ export async function stopStatement(webview: FrameLocator) {
   await stopButton.click();
 
   // Wait for the statement to be stopped
-  await expect(webview.getByTestId(FlinkStatementTestIds.statementStatus)).toHaveText("STOPPED");
+  await expect(webview.getByTestId("statement-status")).toHaveText("STOPPED");
 
   // Verify the statement detail info
-  await expect(webview.getByTestId(FlinkStatementTestIds.statementDetailInfo)).toHaveText(
+  await expect(webview.getByTestId("statement-detail-info")).toHaveText(
     "This statement was stopped manually.",
   );
 
   // Verify no error is shown
-  await expect(webview.getByTestId(FlinkStatementTestIds.statementDetailError)).toBeHidden();
-}
-
-export async function verifyStatementStatus(webview: FrameLocator, status: string) {
-  await expect(webview.getByTestId(FlinkStatementTestIds.statementStatus)).toHaveText(status, {
-    // If the statement was just submitted, it may take a while to transition to the new status.
-    timeout: 30_000,
-  });
-}
-
-/**
- * Assert that the result stats are correct. This is the text that appears at the bottom of the Results Viewer tab,
- * e.g. "Showing 1..100 of 200 results (total: 200).".
- *
- * @param webview - The webview page object.
- * @param stats - The expected result stats.
- */
-export async function verifyResultsStats(webview: FrameLocator, stats: string) {
-  await expect(webview.getByTestId(FlinkStatementTestIds.resultsStats)).toHaveText(stats);
+  await expect(webview.getByTestId("statement-detail-error")).toBeHidden();
 }
