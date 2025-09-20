@@ -207,10 +207,6 @@ export async function setupLocalConnection(
   page: Page,
   options: LocalConnectionOptions,
 ): Promise<LocalConnectionItem> {
-  if (!options.kafka && !options.schemaRegistry) {
-    throw new Error("`kafka` or `schemaRegistry` must be set to true");
-  }
-
   const resourcesView = new ResourcesView(page);
   const localItem = new LocalConnectionItem(page, resourcesView.localItem);
   await expect(localItem.locator).toBeVisible();
@@ -225,9 +221,7 @@ export async function setupLocalConnection(
   await localItem.clickStartResources();
   // multi-select quickpick to select which resources to start
   const containerQuickpick = new Quickpick(page);
-  if (options.kafka) {
-    await containerQuickpick.selectItemByText("Kafka");
-  }
+  // local Kafka is always started by default and has to be started if SR is selected
   if (options.schemaRegistry) {
     await containerQuickpick.selectItemByText("Schema Registry");
   }
@@ -258,10 +252,11 @@ export async function setupLocalConnection(
   return localItem;
 }
 
-export async function cleanupLocalConnection(page: Page, options: { schemaRegistry?: boolean }) {
+export async function cleanupLocalConnection(page: Page, options: LocalConnectionOptions) {
   const resourcesView = new ResourcesView(page);
   const localItem = new LocalConnectionItem(page, resourcesView.localItem.first());
   await localItem.clickStopResources();
+
   if (options.schemaRegistry) {
     // we only see the quickpick if both local Kafka and SR are running
     const containerQuickpick = new Quickpick(page);
