@@ -6,7 +6,11 @@ import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
-import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
+import {
+  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
+  SelectKafkaCluster,
+  TopicsView,
+} from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { Tag } from "../tags";
 import { openNewUntitledDocument } from "../utils/documents";
@@ -43,10 +47,10 @@ test.describe("Produce Message(s) to Topic", () => {
   });
 
   // test dimensions:
-  const connectionTypes: Array<[ConnectionType, Tag]> = [
-    [ConnectionType.Ccloud, Tag.CCloud],
-    [ConnectionType.Direct, Tag.Direct],
-    [ConnectionType.Local, Tag.Local],
+  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
+    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
+    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
+    [ConnectionType.Local, Tag.Local, 1],
   ];
   const schemaTypes: Array<[SchemaType | null, string | null]> = [
     [null, null],
@@ -55,23 +59,25 @@ test.describe("Produce Message(s) to Topic", () => {
     [SchemaType.Protobuf, "proto"],
   ];
 
-  for (const [connectionType, connectionTag] of connectionTypes) {
+  for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
       // tell the `setupConnection` fixture which connection type to create
       test.use({ connectionType });
 
       for (const [schemaType, fileExtension] of schemaTypes) {
         test.describe(schemaType ? `${schemaType} schema` : "(no schema)", () => {
-          test.beforeEach(async ({ page }) => {
+          test.beforeEach(async ({ page, connectionItem }) => {
+            // ensure connection tree item has resources available to work with
+            await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
             const topicsView = new TopicsView(page);
             // click a Kafka cluster from the Resources view to open and populate the Topics view
             await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
             // make sure we have a topic to produce messages to first
             const schemaSuffix = schemaType ? schemaType.toLowerCase() : "no-schema";
             topicName = `e2e-produce-message-${schemaSuffix}`;
-            await topicsView.createTopic(topicName);
+            await topicsView.createTopic(topicName, 1, replicationFactor);
             let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
-            await targetTopic.scrollIntoViewIfNeeded();
 
             // if we want to use a schema, create a new subject with an initial schema version to match
             // the topic we're using
@@ -121,11 +127,7 @@ test.describe("Produce Message(s) to Topic", () => {
             }
           });
 
-          test("should successfully produce a message", async ({
-            page,
-            // ensures connection is set up, but isn't explicitly used in this test
-            setupConnection,
-          }) => {
+          test("should successfully produce a message", async ({ page }) => {
             // open a new JSON editor and add "good" content
             const document: TextDocument = await openNewUntitledDocument(page, "json");
             const messageContent: string = loadFixtureFromFile("produceMessages/good.json");
@@ -157,8 +159,6 @@ test.describe("Produce Message(s) to Topic", () => {
 
           test("should show a JSON validation error when producing a bad message", async ({
             page,
-            // ensures connection is set up, but isn't explicitly used in this test
-            setupConnection,
           }) => {
             // open a new JSON editor and add content that's missing the required 'key' field
             const document: TextDocument = await openNewUntitledDocument(page, "json");
@@ -191,8 +191,6 @@ test.describe("Produce Message(s) to Topic", () => {
           if (schemaType) {
             test("should show a schema validation error when producing a bad message", async ({
               page,
-              // ensures connection is set up, but isn't explicitly used in this test
-              setupConnection,
             }) => {
               // open a new JSON editor and add content that doesn't follow the schema
               const document: TextDocument = await openNewUntitledDocument(page, "json");
