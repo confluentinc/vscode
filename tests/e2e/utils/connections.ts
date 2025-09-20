@@ -221,6 +221,7 @@ export async function setupLocalConnection(
   await localItem.clickStartResources();
   // multi-select quickpick to select which resources to start
   const containerQuickpick = new Quickpick(page);
+  await expect(containerQuickpick.locator).toBeVisible();
   // local Kafka is always started by default and has to be started if SR is selected
   if (options.schemaRegistry) {
     await containerQuickpick.selectItemByText("Schema Registry");
