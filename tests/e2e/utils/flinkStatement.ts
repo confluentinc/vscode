@@ -62,7 +62,7 @@ export async function submitFlinkStatement(
   await (await page.getByLabel("Flink Statements").all())[0].hover();
 
   // Assert that a new Results Viewer tab with "Statement : ..." opens up
-  await expect(page.getByRole("tab", { name: /^Statement : / })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Statement: / })).toBeVisible();
 
   // We don't make assumptions about whether the statement will go into RUNNING state or not.
   // That's up to the caller to decide.
