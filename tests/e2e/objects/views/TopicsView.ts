@@ -131,8 +131,10 @@ export class TopicsView extends View {
    */
   async createTopic(
     topicName: string,
-    numPartitions?: number,
-    replicationFactor?: number,
+    numPartitions: number = 1,
+    // using the CCloud default since we use CCloud for direct connections, and it won't hurt if a
+    // local topic is created with a replication factor of 3
+    replicationFactor: number = DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
   ): Promise<void> {
     await this.clickCreateTopic();
 
