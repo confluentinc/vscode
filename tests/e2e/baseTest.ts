@@ -79,7 +79,7 @@ interface VSCodeFixtures {
    * Set up a connection based on the {@linkcode connectionType} option and returns the associated
    * connection item ({@link CCloudConnectionItem}, {@link DirectConnectionItem}, or {@link LocalConnectionItem}).
    */
-  setupConnection: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
+  connectionItem: CCloudConnectionItem | DirectConnectionItem | LocalConnectionItem;
 }
 
 export const test = testBase.extend<VSCodeFixtures>({
@@ -207,26 +207,13 @@ export const test = testBase.extend<VSCodeFixtures>({
     { option: true },
   ],
 
-  localConnectionConfig: [
-    {
-      kafka: true,
-      schemaRegistry: true,
-    },
-    { option: true },
-  ],
+  localConnectionConfig: [{ schemaRegistry: true }, { option: true }],
 
   // no default value, must be provided by test
   connectionType: undefined as any,
 
-  setupConnection: async (
-    {
-      electronApp,
-      page,
-      openExtensionSidebar,
-      connectionType,
-      directConnectionConfig,
-      localConnectionConfig,
-    },
+  connectionItem: async (
+    { electronApp, page, connectionType, directConnectionConfig, localConnectionConfig },
     use,
   ) => {
     if (!connectionType) {
