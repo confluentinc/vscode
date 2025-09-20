@@ -9,7 +9,7 @@ import { stopStatement, submitFlinkStatement } from "../utils/flinkStatement";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-test.describe.only("Flink Statements", { tag: [Tag.CCloud] }, () => {
+test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
   let webview: FrameLocator;
 
   // tell the `setupConnection` fixture to create a CCloud connection
@@ -57,10 +57,13 @@ test.describe.only("Flink Statements", { tag: [Tag.CCloud] }, () => {
 
       webview = page.locator("iframe").contentFrame().locator("iframe").contentFrame();
 
-      await expect(webview.getByTestId("statement-status")).toHaveText(status, {
-        // If the statement was just submitted, it may take a while to transition to the new status.
-        timeout: 30_000,
-      });
+      await expect(webview.getByTestId("statement-status")).toHaveText(
+        testCase.eventualExpectedStatus,
+        {
+          // If the statement was just submitted, it may take a while to transition to the new status.
+          timeout: 30_000,
+        },
+      );
 
       // Assert that the result stats are correct. This is the text that appears at the bottom of
       // the Results Viewer tab, e.g. "Showing 1..100 of 200 results (total: 200)."
