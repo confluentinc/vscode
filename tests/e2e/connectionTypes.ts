@@ -44,6 +44,5 @@ export interface DirectConnectionOptions {
 
 /** Configuration options for setting up a local connection. */
 export interface LocalConnectionOptions {
-  kafka?: boolean;
   schemaRegistry?: boolean;
 }
