@@ -131,8 +131,8 @@ export class TopicsView extends View {
    */
   async createTopic(
     topicName: string,
-    numPartitions?: number,
-    replicationFactor?: number,
+    numPartitions: number,
+    replicationFactor: number,
   ): Promise<void> {
     await this.clickCreateTopic();
 
@@ -143,16 +143,12 @@ export class TopicsView extends View {
 
     const partitionsInput = new InputBox(this.page);
     await expect(partitionsInput.input).toBeVisible();
-    if (numPartitions !== undefined) {
-      await partitionsInput.input.fill(numPartitions.toString());
-    }
+    await partitionsInput.input.fill(numPartitions.toString());
     await partitionsInput.confirm();
 
     const replicationInput = new InputBox(this.page);
     await expect(replicationInput.input).toBeVisible();
-    if (replicationFactor !== undefined) {
-      await replicationInput.input.fill(replicationFactor.toString());
-    }
+    await replicationInput.input.fill(replicationFactor.toString());
     await replicationInput.confirm();
   }
 

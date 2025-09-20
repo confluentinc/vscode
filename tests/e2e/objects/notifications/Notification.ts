@@ -61,6 +61,9 @@ export class Notification {
   /** Click the dismiss button (X) in the notification's toolbar area. */
   async dismiss(): Promise<void> {
     const dismissButton = this.toolbar.locator(".codicon-notifications-clear");
+    // dismiss isn't visible by default on notifications without action buttons, so hover over it
+    // first to be safe
+    await this.mainRow.hover();
     await dismissButton.click();
   }
 
