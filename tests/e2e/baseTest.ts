@@ -266,10 +266,13 @@ export const test = testBase.extend<VSCodeFixtures>({
         // CCloud auth session
         break;
       case ConnectionType.Direct:
-        // no teardown needed since each test will use its own storage, so any direct connections created
-        // will be cleaned up automatically (eventually)
+        // no teardown needed since each test will use its own storage in TMPDIR, so any direct
+        // connections created will be cleaned up automatically, and subsequent tests will use their
+        // own blank-slate storage
         break;
       case ConnectionType.Local:
+        // local resources are discovered automatically through the Docker engine API, so we need
+        // to explicitly stop them to ensure the next tests can start them fresh
         await cleanupLocalConnection(connection.page, {
           schemaRegistry: localConnectionConfig.schemaRegistry,
         });

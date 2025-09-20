@@ -11,9 +11,7 @@ import { Tag } from "../tags";
  * {@see https://github.com/confluentinc/vscode/issues/1703}
  *
  * Test flow:
- * 1. Set up connection:
- *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
- *    b. DIRECT: Fill out the Add New Connection form and submit with Kafka connection details
+ * 1. Set up connection (CCloud, Direct, or Local)
  * 2. Select a Kafka cluster with topics
  *    a. Pick from the Resources view, or
  *    b. Pick from the Topics view nav action
