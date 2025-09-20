@@ -254,12 +254,13 @@ export async function setupLocalConnection(
   return localItem;
 }
 
-/** Stops local resources (Schema Registry and optionally Kafka) through the Resources view. */
-export async function cleanupLocalConnection(page: Page, options: LocalConnectionOptions) {
+/** Stops local resources (Kafka and optionally Schema Registry) through the Resources view. */
+export async function teardownLocalConnection(page: Page, options: LocalConnectionOptions) {
   await openConfluentSidebar(page);
 
   const resourcesView = new ResourcesView(page);
   const localItem = new LocalConnectionItem(page, resourcesView.localItem.first());
+  await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
   await localItem.clickStopResources();
 
   if (options.schemaRegistry) {
@@ -267,7 +268,7 @@ export async function cleanupLocalConnection(page: Page, options: LocalConnectio
     const containerQuickpick = new Quickpick(page);
     await containerQuickpick.selectItemByText("Schema Registry");
     await containerQuickpick.selectItemByText("Kafka");
-    await containerQuickpick?.confirm();
+    await containerQuickpick.confirm();
   }
 
   // once the resources are stopped, the local connection shouldn't be expandable
