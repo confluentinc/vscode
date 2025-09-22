@@ -46,6 +46,9 @@ export interface IFlinkStatementSubmitParameters {
    * (system catalog queries to support our view providers, ...).
    */
   hidden: boolean;
+
+  /** Optional timeout override in milliseconds */
+  timeout?: number;
 }
 
 export async function submitFlinkStatement(
@@ -296,7 +299,6 @@ export async function parseAllFlinkStatementResults<RT>(
       page_token: pageToken,
     });
 
-    // Writes into resultsMap
     const payload: SqlV1StatementResultResults = response.results;
     parseResults({
       columns: statement.status?.traits?.schema?.columns ?? [],
@@ -305,7 +307,9 @@ export async function parseAllFlinkStatementResults<RT>(
       map: resultsMap,
       rows: payload.data ?? [],
     });
-
+    logger.debug(
+      `parseAllFlinkStatementResults: statement=${statement.name}, rows_parsed=${payload.data ? payload.data.length : 0}, page_token=${pageToken ?? "none"}`,
+    );
     pageToken = extractPageToken(response?.metadata?.next);
   } while (pageToken !== undefined);
 
