@@ -49,7 +49,7 @@ type ConsumeMode = "latest" | "beginning" | "timestamp";
  * available for the UI. It also talks to the "backend": sends and receives
  * messages from the host environment that manages stream consumption.
  */
-export class MessageViewerViewModel extends ViewModel {
+class MessageViewerViewModel extends ViewModel {
   page = this.signal(storage.get()?.page ?? 0);
   pageSize = this.signal(100);
 
