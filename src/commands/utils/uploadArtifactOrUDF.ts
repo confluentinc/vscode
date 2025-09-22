@@ -9,6 +9,7 @@ import {
 import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
+import { FlinkArtifact } from "../../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import {
@@ -104,13 +105,10 @@ export async function promptForArtifactUploadParams(
       region: item.region,
     });
   }
-  // Use the item's environment if provided, otherwise prompt for it
   const environment =
     isCcloudItem && item.environmentId
       ? { id: item.environmentId }
       : await flinkCcloudEnvironmentQuickPick();
-
-  // Use the item's provider and region if exists, otherwise prompt for it
   let cloudRegion: IProviderRegion | undefined;
   if (isCcloudItem) {
     cloudRegion = { provider: item.provider, region: item.region };
@@ -159,7 +157,6 @@ export async function promptForArtifactUploadParams(
 
   const fileFormat: string = selectedFile.fsPath.split(".").pop() ?? "";
 
-  // Default artifact name to the selected file's base name (without extension), but allow override.
   const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
 
   const artifactName = await vscode.window.showInputBox({
@@ -324,4 +321,44 @@ export function buildCreateArtifactRequest(
       upload_id: uploadId,
     },
   };
+}
+
+/*
+ * This function prompts the user for a function name and class name for a new UDF.
+ * It returns an object containing the function name and class name, or undefined if the user cancels.
+ *
+ * @param selectedArtifact The selected Flink artifact, used to generate a default function name.
+ */
+export async function promptForFunctionAndClassName(
+  selectedArtifact: FlinkArtifact | undefined,
+): Promise<{ functionName: string; className: string } | undefined> {
+  const defaultFunctionName = `udf_${selectedArtifact?.id?.substring(0, 6) ?? ""}`;
+  const functionName = await vscode.window.showInputBox({
+    prompt: "Enter a name for the new UDF function",
+    placeHolder: defaultFunctionName,
+    validateInput: (input) => {
+      if (!input || !/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/.test(input)) {
+        return "Function name must start with a letter, number, or underscore and contain only letters, numbers, underscores, or dashes.";
+      }
+      return null;
+    },
+  });
+  if (functionName === undefined) {
+    return undefined;
+  }
+
+  const className = await vscode.window.showInputBox({
+    prompt: "Enter the class name for the new UDF",
+    placeHolder: `your.class.NameHere`,
+    validateInput: (input) => {
+      if (!input || !/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/.test(input)) {
+        return "Class name must start with a letter, number, or underscore and contain only letters, numbers, underscores, or dashes.";
+      }
+      return null;
+    },
+  });
+  if (className === undefined) {
+    return undefined;
+  }
+  return { functionName, className };
 }
