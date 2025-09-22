@@ -1,29 +1,20 @@
-import { ElectronApplication, expect, Locator, Page } from "@playwright/test";
+import { expect, Locator } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
-import { ResourcesView } from "../objects/views/ResourcesView";
-import { SchemasView, SchemaType } from "../objects/views/SchemasView";
+import { SchemasView, SchemaType, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SubjectItem } from "../objects/views/viewItems/SubjectItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the whole schema management flow in the extension.
  * {@see https://github.com/confluentinc/vscode/issues/1839}
  *
  * Test flow:
- * 1. Set up connection:
- *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
- *    b. DIRECT: Fill out the Add New Connection form and submit with Schema Registry connection details
+ * 1. Set up connection (CCloud, Direct, or Local)
  * 2. Select a Schema Registry
  * 3. Create a new subject with an initial schema version
  * 4. Try to evolve the schema to a new version
@@ -33,88 +24,28 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  */
 
 test.describe("Schema Management", () => {
-  let resourcesView: ResourcesView;
-  // this is set after the connections are set up based on their beforeEach hooks
-  let schemasView: SchemasView;
-  let notificationArea: NotificationArea;
-
   let subjectName: string;
   // most tests only create one schema version, but the "should evolve schema to second version" test
   // should create a second version, which will change this to the subject name itself
   let deletionConfirmation = "v1";
 
-  test.beforeEach(async ({ page, electronApp }) => {
+  test.beforeEach(() => {
     subjectName = "";
-
-    await openConfluentSidebar(page);
-
-    resourcesView = new ResourcesView(page);
-    notificationArea = new NotificationArea(page);
   });
 
   test.afterEach(async ({ page, electronApp }) => {
     // delete the subject if it was created during the test
     if (subjectName) {
+      const schemasView = new SchemasView(page);
       await schemasView.deleteSchemaSubject(page, electronApp, subjectName, deletionConfirmation);
     }
   });
 
   // test dimensions:
-  const connectionTypes: Array<
-    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
-  > = [
-    [
-      ConnectionType.Ccloud,
-      Tag.CCloud,
-      async (page, electronApp) => {
-        await setupCCloudConnection(
-          page,
-          electronApp,
-          process.env.E2E_USERNAME!,
-          process.env.E2E_PASSWORD!,
-        );
-
-        // expand the first (CCloud) environment to show Kafka clusters, Schema Registry, and maybe
-        // Flink compute pools
-        await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-        const firstEnvironment: Locator = resourcesView.ccloudEnvironments.first();
-        // environments are collapsed by default, so we need to expand it first
-        await firstEnvironment.click();
-        await expect(firstEnvironment).toHaveAttribute("aria-expanded", "true");
-
-        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-        await expect(resourcesView.ccloudSchemaRegistries).not.toHaveCount(0);
-        const firstSchemaRegistry: Locator = resourcesView.ccloudSchemaRegistries.first();
-        await firstSchemaRegistry.click();
-        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-        // view for these tests, so we're just picking from the Resources view here
-      },
-    ],
-    [
-      ConnectionType.Direct,
-      Tag.Direct,
-      async (page) => {
-        await setupDirectConnection(page, {
-          formConnectionType: FormConnectionType.ConfluentCloud,
-          schemaRegistryConfig: {
-            uri: process.env.E2E_SR_URL!,
-            authType: SupportedAuthType.API,
-            credentials: {
-              api_key: process.env.E2E_SR_API_KEY!,
-              api_secret: process.env.E2E_SR_API_SECRET!,
-            },
-          },
-        });
-        // then click on the first (CCloud) Schema Registry to focus it in the Schemas view
-        const directSchemaRegistries: Locator = resourcesView.directSchemaRegistries;
-        await expect(directSchemaRegistries).not.toHaveCount(0);
-        const firstSchemaRegistry: Locator = directSchemaRegistries.first();
-        await firstSchemaRegistry.click();
-        // NOTE: we don't care about testing SR selection from the Resources view vs the Schemas
-        // view for these tests, so we're just picking from the Resources view here
-      },
-    ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+  const connectionTypes: Array<[ConnectionType, Tag]> = [
+    [ConnectionType.Ccloud, Tag.CCloud],
+    [ConnectionType.Direct, Tag.Direct],
+    [ConnectionType.Local, Tag.Local],
   ];
   const schemaTypes: Array<[SchemaType, string]> = [
     [SchemaType.Avro, "avsc"],
@@ -122,13 +53,20 @@ test.describe("Schema Management", () => {
     [SchemaType.Protobuf, "proto"],
   ];
 
-  for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
+  for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} Connection`, { tag: [connectionTag] }, () => {
-      test.beforeEach(async ({ page, electronApp }) => {
-        // set up the connection based on type
-        await connectionSetup(page, electronApp);
-        schemasView = new SchemasView(page);
-        await expect(schemasView.header).toHaveAttribute("aria-expanded", "true");
+      // tell the `connectionItem` fixture which connection type to set up
+      test.use({ connectionType });
+
+      test.beforeEach(async ({ page, connectionItem }) => {
+        // ensure connection tree item has resources available to work with
+        await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+        const schemasView = new SchemasView(page);
+        await schemasView.loadSchemaSubjects(
+          connectionType,
+          SelectSchemaRegistry.FromResourcesView,
+        );
       });
 
       for (const [schemaType, fileExtension] of schemaTypes) {
@@ -138,8 +76,10 @@ test.describe("Schema Management", () => {
           test("should create a new subject and upload the first schema version", async ({
             page,
           }) => {
+            const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
 
+            const notificationArea = new NotificationArea(page);
             const successNotifications: Locator = notificationArea.infoNotifications.filter({
               hasText: /Schema registered to new subject/,
             });
@@ -152,7 +92,9 @@ test.describe("Schema Management", () => {
           test("should create a new schema version with valid/compatible changes", async ({
             page,
           }) => {
+            const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
+
             // try to evolve the newly-created schema
             const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
             const subjectItem = new SubjectItem(page, subjectLocator.first());
@@ -182,6 +124,7 @@ test.describe("Schema Management", () => {
             await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
             await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
+            const notificationArea = new NotificationArea(page);
             const successNotifications = notificationArea.infoNotifications.filter({
               hasText: /New version 2 registered to existing subject/,
             });
@@ -195,6 +138,7 @@ test.describe("Schema Management", () => {
           test("should reject invalid/incompatible schema evolution and not create a second version", async ({
             page,
           }) => {
+            const schemasView = new SchemasView(page);
             subjectName = await schemasView.createSchemaVersion(page, schemaType, schemaFile);
             // try to evolve the newly-created schema
             const subjectLocator: Locator = schemasView.subjects.filter({ hasText: subjectName });
@@ -225,6 +169,7 @@ test.describe("Schema Management", () => {
             await expect(uploadSchemaTypeQuickpick.locator).toBeVisible();
             await uploadSchemaTypeQuickpick.selectItemByText(schemaType);
 
+            const notificationArea = new NotificationArea(page);
             const errorNotifications: Locator = notificationArea.errorNotifications.filter({
               hasText: "Conflict with prior schema version",
             });

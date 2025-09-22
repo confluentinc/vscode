@@ -1,8 +1,8 @@
 import { expect, Page } from "@playwright/test";
-import { TextDocument } from "../../objects/editor/TextDocument";
-import { Notification } from "../../objects/notifications/Notification";
-import { NotificationArea } from "../../objects/notifications/NotificationArea";
-import { View } from "../../objects/views/View";
+import { TextDocument } from "../objects/editor/TextDocument";
+import { Notification } from "../objects/notifications/Notification";
+import { NotificationArea } from "../objects/notifications/NotificationArea";
+import { View } from "../objects/views/View";
 
 /**
  * Verifies that the project was generated successfully and that its .env file holds
