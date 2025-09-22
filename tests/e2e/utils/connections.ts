@@ -213,11 +213,11 @@ export async function setupLocalConnection(
   await expect(localItem.locator).toBeVisible();
 
   // TEMPORARY: until we can isolate test containers from real containers, we'll have to enforce
-  // no currently running containers
+  // no currently running containers and fail sooner rather than waiting for the default timeout
   await expect(
     localItem.locator,
     "Local resources must be stopped before running @local tests.",
-  ).not.toHaveAttribute("aria-expanded");
+  ).not.toHaveAttribute("aria-expanded", { timeout: 1000 });
 
   await localItem.clickStartResources();
   // multi-select quickpick to select which resources to start
