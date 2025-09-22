@@ -323,6 +323,12 @@ export function buildCreateArtifactRequest(
   };
 }
 
+/*
+ * This function prompts the user for a function name and class name for a new UDF.
+ * It returns an object containing the function name and class name, or undefined if the user cancels.
+ *
+ * @param selectedArtifact The selected Flink artifact, used to generate a default function name.
+ */
 export async function promptForFunctionAndClassName(
   selectedArtifact: FlinkArtifact | undefined,
 ): Promise<{ functionName: string; className: string } | undefined> {
@@ -331,8 +337,8 @@ export async function promptForFunctionAndClassName(
     prompt: "Enter a name for the new UDF function",
     placeHolder: defaultFunctionName,
     validateInput: (input) => {
-      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(input)) {
-        return "Function name must start with a letter or underscore and contain only letters, numbers, underscores, or dashes.";
+      if (!input || !/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/.test(input)) {
+        return "Function name must start with a letter, number, or underscore and contain only letters, numbers, underscores, or dashes.";
       }
       return null;
     },
@@ -345,8 +351,8 @@ export async function promptForFunctionAndClassName(
     prompt: "Enter the class name for the new UDF",
     placeHolder: `your.class.NameHere`,
     validateInput: (input) => {
-      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(input)) {
-        return "Class name must start with a letter or underscore and contain only letters, numbers, underscores, or dots.";
+      if (!input || !/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/.test(input)) {
+        return "Class name must start with a letter, number, or underscore and contain only letters, numbers, underscores, or dashes.";
       }
       return null;
     },
