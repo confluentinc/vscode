@@ -335,18 +335,6 @@ export function validateUdfInput(
     };
   }
 }
-///^[a-zA-Z_][a-zA-Z0-9_]*$/
-// export function validateUdfClassName(
-//   className: string,
-// ): vscode.InputBoxValidationMessage | undefined {
-//   if (!className || !/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(className)) {
-//     return {
-//       message:
-//         "Class name must start with a letter or underscore and contain only letters, numbers, underscores, or dots.",
-//       severity: vscode.InputBoxValidationSeverity.Error,
-//     };
-//   }
-// }
 
 /**
  * This function prompts the user for a function name and class name for a new UDF.
