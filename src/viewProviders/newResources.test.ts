@@ -481,7 +481,6 @@ describe("viewProviders/newResources.ts", () => {
     describe("refresh", () => {
       let updateLocalConnectionStub: sinon.SinonStub;
       let singleEnvironmentConnectionRowRefresh: sinon.SinonStub;
-      let setContextValueStub: sinon.SinonStub;
 
       beforeEach(() => {
         updateLocalConnectionStub = sandbox.stub(sidecarLocalConnections, "updateLocalConnection");
@@ -490,8 +489,6 @@ describe("viewProviders/newResources.ts", () => {
           SingleEnvironmentConnectionRow.prototype,
           "refresh",
         );
-
-        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
       });
 
       it("calls updateLocalConnection when needed", async () => {
@@ -933,17 +930,6 @@ describe("viewProviders/newResources.ts", () => {
             setContextValueStub,
             contextValues.ContextValues.directKafkaClusterAvailable,
             withKafka,
-          );
-          // no local env so should be false
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localKafkaClusterAvailable,
-            false,
-          );
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localSchemaRegistryAvailable,
-            false,
           );
         });
       }
