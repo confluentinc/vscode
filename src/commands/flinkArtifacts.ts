@@ -189,13 +189,6 @@ export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkA
       throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
     }
 
-    const flinkDatabases = environment.flinkDatabaseClusters;
-    if (flinkDatabases.length === 0) {
-      throw new Error(
-        `No Flink-capable databases found in environment ${selectedArtifact.environmentId}`,
-      );
-    }
-
     let userInput = await promptForFunctionAndClassName(selectedArtifact);
     if (!userInput) {
       return; // User cancelled the input
