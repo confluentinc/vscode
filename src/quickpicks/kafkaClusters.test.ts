@@ -42,15 +42,21 @@ describe("quickpicks/kafkaClusters", () => {
   });
 
   describe("kafkaClusterQuickPick", () => {
-    let loader: sinon.SinonStubbedInstance<LocalResourceLoader>;
+    let localLoader: sinon.SinonStubbedInstance<LocalResourceLoader>;
+    let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
     beforeEach(() => {
-      loader = getStubbedLocalResourceLoader(sandbox);
+      localLoader = getStubbedLocalResourceLoader(sandbox);
+      ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
+
+      // Set ccloud as signed out by default.
+      ccloudLoader.getOrganization.resolves(undefined);
+      ccloudLoader.getEnvironments.resolves([]);
     });
 
-    it("bails out early if the environment has no clusters", async () => {
-      loader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-      loader.getKafkaClustersForEnvironmentId.resolves([]);
+    it("bails out early if the environment has no clusters / ccloud logged out", async () => {
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves([]);
       const showInformationMessageStub = sandbox
         .stub(window, "showInformationMessage")
         .resolves(undefined);
@@ -65,9 +71,9 @@ describe("quickpicks/kafkaClusters", () => {
     });
 
     it("should return undefined if getKafkaClustersForEnvironmentId() is out of synch with getEnvironments()", async () => {
-      loader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]); // mismatched id vs TEST_CCLOUD_KAFKA_CLUSTER.environmentId
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]); // mismatched id vs TEST_CCLOUD_KAFKA_CLUSTER.environmentId
       // should have included clusters referencing TEST_LOCAL_ENVIRONMENT, so will make code hit error.
-      loader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves([TEST_CCLOUD_KAFKA_CLUSTER]);
 
       const result = await kafkaClusterQuickPick();
       assert.strictEqual(result, undefined);
@@ -79,8 +85,8 @@ describe("quickpicks/kafkaClusters", () => {
         LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
       ];
 
-      loader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-      loader.getKafkaClustersForEnvironmentId.resolves(clusters);
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
       // Call with no filter lambda.
       await kafkaClusterQuickPick();
@@ -106,8 +112,8 @@ describe("quickpicks/kafkaClusters", () => {
         LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
       ];
 
-      loader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-      loader.getKafkaClustersForEnvironmentId.resolves(clusters);
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
       // Call with a filter lambda that only allows the first cluster.
       const filter = (cluster: KafkaCluster) => cluster.id === TEST_LOCAL_KAFKA_CLUSTER.id;
@@ -129,8 +135,8 @@ describe("quickpicks/kafkaClusters", () => {
         LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
       ];
 
-      loader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-      loader.getKafkaClustersForEnvironmentId.resolves(clusters);
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
       const placeHolder = "Select a Juicy Kafka cluster";
       await kafkaClusterQuickPick({ placeHolder: placeHolder });
@@ -145,8 +151,8 @@ describe("quickpicks/kafkaClusters", () => {
         LocalKafkaCluster.create({ ...TEST_LOCAL_KAFKA_CLUSTER, id: "local-kafka-cluster-xyz" }),
       ];
 
-      loader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
-      loader.getKafkaClustersForEnvironmentId.resolves(clusters);
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
 
       // Simulate a focused cluster
       const focusedCluster = clusters[1];
