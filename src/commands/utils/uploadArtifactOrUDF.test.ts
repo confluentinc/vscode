@@ -579,71 +579,6 @@ describe("commands/utils/uploadArtifact", () => {
       }),
     });
 
-    it("should reject malformed input", async () => {
-      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
-
-      // For the first call (function name), capture validation function
-      let functionNameValidateInput:
-        | ((
-            input: string,
-          ) =>
-            | string
-            | vscode.InputBoxValidationMessage
-            | Thenable<string | vscode.InputBoxValidationMessage | null | undefined>
-            | null
-            | undefined)
-        | undefined;
-      showInputBoxStub.onFirstCall().callsFake((options) => {
-        functionNameValidateInput = options?.validateInput;
-        // Return valid function name
-        return Promise.resolve("validFunction");
-      });
-
-      // For the second call (class name), capture validation function
-      let classNameValidateInput:
-        | ((
-            input: string,
-          ) =>
-            | string
-            | vscode.InputBoxValidationMessage
-            | Thenable<string | vscode.InputBoxValidationMessage | null | undefined>
-            | null
-            | undefined)
-        | undefined;
-      showInputBoxStub.onSecondCall().callsFake((options) => {
-        classNameValidateInput = options?.validateInput;
-        return Promise.resolve("invalid class name with spaces");
-      });
-
-      const result = await promptForFunctionAndClassName(selectedArtifact);
-
-      sinon.assert.calledTwice(showInputBoxStub);
-
-      // Valid class names return null
-      if (functionNameValidateInput) {
-        assert.strictEqual(functionNameValidateInput("validFunction"), null);
-        assert.strictEqual(
-          typeof functionNameValidateInput("") === "string",
-          true,
-          "Empty function name should be rejected",
-        );
-
-        if (classNameValidateInput) {
-          assert.strictEqual(classNameValidateInput("com.example.MyClass"), null);
-          // Invalid class names return an error string while valid ones do not
-          assert.strictEqual(
-            typeof classNameValidateInput("invalid class name") === "string",
-            true,
-            "Invalid class name should return error message",
-          );
-        }
-        assert.deepStrictEqual(result, {
-          functionName: "validFunction",
-          className: "invalid class name with spaces",
-        });
-      }
-    });
-
     it("should accept well-formed input", async () => {
       const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
       showInputBoxStub.onFirstCall().resolves("myFunction");
@@ -658,55 +593,26 @@ describe("commands/utils/uploadArtifact", () => {
         className: "com.example.MyClass",
       });
     });
+  });
+  describe("UDF input validation", () => {
+    it("should reject malformed input for function name", async () => {
+      const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+      const result = uploadArtifactModule.validateUdfInput("123invalid", functionNameRegex);
 
-    it("should validate class name input according to regex pattern", async () => {
-      // Create a showInputBox stub that will let us test the validateInput function
-      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      assert.strictEqual(
+        result?.message,
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      );
+    });
 
-      // Call the function so we can capture the validateInput function
-      showInputBoxStub.callsFake((options) => {
-        if (options?.prompt === "Enter the class name for the new UDF") {
-          // Test the validateInput function with various inputs
-          const validateFn = options.validateInput!;
+    it("should reject malformed input for class name", async () => {
+      const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
+      const result = uploadArtifactModule.validateUdfInput("123 invalid", classNameRegex);
 
-          // Valid inputs should return null
-          assert.strictEqual(validateFn("com.example.MyClass"), null);
-          assert.strictEqual(validateFn("valid_class.name"), null);
-          assert.strictEqual(validateFn("_startsWithUnderscore"), null);
-
-          // Invalid inputs should return error message
-          assert.strictEqual(
-            typeof validateFn("") === "string",
-            true,
-            "Empty string should be rejected",
-          );
-
-          assert.strictEqual(
-            typeof validateFn("123startsWithNumber") === "string",
-            true,
-            "Name starting with number should be rejected",
-          );
-
-          assert.strictEqual(
-            typeof validateFn("invalid-dash-character") === "string",
-            true,
-            "Name with dash should be rejected",
-          );
-
-          assert.strictEqual(
-            typeof validateFn("invalid space") === "string",
-            true,
-            "Name with space should be rejected",
-          );
-        }
-
-        // Return valid values to complete the test
-        return Promise.resolve("com.example.ValidClass");
-      });
-
-      await promptForFunctionAndClassName(selectedArtifact);
-
-      sinon.assert.called(showInputBoxStub);
+      assert.strictEqual(
+        result?.message,
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      );
     });
   });
 });

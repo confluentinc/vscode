@@ -323,7 +323,32 @@ export function buildCreateArtifactRequest(
   };
 }
 
-/*
+export function validateUdfInput(
+  input: string,
+  regex: RegExp,
+): vscode.InputBoxValidationMessage | undefined {
+  if (!input || !regex.test(input)) {
+    return {
+      message:
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      severity: vscode.InputBoxValidationSeverity.Error,
+    };
+  }
+}
+///^[a-zA-Z_][a-zA-Z0-9_]*$/
+// export function validateUdfClassName(
+//   className: string,
+// ): vscode.InputBoxValidationMessage | undefined {
+//   if (!className || !/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(className)) {
+//     return {
+//       message:
+//         "Class name must start with a letter or underscore and contain only letters, numbers, underscores, or dots.",
+//       severity: vscode.InputBoxValidationSeverity.Error,
+//     };
+//   }
+// }
+
+/**
  * This function prompts the user for a function name and class name for a new UDF.
  * It returns an object containing the function name and class name, or undefined if the user cancels.
  *
@@ -332,17 +357,15 @@ export function buildCreateArtifactRequest(
 export async function promptForFunctionAndClassName(
   selectedArtifact: FlinkArtifact | undefined,
 ): Promise<{ functionName: string; className: string } | undefined> {
-  const defaultFunctionName = `udf_${selectedArtifact?.id?.substring(0, 6) ?? ""}`;
+  const defaultFunctionName = `udf_${selectedArtifact?.name?.substring(0, 6) ?? ""}`;
+  const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+  const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
   const functionName = await vscode.window.showInputBox({
     prompt: "Enter a name for the new UDF function",
     placeHolder: defaultFunctionName,
-    validateInput: (input) => {
-      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(input)) {
-        return "Function name must start with a letter or underscore and contain only letters, numbers, underscores, or dashes.";
-      }
-      return null;
-    },
+    validateInput: (value) => validateUdfInput(value, functionNameRegex),
   });
+
   if (functionName === undefined) {
     return undefined;
   }
@@ -350,12 +373,7 @@ export async function promptForFunctionAndClassName(
   const className = await vscode.window.showInputBox({
     prompt: "Enter the class name for the new UDF",
     placeHolder: `your.class.NameHere`,
-    validateInput: (input) => {
-      if (!input || !/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(input)) {
-        return "Class name must start with a letter or underscore and contain only letters, numbers, underscores, or dots.";
-      }
-      return null;
-    },
+    validateInput: (value) => validateUdfInput(value, classNameRegex),
   });
   if (className === undefined) {
     return undefined;
