@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
   let webview: FrameLocator;
 
-  // tell the `setupConnection` fixture to create a CCloud connection
+  // tell the `connectionItem` fixture to set up a CCloud connection
   test.use({ connectionType: ConnectionType.Ccloud });
 
   test.beforeEach(async ({ connectionItem }) => {
