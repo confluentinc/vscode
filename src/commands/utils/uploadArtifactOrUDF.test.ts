@@ -13,6 +13,7 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
 import {
+  ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
@@ -21,15 +22,17 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
+import { ConnectionType } from "../../clients/sidecar";
+import { FlinkArtifact } from "../../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import { CloudProvider, EnvironmentId } from "../../models/resource";
+import { CloudProvider, ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
 import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
 import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
-import * as uploadArtifactModule from "./uploadArtifact";
+import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
   getPresignedUploadUrl,
@@ -37,8 +40,9 @@ import {
   prepareUploadFileFromUri,
   PRESIGNED_URL_LOCATION,
   promptForArtifactUploadParams,
+  promptForFunctionAndClassName,
   uploadArtifactToCCloud,
-} from "./uploadArtifact";
+} from "./uploadArtifactOrUDF";
 import * as uploadToProvider from "./uploadToProvider";
 
 describe("commands/utils/uploadArtifact", () => {
@@ -553,6 +557,62 @@ describe("commands/utils/uploadArtifact", () => {
           region: mockAzureParams.region,
         });
       });
+    });
+  });
+  describe("promptForFunctionAndClassName", () => {
+    const selectedArtifact = new FlinkArtifact({
+      id: "artifact-id",
+      name: "test-artifact",
+      description: "description",
+      connectionId: "conn-id" as ConnectionId,
+      connectionType: "ccloud" as ConnectionType,
+      environmentId: "env-id" as EnvironmentId,
+      provider: "aws",
+      region: "us-west-2",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
+    });
+
+    it("should accept well-formed input", async () => {
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("myFunction");
+      showInputBoxStub.onSecondCall().resolves("com.example.MyClass");
+
+      const result = await promptForFunctionAndClassName(selectedArtifact);
+
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      assert.deepStrictEqual(result, {
+        functionName: "myFunction",
+        className: "com.example.MyClass",
+      });
+    });
+  });
+  describe("UDF input validation", () => {
+    it("should reject malformed input for function name", async () => {
+      const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+      const result = uploadArtifactModule.validateUdfInput("123invalid", functionNameRegex);
+
+      assert.strictEqual(
+        result?.message,
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      );
+    });
+
+    it("should reject malformed input for class name", async () => {
+      const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
+      const result = uploadArtifactModule.validateUdfInput("123 invalid", classNameRegex);
+
+      assert.strictEqual(
+        result?.message,
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      );
     });
   });
 });
