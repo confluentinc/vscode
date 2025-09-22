@@ -13,7 +13,12 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment, EnvironmentType, getEnvironmentClass } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { KafkaClusterType, getKafkaClusterClass } from "../models/kafkaCluster";
+import { FlinkUdf } from "../models/flinkUDF";
+import {
+  CCloudFlinkDbKafkaCluster,
+  KafkaClusterType,
+  getKafkaClusterClass,
+} from "../models/kafkaCluster";
 import {
   ConnectionId,
   EnvironmentId,
@@ -586,6 +591,66 @@ export class ResourceManager {
   /** Generate a per-Flink-DB key for artifact, UDF caching. */
   getEnvProviderRegionKey(envProviderRegion: IEnvProviderRegion): string {
     return `${envProviderRegion.environmentId}-${envProviderRegion.provider}-${envProviderRegion.region}`;
+  }
+
+  // Flink UDFs, cached per (CCloud) Kafka cluster ID
+
+  /**
+   * Cache this list of UDFs for a given CCloud Flink DB Kafka cluster/database.
+   * @param flinkDatabase The CCloud Flink DB Kafka cluster for which to set UDFs
+   * @param udfs The list of UDFs to cache (possibly empty, indicating we know there are no UDFs at this time).
+   */
+  async setFlinkUDFs(flinkDatabase: CCloudFlinkDbKafkaCluster, udfs: FlinkUdf[]): Promise<void> {
+    for (const udf of udfs) {
+      if (udf.databaseId !== flinkDatabase.id) {
+        throw new Error(
+          `Cluster ID mismatch in UDFs list: expected ${flinkDatabase.id}, found ${udf.databaseId}`,
+        );
+      }
+    }
+
+    await this.runWithMutex(WorkspaceStorageKeys.FLINK_UDFS, async () => {
+      const existingString: string | undefined = await this.workspaceState.get(
+        WorkspaceStorageKeys.FLINK_UDFS,
+      );
+      const udfsByCluster: Map<string, FlinkUdf[]> = existingString
+        ? stringToMap(existingString)
+        : new Map();
+
+      udfsByCluster.set(flinkDatabase.id, udfs);
+
+      await this.workspaceState.update(WorkspaceStorageKeys.FLINK_UDFS, mapToString(udfsByCluster));
+    });
+  }
+
+  /**
+   * Fetch cached UDFs for a given CCloud Flink DB Kafka cluster/database, if any.
+   * @param flinkDatabase The CCloud Flink DB Kafka cluster for which to get cached UDFs
+   * @returns FlinkUdf[] (possibly empty) if known, else undefined indicating a cache miss.
+   */
+  async getFlinkUDFs(flinkDatabase: CCloudFlinkDbKafkaCluster): Promise<FlinkUdf[] | undefined> {
+    let udfsByClusterString: string | undefined;
+
+    await this.runWithMutex(WorkspaceStorageKeys.FLINK_UDFS, async () => {
+      udfsByClusterString = await this.workspaceState.get(WorkspaceStorageKeys.FLINK_UDFS);
+    });
+
+    const udfsByCluster: Map<string, FlinkUdf[]> = udfsByClusterString
+      ? stringToMap(udfsByClusterString)
+      : new Map();
+
+    const vanillaJSONUdfs = udfsByCluster.get(flinkDatabase.id);
+
+    if (vanillaJSONUdfs === undefined) {
+      logger.debug(`getFlinkUDFs(): No Flink UDFs cached for database ${flinkDatabase.id}`);
+      return undefined;
+    }
+
+    logger.debug(
+      `getFlinkUDFs(): Found ${vanillaJSONUdfs.length} Flink UDFs for database ${flinkDatabase.id}`,
+    );
+
+    return vanillaJSONUdfs.map((raw) => new FlinkUdf(raw));
   }
 
   // AUTH PROVIDER

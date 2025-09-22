@@ -3,9 +3,8 @@ import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import {
-  DirectConnectionConfig,
   DirectConnectionForm,
-  FormConnectionType,
+  DirectConnectionOptions,
 } from "../objects/webviews/DirectConnectionFormWebview";
 
 import { chromium } from "@playwright/test";
@@ -15,6 +14,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { URI_SCHEME } from "../baseTest";
 import { InputBox } from "../objects/quickInputs/InputBox";
+import { DirectConnectionItem } from "../objects/views/viewItems/DirectConnectionItem";
 import { ViewItem } from "../objects/views/viewItems/ViewItem";
 import { executeVSCodeCommand } from "./commands";
 
@@ -130,18 +130,12 @@ export async function setupCCloudConnection(
   await expect(ccloudItem.locator).toHaveAttribute("aria-expanded", "true");
 }
 
-/**
- * Creates a direct connection and expands it in the Resources view and selects its Schema Registry item.
- */
+/** Creates a direct connection and expands it in the Resources view. */
 export async function setupDirectConnection(
   page: Page,
-  options: {
-    name?: string;
-    formConnectionType?: FormConnectionType;
-    kafkaConfig?: DirectConnectionConfig & { bootstrapServers: string };
-    schemaRegistryConfig?: DirectConnectionConfig & { uri: string };
-  },
-): Promise<void> {
+  options: DirectConnectionOptions,
+  expectError = false,
+): Promise<DirectConnectionItem> {
   const resourcesView = new ResourcesView(page);
 
   const connectionForm: DirectConnectionForm = await resourcesView.addNewConnectionManually();
@@ -169,8 +163,8 @@ export async function setupDirectConnection(
   }
 
   await connectionForm.testButton.click();
-  // there may be two of these if both Kafka and Schema Registry are configured
-  await expect(connectionForm.successMessage).not.toHaveCount(0);
+  const status = expectError ? connectionForm.errorMessage : connectionForm.successMessage;
+  await expect(status).not.toHaveCount(0);
   await connectionForm.saveButton.click();
 
   // make sure we see the notification indicating the connection was created
@@ -186,17 +180,25 @@ export async function setupDirectConnection(
 
   // wait for the Resources view to refresh and show the new direct connection
   await expect(resourcesView.directConnections).not.toHaveCount(0);
-  await expect(resourcesView.directConnections.first()).toHaveText(connectionName);
+  const connectionItem = new DirectConnectionItem(
+    page,
+    resourcesView.directConnections.filter({ hasText: connectionName }).first(),
+  );
+  await expect(connectionItem.label).toHaveText(connectionName);
 
-  // expand the first direct connection to show its Schema Registry
-  await expect(resourcesView.directConnections).not.toHaveCount(0);
-  const firstConnection: Locator = resourcesView.directConnections.first();
-  // direct connections are collapsed by default in the old Resources view, but expanded in the
-  // new Resources view
-  if ((await firstConnection.getAttribute("aria-expanded")) === "false") {
-    await firstConnection.click();
+  if (expectError) {
+    // invalid configurations won't be expandable at all
+    await expect(connectionItem.locator).not.toHaveAttribute("aria-expanded");
+  } else {
+    // direct connections are collapsed by default in the old Resources view, but expanded in the
+    // new Resources view
+    if ((await connectionItem.locator.getAttribute("aria-expanded")) === "false") {
+      await connectionItem.locator.click();
+    }
+    await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
   }
-  await expect(firstConnection).toHaveAttribute("aria-expanded", "true");
+
+  return connectionItem;
 }
 
 // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140

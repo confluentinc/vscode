@@ -1,7 +1,7 @@
-import { test } from "rollwright";
 import { expect } from "@playwright/test";
 import replace from "@rollup/plugin-replace";
 import esbuild from "rollup-plugin-esbuild";
+import { test } from "../baseTest";
 
 test.use({
   plugins: [

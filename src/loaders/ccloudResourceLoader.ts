@@ -313,38 +313,46 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * Get the Flink UDFs for the given Flinkable CCloud Kafka cluster.
    *
    * @param cluster The Flink database to get the UDFs for.
-   * @param computePool Optional Flink compute pool to use for executing the statement. If not provided, will use the first compute pool in the cluster's flinkPools array.
+   * @param forceDeepRefresh Whether to bypass the ResourceManager cache and fetch fresh data.
    * @returns Array of {@link FlinkUdf} objects representing the UDFs in the cluster.
    */
   public async getFlinkUDFs(
     cluster: CCloudFlinkDbKafkaCluster,
-    computePool?: CCloudFlinkComputePool,
+    forceDeepRefresh: boolean,
   ): Promise<FlinkUdf[]> {
-    // Run the statement to list UDFs.
+    // Look to see if we have cached UDFs for this Flink database already.
+    const rm = getResourceManager();
+    let udfs = await rm.getFlinkUDFs(cluster);
 
-    // Will raise Error if the cluster isn't Flinkable, the optionally provided
-    // compute pool doesn't correspond with the cluster, or if the statement
-    // execution fails.
-    const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
-      "SHOW USER FUNCTIONS",
-      cluster,
-      computePool,
-    );
+    if (udfs === undefined || forceDeepRefresh) {
+      // Run the statement to list UDFs.
 
-    const augmentedResults: FlinkUdf[] = rawResults.map((row) => {
-      return new FlinkUdf({
-        connectionId: cluster.connectionId,
-        connectionType: cluster.connectionType,
-        environmentId: cluster.environmentId,
-        id: row["Function Name"], // No unique ID available, so use name as ID.
-        name: row["Function Name"],
-        description: "", // No description available from SHOW FUNCTIONS.
-        provider: cluster.provider,
-        region: cluster.region,
+      // Will raise Error if the cluster isn't Flinkable or if the statement
+      // execution fails. Will use the first compute pool in the cluster's
+      // flinkPools array to execute the statement.
+      const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
+        "SHOW USER FUNCTIONS",
+        cluster,
+      );
+
+      udfs = rawResults.map((row) => {
+        return new FlinkUdf({
+          environmentId: cluster.environmentId,
+          provider: cluster.provider,
+          region: cluster.region,
+          databaseId: cluster.id,
+
+          id: row["Function Name"], // No unique ID available, so use name as ID.
+          name: row["Function Name"],
+          description: "", // No description available from SHOW FUNCTIONS.
+        });
       });
-    });
 
-    return augmentedResults;
+      // Cache them in the resource manager for future reference.
+      await rm.setFlinkUDFs(cluster, udfs);
+    }
+
+    return udfs;
   }
 
   /**
@@ -453,6 +461,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     return resultRows;
   }
 }
+
 /**
  * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
  */

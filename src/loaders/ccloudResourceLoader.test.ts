@@ -12,6 +12,7 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError } from "../../tests/unit/testUtils";
 import {
@@ -49,12 +50,14 @@ import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkUdf } from "../models/flinkUDF";
 import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
   CCloudResourceLoader,
+  FunctionNameRow,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
@@ -758,6 +761,104 @@ describe("CCloudResourceLoader", () => {
       assert.ok(Array.isArray(artifacts));
       assert.strictEqual(artifacts.length, 0);
       sinon.assert.calledOnce(stubbedFlinkArtifactsApi.listArtifactV1FlinkArtifacts);
+    });
+  });
+
+  describe("getFlinkUDFs", () => {
+    let executeFlinkStatementStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      executeFlinkStatementStub = sandbox.stub(loader, "executeFlinkStatement");
+      // By default, cache misses for UDFs.
+      stubbedResourceManager.getFlinkUDFs.resolves(undefined);
+    });
+
+    it("should handle no UDFs returned from the statement", async () => {
+      const emptyUDFs: FlinkUdf[] = [];
+      executeFlinkStatementStub.resolves(emptyUDFs);
+
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+      assert.ok(Array.isArray(udfs));
+      assert.strictEqual(udfs.length, 0);
+      sinon.assert.calledOnce(executeFlinkStatementStub);
+      // Should have tried to get from cache first.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      // Should have cached the empty result.
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.calledWithExactly(
+        stubbedResourceManager.setFlinkUDFs,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        emptyUDFs,
+      );
+    });
+
+    it("should handle some UDFs returned from the statement", async () => {
+      const someUDFNames: FunctionNameRow[] = [
+        { "Function Name": "my_udf_1" },
+        { "Function Name": "my_udf_2" },
+        { "Function Name": "my_udf_3" },
+      ];
+      executeFlinkStatementStub.resolves(someUDFNames);
+
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+      assert.ok(Array.isArray(udfs));
+      assert.strictEqual(udfs.length, someUDFNames.length);
+      for (let i = 0; i < someUDFNames.length; i++) {
+        assert.strictEqual(udfs[i].name, someUDFNames[i]["Function Name"]);
+        assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      }
+      sinon.assert.calledOnce(executeFlinkStatementStub);
+      // Should have tried to get from cache first.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      // Should have cached the result.
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.calledWithExactly(
+        stubbedResourceManager.setFlinkUDFs,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        udfs,
+      );
+    });
+
+    it("should handle resourcemanager cache hit, then skipping the statement execution", async () => {
+      const cachedUDFs: FlinkUdf[] = [createFlinkUDF("func1"), createFlinkUDF("func2")];
+      stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs);
+
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+      assert.deepStrictEqual(udfs, cachedUDFs);
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      sinon.assert.notCalled(executeFlinkStatementStub);
+      sinon.assert.notCalled(stubbedResourceManager.setFlinkUDFs);
+    });
+
+    it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
+      const cachedUDFs: FlinkUdf[] = [createFlinkUDF("func1"), createFlinkUDF("func2")];
+      stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs); // would be a cache hit, but...
+
+      const someUDFNames: FunctionNameRow[] = [
+        { "Function Name": "my_udf_1" },
+        { "Function Name": "my_udf_2" },
+        { "Function Name": "my_udf_3" },
+      ];
+      executeFlinkStatementStub.resolves(someUDFNames);
+
+      // call with forceDeepRefresh=true
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+      assert.ok(Array.isArray(udfs));
+      assert.strictEqual(udfs.length, someUDFNames.length);
+      for (let i = 0; i < someUDFNames.length; i++) {
+        assert.strictEqual(udfs[i].name, someUDFNames[i]["Function Name"]);
+        assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      }
+
+      // Will have consulted the cache, but then ignored it, and called the statement, then cached the results.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      sinon.assert.calledOnce(executeFlinkStatementStub);
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.calledWithExactly(
+        stubbedResourceManager.setFlinkUDFs,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        udfs,
+      );
     });
   });
 

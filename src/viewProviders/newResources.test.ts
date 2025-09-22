@@ -700,6 +700,12 @@ describe("viewProviders/newResources.ts", () => {
   });
 
   describe("NewResourceViewProvider", () => {
+    const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+    });
+
     let provider: NewResourceViewProvider;
 
     beforeEach(() => {
@@ -911,15 +917,22 @@ describe("viewProviders/newResources.ts", () => {
 
     describe("repaint()", () => {
       let onDidChangeTreeDataFireStub: sinon.SinonStub;
+      let updateEnvironmentContextValuesStub: sinon.SinonStub;
 
       beforeEach(() => {
         onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+        updateEnvironmentContextValuesStub = sandbox.stub(
+          provider,
+          "updateEnvironmentContextValues",
+        );
       });
 
       it("toplevel repaint", () => {
         provider["repaint"]();
         sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
         sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, undefined);
+
+        sinon.assert.calledOnce(updateEnvironmentContextValuesStub);
       });
 
       it("repaint a specific connection row", () => {
@@ -928,6 +941,100 @@ describe("viewProviders/newResources.ts", () => {
         provider["repaint"](connectionRow);
         sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
         sinon.assert.calledWithExactly(onDidChangeTreeDataFireStub, connectionRow);
+        sinon.assert.calledOnce(updateEnvironmentContextValuesStub);
+      });
+    });
+
+    describe("updateEnvironmentContextValues()", () => {
+      let setContextValueStub: sinon.SinonStub;
+
+      /** Construct and add a new direct connection row to the view provider.*/
+      function addConnectionRow(opts: { withKafka: boolean; withSchemaRegistry: boolean }): void {
+        const { withKafka, withSchemaRegistry } = opts;
+
+        const stubbedDirectResourceLoader = sandbox.createStubInstance(DirectResourceLoader);
+        stubbedDirectResourceLoader.connectionId =
+          `test-connection-id-${withKafka ? "with" : "without"}-${
+            withSchemaRegistry ? "with" : "without"
+          }-sr` as ConnectionId;
+
+        const connectionRow = new DirectConnectionRow(stubbedDirectResourceLoader);
+        connectionRow.environments.push(
+          new DirectEnvironment({
+            ...TEST_DIRECT_ENVIRONMENT,
+            connectionId: stubbedDirectResourceLoader.connectionId,
+            kafkaClusters: withKafka ? [TEST_DIRECT_KAFKA_CLUSTER] : [],
+            schemaRegistry: withSchemaRegistry ? TEST_DIRECT_SCHEMA_REGISTRY : undefined,
+          }),
+        );
+
+        storeConnectionRow(connectionRow);
+      }
+
+      function storeConnectionRow(row: AnyConnectionRow) {
+        provider["connections"].set(row.connectionId, row);
+      }
+
+      beforeEach(() => {
+        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+      });
+
+      // Test directKafkaClusterAvailable context value
+      for (const withKafka of [true, false]) {
+        it(`sets directKafkaClusterAvailable to ${withKafka} when any direct connection has${withKafka ? "" : " no"} Kafka cluster`, async () => {
+          addConnectionRow({ withKafka, withSchemaRegistry: false });
+          await provider.updateEnvironmentContextValues();
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.directKafkaClusterAvailable,
+            withKafka,
+          );
+        });
+      }
+
+      // Test directSchemaRegistryAvailable context value
+      for (const withSchemaRegistry of [true, false]) {
+        it(`sets directSchemaRegistryAvailable to ${withSchemaRegistry} when any direct connection has${withSchemaRegistry ? "" : " no"} schema registry`, async () => {
+          addConnectionRow({ withKafka: false, withSchemaRegistry });
+          await provider.updateEnvironmentContextValues();
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.directSchemaRegistryAvailable,
+            withSchemaRegistry,
+          );
+        });
+      }
+
+      it("Ignores non-direct connection rows", async () => {
+        // Add a local connection row with Kafka and Schema Registry
+        const localConnectionRow = new LocalConnectionRow();
+        localConnectionRow.environments.push(
+          new LocalEnvironment({
+            ...TEST_LOCAL_ENVIRONMENT,
+            kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+            schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+          }),
+        );
+        storeConnectionRow(localConnectionRow);
+
+        // Add a ccloud connection row with Kafka and Schema Registry
+        const ccloudConnectionRow = new CCloudConnectionRow();
+        ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR);
+        storeConnectionRow(ccloudConnectionRow);
+
+        await provider.updateEnvironmentContextValues();
+
+        // Both context values should be false, since there are no direct connection rows.
+        sinon.assert.calledWith(
+          setContextValueStub,
+          contextValues.ContextValues.directKafkaClusterAvailable,
+          false,
+        );
+        sinon.assert.calledWith(
+          setContextValueStub,
+          contextValues.ContextValues.directSchemaRegistryAvailable,
+          false,
+        );
       });
     });
 
@@ -1043,12 +1150,6 @@ describe("viewProviders/newResources.ts", () => {
 
         const childrenOfRow = provider.getChildren(localConnectionRow);
         assert.deepStrictEqual(childrenOfRow, expectedLocalChildren);
-      });
-
-      const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
-        ...TEST_CCLOUD_ENVIRONMENT,
-        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
-        schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
       });
 
       const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR_AND_FLINK = new CCloudEnvironment({

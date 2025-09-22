@@ -50,7 +50,6 @@ import {
   ConnectionId,
   connectionIdToType,
   IResourceBase,
-  isDirect,
   ISearchable,
   IUpdatableResource,
 } from "../models/resource";
@@ -173,10 +172,10 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     item.description = this.status;
     item.tooltip = this.tooltip;
 
-    if (isDirect(this)) {
-      // mainly to help E2E tests distinguish direct connections from other tree items
-      item.accessibilityInformation = { label: `Direct connection: "${this.name}"` };
-    }
+    // mainly to help E2E tests distinguish direct connections from other tree items
+    item.accessibilityInformation = {
+      label: `${this.connectionType}: connection "${this.name}"`,
+    };
 
     return item;
   }
@@ -579,9 +578,49 @@ export class NewResourceViewProvider
     });
   }
 
-  /** Repaint this node in the treeview. Pass nothing if wanting a toplevel repaint.*/
-  private repaint(object: NewResourceViewProviderData | undefined = undefined): void {
+  /**
+   * Repaint this node in the treeview. Pass nothing if wanting a toplevel repaint.
+   * Also reevaluates some global context values based on the data
+   * we have across all of our ConnectionRow instances after the repaint.
+   */
+  repaint(object: NewResourceViewProviderData | undefined = undefined): void {
     this._onDidChangeTreeData.fire(object);
+
+    // And since some view data has changed, reevaluate context values
+    // that depend on the whole set of environments we have.
+    void this.updateEnvironmentContextValues();
+  }
+
+  /**
+   * Update the context values for the current environments' resource availability. This is used
+   * to change the empty state of our primary resource views and toggle actions in the UI.
+   */
+  async updateEnvironmentContextValues() {
+    // Reevaluate direct-connection-related context values
+    // after some view data has changed.
+
+    // (If needing to expand to consider non-direct connections,
+    //  revise here.)
+
+    // Collect all direct environments from all direct connections.
+    const directEnvs: DirectEnvironment[] = [];
+    for (const connectionRow of this.connections.values()) {
+      if (connectionRow instanceof DirectConnectionRow) {
+        directEnvs.push(...connectionRow.environments);
+      }
+    }
+
+    // And update context values based on what we found.
+    await Promise.all([
+      setContextValue(
+        ContextValues.directKafkaClusterAvailable,
+        directEnvs.some((env) => env.kafkaClusters.length > 0),
+      ),
+      setContextValue(
+        ContextValues.directSchemaRegistryAvailable,
+        directEnvs.some((env) => !!env.schemaRegistry),
+      ),
+    ]);
   }
 
   /**
