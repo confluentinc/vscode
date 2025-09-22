@@ -61,7 +61,7 @@ test.describe("Produce Message(s) to Topic", () => {
 
   for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-      // tell the `setupConnection` fixture which connection type to create
+      // tell the `connectionItem` fixture which connection type to set up
       test.use({ connectionType });
 
       for (const [schemaType, fileExtension] of schemaTypes) {

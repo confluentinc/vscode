@@ -256,6 +256,8 @@ export async function setupLocalConnection(
 
 /** Stops local resources (Kafka and optionally Schema Registry) through the Resources view. */
 export async function teardownLocalConnection(page: Page, options: LocalConnectionOptions) {
+  // always make sure the sidebar is open and we're in the Resources view before we try to interact
+  // with the local connection item
   await openConfluentSidebar(page);
 
   const resourcesView = new ResourcesView(page);

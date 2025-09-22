@@ -63,7 +63,7 @@ interface VSCodeFixtures {
 
   /**
    * Connection type to set up for parameterized tests.
-   * Used by the setupConnection fixture to determine which connection to create.
+   * Used by the `connectionItem` fixture to determine which connection to set up.
    */
   connectionType: ConnectionType;
   /**

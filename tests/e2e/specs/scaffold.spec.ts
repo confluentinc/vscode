@@ -79,7 +79,7 @@ test.describe("Project Scaffolding", () => {
         // only set by the template-from-topic test
         let topicName: string;
 
-        // tell the `setupConnection` fixture which connection type to create
+        // tell the `connectionItem` fixture which connection type to set up
         test.use({ connectionType });
 
         test.beforeEach(async ({ connectionItem }) => {
@@ -93,6 +93,7 @@ test.describe("Project Scaffolding", () => {
           if (topicName) {
             // we don't need to use the `connectionItem` fixture since we didn't close down the
             // electron app between switching windows, so the connection should still be usable
+            // but we do need to reopen the sidebar since the file explorer view will be open
             await openConfluentSidebar(page);
             const topicsView = new TopicsView(page);
             await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);

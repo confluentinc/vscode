@@ -55,7 +55,7 @@ test.describe("Schema Management", () => {
 
   for (const [connectionType, connectionTag] of connectionTypes) {
     test.describe(`${connectionType} Connection`, { tag: [connectionTag] }, () => {
-      // tell the `setupConnection` fixture which connection type to create
+      // tell the `connectionItem` fixture which connection type to set up
       test.use({ connectionType });
 
       test.beforeEach(async ({ page, connectionItem }) => {
