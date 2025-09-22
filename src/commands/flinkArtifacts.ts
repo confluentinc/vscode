@@ -182,12 +182,6 @@ export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkA
     if (!database) {
       throw new Error("No Flink database.");
     }
-    const environments = await ccloudResourceLoader.getEnvironments();
-    const environment = environments.find((env) => env.id === selectedArtifact.environmentId);
-
-    if (!environment) {
-      throw new Error(`Environment ${selectedArtifact.environmentId} not found`);
-    }
 
     let userInput = await promptForFunctionAndClassName(selectedArtifact);
     if (!userInput) {

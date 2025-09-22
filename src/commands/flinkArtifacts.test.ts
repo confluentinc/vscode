@@ -79,14 +79,6 @@ describe("flinkArtifacts", () => {
     }),
   } as unknown as CCloudFlinkDbKafkaCluster;
 
-  const mockEnvironment: Partial<CCloudEnvironment> = {
-    id: artifact.environmentId,
-    name: "Test Environment",
-    flinkComputePools: [],
-    kafkaClusters: [mockCluster],
-    flinkDatabaseClusters: [mockCluster],
-  };
-
   beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
@@ -254,10 +246,6 @@ describe("flinkArtifacts", () => {
       .stub(FlinkDatabaseViewProvider, "getInstance")
       .returns(mockFlinkDatabaseViewProvider as any);
 
-    const getEnvironmentsStub = sandbox
-      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-      .resolves([mockEnvironment as CCloudEnvironment]);
-
     const executeStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
@@ -273,7 +261,6 @@ describe("flinkArtifacts", () => {
 
     await commandForUDFCreationFromArtifact(artifact);
 
-    sinon.assert.calledOnce(getEnvironmentsStub);
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
     sinon.assert.calledOnce(withProgressStub);
@@ -424,17 +411,12 @@ describe("flinkArtifacts", () => {
       .stub(FlinkDatabaseViewProvider, "getInstance")
       .returns(mockFlinkDatabaseViewProvider as any);
 
-    const getEnvironmentsStub = sandbox
-      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-      .resolves([mockEnvironment as CCloudEnvironment]);
-
     const executeStub = sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement");
 
     const withProgressStub = sandbox.stub(vscode.window, "withProgress");
 
     await commandForUDFCreationFromArtifact(artifact);
 
-    sinon.assert.calledOnce(getEnvironmentsStub);
     sinon.assert.calledOnce(promptStub);
     sinon.assert.notCalled(executeStub);
     sinon.assert.notCalled(withProgressStub);
