@@ -122,12 +122,13 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * Get the current organization ID either from cached value or
    * directly from the sidecar GraphQL API.
    *
-   * @returns The {@link CCloudOrganization} for the current CCloud connection, either from cached
-   * value or deep fetch.
+   * If we do not have a ccloud connection, this will return undefined. This undefined
+   * is the signal to callers that they should not be trying to access CCloud resources.
    *
-   * @throws Error if there is no current organization.
+   * @returns The {@link CCloudOrganization} for the current CCloud connection, either from cached
+   * value or deep fetch, or undefined if no organization is found (i.e., not connected).
    */
-  public async getOrganization(): Promise<CCloudOrganization> {
+  public async getOrganization(): Promise<CCloudOrganization | undefined> {
     if (this.organization) {
       return this.organization;
     }
@@ -138,7 +139,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       return this.organization;
     } else {
       logger.withCallpoint("getOrganization()").error("No current organization found.");
-      throw new Error("Could not determine the current CCloud organization!");
     }
   }
 
@@ -188,7 +188,11 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       // The environment may have many resources in the same
       // provider-region pair. We need to deduplicate them by provider-region.
 
-      const org: CCloudOrganization = await this.getOrganization();
+      const org = await this.getOrganization();
+      if (!org) {
+        // not connected to CCloud, therefore never any Flink queryables.
+        return [];
+      }
 
       const providerRegionSet: ObjectSet<IFlinkQueryable> = new ObjectSet(
         (queryable) => `${queryable.provider}-${queryable.region}`,
@@ -223,7 +227,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async toFlinkQueryable(
     resource: CCloudFlinkComputePool | CCloudKafkaCluster,
   ): Promise<IFlinkQueryable> {
-    const org: CCloudOrganization = await this.getOrganization();
+    const org = await this.getOrganization();
+    if (!org) {
+      throw new Error("Not connected to CCloud, cannot determine Flink queryable.");
+    }
 
     const singleton: IFlinkQueryable = {
       organizationId: org.id,
@@ -385,6 +392,11 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     database: CCloudFlinkDbKafkaCluster,
     computePool?: CCloudFlinkComputePool,
   ): Promise<Array<RT>> {
+    const organization = await this.getOrganization();
+    if (!organization) {
+      throw new Error("Not connected to CCloud, cannot execute Flink statement.");
+    }
+
     if (!computePool) {
       // Default to the first compute pool if none is provided.
       computePool = database.flinkPools[0];
@@ -395,12 +407,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       );
     }
 
-    const organizationId = (await this.getOrganization()).id;
-
     const statementParams: IFlinkStatementSubmitParameters = {
       statement: sqlStatement,
       statementName: await determineFlinkStatementName(),
-      organizationId,
+      organizationId: organization.id,
       computePool,
       hidden: true, // Hidden statement, user didn't author it.
       properties: database.toFlinkSpecProperties(),

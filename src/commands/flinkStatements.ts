@@ -166,6 +166,13 @@ export async function submitFlinkStatementCommand(
     // 5. Gotta grab the organization ID to submit as.
     const ccloudLoader = CCloudResourceLoader.getInstance();
     const organization = await ccloudLoader.getOrganization();
+    if (!organization) {
+      // This should never happen, as the user can't pick a compute pool
+      // if they're not connected to CCloud.
+      funcLogger.error("Could not determine current CCloud organization");
+      await showErrorNotificationWithButtons("Not connected to Confluent Cloud");
+      return;
+    }
 
     // 5. Prep to submit, submit.
     const submission: IFlinkStatementSubmitParameters = {
