@@ -231,7 +231,7 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
         });
       });
 
-      test.describe("Local Shadow", { tag: [Tag.Direct] }, () => {
+      test.describe("Local Shadow", { tag: [Tag.Direct, Tag.Local] }, () => {
         const name = "Local Shadow";
         const formConnectionType = FormConnectionType.ApacheKafka;
 
