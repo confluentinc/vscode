@@ -237,8 +237,9 @@
             ><span data-text="this.messageCount().total.toLocaleString()"></span> messages streamed
             since
             <span data-text="this.formatTimestamp()(this.timestampExtent()[0])"></span>
-            <span data-text="this.timestampDisplayMode() === 'local' ? 'Local' : 'UTC'"></span
-          ></label>
+            (<span data-text="this.timestampDisplayMode() === 'local' ? 'Local' : 'UTC'"></span
+            >)</label
+          >
         </template>
         <template data-if="!this.shouldShowMessagesStat()">
           <label class="histogram-label">&nbsp;</label>
