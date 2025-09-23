@@ -68,9 +68,9 @@ export abstract class ParentedBaseViewProvider<
     if (this.resource !== resource) {
       this.setSearch(null); // reset search when parent resource changes
 
-      // If we have a boolean context value to adjust, and if the value is changing, adjust it.
-      if (this.parentResourceChangedContextValue && !!resource !== !!this.resource) {
-        promises.push(setContextValue(this.parentResourceChangedContextValue, !!resource));
+      // If we have a boolean context value to adjust, and if the boolean value is changing, adjust it.
+      if (this.parentResourceChangedContextValue && Boolean(resource) !== Boolean(this.resource)) {
+        promises.push(setContextValue(this.parentResourceChangedContextValue, Boolean(resource)));
       }
 
       this.resource = resource;
