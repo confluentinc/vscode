@@ -492,7 +492,7 @@ describe("viewProviders/newResources.ts", () => {
       });
 
       for (const deepRefresh of [true, false]) {
-        it(`should calls updateLocalConnection() before SingleEnvironmentConnectionRow.refresh (deepRefresh=${deepRefresh})`, async () => {
+        it(`should call updateLocalConnection() before SingleEnvironmentConnectionRow.refresh (deepRefresh=${deepRefresh})`, async () => {
           await localConnectionRow.refresh(deepRefresh);
 
           sinon.assert.calledOnce(updateLocalConnectionStub);
