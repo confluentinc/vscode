@@ -646,7 +646,6 @@ export class NewResourceViewProvider
       children = element.children;
     } else if (element instanceof CCloudEnvironment) {
       children = element.children as ConnectionRowChildren[];
-      this.logger.debug("children", JSON.stringify(children, null, 2));
     } else if (
       element instanceof KafkaCluster ||
       element instanceof SchemaRegistry ||
