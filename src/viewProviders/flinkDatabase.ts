@@ -7,6 +7,7 @@ import {
   udfsChanged,
 } from "../emitters";
 import { logError } from "../errors";
+import { ResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
@@ -16,7 +17,6 @@ import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiV
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
-import { ResourceLoader } from "../loaders";
 
 /** The row models used as view children */
 export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
@@ -151,13 +151,12 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   async updateTreeViewDescription(): Promise<void> {
     const db = this.database;
     if (!db) {
+      this.treeView.description = "";
       return;
     }
-    const loader = ResourceLoader.getInstance(db.connectionId);
-    const envs = await loader.getEnvironments();
-    const parentEnv = envs.find((env) => env.id === db.environmentId);
-    if (parentEnv) {
-      this.treeView.description = `${parentEnv.name} | ${db.name}`;
+    const env = await ResourceLoader.getEnvironment(db.connectionId, db.environmentId);
+    if (env) {
+      this.treeView.description = `${env.name} | ${db.name}`;
     } else {
       this.treeView.description = db.name;
     }

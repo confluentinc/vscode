@@ -277,28 +277,18 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("does nothing when no database is set", async () => {
         viewProvider["resource"] = null;
         await viewProvider.updateTreeViewDescription();
-        assert.strictEqual(getDescription(), initialDescription);
+        assert.strictEqual(getDescription(), "");
       });
 
       it("sets to mix of database name and environment name when database is set", async () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
 
-        // Wire up ccloudLoader.getEnvironments to return two environments, one of which is the parent environment.
         const parentEnvironment = {
           ...TEST_CCLOUD_ENVIRONMENT,
           name: "Test Env Name",
         } as CCloudEnvironment;
 
-        const testEnvironments = [
-          {
-            ...TEST_CCLOUD_ENVIRONMENT,
-            id: "some other env" as EnvironmentId,
-            name: "Test Environment",
-          },
-          parentEnvironment,
-        ] as CCloudEnvironment[];
-
-        ccloudLoader.getEnvironments.resolves(testEnvironments);
+        ccloudLoader.getEnvironment.resolves(parentEnvironment);
 
         await viewProvider.updateTreeViewDescription();
 
@@ -311,8 +301,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
       it("sets to database name when no parent environment is found", async () => {
         viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
 
-        // Wire up ccloudLoader.getEnvironments to return an empty array, hitting warning case.
-        ccloudLoader.getEnvironments.resolves([]);
+        ccloudLoader.getEnvironment.resolves(undefined);
 
         await viewProvider.updateTreeViewDescription();
 
