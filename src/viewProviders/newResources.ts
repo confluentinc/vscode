@@ -421,15 +421,6 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
     }
 
     await super.refresh(deepRefresh);
-
-    // update UI context values based on whether or not we have local resources available.
-    await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, this.kafkaCluster !== undefined),
-      setContextValue(
-        ContextValues.localSchemaRegistryAvailable,
-        this.schemaRegistry !== undefined,
-      ),
-    ]);
   }
 
   get status(): string {
@@ -596,17 +587,14 @@ export class NewResourceViewProvider
    * to change the empty state of our primary resource views and toggle actions in the UI.
    */
   async updateEnvironmentContextValues() {
-    // Reevaluate direct-connection-related context values
-    // after some view data has changed.
-
-    // (If needing to expand to consider non-direct connections,
-    //  revise here.)
-
-    // Collect all direct environments from all direct connections.
+    // Collect all direct environments (if any), and the local environment.
     const directEnvs: DirectEnvironment[] = [];
+    let localEnv: LocalEnvironment | undefined;
     for (const connectionRow of this.connections.values()) {
       if (connectionRow instanceof DirectConnectionRow) {
         directEnvs.push(...connectionRow.environments);
+      } else if (connectionRow instanceof LocalConnectionRow) {
+        localEnv = connectionRow.environment;
       }
     }
 
@@ -620,6 +608,11 @@ export class NewResourceViewProvider
         ContextValues.directSchemaRegistryAvailable,
         directEnvs.some((env) => !!env.schemaRegistry),
       ),
+      setContextValue(
+        ContextValues.localKafkaClusterAvailable,
+        Array.isArray(localEnv?.kafkaClusters) && localEnv.kafkaClusters.length !== 0,
+      ),
+      setContextValue(ContextValues.localSchemaRegistryAvailable, !!localEnv?.schemaRegistry),
     ]);
   }
 
