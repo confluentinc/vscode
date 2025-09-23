@@ -22,7 +22,7 @@ import { filterItems, itemMatchesSearch } from "../utils/search";
 /** View providers offering our common refresh() pattern. */
 export interface RefreshableTreeViewProvider {
   kind: string;
-  refresh(forceDeepRefresh?: boolean): void;
+  refresh(forceDeepRefresh?: boolean): void | Promise<void>;
 }
 
 /** Requirement interfaces for BaseViewProvider data elements */
@@ -49,7 +49,7 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
    * Refresh the tree view with data from the current {@linkcode resource} and {@linkcode environment}.
    *
    * Subclasses should ensure that their implementations fire this._onDidChangeTreeData() after doing any
-   * data loading.
+   * data loading (or to call super.refresh() to do it for them).
    * @returns A promise that resolves when and data loading is complete, for when callers need to wait for it.
    */
   async refresh(): Promise<void> {
