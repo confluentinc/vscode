@@ -381,15 +381,6 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalSchemaRegistry,
   LocalResourceLoader
 > {
-  /**
-   * Is this the first time refresh() is called?
-   *
-   * If so, then be sure to try to discern if there's a local
-   * Schema Registry running at all, then to update the local connection
-   * (and sidecar).
-   */
-  private needUpdateLocalConnection = true;
-
   constructor() {
     super(LocalResourceLoader.getInstance(), "local-container");
   }
@@ -409,16 +400,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   override async refresh(deepRefresh: boolean): Promise<void> {
     this.logger.debug("Refreshing LocalConnectionRow", { deepRefresh });
 
-    if (this.needUpdateLocalConnection) {
-      this.logger.debug(
-        "Trying to discover local schema registry before loading the local environent.",
-      );
-      await updateLocalConnection();
-      this.needUpdateLocalConnection = false;
-
-      // Now clear to call the loader method to GraphQL query the local environment.
-      // in the super.refresh() method.
-    }
+    await updateLocalConnection();
 
     await super.refresh(deepRefresh);
   }
@@ -664,6 +646,7 @@ export class NewResourceViewProvider
       children = element.children;
     } else if (element instanceof CCloudEnvironment) {
       children = element.children as ConnectionRowChildren[];
+      this.logger.debug("children", JSON.stringify(children, null, 2));
     } else if (
       element instanceof KafkaCluster ||
       element instanceof SchemaRegistry ||

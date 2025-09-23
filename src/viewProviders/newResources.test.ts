@@ -491,17 +491,14 @@ describe("viewProviders/newResources.ts", () => {
         );
       });
 
-      it("calls updateLocalConnection when needed", async () => {
-        assert.equal(localConnectionRow["needUpdateLocalConnection"], true);
-        await localConnectionRow.refresh(false);
-        assert.ok(updateLocalConnectionStub.calledOnce);
-        assert.equal(localConnectionRow["needUpdateLocalConnection"], false);
-      });
+      for (const deepRefresh of [true, false]) {
+        it(`should calls updateLocalConnection() before SingleEnvironmentConnectionRow.refresh (deepRefresh=${deepRefresh})`, async () => {
+          await localConnectionRow.refresh(deepRefresh);
 
-      it("downcalls into SingleEnvironmentConnectionRow.refresh", async () => {
-        await localConnectionRow.refresh(false);
-        sinon.assert.calledOnce(singleEnvironmentConnectionRowRefresh);
-      });
+          sinon.assert.calledOnce(updateLocalConnectionStub);
+          sinon.assert.calledOnceWithExactly(singleEnvironmentConnectionRowRefresh, deepRefresh);
+        });
+      }
     });
   });
 
