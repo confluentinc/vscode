@@ -261,9 +261,16 @@ export async function artifactUploadQuickPickForm(
         cloud: item.provider,
         region: item.region,
       });
-      // TODO we'll have to look up env name if we want to display it
-      state.environment = { id: item.environmentId, name: `Environment ${item.environmentId}` };
+
       state.cloudRegion = { provider: item.provider, region: item.region };
+
+      let env = await getEnvById(item.environmentId);
+      if (env !== undefined) {
+        state.environment = {
+          id: env.id,
+          name: env.name,
+        };
+      }
     } else if (item instanceof vscode.Uri) {
       state.selectedFile = item;
       state.artifactName = path.basename(item.fsPath, path.extname(item.fsPath));
