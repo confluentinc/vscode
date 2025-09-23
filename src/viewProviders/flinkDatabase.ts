@@ -7,6 +7,7 @@ import {
   udfsChanged,
 } from "../emitters";
 import { logError } from "../errors";
+import { ResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { FlinkUdf } from "../models/flinkUDF";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
@@ -143,5 +144,21 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   get database(): CCloudFlinkDbKafkaCluster | null {
     return this.resource;
+  }
+
+  /** Update the tree view description to show the currently-focused Flink Database's parent env
+   * name and the Flink Database name. */
+  async updateTreeViewDescription(): Promise<void> {
+    const db = this.database;
+    if (!db) {
+      this.treeView.description = "";
+      return;
+    }
+    const env = await ResourceLoader.getEnvironment(db.connectionId, db.environmentId);
+    if (env) {
+      this.treeView.description = `${env.name} | ${db.name}`;
+    } else {
+      this.treeView.description = db.name;
+    }
   }
 }
