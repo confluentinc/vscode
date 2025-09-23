@@ -610,7 +610,7 @@ export class NewResourceViewProvider
       ),
       setContextValue(
         ContextValues.localKafkaClusterAvailable,
-        Array.isArray(localEnv?.kafkaClusters) && localEnv?.kafkaClusters.length !== 0,
+        Array.isArray(localEnv?.kafkaClusters) && localEnv.kafkaClusters.length !== 0,
       ),
       setContextValue(ContextValues.localSchemaRegistryAvailable, !!localEnv?.schemaRegistry),
     ]);
