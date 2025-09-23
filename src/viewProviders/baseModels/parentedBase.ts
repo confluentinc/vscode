@@ -44,7 +44,7 @@ export abstract class ParentedBaseViewProvider<
    */
   parentResourceChangedEmitter!: EventEmitter<P | null>;
 
-  /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
+  /** Optional boolean context value to adjust when the parent {@linkcode resource} is set/unset. */
   parentResourceChangedContextValue?: ContextValues;
 
   /**
@@ -58,22 +58,25 @@ export abstract class ParentedBaseViewProvider<
       resource,
     });
 
+    const promises: Promise<unknown>[] = [
+      // Always refresh the view when parent resource changes.
+      this.refresh(),
+      // Update the tree view description to show the parent environment name and resource ID.
+      this.updateTreeViewDescription(),
+    ];
+
     if (this.resource !== resource) {
       this.setSearch(null); // reset search when parent resource changes
+
+      // If we have a boolean context value to adjust, and if the value is changing, adjust it.
+      if (this.parentResourceChangedContextValue && !!resource !== !!this.resource) {
+        promises.push(setContextValue(this.parentResourceChangedContextValue, !!resource));
+      }
+
+      this.resource = resource;
     }
 
-    if (resource) {
-      if (this.parentResourceChangedContextValue) {
-        setContextValue(this.parentResourceChangedContextValue, true);
-      }
-      this.resource = resource;
-      await this.updateTreeViewDescription();
-      await this.refresh();
-    } else {
-      // edging to empty state
-      this.resource = null;
-      await this.refresh();
-    }
+    await Promise.all(promises);
   }
 
   /** Set up event listeners for this view provider. */
@@ -92,6 +95,10 @@ export abstract class ParentedBaseViewProvider<
 
   /** Event handler for when CCloud connection gets logged out: If the view was focused on a ccloud resource, reset the view. */
   ccloudConnectedHandler(connected: boolean): void {
+    this.logger.debug("ccloudConnected event fired", {
+      connected,
+      expression: !connected && this.resource && isCCloud(this.resource),
+    });
     if (!connected && this.resource && isCCloud(this.resource)) {
       // any transition of CCloud connection state should reset the tree view if we're focused on
       // a CCloud parent resource
