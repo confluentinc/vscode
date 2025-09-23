@@ -16,6 +16,7 @@ import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiV
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
+import { ResourceLoader } from "../loaders";
 
 /** The row models used as view children */
 export type ArtifactOrUdf = FlinkArtifact | FlinkUdf;
@@ -143,5 +144,22 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   get database(): CCloudFlinkDbKafkaCluster | null {
     return this.resource;
+  }
+
+  /** Update the tree view description to show the currently-focused Flink Database's parent env
+   * name and the Flink Database name. */
+  async updateTreeViewDescription(): Promise<void> {
+    const db = this.database;
+    if (!db) {
+      return;
+    }
+    const loader = ResourceLoader.getInstance(db.connectionId);
+    const envs = await loader.getEnvironments();
+    const parentEnv = envs.find((env) => env.id === db.environmentId);
+    if (parentEnv) {
+      this.treeView.description = `${parentEnv.name} | ${db.name}`;
+    } else {
+      this.treeView.description = db.name;
+    }
   }
 }
