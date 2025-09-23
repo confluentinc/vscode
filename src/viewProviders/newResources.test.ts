@@ -481,7 +481,6 @@ describe("viewProviders/newResources.ts", () => {
     describe("refresh", () => {
       let updateLocalConnectionStub: sinon.SinonStub;
       let singleEnvironmentConnectionRowRefresh: sinon.SinonStub;
-      let setContextValueStub: sinon.SinonStub;
 
       beforeEach(() => {
         updateLocalConnectionStub = sandbox.stub(sidecarLocalConnections, "updateLocalConnection");
@@ -490,8 +489,6 @@ describe("viewProviders/newResources.ts", () => {
           SingleEnvironmentConnectionRow.prototype,
           "refresh",
         );
-
-        setContextValueStub = sandbox.stub(contextValues, "setContextValue");
       });
 
       it("calls updateLocalConnection when needed", async () => {
@@ -504,64 +501,6 @@ describe("viewProviders/newResources.ts", () => {
       it("downcalls into SingleEnvironmentConnectionRow.refresh", async () => {
         await localConnectionRow.refresh(false);
         sinon.assert.calledOnce(singleEnvironmentConnectionRowRefresh);
-      });
-
-      describe("context value setting", () => {
-        it("sets both localSchemaRegistryAvailable and localKafkaClusterAvailable to false when environment is not set", async () => {
-          await localConnectionRow.refresh(false);
-
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localKafkaClusterAvailable,
-            false,
-          );
-
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localSchemaRegistryAvailable,
-            false,
-          );
-        });
-
-        it("sets localKafkaClusterAvailable context value when Kafka cluster is available", async () => {
-          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          await localConnectionRow.refresh(false);
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localKafkaClusterAvailable,
-            true,
-          );
-        });
-
-        it("sets localKafkaClusterAvailable context value to false when no Kafka cluster is available", async () => {
-          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
-          await localConnectionRow.refresh(false);
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localKafkaClusterAvailable,
-            false,
-          );
-        });
-
-        it("sets localSchemaRegistryAvailable context value when Schema Registry is available", async () => {
-          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
-          await localConnectionRow.refresh(false);
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localSchemaRegistryAvailable,
-            true,
-          );
-        });
-
-        it("sets localSchemaRegistryAvailable context value to false when no Schema Registry is available", async () => {
-          localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT);
-          await localConnectionRow.refresh(false);
-          sinon.assert.calledWith(
-            setContextValueStub,
-            contextValues.ContextValues.localSchemaRegistryAvailable,
-            false,
-          );
-        });
       });
     });
   });
@@ -949,7 +888,10 @@ describe("viewProviders/newResources.ts", () => {
       let setContextValueStub: sinon.SinonStub;
 
       /** Construct and add a new direct connection row to the view provider.*/
-      function addConnectionRow(opts: { withKafka: boolean; withSchemaRegistry: boolean }): void {
+      function addDirectConnectionRow(opts: {
+        withKafka: boolean;
+        withSchemaRegistry: boolean;
+      }): void {
         const { withKafka, withSchemaRegistry } = opts;
 
         const stubbedDirectResourceLoader = sandbox.createStubInstance(DirectResourceLoader);
@@ -982,12 +924,21 @@ describe("viewProviders/newResources.ts", () => {
       // Test directKafkaClusterAvailable context value
       for (const withKafka of [true, false]) {
         it(`sets directKafkaClusterAvailable to ${withKafka} when any direct connection has${withKafka ? "" : " no"} Kafka cluster`, async () => {
-          addConnectionRow({ withKafka, withSchemaRegistry: false });
+          addDirectConnectionRow({ withKafka, withSchemaRegistry: false });
           await provider.updateEnvironmentContextValues();
           sinon.assert.calledWith(
             setContextValueStub,
             contextValues.ContextValues.directKafkaClusterAvailable,
             withKafka,
+          );
+
+          // also prove that localKafkaClusterAvailable is set to false, since
+          // we haven't added any local connection yet (`localEnv` within `updateEnvironmentContextValues`
+          // will be `undefined`)
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
           );
         });
       }
@@ -995,7 +946,7 @@ describe("viewProviders/newResources.ts", () => {
       // Test directSchemaRegistryAvailable context value
       for (const withSchemaRegistry of [true, false]) {
         it(`sets directSchemaRegistryAvailable to ${withSchemaRegistry} when any direct connection has${withSchemaRegistry ? "" : " no"} schema registry`, async () => {
-          addConnectionRow({ withKafka: false, withSchemaRegistry });
+          addDirectConnectionRow({ withKafka: false, withSchemaRegistry });
           await provider.updateEnvironmentContextValues();
           sinon.assert.calledWith(
             setContextValueStub,
@@ -1005,37 +956,33 @@ describe("viewProviders/newResources.ts", () => {
         });
       }
 
-      it("Ignores non-direct connection rows", async () => {
-        // Add a local connection row with Kafka and Schema Registry
-        const localConnectionRow = new LocalConnectionRow();
-        localConnectionRow.environments.push(
-          new LocalEnvironment({
-            ...TEST_LOCAL_ENVIRONMENT,
-            kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
-            schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
-          }),
-        );
-        storeConnectionRow(localConnectionRow);
+      for (const withLocalKafka of [true, false]) {
+        for (const withLocalSchemaRegistry of [true, false]) {
+          it(`sets localKafkaClusterAvailable to ${withLocalKafka} and localSchemaRegistryAvailable to ${withLocalSchemaRegistry} when local connection has${withLocalKafka ? "" : " no"} Kafka cluster and${withLocalSchemaRegistry ? "" : " no"} schema registry`, async () => {
+            const localConnectionRow = new LocalConnectionRow();
+            localConnectionRow.environments.push(
+              new LocalEnvironment({
+                ...TEST_LOCAL_ENVIRONMENT,
+                kafkaClusters: withLocalKafka ? [TEST_LOCAL_KAFKA_CLUSTER] : [],
+                schemaRegistry: withLocalSchemaRegistry ? TEST_LOCAL_SCHEMA_REGISTRY : undefined,
+              }),
+            );
+            storeConnectionRow(localConnectionRow);
 
-        // Add a ccloud connection row with Kafka and Schema Registry
-        const ccloudConnectionRow = new CCloudConnectionRow();
-        ccloudConnectionRow.environments.push(TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR);
-        storeConnectionRow(ccloudConnectionRow);
-
-        await provider.updateEnvironmentContextValues();
-
-        // Both context values should be false, since there are no direct connection rows.
-        sinon.assert.calledWith(
-          setContextValueStub,
-          contextValues.ContextValues.directKafkaClusterAvailable,
-          false,
-        );
-        sinon.assert.calledWith(
-          setContextValueStub,
-          contextValues.ContextValues.directSchemaRegistryAvailable,
-          false,
-        );
-      });
+            await provider.updateEnvironmentContextValues();
+            sinon.assert.calledWith(
+              setContextValueStub,
+              contextValues.ContextValues.localKafkaClusterAvailable,
+              withLocalKafka,
+            );
+            sinon.assert.calledWith(
+              setContextValueStub,
+              contextValues.ContextValues.localSchemaRegistryAvailable,
+              withLocalSchemaRegistry,
+            );
+          });
+        }
+      }
     });
 
     describe("lazyInitializeConnections()", () => {
