@@ -231,7 +231,11 @@ export class ResourcesView extends View {
           : this.directConnections.first();
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        await expect(this.localItem).not.toHaveCount(0);
+        environment = this.localItem;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
@@ -293,7 +297,10 @@ export class ResourcesView extends View {
         kafkaClusters = this.directKafkaClusters;
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        kafkaClusters = this.localKafkaClusters;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
@@ -337,7 +344,10 @@ export class ResourcesView extends View {
         schemaRegistries = this.directSchemaRegistries;
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        schemaRegistries = this.localSchemaRegistries;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
