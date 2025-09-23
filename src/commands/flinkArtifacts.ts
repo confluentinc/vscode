@@ -3,6 +3,7 @@ import { SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
+import { ResponseError } from "../clients/sidecar";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
@@ -211,11 +212,11 @@ export async function createUdfFromArtifactCommand(selectedArtifact: FlinkArtifa
       let errorMessage = "Failed to create UDF function: ";
 
       if (isResponseError(err)) {
-        const resp = await extractResponseBody(err);
+        const resp: ResponseError = await extractResponseBody(err);
         try {
-          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+          errorMessage = `${errorMessage} ${resp.response.body}`;
         } catch {
-          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+          errorMessage = `${errorMessage} ${resp}`;
         }
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage} ${err.message}`;

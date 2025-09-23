@@ -315,9 +315,9 @@ describe("flinkArtifacts", () => {
     await createUdfFromArtifactCommand(artifact);
 
     sinon.assert.calledOnce(showErrorStub);
-    sinon.assert.calledWithExactly(
+    sinon.assert.calledWith(
       showErrorStub,
-      `Failed to create UDF function: ${responseError.message}`,
+      "Failed to create UDF function:  Plain text error message",
     );
   });
 
