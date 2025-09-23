@@ -95,10 +95,6 @@ export abstract class ParentedBaseViewProvider<
 
   /** Event handler for when CCloud connection gets logged out: If the view was focused on a ccloud resource, reset the view. */
   ccloudConnectedHandler(connected: boolean): void {
-    this.logger.debug("ccloudConnected event fired", {
-      connected,
-      expression: !connected && this.resource && isCCloud(this.resource),
-    });
     if (!connected && this.resource && isCCloud(this.resource)) {
       // any transition of CCloud connection state should reset the tree view if we're focused on
       // a CCloud parent resource
