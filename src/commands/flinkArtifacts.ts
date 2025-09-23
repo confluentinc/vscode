@@ -18,7 +18,7 @@ import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegat
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
-  promptForArtifactUploadParams,
+  artifactUploadQuickPickForm,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifact";
 
@@ -41,7 +41,7 @@ export async function uploadArtifactCommand(
 ): Promise<void> {
   try {
     // 1. Gather the request parameters from user or item
-    const params = await promptForArtifactUploadParams(item);
+    const params = await artifactUploadQuickPickForm(item);
     if (!params) return; // User cancelled the prompt
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
