@@ -258,10 +258,11 @@ export async function artifactUploadQuickPickForm(
   item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
 ): Promise<ArtifactUploadParams | undefined> {
   const state: FormState = {};
+  const loader = CCloudResourceLoader.getInstance();
   // If there is a selected Flink database, pre-select the environment and cloud/region.
   const selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
   if (selectedFlinkDatabase) {
-    let env = await getEnvById(selectedFlinkDatabase.environmentId);
+    let env = await loader.getEnvironment(selectedFlinkDatabase.environmentId);
     if (env !== undefined) {
       state.environment = {
         id: env.id,
@@ -285,7 +286,7 @@ export async function artifactUploadQuickPickForm(
 
       state.cloudRegion = { provider: item.provider, region: item.region };
 
-      let env = await getEnvById(item.environmentId);
+      let env = await loader.getEnvironment(item.environmentId);
       if (env !== undefined) {
         state.environment = {
           id: env.id,
