@@ -209,24 +209,33 @@ export async function setupLocalConnection(
   options: LocalConnectionOptions,
 ): Promise<LocalConnectionItem> {
   const resourcesView = new ResourcesView(page);
-  const localItem = new LocalConnectionItem(page, resourcesView.localItem);
-  await expect(localItem.locator).toBeVisible();
+  await expect(resourcesView.localItem).toBeVisible();
 
   // TEMPORARY: until we can isolate test containers from real containers, we'll have to enforce
   // no currently running containers and fail sooner rather than waiting for the default timeout
   await expect(
-    localItem.locator,
+    resourcesView.localItem,
     "Local resources must be stopped before running @local tests.",
   ).not.toHaveAttribute("aria-expanded", { timeout: 1000 });
 
+  let localItem: LocalConnectionItem = await setupLocalKafka(page);
+  if (options.schemaRegistry) {
+    localItem = await setupLocalSchemaRegistry(page);
+  }
+  return localItem;
+}
+
+export async function setupLocalKafka(page: Page) {
+  const resourcesView = new ResourcesView(page);
+  await expect(resourcesView.localItem).toBeVisible();
+
+  const localItem = new LocalConnectionItem(page, resourcesView.localItem);
   await localItem.clickStartResources();
+
   // multi-select quickpick to select which resources to start
   const containerQuickpick = new Quickpick(page);
   await expect(containerQuickpick.locator).toBeVisible();
-  // local Kafka is always started by default and has to be started if SR is selected
-  if (options.schemaRegistry) {
-    await containerQuickpick.selectItemByText("Schema Registry");
-  }
+  // local Kafka should be checked by default - if not, we'll fail the expect below
   await containerQuickpick.confirm();
 
   // if we're creating containers instead of just starting them, we'll need to provide a number of
@@ -245,19 +254,36 @@ export async function setupLocalConnection(
   }
 
   await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
+  await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
+  return localItem;
+}
+
+export async function setupLocalSchemaRegistry(page: Page) {
+  const resourcesView = new ResourcesView(page);
+  await expect(resourcesView.localItem).toBeVisible();
+
+  const localItem = new LocalConnectionItem(page, resourcesView.localItem);
+  await localItem.clickStartResources();
+
+  // multi-select quickpick to select which resources to start
+  const containerQuickpick = new Quickpick(page);
+  await expect(containerQuickpick.locator).toBeVisible();
+  await containerQuickpick.selectItemByText("Schema Registry");
+  await containerQuickpick.confirm();
+
+  await expect(localItem.locator).toHaveAttribute("aria-expanded", "true");
   // local SR requires local Kafka, so we should always see local Kafka appear
   await expect(resourcesView.localKafkaClusters).not.toHaveCount(0);
-  if (options.schemaRegistry) {
-    // if we pull the SR image, this could take a while
-    await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 60_000 });
-  }
+  await expect(resourcesView.localSchemaRegistries).not.toHaveCount(0, { timeout: 60_000 });
   return localItem;
 }
 
 /** Stops local resources (Kafka and optionally Schema Registry) through the Resources view. */
 export async function teardownLocalConnection(page: Page, options: LocalConnectionOptions) {
-  // always make sure the sidebar is open and we're in the Resources view before we try to interact
-  // with the local connection item
+  // Always make sure the sidebar is open and we're in the Resources view before we try to interact
+  // with the local connection item. This isn't necessary for the `setupLocalConnection()` function
+  // since it's always called at the start of a test after the `openExtensionSidebar` fixture, but
+  // it's needed here since tests may switch windows/views.
   await openConfluentSidebar(page);
 
   const resourcesView = new ResourcesView(page);
