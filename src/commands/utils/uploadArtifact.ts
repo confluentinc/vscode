@@ -8,7 +8,9 @@ import {
 } from "../../clients/flinkArtifacts";
 import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
+import { Environment } from "../../models/environment";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
@@ -473,4 +475,11 @@ export async function artifactUploadQuickPickForm(
       }
     }
   }
+}
+
+async function getEnvById(id: string): Promise<Environment | undefined> {
+  const loader = CCloudResourceLoader.getInstance();
+  const environments = await loader.getEnvironments();
+  const foundEnv = environments.find((env) => env.id === id);
+  return foundEnv;
 }
