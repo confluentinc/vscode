@@ -1,4 +1,4 @@
-import { ElectronApplication, expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { loadFixtureFromFile } from "../../fixtures/utils";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
@@ -12,24 +12,16 @@ import {
   TopicsView,
 } from "../objects/views/TopicsView";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
-import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
 import { openNewUntitledDocument } from "../utils/documents";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the produce message functionality, with and without associated schemas.
  * {@see https://github.com/confluentinc/vscode/issues/1840}
  *
  * Test flow:
- * 1. Set up connection:
- *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
- *    b. DIRECT: Fill out the Add New Connection form and submit with Kafka connection details
- * 2. Select a Kafka cluster with at least one topic
+ * 1. Set up connection (CCloud, Direct, or Local)
+ * 2. Select a Kafka cluster
  * 3. Create a topic
  * 4. Set up schema, if necessary:
  *    a. Skip for no-schema scenario
@@ -43,71 +35,22 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  */
 
 test.describe("Produce Message(s) to Topic", () => {
-  let topicsView: TopicsView;
-  let schemasView: SchemasView;
-
   let topic: TopicItem;
   let topicName: string;
-
-  let notificationArea: NotificationArea;
-
   let subjectName: string;
+
   // tests here will only ever create one schema version
   const deletionConfirmation = "v1";
 
-  test.beforeEach(async ({ page, electronApp }) => {
+  test.beforeEach(async ({ page }) => {
     subjectName = "";
-
-    await openConfluentSidebar(page);
-
-    topicsView = new TopicsView(page);
-    notificationArea = new NotificationArea(page);
   });
 
   // test dimensions:
-  const connectionTypes: Array<
-    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>, number]
-  > = [
-    [
-      ConnectionType.Ccloud,
-      Tag.CCloud,
-      async (page, electronApp) => {
-        await setupCCloudConnection(
-          page,
-          electronApp,
-          process.env.E2E_USERNAME!,
-          process.env.E2E_PASSWORD!,
-        );
-      },
-      DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
-    ],
-    [
-      ConnectionType.Direct,
-      Tag.Direct,
-      async (page) => {
-        await setupDirectConnection(page, {
-          formConnectionType: FormConnectionType.ConfluentCloud,
-          kafkaConfig: {
-            bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-            authType: SupportedAuthType.API,
-            credentials: {
-              api_key: process.env.E2E_KAFKA_API_KEY!,
-              api_secret: process.env.E2E_KAFKA_API_SECRET!,
-            },
-          },
-          schemaRegistryConfig: {
-            uri: process.env.E2E_SR_URL!,
-            authType: SupportedAuthType.API,
-            credentials: {
-              api_key: process.env.E2E_SR_API_KEY!,
-              api_secret: process.env.E2E_SR_API_SECRET!,
-            },
-          },
-        });
-      },
-      DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
-    ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
+    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
+    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
+    [ConnectionType.Local, Tag.Local, 1],
   ];
   const schemaTypes: Array<[SchemaType | null, string | null]> = [
     [null, null],
@@ -116,34 +59,30 @@ test.describe("Produce Message(s) to Topic", () => {
     [SchemaType.Protobuf, "proto"],
   ];
 
-  for (const [
-    connectionType,
-    connectionTag,
-    connectionSetup,
-    newTopicReplicationFactor,
-  ] of connectionTypes) {
+  for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
     test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
-      test.beforeEach(async ({ page, electronApp }) => {
-        // set up the connection based on type
-        await connectionSetup(page, electronApp);
-      });
+      // tell the `connectionItem` fixture which connection type to set up
+      test.use({ connectionType });
 
       for (const [schemaType, fileExtension] of schemaTypes) {
         test.describe(schemaType ? `${schemaType} schema` : "(no schema)", () => {
-          test.beforeEach(async ({ page }) => {
+          test.beforeEach(async ({ page, connectionItem }) => {
+            // ensure connection tree item has resources available to work with
+            await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+            const topicsView = new TopicsView(page);
             // click a Kafka cluster from the Resources view to open and populate the Topics view
             await topicsView.loadTopics(connectionType, SelectKafkaCluster.FromResourcesView);
             // make sure we have a topic to produce messages to first
             const schemaSuffix = schemaType ? schemaType.toLowerCase() : "no-schema";
-            topicName = `produce-message-${schemaSuffix}`;
-            await topicsView.createTopic(topicName, 1, newTopicReplicationFactor);
+            topicName = `e2e-produce-message-${schemaSuffix}`;
+            await topicsView.createTopic(topicName, 1, replicationFactor);
             let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
-            await targetTopic.scrollIntoViewIfNeeded();
 
             // if we want to use a schema, create a new subject with an initial schema version to match
             // the topic we're using
             if (schemaType && fileExtension) {
-              schemasView = new SchemasView(page);
+              const schemasView = new SchemasView(page);
               await schemasView.loadSchemaSubjects(
                 connectionType,
                 SelectSchemaRegistry.FromResourcesView,
@@ -173,10 +112,12 @@ test.describe("Produce Message(s) to Topic", () => {
           });
 
           test.afterEach(async ({ page, electronApp }) => {
+            const topicsView = new TopicsView(page);
             await topicsView.deleteTopic(topicName);
 
             // delete the subject if it was created during the test
             if (subjectName) {
+              const schemasView = new SchemasView(page);
               await schemasView.deleteSchemaSubject(
                 page,
                 electronApp,
@@ -209,6 +150,7 @@ test.describe("Produce Message(s) to Topic", () => {
             await schemaQuickpick.confirm();
 
             // expect info notification about successfully producing the message
+            const notificationArea = new NotificationArea(page);
             const successNotifications = notificationArea.infoNotifications.filter({
               hasText: /Successfully produced 1 message to topic/,
             });
@@ -239,6 +181,7 @@ test.describe("Produce Message(s) to Topic", () => {
             await expect(document.errorDiagnostics).not.toHaveCount(0);
 
             // expect error notification about basic JSON validation failure
+            const notificationArea = new NotificationArea(page);
             const errorNotifications = notificationArea.errorNotifications.filter({
               hasText: /JSON schema validation failed/,
             });
@@ -275,6 +218,7 @@ test.describe("Produce Message(s) to Topic", () => {
               await expect(document.errorDiagnostics).not.toHaveCount(0);
 
               // expect error notification about schema validation failure
+              const notificationArea = new NotificationArea(page);
               const errorNotifications = notificationArea.errorNotifications.filter({
                 hasText: /Failed to produce 1 message to topic/,
               });
