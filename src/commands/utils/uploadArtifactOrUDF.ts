@@ -249,6 +249,11 @@ interface FormState {
   description?: string;
   documentationUrl?: string;
 }
+/**
+ * Displays a quick pick series as a "form" to gather required fields from the user.
+ * @param item Optional context item to pre-populate fields in the upload form. Sent when invoked from a context menu.
+ * @returns A promise that resolves to the artifact upload parameters or undefined if canceled.
+ */
 export async function artifactUploadQuickPickForm(
   item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
 ): Promise<ArtifactUploadParams | undefined> {
@@ -268,8 +273,9 @@ export async function artifactUploadQuickPickForm(
       region: selectedFlinkDatabase.region,
     };
   }
+
+  // Pre-populate state from item if provided (command invoked from context menu)
   if (item) {
-    // Pre-populate state from item if provided
     if (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster) {
       logger.debug("Pre-populating upload form with provided context", {
         environment: item.environmentId,
@@ -353,7 +359,7 @@ export async function artifactUploadQuickPickForm(
       });
     }
 
-    // top-level quickpick. If user cancels here, we abort the entire flow
+    // Top-level quickpick. If user cancels here, we abort the entire flow
     const selection = await vscode.window.showQuickPick(menuItems, {
       title: "Upload Flink Artifact",
       placeHolder: "Select a step to provide details",
@@ -363,7 +369,7 @@ export async function artifactUploadQuickPickForm(
       return;
     }
 
-    // handle interactions at selected step
+    // Switch handles each (selected) step
     switch (selection.value) {
       case "environment": {
         const environment = await flinkCcloudEnvironmentQuickPick();
@@ -429,7 +435,7 @@ export async function artifactUploadQuickPickForm(
       case "description": {
         const description = await vscode.window.showInputBox({
           title: "Artifact Description",
-          prompt: "Enter an optional description for the artifact",
+          prompt: "Enter a description for the artifact (optional)",
           value: state.description || "",
           ignoreFocusOut: true,
         });
@@ -442,7 +448,7 @@ export async function artifactUploadQuickPickForm(
       case "documentationUrl": {
         const documentationUrl = await vscode.window.showInputBox({
           title: "Documentation URL",
-          prompt: "Enter an optional documentation URL for the artifact",
+          prompt: "Enter a documentation URL for the artifact (optional)",
           value: state.documentationUrl || "",
           ignoreFocusOut: true,
           validateInput: (value) => {
@@ -476,12 +482,14 @@ export async function artifactUploadQuickPickForm(
         } else if (state.cloudRegion!.provider === "AWS") {
           cloud = CloudProvider.AWS;
         } else {
+          // TODO we should really prevent this ahead of time, no?
           void showErrorNotificationWithButtons(
             `Upload Artifact cancelled: Unsupported cloud provider: ${state.cloudRegion!.provider}`,
           );
           continue;
         }
 
+        // TODO what happens if this goes wrong?
         const fileFormat = state.selectedFile!.fsPath.split(".").pop() ?? "";
 
         return {
