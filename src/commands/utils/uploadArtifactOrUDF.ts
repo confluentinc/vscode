@@ -352,6 +352,7 @@ export async function promptForFunctionAndClassName(
     prompt: "Enter a name for the new UDF function",
     placeHolder: defaultFunctionName,
     validateInput: (value) => validateUdfInput(value, functionNameRegex),
+    ignoreFocusOut: true,
   });
 
   if (functionName === undefined) {
@@ -362,6 +363,7 @@ export async function promptForFunctionAndClassName(
     prompt: "Enter the class name for the new UDF",
     placeHolder: `your.class.NameHere`,
     validateInput: (value) => validateUdfInput(value, classNameRegex),
+    ignoreFocusOut: true,
   });
   if (className === undefined) {
     return undefined;

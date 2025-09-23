@@ -2,7 +2,9 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
-import { ArtifactV1FlinkArtifactMetadataFromJSON } from "../clients/flinkArtifacts";
+import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
+import { createResponseError } from "../../tests/unit/testUtils";
+import { ArtifactV1FlinkArtifactMetadataFromJSON, ResponseError } from "../clients/flinkArtifacts";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
@@ -15,8 +17,8 @@ import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
-  commandForUDFCreationFromArtifact,
-  queryArtifactWithFlink,
+  createUdfFromArtifactCommand,
+  createUdfRegistrationDocumentCommand,
   registerFlinkArtifactCommands,
   uploadArtifactCommand,
 } from "./flinkArtifacts";
@@ -62,6 +64,8 @@ describe("flinkArtifacts", () => {
     }),
   });
 
+  const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
   const mockCluster = {
     id: "cluster-123",
     name: "Flink DB Cluster",
@@ -96,7 +100,7 @@ describe("flinkArtifacts", () => {
       insertSnippet: insertSnippetStub,
     } as unknown as vscode.TextEditor);
 
-    await queryArtifactWithFlink(artifact);
+    await createUdfRegistrationDocumentCommand(artifact);
 
     sinon.assert.calledOnce(openTextDocStub);
     const callArgs = openTextDocStub.getCall(0).args[0];
@@ -115,7 +119,7 @@ describe("flinkArtifacts", () => {
     const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
     const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
 
-    await queryArtifactWithFlink(undefined as any);
+    await createUdfRegistrationDocumentCommand(undefined as any);
 
     sinon.assert.notCalled(openTextDocStub);
     sinon.assert.notCalled(showTextDocStub);
@@ -210,11 +214,11 @@ describe("flinkArtifacts", () => {
     sinon.assert.calledOnce(createArtifactStub);
     sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
   });
-  it("should return early if no artifact is provided in commandForUDFCreationFromArtifact", async () => {
+  it("should return early if no artifact is provided in createUdfFromArtifactCommand", async () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-    const result = await commandForUDFCreationFromArtifact(undefined as any);
+    const result = await createUdfFromArtifactCommand(undefined as any);
 
     assert.strictEqual(result, undefined);
     sinon.assert.notCalled(showInfoStub);
@@ -224,7 +228,7 @@ describe("flinkArtifacts", () => {
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
-    await commandForUDFCreationFromArtifact(artifact);
+    await createUdfFromArtifactCommand(artifact);
 
     sinon.assert.notCalled(showInfoStub);
     sinon.assert.calledOnce(showErrorStub);
@@ -259,7 +263,7 @@ describe("flinkArtifacts", () => {
       );
     });
 
-    await commandForUDFCreationFromArtifact(artifact);
+    await createUdfFromArtifactCommand(artifact);
 
     sinon.assert.calledOnce(promptStub);
     sinon.assert.calledOnce(executeStub);
@@ -268,66 +272,62 @@ describe("flinkArtifacts", () => {
     sinon.assert.notCalled(showErrorStub);
   });
 
-  it("should handle ResponseError with string response body in commandForUDFCreationFromArtifact", async () => {
-    getShowErrorNotificationWithButtonsStub(sandbox);
-    sandbox.stub(console, "error"); // Add this to prevent actual logging
-
+  it("should handle ResponseError with string response body in createUdfFromArtifactCommand", async () => {
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
     sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
 
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
+    const mockEnvironmentNoComputePools: CCloudEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
       flinkComputePools: [],
-      kafkaClusters: [mockCluster],
-    };
+    });
 
-    sandbox
-      .stub(FlinkDatabaseViewProvider, "getInstance")
-      .returns({ resource: mockCluster } as any);
+    const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+    sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
+    mockProvider.resource = mockCluster;
 
     sandbox
       .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-      .resolves([mockEnvironment as CCloudEnvironment]);
+      .resolves([mockEnvironmentNoComputePools]);
 
-    const responseError = {
-      name: "ResponseError",
-      message: "Failed to create UDF function: Response error without prefix",
-      isResponseError: true,
-      response: {
-        status: 400,
-        statusText: "Bad Request",
-        headers: new Headers(),
-        body: "Plain text error message",
-      },
-      statusCode: 400,
-    };
-
+    // const responseError = {
+    //   name: "ResponseError",
+    //   message: "Failed to create UDF function: Response error without prefix",
+    //   response: {
+    //     status: 400,
+    //     statusText: "Bad Request",
+    //     headers: new Headers(),
+    //     body: "Plain text error message",
+    //   },
+    //   statusCode: 400,
+    // };
+    const responseForNewError = createResponseError(400, "Bad Request", "Plain text error message");
+    const responseError: ResponseError = new ResponseError(
+      responseForNewError.response,
+      responseForNewError.message,
+    );
     sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .rejects(responseError);
 
-    await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
+    await createUdfFromArtifactCommand(artifact);
+
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWithExactly(
+      showErrorStub,
+      `Failed to create UDF function: ${responseError.message}`,
+    );
   });
 
-  it("should handle plain Error objects in commandForUDFCreationFromArtifact", async () => {
+  it("should handle plain Error objects in createUdfFromArtifactCommand", async () => {
     const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-    sandbox.stub(console, "error"); // Add this to prevent actual logging
 
     sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
-
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
-      flinkComputePools: [],
-      kafkaClusters: [mockCluster],
-      flinkDatabaseClusters: [mockCluster],
-    };
 
     sandbox
       .stub(FlinkDatabaseViewProvider, "getInstance")
@@ -341,7 +341,7 @@ describe("flinkArtifacts", () => {
 
     sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
 
-    await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
+    await assert.doesNotReject(async () => await createUdfFromArtifactCommand(artifact));
 
     sinon.assert.calledOnce(showErrorStub);
     sinon.assert.calledWithExactly(
@@ -350,22 +350,13 @@ describe("flinkArtifacts", () => {
     );
   });
 
-  it("should handle malformed error response JSON in commandForUDFCreationFromArtifact", async () => {
+  it("should handle malformed error response JSON in createUdfFromArtifactCommand", async () => {
     const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-    sandbox.stub(console, "error"); // Add this to prevent actual logging
 
     sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
       functionName: "testFunction",
       className: "com.test.TestClass",
     });
-
-    const mockEnvironment: Partial<CCloudEnvironment> = {
-      id: artifact.environmentId,
-      name: "Test Environment",
-      flinkComputePools: [],
-      kafkaClusters: [mockCluster],
-      flinkDatabaseClusters: [mockCluster],
-    };
 
     sandbox
       .stub(FlinkDatabaseViewProvider, "getInstance")
@@ -392,7 +383,7 @@ describe("flinkArtifacts", () => {
     sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .rejects(responseError);
-    await assert.doesNotReject(async () => await commandForUDFCreationFromArtifact(artifact));
+    await (async () => await createUdfFromArtifactCommand(artifact))();
 
     sinon.assert.calledOnce(showErrorStub);
   });
@@ -415,7 +406,7 @@ describe("flinkArtifacts", () => {
 
     const withProgressStub = sandbox.stub(vscode.window, "withProgress");
 
-    await commandForUDFCreationFromArtifact(artifact);
+    await createUdfFromArtifactCommand(artifact);
 
     sinon.assert.calledOnce(promptStub);
     sinon.assert.notCalled(executeStub);
