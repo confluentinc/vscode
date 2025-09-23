@@ -931,6 +931,15 @@ describe("viewProviders/newResources.ts", () => {
             contextValues.ContextValues.directKafkaClusterAvailable,
             withKafka,
           );
+
+          // also prove that localKafkaClusterAvailable is set to false, since
+          // we haven't added any local connection yet (`localEnv` within `updateEnvironmentContextValues`
+          // will be `undefined`)
+          sinon.assert.calledWith(
+            setContextValueStub,
+            contextValues.ContextValues.localKafkaClusterAvailable,
+            false,
+          );
         });
       }
 
