@@ -1311,7 +1311,7 @@
         },
         {
           "command": "confluent.flinkdatabase.refresh",
-          "when": "false"
+          "when": "true"
         },
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
@@ -1750,7 +1750,7 @@
         },
         {
           "command": "confluent.flinkdatabase.refresh",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && config.confluent.flink.enableFlinkArtifacts",
           "group": "navigation@998"
         },
         {
