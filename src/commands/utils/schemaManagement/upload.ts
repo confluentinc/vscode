@@ -528,7 +528,10 @@ export async function getNewlyRegisteredVersion(
   let subjectVersionPairs: SubjectVersion[] = [];
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      subjectVersionPairs = await schemasApi.getVersions({ id: schemaId });
+      subjectVersionPairs = await schemasApi.getVersions({
+        id: schemaId,
+        subject: subject, // disambiguate when custom contexts are in use
+      });
     } catch (e) {
       if (e instanceof ResponseError) {
         const http_code = e.response.status;

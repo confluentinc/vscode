@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Fix schema registry operations in the face of schemas within custom contexts (#2644)
+
 ### Added
 
 - Date/time picker for message viewer when consuming from a specific point in time.

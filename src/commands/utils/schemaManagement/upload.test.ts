@@ -883,7 +883,10 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       );
 
       assert.strictEqual(result, testSchemaVersion);
-      sinon.assert.calledOnceWithExactly(stubbedSchemasV1Api.getVersions, { id: testSchemaId });
+      sinon.assert.calledOnceWithExactly(stubbedSchemasV1Api.getVersions, {
+        id: testSchemaId,
+        subject: testSubjectName,
+      });
     });
 
     it("should retry up to 5 times for 404 error responses, then succeed when available", async function () {
