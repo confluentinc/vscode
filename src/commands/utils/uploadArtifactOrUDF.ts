@@ -18,6 +18,7 @@ import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegi
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
 
@@ -252,6 +253,21 @@ export async function artifactUploadQuickPickForm(
   item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
 ): Promise<ArtifactUploadParams | undefined> {
   const state: FormState = {};
+  // If there is a selected Flink database, pre-select the environment and cloud/region.
+  const selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
+  if (selectedFlinkDatabase) {
+    let env = await getEnvById(selectedFlinkDatabase.environmentId);
+    if (env !== undefined) {
+      state.environment = {
+        id: env.id,
+        name: env.name,
+      };
+    }
+    state.cloudRegion = {
+      provider: selectedFlinkDatabase.provider,
+      region: selectedFlinkDatabase.region,
+    };
+  }
   if (item) {
     // Pre-populate state from item if provided
     if (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster) {
