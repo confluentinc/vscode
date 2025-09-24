@@ -39,6 +39,20 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
   searchableText(): string {
     return `${this.name} ${this.id}`;
   }
+
+  /**
+   * Determines if this KafkaCluster is equal to another by comparing connectionId, connectionType, and id.
+   *
+   * (Kafka cluster ids are defined by the brokers themselves, but the user may have multiple connections able
+   * to access the same cluster, so we also need to compare connectionId and connectionType to be sure).
+   **/
+  equals(other: KafkaCluster): boolean {
+    return (
+      this.connectionId === other.connectionId &&
+      this.connectionType === other.connectionType &&
+      this.id === other.id
+    );
+  }
 }
 
 /** A Confluent Cloud {@link KafkaCluster} with additional properties. */
