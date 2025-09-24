@@ -107,7 +107,7 @@ cache-docker-images: install-dependencies
 # Usage: make test-playwright-e2e TEST_SUITE=@smoke
 # Usage: make test-playwright-e2e TEST_SUITE=@regression
 .PHONY: test-playwright-e2e
-test-playwright-e2e: load-cached-docker-images setup-test-env install-test-dependencies install-dependencies
+test-playwright-e2e: setup-test-env install-test-dependencies install-dependencies
 	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ] && [ "$(TEST_SUITE)" != "TEST_SUITE" ]; then \
 			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
 	else \
