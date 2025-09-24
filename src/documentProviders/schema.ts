@@ -37,7 +37,10 @@ export async function fetchSchemaBody(schema: Schema, prettified: boolean = true
     schema.schemaRegistryId,
     schema.connectionId,
   );
-  const schemaResp: SchemaString = await client.getSchema({ id: parseInt(schema.id, 10) });
+  const schemaResp: SchemaString = await client.getSchema({
+    id: parseInt(schema.id, 10),
+    subject: schema.subject, // must also provide subject to disambiguate when custom contexts are in use.
+  });
   const schemaDefinition = prettified ? prettifySchemaDefinition(schemaResp) : schemaResp.schema;
   if (!schemaDefinition) {
     throw new Error("Failed to load schema definition; it may be empty or invalid.");
