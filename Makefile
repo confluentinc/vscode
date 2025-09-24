@@ -73,7 +73,8 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 # getKafkaImageRepoTag and getSchemaRegistryImageRepoTag gulp tasks, then handle all of the caching
 # and loading for Semaphore
 .PHONY: load-cached-docker-images
-load-cached-docker-images: install-dependencies
+load-cached-docker-images:
+	npm install --global gulp-cli
 	@KAFKA_IMAGE=$$(npx gulp getKafkaImageRepoTag --silent 2>/dev/null | tail -1); \
 	SCHEMA_REGISTRY_IMAGE=$$(npx gulp getSchemaRegistryImageRepoTag --silent 2>/dev/null | tail -1); \
 	SEMAPHORE_KAFKA_KEY="vscode-docker-kafka-$$KAFKA_IMAGE"; \
@@ -85,7 +86,8 @@ load-cached-docker-images: install-dependencies
 	[ -f schema-registry.tgz ] && docker load -i schema-registry.tgz && rm -rf schema-registry.tgz || true
 
 .PHONY: cache-docker-images
-cache-docker-images: install-dependencies
+cache-docker-images:
+	npm install --global gulp-cli
 	@KAFKA_IMAGE=$$(npx gulp getKafkaImageRepoTag --silent 2>/dev/null | tail -1); \
 	SCHEMA_REGISTRY_IMAGE=$$(npx gulp getSchemaRegistryImageRepoTag --silent 2>/dev/null | tail -1); \
 	SEMAPHORE_KAFKA_KEY="vscode-docker-kafka-$$KAFKA_IMAGE"; \
