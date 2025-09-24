@@ -273,7 +273,7 @@
     ],
     "commands": [
       {
-        "command": "confluent.artifacts.registerUDF",
+        "command": "confluent.artifacts.createUdfRegistrationDocument",
         "title": "Register Flink Artifact with Flink SQL",
         "category": "Confluent: Flink Artifacts"
       },
@@ -284,7 +284,7 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
-        "command": "confluent.artifacts.UDFCreation",
+        "command": "confluent.artifacts.startGuidedUdfCreation",
         "title": "Register UDF",
         "category": "Confluent: Flink Artifacts"
       },
@@ -1205,7 +1205,7 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "confluent.artifacts.registerUDF",
+          "command": "confluent.artifacts.createUdfRegistrationDocument",
           "when": "false"
         },
         {
@@ -1213,7 +1213,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.artifacts.UDFCreation",
+          "command": "confluent.artifacts.startGuidedUdfCreation",
           "when": "false"
         },
         {
@@ -1987,12 +1987,12 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.registerUDF",
+          "command": "confluent.artifacts.createUdfRegistrationDocument",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.UDFCreation",
+          "command": "confluent.artifacts.startGuidedUdfCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
