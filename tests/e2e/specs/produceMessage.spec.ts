@@ -34,7 +34,7 @@ import { openNewUntitledDocument } from "../utils/documents";
  * 6. Clean up by deleting the topic, and any schema+subject that was created
  */
 
-test.describe("Produce Message(s) to Topic", () => {
+test.describe("Produce Message(s) to Topic", { tag: [Tag.ProduceMessageToTopic] }, () => {
   let topic: TopicItem;
   let topicName: string;
   let subjectName: string;

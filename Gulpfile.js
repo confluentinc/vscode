@@ -815,9 +815,10 @@ export function e2eRun(done) {
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
-  // if we're running the whole test suite or `@local`, we need to make sure the default Docker
-  // images for local Kafka and Schema Registry are available so tests don't time out while pulling
-  if (!testFilter || testFilter.includes("@local")) {
+  // If we're running the whole test suite, just `@local`, or running in CI (for specific CUJ tests)
+  // we need to make sure the default Docker images for local Kafka and Schema Registry are available
+  // so tests don't have to pull them and end up timing out.
+  if (IS_CI || !testFilter || testFilter.includes("@local")) {
     const manifest = loadPackageJson();
     const extensionSettings = manifest.contributes.configuration;
     const localSettings = extensionSettings.find((section) => section.title === "Local");
