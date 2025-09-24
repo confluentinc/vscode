@@ -25,7 +25,7 @@ import { Tag } from "../tags";
  * 5. View should open with basic webview components, even if messages aren't (yet) available
  */
 
-test.describe("Topics Listing & Message Viewer", () => {
+test.describe("Topics Listing & Message Viewer", { tag: [Tag.TopicMessageViewer] }, () => {
   let topicName: string = "e2e-topic-message-viewer";
 
   test.afterEach(async ({ page }) => {
