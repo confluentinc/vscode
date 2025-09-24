@@ -825,6 +825,10 @@ export async function getKafkaImageRepoTag() {
 pullKafkaImage.description =
   "Pull the local Kafka Docker image based on the package.json contributes.configuration 'Local' settings' defaults";
 export async function pullKafkaImage(done) {
+  if (IS_CI) {
+    console.log("Skipping pull of Kafka image in CI, assuming it's already cached.");
+    return done(0);
+  }
   const defaultKafkaImageRepoTag = await getKafkaImageRepoTag();
   const kafkaImagePullResult = spawnSync("docker", ["pull", defaultKafkaImageRepoTag], {
     stdio: "inherit",
@@ -856,6 +860,10 @@ export async function getSchemaRegistryImageRepoTag() {
 pullSchemaRegistryImage.description =
   "Pull the local Schema Registry Docker image based on the package.json contributes.configuration 'Local' settings' defaults";
 export async function pullSchemaRegistryImage(done) {
+  if (IS_CI) {
+    console.log("Skipping pull of Schema Registry image in CI, assuming it's already cached.");
+    return done(0);
+  }
   const defaultSchemaRegistryImageRepoTag = await getSchemaRegistryImageRepoTag();
   const schemaRegistryImagePullResult = spawnSync(
     "docker",
