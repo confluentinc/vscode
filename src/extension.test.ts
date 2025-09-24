@@ -101,7 +101,7 @@ describe("Refreshable views tests", () => {
    *
    * When a new one is added, its `kind` attribute value should be added to this list.
    */
-  const expectedKinds = ["resources", "topics", "schemas", "statements"];
+  const expectedKinds = ["resources", "topics", "schemas", "statements", "flinkdatabase"];
 
   before(async () => {
     await getTestExtensionContext();
