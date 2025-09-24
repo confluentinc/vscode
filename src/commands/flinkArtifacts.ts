@@ -3,6 +3,7 @@ import { SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
+import { ResponseError } from "../clients/sidecar";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
@@ -148,7 +149,7 @@ export async function deleteArtifactCommand(
   );
 }
 
-export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact) {
+export async function createUdfRegistrationDocumentCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
@@ -171,7 +172,7 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact) {
   await editor.insertSnippet(snippetString);
 }
 
-export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkArtifact) {
+export async function createUdfFromArtifactCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
@@ -202,7 +203,7 @@ export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkA
           60000, // custom timeout of 60 seconds
         );
         progress.report({ message: "Processing results..." });
-        const createdMsg = `Function created successfully at ${userInput.functionName}.`;
+        const createdMsg = `${userInput.functionName} function created successfully.`;
         void showInfoNotificationWithButtons(createdMsg);
       },
     );
@@ -211,11 +212,11 @@ export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkA
       let errorMessage = "Failed to create UDF function: ";
 
       if (isResponseError(err)) {
-        const resp = await extractResponseBody(err);
+        const resp: ResponseError = await extractResponseBody(err);
         try {
-          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+          errorMessage = `${errorMessage} ${resp.response.body}`;
         } catch {
-          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+          errorMessage = `${errorMessage} ${resp}`;
         }
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage} ${err.message}`;
@@ -246,10 +247,13 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
-    registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
     registerCommandWithLogging(
-      "confluent.artifacts.UDFCreation",
-      commandForUDFCreationFromArtifact,
+      "confluent.artifacts.createUdfRegistrationDocument",
+      createUdfRegistrationDocumentCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.artifacts.startGuidedUdfCreation",
+      createUdfFromArtifactCommand,
     ),
   ];
 }

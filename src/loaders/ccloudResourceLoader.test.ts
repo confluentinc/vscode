@@ -1157,12 +1157,7 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should throw if statement does not complete successfully", async () => {
-      const failedStatement = {
-        phase: Phase.FAILED,
-        status: {
-          detail: "Statement execution failed",
-        },
-      } as FlinkStatement;
+      const failedStatement = createFlinkStatement({ phase: Phase.FAILED });
       waitForStatementCompletionStub.resolves(failedStatement);
 
       await assert.rejects(
@@ -1176,7 +1171,7 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should override timeout if provided", async () => {
-      const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+      const completedStatement = createFlinkStatement({ phase: Phase.COMPLETED });
       waitForStatementCompletionStub.resolves(completedStatement);
 
       const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
