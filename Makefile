@@ -69,12 +69,45 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 	npx gulp build
 	npx gulp functional
 
+# Look up the Kafka and Schema Registry Docker image repo:tag values from package.json via the
+# getKafkaImageRepoTag and getSchemaRegistryImageRepoTag gulp tasks, then handle all of the caching
+# and loading for Semaphore
+.PHONY: load-cached-docker-images
+load-cached-docker-images:
+	@KAFKA_IMAGE=$$(npx gulp getKafkaImageRepoTag --silent 2>/dev/null | tail -1); \
+	SCHEMA_REGISTRY_IMAGE=$$(npx gulp getSchemaRegistryImageRepoTag --silent 2>/dev/null | tail -1); \
+	SEMAPHORE_KAFKA_KEY="vscode-docker-kafka-$$KAFKA_IMAGE"; \
+	SEMAPHORE_SCHEMA_REGISTRY_KEY="vscode-docker-schema-registry-$$SCHEMA_REGISTRY_IMAGE"; \
+	echo "Loading cached Docker images: $$KAFKA_IMAGE and $$SCHEMA_REGISTRY_IMAGE"; \
+	cache restore $$SEMAPHORE_KAFKA_KEY; \
+	[ -f kafka.tgz ] && docker load -i kafka.tgz && rm -rf kafka.tgz || true; \
+	cache restore $$SEMAPHORE_SCHEMA_REGISTRY_KEY; \
+	[ -f schema-registry.tgz ] && docker load -i schema-registry.tgz && rm -rf schema-registry.tgz || true
+
+.PHONY: cache-docker-images
+cache-docker-images:
+	@KAFKA_IMAGE=$$(npx gulp getKafkaImageRepoTag --silent 2>/dev/null | tail -1); \
+	SCHEMA_REGISTRY_IMAGE=$$(npx gulp getSchemaRegistryImageRepoTag --silent 2>/dev/null | tail -1); \
+	SEMAPHORE_KAFKA_KEY="vscode-docker-kafka-$$KAFKA_IMAGE"; \
+	SEMAPHORE_SCHEMA_REGISTRY_KEY="vscode-docker-schema-registry-$$SCHEMA_REGISTRY_IMAGE"; \
+	echo "Caching Docker images: $$KAFKA_IMAGE and $$SCHEMA_REGISTRY_IMAGE"; \
+	cache has_key $$SEMAPHORE_KAFKA_KEY || ( \
+		docker pull $$KAFKA_IMAGE && \
+		docker save $$KAFKA_IMAGE | gzip > kafka.tgz && \
+		cache store $$SEMAPHORE_KAFKA_KEY kafka.tgz && \
+		rm -rf kafka.tgz); \
+	cache has_key $$SEMAPHORE_SCHEMA_REGISTRY_KEY || ( \
+		docker pull $$SCHEMA_REGISTRY_IMAGE && \
+		docker save $$SCHEMA_REGISTRY_IMAGE | gzip > schema-registry.tgz && \
+		cache store $$SEMAPHORE_SCHEMA_REGISTRY_KEY schema-registry.tgz && \
+		rm -rf schema-registry.tgz)
+
 # Run E2E (Playwright) tests with optional test name
 # Usage: make test-playwright-e2e (runs all tests)
 # Usage: make test-playwright-e2e TEST_SUITE=@smoke
 # Usage: make test-playwright-e2e TEST_SUITE=@regression
 .PHONY: test-playwright-e2e
-test-playwright-e2e: setup-test-env install-test-dependencies install-dependencies
+test-playwright-e2e: load-cached-docker-images setup-test-env install-test-dependencies install-dependencies
 	@if [ -n "$(TEST_SUITE)" ] && [ "$(TEST_SUITE)" != "" ] && [ "$(TEST_SUITE)" != "TEST_SUITE" ]; then \
 			TEST_SUITE_ARG="-t $(TEST_SUITE)"; \
 	else \
