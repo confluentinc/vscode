@@ -41,7 +41,7 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
   }
 
   /**
-   * Determines if this KafkaCluster is equal to another by comparing connectionId, connectionType, and id.
+   * Determines if this KafkaCluster is equal to another by comparing connectionId, connectionType, environmentId, and id.
    *
    * (Kafka cluster ids are defined by the brokers themselves, but the user may have multiple connections able
    * to access the same cluster, so we also need to compare connectionId and connectionType to be sure).
@@ -50,6 +50,7 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
     return (
       this.connectionId === other.connectionId &&
       this.connectionType === other.connectionType &&
+      this.environmentId === other.environmentId &&
       this.id === other.id
     );
   }

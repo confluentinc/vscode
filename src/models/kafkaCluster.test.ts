@@ -2,13 +2,67 @@ import * as assert from "assert";
 import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources/kafkaCluster";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
-import { createKafkaClusterTooltip, LocalKafkaCluster } from "./kafkaCluster";
+import {
+  CCloudKafkaCluster,
+  createKafkaClusterTooltip,
+  DirectKafkaCluster,
+  LocalKafkaCluster,
+} from "./kafkaCluster";
 import { EnvironmentId } from "./resource";
 
 describe("models/kafkaCluster", () => {
+  describe("equals()", () => {
+    [
+      {
+        label: "identical LocalKafkaClusters",
+        lhs: TEST_LOCAL_KAFKA_CLUSTER,
+        rhs: TEST_LOCAL_KAFKA_CLUSTER,
+        expected: true,
+      },
+      {
+        label: "different LocalKafkaClusters",
+        lhs: LocalKafkaCluster.create(TEST_LOCAL_KAFKA_CLUSTER),
+        rhs: LocalKafkaCluster.create({
+          ...TEST_LOCAL_KAFKA_CLUSTER,
+          id: "different-id",
+        }),
+        expected: false,
+      },
+      {
+        label: "identical CCloudKafkaClusters",
+        lhs: TEST_CCLOUD_KAFKA_CLUSTER,
+        rhs: TEST_CCLOUD_KAFKA_CLUSTER,
+        expected: true,
+      },
+      {
+        label: "different CCloudKafkaClusters, different env id, same cluster id",
+        lhs: TEST_CCLOUD_KAFKA_CLUSTER,
+        rhs: CCloudKafkaCluster.create({
+          ...TEST_CCLOUD_KAFKA_CLUSTER,
+          environmentId: "different-env-id" as EnvironmentId,
+        }),
+        expected: false,
+      },
+      {
+        label: "local vs direct kafka cluster with same id",
+        lhs: TEST_LOCAL_KAFKA_CLUSTER,
+        rhs: DirectKafkaCluster.create({
+          ...TEST_DIRECT_KAFKA_CLUSTER,
+          id: TEST_LOCAL_KAFKA_CLUSTER.id,
+        }),
+        expected: false,
+      },
+    ].forEach(({ label, lhs, rhs, expected }) => {
+      it(`.equals() should return ${expected} for ${label}`, () => {
+        assert.strictEqual(lhs.equals(rhs), expected);
+      });
+    });
+  });
+
   describe("createKafkaClusterTooltip()", () => {
     it("should return the correct tooltip for a Confluent Cloud Kafka cluster", () => {
       const tooltipString = createKafkaClusterTooltip(TEST_CCLOUD_KAFKA_CLUSTER).value;
