@@ -2,35 +2,42 @@
 
 All notable changes to this extension will be documented in this file.
 
-## Unreleased
+## 1.6.2
+
+### Fixed
+
+- Fix schema registry operations in the face of schemas within custom contexts
+  ([#2644](https://github.com/confluentinc/vscode/issues/2644))
 
 ## 1.6.1
 
 ### Fixed
 
-- Fix connecting to WarpStream agents by Kubernetes port-forwarding by prefixing magic `client.id` suffix
-  with a comma. ([#2506](https://github.com/confluentinc/vscode/issues/2506))
+- Fix connecting to WarpStream agents by Kubernetes port-forwarding by prefixing magic `client.id`
+  suffix with a comma. ([#2506](https://github.com/confluentinc/vscode/issues/2506))
 
 ## 1.6.0
 
 ### Added
 
-- Support for [Private Networking with Confluent Cloud for Apache Flink.](https://docs.confluent.io/cloud/current/flink/concepts/flink-private-networking.html)
-- New optional implementation of the Resources view, offering much better performance and per-connection
-  refresh capability. Users can toggle this functionality through the `confluent.preview.useNewResourcesViewProvider`
-  setting, which is set to `true` by default.
+- Support for
+  [Private Networking with Confluent Cloud for Apache Flink.](https://docs.confluent.io/cloud/current/flink/concepts/flink-private-networking.html)
+- New optional implementation of the Resources view, offering much better performance and
+  per-connection refresh capability. Users can toggle this functionality through the
+  `confluent.preview.useNewResourcesViewProvider` setting, which is set to `true` by default.
 - New "Set Private Network Endpoint(s)" command for configuring private network endpoints for a
   specific CCloud environment.
 - Support for dark mode in the local Confluent Cloud OAuth callback page.
-- Support [connecting to WarpStream agents via Kubernetes port-forwarding.](https://docs.warpstream.com/warpstream/byoc/port-forwarding-k8s)
+- Support
+  [connecting to WarpStream agents via Kubernetes port-forwarding.](https://docs.warpstream.com/warpstream/byoc/port-forwarding-k8s)
 
 ### Changed
 
 - Telemetry updates to only send less common sidecar startup errors to Sentry.
 - Validate authentication types in Direct connection form.
 - Bump minimum required macOS version from 13 to 14.
-- Automatically set appropriate compute pool, catalog, and database
-  when using "Query with Flink", or opening an existing Flink job.
+- Automatically set appropriate compute pool, catalog, and database when using "Query with Flink",
+  or opening an existing Flink job.
 
 ## 1.5.3
 

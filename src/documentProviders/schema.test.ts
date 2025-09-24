@@ -67,6 +67,7 @@ describe("documentProviders/schema.ts", function () {
         assert.strictEqual(schemaDefinition, JSON.stringify(JSON.parse('{"foo": "bar"}'), null, 2));
         sinon.assert.calledOnceWithExactly(stubbedSchemasV1Api.getSchema, {
           id: parseInt(testSchema.id, 10),
+          subject: testSchema.subject,
         });
       });
 
