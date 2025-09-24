@@ -1,6 +1,6 @@
-import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
@@ -17,6 +17,7 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   id: string;
   name: string;
   description: string;
+  iconName: IconNames | undefined;
 
   constructor(
     props: Pick<
@@ -34,6 +35,7 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     this.id = props.id;
     this.name = props.name;
     this.description = props.description;
+    this.iconName = IconNames.FLINK_ARTIFACT;
   }
 
   searchableText(): string {
@@ -58,10 +60,6 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
-
-    // shoup: update this once https://github.com/confluentinc/vscode/issues/1385 is done
-    this.iconPath = new ThemeIcon("code");
-
     this.description = resource.description;
   }
 }
