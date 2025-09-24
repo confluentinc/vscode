@@ -3,7 +3,6 @@ import { SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
-import { ResponseError } from "../clients/sidecar";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
@@ -172,7 +171,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   await editor.insertSnippet(snippetString);
 }
 
-export async function createUdfFromArtifactCommand(selectedArtifact: FlinkArtifact) {
+export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
@@ -212,12 +211,8 @@ export async function createUdfFromArtifactCommand(selectedArtifact: FlinkArtifa
       let errorMessage = "Failed to create UDF function: ";
 
       if (isResponseError(err)) {
-        const resp: ResponseError = await extractResponseBody(err);
-        try {
-          errorMessage = `${errorMessage} ${resp.response.body}`;
-        } catch {
-          errorMessage = `${errorMessage} ${resp}`;
-        }
+        const resp = await err.response.clone().text();
+        errorMessage = `${errorMessage} ${resp}`;
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage} ${err.message}`;
         logError(err, errorMessage);
@@ -253,7 +248,7 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
     ),
     registerCommandWithLogging(
       "confluent.artifacts.startGuidedUdfCreation",
-      createUdfFromArtifactCommand,
+      startGuidedUdfCreationCommand,
     ),
   ];
 }
