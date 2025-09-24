@@ -1843,6 +1843,11 @@
           "group": "4_flink@1"
         },
         {
+          "command": "confluent.uploadArtifact",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)",
+          "group": "4_flink@1"
+        },
+        {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
           "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
           "group": "2_copy@3"
@@ -1975,10 +1980,6 @@
           "command": "confluent.artifacts.UDFCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
-        },
-        {
-          "command": "confluent.uploadArtifact",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)"
         },
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",
