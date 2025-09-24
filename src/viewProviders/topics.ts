@@ -58,13 +58,21 @@ export class TopicViewProvider
   private forceDeepRefresh: boolean = false;
 
   /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
-  refresh(forceDeepRefresh: boolean = false, onlyIfViewingClusterId: string | null = null): void {
-    if (
-      onlyIfViewingClusterId &&
-      this.kafkaCluster &&
-      this.kafkaCluster.id !== onlyIfViewingClusterId
-    ) {
-      // If the view is currently focused on a different cluster, no need to refresh
+  refresh(
+    forceDeepRefresh: boolean = false,
+    onlyIfMatching: KafkaCluster | KafkaTopic | null = null,
+  ): void {
+    let matching: boolean;
+    if (onlyIfMatching instanceof KafkaTopic) {
+      matching = this.kafkaCluster ? this.kafkaCluster.contains(onlyIfMatching) : false;
+    } else if (onlyIfMatching instanceof KafkaCluster) {
+      matching = this.kafkaCluster ? this.kafkaCluster.equals(onlyIfMatching) : false;
+    } else {
+      matching = true; // null means always refresh
+    }
+
+    if (this.kafkaCluster && !matching) {
+      // If the view is currently focused on a different cluster than matches onlyIfMatching, no need to refresh
       return;
     }
 

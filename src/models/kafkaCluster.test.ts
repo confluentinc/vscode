@@ -1,5 +1,10 @@
 import * as assert from "assert";
 import {
+  TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_DIRECT_KAFKA_TOPIC,
+  TEST_LOCAL_KAFKA_TOPIC,
+} from "../../tests/unit/testResources";
+import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_DIRECT_KAFKA_CLUSTER,
@@ -13,6 +18,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { EnvironmentId } from "./resource";
+import { KafkaTopic } from "./topic";
 
 describe("models/kafkaCluster", () => {
   describe("equals()", () => {
@@ -59,6 +65,60 @@ describe("models/kafkaCluster", () => {
     ].forEach(({ label, lhs, rhs, expected }) => {
       it(`.equals() should return ${expected} for ${label}`, () => {
         assert.strictEqual(lhs.equals(rhs), expected);
+      });
+    });
+  });
+
+  describe("contains()", () => {
+    [
+      {
+        label: "LocalKafkaCluster contains its own topic",
+        cluster: TEST_LOCAL_KAFKA_CLUSTER,
+        topic: TEST_LOCAL_KAFKA_TOPIC,
+        expected: true,
+      },
+      {
+        label: "LocalKafkaCluster does not contain topic with different clusterId",
+        cluster: TEST_LOCAL_KAFKA_CLUSTER,
+        topic: KafkaTopic.create({
+          ...TEST_LOCAL_KAFKA_TOPIC,
+          clusterId: "different-cluster-id",
+        }),
+        expected: false,
+      },
+      {
+        label: "CCloudKafkaCluster does not contain topic from different environment",
+        cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+        topic: KafkaTopic.create({
+          ...TEST_CCLOUD_KAFKA_TOPIC,
+          environmentId: "different-env-id" as EnvironmentId,
+        }),
+        expected: false,
+      },
+      {
+        label:
+          "LocalKafkaCluster does not contain Direct topic even when clusterId matches (connection type mismatch)",
+        cluster: TEST_LOCAL_KAFKA_CLUSTER,
+        topic: KafkaTopic.create({
+          ...TEST_DIRECT_KAFKA_TOPIC,
+          clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
+        }),
+        expected: false,
+      },
+      {
+        label:
+          "CCloudKafkaCluster does not contain Local topic even when clusterId matches (connection type mismatch)",
+        cluster: TEST_CCLOUD_KAFKA_CLUSTER,
+        topic: KafkaTopic.create({
+          ...TEST_LOCAL_KAFKA_TOPIC,
+          clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
+          environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+        }),
+        expected: false,
+      },
+    ].forEach(({ label, cluster, topic, expected }) => {
+      it(`.contains() should return ${expected} when ${label}`, () => {
+        assert.strictEqual(cluster.contains(topic), expected);
       });
     });
   });

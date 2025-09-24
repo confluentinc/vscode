@@ -21,6 +21,7 @@ import {
   isCCloud,
   ISearchable,
 } from "./resource";
+import { KafkaTopic } from "./topic";
 
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
@@ -52,6 +53,18 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
       this.connectionType === other.connectionType &&
       this.environmentId === other.environmentId &&
       this.id === other.id
+    );
+  }
+
+  /**
+   * Are we the source of this topic?
+   */
+  contains(topic: KafkaTopic): boolean {
+    return (
+      this.connectionId === topic.connectionId &&
+      this.connectionType === topic.connectionType &&
+      this.environmentId === topic.environmentId &&
+      this.id === topic.clusterId
     );
   }
 }
