@@ -6,7 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Fixed
 
-- Fix schema registry operations in the face of schemas within custom contexts (#2644)
+- Fix schema registry operations in the face of schemas within custom contexts
+  ([#2644](https://github.com/confluentinc/vscode/issues/2644))
 
 ## 1.6.1
 
