@@ -1,8 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { CancellationToken, Progress, window } from "vscode";
-import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import * as errors from "../errors";
+import { CCloudResourceLoader } from "../loaders";
+import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import * as notifications from "../notifications";
@@ -251,6 +257,55 @@ describe("viewProviders/flinkDatabase.ts", () => {
           sinon.assert.calledOnce(udfsDelegateFetchChildrenStub);
           sinon.assert.calledWith(udfsDelegateFetchChildrenStub, db, true);
         });
+      });
+    });
+
+    describe("updateTreeViewDescription()", () => {
+      const initialDescription = "Initial description";
+
+      let ccloudLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+
+      function getDescription(): string | undefined {
+        return viewProvider["treeView"].description;
+      }
+
+      beforeEach(() => {
+        viewProvider["treeView"].description = initialDescription;
+        ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
+      });
+
+      it("does nothing when no database is set", async () => {
+        viewProvider["resource"] = null;
+        await viewProvider.updateTreeViewDescription();
+        assert.strictEqual(getDescription(), "");
+      });
+
+      it("sets to mix of database name and environment name when database is set", async () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
+
+        const parentEnvironment = {
+          ...TEST_CCLOUD_ENVIRONMENT,
+          name: "Test Env Name",
+        } as CCloudEnvironment;
+
+        ccloudLoader.getEnvironment.resolves(parentEnvironment);
+
+        await viewProvider.updateTreeViewDescription();
+
+        assert.strictEqual(
+          getDescription(),
+          `${parentEnvironment.name} | ${TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name}`,
+        );
+      });
+
+      it("sets to database name when no parent environment is found", async () => {
+        viewProvider["resource"] = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER; // in TEST_CCLOUD_ENVIRONMENT.
+
+        ccloudLoader.getEnvironment.resolves(undefined);
+
+        await viewProvider.updateTreeViewDescription();
+
+        assert.strictEqual(getDescription(), TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.name);
       });
     });
   });
