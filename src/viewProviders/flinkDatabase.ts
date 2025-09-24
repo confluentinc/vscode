@@ -34,6 +34,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   ArtifactOrUdf
 > {
   viewId = "confluent-flink-database";
+  kind = "flinkdatabase";
 
   parentResourceChangedEmitter = flinkDatabaseViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
@@ -136,10 +137,6 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   get loggerName() {
     return `viewProviders.flink.${this.currentDelegate?.mode ?? "unknown"}`;
-  }
-
-  get kind() {
-    return this.currentDelegate?.mode ?? "unknown";
   }
 
   get database(): CCloudFlinkDbKafkaCluster | null {
