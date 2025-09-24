@@ -4,11 +4,23 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-- Fix schema registry operations in the face of schemas within custom contexts (#2644)
-
 ### Added
 
 - Date/time picker for message viewer when consuming from a specific point in time.
+
+## 1.6.2
+
+### Fixed
+
+- Fix schema registry operations in the face of schemas within custom contexts
+  ([#2644](https://github.com/confluentinc/vscode/issues/2644))
+
+## 1.6.1
+
+### Fixed
+
+- Fix connecting to WarpStream agents by Kubernetes port-forwarding by prefixing magic `client.id`
+  suffix with a comma. ([#2506](https://github.com/confluentinc/vscode/issues/2506))
 
 ## 1.6.0
 
