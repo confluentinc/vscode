@@ -12,6 +12,7 @@ import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA,
@@ -22,6 +23,7 @@ import { EventChangeType, SubjectChangeEvent } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/loaderUtils";
 import { CCloudEnvironment } from "../models/environment";
+import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
@@ -427,6 +429,28 @@ describe("TopicViewProvider", () => {
         provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
         await provider.currentKafkaClusterChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
         assert.deepEqual(provider.kafkaCluster, TEST_CCLOUD_KAFKA_CLUSTER);
+
+        sinon.assert.calledOnce(setContextValueStub);
+        sinon.assert.calledWith(
+          setContextValueStub,
+          contextValues.ContextValues.kafkaClusterSelected,
+          true,
+        );
+        sinon.assert.calledOnce(setSearchStub);
+        sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+        sinon.assert.calledOnce(refreshStub);
+      });
+
+      it("should handle changing between a local cluster and a shadow direct cluster if the same id correctly", async () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        // Same id as local cluster, but direct cluster type / env id / connection id, as is
+        // the case when having a shadow direct connection on top of local kafka.
+        const shadowDirectCluster = DirectKafkaCluster.create({
+          ...TEST_DIRECT_KAFKA_CLUSTER,
+          id: TEST_LOCAL_KAFKA_CLUSTER.id,
+        });
+        await provider.currentKafkaClusterChangedHandler(shadowDirectCluster);
+        assert.deepEqual(provider.kafkaCluster, shadowDirectCluster);
 
         sinon.assert.calledOnce(setContextValueStub);
         sinon.assert.calledWith(
