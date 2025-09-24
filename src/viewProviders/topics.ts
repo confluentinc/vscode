@@ -324,7 +324,7 @@ export class TopicViewProvider
     // Otherwise was setting to the same cluster, or setting to null when already null, so do nothing.
   }
 
-  topicSearchSetHandler(searchString: string | null): void {
+  async topicSearchSetHandler(searchString: string | null): Promise<void> {
     logger.debug("topicSearchSet event fired, refreshing", { searchString });
     // mainly captures the last state of the search internals to see if search was adjusted after
     // a previous search was used, or if this is the first time search is being used
@@ -340,8 +340,8 @@ export class TopicViewProvider
       lastFilteredItemCount: this.searchMatches.size,
       lastTotalItemCount: this.totalItemCount,
     });
-    this.setSearch(searchString);
-    this.refresh();
+
+    await Promise.all([this.setSearch(searchString), this.refresh()]);
   }
 
   subjectChangeHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): void {
