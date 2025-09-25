@@ -35,7 +35,6 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     this.id = props.id;
     this.name = props.name;
     this.description = props.description;
-    this.iconName = IconNames.FLINK_FUNCTION;
   }
 
   searchableText(): string {

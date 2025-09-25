@@ -441,13 +441,13 @@
       {
         "command": "confluent.flinkdatabase.setArtifactsViewMode",
         "title": "Switch to Flink Artifacts",
-        "icon": "$(folder-library)",
+        "icon": "$(confluent-code)",
         "category": "Confluent: Flink Database View"
       },
       {
         "command": "confluent.flinkdatabase.setUDFsViewMode",
         "title": "Switch to Flink UDFs",
-        "icon": "$(code)",
+        "icon": "$(confluent-function)",
         "category": "Confluent: Flink Database View"
       },
       {
