@@ -64,7 +64,7 @@ export async function configureFlinkDefaults(): Promise<void> {
   // Note: we can use name or ID for Language Server, but name used in Cloud UI since what you send is what shows in completions documentation
   await FLINK_CONFIG_DATABASE.update(databaseCluster.id, true);
 
-  window.showInformationMessage("Flink SQL defaults updated.", "View").then((selection) => {
+  window.showInformationMessage("Flink defaults updated.", "View").then((selection) => {
     if (selection === "View") {
       commands.executeCommand(
         "workbench.action.openSettings",
