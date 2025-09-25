@@ -10,17 +10,7 @@ import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { FlinkArtifact } from "../../models/flinkArtifact";
-import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import {
-  CloudProvider,
-  EnvironmentId,
-  IEnvProviderRegion,
-  IProviderRegion,
-} from "../../models/resource";
-import { showErrorNotificationWithButtons } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
-import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
+import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
@@ -33,6 +23,8 @@ export interface ArtifactUploadParams {
   artifactName: string;
   fileFormat: string;
   selectedFile: vscode.Uri;
+  description?: string;
+  documentationUrl?: string;
 }
 
 const logger = new Logger("commands/uploadArtifact");
@@ -91,93 +83,6 @@ export async function getPresignedUploadUrl(
     PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
   });
   return urlResponse;
-}
-
-export async function promptForArtifactUploadParams(
-  item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
-): Promise<ArtifactUploadParams | undefined> {
-  const isCcloudItem =
-    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster);
-  if (isCcloudItem) {
-    logger.debug("Starting upload artifact using provided context", {
-      environment: item.environmentId,
-      cloud: item.provider,
-      region: item.region,
-    });
-  }
-  const environment =
-    isCcloudItem && item.environmentId
-      ? { id: item.environmentId }
-      : await flinkCcloudEnvironmentQuickPick();
-  let cloudRegion: IProviderRegion | undefined;
-  if (isCcloudItem) {
-    cloudRegion = { provider: item.provider, region: item.region };
-  } else {
-    cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
-  }
-
-  if (!environment || !environment.id || !cloudRegion) {
-    return undefined;
-  }
-
-  let cloud: CloudProvider;
-  if (cloudRegion.provider === "AZURE") {
-    cloud = CloudProvider.Azure;
-  } else if (cloudRegion.provider === "AWS") {
-    cloud = CloudProvider.AWS;
-  } else {
-    void showErrorNotificationWithButtons(
-      `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
-    );
-    return undefined;
-  }
-
-  // If the incoming item is a Uri, use it; otherwise prompt the user
-  let selectedFile: vscode.Uri | undefined;
-  if (item && item instanceof vscode.Uri) {
-    selectedFile = item;
-  } else {
-    const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
-      openLabel: "Select",
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      filters: {
-        "Flink Artifact Files": ["jar"],
-      },
-    });
-
-    if (!selectedFiles || selectedFiles.length === 0) {
-      // if the user cancels the file selection, silently exit
-      return undefined;
-    }
-
-    selectedFile = selectedFiles[0];
-  }
-
-  const fileFormat: string = selectedFile.fsPath.split(".").pop() ?? "";
-
-  const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
-
-  const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name",
-    value: defaultArtifactName,
-    ignoreFocusOut: true,
-    validateInput: (value) => (value && value.trim() ? undefined : "Artifact name is required"),
-  });
-
-  if (!artifactName) {
-    return undefined;
-  }
-
-  return {
-    environment: environment.id,
-    cloud,
-    region: cloudRegion.region,
-    artifactName,
-    fileFormat,
-    selectedFile,
-  };
 }
 
 export async function handleUploadToCloudProvider(
@@ -310,7 +215,7 @@ export function buildCreateArtifactRequest(
   params: ArtifactUploadParams,
   uploadId: string,
 ): CreateArtifactV1FlinkArtifactRequest {
-  return {
+  const request: CreateArtifactV1FlinkArtifactRequest = {
     cloud: params.cloud,
     region: params.region,
     environment: params.environment,
@@ -321,6 +226,13 @@ export function buildCreateArtifactRequest(
       upload_id: uploadId,
     },
   };
+  if (params.description) {
+    request.description = params.description;
+  }
+  if (params.documentationUrl) {
+    request.documentation_link = params.documentationUrl;
+  }
+  return request;
 }
 
 export function validateUdfInput(
