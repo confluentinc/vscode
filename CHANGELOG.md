@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## Fixed
+
+- Fixed automatically refreshing the Topics view when creating or deleting subjects in the
+  corresponding schema registry (re-correlating the new set of schemas to topics)
+  ([#2556](https://github.com/confluentinc/vscode/issues/2556)).
+
 ### Added
 
 - Date/time picker for message viewer when consuming from a specific point in time.
