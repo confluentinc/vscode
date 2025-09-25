@@ -94,7 +94,7 @@ describe("flinkUDFs command", () => {
     );
   });
 
-  it("should return early if no artifact is provided", async () => {
+  it("should return early if no artifact is provided in createUdfRegistrationDocumentCommand", async () => {
     const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
     const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
 
