@@ -174,7 +174,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Get all Flink databases (Flink-enabled Kafka clusters) in all environments.
+   * Get all Flink databases (Flink-enabled Kafka clusters) for one or all environments.
    * @param environmentId Optional environment ID to filter by.
    * @returns Array of {@link CCloudFlinkDbKafkaCluster} objects.
    */
