@@ -21,7 +21,6 @@ describe("commands/utils/artifactUploadForm", () => {
     sandbox = sinon.createSandbox();
     showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick");
     ccloudLoader = getStubbedCCloudResourceLoader(sandbox);
-    // By default, set the ccloudLoader to return the TEST_CCLOUD_SCHEMA_REGISTRY for its environmentId
     ccloudLoader.getEnvironment
       .withArgs(TEST_CCLOUD_ENVIRONMENT.environmentId)
       .resolves(TEST_CCLOUD_ENVIRONMENT);
