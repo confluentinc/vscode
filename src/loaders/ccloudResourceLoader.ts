@@ -180,11 +180,10 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   public async getFlinkDatabases(
     environmentId?: EnvironmentId,
   ): Promise<CCloudFlinkDbKafkaCluster[]> {
-    let databases = await this.getKafkaClusters((cluster) => {
-      return environmentId
-        ? cluster.environmentId === environmentId && cluster.isFlinkable()
-        : cluster.isFlinkable();
-    });
+    let clusters = await this.getKafkaClusters((cluster) => cluster.isFlinkable());
+    const databases = environmentId
+      ? clusters.filter((c) => c.environmentId === environmentId)
+      : clusters;
     return databases as CCloudFlinkDbKafkaCluster[];
   }
 
@@ -194,8 +193,8 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @returns The {@link CCloudFlinkDbKafkaCluster} with the given ID, or undefined if not found.
    */
   public async getFlinkDatabase(
+    environmentId: EnvironmentId,
     databaseId: string,
-    environmentId?: EnvironmentId,
   ): Promise<CCloudFlinkDbKafkaCluster | undefined> {
     const databases: CCloudFlinkDbKafkaCluster[] = await this.getFlinkDatabases(environmentId);
     return databases.find((db) => db.id === databaseId);
