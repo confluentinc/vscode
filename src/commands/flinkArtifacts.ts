@@ -18,10 +18,10 @@ import {
 import { getSidecar } from "../sidecar";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
-  promptForArtifactUploadParams,
   promptForFunctionAndClassName,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
@@ -45,7 +45,7 @@ export async function uploadArtifactCommand(
 ): Promise<void> {
   try {
     // 1. Gather the request parameters from user or item
-    const params = await promptForArtifactUploadParams(item);
+    const params = await artifactUploadQuickPickForm(item);
     if (!params) return; // User cancelled the prompt
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
