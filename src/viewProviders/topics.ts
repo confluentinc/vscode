@@ -301,8 +301,8 @@ export class TopicViewProvider
   }
 
   async currentKafkaClusterChangedHandler(cluster: KafkaCluster | null): Promise<void> {
-    if (!cluster && Boolean(this.kafkaCluster)) {
-      // Edging from a focused Kafka cluster to no cluster selected.
+    if (this.kafkaCluster && !cluster) {
+      // Edging from a focused Kafka cluster to no cluster selected (connection disconnected/logout)
       logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting view", {
         currentCluster: this.kafkaCluster,
       });
@@ -350,7 +350,8 @@ export class TopicViewProvider
       lastTotalItemCount: this.totalItemCount,
     });
 
-    await Promise.all([this.setSearch(searchString), this.refresh()]);
+    await this.setSearch(searchString);
+    this.refresh();
   }
 
   subjectChangeHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): void {
