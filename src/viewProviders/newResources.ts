@@ -84,6 +84,14 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   logger: Logger;
   readonly environments: ET[];
 
+  /**
+   * Is this row useable yet (and properties like `name` and so forth can be referenced?
+   *
+   * CCloud and Local connectino rows will always be, but DirectConnectionRows won't be until they complete
+   * their first loading
+   **/
+  abstract usable: boolean;
+
   constructor(
     public readonly loader: LT,
     public baseContextValue: string,
@@ -249,6 +257,7 @@ export abstract class SingleEnvironmentConnectionRow<
 // Now the concrete connection row classes.
 
 export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloudResourceLoader> {
+  usable = true;
   ccloudOrganization?: CCloudOrganization;
   constructor() {
     super(CCloudResourceLoader.getInstance(), "resources-ccloud-container");
@@ -317,6 +326,11 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
   DirectSchemaRegistry,
   DirectResourceLoader
 > {
+  // Will not be useable until after initial refresh completes.
+  get usable(): boolean {
+    return Boolean(this.environment);
+  }
+
   constructor(loader: DirectResourceLoader) {
     super(loader, "resources-direct-container");
   }
@@ -381,6 +395,9 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalSchemaRegistry,
   LocalResourceLoader
 > {
+  // Local connection row is always immediately useable.
+  usable = true;
+
   constructor() {
     super(LocalResourceLoader.getInstance(), "local-container");
   }
@@ -444,7 +461,7 @@ export class NewResourceViewProvider
       // Always do a deep refresh of this connection.
       await connectionRow.refresh(deepRefresh);
 
-      this.logger.debug("Connection row refreshed, signaling row repaint.");
+      this.logger.debug("Connection row for refreshed, signaling row repaint.", { connectionId });
       this.repaint(connectionRow);
     });
   }
@@ -496,6 +513,11 @@ export class NewResourceViewProvider
       const existingDirectConnections = Array.from(this.connections.values()).filter(
         (row) => row instanceof DirectConnectionRow,
       );
+
+      this.logger.debug("Existing direct connections found", {
+        directLoaders: directLoaders.length,
+        existingDirectConnections: existingDirectConnections.length,
+      });
 
       // We nay collect more than one async operation to perform while within
       // the withProgress() call, so we can show a single throbber while
@@ -731,7 +753,9 @@ export class NewResourceViewProvider
   }
 
   private getToplevelChildren(): AnyConnectionRow[] {
-    const connections = [...this.connections.values()];
+    // Skip any direct connection rows that are not yet useable.
+    // (They will become useable after their initial refresh completes and the view will be repainted.)
+    const connections = [...this.connections.values()].filter((row) => row.usable);
 
     this.sortConnections(connections);
 
