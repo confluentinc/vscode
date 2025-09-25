@@ -63,6 +63,20 @@ semaphore:
           default_value: stag.cpdev.cloud
           description: The Confluent Cloud environment to use for CCloud requests.
           required: true
+    - name: scheduled-run-playwright-e2e-tests
+      branch: main
+      pipeline_file: ".semaphore/playwright-e2e.yml"
+      scheduled: true
+      at: "0 5 * * *" # Every day at 05:00 UTC
+      parameters:
+        - name: VSCODE_VERSION
+          required: true
+          description: The version of VS Code to test against (e.g., 'stable', 'insiders', or a specific version like '1.100.0').
+          default_value: "stable"
+        - name: TEST_SUITE
+          required: true
+          description: The test tag(s) (pipe-separated, e.g. `@smoke|@topic-message-viewer`) to run. By default, runs the smoke tests and critical user flow tests.
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud"
 sonarqube:
   enable: false
 make:

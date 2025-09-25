@@ -32,6 +32,7 @@ blocks:
           type: s1-prod-ubuntu24-04-amd64-1
       prologue: &e2e-prologue
         commands:
+          - make load-cached-docker-images
           - make ci-bin-sem-cache-restore
           - |
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
@@ -58,6 +59,7 @@ blocks:
           commands:
             - make remove-test-env
             - make ci-bin-sem-cache-store
+            - make cache-docker-images
             - make store-test-results-to-semaphore
             # Upload Playwright artifacts, if available
             - |
