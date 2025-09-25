@@ -32,20 +32,30 @@ export async function artifactUploadQuickPickForm(
 ): Promise<ArtifactUploadParams | undefined> {
   const state: FormState = {};
   const loader = CCloudResourceLoader.getInstance();
+  const assignStateFromKnownResource = async (
+    resource: CCloudKafkaCluster | CCloudFlinkComputePool,
+  ) => {
+    state.cloudRegion = { provider: resource.provider, region: resource.region };
+    // Only call getEnvironment if we do not already have this environment in state
+    // Starting upload from right-clicking on Flink database cluster will override the selectedFlinkDatabase env
+    if (!state.environment || state.environment.id !== resource.environmentId) {
+      try {
+        const env = await loader.getEnvironment(resource.environmentId);
+        if (env) {
+          state.environment = {
+            id: env.id,
+            name: env.name,
+          };
+        }
+      } catch (error) {
+        logger.error("Error fetching environment for form, will default to undefined", error);
+      }
+    }
+  };
   // If there is a selected Flink database, pre-select the environment and cloud/region.
   const selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
   if (selectedFlinkDatabase) {
-    let env = await loader.getEnvironment(selectedFlinkDatabase.environmentId);
-    if (env !== undefined) {
-      state.environment = {
-        id: env.id,
-        name: env.name,
-      };
-    }
-    state.cloudRegion = {
-      provider: selectedFlinkDatabase.provider,
-      region: selectedFlinkDatabase.region,
-    };
+    await assignStateFromKnownResource(selectedFlinkDatabase);
   }
 
   // Pre-populate state from item if provided (invoked from context menu)
@@ -56,16 +66,7 @@ export async function artifactUploadQuickPickForm(
         cloud: item.provider,
         region: item.region,
       });
-
-      state.cloudRegion = { provider: item.provider, region: item.region };
-
-      let env = await loader.getEnvironment(item.environmentId);
-      if (env !== undefined) {
-        state.environment = {
-          id: env.id,
-          name: env.name,
-        };
-      }
+      await assignStateFromKnownResource(item);
     } else if (item instanceof vscode.Uri) {
       state.selectedFile = item;
       state.artifactName = path.basename(item.fsPath, path.extname(item.fsPath));
