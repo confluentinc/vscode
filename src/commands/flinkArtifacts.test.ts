@@ -16,12 +16,8 @@ import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import {
-  createUdfRegistrationDocumentCommand,
-  registerFlinkArtifactCommands,
-  startGuidedUdfCreationCommand,
-  uploadArtifactCommand,
-} from "./flinkArtifacts";
+import { registerFlinkArtifactCommands, uploadArtifactCommand } from "./flinkArtifacts";
+import { createUdfRegistrationDocumentCommand, startGuidedUdfCreationCommand } from "./flinkUDFs";
 import * as commands from "./index";
 import * as artifactUploadForm from "./utils/artifactUploadForm";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
