@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Two Flink enablement settings have updated names for clarity. Users may need to verify or update
+  their settings for Flink Language Server and Flink Artifacts.
+  ([#2684](https://github.com/confluentinc/vscode/pull/2684))
+
 ### Added
 
 - Date/time picker for message viewer when consuming from a specific point in time.
