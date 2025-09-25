@@ -82,13 +82,6 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
 - **Connections**: CCloud (OAuth), Direct (custom), Local (Docker)
 - **State**: Tree view state via context values like `confluent.ccloudConnectionAvailable`
 
-### Type Safety Requirements
-
-- Explicit types, never `any`
-- Discriminated unions for state management
-- JSDoc for exported functions
-- Use `enum` over union types for constants
-
 ### Webview Development
 
 - **Templates**: HTML templates in `src/webview/*.html` with template variables `${var}`
@@ -96,6 +89,32 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
 - **Bindings**: Data binding system in `src/webview/bindings/` using Observable patterns
 - **Communication**: `sendWebviewMessage()` and message handlers for extension ↔ webview
   communication
+
+## CRITICAL REQUIREMENTS (Non-negotiable)
+
+### 1. Disposable Resource Management - MANDATORY
+
+- **ALL** classes that register event listeners MUST implement `vscode.Disposable`
+- **ALWAYS** call `.dispose()` on resources when done - especially `.event()` listeners
+- **Use** `DisposableCollection` base class to manage multiple disposables automatically
+- **Pattern**: Store disposables from constructors, dispose in class `.dispose()` method
+- **Example**: `this.disposables.push(vscode.workspace.onDidChangeConfiguration(...))`
+
+### 2. Type Safety - NO EXCEPTIONS
+
+- **NEVER** use `any` type - always provide explicit types or interfaces
+- **ALWAYS** use discriminated unions for state management patterns
+- **PREFER** `enum` over string union types for constants
+- **REQUIRE** JSDoc comments on all exported functions and public class methods
+- **TypeScript strict mode** is enforced - code must compile without type errors
+
+### 3. Single Responsibility Principle - ENFORCE STRICTLY
+
+- **One class, one purpose** - if class does multiple things, split it
+- **One function, one task** - keep functions small and focused
+- **One file, one concept** - related functionality goes together, unrelated gets separated
+- **Example**: ResourceLoader handles loading, ResourceManager handles state, TreeProvider handles
+  UI
 
 ## Important Guidelines
 
