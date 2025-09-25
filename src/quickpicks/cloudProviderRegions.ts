@@ -1,5 +1,8 @@
 import { QuickPickItemKind, window } from "vscode";
-import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader, loadProviderRegions } from "../loaders/ccloudResourceLoader";
@@ -138,21 +141,22 @@ export async function flinkDatabaseRegionsQuickPick(
       ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
       id: "cluster-123",
     }) as CCloudFlinkDbKafkaCluster,
+    CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "cluster-456",
+    }) as CCloudFlinkDbKafkaCluster,
   ]; //await loader.getFlinkDatabases();
 
   // Group by provider then region, collecting the database (cluster) names.
-  const clusterRegions = new Map<
-    string,
-    { provider: string; region: string; names: Set<string> }
-  >();
+  const clusterRegions = new Map<string, IProviderRegion & { names: string[] }>();
   for (const c of flinkDbClusters) {
     const key = `${c.provider}|${c.region}`;
     let agg = clusterRegions.get(key);
     if (!agg) {
-      agg = { provider: c.provider, region: c.region, names: new Set<string>() };
+      agg = { provider: c.provider, region: c.region, names: [] };
       clusterRegions.set(key, agg);
     }
-    agg.names.add(c.name);
+    agg.names.push(c.name);
   }
 
   // Convert to array and sort by provider then region then first database name.
@@ -163,13 +167,10 @@ export async function flinkDatabaseRegionsQuickPick(
     if (a.region !== b.region) {
       return a.region.localeCompare(b.region);
     }
-    // deterministic for identical provider/region (unlikely given map key) but keep stable
-    const aFirst = Array.from(a.names).sort((x, y) => x.localeCompare(y))[0];
-    const bFirst = Array.from(b.names).sort((x, y) => x.localeCompare(y))[0];
-    return aFirst.localeCompare(bFirst);
+    return a.names[0].localeCompare(b.names[0]);
   });
 
-  const quickPickItems: QuickPickItemWithValue<IProviderRegion | "__VIEW_ALL__">[] = [];
+  const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] = [];
   let lastProvider = "";
   for (const entry of regionsList) {
     if (entry.provider !== lastProvider) {
@@ -191,20 +192,20 @@ export async function flinkDatabaseRegionsQuickPick(
 
   // Add View All sentinel item.
   quickPickItems.push({
-    label: "View All Regions",
+    label: "View All Available Regions",
     description: "Show the complete list of regions",
-    value: "__VIEW_ALL__",
+    value: "VIEW_ALL",
   });
 
   const choice = await window.showQuickPick(quickPickItems, {
-    placeHolder: "Select a region (Flink databases only)",
+    placeHolder: "Select a region containing a Flink database",
     ignoreFocusOut: true,
   });
 
   if (!choice) {
     return undefined; // user cancelled
   }
-  if (choice.value === "__VIEW_ALL__") {
+  if (choice.value === "VIEW_ALL") {
     return await cloudProviderRegionQuickPick(filter);
   }
 
