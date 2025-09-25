@@ -1198,8 +1198,13 @@
       },
       {
         "view": "confluent-flink-database",
-        "contents": "No Flink artifacts found.\n[Generate a Flink Artifact from template](command:confluent.artifacts.scaffold)",
-        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected"
+        "contents": "No Flink artifacts found.\n[Generate a new Flink Artifact from template](command:confluent.artifacts.scaffold)",
+        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'"
+      },
+      {
+        "view": "confluent-flink-database",
+        "contents": "No UDFs found.\n[Generate a new Flink UDF from template](command:confluent.artifacts.scaffold)",
+        "when": "config.confluent.flink.enableFlinkArtifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'"
       }
     ],
     "menus": {
@@ -1742,7 +1747,7 @@
         },
         {
           "command": "confluent.artifacts.scaffold",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected",
           "group": "navigation@1"
         },
         {
