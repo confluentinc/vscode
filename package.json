@@ -910,13 +910,13 @@
       {
         "title": "Flink",
         "properties": {
-          "confluent.flink.enableConfluentCloudLanguageServer": {
+          "confluent.flink.languageServer": {
             "type": "boolean",
             "order": 0,
             "default": true,
             "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
           },
-          "confluent.flink.enableFlinkArtifacts": {
+          "confluent.flink.artifacts": {
             "type": "boolean",
             "default": false,
             "order": 1,
