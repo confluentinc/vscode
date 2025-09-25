@@ -21,6 +21,7 @@ import {
   isCCloud,
   ISearchable,
 } from "./resource";
+import { KafkaTopic } from "./topic";
 
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
@@ -38,6 +39,33 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
 
   searchableText(): string {
     return `${this.name} ${this.id}`;
+  }
+
+  /**
+   * Determines if this KafkaCluster is equal to another by comparing connectionId, connectionType, environmentId, and id.
+   *
+   * (Kafka cluster ids are defined by the brokers themselves, but the user may have multiple connections able
+   * to access the same cluster, so we also need to compare connectionId and connectionType to be sure).
+   **/
+  equals(other: KafkaCluster): boolean {
+    return (
+      this.connectionId === other.connectionId &&
+      this.connectionType === other.connectionType &&
+      this.environmentId === other.environmentId &&
+      this.id === other.id
+    );
+  }
+
+  /**
+   * Are we the source of this topic?
+   */
+  contains(topic: KafkaTopic): boolean {
+    return (
+      this.connectionId === topic.connectionId &&
+      this.connectionType === topic.connectionType &&
+      this.environmentId === topic.environmentId &&
+      this.id === topic.clusterId
+    );
   }
 }
 
