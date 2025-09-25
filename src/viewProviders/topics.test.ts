@@ -527,9 +527,9 @@ describe("TopicViewProvider", () => {
         logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
       });
 
-      it("should call setSearch() with the search string", () => {
+      it("should call setSearch() with the search string", async () => {
         const searchString = "test-search";
-        provider.topicSearchSetHandler(searchString);
+        await provider.topicSearchSetHandler(searchString);
         sinon.assert.calledOnce(setSearchStub);
         sinon.assert.calledWith(setSearchStub, searchString);
         sinon.assert.calledOnce(logUsageStub);
@@ -537,8 +537,8 @@ describe("TopicViewProvider", () => {
         assert.strictEqual(provider.searchStringSetCount, 1);
       });
 
-      it("should call setSearch() with null when search string is null, but not increment searchStringSetCount", () => {
-        provider.topicSearchSetHandler(null);
+      it("should call setSearch() with null when search string is null, but not increment searchStringSetCount", async () => {
+        await provider.topicSearchSetHandler(null);
         sinon.assert.calledOnce(setSearchStub);
         sinon.assert.calledWith(setSearchStub, null);
         sinon.assert.calledOnce(logUsageStub);
