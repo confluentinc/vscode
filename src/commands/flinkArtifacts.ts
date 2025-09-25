@@ -14,7 +14,6 @@ import {
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
-import { createUdfRegistrationDocumentCommand, startGuidedUdfCreationCommand } from "./flinkUDFs";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
   getPresignedUploadUrl,
@@ -163,14 +162,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
     registerCommandWithLogging(
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
-    ),
-    registerCommandWithLogging(
-      "confluent.artifacts.createUdfRegistrationDocument",
-      createUdfRegistrationDocumentCommand,
-    ),
-    registerCommandWithLogging(
-      "confluent.artifacts.startGuidedUdfCreation",
-      startGuidedUdfCreationCommand,
     ),
   ];
 }

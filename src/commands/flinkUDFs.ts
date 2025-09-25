@@ -25,6 +25,14 @@ export function registerFlinkUDFCommands(): Disposable[] {
       "confluent.flinkdatabase.setUDFsViewMode",
       setFlinkUDFViewModeCommand,
     ),
+    registerCommandWithLogging(
+      "confluent.artifacts.createUdfRegistrationDocument",
+      createUdfRegistrationDocumentCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.artifacts.startGuidedUdfCreation",
+      startGuidedUdfCreationCommand,
+    ),
   ];
 }
 export async function createUdfRegistrationDocumentCommand(selectedArtifact: FlinkArtifact) {
