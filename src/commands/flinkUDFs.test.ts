@@ -17,7 +17,7 @@ import { createUdfRegistrationDocumentCommand, startGuidedUdfCreationCommand } f
 import * as commands from "./index";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
 
-describe("flinkUDFs", () => {
+describe("flinkUDFs command", () => {
   let sandbox: sinon.SinonSandbox;
 
   const artifact = new FlinkArtifact({
