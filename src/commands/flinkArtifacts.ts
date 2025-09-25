@@ -18,8 +18,8 @@ import {
 import { getSidecar } from "../sidecar";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
-  artifactUploadQuickPickForm,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   promptForFunctionAndClassName,
