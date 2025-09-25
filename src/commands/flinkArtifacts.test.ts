@@ -23,6 +23,7 @@ import {
   uploadArtifactCommand,
 } from "./flinkArtifacts";
 import * as commands from "./index";
+import * as artifactUploadForm from "./utils/artifactUploadForm";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
 
 describe("flinkArtifacts", () => {
@@ -140,7 +141,7 @@ describe("flinkArtifacts", () => {
   });
 
   it("should fail if there is no params", async () => {
-    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(undefined);
+    sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(undefined);
     const result = await uploadArtifactCommand();
 
     assert.strictEqual(result, undefined);
@@ -154,7 +155,7 @@ describe("flinkArtifacts", () => {
       environment: " env-123456",
     };
 
-    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+    sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
     sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
     sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
     sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
@@ -171,7 +172,7 @@ describe("flinkArtifacts", () => {
     const params = { ...mockParams };
     const uploadUrl = { ...mockPresignedUrlResponse };
 
-    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(params);
+    sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(params);
     sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
     sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
 
@@ -198,7 +199,7 @@ describe("flinkArtifacts", () => {
       cloud: "Azure",
     };
 
-    sandbox.stub(uploadArtifact, "promptForArtifactUploadParams").resolves(mockParams);
+    sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
     sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
     const handleUploadStub = sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
     const createArtifactStub = sandbox
