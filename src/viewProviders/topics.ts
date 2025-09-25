@@ -58,13 +58,22 @@ export class TopicViewProvider
   private forceDeepRefresh: boolean = false;
 
   /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
-  refresh(forceDeepRefresh: boolean = false, onlyIfViewingClusterId: string | null = null): void {
-    if (
-      onlyIfViewingClusterId &&
-      this.kafkaCluster &&
-      this.kafkaCluster.id !== onlyIfViewingClusterId
-    ) {
-      // If the view is currently focused on a different cluster, no need to refresh
+  refresh(
+    forceDeepRefresh: boolean = false,
+    onlyIfMatching: KafkaCluster | KafkaTopic | null = null,
+  ): void {
+    let matching: boolean;
+    if (onlyIfMatching instanceof KafkaTopic) {
+      matching = this.kafkaCluster ? this.kafkaCluster.contains(onlyIfMatching) : false;
+    } else if (onlyIfMatching instanceof KafkaCluster) {
+      matching = this.kafkaCluster ? this.kafkaCluster.equals(onlyIfMatching) : false;
+    } else {
+      matching = true; // null means always refresh
+    }
+
+    // If not focused on any cluster, or if the view is currently focused on a
+    // different cluster than matches onlyIfMatching, no need to refresh
+    if (!this.kafkaCluster || !matching) {
       return;
     }
 
@@ -116,11 +125,15 @@ export class TopicViewProvider
   }
 
   /** Convenience method to revert this view to its original state. */
-  reset(): void {
-    setContextValue(ContextValues.kafkaClusterSelected, false);
+  async reset(): Promise<void> {
     this.kafkaCluster = null;
     this.treeView.description = "";
-    this.setSearch(null);
+
+    await Promise.all([
+      setContextValue(ContextValues.kafkaClusterSelected, false),
+      this.setSearch(null),
+    ]);
+
     this.refresh();
   }
 
@@ -258,12 +271,12 @@ export class TopicViewProvider
             envEvent,
           },
         );
-        this.reset();
+        await this.reset();
       }
     }
   }
 
-  ccloudConnectedHandler(connected: boolean): void {
+  async ccloudConnectedHandler(connected: boolean): Promise<void> {
     if (this.kafkaCluster && isCCloud(this.kafkaCluster)) {
       // any transition of CCloud connection state should reset the tree view if we're focused on
       // a CCloud Kafka Cluster
@@ -271,11 +284,11 @@ export class TopicViewProvider
         "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
         { connected },
       );
-      this.reset();
+      await this.reset();
     }
   }
 
-  localKafkaConnectedHandler(connected: boolean): void {
+  async localKafkaConnectedHandler(connected: boolean): Promise<void> {
     if (this.kafkaCluster && isLocal(this.kafkaCluster)) {
       // any transition of local resource availability should reset the tree view if we're focused
       // on a local Kafka cluster
@@ -283,33 +296,44 @@ export class TopicViewProvider
         "Resetting topics view due to localKafkaConnected event and currently focused on a local cluster",
         { connected },
       );
-      this.reset();
+      await this.reset();
     }
   }
 
   async currentKafkaClusterChangedHandler(cluster: KafkaCluster | null): Promise<void> {
-    if (!cluster && this.kafkaCluster) {
+    if (!cluster && Boolean(this.kafkaCluster)) {
+      // Edging from a focused Kafka cluster to no cluster selected.
       logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting view", {
         currentCluster: this.kafkaCluster,
       });
-      // Edging from a focused Kafka cluster to no cluster selected.
-      this.reset();
-    } else if (cluster && this.kafkaCluster?.id !== cluster.id) {
+
+      // will set kafkaCluster to null, among other things.
+      await this.reset();
+    } else if (
+      cluster &&
+      (!this.kafkaCluster || (this.kafkaCluster && !this.kafkaCluster.equals(cluster)))
+    ) {
+      // Edging from no focused cluster to a cluster, or from one focused Kafka cluster to another.
       logger.debug("currentKafkaClusterChanged event fired with new cluster, updating view", {
         currentCluster: this.kafkaCluster,
         newCluster: cluster,
       });
-      // Edging from one focused Kafka cluster to another.
+
       this.kafkaCluster = cluster;
 
-      setContextValue(ContextValues.kafkaClusterSelected, true);
-      this.setSearch(null); // reset search when cluster changes
-      await this.updateTreeViewDescription();
+      await Promise.all([
+        this.updateTreeViewDescription(),
+        setContextValue(ContextValues.kafkaClusterSelected, true),
+        this.setSearch(null), // reset search when cluster changes
+      ]);
+
       this.refresh();
     }
+
+    // Otherwise was setting to the same cluster, or setting to null when already null, so do nothing.
   }
 
-  topicSearchSetHandler(searchString: string | null): void {
+  async topicSearchSetHandler(searchString: string | null): Promise<void> {
     logger.debug("topicSearchSet event fired, refreshing", { searchString });
     // mainly captures the last state of the search internals to see if search was adjusted after
     // a previous search was used, or if this is the first time search is being used
@@ -325,8 +349,8 @@ export class TopicViewProvider
       lastFilteredItemCount: this.searchMatches.size,
       lastTotalItemCount: this.totalItemCount,
     });
-    this.setSearch(searchString);
-    this.refresh();
+
+    await Promise.all([this.setSearch(searchString), this.refresh()]);
   }
 
   subjectChangeHandler(event: SubjectChangeEvent | SchemaVersionChangeEvent): void {
@@ -366,14 +390,16 @@ export class TopicViewProvider
   }
 
   /** Update internal state when the search string is set or unset. */
-  setSearch(searchString: string | null): void {
+  async setSearch(searchString: string | null): Promise<void> {
     // set/unset the filter so any calls to getChildren() will filter appropriately
     this.itemSearchString = searchString;
-    // set context value to toggle between "search" and "clear search" actions
-    setContextValue(ContextValues.topicSearchApplied, searchString !== null);
+
     // clear from any previous search filter
     this.searchMatches = new Set();
     this.totalItemCount = 0;
+
+    // set context value to toggle between "search" and "clear search" actions
+    await setContextValue(ContextValues.topicSearchApplied, searchString !== null);
   }
 
   /** Are we currently viewing a CCloud-based Kafka cluster? */

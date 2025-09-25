@@ -12,6 +12,7 @@ import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_DIRECT_KAFKA_CLUSTER,
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA,
@@ -22,6 +23,7 @@ import { EventChangeType, SubjectChangeEvent } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { TopicFetchError } from "../loaders/loaderUtils";
 import { CCloudEnvironment } from "../models/environment";
+import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
@@ -48,6 +50,60 @@ describe("TopicViewProvider", () => {
   afterEach(() => {
     provider.dispose();
     sandbox.restore();
+  });
+
+  describe("refresh()", () => {
+    let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+    });
+
+    it("no-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to false", () => {
+      provider["forceDeepRefresh"] = true;
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh();
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      assert.strictEqual(provider["forceDeepRefresh"], false);
+    });
+
+    it("true-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to true", () => {
+      provider["forceDeepRefresh"] = false;
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(true);
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      assert.strictEqual(provider["forceDeepRefresh"], true);
+    });
+
+    it("onlyIfMatching a kafka cluster when no cluster is set should do nothing", () => {
+      provider.kafkaCluster = null;
+      provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
+      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a kafka cluster when the cluster doesn't match should do nothing", () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
+      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a kafka cluster when the cluster matches should call onDidChangeTreeData.fire()", () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
+      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a contained Kafka topic when the cluster matches should call onDidChangeTreeData.fire()", () => {
+      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+    });
   });
 
   describe("getTreeItem()", () => {
@@ -427,6 +483,28 @@ describe("TopicViewProvider", () => {
         provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
         await provider.currentKafkaClusterChangedHandler(TEST_CCLOUD_KAFKA_CLUSTER);
         assert.deepEqual(provider.kafkaCluster, TEST_CCLOUD_KAFKA_CLUSTER);
+
+        sinon.assert.calledOnce(setContextValueStub);
+        sinon.assert.calledWith(
+          setContextValueStub,
+          contextValues.ContextValues.kafkaClusterSelected,
+          true,
+        );
+        sinon.assert.calledOnce(setSearchStub);
+        sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+        sinon.assert.calledOnce(refreshStub);
+      });
+
+      it("should handle changing between a local cluster and a shadow direct cluster if the same id correctly", async () => {
+        provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+        // Same id as local cluster, but direct cluster type / env id / connection id, as is
+        // the case when having a shadow direct connection on top of local kafka.
+        const shadowDirectCluster = DirectKafkaCluster.create({
+          ...TEST_DIRECT_KAFKA_CLUSTER,
+          id: TEST_LOCAL_KAFKA_CLUSTER.id,
+        });
+        await provider.currentKafkaClusterChangedHandler(shadowDirectCluster);
+        assert.deepEqual(provider.kafkaCluster, shadowDirectCluster);
 
         sinon.assert.calledOnce(setContextValueStub);
         sinon.assert.calledWith(
