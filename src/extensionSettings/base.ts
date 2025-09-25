@@ -16,7 +16,7 @@ export enum SettingsSection {
   CCLOUD = "Confluent Cloud",
   LOCAL = "Local",
   DIRECT_CONNECTIONS = "Connections",
-  FLINK = "Flink SQL Defaults",
+  FLINK = "Flink",
   COPILOT = "Copilot Chat Participant",
 }
 
