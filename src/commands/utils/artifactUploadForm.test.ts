@@ -10,12 +10,14 @@ import * as loaders from "../../loaders";
 import { CloudProvider } from "../../models/resource";
 import * as regionsQuickPick from "../../quickpicks/cloudProviderRegions";
 import * as environmentsQuickPick from "../../quickpicks/environments";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { artifactUploadQuickPickForm } from "./artifactUploadForm";
 
 describe("commands/utils/artifactUploadForm", () => {
   let sandbox: sinon.SinonSandbox;
   let showQuickPickStub: sinon.SinonStub;
   let ccloudLoader: sinon.SinonStubbedInstance<loaders.CCloudResourceLoader>;
+  let viewProviderStub: FlinkDatabaseViewProvider;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -24,6 +26,7 @@ describe("commands/utils/artifactUploadForm", () => {
     ccloudLoader.getEnvironment
       .withArgs(TEST_CCLOUD_ENVIRONMENT.environmentId)
       .resolves(TEST_CCLOUD_ENVIRONMENT);
+    viewProviderStub = FlinkDatabaseViewProvider.getInstance();
   });
   afterEach(() => {
     sandbox.restore();
@@ -114,6 +117,19 @@ describe("commands/utils/artifactUploadForm", () => {
         fileEndsWith: true,
       },
     );
+  });
+
+  it("should pre-populate region and provider from selected Flink database", async () => {
+    // Cancel right away - we only want to inspect menu state
+    showQuickPickStub.resolves(undefined);
+    const database = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+    viewProviderStub["resource"] = database;
+
+    await artifactUploadQuickPickForm();
+    const firstMenuItems = showQuickPickStub.getCall(0).args[0];
+    const regionItem = firstMenuItems.find((i: any) => i.value === "cloudRegion");
+    assert.ok(regionItem, "Cloud region item should exist");
+    assert.strictEqual(regionItem.description, "AWS - us-west-2");
   });
 
   it("should pre-populate file and artifact name from provided Uri", async () => {
