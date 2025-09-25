@@ -1,102 +1,75 @@
-import { ElectronApplication, expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
-import { ResourcesView } from "../objects/views/ResourcesView";
-import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
-import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import {
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
+  DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR,
+  SelectKafkaCluster,
+  TopicsView,
+} from "../objects/views/TopicsView";
+import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { MessageViewerWebview } from "../objects/webviews/MessageViewerWebview";
 import { Tag } from "../tags";
-import { setupCCloudConnection, setupDirectConnection } from "../utils/connections";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the Topics view and Message Viewer functionality.
  * {@see https://github.com/confluentinc/vscode/issues/1703}
  *
  * Test flow:
- * 1. Set up connection:
- *    a. CCLOUD: Log in to Confluent Cloud from the sidebar auth flow
- *    b. DIRECT: Fill out the Add New Connection form and submit with Kafka connection details
- * 2. Select a Kafka cluster with topics
+ * 1. Set up connection (CCloud, Direct, or Local)
+ * 2. Select a Kafka cluster
  *    a. Pick from the Resources view, or
  *    b. Pick from the Topics view nav action
- * 3. Topics view should have at least one topic item listed
+ * 3. Create a topic
  * 4. Click on the `confluent-new-message` icon (envelope with magnifying glass) to open the topic
  *    message viewer
  * 5. View should open with basic webview components, even if messages aren't (yet) available
  */
 
 test.describe("Topics Listing & Message Viewer", () => {
-  let resourcesView: ResourcesView;
+  let topicName: string = "e2e-topic-message-viewer";
 
-  test.beforeEach(async ({ page }) => {
-    await openConfluentSidebar(page);
-
-    resourcesView = new ResourcesView(page);
+  test.afterEach(async ({ page }) => {
+    const topicView = new TopicsView(page);
+    await topicView.deleteTopic(topicName);
   });
 
   // test dimensions:
-  const connectionTypes: Array<
-    [ConnectionType, Tag, (page: Page, electronApp: ElectronApplication) => Promise<void>]
-  > = [
-    [
-      ConnectionType.Ccloud,
-      Tag.CCloud,
-      async (page, electronApp) => {
-        await setupCCloudConnection(
-          page,
-          electronApp,
-          process.env.E2E_USERNAME!,
-          process.env.E2E_PASSWORD!,
-        );
-      },
-    ],
-    [
-      ConnectionType.Direct,
-      Tag.Direct,
-      async (page) => {
-        await setupDirectConnection(page, {
-          formConnectionType: FormConnectionType.ConfluentCloud,
-          kafkaConfig: {
-            bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-            authType: SupportedAuthType.API,
-            credentials: {
-              api_key: process.env.E2E_KAFKA_API_KEY!,
-              api_secret: process.env.E2E_KAFKA_API_SECRET!,
-            },
-          },
-        });
-      },
-    ],
-    // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+  const connectionTypes: Array<[ConnectionType, Tag, number]> = [
+    [ConnectionType.Ccloud, Tag.CCloud, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
+    [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
+    [ConnectionType.Local, Tag.Local, 1],
   ];
   const entrypoints = [
     SelectKafkaCluster.FromResourcesView,
     SelectKafkaCluster.FromTopicsViewButton,
   ];
 
-  for (const [connectionType, connectionTag, connectionSetup] of connectionTypes) {
-    test.describe(`${connectionType} Connection`, { tag: [connectionTag] }, () => {
-      test.beforeEach(async ({ page, electronApp }) => {
-        // set up the connection based on type
-        await connectionSetup(page, electronApp);
-      });
+  for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
+    test.describe(`${connectionType} connection`, { tag: [connectionTag] }, () => {
+      // tell the `connectionItem` fixture which connection type to set up
+      test.use({ connectionType });
 
       for (const entrypoint of entrypoints) {
         test(`should select a Kafka cluster from the ${entrypoint}, list topics, and open message viewer`, async ({
           page,
+          connectionItem,
         }) => {
+          // ensure connection has resources available to work with
+          await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+          // create a new topic
           const topicsView = new TopicsView(page);
           await topicsView.loadTopics(connectionType, entrypoint);
+          await topicsView.createTopic(topicName, 1, replicationFactor);
 
-          // now the Topics view should show at least one topic item
-          await expect(topicsView.topics).not.toHaveCount(0);
-          const firstTopic = new TopicItem(page, topicsView.topics.first());
-          const messageViewer: MessageViewerWebview = await firstTopic.clickViewMessages();
+          // verify it shows up in the Topics view
+          let targetTopic = topicsView.topicsWithoutSchemas.filter({ hasText: topicName });
+          await targetTopic.scrollIntoViewIfNeeded();
+          await expect(targetTopic).toBeVisible();
+
+          // open the message viewer for the topic
+          const topic = new TopicItem(page, targetTopic);
+          const messageViewer: MessageViewerWebview = await topic.clickViewMessages();
 
           // the message viewer webview should now be visible in the editor area
           await expect(messageViewer.messageViewerSettings).toBeVisible();
