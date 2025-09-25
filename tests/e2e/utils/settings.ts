@@ -58,7 +58,7 @@ export async function configureVSCodeSettings(
   // pairs auto-closed/etc. Instead, we write to the clipboard and paste directly into the document.
   await electronApp.context().grantPermissions(["clipboard-write"]);
   await page.evaluate(
-    (content) => navigator.clipboard.writeText(content),
+    async (content) => await navigator.clipboard.writeText(content),
     JSON.stringify({ ...DEFAULT_SETTINGS, ...(settings ?? {}) }, null, 2),
   );
   await settingsJson.deleteAll();
