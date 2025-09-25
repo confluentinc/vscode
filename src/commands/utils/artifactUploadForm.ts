@@ -254,14 +254,15 @@ export async function artifactUploadQuickPickForm(
         } else if (state.cloudRegion!.provider === "AWS") {
           cloud = CloudProvider.AWS;
         } else {
-          // TODO we should really prevent this ahead of time, no?
+          // We are filitering GCP out of the pick list, so this should never happen, but it's here as a safeguard
           void showErrorNotificationWithButtons(
             `Upload Artifact cancelled: Unsupported cloud provider: ${state.cloudRegion!.provider}`,
           );
           continue;
         }
 
-        // TODO what happens if this goes wrong?
+        // Our file picker and context menu filter on `.jar`, so this should be safe
+        // When we add Python support we may want to make it more robust
         const fileFormat = state.selectedFile!.fsPath.split(".").pop() ?? "";
 
         return {
