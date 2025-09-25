@@ -12,8 +12,12 @@ import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
-import { registerFlinkArtifactCommands, uploadArtifactCommand } from "./flinkArtifacts";
-import { createUdfRegistrationDocumentCommand, startGuidedUdfCreationCommand } from "./flinkUDFs";
+import {
+  createUdfRegistrationDocumentCommand,
+  registerFlinkUDFCommands,
+  setFlinkUDFViewModeCommand,
+  startGuidedUdfCreationCommand,
+} from "./flinkUDFs";
 import * as commands from "./index";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
 
@@ -100,17 +104,29 @@ describe("flinkUDFs command", () => {
     sinon.assert.notCalled(showTextDocStub);
   });
 
-  it("should register the uploadArtifact command", () => {
+  it("should register startGuidedUdfCreationCommand and createUdfRegistrationDocumentCommand", () => {
     const registerCommandWithLoggingStub = sandbox
       .stub(commands, "registerCommandWithLogging")
       .returns({} as vscode.Disposable);
 
-    registerFlinkArtifactCommands();
+    registerFlinkUDFCommands();
+
+    sinon.assert.calledThrice(registerCommandWithLoggingStub);
 
     sinon.assert.calledWithExactly(
-      registerCommandWithLoggingStub,
-      "confluent.uploadArtifact",
-      uploadArtifactCommand,
+      registerCommandWithLoggingStub.getCall(0),
+      "confluent.flinkdatabase.setUDFsViewMode",
+      setFlinkUDFViewModeCommand,
+    );
+    sinon.assert.calledWithExactly(
+      registerCommandWithLoggingStub.getCall(1),
+      "confluent.artifacts.createUdfRegistrationDocument",
+      createUdfRegistrationDocumentCommand,
+    );
+    sinon.assert.calledWithExactly(
+      registerCommandWithLoggingStub.getCall(2),
+      "confluent.artifacts.startGuidedUdfCreation",
+      startGuidedUdfCreationCommand,
     );
   });
 
