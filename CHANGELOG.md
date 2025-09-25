@@ -6,9 +6,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Fixed
 
+- Two Flink enablement settings
+  [`confluent.flink.languageServer`](vscode://settings/confluent.flink.languageServer) and
+  [`confluent.flink.artifacts`](vscode://settings/confluent.flink.artifacts) have updated names for
+  clarity. Users may need to verify or update their settings for Flink Language Server and Flink
+  Artifacts. ([#2684](https://github.com/confluentinc/vscode/pull/2684))
+
 - Fixed automatically refreshing the Topics view when creating or deleting subjects in the
-  corresponding schema registry (re-correlating the new set of schemas to topics)
-  ([#2556](https://github.com/confluentinc/vscode/issues/2556)).
+  corresponding schema registry (re-correlating the new set of schemas to topics).
+  ([#2556](https://github.com/confluentinc/vscode/issues/2556))
 
 ### Added
 
