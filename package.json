@@ -441,13 +441,13 @@
       {
         "command": "confluent.flinkdatabase.setArtifactsViewMode",
         "title": "Switch to Flink Artifacts",
-        "icon": "$(folder-library)",
+        "icon": "$(confluent-code)",
         "category": "Confluent: Flink Database View"
       },
       {
         "command": "confluent.flinkdatabase.setUDFsViewMode",
         "title": "Switch to Flink UDFs",
-        "icon": "$(code)",
+        "icon": "$(confluent-function)",
         "category": "Confluent: Flink Database View"
       },
       {
@@ -2029,144 +2029,158 @@
           "fontCharacter": "\\f101"
         }
       },
+      "confluent-code": {
+        "description": "confluent-code icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f102"
+        }
+      },
       "confluent-environment": {
         "description": "confluent-environment icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f102"
+          "fontCharacter": "\\f103"
         }
       },
       "confluent-evolve-schema": {
         "description": "confluent-evolve-schema icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f103"
+          "fontCharacter": "\\f104"
         }
       },
       "confluent-export-connection": {
         "description": "confluent-export-connection icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f104"
+          "fontCharacter": "\\f105"
         }
       },
       "confluent-flink-compute-pool": {
         "description": "confluent-flink-compute-pool icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f105"
+          "fontCharacter": "\\f106"
         }
       },
       "confluent-flink-statement-status-completed": {
         "description": "confluent-flink-statement-status-completed icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f106"
+          "fontCharacter": "\\f107"
         }
       },
       "confluent-flink-statement-status-degraded": {
         "description": "confluent-flink-statement-status-degraded icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f107"
+          "fontCharacter": "\\f108"
         }
       },
       "confluent-flink-statement-status-deleting": {
         "description": "confluent-flink-statement-status-deleting icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f108"
+          "fontCharacter": "\\f109"
         }
       },
       "confluent-flink-statement-status-failed": {
         "description": "confluent-flink-statement-status-failed icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f109"
+          "fontCharacter": "\\f10a"
         }
       },
       "confluent-flink-statement-status-pending": {
         "description": "confluent-flink-statement-status-pending icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10a"
+          "fontCharacter": "\\f10b"
         }
       },
       "confluent-flink-statement-status-running": {
         "description": "confluent-flink-statement-status-running icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10b"
+          "fontCharacter": "\\f10c"
         }
       },
       "confluent-flink-statement-status-stopped": {
         "description": "confluent-flink-statement-status-stopped icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10c"
+          "fontCharacter": "\\f10d"
+        }
+      },
+      "confluent-function": {
+        "description": "confluent-function icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10e"
         }
       },
       "confluent-kafka-cluster": {
         "description": "confluent-kafka-cluster icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10d"
+          "fontCharacter": "\\f10f"
         }
       },
       "confluent-logo": {
         "description": "confluent-logo icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10e"
+          "fontCharacter": "\\f110"
         }
       },
       "confluent-new-message": {
         "description": "confluent-new-message icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10f"
+          "fontCharacter": "\\f111"
         }
       },
       "confluent-schema-registry": {
         "description": "confluent-schema-registry icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f110"
+          "fontCharacter": "\\f112"
         }
       },
       "confluent-send-message": {
         "description": "confluent-send-message icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f111"
+          "fontCharacter": "\\f113"
         }
       },
       "confluent-topic-without-schema": {
         "description": "confluent-topic-without-schema icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f112"
+          "fontCharacter": "\\f114"
         }
       },
       "confluent-topic": {
         "description": "confluent-topic icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f113"
+          "fontCharacter": "\\f115"
         }
       },
       "confluent-view-messages": {
         "description": "confluent-view-messages icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f114"
+          "fontCharacter": "\\f116"
         }
       },
       "warpstream-logo": {
         "description": "warpstream-logo icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f115"
+          "fontCharacter": "\\f117"
         }
       }
     },
