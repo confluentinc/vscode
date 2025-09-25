@@ -71,8 +71,9 @@ export class TopicViewProvider
       matching = true; // null means always refresh
     }
 
-    if (this.kafkaCluster && !matching) {
-      // If the view is currently focused on a different cluster than matches onlyIfMatching, no need to refresh
+    // If not focused on any cluster, or if the view is currently focused on a
+    // different cluster than matches onlyIfMatching, no need to refresh
+    if (!this.kafkaCluster || !matching) {
       return;
     }
 

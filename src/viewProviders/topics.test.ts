@@ -52,6 +52,60 @@ describe("TopicViewProvider", () => {
     sandbox.restore();
   });
 
+  describe("refresh()", () => {
+    let onDidChangeTreeDataFireStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+    });
+
+    it("no-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to false", () => {
+      provider["forceDeepRefresh"] = true;
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh();
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      assert.strictEqual(provider["forceDeepRefresh"], false);
+    });
+
+    it("true-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to true", () => {
+      provider["forceDeepRefresh"] = false;
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(true);
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      assert.strictEqual(provider["forceDeepRefresh"], true);
+    });
+
+    it("onlyIfMatching a kafka cluster when no cluster is set should do nothing", () => {
+      provider.kafkaCluster = null;
+      provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
+      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a kafka cluster when the cluster doesn't match should do nothing", () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_CCLOUD_KAFKA_CLUSTER);
+      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a kafka cluster when the cluster matches should call onDidChangeTreeData.fire()", () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_LOCAL_KAFKA_CLUSTER);
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a contained Kafka topic when the cluster doesn't match should do nothing", () => {
+      provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
+      sinon.assert.notCalled(onDidChangeTreeDataFireStub);
+    });
+
+    it("onlyIfMatching a contained Kafka topic when the cluster matches should call onDidChangeTreeData.fire()", () => {
+      provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+      provider.refresh(false, TEST_CCLOUD_KAFKA_TOPIC);
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+    });
+  });
+
   describe("getTreeItem()", () => {
     it("getTreeItem() should return a SchemaTreeItem for a Schema instance", () => {
       const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA);
