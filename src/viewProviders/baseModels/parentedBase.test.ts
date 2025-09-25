@@ -210,6 +210,12 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
         provider.parentResourceChangedContextValue,
         true,
       );
+      sinon.assert.callOrder(
+        setSearchStub,
+        setContextValueStub,
+        refreshStub,
+        updateTreeViewDescriptionStub,
+      );
     });
 
     it("Should handle setting from one resource to a different resource", async () => {
