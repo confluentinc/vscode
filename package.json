@@ -1747,7 +1747,7 @@
         },
         {
           "command": "confluent.artifacts.scaffold",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.enableFlinkArtifacts && confluent.flinkDatabaseSelected",
           "group": "navigation@1"
         },
         {
