@@ -107,7 +107,7 @@ export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = new ExtensionSetting<string>(
 
 /** Whether or not to enable the Confluent Cloud language client+server integration for Flink SQL documents. */
 export const ENABLE_FLINK_CCLOUD_LANGUAGE_SERVER = new ExtensionSetting<boolean>(
-  "confluent.flink.enableConfluentCloudLanguageServer",
+  "confluent.flink.languageServer",
   SettingsSection.FLINK,
 );
 /** Default Flink compute pool ID. */
@@ -160,7 +160,7 @@ export const STATEMENT_POLLING_CONCURRENCY = new ExtensionSetting<number>(
 
 /** Whether or not to enable Flink Artifacts functionality including the artifacts view. */
 export const ENABLE_FLINK_ARTIFACTS = new ExtensionSetting<boolean>(
-  "confluent.flink.enableFlinkArtifacts",
+  "confluent.flink.artifacts",
   SettingsSection.FLINK,
 );
 

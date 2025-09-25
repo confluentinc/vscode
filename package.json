@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-70",
+  "version": "1.7.0-72",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -908,14 +908,15 @@
         }
       },
       {
-        "title": "Flink SQL Defaults",
+        "title": "Flink",
         "properties": {
-          "confluent.flink.enableConfluentCloudLanguageServer": {
+          "confluent.flink.languageServer": {
             "type": "boolean",
+            "order": 0,
             "default": true,
             "markdownDescription": "Enable integration with the Confluent Cloud Flink SQL language server for diagnostics, code completion, and other language features in Flink SQL documents. (Requires [signing in to Confluent Cloud](command:confluent.connections.ccloud.signIn).)"
           },
-          "confluent.flink.enableFlinkArtifacts": {
+          "confluent.flink.artifacts": {
             "type": "boolean",
             "default": false,
             "order": 1,
@@ -927,12 +928,10 @@
           "confluent.flink.computePoolId": {
             "type": "string",
             "default": "",
-            "order": 2,
             "markdownDescription": "ID for the compute pool to use as a default in Confluent Cloud for Apache Flink® SQL operations. The value must be a valid Confluent Cloud compute pool ID. \n\nTo select from the list of available compute pools use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults)."
           },
           "confluent.flink.database": {
             "type": "string",
-            "order": 3,
             "default": "",
             "markdownDescription": "Name or ID for Apache Kafka® cluster in Confluent to use as the default Confluent Cloud for Apache Flink® SQL database. The value must be a valid Confluent Cloud database (Kafka cluster) name or ID. \n\nTo select from the list of available databases use the [\"Configure default settings for Flink SQL actions\" command](command:confluent.flink.configureFlinkDefaults)."
           },
