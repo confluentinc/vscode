@@ -58,12 +58,7 @@ export abstract class ParentedBaseViewProvider<
       resource,
     });
 
-    const promises: Promise<unknown>[] = [
-      // Always refresh the view when parent resource changes.
-      this.refresh(),
-      // Update the tree view description to show the parent environment name and resource ID.
-      this.updateTreeViewDescription(),
-    ];
+    const promises: Promise<unknown>[] = [];
 
     if (this.resource !== resource) {
       this.setSearch(null); // reset search when parent resource changes
@@ -75,6 +70,16 @@ export abstract class ParentedBaseViewProvider<
 
       this.resource = resource;
     }
+
+    // Be sure to only kick off the awaitables _after_ we've assigned this.resource,
+    // since they depend on it.
+
+    promises.push(
+      // Always refresh the view when parent resource changes.
+      this.refresh(),
+      // Update the tree view description to show the parent environment name and resource ID.
+      this.updateTreeViewDescription(),
+    );
 
     await Promise.all(promises);
   }
