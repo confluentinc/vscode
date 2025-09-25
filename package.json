@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-65",
+  "version": "1.7.0-68",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -273,7 +273,7 @@
     ],
     "commands": [
       {
-        "command": "confluent.artifacts.registerUDF",
+        "command": "confluent.artifacts.createUdfRegistrationDocument",
         "title": "Register Flink Artifact with Flink SQL",
         "category": "Confluent: Flink Artifacts"
       },
@@ -284,7 +284,7 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
-        "command": "confluent.artifacts.UDFCreation",
+        "command": "confluent.artifacts.startGuidedUdfCreation",
         "title": "Register UDF",
         "category": "Confluent: Flink Artifacts"
       },
@@ -1205,7 +1205,7 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "confluent.artifacts.registerUDF",
+          "command": "confluent.artifacts.createUdfRegistrationDocument",
           "when": "false"
         },
         {
@@ -1213,7 +1213,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.artifacts.UDFCreation",
+          "command": "confluent.artifacts.startGuidedUdfCreation",
           "when": "false"
         },
         {
@@ -1858,6 +1858,11 @@
           "group": "4_flink@1"
         },
         {
+          "command": "confluent.uploadArtifact",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)",
+          "group": "4_flink@1"
+        },
+        {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
           "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
           "group": "2_copy@3"
@@ -1982,18 +1987,14 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.registerUDF",
+          "command": "confluent.artifacts.createUdfRegistrationDocument",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.artifacts.UDFCreation",
+          "command": "confluent.artifacts.startGuidedUdfCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"
-        },
-        {
-          "command": "confluent.uploadArtifact",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)"
         },
         {
           "command": "confluent.resources.ccloudEnvironment.setPrivateNetworkEndpoint",

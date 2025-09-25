@@ -168,8 +168,6 @@ describe("models/environment.ts CCloudEnvironment", () => {
     assert.deepStrictEqual(asReconstitutedFromStorage, env);
   });
   it("should get flinkable Kafka clusters", () => {
-    // Create a cluster with flinkPools using CCloudKafkaCluster.create method
-    // instead of direct constructor which may not support the flinkPools property
     const clusterWithFlinkPools = CCloudKafkaCluster.create({
       ...TEST_CCLOUD_KAFKA_CLUSTER,
       flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
@@ -181,7 +179,7 @@ describe("models/environment.ts CCloudEnvironment", () => {
       flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
     });
 
-    const flinkable = env.flinkDatabaseClusters;
+    const flinkable = env.flinkDatabaseKafkaClusters;
     assert.strictEqual(flinkable.length, 1);
     assert.strictEqual(flinkable[0], clusterWithFlinkPools);
 
@@ -190,21 +188,21 @@ describe("models/environment.ts CCloudEnvironment", () => {
       kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER], // This has no flinkPools
       flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
     });
-    assert.strictEqual(envWithClusterNoFlinkPools.flinkDatabaseClusters.length, 0);
+    assert.strictEqual(envWithClusterNoFlinkPools.flinkDatabaseKafkaClusters.length, 0);
 
     const envNoFlink = new CCloudEnvironment({
       ...TEST_CCLOUD_ENVIRONMENT,
       kafkaClusters: [clusterWithFlinkPools],
       flinkComputePools: [],
     });
-    assert.strictEqual(envNoFlink.flinkDatabaseClusters.length, 0);
+    assert.strictEqual(envNoFlink.flinkDatabaseKafkaClusters.length, 0);
 
     const envNoKafka = new CCloudEnvironment({
       ...TEST_CCLOUD_ENVIRONMENT,
       kafkaClusters: [],
       flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
     });
-    assert.strictEqual(envNoKafka.flinkDatabaseClusters.length, 0);
+    assert.strictEqual(envNoKafka.flinkDatabaseKafkaClusters.length, 0);
   });
 
   it("should return the correct .children for a CCloudEnvironment", () => {

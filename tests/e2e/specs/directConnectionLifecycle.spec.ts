@@ -1,10 +1,16 @@
-import { expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { stubMultipleDialogs } from "electron-playwright-helpers";
 import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { test } from "../baseTest";
-import { ConnectionType } from "../connectionTypes";
+import {
+  ConnectionType,
+  DirectConnectionKafkaConfig,
+  DirectConnectionSchemaRegistryConfig,
+  FormConnectionType,
+  SupportedAuthType,
+} from "../connectionTypes";
 import { TextDocument } from "../objects/editor/TextDocument";
 import { Notification } from "../objects/notifications/Notification";
 import { NotificationArea } from "../objects/notifications/NotificationArea";
@@ -12,16 +18,11 @@ import { ResourcesView } from "../objects/views/ResourcesView";
 import { SchemasView, SelectSchemaRegistry } from "../objects/views/SchemasView";
 import { SelectKafkaCluster, TopicsView } from "../objects/views/TopicsView";
 import { DirectConnectionItem } from "../objects/views/viewItems/DirectConnectionItem";
-import {
-  DirectConnectionForm,
-  DirectConnectionKafkaConfig,
-  DirectConnectionSchemaRegistryConfig,
-  FormConnectionType,
-  SupportedAuthType,
-} from "../objects/webviews/DirectConnectionFormWebview";
+import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
+import { SchemaRegistryItem } from "../objects/views/viewItems/SchemaRegistryItem";
+import { DirectConnectionForm } from "../objects/webviews/DirectConnectionFormWebview";
 import { Tag } from "../tags";
 import { setupDirectConnection } from "../utils/connections";
-import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
 /**
  * E2E test suite for testing the direct connection CRUD lifecycle.
@@ -48,9 +49,7 @@ enum ConfigType {
 }
 
 test.describe("Direct Connection CRUD Lifecycle", () => {
-  test.beforeEach(async ({ page, electronApp }) => {
-    await openConfluentSidebar(page);
-
+  test.beforeEach(async ({ electronApp }) => {
     // stub the disconnect confirmation dialog
     const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
     await stubMultipleDialogs(electronApp, [
@@ -65,203 +64,353 @@ test.describe("Direct Connection CRUD Lifecycle", () => {
   });
 
   // test dimensions:
-  const connectionTypes: Array<
-    [
-      string,
-      FormConnectionType,
-      // function for setting up the Kafka config
-      (page: Page) => DirectConnectionKafkaConfig | Promise<DirectConnectionKafkaConfig>,
-      // function for setting up the Schema Registry config
-      (
-        page: Page,
-      ) => DirectConnectionSchemaRegistryConfig | Promise<DirectConnectionSchemaRegistryConfig>,
-    ]
-  > = [
-    [
-      "CCloud API key+secret",
-      FormConnectionType.ConfluentCloud,
-      () => {
-        return {
-          bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
-          authType: SupportedAuthType.API,
-          credentials: {
-            api_key: process.env.E2E_KAFKA_API_KEY!,
-            api_secret: process.env.E2E_KAFKA_API_SECRET!,
-          },
-        };
-      },
-      () => {
-        return {
-          uri: process.env.E2E_SR_URL!,
-          authType: SupportedAuthType.API,
-          credentials: {
-            api_key: process.env.E2E_SR_API_KEY!,
-            api_secret: process.env.E2E_SR_API_SECRET!,
-          },
-        };
-      },
-    ],
-    // FUTURE: add support for LOCAL config, see https://github.com/confluentinc/vscode/issues/2140
-    // FUTURE: add support for CP config
-  ];
   const configTypes: Array<ConfigType> = [
     ConfigType.Kafka,
     ConfigType.SchemaRegistry,
     ConfigType.KafkaAndSchemaRegistry,
   ];
 
-  for (const [
-    connectionTypeName,
-    formConnectionType,
-    loadKafkaConfig,
-    loadSchemaRegistryConfig,
-  ] of connectionTypes) {
-    test.describe(connectionTypeName, { tag: [Tag.Direct] }, () => {
-      for (const configType of configTypes) {
-        test.describe(configType, () => {
-          let kafkaConfig: DirectConnectionKafkaConfig | undefined;
-          let schemaRegistryConfig: DirectConnectionSchemaRegistryConfig | undefined;
+  for (const configType of configTypes) {
+    test.describe(configType, () => {
+      let kafkaConfig: DirectConnectionKafkaConfig | undefined;
+      let schemaRegistryConfig: DirectConnectionSchemaRegistryConfig | undefined;
 
-          test.beforeEach(async ({ page }) => {
-            if (
-              configType === ConfigType.Kafka ||
-              configType === ConfigType.KafkaAndSchemaRegistry
-            ) {
-              kafkaConfig = await loadKafkaConfig(page);
-            }
-            if (
-              configType === ConfigType.SchemaRegistry ||
-              configType === ConfigType.KafkaAndSchemaRegistry
-            ) {
-              schemaRegistryConfig = await loadSchemaRegistryConfig(page);
-            }
+      test.beforeEach(() => {
+        // reset configs before each test
+        kafkaConfig = undefined;
+        schemaRegistryConfig = undefined;
+      });
+
+      test.describe("CCloud API key+secret", { tag: [Tag.Direct] }, () => {
+        const name = "CCloud API key+secret";
+        const formConnectionType = FormConnectionType.ConfluentCloud;
+
+        test.beforeEach(async () => {
+          if (configType === ConfigType.Kafka || configType === ConfigType.KafkaAndSchemaRegistry) {
+            kafkaConfig = {
+              bootstrapServers: process.env.E2E_KAFKA_BOOTSTRAP_SERVERS!,
+              authType: SupportedAuthType.API,
+              credentials: {
+                api_key: process.env.E2E_KAFKA_API_KEY!,
+                api_secret: process.env.E2E_KAFKA_API_SECRET!,
+              },
+            };
+          }
+          if (
+            configType === ConfigType.SchemaRegistry ||
+            configType === ConfigType.KafkaAndSchemaRegistry
+          ) {
+            schemaRegistryConfig = {
+              uri: process.env.E2E_SR_URL!,
+              authType: SupportedAuthType.API,
+              credentials: {
+                api_key: process.env.E2E_SR_API_KEY!,
+                api_secret: process.env.E2E_SR_API_SECRET!,
+              },
+            };
+          }
+        });
+
+        test("should create, edit, export, delete, and import a valid direct connection config", async ({
+          page,
+          electronApp,
+        }) => {
+          const resourcesView = new ResourcesView(page);
+
+          // 1. create the connection
+          const connectionName = `Playwright ${name} (${configType})`;
+          const connectionItem: DirectConnectionItem = await setupDirectConnection(page, {
+            name: connectionName,
+            formConnectionType,
+            kafkaConfig,
+            schemaRegistryConfig,
           });
+          await expectConnectionResources(resourcesView, configType);
 
-          test("should create, edit, export, delete, and import a valid direct connection config", async ({
+          // 2. edit the connection
+          const form: DirectConnectionForm = await connectionItem.clickEditConnection();
+          await expect(form.formHeader).toContainText("Edit connection details");
+          const newName = `Renamed ${connectionName}`;
+          await form.nameField.clear();
+          await form.fillConnectionName(newName);
+          await form.updateButton.click();
+          // make sure the resources view refreshes and shows the updated connection name
+          await expect(connectionItem.label).toHaveText(newName);
+
+          // 3. export the connection to a JSON file
+          const tmpConnectionDir = mkdtempSync(join(tmpdir(), "vscode-test-direct-connection-"));
+          await stubMultipleDialogs(electronApp, [
+            {
+              method: "showOpenDialog",
+              value: {
+                filePaths: [tmpConnectionDir],
+              },
+            },
+          ]);
+          await connectionItem.clickExportConnectionDetails();
+          const notificationArea = new NotificationArea(page);
+          await expect(notificationArea.infoNotifications).toHaveCount(1);
+          const notification = new Notification(page, notificationArea.infoNotifications.first());
+          await expect(notification.message).toContainText("Connection file saved at");
+          // inspect exported file contents
+          await notification.clickActionButton("Open File");
+          // same name transformation as what `confluent.connections.direct.export` uses
+          const exportFileName = `${newName.trim().replace(/\s+/g, "_")}.json`;
+          const exportDoc = new TextDocument(page, exportFileName);
+          await expect(exportDoc.tab).toBeVisible();
+          await expect(exportDoc.editorContent).toContainText(`"name": "${newName}"`);
+
+          // 4. disconnect
+          await connectionItem.clickDisconnect();
+          // warning modal is already stubbed to confirm disconnect
+          await expect(resourcesView.directConnections).toHaveCount(0);
+
+          // 5. import the exported connection file
+          await stubMultipleDialogs(electronApp, [
+            {
+              method: "showOpenDialog",
+              value: {
+                filePaths: [join(tmpConnectionDir, exportFileName)],
+              },
+            },
+          ]);
+          const importForm: DirectConnectionForm =
+            await resourcesView.addNewConnectionFromFileImport();
+          await expect(importForm.formHeader).toContainText("Import connection");
+          await importForm.nameField.clear();
+          const importName = `Imported ${newName}`;
+          await importForm.fillConnectionName(importName);
+          await importForm.saveButton.click();
+
+          // 6. focus the connection resources (Topics and/or Schemas views, depending on config)
+          const topicsView = new TopicsView(page);
+          const schemasView = new SchemasView(page);
+          await focusConnectionResources(topicsView, schemasView, configType);
+
+          // 7. disconnect again and verify Topics and/or Schemas views reset
+          const importedConnection = await resourcesView.getDirectConnection(importName);
+          await expect(importedConnection).toHaveCount(1);
+          const importedConnectionItem = new DirectConnectionItem(page, importedConnection.first());
+          await expect(importedConnectionItem.locator).toBeVisible();
+          await connectionItem.clickDisconnect();
+          await expect(resourcesView.directConnections).toHaveCount(0);
+          await expect(topicsView.topics).toHaveCount(0);
+          await expect(schemasView.subjects).toHaveCount(0);
+        });
+
+        test("should show error information for an invalid connection config", async ({ page }) => {
+          const connectionName = `INVALID Playwright ${name} (${configType})`;
+          const connectionItem: DirectConnectionItem = await setupDirectConnection(
             page,
-            electronApp,
-          }) => {
-            const resourcesView = new ResourcesView(page);
-
-            // 1. create the connection
-            const connectionName = `Playwright ${connectionTypeName} (${configType})`;
-            const connectionItem: DirectConnectionItem = await setupDirectConnection(page, {
+            {
               name: connectionName,
               formConnectionType,
-              kafkaConfig,
-              schemaRegistryConfig,
-            });
-            await expectConnectionResources(resourcesView, configType);
+              kafkaConfig: kafkaConfig
+                ? { ...kafkaConfig, bootstrapServers: "invalid:1234" }
+                : undefined,
+              schemaRegistryConfig: schemaRegistryConfig
+                ? { ...schemaRegistryConfig, uri: "http://invalid:1234" }
+                : undefined,
+            },
+            true, // expect an error after clicking "Test" and confirm the view item isn't expandable
+          );
+          // connection should still be visible, but:
+          // - it should have a warning icon
+          // - its tooltip should show "Unable to connect to" with other details
+          await expect(connectionItem.icon).toHaveClass(/warning/);
+          const tooltip = await connectionItem.showTooltip();
+          await expect(tooltip).toContainText("Unable to connect to");
 
-            // 2. edit the connection
-            const form: DirectConnectionForm = await connectionItem.clickEditConnection();
-            await expect(form.formHeader).toContainText("Edit connection details");
-            const newName = `${connectionName} v2`;
-            await form.nameField.clear();
-            await form.fillConnectionName(newName);
-            await form.updateButton.click();
-            // make sure the resources view refreshes and shows the updated connection name
-            await expect(connectionItem.label).toHaveText(newName);
-
-            // 3. export the connection to a JSON file
-            const tmpConnectionDir = mkdtempSync(join(tmpdir(), "vscode-test-direct-connection-"));
-            await stubMultipleDialogs(electronApp, [
-              {
-                method: "showOpenDialog",
-                value: {
-                  filePaths: [tmpConnectionDir],
-                },
-              },
-            ]);
-            await connectionItem.clickExportConnectionDetails();
-            const notificationArea = new NotificationArea(page);
-            await expect(notificationArea.infoNotifications).toHaveCount(1);
-            const notification = new Notification(page, notificationArea.infoNotifications.first());
-            await expect(notification.message).toContainText("Connection file saved at");
-            // inspect exported file contents
-            await notification.clickActionButton("Open File");
-            // same name transformation as what `confluent.connections.direct.export` uses
-            const exportFileName = `${newName.trim().replace(/\s+/g, "_")}.json`;
-            const exportDoc = new TextDocument(page, exportFileName);
-            await expect(exportDoc.tab).toBeVisible();
-            await expect(exportDoc.editorContent).toContainText(`"name": "${newName}"`);
-
-            // 4. disconnect
-            await connectionItem.clickDisconnect();
-            // warning modal is already stubbed to confirm disconnect
-            await expect(resourcesView.directConnections).toHaveCount(0);
-
-            // 5. import the exported connection file
-            await stubMultipleDialogs(electronApp, [
-              {
-                method: "showOpenDialog",
-                value: {
-                  filePaths: [join(tmpConnectionDir, exportFileName)],
-                },
-              },
-            ]);
-            const importForm: DirectConnectionForm =
-              await resourcesView.addNewConnectionFromFileImport();
-            await expect(importForm.formHeader).toContainText("Import connection");
-            await importForm.nameField.clear();
-            const importName = `Imported ${newName}`;
-            await importForm.fillConnectionName(importName);
-            await importForm.saveButton.click();
-
-            // 6. focus the connection resources (Topics and/or Schemas views, depending on config)
-            const topicsView = new TopicsView(page);
-            const schemasView = new SchemasView(page);
-            await focusConnectionResources(topicsView, schemasView, configType);
-
-            // 7. disconnect again and verify Topics and/or Schemas views reset
-            const importedConnection = await resourcesView.getDirectConnection(importName);
-            await expect(importedConnection).toHaveCount(1);
-            const importedConnectionItem = new DirectConnectionItem(
-              page,
-              importedConnection.first(),
-            );
-            await expect(importedConnectionItem.locator).toBeVisible();
-            await connectionItem.clickDisconnect();
-            await expect(resourcesView.directConnections).toHaveCount(0);
-            await expect(topicsView.topics).toHaveCount(0);
-            await expect(schemasView.subjects).toHaveCount(0);
+          const notificationArea = new NotificationArea(page);
+          const errorNotifications = notificationArea.errorNotifications.filter({
+            hasText: "Failed to establish connection",
           });
-
-          test("should show error information for an invalid connection config", async ({
-            page,
-          }) => {
-            const connectionName = `INVALID Playwright ${connectionTypeName} (${configType})`;
-            const connectionItem: DirectConnectionItem = await setupDirectConnection(
-              page,
-              {
-                name: connectionName,
-                formConnectionType,
-                kafkaConfig: kafkaConfig
-                  ? { ...kafkaConfig, bootstrapServers: "invalid:1234" }
-                  : undefined,
-                schemaRegistryConfig: schemaRegistryConfig
-                  ? { ...schemaRegistryConfig, uri: "http://invalid:1234" }
-                  : undefined,
-              },
-              true, // expect an error after clicking "Test" and confirm the view item isn't expandable
-            );
-            // connection should still be visible, but:
-            // - it should have a warning icon
-            // - its tooltip should show "Unable to connect to" with other details
-            await expect(connectionItem.icon).toHaveClass(/warning/);
-            const tooltip = await connectionItem.showTooltip();
-            await expect(tooltip).toContainText("Unable to connect to");
-
-            const notificationArea = new NotificationArea(page);
-            const errorNotifications = notificationArea.errorNotifications.filter({
-              hasText: "Failed to establish connection",
-            });
-            await expect(errorNotifications).toHaveCount(1);
-            const notification = new Notification(page, errorNotifications.first());
-            await notification.dismiss();
-          });
+          await expect(errorNotifications).toHaveCount(1);
+          const notification = new Notification(page, errorNotifications.first());
+          await notification.dismiss();
         });
-      }
+      });
+
+      test.describe("Local Shadow", { tag: [Tag.Direct, Tag.Local] }, () => {
+        const name = "Local Shadow";
+        const formConnectionType = FormConnectionType.ApacheKafka;
+
+        // require the local connection to be available with Kafka+SR before starting
+        test.use({
+          connectionType: ConnectionType.Local,
+          localConnectionConfig: {
+            schemaRegistry:
+              configType === ConfigType.KafkaAndSchemaRegistry ||
+              configType === ConfigType.SchemaRegistry,
+          },
+        });
+
+        test.beforeEach(async ({ electronApp, page, connectionItem }) => {
+          // make sure the local item is expanded before we try to copy local resources properties
+          await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+
+          // grant clipboard access to read the copied bootstrap servers and schema registry URL
+          // from the local items' context menu actions
+          await electronApp.context().grantPermissions(["clipboard-read"]);
+
+          const resourcesView = new ResourcesView(page);
+
+          if (configType === ConfigType.Kafka || configType === ConfigType.KafkaAndSchemaRegistry) {
+            // copy the local Kafka bootstrap server string
+            const localKafka = await resourcesView.getKafkaCluster(ConnectionType.Local);
+            await expect(localKafka).not.toHaveCount(0);
+            const localKafkaItem = new KafkaClusterItem(page, localKafka.first());
+            await localKafkaItem.copyBootstrapServers();
+            const bootstrapServers = await page.evaluate(
+              async () => await navigator.clipboard.readText(),
+            );
+            kafkaConfig = {
+              bootstrapServers,
+              authType: SupportedAuthType.None,
+              credentials: {},
+            };
+          }
+
+          if (
+            configType === ConfigType.SchemaRegistry ||
+            configType === ConfigType.KafkaAndSchemaRegistry
+          ) {
+            // copy the local Schema Registry URL string
+            const localSchemaRegistry = await resourcesView.getSchemaRegistry(ConnectionType.Local);
+            await expect(localSchemaRegistry).not.toHaveCount(0);
+            const localSchemaRegistryItem = new SchemaRegistryItem(
+              page,
+              localSchemaRegistry.first(),
+            );
+            await localSchemaRegistryItem.copyUri();
+            const uri = await page.evaluate(async () => await navigator.clipboard.readText());
+            schemaRegistryConfig = {
+              uri,
+              authType: SupportedAuthType.None,
+              credentials: {},
+            };
+          }
+        });
+
+        test("should create, edit, export, delete, and import a valid direct connection config", async ({
+          page,
+          electronApp,
+        }) => {
+          const resourcesView = new ResourcesView(page);
+
+          // 1. create the connection
+          const connectionName = `Playwright ${name} (${configType})`;
+          const connectionItem: DirectConnectionItem = await setupDirectConnection(page, {
+            name: connectionName,
+            formConnectionType,
+            kafkaConfig,
+            schemaRegistryConfig,
+          });
+          await expectConnectionResources(resourcesView, configType);
+
+          // 2. edit the connection
+          const form: DirectConnectionForm = await connectionItem.clickEditConnection();
+          await expect(form.formHeader).toContainText("Edit connection details");
+          const newName = `Renamed ${connectionName}`;
+          await form.nameField.clear();
+          await form.fillConnectionName(newName);
+          await form.updateButton.click();
+          // make sure the resources view refreshes and shows the updated connection name
+          await expect(connectionItem.label).toHaveText(newName);
+
+          // 3. export the connection to a JSON file
+          const tmpConnectionDir = mkdtempSync(join(tmpdir(), "vscode-test-direct-connection-"));
+          await stubMultipleDialogs(electronApp, [
+            {
+              method: "showOpenDialog",
+              value: {
+                filePaths: [tmpConnectionDir],
+              },
+            },
+          ]);
+          await connectionItem.clickExportConnectionDetails();
+          const notificationArea = new NotificationArea(page);
+          await expect(notificationArea.infoNotifications).toHaveCount(1);
+          const notification = new Notification(page, notificationArea.infoNotifications.first());
+          await expect(notification.message).toContainText("Connection file saved at");
+          // inspect exported file contents
+          await notification.clickActionButton("Open File");
+          // same name transformation as what `confluent.connections.direct.export` uses
+          const exportFileName = `${newName.trim().replace(/\s+/g, "_")}.json`;
+          const exportDoc = new TextDocument(page, exportFileName);
+          await expect(exportDoc.tab).toBeVisible();
+          await expect(exportDoc.editorContent).toContainText(`"name": "${newName}"`);
+
+          // 4. disconnect
+          await connectionItem.clickDisconnect();
+          // warning modal is already stubbed to confirm disconnect
+          await expect(resourcesView.directConnections).toHaveCount(0);
+
+          // 5. import the exported connection file
+          await stubMultipleDialogs(electronApp, [
+            {
+              method: "showOpenDialog",
+              value: {
+                filePaths: [join(tmpConnectionDir, exportFileName)],
+              },
+            },
+          ]);
+          const importForm: DirectConnectionForm =
+            await resourcesView.addNewConnectionFromFileImport();
+          await expect(importForm.formHeader).toContainText("Import connection");
+          await importForm.nameField.clear();
+          const importName = `Imported ${newName}`;
+          await importForm.fillConnectionName(importName);
+          await importForm.saveButton.click();
+
+          // 6. focus the connection resources (Topics and/or Schemas views, depending on config)
+          const topicsView = new TopicsView(page);
+          const schemasView = new SchemasView(page);
+          await focusConnectionResources(topicsView, schemasView, configType);
+
+          // 7. disconnect again and verify Topics and/or Schemas views reset
+          const importedConnection = await resourcesView.getDirectConnection(importName);
+          await expect(importedConnection).toHaveCount(1);
+          const importedConnectionItem = new DirectConnectionItem(page, importedConnection.first());
+          await expect(importedConnectionItem.locator).toBeVisible();
+          await connectionItem.clickDisconnect();
+          await expect(resourcesView.directConnections).toHaveCount(0);
+          await expect(topicsView.topics).toHaveCount(0);
+          await expect(schemasView.subjects).toHaveCount(0);
+        });
+
+        test("should show error information for an invalid connection config", async ({ page }) => {
+          const connectionName = `INVALID Playwright ${name} (${configType})`;
+          const connectionItem: DirectConnectionItem = await setupDirectConnection(
+            page,
+            {
+              name: connectionName,
+              formConnectionType,
+              kafkaConfig: kafkaConfig
+                ? { ...kafkaConfig, bootstrapServers: "invalid:1234" }
+                : undefined,
+              schemaRegistryConfig: schemaRegistryConfig
+                ? { ...schemaRegistryConfig, uri: "http://invalid:1234" }
+                : undefined,
+            },
+            true, // expect an error after clicking "Test" and confirm the view item isn't expandable
+          );
+          // connection should still be visible, but:
+          // - it should have a warning icon
+          // - its tooltip should show "Unable to connect to" with other details
+          await expect(connectionItem.icon).toHaveClass(/warning/);
+          const tooltip = await connectionItem.showTooltip();
+          await expect(tooltip).toContainText("Unable to connect to");
+
+          const notificationArea = new NotificationArea(page);
+          const errorNotifications = notificationArea.errorNotifications.filter({
+            hasText: "Failed to establish connection",
+          });
+          await expect(errorNotifications).toHaveCount(1);
+          const notification = new Notification(page, errorNotifications.first());
+          await notification.dismiss();
+        });
+      });
     });
   }
 });

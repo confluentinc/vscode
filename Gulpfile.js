@@ -815,6 +815,42 @@ export function e2eRun(done) {
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
+  // if we're running the whole test suite or `@local`, we need to make sure the default Docker
+  // images for local Kafka and Schema Registry are available so tests don't time out while pulling
+  if (!testFilter || testFilter.includes("@local")) {
+    const manifest = loadPackageJson();
+    const extensionSettings = manifest.contributes.configuration;
+    const localSettings = extensionSettings.find((section) => section.title === "Local");
+    if (!localSettings)
+      throw new Error('Failed to find "Local" section in extension settings configuration');
+
+    const defaultKafkaImage =
+      localSettings.properties["confluent.localDocker.kafkaImageRepo"].default;
+    const defaultKafkaImageTag =
+      localSettings.properties["confluent.localDocker.kafkaImageTag"].default;
+    const kafkaImagePullResult = spawnSync(
+      "docker",
+      ["pull", `${defaultKafkaImage}:${defaultKafkaImageTag}`],
+      { stdio: "inherit", shell: IS_WINDOWS },
+    );
+    if (kafkaImagePullResult.error || kafkaImagePullResult.status !== 0) {
+      throw kafkaImagePullResult.error;
+    }
+
+    const defaultSchemaRegistryImage =
+      localSettings.properties["confluent.localDocker.schemaRegistryImageRepo"].default;
+    const defaultSchemaRegistryImageTag =
+      localSettings.properties["confluent.localDocker.schemaRegistryImageTag"].default;
+    const schemaRegistryImagePullResult = spawnSync(
+      "docker",
+      ["pull", `${defaultSchemaRegistryImage}:${defaultSchemaRegistryImageTag}`],
+      { stdio: "inherit", shell: IS_WINDOWS },
+    );
+    if (schemaRegistryImagePullResult.error || schemaRegistryImagePullResult.status !== 0) {
+      throw schemaRegistryImagePullResult.error;
+    }
+  }
+
   const command = [
     "playwright",
     "test",

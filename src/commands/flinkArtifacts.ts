@@ -148,7 +148,7 @@ export async function deleteArtifactCommand(
   );
 }
 
-export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact) {
+export async function createUdfRegistrationDocumentCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
@@ -171,7 +171,7 @@ export async function queryArtifactWithFlink(selectedArtifact: FlinkArtifact) {
   await editor.insertSnippet(snippetString);
 }
 
-export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkArtifact) {
+export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
@@ -202,7 +202,7 @@ export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkA
           60000, // custom timeout of 60 seconds
         );
         progress.report({ message: "Processing results..." });
-        const createdMsg = `Function created successfully at ${userInput.functionName}.`;
+        const createdMsg = `${userInput.functionName} function created successfully.`;
         void showInfoNotificationWithButtons(createdMsg);
       },
     );
@@ -211,12 +211,8 @@ export async function commandForUDFCreationFromArtifact(selectedArtifact: FlinkA
       let errorMessage = "Failed to create UDF function: ";
 
       if (isResponseError(err)) {
-        const resp = await extractResponseBody(err);
-        try {
-          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
-        } catch {
-          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
-        }
+        const resp = await err.response.clone().text();
+        errorMessage = `${errorMessage} ${resp}`;
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage} ${err.message}`;
         logError(err, errorMessage);
@@ -246,10 +242,13 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
-    registerCommandWithLogging("confluent.artifacts.registerUDF", queryArtifactWithFlink),
     registerCommandWithLogging(
-      "confluent.artifacts.UDFCreation",
-      commandForUDFCreationFromArtifact,
+      "confluent.artifacts.createUdfRegistrationDocument",
+      createUdfRegistrationDocumentCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.artifacts.startGuidedUdfCreation",
+      startGuidedUdfCreationCommand,
     ),
   ];
 }
