@@ -174,6 +174,33 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
+   * Get all Flink databases (Flink-enabled Kafka clusters) in all environments.
+   * @returns Array of {@link CCloudFlinkDbKafkaCluster} objects.
+   */
+  public async getFlinkDatabases(
+    environmentId?: EnvironmentId,
+  ): Promise<CCloudFlinkDbKafkaCluster[]> {
+    let clusters = await this.getKafkaClusters((cluster) => cluster.isFlinkable());
+    const databases = environmentId
+      ? clusters.filter((c) => c.environmentId === environmentId)
+      : clusters;
+    return databases as CCloudFlinkDbKafkaCluster[];
+  }
+
+  /**
+   * Get a specific Flink database (Flink-enabled Kafka cluster) by ID.
+   * @param databaseId The database/cluster ID to look for.
+   * @returns The {@link CCloudFlinkDbKafkaCluster} with the given ID, or undefined if not found.
+   */
+  public async getFlinkDatabase(
+    environmentId: EnvironmentId,
+    databaseId: string,
+  ): Promise<CCloudFlinkDbKafkaCluster | undefined> {
+    const databases: CCloudFlinkDbKafkaCluster[] = await this.getFlinkDatabases(environmentId);
+    return databases.find((db) => db.id === databaseId);
+  }
+
+  /**
    * Convert the given CCloudEnvironment, CCloudFlinkComputePool, or CCloudKafkaCluster
    * into a list of distinct IFlinkQueryable objects. Each object
    * will be for a separate provider-region pair within the environment.
