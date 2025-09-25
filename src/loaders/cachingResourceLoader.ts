@@ -153,6 +153,18 @@ export abstract class CachingResourceLoader<
   }
 
   /**
+   * Get all of the known kafka clusters in the accessible environments.
+   *
+   * Ensures that the coarse resources are loaded before returning the kafka clusters from
+   * the resource manager cache.
+   **/
+  public async getKafkaClusters(filterPredicate?: (cluster: KCT) => boolean): Promise<KCT[]> {
+    await this.ensureCoarseResourcesLoaded(false);
+    const clusters = await getResourceManager().getKafkaClusters<KCT>(this.connectionId);
+    return filterPredicate ? clusters.filter(filterPredicate) : clusters;
+  }
+
+  /**
    * Get all of the known schema registries in the accessible environments.
    *
    * Ensures that the coarse resources are loaded before returning the schema registries from
