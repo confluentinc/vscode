@@ -1,7 +1,12 @@
 import { QuickPickItemKind, window } from "vscode";
+import {
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader, loadProviderRegions } from "../loaders/ccloudResourceLoader";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { IProviderRegion } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { QuickPickItemWithValue } from "./types";
@@ -71,11 +76,9 @@ export async function cloudProviderRegionQuickPick(
 
   const getDetail = (region: FcpmV2RegionListDataInner): string | undefined => {
     if (matchesSelectedFlinkDatabase(region)) {
-      return "matches currently selected database";
+      return "currently selected database";
     } else if (matchesDefaultComputePool(region)) {
-      return "matches default compute pool";
-    } else if (hasComputePool(region)) {
-      return "has compute pool";
+      return "default compute pool";
     }
     return undefined;
   };
@@ -108,4 +111,96 @@ export async function cloudProviderRegionQuickPick(
     });
 
   return chosenRegion?.value;
+}
+
+/**
+ * Quickpick that shows only the cloud provider + region combinations that the user can access
+ * through existing Flink databases (Flinkable Kafka clusters).
+ * Includes a trailing "View All" item which, if selected, opens the full list of region/providers
+ * {@link cloudProviderRegionQuickPick} (with optional filter parameter forwarded) so the user can
+ * choose among all available regions.
+ * @returns {Promise<IProviderRegion | undefined>} region selected or undefined if cancelled.
+ */
+export async function flinkDatabaseRegionsQuickPick(
+  filter?: regionFilter,
+): Promise<IProviderRegion | undefined> {
+  // TODO Cleanup the fake test code once https://github.com/confluentinc/vscode/pull/2695 merges
+  // const loader = CCloudResourceLoader.getInstance();
+
+  // We only care about CCloud Kafka clusters that are Flinkable (aka databases).
+  // TODO Cleanup the fake test code once https://github.com/confluentinc/vscode/pull/2695 merges
+  // await loader.getFlinkDatabases();
+  const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = [
+    CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      id: "cluster-123",
+    }) as CCloudFlinkDbKafkaCluster,
+    CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "cluster-456",
+    }) as CCloudFlinkDbKafkaCluster,
+  ];
+
+  // Group by provider then region, collecting the database (cluster) names.
+  const clusterRegions = new Map<string, IProviderRegion & { names: string[] }>();
+  for (const c of flinkDbClusters) {
+    const key = `${c.provider}|${c.region}`;
+    let agg = clusterRegions.get(key);
+    if (!agg) {
+      agg = { provider: c.provider, region: c.region, names: [] };
+      clusterRegions.set(key, agg);
+    }
+    agg.names.push(c.name);
+  }
+
+  // Convert to array and sort by provider then region then first database name.
+  const regionsList = Array.from(clusterRegions.values()).sort((a, b) => {
+    if (a.provider !== b.provider) {
+      return a.provider.localeCompare(b.provider);
+    }
+    if (a.region !== b.region) {
+      return a.region.localeCompare(b.region);
+    }
+    return a.names[0].localeCompare(b.names[0]);
+  });
+
+  const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] = [];
+  let lastProvider = "";
+  for (const entry of regionsList) {
+    if (entry.provider !== lastProvider) {
+      lastProvider = entry.provider;
+      quickPickItems.push({
+        label: entry.provider,
+        description: "",
+        kind: QuickPickItemKind.Separator,
+      });
+    }
+    quickPickItems.push({
+      label: `${entry.provider} / ${entry.region}`,
+      description: Array.from(entry.names)
+        .sort((a, b) => a.localeCompare(b))
+        .join(", "),
+      value: { provider: entry.provider, region: entry.region },
+    });
+  }
+
+  quickPickItems.push({
+    label: "View All Available Regions",
+    description: "Show the complete list of regions",
+    value: "VIEW_ALL",
+  });
+
+  const choice = await window.showQuickPick(quickPickItems, {
+    placeHolder: "Select a region containing a Flink database",
+    ignoreFocusOut: true,
+  });
+
+  if (!choice) {
+    return undefined; // user cancelled
+  }
+  if (choice.value === "VIEW_ALL") {
+    return await cloudProviderRegionQuickPick(filter);
+  }
+
+  return choice.value as IProviderRegion;
 }
