@@ -185,14 +185,6 @@ describe("flinkUDFs command", () => {
       const executeStub = sandbox
         .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
         .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(
-          {
-            report: () => {},
-          },
-          {},
-        );
-      });
 
       await startGuidedUdfCreationCommand(artifact);
 
@@ -236,15 +228,6 @@ describe("flinkUDFs command", () => {
         .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
         .rejects(responseError);
 
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(
-          {
-            report: () => {},
-          },
-          {},
-        );
-      });
-
       await startGuidedUdfCreationCommand(artifact);
 
       sinon.assert.calledOnce(showErrorStub);
@@ -273,15 +256,6 @@ describe("flinkUDFs command", () => {
       const error = new Error("Something went wrong with UDF creation");
 
       sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
-
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(
-          {
-            report: () => {},
-          },
-          {},
-        );
-      });
 
       await startGuidedUdfCreationCommand(artifact);
 
@@ -332,9 +306,6 @@ describe("flinkUDFs command", () => {
       const executeStub = sandbox
         .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
         .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback({ report: () => {} }, {});
-      });
 
       const stubbedEventEmitters = eventEmitterStubs(sandbox);
       const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
