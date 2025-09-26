@@ -382,39 +382,44 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    *
    * @param sqlStatement The SQL statement (string) to execute.
    * @param database The database (CCloudKafkaCluster) to execute the statement against.
-   * @param computePool The compute pool (CCloudFlinkComputePool) to use for execution, otherwise will default
-   * to the first compute pool in the database's flinkPools array.
+   * @param options Optional parameters for statement execution
+   * @param options.computePool The compute pool to use for execution, defaults to the first compute pool in the database's flinkPools array
+   * @param options.timeout Custom timeout for the statement execution
+   * @param options.spice Additional spice parameter for statement execution
    * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
    *
    */
   async executeFlinkStatement<RT>(
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
-    computePool?: CCloudFlinkComputePool,
-    timeout?: number,
+    options: {
+      computePool?: CCloudFlinkComputePool;
+      timeout?: number;
+      spice?: string;
+    } = {},
   ): Promise<Array<RT>> {
     const organization = await this.getOrganization();
     if (!organization) {
       throw new Error("Not connected to CCloud, cannot execute Flink statement.");
     }
 
-    if (!computePool) {
-      computePool = database.flinkPools[0];
-    } else if (!database.isSameEnvCloudRegion(computePool)) {
+    if (!options.computePool) {
+      options.computePool = database.flinkPools[0];
+    } else if (!database.isSameEnvCloudRegion(options.computePool)) {
       // Ensure the provided compute pool is valid for this database.
       throw new Error(
-        `Compute pool ${computePool.name} is not in the same cloud/region as cluster ${database.name}`,
+        `Compute pool ${options.computePool.name} is not in the same cloud/region as cluster ${database.name}`,
       );
     }
 
     const statementParams: IFlinkStatementSubmitParameters = {
       statement: sqlStatement,
-      statementName: await determineFlinkStatementName(),
+      statementName: await determineFlinkStatementName(options.spice),
       organizationId: organization.id,
-      computePool,
+      computePool: options.computePool,
       hidden: true, // Hidden statement, user didn't author it.
       properties: database.toFlinkSpecProperties(),
-      ...(timeout !== undefined ? { timeout } : {}),
+      ...(options.timeout !== undefined ? { timeout: options.timeout } : {}),
     };
 
     const promiseKey = generateFlinkStatementKey(statementParams);

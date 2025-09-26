@@ -1114,11 +1114,9 @@ describe("CCloudResourceLoader", () => {
       });
 
       await assert.rejects(
-        loader.executeFlinkStatement(
-          "SELECT 1",
-          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-          differentCloudComputePool,
-        ),
+        loader.executeFlinkStatement("SELECT 1", TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, {
+          computePool: differentCloudComputePool,
+        }),
         /is not in the same cloud/,
       );
     });
@@ -1182,8 +1180,7 @@ describe("CCloudResourceLoader", () => {
       await loader.executeFlinkStatement<TestResult>(
         "SELECT 1",
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-        undefined,
-        customTimeout,
+        { timeout: customTimeout },
       );
       sinon.assert.calledOnce(submitFlinkStatementStub);
       sinon.assert.calledOnce(waitForStatementCompletionStub);

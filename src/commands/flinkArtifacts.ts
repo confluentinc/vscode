@@ -198,8 +198,9 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
         await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
           `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
           database,
-          undefined,
-          60000, // custom timeout of 60 seconds
+          {
+            timeout: 60000, // custom timeout of 60 seconds
+          },
         );
         progress.report({ message: "Processing results..." });
         const createdMsg = `${userInput.functionName} function created successfully.`;
