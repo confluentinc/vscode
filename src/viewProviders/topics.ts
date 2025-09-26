@@ -365,8 +365,8 @@ export class TopicViewProvider
         },
       );
 
-      // Toplevel repaint.
-      this.refresh();
+      // Toplevel (deep) repaint to reevaluate which topics have subjects.
+      this.refresh(true);
     }
   }
 

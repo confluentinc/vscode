@@ -574,6 +574,8 @@ describe("TopicViewProvider", () => {
             change,
           } as SubjectChangeEvent);
           sinon.assert.calledOnce(refreshStub);
+          // Must be a deep refresh to do the right thing and re-correlate topics and subjects.
+          sinon.assert.calledWith(refreshStub, true);
         });
       }
     });
