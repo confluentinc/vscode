@@ -129,6 +129,29 @@ describe("quickpicks/kafkaClusters", () => {
       assert.strictEqual(itemsCalledWith[1].description, clusters[0].id);
     });
 
+    it("should return undefined and show an info notification when filter predicate results in zero clusters", async () => {
+      const clusters: KafkaCluster[] = [TEST_LOCAL_KAFKA_CLUSTER];
+      localLoader.getEnvironments.resolves([TEST_LOCAL_ENVIRONMENT]);
+      localLoader.getKafkaClustersForEnvironmentId.resolves(clusters);
+      const showInformationMessageStub = sandbox
+        .stub(window, "showInformationMessage")
+        .resolves(undefined);
+
+      const result = await kafkaClusterQuickPick({
+        filter: (cluster: KafkaCluster) => cluster.id === "non-existent-cluster-id",
+      });
+
+      assert.strictEqual(result, undefined);
+      sinon.assert.notCalled(showQuickPickStub);
+      sinon.assert.calledOnce(showInformationMessageStub);
+      sinon.assert.calledOnceWithMatch(
+        showInformationMessageStub,
+        "No Kafka clusters available.",
+        sinon.match.string,
+        sinon.match.string,
+      );
+    });
+
     it("Uses the provided placeHolder in the quick pick", async () => {
       const clusters: KafkaCluster[] = [
         TEST_LOCAL_KAFKA_CLUSTER,
@@ -253,6 +276,72 @@ describe("quickpicks/kafkaClusters", () => {
       // and their .value should be the cluster.
       assert.strictEqual(itemsCalledWith[1].description, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
       assert.strictEqual(itemsCalledWith[1].value, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+    });
+
+    it("should return undefined and show information message when no flinkable clusters are available", async () => {
+      ccloudLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
+      // Return only non-flinkable clusters
+      ccloudLoader.getKafkaClustersForEnvironmentId.callsFake(
+        async (): Promise<CCloudKafkaCluster[]> => {
+          return [TEST_CCLOUD_KAFKA_CLUSTER]; // This is not flinkable
+        },
+      );
+
+      const showInformationMessageStub = sandbox
+        .stub(window, "showInformationMessage")
+        .resolves(undefined);
+
+      const result = await flinkDatabaseQuickpick();
+
+      assert.strictEqual(result, undefined);
+      assert.strictEqual(
+        showQuickPickStub.callCount,
+        0,
+        "showQuickPick should not be called when no flinkable clusters are available",
+      );
+      assert.strictEqual(showInformationMessageStub.callCount, 1);
+      assert.strictEqual(
+        showInformationMessageStub.getCall(0).args[0],
+        "No Kafka clusters available.",
+      );
+    });
+
+    it("should return undefined and show information message when compute pool filters out all clusters", async () => {
+      const computePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      // Create a flinkable cluster but with different provider/region than compute pool
+      const differentRegionCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        id: "different-region-cluster",
+        provider: "different-provider",
+        region: "different-region",
+        flinkPools: [computePool], // Make it flinkable
+      });
+
+      ccloudLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
+      ccloudLoader.getKafkaClustersForEnvironmentId.callsFake(
+        async (): Promise<CCloudKafkaCluster[]> => {
+          return [differentRegionCluster]; // Different provider/region from compute pool
+        },
+      );
+
+      const showInformationMessageStub = sandbox
+        .stub(window, "showInformationMessage")
+        .resolves(undefined);
+
+      const result = await flinkDatabaseQuickpick(computePool);
+
+      assert.strictEqual(result, undefined);
+      assert.strictEqual(
+        showQuickPickStub.callCount,
+        0,
+        "showQuickPick should not be called when compute pool filters out all clusters",
+      );
+      assert.strictEqual(showInformationMessageStub.callCount, 1);
+      assert.strictEqual(
+        showInformationMessageStub.getCall(0).args[0],
+        "No Kafka clusters available.",
+      );
     });
   });
 });
