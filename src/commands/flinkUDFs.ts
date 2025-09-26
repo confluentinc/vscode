@@ -67,6 +67,8 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
     const database = flinkDatabaseProvider.database; // selected database in Artifacts view
     if (database && catalog) {
       const metadata: UriMetadata = {
+        // FLINK_COMPUTE_POOL_ID will fallback to `null` so the user has to pick a pool to run the statement,
+        // to avoid conflicts between any default pool settings and the artifact-related catalog/database
         [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: database.flinkPools[0]?.id || null,
         [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
         [UriMetadataKeys.FLINK_CATALOG_NAME]: catalog.name,
