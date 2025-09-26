@@ -7,12 +7,12 @@ description: "TypeScript patterns and VS Code extension development best practic
 
 When writing TypeScript code for this VS Code extension:
 
-## Type Safety and Code Quality
+## Type Safety and Code Quality - MANDATORY
 
-- Always use explicit types and interfaces, never use `any`
-- Use discriminated unions for handling different states or types
-- Prefer `enum` for fixed sets of related constants instead of union types
-- Add JSDoc comments to exported functions, classes, and interfaces
+- **NEVER** use `any` type - always provide explicit types or interfaces
+- **PREFER** `enum` over string union types for constants
+- **REQUIRE** JSDoc comments on all exported functions and public class methods
+- TypeScript strict mode is enforced - code must compile without type errors
 
 ## Asynchronous Programming
 
@@ -20,28 +20,38 @@ When writing TypeScript code for this VS Code extension:
 - Implement `Promise.all` for concurrent operations when possible
 - Always handle promise rejections properly with try/catch blocks
 
-## Code Style and Organization
+## Code Style and Organization - ENFORCE STRICTLY
 
 - Write self-documenting variable and function names
-- Keep functions small and focused on a single responsibility
+- **One class, one purpose** - if class does multiple things, split it
+- **One function, one task** - keep functions small and focused
+- **One file, one concept** - related functionality goes together, unrelated gets separated
 - Use classes to encapsulate related functionality and state for better organization and testability
-- Follow functional programming patterns where appropriate
+  - Example: ResourceLoader handles loading, ResourceManager handles state, TreeProvider handles UI
+
+## Comment Preservation - CRITICAL
+
+- **Never delete existing comments** unless they contain significant errors or gaps
+- Comments provide valuable context about business logic, architectural decisions, and edge cases
+- When refactoring, preserve and update comments rather than removing them
+- If code seems self-explanatory, comments often explain the _why_ behind the implementation
 
 ## VS Code Extension Patterns
 
-- Properly handle `vscode.Disposable` resources to prevent memory leaks
+- **MANDATORY**: All classes that register event listeners MUST implement `vscode.Disposable`
+- **ALWAYS** call `.dispose()` on resources when done - especially `.event()` listeners
+- **Use** `DisposableCollection` base class to manage multiple disposables automatically
+- **Pattern**: Store disposables from constructors, dispose in class `.dispose()` method
+- **Example**: `this.disposables.push(vscode.workspace.onDidChangeConfiguration(...))`
 - Use the extension's established command patterns for consistency
-- Implement tree providers, quickpicks, and webviews according to VS Code patterns
 - Use the existing ResourceLoader and ResourceManager patterns for data fetching
 - Follow VS Code extension API patterns for commands, tree providers, quickpicks, and webviews
 
 ## Configuration and Settings
 
-- Use VS Code's configuration API to access and update settings:
-  ```typescript
-  vscode.workspace.getConfiguration("confluent");
-  ```
-- Handle configuration changes with `vscode.workspace.onDidChangeConfiguration`
+- Use `ExtensionSetting<T>` instances defined in `src/extensionSettings/constants.ts`
+- Access settings via `.value` property for automatic VS Code configuration sync
+- Handle configuration changes through `src/extensionSettings/listener.ts` patterns
 - Validate settings values before using them in critical operations
 - Implement proper typing for all configuration values
 - Use workspace-scoped settings for project-specific configurations

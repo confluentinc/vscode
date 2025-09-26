@@ -9,11 +9,11 @@ When handling errors in the Confluent extension for VS Code:
 
 ## Error Logging and Reporting
 
-- Always use the `logError()` utility for consistent error logging that captures:
+- **Always** use the `logError()` utility for consistent error capture that includes:
   - Stack traces for debugging
   - HTTP response details (when applicable)
   - Contextual information about what operation failed
-- Implement `showErrorNotificationWithButtons()` for user-facing errors that include:
+- **Use** `showErrorNotificationWithButtons()` for user-facing errors with:
   - "Open Logs" button to help users find detailed error information
   - "File Issue" button to streamline bug reporting
 

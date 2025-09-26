@@ -103,7 +103,6 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
 ### 2. Type Safety - NO EXCEPTIONS
 
 - **NEVER** use `any` type - always provide explicit types or interfaces
-- **ALWAYS** use discriminated unions for state management patterns
 - **PREFER** `enum` over string union types for constants
 - **REQUIRE** JSDoc comments on all exported functions and public class methods
 - **TypeScript strict mode** is enforced - code must compile without type errors
@@ -124,3 +123,54 @@ npx gulp lint          # ESLint with auto-fix: gulp lint -f
 - Prioritize proper disposal patterns for VS Code resources to prevent memory leaks (especially for
   `.event()` listeners)
 - Enforce single responsibility principle in classes and modules for maintainability
+
+## Code Review Guidelines (GitHub PR Reviews)
+
+When reviewing pull requests for this VS Code extension:
+
+### Focus Areas for PR Reviews
+
+- **Disposable Management**: Verify all event listeners are properly disposed via
+  `DisposableCollection`
+- **Type Safety**: Ensure no `any` types are introduced and all interfaces are properly typed
+- **Single Responsibility**: Check that classes and functions maintain focused, single purposes
+- **Sidecar Pattern**: Confirm proper use of short-lived `SidecarHandle` instances
+- **Testing Coverage**: Validate that new functionality includes appropriate unit/E2E tests
+- **Error Handling**: Ensure `logError()` and `showErrorNotificationWithButtons()` are used
+  consistently
+
+### Comment Preservation
+
+- **Never delete existing comments** unless they contain significant errors or gaps
+- Comments provide valuable context about business logic, architectural decisions, and edge cases
+- If code appears self-explanatory, comments may explain _why_ rather than _what_
+- When suggesting improvements, enhance comments rather than removing them
+
+### Review Checklist
+
+- Verify the PR description is clear and applicable checklist items are completed
+- Check that any OpenAPI spec changes include corresponding patches in
+  `src/clients/sidecar-openapi-specs/patches/`
+- Ensure extension settings follow the `ExtensionSetting<T>` pattern
+- Validate webview implementations use the established template binding patterns
+
+## Local Development with Copilot Chat
+
+When working with Copilot chat during development:
+
+### Code Generation Requests
+
+- Reference existing patterns from the codebase (ResourceLoader, ViewProvider, etc.)
+- Use the #vscodeAPI tool as appropriate for VS Code API or UX guidelines
+- Specify which connection type (CCloud, Direct, Local) when working with Kafka resources
+- Request examples that follow the established testing patterns (Mocha/Sinon for units, Playwright
+  for E2E)
+- Ask for proper disposable management in any new classes or event listeners
+
+### Refactoring Assistance
+
+- Preserve all existing comments when refactoring code
+- Maintain the established architectural patterns (sidecar communication, view providers)
+- Ensure refactored code follows the three critical requirements (disposables, type safety, single
+  responsibility)
+- Request TypeScript interfaces for complex data structures rather than inline types

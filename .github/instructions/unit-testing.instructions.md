@@ -5,7 +5,8 @@ description: "Unit testing practices with Mocha, Sinon, and Assert"
 
 # Unit Testing with Mocha, Sinon, and Assert
 
-Tests should be run with `npx gulp test`. When writing unit tests for this extension:
+Tests should be run with `npx gulp test` (use `--coverage` flag for Istanbul reports). When writing
+unit tests for this extension:
 
 ## Test Structure and Naming
 
@@ -26,7 +27,7 @@ Tests should be run with `npx gulp test`. When writing unit tests for this exten
 
 ## Test Data
 
-- Use fixtures from `test/unit/testResources/` for reusable test data representing `src/models/`
+- Use fixtures from `tests/unit/testResources/` for reusable test data representing `src/models/`
   entities
 - Only create new fixture instances when necessary variations are needed
 - When modifying fixtures, document the reasons for the variations
