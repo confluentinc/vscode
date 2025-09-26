@@ -545,7 +545,7 @@ export class NewResourceViewProvider
         // load its coarse resources and store it.
         for (const loader of newDirectLoaders) {
           const connectionRow = new DirectConnectionRow(loader);
-          loadAndStorePromises.push(this.loadAndStoreConnection(connectionRow, false));
+          loadAndStorePromises.push(this.loadAndStoreConnection(connectionRow));
         }
       }
 
@@ -635,14 +635,14 @@ export class NewResourceViewProvider
     // Store all of the connections. Will also kick off the initial loading of environments
     // for each connection.
     for (const connectionRow of [new CCloudConnectionRow(), new LocalConnectionRow()]) {
-      void this.loadAndStoreConnection(connectionRow, true);
+      void this.loadAndStoreConnection(connectionRow);
     }
 
     // Queue up storing of the initial population of direct connections,
     // after each completes refreshing (so we can know what icon type and name to use)
     const directLoaders = ResourceLoader.directLoaders();
     directLoaders.forEach((loader) => {
-      void this.loadAndStoreConnection(new DirectConnectionRow(loader), false);
+      void this.loadAndStoreConnection(new DirectConnectionRow(loader));
     });
   }
 
@@ -721,11 +721,14 @@ export class NewResourceViewProvider
   async loadAndStoreConnection(
     /** The row to insert */
     connectionRow: AnyConnectionRow,
-    insertBeforeRefresh: boolean,
   ): Promise<void> {
+    // We can eagerly insert the row *before* the initial refresh if it is
+    // already useable (i.e. CCloud or Local connection rows).
+    // If it is a DirectConnectionRow, we must wait until after the initial refresh
+    // completes, because only then will we know the name, icon, and so forth.
+    // (And if we try to make a TreeItem before that, an error will be raised.)
+    const insertBeforeRefresh = connectionRow.usable;
     if (insertBeforeRefresh) {
-      // Codepath for local, ccloud rows whose core treeitem attributes
-      // (name, etc.) are known before the initial refresh.
       this.logger.debug("Storing connection row before initial refresh", {
         connectionId: connectionRow.connectionId,
       });
@@ -733,24 +736,39 @@ export class NewResourceViewProvider
     }
 
     // Kick off the initial fetching for this connection.
-    await connectionRow.refresh(false).then(() => {
-      this.logger.debug("New connection row back from initial refresh", {
-        connectionId: connectionRow.connectionId,
-      });
-
-      if (!insertBeforeRefresh) {
-        // Codepath for direct connections, where we don't know the name, icon, etc.
-        // until after the initial refresh (and if we tried to make a TreeItem
-        // before the refresh, an error would be raised).
-        this.logger.debug("Storing connection row now that initial refresh has completed", {
+    await connectionRow
+      .refresh(false)
+      .then(() => {
+        // Now that the initial refresh has completed, if we didn't already
+        // insert the connection row, do so now.
+        this.logger.debug("New connection row back from initial refresh", {
           connectionId: connectionRow.connectionId,
         });
-        this.storeConnection(connectionRow);
-      }
 
-      // Indicate that we have a new happy toplevel child.
-      this.repaint();
-    });
+        if (!insertBeforeRefresh) {
+          // Codepath for direct connections, where we don't know the name, icon, etc.
+          // until after the initial refresh (and if we tried to make a TreeItem
+          // before the refresh, an error would be raised).
+          this.logger.debug("Storing connection row now that initial refresh has completed", {
+            connectionId: connectionRow.connectionId,
+          });
+          this.storeConnection(connectionRow);
+        }
+
+        // Indicate to the view that we have a new happy toplevel child
+        // that should be shown.
+        this.repaint();
+      })
+      .catch((e) => {
+        const msg = `Failed to load resources for connection "${connectionRow.name}".`;
+        logError(e, "loading resources for connection", {
+          extra: {
+            functionName: "loadAndStoreConnection",
+            connectionId: connectionRow.connectionId,
+          },
+        });
+        void showErrorNotificationWithButtons(msg);
+      });
   }
 
   private storeConnection(connectionRow: AnyConnectionRow): void {
@@ -758,13 +776,25 @@ export class NewResourceViewProvider
   }
 
   private getToplevelChildren(): AnyConnectionRow[] {
-    // Skip any direct connection rows that are not yet useable.
-    // (They will become useable after their initial refresh completes and the view will be repainted.)
-    const connections = [...this.connections.values()].filter((row) => row.usable);
+    const allConnections = Array.from(this.connections.values());
+    const usableConnections = allConnections.filter((row) => row.usable);
 
-    this.sortConnections(connections);
+    // Triple guard against making TreeItems for connections that aren't
+    // yet useable (i.e. DirectConnectionRows that haven't yet completed
+    // their initial refresh, whose name, iconPath, and tooltip cannot
+    // be referenced yet).
+    if (usableConnections.length !== allConnections.length) {
+      const unusableConnectionIds = allConnections
+        .filter((row) => !row.usable)
+        .map((row) => row.connectionId);
+      this.logger.debug("Some connection rows not yet useable, omitting from toplevel children", {
+        unusableConnectionIds,
+      });
+    }
 
-    return connections;
+    this.sortConnections(usableConnections);
+
+    return usableConnections;
   }
 
   private sortConnections(connections: AnyConnectionRow[]): void {
