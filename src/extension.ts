@@ -517,13 +517,14 @@ async function setupFeatureFlags(): Promise<void> {
 export function getRefreshableViewProviders(
   resourcesViewProviderInstance: ResourceViewProvider | NewResourceViewProvider,
 ): RefreshableTreeViewProvider[] {
-  // When adding a new view provider pair, also update the test
-  // mentioning "viewProviderNameFragments" in extension.test.ts.
+  // When adding a new refreshable view, also update the test block
+  // "Refreshable views tests" in extension.test.ts.
   const refreshables = [
     resourcesViewProviderInstance,
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),
+    FlinkDatabaseViewProvider.getInstance(),
   ];
 
   return refreshables;

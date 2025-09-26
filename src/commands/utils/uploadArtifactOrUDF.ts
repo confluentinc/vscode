@@ -6,20 +6,11 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import { artifactUploadCompleted } from "../../emitters";
+import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { Logger } from "../../logging";
-import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import {
-  CloudProvider,
-  EnvironmentId,
-  IEnvProviderRegion,
-  IProviderRegion,
-} from "../../models/resource";
-import { showErrorNotificationWithButtons } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
-import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
+import { FlinkArtifact } from "../../models/flinkArtifact";
+import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
@@ -32,6 +23,8 @@ export interface ArtifactUploadParams {
   artifactName: string;
   fileFormat: string;
   selectedFile: vscode.Uri;
+  description?: string;
+  documentationUrl?: string;
 }
 
 const logger = new Logger("commands/uploadArtifact");
@@ -90,97 +83,6 @@ export async function getPresignedUploadUrl(
     PresignedUploadUrlArtifactV1PresignedUrlRequest: request,
   });
   return urlResponse;
-}
-
-export async function promptForArtifactUploadParams(
-  item?: CCloudKafkaCluster | CCloudFlinkComputePool | vscode.Uri,
-): Promise<ArtifactUploadParams | undefined> {
-  const isCcloudItem =
-    item && (item instanceof CCloudFlinkComputePool || item instanceof CCloudKafkaCluster);
-  if (isCcloudItem) {
-    logger.debug("Starting upload artifact using provided context", {
-      environment: item.environmentId,
-      cloud: item.provider,
-      region: item.region,
-    });
-  }
-  // Use the item's environment if provided, otherwise prompt for it
-  const environment =
-    isCcloudItem && item.environmentId
-      ? { id: item.environmentId }
-      : await flinkCcloudEnvironmentQuickPick();
-
-  // Use the item's provider and region if exists, otherwise prompt for it
-  let cloudRegion: IProviderRegion | undefined;
-  if (isCcloudItem) {
-    cloudRegion = { provider: item.provider, region: item.region };
-  } else {
-    cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
-  }
-
-  if (!environment || !environment.id || !cloudRegion) {
-    return undefined;
-  }
-
-  let cloud: CloudProvider;
-  if (cloudRegion.provider === "AZURE") {
-    cloud = CloudProvider.Azure;
-  } else if (cloudRegion.provider === "AWS") {
-    cloud = CloudProvider.AWS;
-  } else {
-    void showErrorNotificationWithButtons(
-      `Upload Artifact cancelled: Unsupported cloud provider: ${cloudRegion.provider}`,
-    );
-    return undefined;
-  }
-
-  // If the incoming item is a Uri, use it; otherwise prompt the user
-  let selectedFile: vscode.Uri | undefined;
-  if (item && item instanceof vscode.Uri) {
-    selectedFile = item;
-  } else {
-    const selectedFiles: vscode.Uri[] | undefined = await vscode.window.showOpenDialog({
-      openLabel: "Select",
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      filters: {
-        "Flink Artifact Files": ["jar"],
-      },
-    });
-
-    if (!selectedFiles || selectedFiles.length === 0) {
-      // if the user cancels the file selection, silently exit
-      return undefined;
-    }
-
-    selectedFile = selectedFiles[0];
-  }
-
-  const fileFormat: string = selectedFile.fsPath.split(".").pop() ?? "";
-
-  // Default artifact name to the selected file's base name (without extension), but allow override.
-  const defaultArtifactName = path.basename(selectedFile.fsPath, path.extname(selectedFile.fsPath));
-
-  const artifactName = await vscode.window.showInputBox({
-    prompt: "Enter the artifact name",
-    value: defaultArtifactName,
-    ignoreFocusOut: true,
-    validateInput: (value) => (value && value.trim() ? undefined : "Artifact name is required"),
-  });
-
-  if (!artifactName) {
-    return undefined;
-  }
-
-  return {
-    environment: environment.id,
-    cloud,
-    region: cloudRegion.region,
-    artifactName,
-    fileFormat,
-    selectedFile,
-  };
 }
 
 export async function handleUploadToCloudProvider(
@@ -294,7 +196,9 @@ export async function uploadArtifactToCCloud(
       artifactName: params.artifactName,
     });
 
-    artifactUploadCompleted.fire();
+    // Inform all interested parties that we just mutated the artifacts list
+    // in this env/region.
+    artifactsChanged.fire(providerRegion);
 
     return response;
   } catch (error) {
@@ -311,7 +215,7 @@ export function buildCreateArtifactRequest(
   params: ArtifactUploadParams,
   uploadId: string,
 ): CreateArtifactV1FlinkArtifactRequest {
-  return {
+  const request: CreateArtifactV1FlinkArtifactRequest = {
     cloud: params.cloud,
     region: params.region,
     environment: params.environment,
@@ -322,4 +226,59 @@ export function buildCreateArtifactRequest(
       upload_id: uploadId,
     },
   };
+  if (params.description) {
+    request.description = params.description;
+  }
+  if (params.documentationUrl) {
+    request.documentation_link = params.documentationUrl;
+  }
+  return request;
+}
+
+export function validateUdfInput(
+  input: string,
+  regex: RegExp,
+): vscode.InputBoxValidationMessage | undefined {
+  if (!input || !regex.test(input)) {
+    return {
+      message:
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      severity: vscode.InputBoxValidationSeverity.Error,
+    };
+  }
+}
+
+/**
+ * This function prompts the user for a function name and class name for a new UDF.
+ * It returns an object containing the function name and class name, or undefined if the user cancels.
+ *
+ * @param selectedArtifact The selected Flink artifact, used to generate a default function name.
+ */
+export async function promptForFunctionAndClassName(
+  selectedArtifact: FlinkArtifact | undefined,
+): Promise<{ functionName: string; className: string } | undefined> {
+  const defaultFunctionName = `udf_${selectedArtifact?.name?.substring(0, 6) ?? ""}`;
+  const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+  const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
+  const functionName = await vscode.window.showInputBox({
+    prompt: "Enter a name for the new UDF function",
+    placeHolder: defaultFunctionName,
+    validateInput: (value) => validateUdfInput(value, functionNameRegex),
+    ignoreFocusOut: true,
+  });
+
+  if (functionName === undefined) {
+    return undefined;
+  }
+
+  const className = await vscode.window.showInputBox({
+    prompt: "Enter the class name for the new UDF",
+    placeHolder: `your.class.NameHere`,
+    validateInput: (value) => validateUdfInput(value, classNameRegex),
+    ignoreFocusOut: true,
+  });
+  if (className === undefined) {
+    return undefined;
+  }
+  return { functionName, className };
 }

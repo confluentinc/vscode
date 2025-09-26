@@ -11,6 +11,7 @@ import {
 import { FormConnectionType } from "../directConnections/types";
 import { CCloudFlinkComputePool, FlinkComputePool } from "./flinkComputePool";
 import {
+  CCloudFlinkDbKafkaCluster,
   CCloudKafkaCluster,
   DirectKafkaCluster,
   KafkaCluster,
@@ -147,6 +148,15 @@ export class CCloudEnvironment extends Environment {
     this.flinkComputePools = props.flinkComputePools.map((pool) =>
       pool instanceof CCloudFlinkComputePool ? pool : new CCloudFlinkComputePool(pool),
     );
+  }
+  /**
+   * Flinkable Kafka clusters, i.e. those with at least one associated Flink compute pool.
+   */
+  get flinkDatabaseKafkaClusters(): CCloudFlinkDbKafkaCluster[] {
+    if (this.flinkComputePools.length === 0) {
+      return [];
+    }
+    return this.kafkaClusters.filter((kc): kc is CCloudFlinkDbKafkaCluster => kc.isFlinkable());
   }
 
   get ccloudUrl(): string {
@@ -385,10 +395,10 @@ export class EnvironmentTreeItem extends TreeItem {
     // "ccloud-environment", "direct-environment", "local-environment"
     this.contextValue = contextParts.join("-");
 
-    if (isDirect(resource)) {
-      // mainly to help E2E tests distinguish direct connections from other tree items
-      this.accessibilityInformation = { label: `Direct connection: "${resource.name}"` };
-    }
+    // mainly to help E2E tests distinguish direct connections from other tree items
+    this.accessibilityInformation = {
+      label: `${this.resource.connectionType}: connection "${resource.name}"`,
+    };
 
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;

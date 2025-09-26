@@ -110,6 +110,13 @@ export class SchemaRegistryTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createSchemaRegistryTooltip(this.resource);
 
+    // all Schema Registry items show up with the "Schema Registry" label, so we need to add more
+    // information for accessibility and E2E testing purposes
+    // (we may eventually want connection/environment names in here as well)
+    this.accessibilityInformation = {
+      label: `${this.resource.connectionType} connection: Schema Registry`,
+    };
+
     // set primary click action to select this cluster as the current one, focusing it in the Schemas view
     this.command = {
       command: "confluent.resources.schema-registry.select",

@@ -14,16 +14,16 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
 > {
   readonly mode = FlinkDatabaseViewProviderMode.Artifacts;
   readonly viewTitle = "Flink Artifacts (Preview)";
+  readonly loadingMessage = "Loading Flink artifacts...";
 
-  children: FlinkArtifact[] = [];
-
-  loadingMessage = "Loading Flink artifacts...";
-
-  async fetchChildren(resource: CCloudFlinkDbKafkaCluster): Promise<FlinkArtifact[]> {
+  async fetchChildren(
+    resource: CCloudFlinkDbKafkaCluster,
+    forceDeepRefresh: boolean,
+  ): Promise<FlinkArtifact[]> {
     this.children = [];
     try {
       const loader = CCloudResourceLoader.getInstance();
-      this.children = await loader.getFlinkArtifacts(resource);
+      this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
       return this.children;
     } catch (error) {
       const { showNotification, message } = triageGetFlinkArtifactsError(error);

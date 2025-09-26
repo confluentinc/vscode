@@ -5,7 +5,6 @@ import { createFilter } from "@rollup/pluginutils";
 import { readFileSync } from "node:fs";
 import { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
-import { test } from "rollwright";
 import sanitize from "sanitize-html";
 import { SinonStub } from "sinon";
 import {
@@ -16,6 +15,7 @@ import {
   OAuthCredentials,
   ScramCredentials,
 } from "../clients/sidecar";
+import { test } from "./baseTest";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {

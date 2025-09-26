@@ -16,10 +16,12 @@ import {
   ConnectionId,
   connectionIdToType,
   EnvironmentId,
+  IEnvProviderRegion,
   IResourceBase,
   isCCloud,
   ISearchable,
 } from "./resource";
+import { KafkaTopic } from "./topic";
 
 /** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
@@ -37,6 +39,33 @@ export abstract class KafkaCluster extends Data implements IResourceBase, ISearc
 
   searchableText(): string {
     return `${this.name} ${this.id}`;
+  }
+
+  /**
+   * Determines if this KafkaCluster is equal to another by comparing connectionId, connectionType, environmentId, and id.
+   *
+   * (Kafka cluster ids are defined by the brokers themselves, but the user may have multiple connections able
+   * to access the same cluster, so we also need to compare connectionId and connectionType to be sure).
+   **/
+  equals(other: KafkaCluster): boolean {
+    return (
+      this.connectionId === other.connectionId &&
+      this.connectionType === other.connectionType &&
+      this.environmentId === other.environmentId &&
+      this.id === other.id
+    );
+  }
+
+  /**
+   * Are we the source of this topic?
+   */
+  contains(topic: KafkaTopic): boolean {
+    return (
+      this.connectionId === topic.connectionId &&
+      this.connectionType === topic.connectionType &&
+      this.environmentId === topic.environmentId &&
+      this.id === topic.clusterId
+    );
   }
 }
 
@@ -80,9 +109,13 @@ export class CCloudKafkaCluster extends KafkaCluster {
     return (this.flinkPools?.length ?? 0) > 0;
   }
 
-  /** Is this compute pool in the same cloud provider/region as we are? */
-  isSameCloudRegion(other: CCloudFlinkComputePool): boolean {
-    return this.provider === other.provider && this.region === other.region;
+  /* Are we in the same env/provider/region as other? */
+  isSameEnvCloudRegion(other: IEnvProviderRegion): boolean {
+    return (
+      this.provider.toLowerCase() === other.provider.toLowerCase() &&
+      this.region.toLowerCase() === other.region.toLowerCase() &&
+      this.environmentId === other.environmentId
+    );
   }
 
   searchableText(): string {
@@ -163,6 +196,11 @@ export class KafkaClusterTreeItem extends TreeItem {
     this.description = `${this.resource.id}`;
     this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createKafkaClusterTooltip(this.resource);
+
+    // mainly to help E2E tests more easily identify these items between different connection types
+    this.accessibilityInformation = {
+      label: `${this.resource.connectionType} connection: Kafka Cluster`,
+    };
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
     this.command = {

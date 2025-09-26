@@ -62,9 +62,8 @@ export class ResourcesView extends View {
 
   /** Locator for all root-level direct connection tree items. */
   get directConnections(): Locator {
-    // we can't use this.treeItems since we have to look for an attribute instead of filtering
-    // based on the existing selector
-    return this.body.locator('[role="treeitem"][aria-label^="Direct connection: "]');
+    // use the accessibilityInformation label we're adding instead of trying to filter by icons/names
+    return this.treeItems.and(this.page.locator('[aria-label^="DIRECT: connection "]'));
   }
 
   // Kafka cluster locators:
@@ -80,9 +79,9 @@ export class ResourcesView extends View {
    */
   get ccloudKafkaClusters(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Kafka cluster item
-    return this.body
-      .locator("[role='treeitem'][aria-level='3']")
-      .filter({ has: this.page.locator(".codicon-confluent-kafka-cluster") });
+    return this.kafkaClusters.and(
+      this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster']"),
+    );
   }
 
   /**
@@ -90,16 +89,22 @@ export class ResourcesView extends View {
    * Only visible when the {@link localItem "Local" item} is expanded.
    */
   get localKafkaClusters(): Locator {
-    return this.kafkaClusters.filter({ hasText: "confluent-local" });
+    // second nested element: Local connection item -> Kafka cluster item
+    return this.kafkaClusters.and(
+      this.page.locator("[aria-level='2'][aria-label^='LOCAL connection: Kafka Cluster']"),
+    );
   }
 
   /**
    * Locator for direct connection Kafka cluster tree items.
    * Only visible when a {@link directConnections "Direct Connections" item} is available and
-   * expanded.
+   * expanded with a Kafka cluster configured.
    */
   get directKafkaClusters(): Locator {
-    return this.kafkaClusters.filter({ hasText: "Kafka Cluster" });
+    // second nested element: Direct connection item -> Kafka cluster item
+    return this.kafkaClusters.and(
+      this.page.locator("[aria-level='2'][aria-label^='DIRECT connection: Kafka Cluster']"),
+    );
   }
 
   /** Locator for all Schema Registry tree items. */
@@ -113,9 +118,9 @@ export class ResourcesView extends View {
    */
   get ccloudSchemaRegistries(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Schema Registry item
-    return this.body
-      .locator("[role='treeitem'][aria-level='3']")
-      .filter({ has: this.page.locator(".codicon-confluent-schema-registry") });
+    return this.schemaRegistries.and(
+      this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Schema Registry']"),
+    );
   }
 
   /**
@@ -123,16 +128,30 @@ export class ResourcesView extends View {
    * Only visible when the {@link localItem "Local" item} is expanded.
    */
   get localSchemaRegistries(): Locator {
-    return this.schemaRegistries.filter({ hasText: "local-sr" });
+    // second nested element: Local connection item -> Schema Registry item
+    return this.schemaRegistries.and(
+      this.page.locator("[aria-level='2'][aria-label^='LOCAL connection: Schema Registry']"),
+    );
   }
 
   /**
    * Locator for direct connection Schema Registry tree items.
-   * Only visible when a {@link directConnections "Direct Connections" item} is available and
-   * expanded.
+   * Only visible when a {@link directConnections direct connection item} is available and
+   * expanded with a Schema Registry configured.
    */
   get directSchemaRegistries(): Locator {
-    return this.schemaRegistries.filter({ hasText: "Schema Registry" });
+    // second nested element: Direct connection item -> Schema Registry item
+    return this.schemaRegistries.and(
+      this.page.locator("[aria-level='2'][aria-label^='DIRECT connection: Schema Registry']"),
+    );
+  }
+
+  /** Locator for all Flink Compute Pool tree items.*/
+  get flinkComputePools(): Locator {
+    // only available for CCloud connections
+    return this.treeItems.filter({
+      has: this.page.locator(".codicon-confluent-flink-compute-pool"),
+    });
   }
 
   /**
@@ -141,9 +160,7 @@ export class ResourcesView extends View {
    */
   get ccloudFlinkComputePools(): Locator {
     // third nested element: Confluent Cloud item -> environment item -> Flink Compute Pool item
-    return this.body
-      .locator("[role='treeitem'][aria-level='3']")
-      .filter({ has: this.page.locator(".codicon-confluent-flink-compute-pool") });
+    return this.flinkComputePools.and(this.page.locator("[aria-level='3']"));
   }
 
   /**
@@ -162,44 +179,92 @@ export class ResourcesView extends View {
   }
 
   /**
+   * Open the Direct Connection form by clicking "Add New Connection" -> "Import from file".
+   *
+   * To avoid saving off any sensitive connection details for these tests, the file picker dialog
+   * should be handled through a stub in the test that calls this method and provides the JSON
+   * content to import.
+   *
+   * @returns A DirectConnectionForm instance for the imported connection
+   */
+  async addNewConnectionFromFileImport(): Promise<DirectConnectionForm> {
+    await this.clickAddNewConnection();
+
+    const quickpick = new Quickpick(this.page);
+    // choices will be either "Enter manually" or "Import from file"
+    const importFromFileItem = quickpick.items.filter({ hasText: /Import from file/ });
+    await expect(importFromFileItem).not.toHaveCount(0);
+    await importFromFileItem.first().click();
+    return new DirectConnectionForm(this.page);
+  }
+
+  /**
+   * Locate a connection environment item in the view for a given {@link ConnectionType connection type}.
+   * If there are multiple environments for the connection type, you can optionally provide a
+   * `label` string or regex to filter the results.
+   *
+   * This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
+   * direct connection form completion, etc.) so that the environment item is present.
+   *
+   * NOTE: CCloud connections may have multiple environments, but the local connection and direct
+   * connections are each treated as individual "environments" in the Resources view.
+   *
+   * @param connectionType The type of connection (CCloud or Direct)
+   * @param label Optional string or regex to filter the located environments
+   * @returns A Locator for the environment item
+   */
+  async getEnvironment(connectionType: ConnectionType, label?: string | RegExp): Promise<Locator> {
+    let environment: Locator;
+
+    switch (connectionType) {
+      case ConnectionType.Ccloud: {
+        await expect(this.ccloudEnvironments).not.toHaveCount(0);
+        environment = label
+          ? this.ccloudEnvironments.filter({ hasText: label }).first()
+          : this.ccloudEnvironments.first();
+        break;
+      }
+      case ConnectionType.Direct: {
+        await expect(this.directConnections).not.toHaveCount(0);
+        environment = label
+          ? this.directConnections.filter({ hasText: label }).first()
+          : this.directConnections.first();
+        break;
+      }
+      case ConnectionType.Local: {
+        await expect(this.localItem).not.toHaveCount(0);
+        environment = this.localItem;
+        break;
+      }
+      default:
+        throw new Error(`Unsupported connection type: ${connectionType}`);
+    }
+
+    await expect(environment).toBeVisible();
+    return environment;
+  }
+
+  /**
    * Expand a connection's environment in the Resources view.
    *
-   * NOTE: This requires the connection to be fully set up beforehand (e.g. CCloud authentication,
-   * direct connection form completion, etc.) so that the environment item is present.
+   * NOTE: CCloud connections may have multiple environments, but the local connection and direct
+   * connections are each treated as individual "environments" in the Resources view.
    */
   async expandConnectionEnvironment(
     connectionType: ConnectionType,
     label?: string | RegExp,
   ): Promise<void> {
-    switch (connectionType) {
-      case ConnectionType.Ccloud: {
-        await expect(this.ccloudEnvironments).not.toHaveCount(0);
-        const ccloudEnv: Locator = label
-          ? this.ccloudEnvironments.filter({ hasText: label }).first()
-          : this.ccloudEnvironments.first();
-        // CCloud environments are always collapsed by default, but we may have opened it already
-        if ((await ccloudEnv.getAttribute("aria-expanded")) === "false") {
-          await ccloudEnv.click();
-        }
-        await expect(ccloudEnv).toHaveAttribute("aria-expanded", "true");
-        break;
-      }
-      case ConnectionType.Direct: {
-        await expect(this.directConnections).not.toHaveCount(0);
-        const directEnv: Locator = label
-          ? this.directConnections.filter({ hasText: label }).first()
-          : this.directConnections.first();
-        // direct connections are only collapsed by default in the old Resources view
-        if ((await directEnv.getAttribute("aria-expanded")) === "false") {
-          await directEnv.click();
-        }
-        await expect(directEnv).toHaveAttribute("aria-expanded", "true");
-        break;
-      }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
-      default:
-        throw new Error(`Unsupported connection type: ${connectionType}`);
+    const environment = await this.getEnvironment(connectionType, label);
+
+    if ((await environment.getAttribute("aria-expanded")) === "false") {
+      await environment.click();
     }
+    await expect(environment).toHaveAttribute("aria-expanded", "true");
+  }
+
+  /** Locate a direct connection item in the view by its label. */
+  async getDirectConnection(label: string | RegExp): Promise<Locator> {
+    return await this.getEnvironment(ConnectionType.Direct, label);
   }
 
   /**
@@ -232,7 +297,10 @@ export class ResourcesView extends View {
         kafkaClusters = this.directKafkaClusters;
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        kafkaClusters = this.localKafkaClusters;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }
@@ -276,7 +344,10 @@ export class ResourcesView extends View {
         schemaRegistries = this.directSchemaRegistries;
         break;
       }
-      // FUTURE: add support for LOCAL connections, see https://github.com/confluentinc/vscode/issues/2140
+      case ConnectionType.Local: {
+        schemaRegistries = this.localSchemaRegistries;
+        break;
+      }
       default:
         throw new Error(`Unsupported connection type: ${connectionType}`);
     }

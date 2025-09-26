@@ -8,6 +8,12 @@ export enum WorkspaceStorageKeys {
 
   /** Map of URIs to their associated metadata record/objects. */
   URI_METADATA = "uriMetadata",
+
+  /** Map of Flink Artifacts by (CCloud) environment id, cloud provider, cloud region) */
+  FLINK_ARTIFACTS = "flinkArtifacts",
+
+  /** Map of Flink UDFs by (CCloud) Kafka cluster id (i.e. a Flinkable Database) */
+  FLINK_UDFS = "flinkUDFs",
 }
 
 export enum GlobalStorageKeys {

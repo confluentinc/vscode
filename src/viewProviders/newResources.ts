@@ -52,7 +52,6 @@ import {
   ConnectionId,
   connectionIdToType,
   IResourceBase,
-  isDirect,
   ISearchable,
   IUpdatableResource,
 } from "../models/resource";
@@ -176,10 +175,10 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     item.description = this.status;
     item.tooltip = this.tooltip;
 
-    if (isDirect(this)) {
-      // mainly to help E2E tests distinguish direct connections from other tree items
-      item.accessibilityInformation = { label: `Direct connection: "${this.name}"` };
-    }
+    // mainly to help E2E tests distinguish direct connections from other tree items
+    item.accessibilityInformation = {
+      label: `${this.connectionType}: connection "${this.name}"`,
+    };
 
     return item;
   }
@@ -385,15 +384,6 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalSchemaRegistry,
   LocalResourceLoader
 > {
-  /**
-   * Is this the first time refresh() is called?
-   *
-   * If so, then be sure to try to discern if there's a local
-   * Schema Registry running at all, then to update the local connection
-   * (and sidecar).
-   */
-  private needUpdateLocalConnection = true;
-
   constructor() {
     super(LocalResourceLoader.getInstance(), "local-container");
   }
@@ -434,28 +424,9 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   override async refresh(deepRefresh: boolean): Promise<void> {
     this.logger.debug("Refreshing LocalConnectionRow", { deepRefresh });
 
-    if (this.needUpdateLocalConnection) {
-      this.logger.debug(
-        "Trying to discover local schema registry before loading the local environent.",
-      );
-      await updateLocalConnection();
-      this.needUpdateLocalConnection = false;
-
-      // Now clear to call the loader method to GraphQL query the local environment.
-      // in the super.refresh() method.
-    }
+    await updateLocalConnection();
 
     await super.refresh(deepRefresh);
-
-    // update UI context values based on whether or not we have local resources available.
-    await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, this.kafkaCluster !== undefined),
-      setContextValue(
-        ContextValues.localSchemaRegistryAvailable,
-        this.schemaRegistry !== undefined,
-      ),
-      setContextValue(ContextValues.localMedusaAvailable, this.medusa !== undefined),
-    ]);
   }
 
   get status(): string {
@@ -612,9 +583,52 @@ export class NewResourceViewProvider
     });
   }
 
-  /** Repaint this node in the treeview. Pass nothing if wanting a toplevel repaint.*/
-  private repaint(object: NewResourceViewProviderData | undefined = undefined): void {
+  /**
+   * Repaint this node in the treeview. Pass nothing if wanting a toplevel repaint.
+   * Also reevaluates some global context values based on the data
+   * we have across all of our ConnectionRow instances after the repaint.
+   */
+  repaint(object: NewResourceViewProviderData | undefined = undefined): void {
     this._onDidChangeTreeData.fire(object);
+
+    // And since some view data has changed, reevaluate context values
+    // that depend on the whole set of environments we have.
+    void this.updateEnvironmentContextValues();
+  }
+
+  /**
+   * Update the context values for the current environments' resource availability. This is used
+   * to change the empty state of our primary resource views and toggle actions in the UI.
+   */
+  async updateEnvironmentContextValues() {
+    // Collect all direct environments (if any), and the local environment.
+    const directEnvs: DirectEnvironment[] = [];
+    let localEnv: LocalEnvironment | undefined;
+    for (const connectionRow of this.connections.values()) {
+      if (connectionRow instanceof DirectConnectionRow) {
+        directEnvs.push(...connectionRow.environments);
+      } else if (connectionRow instanceof LocalConnectionRow) {
+        localEnv = connectionRow.environment;
+      }
+    }
+
+    // And update context values based on what we found.
+    await Promise.all([
+      setContextValue(
+        ContextValues.directKafkaClusterAvailable,
+        directEnvs.some((env) => env.kafkaClusters.length > 0),
+      ),
+      setContextValue(
+        ContextValues.directSchemaRegistryAvailable,
+        directEnvs.some((env) => !!env.schemaRegistry),
+      ),
+      setContextValue(
+        ContextValues.localKafkaClusterAvailable,
+        Array.isArray(localEnv?.kafkaClusters) && localEnv.kafkaClusters.length !== 0,
+      ),
+      setContextValue(ContextValues.localSchemaRegistryAvailable, !!localEnv?.schemaRegistry),
+      setContextValue(ContextValues.localMedusaAvailable, !!localEnv?.medusa),
+    ]);
   }
 
   /**

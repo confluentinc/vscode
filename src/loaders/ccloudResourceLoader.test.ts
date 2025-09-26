@@ -3,6 +3,7 @@ import * as sinon from "sinon";
 
 import { loadFixtureFromFile } from "../../tests/fixtures/utils";
 import { StubbedEventEmitters, eventEmitterStubs } from "../../tests/stubs/emitters";
+import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -11,6 +12,7 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError } from "../../tests/unit/testUtils";
 import {
@@ -48,12 +50,14 @@ import * as graphqlOrgs from "../graphql/organizations";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
+import { FlinkUdf } from "../models/flinkUDF";
 import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
   CCloudResourceLoader,
+  FunctionNameRow,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
@@ -66,10 +70,9 @@ describe("CCloudResourceLoader", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    loader = CCloudResourceLoader.getInstance();
+    stubbedResourceManager = getStubbedResourceManager(sandbox);
 
-    stubbedResourceManager = sandbox.createStubInstance(ResourceManager);
-    sandbox.stub(ResourceManager, "getInstance").returns(stubbedResourceManager);
+    loader = CCloudResourceLoader.getInstance();
   });
 
   afterEach(() => {
@@ -191,17 +194,10 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(getCurrentOrganizationStub);
     });
 
-    it("should throw if no organization is available", async () => {
+    it("should return undefined if no organization is available", async () => {
       getCurrentOrganizationStub.resolves(undefined);
-      await assert.rejects(
-        async () => {
-          await loader.getOrganization();
-        },
-        {
-          name: "Error",
-          message: "Could not determine the current CCloud organization!",
-        },
-      );
+      const org = await loader.getOrganization();
+      assert.strictEqual(org, undefined);
       sinon.assert.calledOnce(getCurrentOrganizationStub);
     });
   });
@@ -592,7 +588,7 @@ describe("CCloudResourceLoader", () => {
     }
   }); // getFlinkStatements
 
-  describe("refreshFlinkStatement()", () => {
+  describe("ccloudResourceLoader.refreshFlinkStatement()", () => {
     let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
 
     beforeEach(() => {
@@ -684,19 +680,14 @@ describe("CCloudResourceLoader", () => {
       getCurrentOrganizationStub = sandbox.stub(graphqlOrgs, "getCurrentOrganization");
     });
 
-    it("will throw when no CCloud org is available", async () => {
+    it("does nothing when no CCloud org is available", async () => {
       getEnvironmentsStub.resolves([]);
       getCurrentOrganizationStub.resolves(undefined);
 
-      await assert.rejects(
-        async () => {
-          await loader["doLoadCoarseResources"]();
-        },
-        {
-          name: "Error",
-          message: "Could not determine the current CCloud organization!",
-        },
-      );
+      await loader["doLoadCoarseResources"]();
+      sinon.assert.calledOnce(getEnvironmentsStub);
+      sinon.assert.calledOnce(getCurrentOrganizationStub);
+      assert.strictEqual(loader["organization"], null);
     });
 
     it("should set CCloud resources when available", async () => {
@@ -761,18 +752,116 @@ describe("CCloudResourceLoader", () => {
     });
   });
 
+  describe("getFlinkUDFs", () => {
+    let executeFlinkStatementStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      executeFlinkStatementStub = sandbox.stub(loader, "executeFlinkStatement");
+      // By default, cache misses for UDFs.
+      stubbedResourceManager.getFlinkUDFs.resolves(undefined);
+    });
+
+    it("should handle no UDFs returned from the statement", async () => {
+      const emptyUDFs: FlinkUdf[] = [];
+      executeFlinkStatementStub.resolves(emptyUDFs);
+
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+      assert.ok(Array.isArray(udfs));
+      assert.strictEqual(udfs.length, 0);
+      sinon.assert.calledOnce(executeFlinkStatementStub);
+      // Should have tried to get from cache first.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      // Should have cached the empty result.
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.calledWithExactly(
+        stubbedResourceManager.setFlinkUDFs,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        emptyUDFs,
+      );
+    });
+
+    it("should handle some UDFs returned from the statement", async () => {
+      const someUDFNames: FunctionNameRow[] = [
+        { "Function Name": "my_udf_1" },
+        { "Function Name": "my_udf_2" },
+        { "Function Name": "my_udf_3" },
+      ];
+      executeFlinkStatementStub.resolves(someUDFNames);
+
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+      assert.ok(Array.isArray(udfs));
+      assert.strictEqual(udfs.length, someUDFNames.length);
+      for (let i = 0; i < someUDFNames.length; i++) {
+        assert.strictEqual(udfs[i].name, someUDFNames[i]["Function Name"]);
+        assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      }
+      sinon.assert.calledOnce(executeFlinkStatementStub);
+      // Should have tried to get from cache first.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      // Should have cached the result.
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.calledWithExactly(
+        stubbedResourceManager.setFlinkUDFs,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        udfs,
+      );
+    });
+
+    it("should handle resourcemanager cache hit, then skipping the statement execution", async () => {
+      const cachedUDFs: FlinkUdf[] = [createFlinkUDF("func1"), createFlinkUDF("func2")];
+      stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs);
+
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+      assert.deepStrictEqual(udfs, cachedUDFs);
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      sinon.assert.notCalled(executeFlinkStatementStub);
+      sinon.assert.notCalled(stubbedResourceManager.setFlinkUDFs);
+    });
+
+    it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
+      const cachedUDFs: FlinkUdf[] = [createFlinkUDF("func1"), createFlinkUDF("func2")];
+      stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs); // would be a cache hit, but...
+
+      const someUDFNames: FunctionNameRow[] = [
+        { "Function Name": "my_udf_1" },
+        { "Function Name": "my_udf_2" },
+        { "Function Name": "my_udf_3" },
+      ];
+      executeFlinkStatementStub.resolves(someUDFNames);
+
+      // call with forceDeepRefresh=true
+      const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+      assert.ok(Array.isArray(udfs));
+      assert.strictEqual(udfs.length, someUDFNames.length);
+      for (let i = 0; i < someUDFNames.length; i++) {
+        assert.strictEqual(udfs[i].name, someUDFNames[i]["Function Name"]);
+        assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
+      }
+
+      // Will have consulted the cache, but then ignored it, and called the statement, then cached the results.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkUDFs);
+      sinon.assert.calledOnce(executeFlinkStatementStub);
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkUDFs);
+      sinon.assert.calledWithExactly(
+        stubbedResourceManager.setFlinkUDFs,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        udfs,
+      );
+    });
+  });
+
   describe("getFlinkArtifacts", () => {
     let flinkArtifactsApiStub: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
 
     beforeEach(() => {
-      // stub the sidecar getFlinkArtifactsApi API
-      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        sandbox.createStubInstance(sidecar.SidecarHandle);
+      const mockSidecarHandle = getSidecarStub(sandbox);
       flinkArtifactsApiStub = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
       mockSidecarHandle.getFlinkArtifactsApi.returns(flinkArtifactsApiStub);
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
 
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+
+      // By default, cache misses for Flink artifacts.
+      stubbedResourceManager.getFlinkArtifacts.resolves(undefined);
     });
 
     it("should handle zero artifacts to list", async () => {
@@ -781,9 +870,10 @@ describe("CCloudResourceLoader", () => {
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
 
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.strictEqual(artifacts.length, 0);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
 
       // Test the args passed to the API.
       const args = flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.getCall(0).args[0];
@@ -800,7 +890,7 @@ describe("CCloudResourceLoader", () => {
       const mockResponse = makeFakeListArtifactsResponse(false, 3);
 
       flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.strictEqual(artifacts.length, 3);
       sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
     });
@@ -814,9 +904,38 @@ describe("CCloudResourceLoader", () => {
         .resolves(mockResponse)
         .onSecondCall()
         .resolves(mockResponse2);
-      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
       assert.strictEqual(artifacts.length, 5);
+
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
       sinon.assert.calledTwice(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+
+    it("should handle resourcemanager cache hit, then skipping the route call", async () => {
+      stubbedResourceManager.getFlinkArtifacts.resolves([]); // empty array is easy cache fodder.
+
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
+
+      assert.strictEqual(artifacts.length, 0);
+
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+      sinon.assert.notCalled(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+    });
+
+    it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
+      const mockResponse = makeFakeListArtifactsResponse(false, 3);
+      flinkArtifactsApiStub.listArtifactV1FlinkArtifacts.resolves(mockResponse);
+      stubbedResourceManager.getFlinkArtifacts.resolves([]); // would be a cache hit, but...
+
+      // call with forceDeepRefresh=true
+      const artifacts = await loader.getFlinkArtifacts(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
+      assert.strictEqual(artifacts.length, 3);
+
+      // Will have consulted the cache, but then ignored it, and called the API, then cached the results.
+      sinon.assert.calledOnce(stubbedResourceManager.getFlinkArtifacts);
+      sinon.assert.calledOnce(flinkArtifactsApiStub.listArtifactV1FlinkArtifacts);
+      sinon.assert.calledOnce(stubbedResourceManager.setFlinkArtifacts);
     });
 
     /** Make a fake list flink artifacts API response with requested artifact count and indicating next page available. */
@@ -856,7 +975,7 @@ describe("CCloudResourceLoader", () => {
         data: new Set(artifacts),
       };
     }
-  }); // getFlinkArtifacts
+  });
 
   describe("loadProviderRegions", () => {
     let regionsApiStub: sinon.SinonStubbedInstance<RegionsFcpmV2Api>;
@@ -1038,7 +1157,7 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should throw if statement does not complete successfully", async () => {
-      const failedStatement = { phase: Phase.FAILED } as FlinkStatement;
+      const failedStatement = createFlinkStatement({ phase: Phase.FAILED });
       waitForStatementCompletionStub.resolves(failedStatement);
 
       await assert.rejects(
@@ -1049,6 +1168,104 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(waitForStatementCompletionStub);
       sinon.assert.calledOnce(submitFlinkStatementStub);
       sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+    });
+
+    it("should override timeout if provided", async () => {
+      const completedStatement = createFlinkStatement({ phase: Phase.COMPLETED });
+      waitForStatementCompletionStub.resolves(completedStatement);
+
+      const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+      parseAllFlinkStatementResultsStub.returns(parseResults);
+
+      const customTimeout = 10;
+
+      await loader.executeFlinkStatement<TestResult>(
+        "SELECT 1",
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        undefined,
+        customTimeout,
+      );
+      sinon.assert.calledOnce(submitFlinkStatementStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      const waitCallArgs = waitForStatementCompletionStub.getCall(0).args;
+      assert.strictEqual(waitCallArgs[1], customTimeout);
+    });
+
+    describe("concurrency handling", () => {
+      beforeEach(() => {
+        // Set up any submitted statement to complete successfully
+        const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+        waitForStatementCompletionStub.resolves(completedStatement);
+
+        const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+        parseAllFlinkStatementResultsStub.returns(parseResults);
+      });
+
+      it("should return same promise if called multiple times concurrently", async () => {
+        const promise1 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+        const promise2 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        await Promise.all([promise1, promise2]);
+
+        // waitForStatementCompletionStub, parseAllFlinkStatementResultsStub should have only be called once
+        // since both calls should share the same promise.
+        sinon.assert.calledOnce(waitForStatementCompletionStub);
+        sinon.assert.calledOnce(parseAllFlinkStatementResultsStub);
+      });
+
+      it("should issue separate calls if called with different statements concurrently", async () => {
+        const promise1 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+        const promise2 = loader.executeFlinkStatement<TestResult>(
+          "SELECT 2",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        await Promise.all([promise1, promise2]);
+
+        // waitForStatementCompletionStub, parseAllFlinkStatementResultsStub should have been called twice
+        // since both calls should have been independent (separate statements).
+        sinon.assert.calledTwice(waitForStatementCompletionStub);
+        sinon.assert.calledTwice(parseAllFlinkStatementResultsStub);
+      });
+
+      it("pending promise map should be cleared after successful completion", async () => {
+        await loader.executeFlinkStatement<TestResult>(
+          "SELECT 1",
+          TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        );
+
+        assert.strictEqual(
+          loader["backgroundStatementPromises"].size,
+          0,
+          "Expected pending promise map to be cleared",
+        );
+      });
+
+      it("pending promise map should be cleared after failure", async () => {
+        waitForStatementCompletionStub.rejects(new Error("Simulated failure"));
+
+        await assert.rejects(async () => {
+          await loader.executeFlinkStatement<TestResult>(
+            "SELECT 1",
+            TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+          );
+        });
+
+        assert.strictEqual(
+          loader["backgroundStatementPromises"].size,
+          0,
+          "Expected pending promise map to be cleared",
+        );
+      });
     });
   });
 });

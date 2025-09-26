@@ -5,13 +5,10 @@ import path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { eventEmitterStubs } from "../../../tests/stubs/emitters";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 import {
-  TEST_CCLOUD_ENVIRONMENT,
-  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-} from "../../../tests/unit/testResources";
-import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../../tests/unit/testResources/flinkComputePool";
-import {
+  ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
@@ -19,27 +16,25 @@ import {
 } from "../../clients/flinkArtifacts";
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
-import { FcpmV2RegionListDataInner } from "../../clients/flinkComputePool/models/FcpmV2RegionListDataInner";
-import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
-import { CCloudKafkaCluster } from "../../models/kafkaCluster";
-import { CloudProvider } from "../../models/resource";
+import { ConnectionType } from "../../clients/sidecar";
+import { FlinkArtifact } from "../../models/flinkArtifact";
+import { ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
-import * as cloudProviderRegions from "../../quickpicks/cloudProviderRegions";
-import * as environments from "../../quickpicks/environments";
 import * as sidecar from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
-import * as uploadArtifactModule from "./uploadArtifact";
+import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   prepareUploadFileFromUri,
   PRESIGNED_URL_LOCATION,
-  promptForArtifactUploadParams,
+  promptForFunctionAndClassName,
   uploadArtifactToCCloud,
-} from "./uploadArtifact";
+} from "./uploadArtifactOrUDF";
 import * as uploadToProvider from "./uploadToProvider";
-describe("uploadArtifact", () => {
+
+describe("commands/utils/uploadArtifact", () => {
   let sandbox: sinon.SinonSandbox;
   let tempJarPath: string;
   let tempJarUri: vscode.Uri;
@@ -162,207 +157,6 @@ describe("uploadArtifact", () => {
       });
     });
   });
-
-  describe("promptForArtifactUploadParams", () => {
-    let flinkCcloudEnvironmentQuickPickStub: sinon.SinonStub;
-    let cloudProviderRegionQuickPickStub: sinon.SinonStub;
-    const fakeCloudProviderRegion: FcpmV2RegionListDataInner = {
-      id: "australiaeast",
-      cloud: "temp", //Change in below tests
-      display_name: "Australia East",
-      region_name: "australiaeast",
-      metadata: {} as any,
-      http_endpoint: "",
-    };
-    const mockEnvironment = TEST_CCLOUD_ENVIRONMENT;
-    const mockFileName = "mock-file";
-    const mockFileUri = vscode.Uri.file(`/path/to/${mockFileName}.jar`);
-    beforeEach(() => {
-      flinkCcloudEnvironmentQuickPickStub = sandbox.stub(
-        environments,
-        "flinkCcloudEnvironmentQuickPick",
-      );
-      cloudProviderRegionQuickPickStub = sandbox.stub(
-        cloudProviderRegions,
-        "cloudProviderRegionQuickPick",
-      );
-    });
-    it("should return undefined if environment is not selected", async () => {
-      const result = await promptForArtifactUploadParams();
-      assert.strictEqual(result, undefined);
-    });
-
-    it("should return undefined if region is not selected", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(TEST_CCLOUD_ENVIRONMENT);
-      const result = await promptForArtifactUploadParams();
-      assert.strictEqual(result, undefined);
-    });
-
-    it("should show error and return undefined for GCP cloud provider", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(TEST_CCLOUD_ENVIRONMENT);
-
-      const mockGCPRegion = {
-        id: "us-central1",
-        provider: "GCP" as CloudProvider,
-        displayName: "US Central 1",
-        regionName: "us-central1",
-        region: "us-central1",
-      };
-
-      cloudProviderRegionQuickPickStub.resolves(mockGCPRegion);
-
-      const errorNotificationStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
-
-      const result = await promptForArtifactUploadParams();
-
-      sinon.assert.calledWithMatch(
-        errorNotificationStub,
-        `Upload Artifact cancelled: Unsupported cloud provider: ${mockGCPRegion.provider}`,
-      );
-
-      assert.strictEqual(result, undefined);
-    });
-
-    it("should silently return if user cancels the file selection", async () => {
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([]);
-      const result = await promptForArtifactUploadParams();
-      assert.strictEqual(result, undefined);
-    });
-
-    it("should prefill artifact name with file base name when selecting a file", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
-      cloudProviderRegionQuickPickStub.resolves({
-        ...fakeCloudProviderRegion,
-        provider: "AZURE",
-      });
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-
-      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox").resolves(mockFileName);
-
-      const result = await promptForArtifactUploadParams();
-
-      sinon.assert.calledWithMatch(showInputBoxStub, sinon.match({ value: mockFileName }));
-      assert.deepStrictEqual(result?.selectedFile, mockFileUri);
-    });
-
-    it("returns the correct Artifact upload parameters for Azure", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
-      // reset the region quick pick stub to return a valid Azure region
-      cloudProviderRegionQuickPickStub.resolves({
-        ...fakeCloudProviderRegion,
-        provider: "AZURE",
-        region: fakeCloudProviderRegion.region_name,
-      });
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-
-      sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
-
-      const result = await promptForArtifactUploadParams();
-
-      assert.deepStrictEqual(result, {
-        environment: mockEnvironment.id,
-        cloud: "Azure",
-        region: fakeCloudProviderRegion.region_name,
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: mockFileUri,
-      });
-    });
-
-    it("returns the correct Artifact upload parameters for AWS", async () => {
-      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
-
-      cloudProviderRegionQuickPickStub.resolves({
-        ...fakeCloudProviderRegion,
-        provider: "AWS",
-        region: fakeCloudProviderRegion.region_name,
-      });
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves("test-artifact");
-
-      const result = await promptForArtifactUploadParams();
-
-      assert.deepStrictEqual(result, {
-        environment: mockEnvironment.id,
-        cloud: "AWS",
-        region: fakeCloudProviderRegion.region_name,
-        artifactName: "test-artifact",
-        fileFormat: "jar",
-        selectedFile: mockFileUri,
-      });
-    });
-
-    it("should use provided CCloudFlinkComputePool context without prompting for environment/region", async () => {
-      const pool: CCloudFlinkComputePool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves(mockFileName);
-
-      const result = await promptForArtifactUploadParams(pool);
-
-      // environment and cloud/region should be derived from the item, not from quick picks
-      sinon.assert.notCalled(flinkCcloudEnvironmentQuickPickStub);
-      sinon.assert.notCalled(cloudProviderRegionQuickPickStub);
-
-      assert.deepStrictEqual(result, {
-        environment: mockEnvironment.id,
-        cloud: "AWS",
-        region: "us-west-2",
-        artifactName: "mock-file",
-        fileFormat: "jar",
-        selectedFile: mockFileUri,
-      });
-    });
-
-    it("should use provided CCloudKafkaCluster context without prompting for environment/region", async () => {
-      const cluster: CCloudKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
-
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockFileUri]);
-      sandbox.stub(vscode.window, "showInputBox").resolves("cluster-artifact");
-
-      const result = await promptForArtifactUploadParams(cluster);
-
-      sinon.assert.notCalled(flinkCcloudEnvironmentQuickPickStub);
-      sinon.assert.notCalled(cloudProviderRegionQuickPickStub);
-
-      assert.deepStrictEqual(result, {
-        environment: mockEnvironment.id,
-        cloud: "AWS",
-        region: "us-west-2",
-        artifactName: "cluster-artifact",
-        fileFormat: "jar",
-        selectedFile: mockFileUri,
-      });
-    });
-
-    it("should accept a vscode.Uri item and not prompt for file selection", async () => {
-      // environment and region picks still happen when URI is provided
-      flinkCcloudEnvironmentQuickPickStub.resolves(mockEnvironment);
-      cloudProviderRegionQuickPickStub.resolves({
-        ...fakeCloudProviderRegion,
-        provider: "AWS",
-        region: fakeCloudProviderRegion.region_name,
-      });
-      sandbox.stub(vscode.window, "showInputBox").resolves("mock-file");
-      const filePicker = sandbox.stub(vscode.window, "showOpenDialog");
-
-      const result = await promptForArtifactUploadParams(mockFileUri);
-      // file picker should not be called if we provided a URI
-      sinon.assert.notCalled(filePicker);
-      assert.deepStrictEqual(result, {
-        environment: mockEnvironment.id,
-        cloud: "AWS",
-        region: fakeCloudProviderRegion.region_name,
-        artifactName: "mock-file",
-        fileFormat: "jar",
-        selectedFile: mockFileUri,
-      });
-    });
-  });
-
   describe("handleUploadToCloudProvider", () => {
     const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
       api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
@@ -512,11 +306,15 @@ describe("uploadArtifact", () => {
     describe("uploadArtifactToCCloud", () => {
       let stubbedFlinkArtifactsApi: sinon.SinonStubbedInstance<FlinkArtifactsArtifactV1Api>;
       let stubbedSidecarHandle: ReturnType<typeof getSidecarStub>;
+      let stubbedArtifactsChangedEmitter: sinon.SinonStubbedInstance<vscode.EventEmitter<any>>;
 
       beforeEach(() => {
         stubbedFlinkArtifactsApi = sandbox.createStubInstance(FlinkArtifactsArtifactV1Api);
         stubbedSidecarHandle = getSidecarStub(sandbox);
         stubbedSidecarHandle.getFlinkArtifactsApi.returns(stubbedFlinkArtifactsApi);
+
+        const stubbedEventEmitters = eventEmitterStubs(sandbox);
+        stubbedArtifactsChangedEmitter = stubbedEventEmitters.artifactsChanged!;
       });
 
       it("should upload the artifact to Confluent Cloud", async () => {
@@ -540,7 +338,69 @@ describe("uploadArtifact", () => {
           cloud: mockAzureParams.cloud,
           region: mockAzureParams.region,
         });
+        sinon.assert.called(stubbedArtifactsChangedEmitter.fire);
+        sinon.assert.calledWith(stubbedArtifactsChangedEmitter.fire, {
+          environmentId: mockAzureParams.environment as EnvironmentId,
+          provider: mockAzureParams.cloud,
+          region: mockAzureParams.region,
+        });
       });
+    });
+  });
+  describe("promptForFunctionAndClassName", () => {
+    const selectedArtifact = new FlinkArtifact({
+      id: "artifact-id",
+      name: "test-artifact",
+      description: "description",
+      connectionId: "conn-id" as ConnectionId,
+      connectionType: "ccloud" as ConnectionType,
+      environmentId: "env-id" as EnvironmentId,
+      provider: "aws",
+      region: "us-west-2",
+      documentationLink: "https://confluent.io",
+      metadata: ArtifactV1FlinkArtifactMetadataFromJSON({
+        self: {},
+        resource_name: "test-artifact",
+        created_at: new Date(),
+        updated_at: new Date(),
+        deleted_at: new Date(),
+      }),
+    });
+
+    it("should accept well-formed input", async () => {
+      const showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+      showInputBoxStub.onFirstCall().resolves("myFunction");
+      showInputBoxStub.onSecondCall().resolves("com.example.MyClass");
+
+      const result = await promptForFunctionAndClassName(selectedArtifact);
+
+      sinon.assert.calledTwice(showInputBoxStub);
+
+      assert.deepStrictEqual(result, {
+        functionName: "myFunction",
+        className: "com.example.MyClass",
+      });
+    });
+  });
+  describe("UDF input validation", () => {
+    it("should reject malformed input for function name", async () => {
+      const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+      const result = uploadArtifactModule.validateUdfInput("123invalid", functionNameRegex);
+
+      assert.strictEqual(
+        result?.message,
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      );
+    });
+
+    it("should reject malformed input for class name", async () => {
+      const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
+      const result = uploadArtifactModule.validateUdfInput("123 invalid", classNameRegex);
+
+      assert.strictEqual(
+        result?.message,
+        "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
+      );
     });
   });
 });

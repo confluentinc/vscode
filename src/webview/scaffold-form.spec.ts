@@ -5,10 +5,10 @@ import { createFilter } from "@rollup/pluginutils";
 import { readFileSync } from "node:fs";
 import { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
-import { test } from "rollwright";
-import { SinonStub } from "sinon";
 import sanitize from "sanitize-html";
+import { SinonStub } from "sinon";
 import { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import { test } from "./baseTest";
 import { ScaffoldV1TemplateSpecAlt } from "./scaffold-form";
 
 const template = readFileSync(new URL("scaffold-form.html", import.meta.url), "utf8");

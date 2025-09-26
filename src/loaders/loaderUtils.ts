@@ -1,7 +1,9 @@
+import { createHash } from "crypto";
 import { toKafkaTopicOperations } from "../authz/types";
 import { TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { isResponseError } from "../errors";
+import { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
@@ -237,4 +239,23 @@ export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Prom
     type: (responseSchema.schemaType as SchemaType) || SchemaType.Avro,
     isHighestVersion: responseSchema.version === params.highestVersion,
   });
+}
+
+/** Generate a key for the given statement parameters to identify identical pending statements. */
+export function generateFlinkStatementKey(params: IFlinkStatementSubmitParameters): string {
+  // Compute MD5 hash of:
+  // 1. Compute pool id
+  // 2. Database name (may be empty)
+  // 3. The catalog name (may be empty)
+  // 4. SQL statement text
+
+  // NOSONAR: We don't use a cryptographically secure hash here, we just want a
+  // fingerprint to avoid duplicate identical statements in flight.
+  const hasher = createHash("md5");
+
+  hasher.update(params.computePool.id);
+  hasher.update(params.properties.currentDatabase || ""); // database may be empty
+  hasher.update(params.properties.currentCatalog || ""); // catalog may be empty
+  hasher.update(params.statement);
+  return hasher.digest("hex");
 }

@@ -171,19 +171,38 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
       updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
     });
 
-    it("Should handle setting to null", async () => {
+    it("Should handle setting from something to null", async () => {
+      // As if was focused on something and then set to null
+      provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
       await provider.setParentResource(null);
+
       assert.strictEqual(provider.resource, null, "resource should be null");
+      sinon.assert.calledOnce(setSearchStub); // reset search when parent resource changes
+      sinon.assert.calledWith(setSearchStub, null);
+
       sinon.assert.calledOnce(refreshStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      sinon.assert.calledOnce(setContextValueStub);
+      sinon.assert.calledWith(
+        setContextValueStub,
+        provider.parentResourceChangedContextValue,
+        false,
+      );
     });
 
-    it("Should handle setting to a resource", async () => {
+    it("Should handle setting from null to a resource", async () => {
+      // As if was focused on nothing and then set to something
+      provider.resource = null;
+
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       await provider.setParentResource(resource);
+
       assert.strictEqual(provider.resource, resource, "resource should be set");
-      sinon.assert.calledOnce(refreshStub);
-      sinon.assert.calledOnce(setSearchStub);
+      sinon.assert.calledOnce(setSearchStub); // reset search when parent resource changes
       sinon.assert.calledWith(setSearchStub, null);
+
+      sinon.assert.calledOnce(refreshStub);
       sinon.assert.calledOnce(updateTreeViewDescriptionStub);
       sinon.assert.calledOnce(setContextValueStub);
       sinon.assert.calledWith(
@@ -191,6 +210,48 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
         provider.parentResourceChangedContextValue,
         true,
       );
+      sinon.assert.callOrder(
+        setSearchStub,
+        setContextValueStub,
+        refreshStub,
+        updateTreeViewDescriptionStub,
+      );
+    });
+
+    it("Should handle setting from one resource to a different resource", async () => {
+      // As if was focused on something and then set to something else
+      provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+
+      const resource = new CCloudFlinkComputePool({
+        ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+        id: "different-id",
+        name: "different-name",
+      });
+      await provider.setParentResource(resource);
+
+      assert.strictEqual(provider.resource, resource, "resource should be set");
+      sinon.assert.calledOnce(setSearchStub); // reset search when parent resource changes
+      sinon.assert.calledWith(setSearchStub, null);
+
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      // was not-undefined -> not undefined, so should not change context value
+      // (was set to true, remains true)
+      sinon.assert.notCalled(setContextValueStub);
+    });
+
+    it("Should handle setting to the same resource (partial no-op)", async () => {
+      // As if was focused on something and then set to the same thing
+      const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      provider.resource = resource;
+
+      await provider.setParentResource(resource);
+
+      assert.strictEqual(provider.resource, resource, "resource should be unchanged");
+      sinon.assert.notCalled(setSearchStub); // should not reset search when parent resource is unchanged
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(setContextValueStub); // should not change context when parent resource is unchanged
     });
 
     it("Should be called when parentResourceChangedEmitter fires", () => {

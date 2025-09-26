@@ -1,28 +1,6 @@
 import { Locator, Page } from "@playwright/test";
+import { FormConnectionType, SupportedAuthType } from "../../connectionTypes";
 import { Webview } from "./Webview";
-
-// same as src/directConnections/types.ts
-export enum FormConnectionType {
-  ApacheKafka = "Apache Kafka",
-  ConfluentCloud = "Confluent Cloud",
-  ConfluentPlatform = "Confluent Platform",
-  WarpStream = "WarpStream",
-  Other = "Other",
-}
-export enum SupportedAuthType {
-  None = "None",
-  Basic = "Basic",
-  API = "API",
-  SCRAM = "SCRAM",
-  OAuth = "OAuth",
-  Kerberos = "Kerberos",
-}
-
-/** Configuration options for setting up a direct connection. */
-export interface DirectConnectionConfig {
-  authType: SupportedAuthType;
-  credentials: Record<string, any>;
-}
 
 /**
  * Object representing the Direct Connection form {@link https://code.visualstudio.com/api/ux-guidelines/webviews webview}.
@@ -31,6 +9,11 @@ export interface DirectConnectionConfig {
 export class DirectConnectionForm extends Webview {
   constructor(page: Page) {
     super(page);
+  }
+
+  // form header+description area
+  get formHeader(): Locator {
+    return this.webview.locator(".form-header");
   }
 
   // top-level/general form fields
@@ -85,6 +68,9 @@ export class DirectConnectionForm extends Webview {
   }
   get saveButton(): Locator {
     return this.webview.getByRole("button", { name: "Save" });
+  }
+  get updateButton(): Locator {
+    return this.webview.getByRole("button", { name: "Update" });
   }
 
   // status and message elements
