@@ -72,40 +72,6 @@ describe("flinkUDFs command", () => {
     sandbox.restore();
   });
 
-  it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
-    const openTextDocStub = sandbox
-      .stub(vscode.workspace, "openTextDocument")
-      .resolves({} as vscode.TextDocument);
-    const insertSnippetStub = sandbox.stub().resolves();
-    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
-      insertSnippet: insertSnippetStub,
-    } as unknown as vscode.TextEditor);
-
-    await createUdfRegistrationDocumentCommand(artifact);
-
-    sinon.assert.calledOnce(openTextDocStub);
-    const callArgs = openTextDocStub.getCall(0).args[0];
-    assert.ok(callArgs, "openTextDocStub was not called with any arguments");
-    assert.strictEqual(callArgs.language, "flinksql");
-    sinon.assert.calledOnce(showTextDocStub);
-    sinon.assert.calledOnce(insertSnippetStub);
-    const snippetArg = insertSnippetStub.getCall(0).args[0];
-    assert.ok(
-      typeof snippetArg.value === "string" && snippetArg.value.includes("CREATE FUNCTION"),
-      "insertSnippet should be called with a snippet containing CREATE FUNCTION",
-    );
-  });
-
-  it("should return early if no artifact is provided in createUdfRegistrationDocumentCommand", async () => {
-    const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
-    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
-
-    await createUdfRegistrationDocumentCommand(undefined as any);
-
-    sinon.assert.notCalled(openTextDocStub);
-    sinon.assert.notCalled(showTextDocStub);
-  });
-
   it("should register startGuidedUdfCreationCommand and createUdfRegistrationDocumentCommand", () => {
     const registerCommandWithLoggingStub = sandbox
       .stub(commands, "registerCommandWithLogging")
@@ -300,6 +266,40 @@ describe("flinkUDFs command", () => {
 
       flinkDatabaseProviderStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
       sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(flinkDatabaseProviderStub);
+    });
+
+    it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
+      const openTextDocStub = sandbox
+        .stub(vscode.workspace, "openTextDocument")
+        .resolves({} as vscode.TextDocument);
+      const insertSnippetStub = sandbox.stub().resolves();
+      const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
+        insertSnippet: insertSnippetStub,
+      } as unknown as vscode.TextEditor);
+
+      await createUdfRegistrationDocumentCommand(artifact);
+
+      sinon.assert.calledOnce(openTextDocStub);
+      const callArgs = openTextDocStub.getCall(0).args[0];
+      assert.ok(callArgs, "openTextDocStub was not called with any arguments");
+      assert.strictEqual(callArgs.language, "flinksql");
+      sinon.assert.calledOnce(showTextDocStub);
+      sinon.assert.calledOnce(insertSnippetStub);
+      const snippetArg = insertSnippetStub.getCall(0).args[0];
+      assert.ok(
+        typeof snippetArg.value === "string" && snippetArg.value.includes("CREATE FUNCTION"),
+        "insertSnippet should be called with a snippet containing CREATE FUNCTION",
+      );
+    });
+
+    it("should return early if no artifact is provided", async () => {
+      const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
+      const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
+
+      await createUdfRegistrationDocumentCommand(undefined as any);
+
+      sinon.assert.notCalled(openTextDocStub);
+      sinon.assert.notCalled(showTextDocStub);
     });
 
     it("should set URI metadata when both database and catalog are available", async () => {
