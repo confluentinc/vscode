@@ -781,8 +781,8 @@ describe("viewProviders/newResources.ts", () => {
           sandbox.assert.calledOnce(repaintStub);
           sandbox.assert.calledOnceWithExactly(storeConnectionSpy, localConnectionRow);
 
-          // ensure that store is called before refresh and repaint, since is an immediately
-          // usable ConnectionRow (LocalConnectionRow)
+          // ensure that store is called before refresh and repaint, since a LocalConnectionRow is
+          // immediately usable.
           sinon.assert.callOrder(storeConnectionSpy, localRowRefreshStub, repaintStub);
         });
 
@@ -791,8 +791,8 @@ describe("viewProviders/newResources.ts", () => {
           await provider.loadAndStoreConnection(ccloudConnectionRow);
           sandbox.assert.calledOnce(repaintStub);
           sandbox.assert.calledOnceWithExactly(storeConnectionSpy, ccloudConnectionRow);
-          // ensure that store is called before refresh and repaint, since is an immediately
-          // usable ConnectionRow (CCloudConnectionRow)
+          // ensure that store is called before refresh and repaint, since a CCloudConnectionRow is
+          // immediately usable.
           sinon.assert.callOrder(storeConnectionSpy, ccloudRowRefreshStub, repaintStub);
         });
 
@@ -801,8 +801,8 @@ describe("viewProviders/newResources.ts", () => {
           await provider.loadAndStoreConnection(directConnectionRow);
           sandbox.assert.calledOnce(repaintStub);
           sandbox.assert.calledOnceWithExactly(storeConnectionSpy, directConnectionRow);
-          // ensure that store is called AFTER refresh and repaint, since is an immediately
-          // usable ConnectionRow (DirectConnectionRow)
+          // ensure that store is called AFTER refresh and repaint, since a DirectConnectionRow is
+          // NOW immediately usable (not until after the initial refresh).
           sinon.assert.callOrder(directRowRefreshStub, storeConnectionSpy, repaintStub);
         });
       });

@@ -85,9 +85,9 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
   readonly environments: ET[];
 
   /**
-   * Is this row useable yet (and properties like `name` and so forth can be referenced?
+   * Is this row usable yet (and properties like `name` and so forth can be referenced?
    *
-   * CCloud and Local connectino rows will always be, but DirectConnectionRows won't be until they complete
+   * CCloud and Local connection rows will always be, but DirectConnectionRows won't be until they complete
    * their first loading
    **/
   abstract usable: boolean;
@@ -400,7 +400,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   LocalSchemaRegistry,
   LocalResourceLoader
 > {
-  // Local connection row is always immediately useable.
+  // Local connection row is always immediately usable.
   usable = true;
 
   constructor() {
@@ -723,7 +723,7 @@ export class NewResourceViewProvider
     connectionRow: AnyConnectionRow,
   ): Promise<void> {
     // We can eagerly insert the row *before* the initial refresh if it is
-    // already useable (i.e. CCloud or Local connection rows).
+    // already usable (i.e. CCloud or Local connection rows).
     // If it is a DirectConnectionRow, we must wait until after the initial refresh
     // completes, because only then will we know the name, icon, and so forth.
     // (And if we try to make a TreeItem before that, an error will be raised.)
@@ -780,14 +780,14 @@ export class NewResourceViewProvider
     const usableConnections = allConnections.filter((row) => row.usable);
 
     // Triple guard against making TreeItems for connections that aren't
-    // yet useable (i.e. DirectConnectionRows that haven't yet completed
+    // yet usable (i.e. DirectConnectionRows that haven't yet completed
     // their initial refresh, whose name, iconPath, and tooltip cannot
     // be referenced yet).
     if (usableConnections.length !== allConnections.length) {
       const unusableConnectionIds = allConnections
         .filter((row) => !row.usable)
         .map((row) => row.connectionId);
-      this.logger.debug("Some connection rows not yet useable, omitting from toplevel children", {
+      this.logger.debug("Some connection rows not yet usable, omitting from toplevel children", {
         unusableConnectionIds,
       });
     }
