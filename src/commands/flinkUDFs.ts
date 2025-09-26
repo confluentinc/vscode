@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Disposable, SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { flinkDatabaseViewMode } from "../emitters";
+import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { FlinkArtifact } from "../models/flinkArtifact";
@@ -57,6 +57,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   const editor = await window.showTextDocument(document, { preview: false });
   await editor.insertSnippet(snippetString);
 }
+
 export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
@@ -93,6 +94,7 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
         void showInfoNotificationWithButtons(createdMsg);
       },
     );
+    udfsChanged.fire(database);
   } catch (err) {
     if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
       let errorMessage = "Failed to create UDF function: ";
