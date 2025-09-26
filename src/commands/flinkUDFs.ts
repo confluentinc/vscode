@@ -79,7 +79,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
       `UDF "${selectedUdf.name}" deleted successfully from Confluent Cloud.`,
     );
   } catch (err) {
-    let errorMessage = "Failed to delete UDF: ";
+    let errorMessage = "Failed to delete UDF:";
 
     if (isResponseError(err)) {
       const resp = await err.response.clone().text();
