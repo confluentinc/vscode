@@ -263,8 +263,8 @@ You can create local branches from `main` and do your development there.
 
 <!-- prettier-ignore -->
 > [!NOTE]
-> You don't need to keep the `main` branch on your remote
-> https://github.com/YOUR-USERNAME/vscode repository in sync, but you can if you want:
+> You don't need to keep the `main` branch on your remote https://github.com/YOUR-USERNAME/vscode
+> repository in sync, but you can if you want:
 >
 >     git push origin main
 
