@@ -178,7 +178,7 @@ async function waitForStatementState(
  * @param statement
  * @returns string akin to "username-vscode-2023-10-01t12-00-00"
  */
-export async function determineFlinkStatementName(): Promise<string> {
+export async function determineFlinkStatementName(spice?: string): Promise<string> {
   const parts: string[] = [];
 
   // If we're creating flink statements, then we're ccloud authed. Use their
@@ -197,7 +197,9 @@ export async function determineFlinkStatementName(): Promise<string> {
   }
 
   parts.push("vscode");
-
+  if (spice) {
+    parts.push(spice);
+  }
   const dateString = new Date().toISOString().replace(/:/g, "-").replace(/\..*$/, "");
   parts.push(dateString);
 
