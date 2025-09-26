@@ -19,8 +19,7 @@ import {
   getCCloudConnection,
 } from "../sidecar/connections/ccloud";
 import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
-import { gatherSidecarOutputs, getSidecarLogfilePath } from "../sidecar/logging";
-import { SidecarOutputs } from "../sidecar/types";
+import { getLastSidecarLogLines } from "../sidecar/logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
@@ -29,6 +28,7 @@ import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
 import { DisposableCollection } from "../utils/disposables";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
+import { CCloudSignInError } from "./errors";
 import { AuthCallbackEvent } from "./types";
 
 const logger = new Logger("authn.ccloudProvider");
@@ -134,7 +134,7 @@ export class ConfluentCloudAuthProvider
       logger.error(
         "createSession() no sign-in URI found in connection metadata; this should not happen",
       );
-      throw new Error("Failed to create new connection. Please try again.");
+      throw new CCloudSignInError("Failed to create new connection. Please try again.");
     }
 
     if (process.env.CONFLUENT_VSCODE_E2E_TESTING) {
@@ -155,39 +155,23 @@ export class ConfluentCloudAuthProvider
     if (authCallback === undefined) {
       // user cancelled the operation
       logger.debug("createSession() user cancelled the operation");
-      throw new Error("User cancelled the authentication flow.");
+      throw new CCloudSignInError("User cancelled the authentication flow.");
     }
 
     if (authCallback.resetPassword) {
       // user reset their password, so we need to notify them to reauthenticate
       logger.debug("createSession() user reset their password");
       this.showResetPasswordNotification();
-      throw new Error("User reset their password.");
+      throw new CCloudSignInError("User reset their password.");
     }
 
     if (!authCallback.success) {
       const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
-      vscode.window.showErrorMessage(authFailedMsg);
+      void vscode.window.showErrorMessage(authFailedMsg);
       logUsage(UserEvent.CCloudAuthentication, {
         status: "authentication failed",
       });
-      const failedAuthError = new Error(authFailedMsg);
-
-      // include sidecar logs in the Sentry event to help debug
-      let sidecarLogs: string = "";
-      try {
-        const sidecarLogPath: string = getSidecarLogfilePath();
-        const outputs: SidecarOutputs = await gatherSidecarOutputs(
-          sidecarLogPath,
-          `${sidecarLogPath}.stderr`,
-        );
-        sidecarLogs = outputs.logLines.join("\n");
-      } catch (error) {
-        sidecarLogs = `Failed to gather sidecar logs:\n${error instanceof Error ? error.stack : error}`;
-        logger.error(sidecarLogs);
-      }
-      logError(failedAuthError, "CCloud authentication failed", { extra: { sidecarLogs } });
-
+      const failedAuthError: CCloudSignInError = await this.handleSignInError(authFailedMsg);
       throw failedAuthError;
     }
 
@@ -199,23 +183,26 @@ export class ConfluentCloudAuthProvider
     const authenticatedConnection: Connection | null =
       await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
-      throw new Error("CCloud connection failed to become usable after authentication.");
+      const unstableConnectionError: CCloudSignInError = await this.handleSignInError(
+        "CCloud connection failed to become usable after authentication.",
+      );
+      throw unstableConnectionError;
     }
 
     const ccloudStatus: CCloudStatus | undefined = authenticatedConnection.status.ccloud;
     if (!ccloudStatus) {
-      logger.error(
-        "createSession() authenticated connection has no CCloud status, which should never happen",
+      const missingStatusError: CCloudSignInError = await this.handleSignInError(
+        "CCloud connection has no 'status' after successful authentication",
       );
-      throw new Error("Authenticated connection has no CCloud status.");
+      throw missingStatusError;
     }
 
     const userInfo: UserInfo | undefined = ccloudStatus.user;
     if (!userInfo) {
-      logger.error(
-        "createSession() authenticated connection has no CCloud user, which should never happen",
+      const missingUserError: CCloudSignInError = await this.handleSignInError(
+        "Authenticated connection has no CCloud user.",
       );
-      throw new Error("Authenticated connection has no CCloud user.");
+      throw missingUserError;
     }
 
     // User signed in successfully so we send an identify event to Segment and LaunchDarkly
@@ -677,6 +664,19 @@ export class ConfluentCloudAuthProvider
           this.createSession();
         }
       });
+  }
+
+  /**
+   * Gather sidecar logs to send to Sentry, and build a {@link CCloudSignInError} when a sign-in
+   * error occurs during {@linkcode ConfluentCloudAuthProvider.createSession `createSession()`}.
+   * @param message The error message to include in the {@link CCloudSignInError}.
+   * @returns A {@link CCloudSignInError} for the caller to throw and escape `createSession()`
+   */
+  async handleSignInError(message: string): Promise<CCloudSignInError> {
+    const error = new CCloudSignInError(message);
+    const sidecarLogs: string[] = await getLastSidecarLogLines();
+    await logError(error, message, { extra: { sidecarLogs } });
+    return error;
   }
 }
 
