@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as sidecar from "..";
 import {
   TEST_CCLOUD_CONNECTION,
   TEST_DIRECT_CONNECTION,
@@ -20,6 +19,8 @@ import {
   tryToGetConnection,
   tryToUpdateConnection,
 } from ".";
+import { SidecarHandle } from "..";
+import { getSidecarStub } from "../../../tests/stubs/sidecar";
 
 describe("sidecar/connections/index.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -28,12 +29,9 @@ describe("sidecar/connections/index.ts", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
-    const stubSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     stubConnectionsResourceApi = sandbox.createStubInstance(ConnectionsResourceApi);
-    stubSidecarHandle.getConnectionsResourceApi.returns(stubConnectionsResourceApi);
-    // stub the getSidecar function to return the stub sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(stubSidecarHandle);
+    stubbedSidecar.getConnectionsResourceApi.returns(stubConnectionsResourceApi);
   });
 
   afterEach(() => {
