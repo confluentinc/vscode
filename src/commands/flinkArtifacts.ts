@@ -61,7 +61,7 @@ export async function uploadArtifactCommand(
     // 3. Upload the artifact to the presigned URL (either AWS or Azure)
     await handleUploadToCloudProvider(params, uploadUrl);
 
-    // 4/Last. Show our progress while creating the Artifact in Confluent Cloud (TODO should this wrap all the steps?)
+    // 4/Last. Show progress while creating the Artifact in Confluent Cloud (future: consider wrapping prior steps as well)
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
