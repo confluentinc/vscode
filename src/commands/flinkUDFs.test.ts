@@ -310,14 +310,9 @@ describe("flinkUDFs command", () => {
       className: "com.test.TestClass",
     });
 
-    const mockFlinkDatabaseViewProvider = {
-      resource: mockCluster,
-    };
-    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<vscode.EventEmitter<any>>;
-
-    sandbox
-      .stub(FlinkDatabaseViewProvider, "getInstance")
-      .returns(mockFlinkDatabaseViewProvider as any);
+    const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+    mockProvider.resource = mockCluster;
+    sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
 
     const executeStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
@@ -327,7 +322,8 @@ describe("flinkUDFs command", () => {
     });
 
     const stubbedEventEmitters = eventEmitterStubs(sandbox);
-    stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
+    const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
+
     await startGuidedUdfCreationCommand(artifact);
 
     sinon.assert.calledOnce(promptStub);
