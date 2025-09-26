@@ -22,7 +22,7 @@ import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
-import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
+import { ConfluentCloudAuthProvider } from "./ccloudProvider";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { AuthCallbackEvent } from "./types";
 
@@ -65,7 +65,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
       .stub(watcher, "waitForConnectionToBeStable")
       .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
 
-    authProvider = getAuthProvider();
+    authProvider = ConfluentCloudAuthProvider.getInstance();
     // don't handle the progress notification, openExternal, etc in this test suite
     browserAuthFlowStub = sandbox.stub(authProvider, "browserAuthFlow").resolves();
     stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
@@ -379,7 +379,7 @@ describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () =
 
     deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection").resolves();
 
-    authProvider = getAuthProvider();
+    authProvider = ConfluentCloudAuthProvider.getInstance();
     createSessionStub = sandbox.stub(authProvider, "createSession").resolves();
     // don't handle the progress notification, openExternal, etc in this test suite
     stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
