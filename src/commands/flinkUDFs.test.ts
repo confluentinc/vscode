@@ -1,7 +1,9 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
 import { createResponseError } from "../../tests/unit/testUtils";
 import { ArtifactV1FlinkArtifactMetadataFromJSON, ResponseError } from "../clients/flinkArtifacts";
@@ -261,11 +263,8 @@ describe("flinkUDFs command", () => {
     let insertSnippetStub: sinon.SinonStub;
 
     beforeEach(() => {
-      resourceManagerStub = sandbox.createStubInstance(ResourceManager);
-      sandbox.stub(ResourceManager, "getInstance").returns(resourceManagerStub);
-
-      ccloudLoaderStub = sandbox.createStubInstance(CCloudResourceLoader);
-      sandbox.stub(CCloudResourceLoader, "getInstance").returns(ccloudLoaderStub);
+      resourceManagerStub = getStubbedResourceManager(sandbox);
+      ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
 
       flinkDatabaseProviderStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
       sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(flinkDatabaseProviderStub);
