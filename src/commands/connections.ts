@@ -1,5 +1,6 @@
 import { Disposable, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { CCloudSignInError } from "../authn/errors";
 import { getCCloudAuthSession } from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
 import { openDirectConnectionForm } from "../directConnect";
@@ -29,23 +30,19 @@ export async function ccloudSignInCommand() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
-    if (error instanceof Error) {
-      // we don't need to do anything if:
-      // - the user clicks "Cancel" on the modal before the sign-in process, or on the progress
-      //  notification after the sign-in process has started
-      // - the auth provider handles a callback failure (which shows its own error notification)
-      if (
-        error.message === "User did not consent to login." ||
-        error.message === "User cancelled the authentication flow." ||
-        error.message === "Confluent Cloud authentication failed. See browser for details." ||
-        error.message === "User reset their password."
-      ) {
-        return;
-      }
-      // any other errors will be caught by the error handler in src/commands/index.ts as part of the
-      // registerCommandWithLogging wrapper
-      throw error;
+    // we don't need to do anything if:
+    // - the user clicks "Cancel" on the modal before the sign-in process, or on the progress
+    //  notification after the sign-in process has started
+    // - the auth provider handles a sign-in failure (which shows its own error notification)
+    if (
+      error instanceof CCloudSignInError ||
+      (error instanceof Error && error.name === "CCloudSignInError")
+    ) {
+      return;
     }
+    // any other errors will be caught by the error handler in src/commands/index.ts as part of the
+    // registerCommandWithLogging wrapper
+    throw error;
   }
 }
 
