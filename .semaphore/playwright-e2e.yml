@@ -33,6 +33,7 @@ blocks:
       prologue: &e2e-prologue
         commands:
           - make ci-bin-sem-cache-restore
+          - make load-cached-docker-images
           - |
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
@@ -58,6 +59,7 @@ blocks:
           commands:
             - make remove-test-env
             - make ci-bin-sem-cache-store
+            - make cache-docker-images
             - make store-test-results-to-semaphore
             # Upload Playwright artifacts, if available
             - |
