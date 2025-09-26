@@ -340,6 +340,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
         "SHOW USER FUNCTIONS",
         cluster,
+        { nameSpice: "list-udfs" },
       );
 
       udfs = rawResults.map((row) => {
@@ -385,7 +386,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @param options Optional parameters for statement execution
    * @param options.computePool The compute pool to use for execution, defaults to the first compute pool in the database's flinkPools array
    * @param options.timeout Custom timeout for the statement execution
-   * @param options.spice Additional spice parameter for extending statement name
+   * @param options.nameSpice Additional spice parameter for extending statement name
    * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
    *
    */
@@ -395,7 +396,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     options: {
       computePool?: CCloudFlinkComputePool;
       timeout?: number;
-      spice?: string;
+      nameSpice?: string;
     } = {},
   ): Promise<Array<RT>> {
     const organization = await this.getOrganization();
@@ -414,7 +415,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
     const statementParams: IFlinkStatementSubmitParameters = {
       statement: sqlStatement,
-      statementName: await determineFlinkStatementName(options.spice),
+      statementName: await determineFlinkStatementName(options.nameSpice),
       organizationId: organization.id,
       computePool: options.computePool,
       hidden: true, // Hidden statement, user didn't author it.
