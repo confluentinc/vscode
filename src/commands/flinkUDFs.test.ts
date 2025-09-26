@@ -418,11 +418,12 @@ describe("flinkUDFs command", () => {
 
       await startGuidedUdfCreationCommand(artifact);
 
-    sinon.assert.calledOnce(promptStub);
-    sinon.assert.notCalled(executeStub);
-    sinon.assert.notCalled(withProgressStub);
-    sinon.assert.notCalled(showInfoStub);
-    sinon.assert.notCalled(showErrorStub);
+      sinon.assert.calledOnce(promptStub);
+      sinon.assert.notCalled(executeStub);
+      sinon.assert.notCalled(withProgressStub);
+      sinon.assert.notCalled(showInfoStub);
+      sinon.assert.notCalled(showErrorStub);
+    });
   });
 
   describe("createUdfRegistrationDocumentCommand", () => {
