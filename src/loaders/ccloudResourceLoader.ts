@@ -385,7 +385,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @param options Optional parameters for statement execution
    * @param options.computePool The compute pool to use for execution, defaults to the first compute pool in the database's flinkPools array
    * @param options.timeout Custom timeout for the statement execution
-   * @param options.spice Additional spice parameter for statement execution
+   * @param options.spice Additional spice parameter for extending statement name
    * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
    *
    */
