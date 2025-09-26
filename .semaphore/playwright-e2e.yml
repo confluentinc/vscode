@@ -32,8 +32,8 @@ blocks:
           type: s1-prod-ubuntu24-04-amd64-1
       prologue: &e2e-prologue
         commands:
-          - make load-cached-docker-images
           - make ci-bin-sem-cache-restore
+          - make load-cached-docker-images
           - |
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
