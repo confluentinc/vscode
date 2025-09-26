@@ -708,7 +708,3 @@ function convertToAuthSession(connection: Connection): vscode.AuthenticationSess
   };
   return session;
 }
-
-export function getAuthProvider(): ConfluentCloudAuthProvider {
-  return ConfluentCloudAuthProvider.getInstance();
-}
