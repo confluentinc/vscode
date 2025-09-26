@@ -326,11 +326,6 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
   DirectSchemaRegistry,
   DirectResourceLoader
 > {
-  // Will not be useable until after initial refresh completes.
-  get usable(): boolean {
-    return Boolean(this.environment);
-  }
-
   constructor(loader: DirectResourceLoader) {
     super(loader, "resources-direct-container");
   }
@@ -353,6 +348,16 @@ export class DirectConnectionRow extends SingleEnvironmentConnectionRow<
     }
 
     return environments;
+  }
+
+  /**
+   * Indicates when the GraphQL query for the environment has completed.
+   *
+   * Before that completes, properties like `name`, `iconPath`, and `tooltip`
+   * cannot be referenced, and the row should not be shown in the tree view.
+   * */
+  get usable(): boolean {
+    return Boolean(this.environment);
   }
 
   get iconPath(): ThemeIcon {

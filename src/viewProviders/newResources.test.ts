@@ -263,6 +263,29 @@ describe("viewProviders/newResources.ts", () => {
     });
 
     describe("getters", () => {
+      describe("usable", () => {
+        it("returns false when no environment is set", () => {
+          assert.strictEqual(directConnectionRow.usable, false);
+        });
+
+        const testCases: Array<{ label: string; env: DirectEnvironment }> = [
+          { label: "with Kafka", env: TEST_DIRECT_ENVIRONMENT_WITH_KAFKA },
+          { label: "with Schema Registry", env: TEST_DIRECT_ENVIRONMENT_WITH_SR },
+          {
+            label: "with Kafka and Schema Registry",
+            env: TEST_DIRECT_ENVIRONMENT_WITH_KAFKA_AND_SR,
+          },
+          { label: "no clusters", env: TEST_DIRECT_ENVIRONMENT_NO_CLUSTERS },
+        ];
+
+        for (const { label, env } of testCases) {
+          it(`returns true when the environment has been assigned (${label})`, () => {
+            directConnectionRow.environments.push(env);
+            assert.strictEqual(directConnectionRow.usable, true);
+          });
+        }
+      });
+
       describe("iconpath", () => {
         it("throws when no environment", () => {
           assert.throws(() => {
@@ -400,6 +423,10 @@ describe("viewProviders/newResources.ts", () => {
       localConnectionRow = new LocalConnectionRow();
     });
 
+    it("should be immediately usable", () => {
+      assert.ok(localConnectionRow.usable);
+    });
+
     it("should create a new LocalConnectionRow instance over the LocalResourceLoader", () => {
       assert.ok(localConnectionRow);
       assert.deepStrictEqual(localConnectionRow.loader, LocalResourceLoader.getInstance());
@@ -512,6 +539,10 @@ describe("viewProviders/newResources.ts", () => {
     });
 
     describe("getters", () => {
+      it("should be immediately usable", () => {
+        assert.ok(ccloudConnectionRow.usable);
+      });
+
       it("name getter should return the correct name", () => {
         assert.strictEqual(ccloudConnectionRow.name, "Confluent Cloud");
       });
@@ -1070,6 +1101,34 @@ describe("viewProviders/newResources.ts", () => {
 
         const children = provider.getChildren(undefined);
         assert.deepStrictEqual(children, expectedChildren);
+      });
+
+      it("Ignores not-yet-usable DirectConnectionRows", () => {
+        const directConnectionRow = new DirectConnectionRow(
+          new DirectResourceLoader("test-direct-connection-id" as ConnectionId),
+        );
+        // DirectConnectionRow is not usable until its loader has finished initializing.
+        assert.strictEqual(directConnectionRow.usable, false);
+
+        setChildren([new CCloudConnectionRow(), new LocalConnectionRow(), directConnectionRow]);
+
+        const children = provider.getChildren(undefined) as AnyConnectionRow[];
+        assert.strictEqual(children.length, 2); // just the local and ccloud rows.
+        assert.ok(children.every((c) => c.usable));
+      });
+
+      it("Includes usable DirectConnectionRows", () => {
+        const directConnectionRow = new DirectConnectionRow(
+          new DirectResourceLoader("test-direct-connection-id" as ConnectionId),
+        );
+        // Force it to be usable for this test.
+        sandbox.stub(directConnectionRow, "usable").get(() => true);
+
+        setChildren([new CCloudConnectionRow(), new LocalConnectionRow(), directConnectionRow]);
+
+        const children = provider.getChildren(undefined) as AnyConnectionRow[];
+        assert.strictEqual(children.length, 3); // local, ccloud and direct rows.
+        assert.ok(children.every((c) => c.usable));
       });
 
       it("filters children by search string", () => {
