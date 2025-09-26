@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import { getSidecarStub } from "../tests/stubs/sidecar";
 import { TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY } from "../tests/unit/testResources";
 import {
   TEST_DIRECT_CONNECTION,
@@ -16,7 +17,7 @@ import {
 import { DirectConnectionManager } from "./directConnectManager";
 import { ResourceLoader } from "./loaders";
 import { ConnectionId } from "./models/resource";
-import * as sidecar from "./sidecar";
+import { SidecarHandle } from "./sidecar";
 import * as connections from "./sidecar/connections";
 import * as watcher from "./sidecar/connections/watcher";
 import {
@@ -63,11 +64,9 @@ describe("DirectConnectionManager behavior", () => {
     sandbox = sinon.createSandbox();
 
     // stub the sidecar Connections API
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     stubbedConnectionsResourceApi = sandbox.createStubInstance(ConnectionsResourceApi);
-    mockSidecarHandle.getConnectionsResourceApi.returns(stubbedConnectionsResourceApi);
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getConnectionsResourceApi.returns(stubbedConnectionsResourceApi);
 
     // don't return a Connection type since the IDs are randomly generated - handle in specific tests
     tryToCreateConnectionStub = sandbox
