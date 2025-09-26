@@ -79,6 +79,11 @@ export async function kafkaClusterQuickPick(
     }
   }
 
+  // If caller provides a filter, apply it to the list of Kafka clusters.
+  if (options.filter) {
+    kafkaClusters = kafkaClusters.filter((cluster) => options.filter!(cluster));
+  }
+
   if (kafkaClusters.length === 0) {
     let login: string = "";
     let local: string = "";
@@ -113,11 +118,6 @@ export async function kafkaClusterQuickPick(
   if (focusedClusterIndex !== -1) {
     kafkaClusters.splice(focusedClusterIndex, 1);
     kafkaClusters.unshift(focusedCluster!);
-  }
-
-  // If caller provides a filter, apply it to the list of Kafka clusters.
-  if (options.filter) {
-    kafkaClusters = kafkaClusters.filter((cluster) => options.filter!(cluster));
   }
 
   // convert all available Kafka Clusters to quick pick items and keep track of the last env name
