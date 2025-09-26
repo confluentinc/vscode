@@ -2,6 +2,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -31,7 +32,7 @@ import {
   ProduceMessage,
   SubjectNameStrategy,
 } from "../schemas/produceMessageSchema";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import * as fileUtils from "../utils/file";
@@ -88,12 +89,9 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect").resolves(schemaLess);
 
     // create the stubs for the sidecar + service client
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     clientStub = sandbox.createStubInstance(RecordsV3Api);
-    mockSidecarHandle.getRecordsV3Api.returns(clientStub);
-    // stub the getSidecar function to return the mock sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getRecordsV3Api.returns(clientStub);
   });
 
   afterEach(function () {
@@ -290,16 +288,13 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
     promptForSchemaStub = sandbox.stub(schemaUtils, "promptForSchema");
 
     // create the stubs for the sidecar + service clients
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     // non-CCloud:
     recordsV3ApiStub = sandbox.createStubInstance(RecordsV3Api);
-    mockSidecarHandle.getRecordsV3Api.returns(recordsV3ApiStub);
+    stubbedSidecar.getRecordsV3Api.returns(recordsV3ApiStub);
     // CCloud:
     ccloudProduceApiStub = sandbox.createStubInstance(ConfluentCloudProduceRecordsResourceApi);
-    mockSidecarHandle.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
-
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
   });
 
   afterEach(function () {
@@ -741,16 +736,13 @@ describe("commands/topics.ts produceMessage()", function () {
     sandbox = sinon.createSandbox();
 
     // create the stubs for the sidecar + service clients
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     // non-CCloud:
     recordsV3ApiStub = sandbox.createStubInstance(RecordsV3Api);
-    mockSidecarHandle.getRecordsV3Api.returns(recordsV3ApiStub);
+    stubbedSidecar.getRecordsV3Api.returns(recordsV3ApiStub);
     // CCloud:
     ccloudProduceApiStub = sandbox.createStubInstance(ConfluentCloudProduceRecordsResourceApi);
-    mockSidecarHandle.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
-
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
   });
 
   afterEach(function () {

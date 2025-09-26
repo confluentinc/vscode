@@ -1,8 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { ScaffoldV1Template } from "../clients/scaffoldingService";
-import * as sidecarModule from "../sidecar";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
+import {
+  ScaffoldV1Template,
+  ScaffoldV1TemplateList,
+  ScaffoldV1TemplateListFromJSON,
+  TemplatesScaffoldV1Api,
+} from "../clients/scaffoldingService";
+import { SidecarHandle } from "../sidecar";
 import {
   filterSensitiveKeys,
   getTemplatesList,
@@ -94,12 +100,15 @@ describe("templates.ts", () => {
         { spec: { name: "java-client" } },
         { spec: { name: "python-client" } },
       ] as ScaffoldV1Template[];
-      const fakeApi = {
-        listScaffoldV1Templates: sandbox.stub().resolves({ data: fakeTemplates }),
-      };
 
-      const fakeSidecarHandle = { getTemplatesApi: () => fakeApi };
-      sandbox.stub(sidecarModule, "getSidecar").resolves(fakeSidecarHandle as any);
+      const stubbedTemplatesApi = sandbox.createStubInstance(TemplatesScaffoldV1Api);
+      stubbedTemplatesApi.listScaffoldV1Templates.resolves(
+        ScaffoldV1TemplateListFromJSON({
+          data: fakeTemplates,
+        }) satisfies ScaffoldV1TemplateList,
+      );
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      stubbedSidecar.getTemplatesApi.returns(stubbedTemplatesApi);
 
       const result = await getTemplatesList("my-collection");
       assert.strictEqual(result.length, 2);

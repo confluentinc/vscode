@@ -20,7 +20,7 @@ import { ConnectionType } from "../../clients/sidecar";
 import { FlinkArtifact } from "../../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
-import * as sidecar from "../../sidecar";
+import { SidecarHandle } from "../../sidecar";
 import * as fsWrappers from "../../utils/fsWrappers";
 import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
@@ -128,7 +128,6 @@ describe("commands/utils/uploadArtifact", () => {
 
   describe("getPresignedUploadUrl", () => {
     it("should return a presigned upload URL", async () => {
-      const mockSidecarHandle = sandbox.createStubInstance(sidecar.SidecarHandle);
       const mockResponse = {
         upload_url: "https://example.com/presigned-url",
         api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
@@ -138,9 +137,8 @@ describe("commands/utils/uploadArtifact", () => {
       const mockPresignedClient = sandbox.createStubInstance(PresignedUrlsArtifactV1Api);
       mockPresignedClient.presignedUploadUrlArtifactV1PresignedUrl.resolves(mockResponse);
 
-      mockSidecarHandle.getFlinkPresignedUrlsApi.returns(mockPresignedClient);
-
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
+      stubbedSidecar.getFlinkPresignedUrlsApi.returns(mockPresignedClient);
 
       const mockPresignedUploadUrlRequest: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
         content_format: "application/java-archive",

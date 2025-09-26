@@ -4,7 +4,13 @@
 
 -
 
-## Any additional details or context that should be provided?
+### Optional: Click-testing instructions
+
+<!-- Include any special instructions to help reviewers test your changes, if applicable -->
+
+1.
+
+### Optional: Any additional details or context that should be provided?
 
 <!-- Behavior before/after, more technical details/screenshots, follow-on work that should be expected, links to discussions or issues, etc -->
 
@@ -14,18 +20,13 @@
 
 Please check if your PR fulfills the following (if applicable):
 
-##### Tests
+#### Tests
 
 - [ ] Added new
 - [ ] Updated existing
 - [ ] Deleted existing
 
-##### Other
+#### Release notes
 
-- [ ] All new disposables (event listeners, views, channels, etc.) collected as  for eventual cleanup?
 <!-- prettier-ignore -->
-- [ ] Does anything in this PR need to be mentioned in the user-facing [CHANGELOG](https://github.com/confluentinc/vscode/blob/main/CHANGELOG.md) or [README](https://github.com/confluentinc/vscode/blob/main/public/README.md)?
-- [ ] Have you validated this change locally by [packaging](https://github.com/confluentinc/vscode/blob/main/README.md#packaging-steps) and installing the extension `.vsix` file?
-  ```shell
-  gulp clicktest
-  ```
+- [ ] Does anything in this PR need to be mentioned in the user-facing [CHANGELOG](https://github.com/confluentinc/vscode/blob/main/CHANGELOG.md)?
