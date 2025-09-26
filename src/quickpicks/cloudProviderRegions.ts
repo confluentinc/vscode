@@ -11,14 +11,6 @@ import { IProviderRegion } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { QuickPickItemWithValue } from "./types";
 
-// Temporary type augmentation so this file type-checks before getFlinkDatabases() implementation lands.
-// When getFlinkDatabases is added to CCloudResourceLoader, remove this augmentation if redundant.
-// declare module "../loaders/ccloudResourceLoader" {
-//   interface CCloudResourceLoader {
-//     getFlinkDatabases(): Promise<CCloudFlinkDbKafkaCluster[]>; // returns only clusters where isFlinkable() === true
-//   }
-// }
-
 export type regionFilter = (region: FcpmV2RegionListDataInner) => boolean;
 
 export async function cloudProviderRegionQuickPick(
@@ -132,10 +124,12 @@ export async function cloudProviderRegionQuickPick(
 export async function flinkDatabaseRegionsQuickPick(
   filter?: regionFilter,
 ): Promise<IProviderRegion | undefined> {
+  // TODO Cleanup the fake test code once https://github.com/confluentinc/vscode/pull/2695 merges
   // const loader = CCloudResourceLoader.getInstance();
 
   // We only care about CCloud Kafka clusters that are Flinkable (aka databases).
-  // A dedicated loader method now returns these directly.
+  // TODO Cleanup the fake test code once https://github.com/confluentinc/vscode/pull/2695 merges
+  // await loader.getFlinkDatabases();
   const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = [
     CCloudKafkaCluster.create({
       ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
@@ -145,7 +139,7 @@ export async function flinkDatabaseRegionsQuickPick(
       ...TEST_CCLOUD_KAFKA_CLUSTER,
       id: "cluster-456",
     }) as CCloudFlinkDbKafkaCluster,
-  ]; //await loader.getFlinkDatabases();
+  ];
 
   // Group by provider then region, collecting the database (cluster) names.
   const clusterRegions = new Map<string, IProviderRegion & { names: string[] }>();
@@ -190,7 +184,6 @@ export async function flinkDatabaseRegionsQuickPick(
     });
   }
 
-  // Add View All sentinel item.
   quickPickItems.push({
     label: "View All Available Regions",
     description: "Show the complete list of regions",
