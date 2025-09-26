@@ -5,6 +5,7 @@ import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
+import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import {
   showErrorNotificationWithButtons,
@@ -16,6 +17,7 @@ import { UriMetadata } from "../storage/types";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
+const logger = new Logger("flinkUDFs");
 
 export async function setFlinkUDFViewModeCommand() {
   flinkDatabaseViewMode.fire(FlinkDatabaseViewProviderMode.UDFs);
@@ -56,21 +58,25 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
     // content is initialized as an empty string, we insert the snippet next due to how the Snippets API works
     content: "",
   });
-  // We'll gather all the metadata we can and attach it to the document
-  // In the future some of this could be handled by the codelens provider getting a little smarter about defaults
-  const loader = CCloudResourceLoader.getInstance();
-  const catalog = await loader.getEnvironment(selectedArtifact.environmentId);
-  const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
-  const database = flinkDatabaseProvider.database; // selected database in Artifacts view
-  if (database && catalog) {
-    const metadata: UriMetadata = {
-      [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: database.flinkPools[0]?.id || null,
-      [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
-      [UriMetadataKeys.FLINK_CATALOG_NAME]: catalog.name,
-      [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
-      [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
-    };
-    await ResourceManager.getInstance().setUriMetadata(document.uri, metadata);
+  try {
+    // We'll gather all the metadata we can and attach it to the document
+    // In the future some of this could be handled by the codelens provider
+    const loader = CCloudResourceLoader.getInstance();
+    const catalog = await loader.getEnvironment(selectedArtifact.environmentId);
+    const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
+    const database = flinkDatabaseProvider.database; // selected database in Artifacts view
+    if (database && catalog) {
+      const metadata: UriMetadata = {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: database.flinkPools[0]?.id || null,
+        [UriMetadataKeys.FLINK_CATALOG_ID]: catalog.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: catalog.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: database.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: database.name,
+      };
+      await ResourceManager.getInstance().setUriMetadata(document.uri, metadata);
+    }
+  } catch (err) {
+    logger.error("failed to set metadata for UDF registration doc", err);
   }
   const editor = await window.showTextDocument(document, { preview: false });
   await editor.insertSnippet(snippetString);
