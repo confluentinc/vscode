@@ -361,6 +361,11 @@
         "category": "Confluent: Flink Artifacts"
       },
       {
+        "command": "confluent.deleteFlinkUDF",
+        "title": "Delete UDF",
+        "category": "Confluent: Flink UDFs"
+      },
+      {
         "command": "confluent.diff.compareWithSelected",
         "icon": "$(diff)",
         "title": "Compare with Selected",
@@ -1273,6 +1278,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "false"
+        },
+        {
           "command": "confluent.diff.compareWithSelected",
           "when": "false"
         },
@@ -1914,6 +1923,11 @@
           "command": "confluent.deleteArtifact",
           "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
           "group": "artifacts"
+        },
+        {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-udf$/",
+          "group": "udfs"
         },
         {
           "command": "confluent.schemas.upload",
