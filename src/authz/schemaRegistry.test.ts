@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { StubbedWorkspaceConfiguration } from "../../tests/stubs/workspaceConfiguration";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -14,7 +15,7 @@ import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_BASE_PATH, UTM_SOURCE_VSCODE } from "../constants";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../extensionSettings/constants";
 import { CCloudResourceLoader } from "../loaders";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import * as schemaRegistry from "./schemaRegistry";
 
 describe("authz.schemaRegistry", function () {
@@ -29,12 +30,9 @@ describe("authz.schemaRegistry", function () {
 
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     mockClient = sandbox.createStubInstance(SubjectsV1Api);
-    mockSidecarHandle.getSubjectsV1Api.returns(mockClient);
-    // stub the getSidecar function to return the mock sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getSubjectsV1Api.returns(mockClient);
 
     stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
 

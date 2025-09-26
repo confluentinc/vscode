@@ -21,6 +21,7 @@ import { IFlinkStatementSubmitParameters } from "../flinkSql/statementUtils";
 import * as loaderUtils from "../loaders/loaderUtils";
 import { Schema, SchemaType, Subject } from "../models/schema";
 import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import * as privateNetworking from "../utils/privateNetworking";
 
 // as from fetchTopics() result.
@@ -75,16 +76,9 @@ describe("loaderUtils.ts", () => {
     let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
 
     beforeEach(() => {
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
       stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
-
-      const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
-
-      const mockHandle = {
-        getSubjectsV1Api: () => {
-          return stubbedSubjectsV1Api;
-        },
-      };
-      getSidecarStub.resolves(mockHandle);
+      stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
     });
 
     it("fetchSubjects() should return subjects sorted", async () => {

@@ -53,6 +53,7 @@ import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flin
 import { FlinkUdf } from "../models/flinkUDF";
 import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
@@ -445,11 +446,9 @@ describe("CCloudResourceLoader", () => {
 
     beforeEach(() => {
       // stub the sidecar getFlinkSqlStatementsApi API
-      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        sandbox.createStubInstance(sidecar.SidecarHandle);
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
       flinkStatementsApiStub = sandbox.createStubInstance(StatementsSqlV1Api);
-      mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkStatementsApiStub);
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+      stubbedSidecar.getFlinkSqlStatementsApi.returns(flinkStatementsApiStub);
 
       sandbox.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     });
@@ -593,12 +592,9 @@ describe("CCloudResourceLoader", () => {
 
     beforeEach(() => {
       // stub the sidecar getFlinkSqlStatementsApi API
-      const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-        sandbox.createStubInstance(sidecar.SidecarHandle);
-      sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
-
+      const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
       flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
-      mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+      stubbedSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
     });
 
     it("should return the statement if found", async () => {
