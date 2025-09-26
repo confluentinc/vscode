@@ -115,7 +115,7 @@ are unfamiliar with the GitHub flow. This project uses the following software th
 have:
 
 - [Git](https://git-scm.com) — version 2.40.0 or later
-- [Node.js](https://nodejs.org/en) — version 18.12.0 or later. It usually installs
+- [Node.js](https://nodejs.org/en) — version 22.17.0 or later. It usually installs
   [NPM](https://www.npmjs.com) alongside
 - [Visual Studio Code](https://code.visualstudio.com) — version 1.87.0 or later
 
@@ -261,9 +261,8 @@ repository's `main` branch:
 
 You can create local branches from `main` and do your development there.
 
-> [!NOTE]
-> You don't need to keep the `main` branch on your remote https://github.com/YOUR-USERNAME/vscode
-> repository in sync, but you can if you want:
+> [!NOTE] You don't need to keep the `main` branch on your remote
+> https://github.com/YOUR-USERNAME/vscode repository in sync, but you can if you want:
 >
 >     git push origin main
 
