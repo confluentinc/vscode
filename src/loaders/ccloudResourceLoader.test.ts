@@ -14,7 +14,7 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { createResponseError } from "../../tests/unit/testUtils";
+import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ArtifactV1FlinkArtifactList,
   ArtifactV1FlinkArtifactListApiVersionEnum,
@@ -51,6 +51,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flinkStatement";
 import { FlinkUdf } from "../models/flinkUDF";
+import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import * as sidecar from "../sidecar";
 import { SidecarHandle } from "../sidecar";
@@ -68,6 +69,10 @@ describe("CCloudResourceLoader", () => {
   let loader: CCloudResourceLoader;
 
   let stubbedResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -585,9 +590,9 @@ describe("CCloudResourceLoader", () => {
         data: new Set(statements),
       };
     }
-  }); // getFlinkStatements
+  });
 
-  describe("ccloudResourceLoader.refreshFlinkStatement()", () => {
+  describe("refreshFlinkStatement()", () => {
     let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
 
     beforeEach(() => {
@@ -633,7 +638,7 @@ describe("CCloudResourceLoader", () => {
         await loader.refreshFlinkStatement(statement);
       });
     });
-  }); // refreshFlinkStatement
+  });
 
   describe("getKafkaClustersForEnvironmentId", () => {
     beforeEach(() => {
@@ -1081,6 +1086,128 @@ describe("CCloudResourceLoader", () => {
         data: new Set(regions),
       };
     }
+  });
+
+  describe("getFlinkDatabases", () => {
+    let getKafkaClustersStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getKafkaClustersStub = sandbox.stub(loader, "getKafkaClusters");
+    });
+
+    it("should return all Flink databases when no environmentId is provided", async () => {
+      // Kafka clusters that pass the isFlinkable() check
+      const cluster1: CCloudKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+      const cluster2: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        id: "lkc-flink-db-2",
+        name: "test-flink-db-cluster-2",
+      });
+      getKafkaClustersStub.resolves([cluster1, cluster2]);
+
+      const databases: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases();
+
+      assert.strictEqual(databases.length, 2);
+      assert.deepStrictEqual(databases, [cluster1, cluster2]);
+      sinon.assert.calledOnce(getKafkaClustersStub);
+    });
+
+    it("should return filtered Flink databases when an environmentId is provided", async () => {
+      const targetEnvironmentId = "env-target" as EnvironmentId;
+      const cluster1: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        id: "lkc-flink-db-1",
+        name: "test-flink-db-cluster-1",
+        environmentId: targetEnvironmentId,
+      });
+      const cluster2: CCloudKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        id: "lkc-flink-db-2",
+        name: "test-flink-db-cluster-2",
+        environmentId: "env-other" as EnvironmentId,
+      });
+      getKafkaClustersStub.resolves([cluster1, cluster2]);
+
+      const databases: CCloudFlinkDbKafkaCluster[] =
+        await loader.getFlinkDatabases(targetEnvironmentId);
+
+      assert.strictEqual(databases.length, 1);
+      assert.deepStrictEqual(databases[0], cluster1);
+      sinon.assert.calledOnce(getKafkaClustersStub);
+    });
+
+    it("should return an empty array when no underlying Kafka clusters are available", async () => {
+      getKafkaClustersStub.resolves([]);
+
+      const databases: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases();
+
+      assert.strictEqual(databases.length, 0);
+      assert.deepStrictEqual(databases, []);
+      sinon.assert.calledOnce(getKafkaClustersStub);
+    });
+
+    it("should return an empty array when no databases match the provided environmentId", async () => {
+      getKafkaClustersStub.resolves([TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER]);
+
+      const databases: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases(
+        "some-other-env-id" as EnvironmentId,
+      );
+
+      assert.strictEqual(databases.length, 0);
+      sinon.assert.calledOnce(getKafkaClustersStub);
+    });
+  });
+
+  describe("getFlinkDatabase", () => {
+    let getFlinkDatabasesStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getFlinkDatabasesStub = sandbox.stub(loader, "getFlinkDatabases");
+    });
+
+    it("should return the database with matching environment and database IDs", async () => {
+      const database1: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+      const database2: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        environmentId: "other-env-id" as EnvironmentId,
+      }) as CCloudFlinkDbKafkaCluster;
+      // same cluster/database IDs, different environment IDs
+      getFlinkDatabasesStub.resolves([database1, database2]);
+
+      const result: CCloudFlinkDbKafkaCluster | undefined = await loader.getFlinkDatabase(
+        database1.environmentId,
+        database1.id,
+      );
+
+      assert.strictEqual(result, database1);
+      sinon.assert.calledOnceWithExactly(getFlinkDatabasesStub, database1.environmentId);
+    });
+
+    it("should return undefined when no databases match the provided database ID", async () => {
+      const database1: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+      getFlinkDatabasesStub.resolves([database1]);
+
+      const result: CCloudFlinkDbKafkaCluster | undefined = await loader.getFlinkDatabase(
+        database1.environmentId,
+        "some-other-db-id",
+      );
+
+      assert.strictEqual(result, undefined);
+      sinon.assert.calledOnceWithExactly(getFlinkDatabasesStub, database1.environmentId);
+    });
+
+    it("should return undefined when no databases are available", async () => {
+      getFlinkDatabasesStub.resolves([]);
+
+      const envId = "env1" as EnvironmentId;
+      const result: CCloudFlinkDbKafkaCluster | undefined = await loader.getFlinkDatabase(
+        envId,
+        "db-id",
+      );
+
+      assert.strictEqual(result, undefined);
+      sinon.assert.calledOnceWithExactly(getFlinkDatabasesStub, envId);
+    });
   });
 
   describe("executeFlinkStatement", () => {
