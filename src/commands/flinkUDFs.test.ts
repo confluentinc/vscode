@@ -256,6 +256,9 @@ describe("flinkUDFs command", () => {
     let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
     let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
     let flinkDatabaseProviderStub: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+    let openTextDocStub: sinon.SinonStub;
+    let showTextDocStub: sinon.SinonStub;
+    let insertSnippetStub: sinon.SinonStub;
 
     beforeEach(() => {
       resourceManagerStub = sandbox.createStubInstance(ResourceManager);
@@ -266,16 +269,17 @@ describe("flinkUDFs command", () => {
 
       flinkDatabaseProviderStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
       sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(flinkDatabaseProviderStub);
+
+      insertSnippetStub = sandbox.stub().resolves();
+      openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
+      showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
     });
 
     it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
-      const openTextDocStub = sandbox
-        .stub(vscode.workspace, "openTextDocument")
-        .resolves({} as vscode.TextDocument);
-      const insertSnippetStub = sandbox.stub().resolves();
-      const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
+      openTextDocStub.resolves({});
+      showTextDocStub.resolves({
         insertSnippet: insertSnippetStub,
-      } as unknown as vscode.TextEditor);
+      });
 
       await createUdfRegistrationDocumentCommand(artifact);
 
@@ -293,9 +297,6 @@ describe("flinkUDFs command", () => {
     });
 
     it("should return early if no artifact is provided", async () => {
-      const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
-      const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
-
       await createUdfRegistrationDocumentCommand(undefined as any);
 
       sinon.assert.notCalled(openTextDocStub);
@@ -303,22 +304,16 @@ describe("flinkUDFs command", () => {
     });
 
     it("should set URI metadata when both database and catalog are available", async () => {
-      const mockDocument = { uri: vscode.Uri.parse("untitled:Untitled-1") } as vscode.TextDocument;
-      const openTextDocStub = sandbox
-        .stub(vscode.workspace, "openTextDocument")
-        .resolves(mockDocument);
-      const insertSnippetStub = sandbox.stub().resolves();
-      const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
+      const mockDocument = { uri: vscode.Uri.parse("untitled:Untitled-1") };
+      openTextDocStub.resolves(mockDocument);
+      showTextDocStub.resolves({
         insertSnippet: insertSnippetStub,
-      } as unknown as vscode.TextEditor);
-
-      // Set up the database and catalog data
+      });
       sandbox.stub(flinkDatabaseProviderStub, "database").get(() => mockCluster);
       ccloudLoaderStub.getEnvironment.resolves(mockEnvironment);
 
       await createUdfRegistrationDocumentCommand(artifact);
 
-      // Verify the metadata was set correctly
       sinon.assert.calledOnce(resourceManagerStub.setUriMetadata);
       const setMetadataCall = resourceManagerStub.setUriMetadata.getCall(0);
       assert.strictEqual(setMetadataCall.args[0], mockDocument.uri);
