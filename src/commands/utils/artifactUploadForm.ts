@@ -6,7 +6,7 @@ import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
+import { flinkDatabaseRegionsQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { ArtifactUploadParams } from "./uploadArtifactOrUDF";
@@ -153,7 +153,7 @@ export async function artifactUploadQuickPickForm(
       }
 
       case "cloudRegion": {
-        const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+        const cloudRegion = await flinkDatabaseRegionsQuickPick((region) => region.cloud !== "GCP");
         if (cloudRegion) {
           state.cloudRegion = {
             provider: cloudRegion.provider,
