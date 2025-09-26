@@ -99,6 +99,17 @@ describe("flinkSql/statementUtils.ts", function () {
       sandbox.useFakeTimers(now);
     });
 
+    it("Should include the spice parameter in the statement name", async function () {
+      getCCloudAuthSessionStub.resolves({
+        account: {
+          label: "VS_Code.Dev-Team@confluent.io",
+          id: "u-abc123",
+        },
+      });
+      const statementName = await determineFlinkStatementName("test-spice");
+      assert.strictEqual(statementName, `vscodedev-team-vscode-test-spice-${expectedDatePart}`);
+    });
+
     it("Should remove all non-alphanumeric characters (except for hyphens) from the username", async function () {
       getCCloudAuthSessionStub.resolves({
         account: {
