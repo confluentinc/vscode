@@ -11,6 +11,8 @@ import { CCloudEnvironment } from "../models/environment";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
+import { UriMetadataKeys } from "../storage/constants";
+import { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
@@ -282,5 +284,57 @@ describe("flinkUDFs command", () => {
     sinon.assert.notCalled(withProgressStub);
     sinon.assert.notCalled(showInfoStub);
     sinon.assert.notCalled(showErrorStub);
+  });
+
+  describe("createUdfRegistrationDocumentCommand", () => {
+    let resourceManagerStub: sinon.SinonStubbedInstance<ResourceManager>;
+    let ccloudLoaderStub: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let flinkDatabaseProviderStub: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+
+    beforeEach(() => {
+      resourceManagerStub = sandbox.createStubInstance(ResourceManager);
+      sandbox.stub(ResourceManager, "getInstance").returns(resourceManagerStub);
+
+      ccloudLoaderStub = sandbox.createStubInstance(CCloudResourceLoader);
+      sandbox.stub(CCloudResourceLoader, "getInstance").returns(ccloudLoaderStub);
+
+      flinkDatabaseProviderStub = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(flinkDatabaseProviderStub);
+    });
+
+    it("should set URI metadata when both database and catalog are available", async () => {
+      const mockDocument = { uri: vscode.Uri.parse("untitled:Untitled-1") } as vscode.TextDocument;
+      const openTextDocStub = sandbox
+        .stub(vscode.workspace, "openTextDocument")
+        .resolves(mockDocument);
+      const insertSnippetStub = sandbox.stub().resolves();
+      const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
+        insertSnippet: insertSnippetStub,
+      } as unknown as vscode.TextEditor);
+
+      // Set up the database and catalog data
+      sandbox.stub(flinkDatabaseProviderStub, "database").get(() => mockCluster);
+      ccloudLoaderStub.getEnvironment.resolves(mockEnvironment);
+
+      await createUdfRegistrationDocumentCommand(artifact);
+
+      // Verify the metadata was set correctly
+      sinon.assert.calledOnce(resourceManagerStub.setUriMetadata);
+      const setMetadataCall = resourceManagerStub.setUriMetadata.getCall(0);
+      assert.strictEqual(setMetadataCall.args[0], mockDocument.uri);
+
+      const expectedMetadata = {
+        [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: mockCluster.flinkPools[0]?.id || null,
+        [UriMetadataKeys.FLINK_CATALOG_ID]: mockEnvironment.id,
+        [UriMetadataKeys.FLINK_CATALOG_NAME]: mockEnvironment.name,
+        [UriMetadataKeys.FLINK_DATABASE_ID]: mockCluster.id,
+        [UriMetadataKeys.FLINK_DATABASE_NAME]: mockCluster.name,
+      };
+      assert.deepStrictEqual(setMetadataCall.args[1], expectedMetadata);
+
+      sinon.assert.calledOnce(openTextDocStub);
+      sinon.assert.calledOnce(showTextDocStub);
+      sinon.assert.calledOnce(insertSnippetStub);
+    });
   });
 });
