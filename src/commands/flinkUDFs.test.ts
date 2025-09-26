@@ -179,7 +179,7 @@ describe("flinkUDFs command", () => {
         {
           report: () => {},
         },
-        {} as any,
+        {},
       );
     });
 
@@ -221,6 +221,15 @@ describe("flinkUDFs command", () => {
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .rejects(responseError);
 
+    withProgressStub.callsFake(async (options, callback) => {
+      return await callback(
+        {
+          report: () => {},
+        },
+        {},
+      );
+    });
+
     await startGuidedUdfCreationCommand(artifact);
 
     sinon.assert.calledOnce(showErrorStub);
@@ -249,6 +258,15 @@ describe("flinkUDFs command", () => {
     const error = new Error("Something went wrong with UDF creation");
 
     sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
+
+    withProgressStub.callsFake(async (options, callback) => {
+      return await callback(
+        {
+          report: () => {},
+        },
+        {},
+      );
+    });
 
     await startGuidedUdfCreationCommand(artifact);
 
