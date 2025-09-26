@@ -1,7 +1,7 @@
 name: 'Report a bug'
 description: Report a bug with Confluent for VS Code.
+type: Bug
 labels:
-  - 'bug'
   - 'needs triage'
 body:
   - type: markdown
