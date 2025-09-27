@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { projectScaffoldUri } from "./emitters";
+import { ccloudAuthCallback, projectScaffoldUri } from "./emitters";
 import { Logger } from "./logging";
 
 const logger = new Logger("uriHandler");
@@ -29,8 +29,7 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
     const { path } = uri;
     switch (path) {
       case "/authCallback":
-        logger.debug("Got authCallback URI, firing as Event", uri);
-        this.fire(uri);
+        ccloudAuthCallback.fire(uri);
         break;
       case "/consume":
         vscode.commands.executeCommand("confluent.topic.consume.fromUri", uri);

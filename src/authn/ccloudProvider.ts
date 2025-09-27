@@ -7,7 +7,7 @@ import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
-import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
+import { ccloudAuthCallback, ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError, logError } from "../errors";
 import { loadPreferencesFromWorkspaceConfig } from "../extensionSettings/sidecarSync";
 import { getLaunchDarklyClient } from "../featureFlags/client";
@@ -433,8 +433,8 @@ export class ConfluentCloudAuthProvider
 
     // general listener for the URI handling event, which is used to resolve any auth flow promises
     // and will trigger the secrets.onDidChange event described above
-    const uriHandlerSub: vscode.Disposable = UriEventHandler.getInstance().event(
-      async (uri) => await this.handleUri(uri),
+    const ccloudAuthCallbackSub: vscode.Disposable = ccloudAuthCallback.event(
+      async (uri) => await this.handleCcloudAuthCallback(uri),
     );
 
     // if any other part of the extension notices that our current CCloud connection transitions from
@@ -449,7 +449,7 @@ export class ConfluentCloudAuthProvider
       },
     );
 
-    return [secretsOnDidChangeSub, uriHandlerSub, ccloudAuthSessionInvalidatedSub];
+    return [secretsOnDidChangeSub, ccloudAuthCallbackSub, ccloudAuthSessionInvalidatedSub];
   }
 
   /**
@@ -629,8 +629,7 @@ export class ConfluentCloudAuthProvider
    * Handle the URI event for the authentication callback.
    * @param uri The URI that was handled.
    */
-  async handleUri(uri: vscode.Uri): Promise<void> {
-    if (uri.path === "/authCallback") {
+  async handleCcloudAuthCallback(uri: vscode.Uri): Promise<void> {
       const queryParams = new URLSearchParams(uri.query);
       const callbackEvent: AuthCallbackEvent = {
         success: queryParams.get("success") === "true",
@@ -647,7 +646,6 @@ export class ConfluentCloudAuthProvider
         ]);
         ccloudAuthSessionInvalidated.fire();
         this.showResetPasswordNotification();
-      }
     }
   }
 
