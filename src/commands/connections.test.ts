@@ -51,7 +51,7 @@ describe("commands/connections.ts", function () {
 
       await connections.ccloudSignInCommand();
 
-      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
     });
 
     it("should not re-throw 'User did not consent to login' errors", async function () {
@@ -59,7 +59,7 @@ describe("commands/connections.ts", function () {
 
       await connections.ccloudSignInCommand();
 
-      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
     });
 
     it("should not re-throw CCloudSignInErrors", async function () {
@@ -67,7 +67,7 @@ describe("commands/connections.ts", function () {
 
       await connections.ccloudSignInCommand();
 
-      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
     });
 
     it("should re-throw unexpected errors", async function () {
@@ -76,7 +76,7 @@ describe("commands/connections.ts", function () {
 
       await assert.rejects(connections.ccloudSignInCommand(), unexpectedError);
 
-      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, { createIfNone: true });
     });
   });
 

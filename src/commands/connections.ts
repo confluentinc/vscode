@@ -27,7 +27,7 @@ const logger = new Logger("commands.connections");
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
 export async function ccloudSignInCommand() {
   try {
-    await getCCloudAuthSession(true);
+    await getCCloudAuthSession({ createIfNone: true });
   } catch (error) {
     // we don't need to do anything if:
     // - the user clicks "Cancel" on the modal before the sign-in process, or on the progress

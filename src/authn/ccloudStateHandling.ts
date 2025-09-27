@@ -78,7 +78,8 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
       void showErrorNotificationWithButtons(
         "Error authenticating with Confluent Cloud. Please try again.",
         {
-          [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () => await getCCloudAuthSession(true),
+          [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () =>
+            await getCCloudAuthSession({ createIfNone: true }),
         },
       );
       break;
@@ -92,7 +93,7 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
         void showInfoNotificationWithButtons(
           "Your Confluent Cloud session has expired. Please sign in again to continue.",
           {
-            [REAUTH_BUTTON_TEXT]: async () => await getCCloudAuthSession(true),
+            [REAUTH_BUTTON_TEXT]: async () => await getCCloudAuthSession({ createIfNone: true }),
           },
         );
       } else if (previousState !== ConnectedState.None) {
@@ -137,7 +138,8 @@ export async function handleUpdatedConnection(connection: Connection): Promise<v
       void showErrorNotificationWithButtons(
         "Error authenticating with Confluent Cloud. Please try again.",
         {
-          [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () => await getCCloudAuthSession(true),
+          [CCLOUD_SIGN_IN_BUTTON_LABEL]: async () =>
+            await getCCloudAuthSession({ createIfNone: true }),
         },
       );
     } else if (hasTransientErrors) {
