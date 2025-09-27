@@ -277,22 +277,27 @@ export function appendSidecarLogToOutputChannel(line: string) {
  *
  * @param sidecarLogfilePath The path to the sidecar log file.
  * @param stderrPath The path to the sidecar's stderr file.
+ * @param numLogLines The number of most recent log lines to read and parse (default: 20).
  *
  * @returns SidecarOutputs structure containing the log lines, parsed log lines, and stderr lines.
  */
 export async function gatherSidecarOutputs(
   sidecarLogfilePath: string,
   stderrPath: string,
+  numLogLines: number = 20,
 ): Promise<SidecarOutputs> {
   const myLogger = logger.withCallpoint("gatherSidecarOutputs");
-  // Try to read+parse most recent 20 sidecar logs to notice any startup errors (occupied port, missing
-  // configs, etc.)
+  // Try to read+parse most recent `numLogLines` sidecar logs to notice any startup errors
+  // (occupied port, missing configs, etc.)
   const reformattedLogLines: string[] = [];
   const parsedLines: SidecarLogFormat[] = [];
 
   let rawLogs: string[] = [];
   try {
-    rawLogs = (await readFileString(Uri.file(sidecarLogfilePath))).trim().split("\n").slice(-20);
+    rawLogs = (await readFileString(Uri.file(sidecarLogfilePath)))
+      .trim()
+      .split("\n")
+      .slice(-numLogLines);
   } catch (e) {
     myLogger.error(`Failed to read sidecar log file: ${e}`);
   }
@@ -333,6 +338,50 @@ export async function gatherSidecarOutputs(
     parsedLogLines: parsedLines,
     stderrLines: stderrLines,
   };
+}
+
+/**
+ * Convenience function for getting the last `numLogLines` of sidecar log lines.
+ * @param numLogLines The number of most recent log lines to retrieve (default: 20).
+ * @param style The kind of logs to use from the {@link SidecarOutputs}:
+ *   - `formattedLogs` (default) for the string-formatted log lines matching what appears in the
+ *     "Confluent (Sidecar)" log output channel
+ *   - `parsedJson` for the raw JSON lines parsed from the log file
+ *   - `stderr` for the sidecar's stderr output
+ * @returns An array of log lines as strings.
+ */
+export async function getLastSidecarLogLines(
+  numLogLines: number = 20,
+  style: "formattedLogs" | "parsedJson" | "stderr" = "formattedLogs",
+): Promise<string[]> {
+  let sidecarLogs: string[] = [];
+  try {
+    const sidecarLogPath: string = getSidecarLogfilePath();
+    const outputs: SidecarOutputs = await gatherSidecarOutputs(
+      sidecarLogPath,
+      `${sidecarLogPath}.stderr`,
+      numLogLines,
+    );
+    switch (style) {
+      case "formattedLogs":
+        sidecarLogs = outputs.logLines;
+        break;
+      case "parsedJson":
+        sidecarLogs = outputs.parsedLogLines.map((value: SidecarLogFormat) =>
+          JSON.stringify(value),
+        );
+        break;
+      case "stderr":
+        sidecarLogs = outputs.stderrLines;
+        break;
+    }
+  } catch (error) {
+    sidecarLogs.push(
+      `Failed to gather sidecar logs:\n${error instanceof Error ? error.stack : error}`,
+    );
+    logger.error(sidecarLogs.join("\n"));
+  }
+  return sidecarLogs;
 }
 
 /** Try to guess as to reason why Sidecar died very quickly after starting up through heuristics against logged lines or stderr. */

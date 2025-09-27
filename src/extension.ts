@@ -13,7 +13,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
-import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
+import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
@@ -532,7 +532,7 @@ async function setupStorage(): Promise<void> {
  * @returns A {@link vscode.Disposable} for the auth provider
  */
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {
-  const provider: ConfluentCloudAuthProvider = getAuthProvider();
+  const provider = ConfluentCloudAuthProvider.getInstance();
   const providerDisposable = vscode.authentication.registerAuthenticationProvider(
     AUTH_PROVIDER_ID,
     AUTH_PROVIDER_LABEL,

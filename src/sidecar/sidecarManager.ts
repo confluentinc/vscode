@@ -26,6 +26,7 @@ import {
   determineSidecarStartupFailureReason,
   disposeSidecarLogTail,
   gatherSidecarOutputs,
+  getLastSidecarLogLines,
   getSidecarLogfilePath,
   getSidecarLogTail,
 } from "./logging";
@@ -505,21 +506,20 @@ export class SidecarManager {
         // (Informative when diagnosing test suite startup flake, for example.)
 
         const mainComplaint = `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts.`;
-        const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
 
-        // Only log the last 10 lines of the sidecar logs, to avoid flooding the logs.
-        if (outputs.parsedLogLines.length > 10) {
-          outputs.parsedLogLines = outputs.parsedLogLines.slice(-10);
-        }
+        const [stderrLines, formattedLines] = await Promise.all([
+          getLastSidecarLogLines(20, "stderr"),
+          getLastSidecarLogLines(10, "formattedLogs"),
+        ]);
 
         logger.error(
           `${mainComplaint}
 
 Sidecar stderr:
-${outputs.stderrLines.join("\n")}
+${stderrLines.join("\n")}
 
 Sidecar logs (last 10 lines only):
-${outputs.parsedLogLines.map((line) => `${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`).join("\n")}
+${formattedLines.join("\n")}
 `,
         );
 
