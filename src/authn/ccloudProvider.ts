@@ -25,7 +25,7 @@ import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
-import { getUriHandler } from "../uriHandler";
+import { UriEventHandler } from "../uriHandler";
 import { DisposableCollection } from "../utils/disposables";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { CCloudSignInError } from "./errors";
@@ -433,7 +433,7 @@ export class ConfluentCloudAuthProvider
 
     // general listener for the URI handling event, which is used to resolve any auth flow promises
     // and will trigger the secrets.onDidChange event described above
-    const uriHandlerSub: vscode.Disposable = getUriHandler().event(
+    const uriHandlerSub: vscode.Disposable = UriEventHandler.getInstance().event(
       async (uri) => await this.handleUri(uri),
     );
 

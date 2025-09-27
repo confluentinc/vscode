@@ -41,7 +41,3 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
     }
   }
 }
-
-export function getUriHandler(): UriEventHandler {
-  return UriEventHandler.getInstance();
-}
