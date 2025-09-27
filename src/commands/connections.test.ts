@@ -7,6 +7,7 @@ import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_AUTH_SESSION } from "../../tests/unit/testResources/ccloudAuth";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { CCloudSignInError } from "../authn/errors";
 import * as authnUtils from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
 import * as directConnect from "../directConnect";
@@ -53,21 +54,21 @@ describe("commands/connections.ts", function () {
       sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
     });
 
-    for (const errorMsg of [
-      "User did not consent to login.",
-      "User cancelled the authentication flow.",
-      "Confluent Cloud authentication failed. See browser for details.",
-      "User reset their password.",
-    ]) {
-      it(`should not re-throw specific errors -> "${errorMsg}"`, async function () {
-        const cancelError = new Error(errorMsg);
-        getCCloudAuthSessionStub.rejects(cancelError);
+    it("should not re-throw 'User did not consent to login' errors", async function () {
+      getCCloudAuthSessionStub.rejects(new Error("User did not consent to login."));
 
-        await connections.ccloudSignInCommand();
+      await connections.ccloudSignInCommand();
 
-        sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
-      });
-    }
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+    });
+
+    it("should not re-throw CCloudSignInErrors", async function () {
+      getCCloudAuthSessionStub.rejects(new CCloudSignInError("oh no"));
+
+      await connections.ccloudSignInCommand();
+
+      sinon.assert.calledOnceWithExactly(getCCloudAuthSessionStub, true);
+    });
 
     it("should re-throw unexpected errors", async function () {
       const unexpectedError = new Error("Something unexpected happened");
