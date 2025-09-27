@@ -1,6 +1,5 @@
 import { Disposable, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { CCloudSignInError } from "../authn/errors";
 import { getCCloudAuthSession } from "../authn/utils";
 import { EXTENSION_VERSION } from "../constants";
 import { openDirectConnectionForm } from "../directConnect";
@@ -35,8 +34,8 @@ export async function ccloudSignInCommand() {
     //  notification after the sign-in process has started
     // - the auth provider handles a sign-in failure (which shows its own error notification)
     if (
-      error instanceof CCloudSignInError ||
-      (error instanceof Error && error.name === "CCloudSignInError")
+      error instanceof Error &&
+      (error.message === "User did not consent to login." || error.name === "CCloudSignInError")
     ) {
       return;
     }
