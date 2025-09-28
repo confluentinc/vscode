@@ -81,7 +81,7 @@ after_pipeline:
           # Publish all agents' test results
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
           # Pull and re-push Playwright HTML report artifacts
-          - artifact pull playwright-reports/*.zip || echo "No Playwright HTML report artifacts to pull"
+          - artifact pull workflow playwright-reports/*.zip || echo "No Playwright HTML report artifacts to pull"
           - for file in playwright-reports/*.zip; do
-              artifact push "$file" --force;
+              artifact push workflow "$file" --force;
             done
