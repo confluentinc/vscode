@@ -79,9 +79,11 @@ ci-bin-sem-cache-restore:
 	cache restore $(platform_arch_key)_npm_cache
 	cache restore $(platform_arch_key)_playwright_cache || true
 
-# Merge per-job blob reports into one zip by platform/arch path (e.g. playwright-reports/linux-x64.zip)
+# Merge per-job blob reports into one HTML report by platform/arch path (e.g. playwright-report-linux-x64.zip)
+# HTML reports are saved to ./playwright-report/ by default
+# (see https://playwright.dev/docs/test-reporters#html-reporter)
 .PHONY: merge-blob-reports
 merge-blob-reports:
 	npx playwright merge-reports --reporter html blob-report
-	tar -zcvf playwright-reports/$(platform)-$(arch).zip blob-report
-	artifact push workflow playwright-reports/$(platform)-$(arch).zip --force
+	tar -zcvf playwright-report-$(platform)-$(arch).zip playwright-report
+	artifact push workflow playwright-report-$(platform)-$(arch).zip --force
