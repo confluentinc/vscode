@@ -79,9 +79,13 @@ ci-bin-sem-cache-restore:
 	cache restore $(platform_arch_key)_npm_cache
 	cache restore $(platform_arch_key)_playwright_cache || true
 
-# Merge per-job blob reports into one HTML report by platform/arch path (e.g. playwright-reports/linux-x64.zip)
-# HTML reports are saved to ./playwright-report/ by default
-# (see https://playwright.dev/docs/test-reporters#html-reporter)
+# Merge per-job blob reports into one HTML report by test job:
+# - Each job's blob reporter will write a report zip to `blob-report/`, so we'll have multiple files
+#  like `blob-report/report-abc123.zip`, `blob-report/report-xyz456.zip` (one for each test)
+# - When we merge them into an HTML report, we'll get one HTML report in `playwright-report/`
+#  containing all tests from each job, which we then zip up and push to Semaphore artifacts
+#  so each job's results can be downloaded separately.
+# (To avoid making large zip files, we're not bundling these into per-agent reports.)
 .PHONY: merge-blob-reports
 merge-blob-reports:
 	npx playwright merge-reports --reporter html blob-report
