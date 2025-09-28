@@ -10,7 +10,7 @@ os_name := $(shell uname -s)
 platform := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')")
 arch := $(shell uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
 # e.g. 'linux x64', 'macos arm64'
-platform_arch := "$(platform) $(arch)"
+platform_arch := $(platform) $(arch)
 platform_arch_key := $(shell echo "$(platform_arch)" | tr ' ' '_')
 
 .PHONY: store-test-results-to-semaphore
