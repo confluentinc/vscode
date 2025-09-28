@@ -45,6 +45,10 @@ blocks:
           commands:
             - make test-playwright-e2e TEST_SUITE="$TEST_SUITE_TAG"
           env_vars:
+            - name: FORCE_COLOR
+              value: "1"
+            - name: TERM
+              value: "xterm-256color"
             - name: VSCODE_VERSION
               value: "%{{parameters.VSCODE_VERSION | lower }}"
           # Use matrix to create parallel jobs for each tag when TEST_SUITE contains multiple tags separated by |
