@@ -87,6 +87,6 @@ ci-bin-sem-cache-restore:
 merge-blob-reports:
 	npx playwright merge-reports --reporter html blob-report
 	$(eval TEST_SUITE_NAME := $(subst @,, $(or $(TEST_SUITE_TAG),all)))
-	$(eval FILENAME := playwright-report-$(platform)-$(arch)-vscode-$(VSCODE_VERSION)--$(TEST_SUITE_NAME).zip)
+	$(eval FILENAME := playwright-report-$(PLATFORM)-$(ARCH)-vscode-$(VSCODE_VERSION)--$(TEST_SUITE_NAME).zip)
 	tar -zcvf $(FILENAME) playwright-report
 	artifact push workflow $(FILENAME) --destination "playwright-reports/$(FILENAME)" --force
