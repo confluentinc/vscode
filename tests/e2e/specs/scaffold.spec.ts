@@ -25,7 +25,7 @@ import { openConfluentSidebar } from "../utils/sidebarNavigation";
  * {@see https://github.com/confluentinc/vscode/issues/1840}
  */
 
-test.describe("Project Scaffolding", () => {
+test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
   test.beforeEach(async ({ electronApp }) => {
     // Stub the showOpen dialog
     // Will lead to generated projects being stored in a temp directory
