@@ -84,4 +84,4 @@ ci-bin-sem-cache-restore:
 merge-blob-reports:
 	npx playwright merge-reports --reporter html blob-report
 	tar -zcvf playwright-reports/$(platform)-$(arch).zip blob-report
-	artifact push playwright-reports/$(platform)-$(arch).zip --force
+	artifact push workflow playwright-reports/$(platform)-$(arch).zip --force
