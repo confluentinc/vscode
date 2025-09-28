@@ -85,7 +85,7 @@ ci-bin-sem-cache-restore:
 .PHONY: merge-blob-reports
 merge-blob-reports:
 	npx playwright merge-reports --reporter html blob-report
-	testsuite=$$(echo "$${TEST_SUITE_TAG:-all}" | tr -d '@'); \
-	filename=playwright-report-$(platform)-$(arch)-vscode-$${VSCODE_VERSION}--$${testsuite}.zip; \
-	tar -zcvf "$$filename" playwright-report
-	artifact push workflow "$$filename" --destination "playwright-reports/$$filename" --force
+	$(eval TEST_SUITE_NAME := $(subst @,, $(or $(TEST_SUITE_TAG),all)))
+	$(eval FILENAME := playwright-report-$(platform)-$(arch)-vscode-$(VSCODE_VERSION)--$(TEST_SUITE_NAME).zip)
+	tar -zcvf $(FILENAME) playwright-report
+	artifact push workflow $(FILENAME) --destination "playwright-reports/$(FILENAME)" --force
