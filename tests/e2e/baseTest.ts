@@ -192,7 +192,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     });
     await expect(successNotification).toHaveCount(1, { timeout: 5000 });
     // attach the support zip to the test results
-    await testInfo.attach("vscode-confluent-support", {
+    await testInfo.attach("vscode-confluent-support.zip", {
       path: supportZipPath,
       contentType: "application/zip",
     });
