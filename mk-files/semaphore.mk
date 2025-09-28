@@ -7,11 +7,8 @@ SEM_CACHE_DURATION_DAYS ?= 7
 current_time := $(shell date +"%s")
 # platform+arch info for agent-specific handling (test names, cache keys, etc)
 os_name := $(shell uname -s)
-platform := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')")
-arch := $(shell uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
-# e.g. 'linux x64', 'macos arm64'
-platform_arch := $(platform) $(arch)
-platform_arch_key := $(shell echo "$(platform_arch)" | tr ' ' '_')
+export PLATFORM := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')")
+export ARCH := $(shell uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
@@ -28,13 +25,13 @@ else
 	@echo "Mocha test results not found at $(TEST_RESULT_FILE)"
 endif
 ifneq ($(wildcard $(TEST_RESULT_E2E_FILE)),)
-	test-results publish $(TEST_RESULT_E2E_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: E2E ($(platform_arch))" --force
+	test-results publish $(TEST_RESULT_E2E_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: E2E ($(PLATFORM) $(ARCH))" --force
 	@echo "Published E2E test results from $(TEST_RESULT_E2E_FILE)"
 else
 	@echo "E2E test results not found at $(TEST_RESULT_E2E_FILE)"
 endif
 ifneq ($(wildcard $(TEST_RESULT_WEBVIEW_FILE)),)
-	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: Webview ($(platform_arch))" --force
+	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: Webview ($(PLATFORM) $(ARCH))" --force
 	@echo "Published Webview test results from $(TEST_RESULT_WEBVIEW_FILE)"
 else
 	@echo "Webview test results not found at $(TEST_RESULT_WEBVIEW_FILE)"
@@ -45,10 +42,10 @@ endif
 ci-bin-sem-cache-store:
 ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 	@echo "Storing semaphore caches"
-	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(platform_arch_key)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
+	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
 # Cache packages installed by `npx playwright install`
-	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(platform_arch_key)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
-	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(platform_arch_key)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
+	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
+	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -76,8 +73,8 @@ _ci-bin-sem-cache-store:
 .PHONY: ci-bin-sem-cache-restore
 ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
-	cache restore $(platform_arch_key)_npm_cache
-	cache restore $(platform_arch_key)_playwright_cache || true
+	cache restore $(PLATFORM)_$(ARCH)_npm_cache
+	cache restore $(PLATFORM)_$(ARCH)_playwright_cache || true
 
 # Merge per-job blob reports into one HTML report by test job:
 # - Each job's blob reporter will write a report zip to `blob-report/`, so we'll have multiple files
