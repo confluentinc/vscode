@@ -17,7 +17,7 @@ test.describe(() => {
 
   test(
     "should complete the browser-based Confluent Cloud sign-in flow",
-    { tag: [Tag.CCloud] },
+    { tag: [Tag.Smoke, Tag.CCloud] },
     async ({ page, electronApp, openExtensionSidebar }) => {
       await setupCCloudConnection(
         page,

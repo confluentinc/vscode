@@ -33,6 +33,7 @@ blocks:
       prologue: &e2e-prologue
         commands:
           - make ci-bin-sem-cache-restore
+          - make load-cached-docker-images
           - |
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
               echo "Skipping Vault setup for Semaphore CI"
@@ -58,15 +59,9 @@ blocks:
           commands:
             - make remove-test-env
             - make ci-bin-sem-cache-store
+            - make cache-docker-images
             - make store-test-results-to-semaphore
-            # Upload Playwright artifacts, if available
-            - |
-              if [ -d test-results ]; then
-                artifact push workflow test-results --destination test-results-$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/') --force
-              fi
-              if [ -d playwright-report ]; then
-                artifact push workflow playwright-report --destination playwright-report-$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/') --force
-              fi
+            - make merge-blob-reports
 
   - name: "Linux ARM64: Playwright E2E Tests"
     dependencies: []
@@ -83,4 +78,5 @@ after_pipeline:
     jobs:
       - name: Publish Test Results to Semaphore
         commands:
+          # Publish all agents' test results
           - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
