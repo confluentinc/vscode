@@ -5,10 +5,13 @@ TEST_RESULT_WEBVIEW_FILE = $(CURDIR)/TEST-result-webview.xml
 # How many days cache entries can stay in the semaphore cache before they are considered stale
 SEM_CACHE_DURATION_DAYS ?= 7
 current_time := $(shell date +"%s")
-# OS Name
+# platform+arch info for agent-specific handling (test names, cache keys, etc)
 os_name := $(shell uname -s)
-os_name_and_arch := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')_$$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')")
-platform_arch := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/') $$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')")
+platform := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')")
+arch := $(shell uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
+# e.g. 'linux x64', 'macos arm64'
+platform_arch := $(platform) $(arch)
+platform_arch_key := $(shell echo "$(platform_arch)" | tr ' ' '_')
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
@@ -42,10 +45,10 @@ endif
 ci-bin-sem-cache-store:
 ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 	@echo "Storing semaphore caches"
-	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
+	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(platform_arch_key)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
 # Cache packages installed by `npx playwright install`
-	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
-	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
+	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(platform_arch_key)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
+	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(platform_arch_key)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -73,5 +76,14 @@ _ci-bin-sem-cache-store:
 .PHONY: ci-bin-sem-cache-restore
 ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
-	cache restore $(os_name_and_arch)_npm_cache
-	cache restore $(os_name_and_arch)_playwright_cache || true
+	cache restore $(platform_arch_key)_npm_cache
+	cache restore $(platform_arch_key)_playwright_cache || true
+
+# Merge per-job blob reports into one HTML report by platform/arch path (e.g. playwright-report-linux-x64.zip)
+# HTML reports are saved to ./playwright-report/ by default
+# (see https://playwright.dev/docs/test-reporters#html-reporter)
+.PHONY: merge-blob-reports
+merge-blob-reports:
+	npx playwright merge-reports --reporter html blob-report
+	tar -zcvf playwright-report-$(platform)-$(arch).zip playwright-report
+	artifact push workflow playwright-report-$(platform)-$(arch).zip --force
