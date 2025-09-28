@@ -5,7 +5,7 @@ import {
   Page,
   test as testBase,
 } from "@playwright/test";
-import { stubAllDialogs } from "electron-playwright-helpers";
+import { stubAllDialogs, stubDialog } from "electron-playwright-helpers";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -21,6 +21,7 @@ import { NotificationArea } from "./objects/notifications/NotificationArea";
 import { CCloudConnectionItem } from "./objects/views/viewItems/CCloudConnectionItem";
 import { DirectConnectionItem } from "./objects/views/viewItems/DirectConnectionItem";
 import { LocalConnectionItem } from "./objects/views/viewItems/LocalConnectionItem";
+import { executeVSCodeCommand } from "./utils/commands";
 import {
   setupCCloudConnection,
   setupDirectConnection,
@@ -53,6 +54,9 @@ function getTestSetupCache(): TestSetupCache {
 }
 
 interface VSCodeFixtures {
+  /** Temporary directory for the test to use. */
+  testTempDir: string;
+
   /** The launched Electron application (VS Code). */
   electronApp: ElectronApplication;
   /** The first window of the launched Electron application (VS Code). */
@@ -83,11 +87,14 @@ interface VSCodeFixtures {
 }
 
 export const test = testBase.extend<VSCodeFixtures>({
-  electronApp: async ({ trace }, use, testInfo) => {
-    const testConfigs = getTestSetupCache();
-
-    // create a temporary directory for this test run
+  testTempDir: async ({}, use) => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "vscode-test-"));
+
+    await use(tempDir);
+  },
+
+  electronApp: async ({ trace, testTempDir }, use, testInfo) => {
+    const testConfigs = getTestSetupCache();
 
     // launch VS Code with Electron using args pattern from vscode-test
     const electronApp = await electron.launch({
@@ -102,7 +109,7 @@ export const test = testBase.extend<VSCodeFixtures>({
         "--disable-workspace-trust",
         "--disable-extensions",
         // required to prevent test resources being saved to user's real profile
-        `--user-data-dir=${tempDir}`,
+        `--user-data-dir=${testTempDir}`,
         // additional args needed for the Electron launch:
         `--extensionDevelopmentPath=${testConfigs.outPath}`,
       ],
@@ -157,7 +164,7 @@ export const test = testBase.extend<VSCodeFixtures>({
     }
   },
 
-  page: async ({ electronApp }, use) => {
+  page: async ({ electronApp, testTempDir }, use, testInfo) => {
     if (!electronApp) {
       throw new Error("electronApp is null - failed to launch VS Code");
     }
@@ -171,6 +178,24 @@ export const test = testBase.extend<VSCodeFixtures>({
     await globalBeforeEach(page, electronApp);
 
     await use(page);
+
+    // save the support zip to include extension+sidecar logs
+    const supportZipPath = path.join(testTempDir, "support.zip");
+    await stubDialog(electronApp, "showSaveDialog", {
+      filePath: path.join(testTempDir, "support.zip"),
+    });
+    await executeVSCodeCommand(page, "confluent.support.saveSupportZip");
+    // wait for info notification indicating .zip was saved
+    const notificationArea = new NotificationArea(page);
+    const successNotification = notificationArea.infoNotifications.filter({
+      hasText: "Confluent extension support .zip saved successfully.",
+    });
+    await expect(successNotification).toHaveCount(1, { timeout: 5000 });
+    // attach the support zip to the test results
+    await testInfo.attach("vscode-confluent-support.zip", {
+      path: supportZipPath,
+      contentType: "application/zip",
+    });
   },
 
   openExtensionSidebar: [
