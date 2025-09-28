@@ -139,7 +139,7 @@ export const test = testBase.extend<VSCodeFixtures>({
         screenshots: true,
         snapshots: true,
         sources: true,
-        title: testInfo.title,
+        title: `${process.platform} ${process.arch}: ${testInfo.title} (${testInfo.tags.join(", ")})`,
       });
     }
 
