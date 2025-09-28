@@ -71,13 +71,15 @@ test-playwright-webviews: setup-test-env install-test-dependencies install-depen
 
 # Look up the Kafka and Schema Registry Docker image repo:tag values from package.json via the
 # getKafkaImageRepoTag and getSchemaRegistryImageRepoTag gulp tasks, then handle all of the caching
-# and loading for Semaphore
+# and loading for Semaphore. IMPORTANT: we need to use the platform_arch_key here so we cache by
+# platform/arch (per agent) so we don't see errors from Docker when creating containers like:
+# "The requested image's platform (X) does not match the detected host platform (Y)"
 .PHONY: load-cached-docker-images
 load-cached-docker-images: install-dependencies
 	@KAFKA_IMAGE=$$(npx gulp getKafkaImageRepoTag --silent 2>/dev/null | tail -1); \
 	SCHEMA_REGISTRY_IMAGE=$$(npx gulp getSchemaRegistryImageRepoTag --silent 2>/dev/null | tail -1); \
-	SEMAPHORE_KAFKA_KEY="vscode-docker-kafka-$$KAFKA_IMAGE"; \
-	SEMAPHORE_SCHEMA_REGISTRY_KEY="vscode-docker-schema-registry-$$SCHEMA_REGISTRY_IMAGE"; \
+	SEMAPHORE_KAFKA_KEY="vscode-docker-$$platform_arch_key-kafka-$$KAFKA_IMAGE"; \
+	SEMAPHORE_SCHEMA_REGISTRY_KEY="vscode-docker-$$platform_arch_key-schema-registry-$$SCHEMA_REGISTRY_IMAGE"; \
 	echo "Loading cached Docker images: $$KAFKA_IMAGE and $$SCHEMA_REGISTRY_IMAGE"; \
 	cache restore $$SEMAPHORE_KAFKA_KEY; \
 	[ -f kafka.tgz ] && docker load -i kafka.tgz && rm -rf kafka.tgz || true; \
@@ -90,8 +92,8 @@ load-cached-docker-images: install-dependencies
 cache-docker-images:
 	@KAFKA_IMAGE=$$(npx gulp getKafkaImageRepoTag --silent 2>/dev/null | tail -1); \
 	SCHEMA_REGISTRY_IMAGE=$$(npx gulp getSchemaRegistryImageRepoTag --silent 2>/dev/null | tail -1); \
-	SEMAPHORE_KAFKA_KEY="vscode-docker-kafka-$$KAFKA_IMAGE"; \
-	SEMAPHORE_SCHEMA_REGISTRY_KEY="vscode-docker-schema-registry-$$SCHEMA_REGISTRY_IMAGE"; \
+	SEMAPHORE_KAFKA_KEY="vscode-docker-$$platform_arch_key-kafka-$$KAFKA_IMAGE"; \
+	SEMAPHORE_SCHEMA_REGISTRY_KEY="vscode-docker-$$platform_arch_key-schema-registry-$$SCHEMA_REGISTRY_IMAGE"; \
 	echo "Caching Docker images: $$KAFKA_IMAGE and $$SCHEMA_REGISTRY_IMAGE"; \
 	cache has_key $$SEMAPHORE_KAFKA_KEY || ( \
 		docker pull $$KAFKA_IMAGE && \
