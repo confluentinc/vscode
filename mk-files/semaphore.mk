@@ -85,5 +85,6 @@ ci-bin-sem-cache-restore:
 .PHONY: merge-blob-reports
 merge-blob-reports:
 	npx playwright merge-reports --reporter html blob-report
-	tar -zcvf playwright-report-$(platform)-$(arch).zip playwright-report
-	artifact push workflow playwright-report-$(platform)-$(arch).zip --destination playwright-reports/$(platform)-$(arch).zip --force
+	filename=playwright-report-$(platform)-$(arch)-vscode-$${VSCODE_VERSION}--$${TEST_SUITE_TAG:-all}.zip; \
+	tar -zcvf "$$filename" playwright-report
+	artifact push workflow "$$filename" --destination "playwright-reports/$$filename" --force
