@@ -53,7 +53,7 @@ export default defineConfig({
       testDir: path.join(__dirname),
     },
     {
-      name: `VS Code (${vscodeVersion})`,
+      name: `vscode-${vscodeVersion}`,
       dependencies: ["setup"],
     },
   ],
