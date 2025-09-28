@@ -26,6 +26,7 @@ export default defineConfig({
   },
   reporter: process.env.CI
     ? [
+        ["list"],
         // Generate blob reports for each job so they can be merged into a single HTML report for
         // each agent in the pipeline (see mk-files/semaphore.mk).
         // (see https://playwright.dev/docs/test-reporters#blob-reporter)
@@ -52,7 +53,7 @@ export default defineConfig({
       testDir: path.join(__dirname),
     },
     {
-      name: vscodeVersion,
+      name: `VS Code (${vscodeVersion})`,
       dependencies: ["setup"],
     },
   ],
