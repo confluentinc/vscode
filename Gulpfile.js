@@ -39,7 +39,8 @@ liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
 
 export const bundle = series(clean, build, pack);
-export const e2e = series(bundle, testBuild, e2eRun);
+export const pullDockerImages = series(pullKafkaImage, pullSchemaRegistryImage);
+export const e2e = series(bundle, testBuild, pullDockerImages, e2eRun);
 
 export const clicktest = series(bundle, install);
 
@@ -804,6 +805,77 @@ export function functional(done) {
   return done(result.status);
 }
 
+export async function getKafkaImageRepoTag() {
+  const manifest = loadPackageJson();
+  const extensionSettings = manifest.contributes.configuration;
+  const localSettings = extensionSettings.find((section) => section.title === "Local");
+  if (!localSettings)
+    throw new Error('Failed to find "Local" section in extension settings configuration');
+
+  const defaultKafkaImage =
+    localSettings.properties["confluent.localDocker.kafkaImageRepo"].default;
+  const defaultKafkaImageTag =
+    localSettings.properties["confluent.localDocker.kafkaImageTag"].default;
+  const defaultKafkaImageRepoTag = `${defaultKafkaImage}:${defaultKafkaImageTag}`;
+  // used by CI to capture the image to cache or load from the cache
+  console.log(defaultKafkaImageRepoTag);
+  return Promise.resolve(defaultKafkaImageRepoTag);
+}
+
+pullKafkaImage.description =
+  "Pull the local Kafka Docker image based on the package.json contributes.configuration 'Local' settings' defaults";
+export async function pullKafkaImage(done) {
+  if (IS_CI) {
+    console.log("Skipping pull of Kafka image in CI, assuming it's already cached.");
+    return done(0);
+  }
+  const defaultKafkaImageRepoTag = await getKafkaImageRepoTag();
+  const kafkaImagePullResult = spawnSync("docker", ["pull", defaultKafkaImageRepoTag], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
+  if (kafkaImagePullResult.error || kafkaImagePullResult.status !== 0) {
+    throw kafkaImagePullResult.error;
+  }
+  return done(0);
+}
+
+export async function getSchemaRegistryImageRepoTag() {
+  const manifest = loadPackageJson();
+  const extensionSettings = manifest.contributes.configuration;
+  const localSettings = extensionSettings.find((section) => section.title === "Local");
+  if (!localSettings)
+    throw new Error('Failed to find "Local" section in extension settings configuration');
+
+  const defaultSchemaRegistryImage =
+    localSettings.properties["confluent.localDocker.schemaRegistryImageRepo"].default;
+  const defaultSchemaRegistryImageTag =
+    localSettings.properties["confluent.localDocker.schemaRegistryImageTag"].default;
+  const defaultSchemaRegistryImageRepoTag = `${defaultSchemaRegistryImage}:${defaultSchemaRegistryImageTag}`;
+  // used by CI to capture the image to cache or load from the cache
+  console.log(defaultSchemaRegistryImageRepoTag);
+  return Promise.resolve(defaultSchemaRegistryImageRepoTag);
+}
+
+pullSchemaRegistryImage.description =
+  "Pull the local Schema Registry Docker image based on the package.json contributes.configuration 'Local' settings' defaults";
+export async function pullSchemaRegistryImage(done) {
+  if (IS_CI) {
+    console.log("Skipping pull of Schema Registry image in CI, assuming it's already cached.");
+    return done(0);
+  }
+  const defaultSchemaRegistryImageRepoTag = await getSchemaRegistryImageRepoTag();
+  const schemaRegistryImagePullResult = spawnSync(
+    "docker",
+    ["pull", defaultSchemaRegistryImageRepoTag],
+    { stdio: "inherit", shell: IS_WINDOWS },
+  );
+  if (schemaRegistryImagePullResult.error || schemaRegistryImagePullResult.status !== 0) {
+    throw schemaRegistryImagePullResult.error;
+  }
+  return done(0);
+}
+
 export function e2eRun(done) {
   // set env var so extension knows it's in E2E test mode, which is mainly used for CCloud auth:
   // - the auth provider will store the sign-in URL to a temp file for easier test handling of the
@@ -814,42 +886,6 @@ export function e2eRun(done) {
 
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
-
-  // if we're running the whole test suite or `@local`, we need to make sure the default Docker
-  // images for local Kafka and Schema Registry are available so tests don't time out while pulling
-  if (!testFilter || testFilter.includes("@local")) {
-    const manifest = loadPackageJson();
-    const extensionSettings = manifest.contributes.configuration;
-    const localSettings = extensionSettings.find((section) => section.title === "Local");
-    if (!localSettings)
-      throw new Error('Failed to find "Local" section in extension settings configuration');
-
-    const defaultKafkaImage =
-      localSettings.properties["confluent.localDocker.kafkaImageRepo"].default;
-    const defaultKafkaImageTag =
-      localSettings.properties["confluent.localDocker.kafkaImageTag"].default;
-    const kafkaImagePullResult = spawnSync(
-      "docker",
-      ["pull", `${defaultKafkaImage}:${defaultKafkaImageTag}`],
-      { stdio: "inherit", shell: IS_WINDOWS },
-    );
-    if (kafkaImagePullResult.error || kafkaImagePullResult.status !== 0) {
-      throw kafkaImagePullResult.error;
-    }
-
-    const defaultSchemaRegistryImage =
-      localSettings.properties["confluent.localDocker.schemaRegistryImageRepo"].default;
-    const defaultSchemaRegistryImageTag =
-      localSettings.properties["confluent.localDocker.schemaRegistryImageTag"].default;
-    const schemaRegistryImagePullResult = spawnSync(
-      "docker",
-      ["pull", `${defaultSchemaRegistryImage}:${defaultSchemaRegistryImageTag}`],
-      { stdio: "inherit", shell: IS_WINDOWS },
-    );
-    if (schemaRegistryImagePullResult.error || schemaRegistryImagePullResult.status !== 0) {
-      throw schemaRegistryImagePullResult.error;
-    }
-  }
 
   const command = [
     "playwright",
