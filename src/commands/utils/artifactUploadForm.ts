@@ -6,7 +6,7 @@ import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider } from "../../models/resource";
 import { showErrorNotificationWithButtons } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
+import { flinkDatabaseRegionsQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { ArtifactUploadParams } from "./uploadArtifactOrUDF";
@@ -35,7 +35,10 @@ export async function artifactUploadQuickPickForm(
   const assignStateFromKnownResource = async (
     resource: CCloudKafkaCluster | CCloudFlinkComputePool,
   ) => {
-    state.cloudRegion = { provider: resource.provider, region: resource.region };
+    // Only set cloud/region if not GCP (not supported)
+    if (resource.provider !== "GCP") {
+      state.cloudRegion = { provider: resource.provider, region: resource.region };
+    }
     // Only call getEnvironment if we do not already have this environment in state
     // Starting upload from right-clicking on Flink database cluster will override the selectedFlinkDatabase env
     if (!state.environment || state.environment.id !== resource.environmentId) {
@@ -153,7 +156,7 @@ export async function artifactUploadQuickPickForm(
       }
 
       case "cloudRegion": {
-        const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+        const cloudRegion = await flinkDatabaseRegionsQuickPick((region) => region.cloud !== "GCP");
         if (cloudRegion) {
           state.cloudRegion = {
             provider: cloudRegion.provider,
