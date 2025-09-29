@@ -2289,6 +2289,20 @@
             ]
           },
           {
+            "id": "cc-flink-artifact-udf",
+            "title": "Develop and Deploy Flink UDFs",
+            "description": "Create User-Defined Functions from templates, develop and test locally, upload artifacts to Confluent Cloud, and register UDFs for use in Flink SQL statements.\n[Generate Flink Artifact](command:confluent.artifacts.scaffold)\n[Upload Flink Artifact](command:confluent.uploadArtifact)",
+            "media": {
+              "markdown": "resources/walkthrough/flink/udf.md"
+            },
+            "completionEvents": [
+              "onCommand:confluent.artifacts.scaffold",
+              "onCommand:confluent.uploadArtifact",
+              "onCommand:confluent.artifacts.createUdfRegistrationDocument",
+              "onCommand:confluent.artifacts.startGuidedUdfCreation"
+            ]
+          },
+          {
             "id": "copilot",
             "title": "Copiloting Your Data Streaming",
             "description": "The extension provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications. \n[Enable Copilot Chat Participant](command:workbench.action.openSettings?%5B%22%40ext%3Aconfluentinc.vscode-confluent%20copilot%22%5D)",
