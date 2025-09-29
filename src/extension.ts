@@ -418,6 +418,7 @@ async function setupContextValues() {
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
     "ccloud-flink-artifact",
+    "ccloud-flink-udf",
     "local-kafka-cluster",
     "direct-kafka-cluster",
     // topics also have names, but their context values vary wildly and must be regex-matched
