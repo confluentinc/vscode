@@ -120,13 +120,13 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
     );
   } catch (err) {
     if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
-      let errorMessage = "Failed to create UDF function: ";
+      let errorMessage = "Failed to create UDF function";
 
       if (isResponseError(err)) {
         const resp = await err.response.clone().text();
-        errorMessage = `${errorMessage} ${resp}`;
+        errorMessage = `${errorMessage}: ${resp}`;
       } else if (err instanceof Error) {
-        errorMessage = `${errorMessage} ${err.message}`;
+        errorMessage = `${errorMessage}: ${err.message}`;
         logError(err, errorMessage);
       }
       showErrorNotificationWithButtons(errorMessage);
