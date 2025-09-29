@@ -24,7 +24,7 @@ import { FlinkStatement, Phase, restFlinkStatementToModel } from "../models/flin
 import { FlinkUdf } from "../models/flinkUDF";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { CCloudOrganization } from "../models/organization";
-import { EnvironmentId, IFlinkQueryable } from "../models/resource";
+import { EnvironmentId, IFlinkQueryable, IProviderRegion } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar, SidecarHandle } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
@@ -503,6 +503,28 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     // call to delete the statement here when doing issue 2597.
 
     return resultRows;
+  }
+
+  /**
+   * Returns a deduplicated list of provider/region pairs for all Flink compute pools
+   * across all environments the user has access to.
+   */
+  public async getComputePoolProviderRegions(): Promise<IProviderRegion[]> {
+    const envs: CCloudEnvironment[] = await this.getEnvironments();
+    const providerRegionSet: ObjectSet<IProviderRegion> = new ObjectSet(
+      (pr) => `${pr.provider}-${pr.region}`,
+    );
+
+    for (const env of envs) {
+      (env.flinkComputePools || []).forEach((pool) => {
+        providerRegionSet.add({
+          provider: pool.provider,
+          region: pool.region,
+        });
+      });
+    }
+
+    return providerRegionSet.items();
   }
 }
 
