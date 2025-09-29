@@ -20,8 +20,8 @@ import { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
-  executeCreateFunction,
   deleteFlinkUDFCommand,
+  executeCreateFunction,
   registerFlinkUDFCommands,
   setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
@@ -220,7 +220,6 @@ describe("flinkUDFs command", () => {
       showWarningStub.resolves("Yes, delete");
 
       const progressReportStub = sandbox.stub();
-      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
       withProgressStub.callsFake(async (options, callback) => {
         return await callback(
           {
