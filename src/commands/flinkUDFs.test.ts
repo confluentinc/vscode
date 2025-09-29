@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
@@ -18,6 +19,7 @@ import { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
+  executeCreateFunction,
   registerFlinkUDFCommands,
   setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
@@ -66,8 +68,17 @@ describe("flinkUDFs command", () => {
     }),
   } as unknown as CCloudFlinkDbKafkaCluster;
 
+  let withProgressStub: sinon.SinonStub;
+
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
+      const mockProgress = {
+        report: sandbox.stub(),
+      } as vscode.Progress<unknown>;
+      const mockToken = {} as vscode.CancellationToken;
+      return Promise.resolve(callback(mockProgress, mockToken));
+    });
   });
 
   afterEach(() => {
@@ -140,15 +151,6 @@ describe("flinkUDFs command", () => {
     const executeStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
-    const withProgressStub = sandbox.stub(vscode.window, "withProgress");
-    withProgressStub.callsFake(async (options, callback) => {
-      return await callback(
-        {
-          report: () => {},
-        },
-        {} as any,
-      );
-    });
 
     await startGuidedUdfCreationCommand(artifact);
 
@@ -227,9 +229,6 @@ describe("flinkUDFs command", () => {
   });
 
   it("should exit silently if a user exits the function and class name prompt", async () => {
-    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
-    const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
-
     const promptStub = sandbox
       .stub(uploadArtifact, "promptForFunctionAndClassName")
       .resolves(undefined as any);
@@ -243,15 +242,60 @@ describe("flinkUDFs command", () => {
 
     const executeStub = sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement");
 
-    const withProgressStub = sandbox.stub(vscode.window, "withProgress");
-
     await startGuidedUdfCreationCommand(artifact);
 
     sinon.assert.calledOnce(promptStub);
     sinon.assert.notCalled(executeStub);
-    sinon.assert.notCalled(withProgressStub);
-    sinon.assert.notCalled(showInfoStub);
-    sinon.assert.notCalled(showErrorStub);
+  });
+
+  it("should update UDFs list when a new one is created", async () => {
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+    const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
+    });
+
+    const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+    mockProvider.resource = mockCluster;
+    sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
+
+    const executeStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
+
+    const stubbedEventEmitters = eventEmitterStubs(sandbox);
+    const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
+
+    await startGuidedUdfCreationCommand(artifact);
+
+    sinon.assert.calledOnce(promptStub);
+    sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledOnce(withProgressStub);
+    sinon.assert.calledOnce(showInfoStub);
+    sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
+  });
+
+  it("should show info notification when UDF is created successfully", async () => {
+    const executeStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
+
+    await executeCreateFunction(
+      artifact,
+      { functionName: "testFunction", className: "com.test.TestClass" },
+      mockCluster,
+    );
+
+    sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledWith(
+      executeStub,
+      "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
+      mockCluster,
+      { timeout: 60000 },
+    );
+    sinon.assert.calledOnce(showInfoStub);
+    sinon.assert.calledWith(showInfoStub, "testFunction function created successfully.");
   });
 
   describe("createUdfRegistrationDocumentCommand", () => {

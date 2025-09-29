@@ -2,11 +2,12 @@ import * as vscode from "vscode";
 import { Disposable, SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { flinkDatabaseViewMode } from "../emitters";
+import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
@@ -83,12 +84,32 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   const editor = await window.showTextDocument(document, { preview: false });
   await editor.insertSnippet(snippetString);
 }
+
+export async function executeCreateFunction(
+  selectedArtifact: FlinkArtifact,
+  userInput: {
+    functionName: string;
+    className: string;
+  },
+  database: CCloudFlinkDbKafkaCluster,
+) {
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
+    `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
+    database,
+    {
+      timeout: 60000, // custom timeout of 60 seconds
+    },
+  );
+  const createdMsg = `${userInput.functionName} function created successfully.`;
+  void showInfoNotificationWithButtons(createdMsg);
+}
+
 export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {
   if (!selectedArtifact) {
     return;
   }
   try {
-    const ccloudResourceLoader = CCloudResourceLoader.getInstance();
     const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
     const database = flinkDatabaseProvider.resource;
     if (!database) {
@@ -107,18 +128,10 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
       },
       async (progress) => {
         progress.report({ message: "Executing statement..." });
-        await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
-          `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
-          database,
-          {
-            timeout: 60000, // custom timeout of 60 seconds
-          },
-        );
-        progress.report({ message: "Processing results..." });
-        const createdMsg = `${userInput.functionName} function created successfully.`;
-        void showInfoNotificationWithButtons(createdMsg);
+        await executeCreateFunction(selectedArtifact, userInput, database);
       },
     );
+    udfsChanged.fire(database);
   } catch (err) {
     if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
       let errorMessage = "Failed to create UDF function: ";
