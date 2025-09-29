@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { QuickPickItemKind, window } from "vscode";
+import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
@@ -11,6 +12,7 @@ import {
 import * as ccloudResourceLoader from "../loaders/ccloudResourceLoader";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId, IProviderRegion } from "../models/resource";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   cloudProviderRegionQuickPick,
   flinkDatabaseRegionsQuickPick,
@@ -22,6 +24,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let loadProviderRegionsStub: sinon.SinonStub;
   let showQuickPickStub: sinon.SinonStub;
+  let ccloudLoaderStub: sinon.SinonStubbedInstance<ccloudResourceLoader.CCloudResourceLoader>;
 
   const testRegionDataAWS: FcpmV2RegionListDataInner = {
     api_version: FcpmV2RegionListDataInnerApiVersionEnum.FcpmV2,
@@ -55,9 +58,12 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
   });
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    ccloudLoaderStub = getStubbedCCloudResourceLoader(sandbox);
     showQuickPickStub = sandbox.stub(window, "showQuickPick");
     loadProviderRegionsStub = sandbox.stub(ccloudResourceLoader, "loadProviderRegions");
     loadProviderRegionsStub.resolves(testRegions);
+    const stubbedViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+    sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(stubbedViewProvider);
   });
 
   afterEach(() => {
@@ -234,8 +240,6 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
   });
 
   describe("flinkDatabaseRegionsQuickPick()", () => {
-    let getFlinkDatabasesStub: sinon.SinonStub;
-
     const testFlinkDbCluster1: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
       id: "lkc-flink-db-1",
       name: "test-flink-db-cluster-1",
@@ -276,11 +280,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
     ];
 
     beforeEach(() => {
-      getFlinkDatabasesStub = sandbox.stub(
-        ccloudResourceLoader.CCloudResourceLoader.prototype,
-        "getFlinkDatabases",
-      );
-      getFlinkDatabasesStub.resolves(testFlinkDbClusters);
+      ccloudLoaderStub.getFlinkDatabases.resolves(testFlinkDbClusters);
     });
 
     it("should correctly set quickpick options", async () => {
@@ -295,7 +295,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
     it("should show quickpick with regions grouped by cloud provider with separators", async () => {
       await flinkDatabaseRegionsQuickPick();
 
-      sinon.assert.calledOnce(getFlinkDatabasesStub);
+      sinon.assert.calledOnce(ccloudLoaderStub.getFlinkDatabases);
       sinon.assert.calledOnce(showQuickPickStub);
 
       const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] =
@@ -396,7 +396,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
         flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
       }) as CCloudFlinkDbKafkaCluster;
 
-      getFlinkDatabasesStub.resolves([...testFlinkDbClusters, gcpCluster]);
+      ccloudLoaderStub.getFlinkDatabases.resolves([...testFlinkDbClusters, gcpCluster]);
 
       await flinkDatabaseRegionsQuickPick();
 
@@ -425,7 +425,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
         flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
       }) as CCloudFlinkDbKafkaCluster;
 
-      getFlinkDatabasesStub.resolves([...testFlinkDbClusters, additionalCluster]);
+      ccloudLoaderStub.getFlinkDatabases.resolves([...testFlinkDbClusters, additionalCluster]);
 
       await flinkDatabaseRegionsQuickPick();
 
