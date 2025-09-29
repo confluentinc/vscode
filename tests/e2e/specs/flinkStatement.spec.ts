@@ -9,7 +9,7 @@ import { stopStatement, submitFlinkStatement } from "../utils/flinkStatement";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-test.describe("Flink Statements", { tag: [Tag.CCloud] }, () => {
+test.describe("Flink Statements", { tag: [Tag.CCloud, Tag.FlinkStatements] }, () => {
   let webview: FrameLocator;
 
   // tell the `connectionItem` fixture to set up a CCloud connection
