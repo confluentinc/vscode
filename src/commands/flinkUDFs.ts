@@ -4,20 +4,16 @@ import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
-import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
-import {
-  showErrorNotificationWithButtons,
-  showInfoNotificationWithButtons,
-} from "../notifications";
+import { showErrorNotificationWithButtons } from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
-import { promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
+import { executeCreateFunction, promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
 
 const logger = new Logger("commands.flinkUDFs");
 
@@ -80,26 +76,6 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   }
   const editor = await window.showTextDocument(document, { preview: false });
   await editor.insertSnippet(snippetString);
-}
-
-export async function executeCreateFunction(
-  selectedArtifact: FlinkArtifact,
-  userInput: {
-    functionName: string;
-    className: string;
-  },
-  database: CCloudFlinkDbKafkaCluster,
-) {
-  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
-  await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
-    `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${selectedArtifact.id}';`,
-    database,
-    {
-      timeout: 60000, // custom timeout of 60 seconds
-    },
-  );
-  const createdMsg = `${userInput.functionName} function created successfully.`;
-  void showInfoNotificationWithButtons(createdMsg);
 }
 
 export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {
