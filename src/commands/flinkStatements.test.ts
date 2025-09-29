@@ -152,7 +152,7 @@ describe("commands/flinkStatements.ts", () => {
         statementUtils,
         "waitForStatementCompletion",
       );
-      waitForStatementCompletionStub.resolves(statement); // This should resolve with a COMPLETED statement
+      waitForStatementCompletionStub.resolves(statement);
       const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
       await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
 
