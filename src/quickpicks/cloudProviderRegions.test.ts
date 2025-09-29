@@ -11,7 +11,6 @@ import {
 import * as ccloudResourceLoader from "../loaders/ccloudResourceLoader";
 import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId, IProviderRegion } from "../models/resource";
-import * as cloudProviderRegionsModule from "./cloudProviderRegions"; // added for stubbing exported fn
 import {
   cloudProviderRegionQuickPick,
   flinkDatabaseRegionsQuickPick,
@@ -374,19 +373,14 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
     });
 
     it("should call cloudProviderRegionQuickPick when 'View All' is selected", async () => {
-      // Stub the higher-level quick pick instead of relying on internal loader side-effects
-      const cloudProviderRegionQuickPickStub = sandbox
-        .stub(cloudProviderRegionsModule, "cloudProviderRegionQuickPick")
-        .resolves(undefined);
-
       showQuickPickStub.resolves({
         label: "View All Available Regions",
         value: "VIEW_ALL",
       });
-
+      loadProviderRegionsStub.resolves([]); // to ensure cloudProviderRegionQuickPick returns undefined
       const result = await flinkDatabaseRegionsQuickPick();
 
-      sinon.assert.calledOnce(cloudProviderRegionQuickPickStub); // direct assertion
+      sinon.assert.calledOnce(loadProviderRegionsStub); // called within cloudProviderRegionQuickPick
       assert.strictEqual(result, undefined);
     });
 
