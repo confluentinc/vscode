@@ -78,7 +78,7 @@ describe("flinkUDFs command", () => {
     sandbox = sinon.createSandbox();
     withProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
       const mockProgress = {
-        report: sandbox.stub(), // Add the report method
+        report: sandbox.stub(),
       } as Progress<unknown>;
       const mockToken = {} as CancellationToken;
       return Promise.resolve(callback(mockProgress, mockToken));
