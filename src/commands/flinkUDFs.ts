@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { Disposable, SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode } from "../emitters";
@@ -7,6 +6,7 @@ import { isResponseError, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
+import { FlinkUdf } from "../models/flinkUDF";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
@@ -24,8 +24,91 @@ export async function setFlinkUDFViewModeCommand() {
   await setContextValue(ContextValues.flinkDatabaseViewMode, FlinkDatabaseViewProviderMode.UDFs);
 }
 
-export function registerFlinkUDFCommands(): Disposable[] {
+/**
+ * Delete a Flink UDF by executing a DROP FUNCTION statement.
+ *
+ * @param selectedUdf The UDF to delete
+ */
+export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void> {
+  if (!selectedUdf) {
+    return;
+  }
+
+  const confirmButton = "Yes, delete";
+  const confirmResult = await vscode.window.showWarningMessage(
+    `Are you sure you want to delete the UDF "${selectedUdf.name}"?`,
+    {
+      modal: true,
+      detail: `Deleting this UDF will run 'DROP FUNCTION' within the Flinkable CCloud Kafka Cluster "${selectedUdf.databaseId}". This action cannot be undone.`,
+    },
+    confirmButton,
+  );
+
+  if (confirmResult !== confirmButton) {
+    return;
+  }
+
+  try {
+    const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+    const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
+    const database = flinkDatabaseProvider.resource;
+
+    if (!database) {
+      throw new Error("No Flink database.");
+    }
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Deleting Flink UDF",
+        cancellable: false,
+      },
+      async (progress) => {
+        progress.report({ message: "Executing DROP FUNCTION statement..." });
+        await ccloudResourceLoader.executeFlinkStatement(
+          `DROP FUNCTION \`${selectedUdf.name}\`;`,
+          database,
+          {
+            nameSpice: "delete-udf",
+            timeout: 30000, // 30 second timeout
+          },
+        );
+
+        progress.report({ message: "Updating cache..." });
+
+        flinkDatabaseProvider.refresh(true);
+
+        progress.report({ message: "UDF deleted successfully." });
+      },
+    );
+
+    showInfoNotificationWithButtons(
+      `UDF "${selectedUdf.name}" deleted successfully from Confluent Cloud.`,
+    );
+  } catch (err) {
+    let errorMessage = "Failed to delete UDF:";
+
+    if (isResponseError(err)) {
+      const resp = await err.response.clone().text();
+      errorMessage = `${errorMessage} ${resp}`;
+    } else if (err instanceof Error) {
+      // extract the error detail from the error message for better error notification
+      const flinkDetail = err.message.split("Error detail:")[1]?.trim();
+      if (flinkDetail) {
+        errorMessage = `${errorMessage} ${flinkDetail}`;
+      } else {
+        // fall back to regular error message
+        errorMessage = `${errorMessage} ${err.message}`;
+      }
+    }
+    logError(err, errorMessage);
+    showErrorNotificationWithButtons(errorMessage);
+  }
+}
+
+export function registerFlinkUDFCommands(): vscode.Disposable[] {
   return [
+    registerCommandWithLogging("confluent.deleteFlinkUDF", deleteFlinkUDFCommand),
     registerCommandWithLogging(
       "confluent.flinkdatabase.setUDFsViewMode",
       setFlinkUDFViewModeCommand,
@@ -44,7 +127,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   if (!selectedArtifact) {
     return;
   }
-  const snippetString = new SnippetString()
+  const snippetString = new vscode.SnippetString()
     .appendText(`-- Register UDF for artifact "${selectedArtifact.name}"\n`)
     .appendText("CREATE FUNCTION `")
     .appendPlaceholder("yourFunctionNameHere", 1)
@@ -53,7 +136,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
     .appendText(`' USING JAR 'confluent-artifact://${selectedArtifact.id}';\n`)
     .appendText("-- confirm with 'SHOW USER FUNCTIONS';\n");
 
-  const document = await workspace.openTextDocument({
+  const document = await vscode.workspace.openTextDocument({
     language: "flinksql",
     // content is initialized as an empty string, we insert the snippet next due to how the Snippets API works
     content: "",
@@ -80,7 +163,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   } catch (err) {
     logger.error("failed to set metadata for UDF registration doc", err);
   }
-  const editor = await window.showTextDocument(document, { preview: false });
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
   await editor.insertSnippet(snippetString);
 }
 export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {
