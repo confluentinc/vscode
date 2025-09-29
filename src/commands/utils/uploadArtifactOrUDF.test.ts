@@ -6,7 +6,13 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import { eventEmitterStubs } from "../../../tests/stubs/emitters";
+import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
+import {
+  createFlinkArtifact,
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+} from "../../../tests/unit/testResources";
 import {
   ArtifactV1FlinkArtifactMetadataFromJSON,
   FlinkArtifactsArtifactV1Api,
@@ -17,6 +23,7 @@ import {
 import { PresignedUrlsArtifactV1Api } from "../../clients/flinkArtifacts/apis/PresignedUrlsArtifactV1Api";
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrlRequest";
 import { ConnectionType } from "../../clients/sidecar";
+import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact } from "../../models/flinkArtifact";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
 import * as notifications from "../../notifications";
@@ -25,6 +32,7 @@ import * as fsWrappers from "../../utils/fsWrappers";
 import * as uploadArtifactModule from "./uploadArtifactOrUDF";
 import {
   buildCreateArtifactRequest,
+  executeCreateFunction,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   prepareUploadFileFromUri,
@@ -155,6 +163,7 @@ describe("commands/utils/uploadArtifact", () => {
       });
     });
   });
+
   describe("handleUploadToCloudProvider", () => {
     const mockPresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
       api_version: PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum.ArtifactV1,
@@ -345,6 +354,7 @@ describe("commands/utils/uploadArtifact", () => {
       });
     });
   });
+
   describe("promptForFunctionAndClassName", () => {
     const selectedArtifact = new FlinkArtifact({
       id: "artifact-id",
@@ -380,6 +390,7 @@ describe("commands/utils/uploadArtifact", () => {
       });
     });
   });
+
   describe("UDF input validation", () => {
     it("should reject malformed input for function name", async () => {
       const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
@@ -399,6 +410,43 @@ describe("commands/utils/uploadArtifact", () => {
         result?.message,
         "Function name or class name must start with a letter or underscore and contain only letters, numbers, or underscores. Dots are allowed in class names.",
       );
+    });
+  });
+
+  describe("executeCreateFunction()", () => {
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let showInfoStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+      // one environment with no pools by default
+      stubbedLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
+      stubbedLoader.executeFlinkStatement.resolves([
+        { created_at: JSON.stringify(new Date().toISOString()) },
+      ]);
+
+      showInfoStub = sandbox.stub(notifications, "showInfoNotificationWithButtons").resolves();
+    });
+
+    it("should show an info notification when UDF is created successfully", async () => {
+      const fakeArtifact: FlinkArtifact = createFlinkArtifact();
+      const functionName = "testFunction";
+      const className = "com.test.TestClass";
+      await executeCreateFunction(
+        fakeArtifact,
+        { functionName, className },
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      );
+
+      sinon.assert.calledOnce(stubbedLoader.executeFlinkStatement);
+      sinon.assert.calledWith(
+        stubbedLoader.executeFlinkStatement,
+        `CREATE FUNCTION \`${functionName}\` AS '${className}' USING JAR 'confluent-artifact://${fakeArtifact.id}';`,
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        { timeout: 60000 },
+      );
+      sinon.assert.calledOnce(showInfoStub);
+      sinon.assert.calledWith(showInfoStub, "testFunction function created successfully.");
     });
   });
 });
