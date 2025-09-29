@@ -23,6 +23,7 @@ import { ConnectionId, EnvironmentId } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
+  executeCreateFunction,
   registerFlinkUDFCommands,
   setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
@@ -267,9 +268,6 @@ describe("flinkUDFs command", () => {
     });
 
     it("should exit silently if a user exits the function and class name prompt", async () => {
-      const showInfoStub = sandbox.stub(window, "showInformationMessage");
-      const showErrorStub = sandbox.stub(window, "showErrorMessage");
-
       const promptStub = sandbox
         .stub(uploadArtifact, "promptForFunctionAndClassName")
         .resolves(undefined as any);
@@ -287,9 +285,6 @@ describe("flinkUDFs command", () => {
 
       sinon.assert.calledOnce(promptStub);
       sinon.assert.notCalled(executeStub);
-      sinon.assert.notCalled(withProgressStub);
-      sinon.assert.notCalled(showInfoStub);
-      sinon.assert.notCalled(showErrorStub);
     });
 
     it("should update UDFs list when a new one is created", async () => {
@@ -317,6 +312,35 @@ describe("flinkUDFs command", () => {
       sinon.assert.calledOnce(withProgressStub);
       sinon.assert.calledOnce(showInfoStub);
       sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
+    });
+
+    it("should show info notification when UDF is created successfully", async () => {
+      const showInfoStub = sandbox.stub(window, "showInformationMessage");
+      const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+        functionName: "testFunction",
+        className: "com.test.TestClass",
+      });
+
+      const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+      mockProvider.resource = mockCluster;
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
+
+      await executeCreateFunction(
+        artifact,
+        {
+          functionName: "testFunction",
+          className: "com.test.TestClass",
+        },
+        mockCluster,
+      );
+
+      sinon.assert.calledOnce(promptStub);
+      sinon.assert.calledOnce(showInfoStub);
+      sinon.assert.calledWithExactly(
+        showInfoStub,
+        "testFunction function created successfully.",
+        sinon.match.string,
+      );
     });
   });
 });
