@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { SnippetString, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode } from "../emitters";
@@ -38,7 +37,10 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
   const confirmButton = "Yes, delete";
   const confirmResult = await vscode.window.showWarningMessage(
     `Are you sure you want to delete the UDF "${selectedUdf.name}"?`,
-    { modal: true },
+    {
+      modal: true,
+      detail: `Deleting this UDF will run 'DROP FUNCTION' within the Flinkable CCloud Kafka Cluster "${selectedUdf.databaseId}". This action cannot be undone.`,
+    },
     confirmButton,
   );
 
@@ -63,7 +65,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
       },
       async (progress) => {
         progress.report({ message: "Executing DROP FUNCTION statement..." });
-        await ccloudResourceLoader.executeFlinkStatement<{ dropped_at?: string }>(
+        await ccloudResourceLoader.executeFlinkStatement(
           `DROP FUNCTION \`${selectedUdf.name}\`;`,
           database,
           {
@@ -125,7 +127,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   if (!selectedArtifact) {
     return;
   }
-  const snippetString = new SnippetString()
+  const snippetString = new vscode.SnippetString()
     .appendText(`-- Register UDF for artifact "${selectedArtifact.name}"\n`)
     .appendText("CREATE FUNCTION `")
     .appendPlaceholder("yourFunctionNameHere", 1)
@@ -134,7 +136,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
     .appendText(`' USING JAR 'confluent-artifact://${selectedArtifact.id}';\n`)
     .appendText("-- confirm with 'SHOW USER FUNCTIONS';\n");
 
-  const document = await workspace.openTextDocument({
+  const document = await vscode.workspace.openTextDocument({
     language: "flinksql",
     // content is initialized as an empty string, we insert the snippet next due to how the Snippets API works
     content: "",
@@ -161,7 +163,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   } catch (err) {
     logger.error("failed to set metadata for UDF registration doc", err);
   }
-  const editor = await window.showTextDocument(document, { preview: false });
+  const editor = await vscode.window.showTextDocument(document, { preview: false });
   await editor.insertSnippet(snippetString);
 }
 export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtifact) {

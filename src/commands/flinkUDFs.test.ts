@@ -215,7 +215,7 @@ describe("flinkUDFs command", () => {
           {
             report: progressReportStub,
           },
-          {} as any,
+          {} as vscode.CancellationToken,
         );
       });
 
