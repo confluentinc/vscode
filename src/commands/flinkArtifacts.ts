@@ -82,13 +82,24 @@ export async function uploadArtifactCommand(
       },
     );
   } catch (err) {
-    let errorMessage = "Failed to upload artifact: ";
+    let errorMessage = "Failed to upload artifact:";
     if (isResponseError(err)) {
-      const resp = await extractResponseBody(err);
-      try {
-        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
-      } catch {
-        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+      const statusCode = err.response.status;
+
+      switch (statusCode) {
+        // Temporary fix to clarify generic error message from invalid JAR files until validation of JAR files is implemented
+        case 500:
+          errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
+          break;
+        default: {
+          const resp = await extractResponseBody(err);
+          try {
+            errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+          } catch {
+            errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+          }
+          break;
+        }
       }
     } else if (err instanceof Error) {
       errorMessage = `${errorMessage} ${err.message}`;
