@@ -346,14 +346,10 @@ describe("flinkUDFs command", () => {
         .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
         .resolves([mockEnvironmentNoComputePools]);
 
-      const responseForNewError = createResponseError(
-        400,
-        "Bad Request",
-        "Plain text error message",
-      );
+      const mockResponseError = createResponseError(400, "Bad Request", "Plain text error message");
       const responseError: ResponseError = new ResponseError(
-        responseForNewError.response,
-        responseForNewError.message,
+        mockResponseError.response,
+        mockResponseError.message,
       );
       sandbox
         .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
