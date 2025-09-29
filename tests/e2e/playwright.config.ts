@@ -28,7 +28,7 @@ export default defineConfig({
     ? [
         ["list"],
         // Generate blob reports for each job so they can be merged into a single HTML report for
-        // each agent in the pipeline (see mk-files/semaphore.mk).
+        // each job in the pipeline (see mk-files/semaphore.mk).
         // (see https://playwright.dev/docs/test-reporters#blob-reporter)
         ["blob"],
         [
