@@ -6,6 +6,7 @@ import {
   FLINKSTATEMENT_URI_SCHEME,
   FlinkStatementDocumentProvider,
 } from "../documentProviders/flinkStatement";
+import { udfsChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
@@ -15,6 +16,7 @@ import {
   determineFlinkStatementName,
   submitFlinkStatement,
   waitForResultsFetchable,
+  waitForStatementCompletion,
 } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -85,6 +87,29 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   const doc = await vscode.workspace.openTextDocument(uri);
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
   await vscode.window.showTextDocument(doc, { preview: false });
+}
+/**
+ * Monitors a Flink statement and fires the UDF change emitter when a CREATE_FUNCTION statement completes.
+ *
+ * @param statement - The FlinkStatement to monitor for CREATE_FUNCTION completion
+ * @param database - The CCloudFlinkDbKafkaCluster where the UDF will be created and which should be notified of changes
+ * @returns Promise that resolves when monitoring is complete (immediately if not a CREATE_FUNCTION, or after completion if it is)
+ */
+export async function fireEmitterWhenFlinkStatementIsCreatingFunction(
+  statement: FlinkStatement,
+  database: CCloudFlinkDbKafkaCluster,
+): Promise<void> {
+  if (statement?.status.traits?.sql_kind !== "CREATE_FUNCTION") {
+    return;
+  }
+
+  const completedStatement = await waitForStatementCompletion(statement);
+
+  if (completedStatement.status.phase !== Phase.COMPLETED) {
+    return;
+  }
+
+  udfsChanged.fire(database);
 }
 
 /**
@@ -232,6 +257,10 @@ export async function submitFlinkStatementCommand(
     // (This is a whole empty + reload of view data, so have to wait until it's done.
     //  before we can focus our new statement.)
     await statementsView.refresh();
+    await fireEmitterWhenFlinkStatementIsCreatingFunction(
+      newStatement,
+      currentDatabaseKafkaCluster,
+    );
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
