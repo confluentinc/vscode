@@ -2,6 +2,10 @@ import * as assert from "assert";
 
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import {
+  makeUdfFunctionRow,
+  makeUdfParameterRow,
+} from "../../tests/unit/testResources/ccloudResourceLoader";
+import {
   RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
@@ -11,8 +15,8 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
   describe("transformUDFSystemCatalogRows()", () => {
     it("should balk if encounters repeated function rows describing same functionSpecificName", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeFunctionRow("A", { functionSpecificName: "A-1" }), // duplicate
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }), // duplicate
       ];
       assert.throws(
         () => transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows),
@@ -22,7 +26,7 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("should transform a simple function with no parameters", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 1);
@@ -34,9 +38,9 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("should transform a function with parameters", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeParameterRow("A", "param1", 1, { dataType: "INT", isOptional: false }),
-        makeParameterRow("A", "param2", 2, {
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfParameterRow("A", "param1", 1, { dataType: "INT", isOptional: false }),
+        makeUdfParameterRow("A", "param2", 2, {
           dataType: "STRING",
           isOptional: true,
           traits: ["VARIADIC"],
@@ -64,15 +68,15 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("should transform multiple functions with parameters", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeParameterRow("A", "param1", 1, { dataType: "INT", isOptional: false }),
-        makeParameterRow("A", "param2", 2, {
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfParameterRow("A", "param1", 1, { dataType: "INT", isOptional: false }),
+        makeUdfParameterRow("A", "param2", 2, {
           dataType: "STRING",
           isOptional: true,
           traits: ["VARIADIC"],
         }),
-        makeFunctionRow("B", { functionSpecificName: "B-1" }),
-        makeParameterRow("B", "param1", 1, { dataType: "BOOLEAN", isOptional: false }),
+        makeUdfFunctionRow("B", { functionSpecificName: "B-1" }),
+        makeUdfParameterRow("B", "param1", 1, { dataType: "BOOLEAN", isOptional: false }),
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 2);
@@ -108,9 +112,9 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("Should handle two functions with the same name but different functionSpecificName (function overloading)", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeFunctionRow("A", { functionSpecificName: "A-2" }),
-        makeParameterRow("A", "param1", 1, { functionSpecificName: "A-2", dataType: "INT" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-2" }),
+        makeUdfParameterRow("A", "param1", 1, { functionSpecificName: "A-2", dataType: "INT" }),
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 2);
@@ -126,8 +130,8 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("Should handle parameters with multiple traits", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeParameterRow("A", "param1", 1, {
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfParameterRow("A", "param1", 1, {
           dataType: "INT",
           isOptional: false,
           traits: ["VARIADIC", "OTHER"], // makeParameterRow will join these with ";"
@@ -147,8 +151,8 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("Should handle parameters with no traits", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeParameterRow("A", "param1", 1, {
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfParameterRow("A", "param1", 1, {
           dataType: "INT",
           isOptional: false,
           traits: [], // makeParameterRow will end up making this an empty string
@@ -168,12 +172,12 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("Should honor parameter isOptional being YES or NO", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeParameterRow("A", "param1", 1, {
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfParameterRow("A", "param1", 1, {
           dataType: "INT",
           isOptional: true,
         }),
-        makeParameterRow("A", "param2", 2, {
+        makeUdfParameterRow("A", "param2", 2, {
           dataType: "STRING",
           isOptional: false,
         }),
@@ -186,10 +190,10 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("Should honor parameter datatye", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A"),
-        makeParameterRow("A", "param1", 1, { dataType: "INT" }),
-        makeParameterRow("A", "param2", 2, { dataType: "STRING" }),
-        makeParameterRow("A", "param3", 3, { dataType: "BOOLEAN" }),
+        makeUdfFunctionRow("A"),
+        makeUdfParameterRow("A", "param1", 1, { dataType: "INT" }),
+        makeUdfParameterRow("A", "param2", 2, { dataType: "STRING" }),
+        makeUdfParameterRow("A", "param3", 3, { dataType: "BOOLEAN" }),
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 1);
@@ -201,11 +205,11 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
       const rows: RawUdfSystemCatalogRow[] = [
         // make function A row, then two params for it, then a param for function B but no function B row,
         // then finally a function C row. The B param should cause an error.
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeParameterRow("A", "param1", 1),
-        makeParameterRow("A", "param2", 2),
-        makeParameterRow("missing-B", "param1", 1), // no B function definitoin row, straight to param row
-        makeFunctionRow("C", { functionSpecificName: "C-1" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfParameterRow("A", "param1", 1),
+        makeUdfParameterRow("A", "param2", 2),
+        makeUdfParameterRow("missing-B", "param1", 1), // no B function definitoin row, straight to param row
+        makeUdfFunctionRow("C", { functionSpecificName: "C-1" }),
       ];
       assert.throws(
         () => transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows),
@@ -214,7 +218,7 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
     });
 
     it("Should raise exception if parameter row is encountered before any function row", () => {
-      const rows: RawUdfSystemCatalogRow[] = [makeParameterRow("A", "param1", 1)];
+      const rows: RawUdfSystemCatalogRow[] = [makeUdfParameterRow("A", "param1", 1)];
       assert.throws(
         () => transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows),
         /Unexpected parameter row.*A-1/,
@@ -223,9 +227,9 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("Should raise exception if parameter row duplicates parameterOrdinalPosition for the same function", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A"),
-        makeParameterRow("A", "param1", 1),
-        makeParameterRow("A", "param2", 1), // duplicate position
+        makeUdfFunctionRow("A"),
+        makeUdfParameterRow("A", "param1", 1),
+        makeUdfParameterRow("A", "param2", 1), // duplicate position
       ];
       assert.throws(
         () => transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows),
@@ -243,10 +247,10 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
   describe("sortUdfSystemCatalogRows()", () => {
     it("should sort by functionSpecificName", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeFunctionRow("A", { functionSpecificName: "A-2" }),
-        makeFunctionRow("B", { functionSpecificName: "B-1" }),
-        makeFunctionRow("A", { functionSpecificName: "A-1" }),
-        makeFunctionRow("C", { functionSpecificName: "C-1" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-2" }),
+        makeUdfFunctionRow("B", { functionSpecificName: "B-1" }),
+        makeUdfFunctionRow("A", { functionSpecificName: "A-1" }),
+        makeUdfFunctionRow("C", { functionSpecificName: "C-1" }),
       ];
       const sorted = sortUdfSystemCatalogRows(rows);
       const sortedNames = sorted.map((r) => r.functionSpecificName);
@@ -256,13 +260,13 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
 
     it("should sort parameters after function row, in ordinal position order", () => {
       const rows: RawUdfSystemCatalogRow[] = [
-        makeParameterRow("A", "param2", 2),
-        makeFunctionRow("A"),
-        makeParameterRow("A", "param1", 1),
-        makeParameterRow("B", "param1", 1),
-        makeFunctionRow("C"),
-        makeFunctionRow("B"),
-        makeParameterRow("A", "param3", 3),
+        makeUdfParameterRow("A", "param2", 2),
+        makeUdfFunctionRow("A"),
+        makeUdfParameterRow("A", "param1", 1),
+        makeUdfParameterRow("B", "param1", 1),
+        makeUdfFunctionRow("C"),
+        makeUdfFunctionRow("B"),
+        makeUdfParameterRow("A", "param3", 3),
       ];
       const sorted = sortUdfSystemCatalogRows(rows);
       const sortedNamesAndPositions = sorted.map((r) => ({
@@ -282,60 +286,3 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
     });
   });
 });
-
-/**
- * Make a function-describing row as if from UDF_SYSTEM_CATALOG_QUERY.
- */
-function makeFunctionRow(
-  name: string,
-  opts: { functionSpecificName?: string; returnType?: string } = {},
-): RawUdfSystemCatalogRow {
-  return {
-    functionRoutineName: name,
-    functionSpecificName: opts.functionSpecificName ?? `${name}-1`,
-    functionExternalName: `com.example.${name}`,
-    functionExternalLanguage: "JAVA",
-    functionExternalArtifacts: "my-artifact:1.0.0", // to be refined.
-    isDeterministic: "YES",
-    functionCreatedTs: new Date().toISOString(),
-    functionKind: "SCALAR",
-    fullDataType: opts.returnType ?? "STRING",
-
-    parameterOrdinalPosition: null,
-    parameterName: null,
-    isParameterOptional: null,
-    parameterTraits: null,
-  };
-}
-
-/**
- * Make a parameter-describing row as if from UDF_SYSTEM_CATALOG_QUERY.
- */
-function makeParameterRow(
-  functionName: string,
-  paramName: string,
-  position: number,
-  opts: {
-    functionSpecificName?: string;
-    dataType?: string;
-    isOptional?: boolean;
-    traits?: string[];
-  } = {},
-): RawUdfSystemCatalogRow {
-  return {
-    functionRoutineName: functionName,
-    functionSpecificName: opts.functionSpecificName ?? `${functionName}-1`,
-    functionExternalName: null,
-    functionExternalLanguage: null,
-    functionExternalArtifacts: null,
-    isDeterministic: null,
-    functionCreatedTs: null,
-    functionKind: null,
-    fullDataType: opts.dataType ?? "STRING",
-
-    parameterOrdinalPosition: position,
-    parameterName: paramName,
-    isParameterOptional: opts.isOptional ? "YES" : "NO",
-    parameterTraits: opts.traits ? opts.traits.join(";") : "",
-  };
-}

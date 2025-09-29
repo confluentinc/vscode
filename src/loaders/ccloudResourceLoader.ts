@@ -502,13 +502,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 }
 
 /**
- * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
- */
-export interface FunctionNameRow {
-  "Function Name": string;
-}
-
-/**
  * Load statements for a single provider/region and perhaps cluster-id
  * (Sub-unit of getFlinkStatements(), factored out for concurrency
  *  via executeInWorkerPool())
