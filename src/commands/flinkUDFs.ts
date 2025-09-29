@@ -129,9 +129,9 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
       async (progress) => {
         progress.report({ message: "Executing statement..." });
         await executeCreateFunction(selectedArtifact, userInput, database);
+        udfsChanged.fire(database);
       },
     );
-    udfsChanged.fire(database);
   } catch (err) {
     if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
       let errorMessage = "Failed to create UDF function: ";
