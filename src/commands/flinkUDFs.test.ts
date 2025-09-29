@@ -77,270 +77,262 @@ describe("flinkUDFs command", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     withProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
-      const mockProgress = {} as Progress<unknown>;
+      const mockProgress = {
+        report: sandbox.stub(), // Add the report method
+      } as Progress<unknown>;
       const mockToken = {} as CancellationToken;
       return Promise.resolve(callback(mockProgress, mockToken));
     });
+  });
 
-    afterEach(() => {
-      sandbox.restore();
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
+    const openTextDocStub = sandbox
+      .stub(workspace, "openTextDocument")
+      .resolves({} as TextDocument);
+    const insertSnippetStub = sandbox.stub().resolves();
+    const showTextDocStub = sandbox.stub(window, "showTextDocument").resolves({
+      insertSnippet: insertSnippetStub,
+    } as unknown as TextEditor);
+
+    await createUdfRegistrationDocumentCommand(artifact);
+
+    sinon.assert.calledOnce(openTextDocStub);
+    const callArgs = openTextDocStub.getCall(0).args[0];
+    assert.ok(callArgs, "openTextDocStub was not called with any arguments");
+    assert.strictEqual(callArgs.language, "flinksql");
+    sinon.assert.calledOnce(showTextDocStub);
+    sinon.assert.calledOnce(insertSnippetStub);
+    const snippetArg = insertSnippetStub.getCall(0).args[0];
+    assert.ok(
+      typeof snippetArg.value === "string" && snippetArg.value.includes("CREATE FUNCTION"),
+      "insertSnippet should be called with a snippet containing CREATE FUNCTION",
+    );
+  });
+
+  it("should return early if no artifact is provided in createUdfRegistrationDocumentCommand", async () => {
+    const openTextDocStub = sandbox.stub(workspace, "openTextDocument");
+    const showTextDocStub = sandbox.stub(window, "showTextDocument");
+
+    await createUdfRegistrationDocumentCommand(undefined as any);
+
+    sinon.assert.notCalled(openTextDocStub);
+    sinon.assert.notCalled(showTextDocStub);
+  });
+
+  it("should register startGuidedUdfCreationCommand and createUdfRegistrationDocumentCommand", () => {
+    const registerCommandWithLoggingStub = sandbox
+      .stub(commands, "registerCommandWithLogging")
+      .returns({} as Disposable);
+
+    registerFlinkUDFCommands();
+
+    sinon.assert.calledThrice(registerCommandWithLoggingStub);
+
+    sinon.assert.calledWithExactly(
+      registerCommandWithLoggingStub.getCall(0),
+      "confluent.flinkdatabase.setUDFsViewMode",
+      setFlinkUDFViewModeCommand,
+    );
+    sinon.assert.calledWithExactly(
+      registerCommandWithLoggingStub.getCall(1),
+      "confluent.artifacts.createUdfRegistrationDocument",
+      createUdfRegistrationDocumentCommand,
+    );
+    sinon.assert.calledWithExactly(
+      registerCommandWithLoggingStub.getCall(2),
+      "confluent.artifacts.startGuidedUdfCreation",
+      startGuidedUdfCreationCommand,
+    );
+  });
+
+  it("should return early if no artifact is provided in startGuidedUdfCreationCommand", async () => {
+    const showInfoStub = sandbox.stub(window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(window, "showErrorMessage");
+
+    const result = await startGuidedUdfCreationCommand(undefined as any);
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.notCalled(showInfoStub);
+    sinon.assert.notCalled(showErrorStub);
+  });
+  it("should throw an error if flinkDatabases is empty", async () => {
+    const showInfoStub = sandbox.stub(window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(window, "showErrorMessage");
+
+    await startGuidedUdfCreationCommand(artifact);
+
+    sinon.assert.notCalled(showInfoStub);
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWith(showErrorStub, "Failed to create UDF function:  No Flink database.");
+  });
+
+  it("should prompt for function name and classname and show info message on success", async () => {
+    const showInfoStub = sandbox.stub(window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(window, "showErrorMessage");
+
+    const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
     });
 
-    it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
-      const openTextDocStub = sandbox
-        .stub(workspace, "openTextDocument")
-        .resolves({} as TextDocument);
-      const insertSnippetStub = sandbox.stub().resolves();
-      const showTextDocStub = sandbox.stub(window, "showTextDocument").resolves({
-        insertSnippet: insertSnippetStub,
-      } as unknown as TextEditor);
+    const mockFlinkDatabaseViewProvider = {
+      resource: mockCluster,
+    };
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns(mockFlinkDatabaseViewProvider as any);
 
-      await createUdfRegistrationDocumentCommand(artifact);
+    const executeStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
 
-      sinon.assert.calledOnce(openTextDocStub);
-      const callArgs = openTextDocStub.getCall(0).args[0];
-      assert.ok(callArgs, "openTextDocStub was not called with any arguments");
-      assert.strictEqual(callArgs.language, "flinksql");
-      sinon.assert.calledOnce(showTextDocStub);
-      sinon.assert.calledOnce(insertSnippetStub);
-      const snippetArg = insertSnippetStub.getCall(0).args[0];
-      assert.ok(
-        typeof snippetArg.value === "string" && snippetArg.value.includes("CREATE FUNCTION"),
-        "insertSnippet should be called with a snippet containing CREATE FUNCTION",
-      );
+    await startGuidedUdfCreationCommand(artifact);
+
+    sinon.assert.calledOnce(promptStub);
+    sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledOnce(withProgressStub);
+    sinon.assert.calledOnce(showInfoStub);
+    sinon.assert.notCalled(showErrorStub);
+  });
+
+  it("should handle ResponseError with string response body in startGuidedUdfCreationCommand", async () => {
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+    sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
     });
 
-    it("should return early if no artifact is provided in createUdfRegistrationDocumentCommand", async () => {
-      const openTextDocStub = sandbox.stub(workspace, "openTextDocument");
-      const showTextDocStub = sandbox.stub(window, "showTextDocument");
-
-      await createUdfRegistrationDocumentCommand(undefined as any);
-
-      sinon.assert.notCalled(openTextDocStub);
-      sinon.assert.notCalled(showTextDocStub);
+    const mockEnvironmentNoComputePools: CCloudEnvironment = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      flinkComputePools: [],
     });
 
-    it("should register startGuidedUdfCreationCommand and createUdfRegistrationDocumentCommand", () => {
-      const registerCommandWithLoggingStub = sandbox
-        .stub(commands, "registerCommandWithLogging")
-        .returns({} as Disposable);
+    const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+    sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
+    mockProvider.resource = mockCluster;
 
-      registerFlinkUDFCommands();
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
+      .resolves([mockEnvironmentNoComputePools]);
 
-      sinon.assert.calledThrice(registerCommandWithLoggingStub);
+    const responseForNewError = createResponseError(400, "Bad Request", "Plain text error message");
+    const responseError: ResponseError = new ResponseError(
+      responseForNewError.response,
+      responseForNewError.message,
+    );
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .rejects(responseError);
 
-      sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(0),
-        "confluent.flinkdatabase.setUDFsViewMode",
-        setFlinkUDFViewModeCommand,
-      );
-      sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(1),
-        "confluent.artifacts.createUdfRegistrationDocument",
-        createUdfRegistrationDocumentCommand,
-      );
-      sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(2),
-        "confluent.artifacts.startGuidedUdfCreation",
-        startGuidedUdfCreationCommand,
-      );
+    await startGuidedUdfCreationCommand(artifact);
+
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWith(
+      showErrorStub,
+      "Failed to create UDF function:  Plain text error message",
+    );
+  });
+
+  it("should handle plain Error objects in startGuidedUdfCreationCommand", async () => {
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
     });
 
-    it("should return early if no artifact is provided in startGuidedUdfCreationCommand", async () => {
-      const showInfoStub = sandbox.stub(window, "showInformationMessage");
-      const showErrorStub = sandbox.stub(window, "showErrorMessage");
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns({ resource: mockCluster } as any);
 
-      const result = await startGuidedUdfCreationCommand(undefined as any);
+    sandbox
+      .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
+      .resolves([mockEnvironment as CCloudEnvironment]);
 
-      assert.strictEqual(result, undefined);
-      sinon.assert.notCalled(showInfoStub);
-      sinon.assert.notCalled(showErrorStub);
-    });
-    it("should throw an error if flinkDatabases is empty", async () => {
-      const showInfoStub = sandbox.stub(window, "showInformationMessage");
-      const showErrorStub = sandbox.stub(window, "showErrorMessage");
+    const error = new Error("Something went wrong with UDF creation");
 
-      await startGuidedUdfCreationCommand(artifact);
+    sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
 
-      sinon.assert.notCalled(showInfoStub);
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWith(showErrorStub, "Failed to create UDF function:  No Flink database.");
-    });
+    await startGuidedUdfCreationCommand(artifact);
 
-    it("should prompt for function name and classname and show info message on success", async () => {
-      const showInfoStub = sandbox.stub(window, "showInformationMessage");
-      const showErrorStub = sandbox.stub(window, "showErrorMessage");
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWithExactly(
+      showErrorStub,
+      "Failed to create UDF function:  Something went wrong with UDF creation",
+    );
+  });
 
-      const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-        functionName: "testFunction",
-        className: "com.test.TestClass",
-      });
+  it("should exit silently if a user exits the function and class name prompt", async () => {
+    const promptStub = sandbox
+      .stub(uploadArtifact, "promptForFunctionAndClassName")
+      .resolves(undefined as any);
 
-      const mockFlinkDatabaseViewProvider = {
-        resource: mockCluster,
-      };
-      sandbox
-        .stub(FlinkDatabaseViewProvider, "getInstance")
-        .returns(mockFlinkDatabaseViewProvider as any);
+    const mockFlinkDatabaseViewProvider = {
+      resource: mockCluster,
+    };
+    sandbox
+      .stub(FlinkDatabaseViewProvider, "getInstance")
+      .returns(mockFlinkDatabaseViewProvider as any);
 
-      const executeStub = sandbox
-        .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
-        .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
+    const executeStub = sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement");
 
-      await startGuidedUdfCreationCommand(artifact);
+    await startGuidedUdfCreationCommand(artifact);
 
-      sinon.assert.calledOnce(promptStub);
-      sinon.assert.calledOnce(executeStub);
-      sinon.assert.calledOnce(withProgressStub);
-      sinon.assert.calledOnce(showInfoStub);
-      sinon.assert.notCalled(showErrorStub);
+    sinon.assert.calledOnce(promptStub);
+    sinon.assert.notCalled(executeStub);
+  });
+
+  it("should update UDFs list when a new one is created", async () => {
+    const showInfoStub = sandbox.stub(window, "showInformationMessage");
+    const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
+      functionName: "testFunction",
+      className: "com.test.TestClass",
     });
 
-    it("should handle ResponseError with string response body in startGuidedUdfCreationCommand", async () => {
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-      sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-        functionName: "testFunction",
-        className: "com.test.TestClass",
-      });
+    const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+    mockProvider.resource = mockCluster;
+    sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
 
-      const mockEnvironmentNoComputePools: CCloudEnvironment = new CCloudEnvironment({
-        ...TEST_CCLOUD_ENVIRONMENT,
-        flinkComputePools: [],
-      });
+    const executeStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
 
-      const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
-      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
-      mockProvider.resource = mockCluster;
+    const stubbedEventEmitters = eventEmitterStubs(sandbox);
+    const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
 
-      sandbox
-        .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-        .resolves([mockEnvironmentNoComputePools]);
+    await startGuidedUdfCreationCommand(artifact);
 
-      const responseForNewError = createResponseError(
-        400,
-        "Bad Request",
-        "Plain text error message",
-      );
-      const responseError: ResponseError = new ResponseError(
-        responseForNewError.response,
-        responseForNewError.message,
-      );
-      sandbox
-        .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
-        .rejects(responseError);
+    sinon.assert.calledOnce(promptStub);
+    sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledOnce(withProgressStub);
+    sinon.assert.calledOnce(showInfoStub);
+    sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
+  });
 
-      await startGuidedUdfCreationCommand(artifact);
+  it("should show info notification when UDF is created successfully", async () => {
+    const executeStub = sandbox
+      .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
+      .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
+    const showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
 
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWith(
-        showErrorStub,
-        "Failed to create UDF function:  Plain text error message",
-      );
-    });
+    await executeCreateFunction(
+      artifact,
+      { functionName: "testFunction", className: "com.test.TestClass" },
+      mockCluster,
+    );
 
-    it("should handle plain Error objects in startGuidedUdfCreationCommand", async () => {
-      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
-
-      sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-        functionName: "testFunction",
-        className: "com.test.TestClass",
-      });
-
-      sandbox
-        .stub(FlinkDatabaseViewProvider, "getInstance")
-        .returns({ resource: mockCluster } as any);
-
-      sandbox
-        .stub(CCloudResourceLoader.getInstance(), "getEnvironments")
-        .resolves([mockEnvironment as CCloudEnvironment]);
-
-      const error = new Error("Something went wrong with UDF creation");
-
-      sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement").rejects(error);
-
-      await startGuidedUdfCreationCommand(artifact);
-
-      sinon.assert.calledOnce(showErrorStub);
-      sinon.assert.calledWithExactly(
-        showErrorStub,
-        "Failed to create UDF function:  Something went wrong with UDF creation",
-      );
-    });
-
-    it("should exit silently if a user exits the function and class name prompt", async () => {
-      const promptStub = sandbox
-        .stub(uploadArtifact, "promptForFunctionAndClassName")
-        .resolves(undefined as any);
-
-      const mockFlinkDatabaseViewProvider = {
-        resource: mockCluster,
-      };
-      sandbox
-        .stub(FlinkDatabaseViewProvider, "getInstance")
-        .returns(mockFlinkDatabaseViewProvider as any);
-
-      const executeStub = sandbox.stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement");
-
-      await startGuidedUdfCreationCommand(artifact);
-
-      sinon.assert.calledOnce(promptStub);
-      sinon.assert.notCalled(executeStub);
-    });
-
-    it("should update UDFs list when a new one is created", async () => {
-      const showInfoStub = sandbox.stub(window, "showInformationMessage");
-      const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-        functionName: "testFunction",
-        className: "com.test.TestClass",
-      });
-
-      const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
-      mockProvider.resource = mockCluster;
-      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
-
-      const executeStub = sandbox
-        .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
-        .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
-
-      const stubbedEventEmitters = eventEmitterStubs(sandbox);
-      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
-
-      await startGuidedUdfCreationCommand(artifact);
-
-      sinon.assert.calledOnce(promptStub);
-      sinon.assert.calledOnce(executeStub);
-      sinon.assert.calledOnce(withProgressStub);
-      sinon.assert.calledOnce(showInfoStub);
-      sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
-    });
-
-    it("should show info notification when UDF is created successfully", async () => {
-      const showInfoStub = sandbox.stub(window, "showInformationMessage");
-      const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
-        functionName: "testFunction",
-        className: "com.test.TestClass",
-      });
-
-      const mockProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
-      mockProvider.resource = mockCluster;
-      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockProvider);
-
-      await executeCreateFunction(
-        artifact,
-        {
-          functionName: "testFunction",
-          className: "com.test.TestClass",
-        },
-        mockCluster,
-      );
-
-      sinon.assert.calledOnce(promptStub);
-      sinon.assert.calledOnce(showInfoStub);
-      sinon.assert.calledWithExactly(
-        showInfoStub,
-        "testFunction function created successfully.",
-        sinon.match.string,
-      );
-    });
+    sinon.assert.calledOnce(executeStub);
+    sinon.assert.calledWith(
+      executeStub,
+      "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
+      mockCluster,
+      { timeout: 60000 },
+    );
+    sinon.assert.calledOnce(showInfoStub);
+    sinon.assert.calledWith(showInfoStub, "testFunction function created successfully.");
   });
 });
