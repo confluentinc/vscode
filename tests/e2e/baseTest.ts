@@ -329,7 +329,7 @@ async function globalAfterEach(
   });
 
   // store the (formatted) sidecar logs
-  const sidecarLogPath = path.join(testTempDir, "vscode-confluent.log");
+  const sidecarLogPath = path.join(testTempDir, "vscode-confluent-sidecar.log");
   await stubDialog(electronApp, "showSaveDialog", {
     filePath: sidecarLogPath,
   });
