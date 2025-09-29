@@ -123,9 +123,14 @@ export async function flinkDatabaseRegionsQuickPick(
   const loader = CCloudResourceLoader.getInstance();
   const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases();
 
+  // Apply filter to remove databases in GCP (not supported)
+  const filteredDbs = flinkDbClusters.filter((c) => {
+    return c.provider !== "GCP";
+  });
+
   // Group by provider then region, collecting the database (cluster) names.
   const clusterRegions = new Map<string, IProviderRegion & { names: string[] }>();
-  for (const c of flinkDbClusters) {
+  for (const c of filteredDbs) {
     const key = `${c.provider}|${c.region}`;
     let agg = clusterRegions.get(key);
     if (!agg) {
@@ -158,7 +163,7 @@ export async function flinkDatabaseRegionsQuickPick(
       });
     }
     quickPickItems.push({
-      label: `${entry.provider} / ${entry.region}`,
+      label: `${entry.provider} | ${entry.region}`,
       description: Array.from(entry.names)
         .sort((a, b) => a.localeCompare(b))
         .join(", "),
