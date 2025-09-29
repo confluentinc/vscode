@@ -27,8 +27,8 @@ export default defineConfig({
   reporter: process.env.CI
     ? [
         ["list"],
-        // Generate blob reports for each job so they can be merged into a single HTML report for
-        // each job in the pipeline (see mk-files/semaphore.mk).
+        // Generate blob reports for each test so they can be merged into a single per-job HTML
+        // report, including traces (see mk-files/semaphore.mk).
         // (see https://playwright.dev/docs/test-reporters#blob-reporter)
         ["blob"],
         [
