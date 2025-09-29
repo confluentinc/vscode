@@ -129,8 +129,8 @@ export class ConfluentCloudAuthProvider
 
     // NOTE: for any of the branches below, if there's an error scenario we need to gather more info
     // about for internal debugging/troubleshooting, we need to create a CCloudSignInError with
-    // `handleSignInError()`. This also captures the last few lines of sidecar logs to send to
-    // Sentry along with the error.
+    // `signInError()`. This also captures the last few lines of sidecar logs to send to Sentry
+    // along with the error.
     // If we need to escape this flow without creating an AuthenticationSession, we still need to
     // throw an error but don't necessarily need to gather sidecar logs, so we can throw a
     // CCloudSignInError directly if we don't want it to appear as an error notification.
