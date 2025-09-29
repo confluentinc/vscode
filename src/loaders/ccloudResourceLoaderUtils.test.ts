@@ -188,7 +188,7 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
       assert.deepStrictEqual(paramOptionality, [true, false]);
     });
 
-    it("Should honor parameter datatye", () => {
+    it("Should honor parameter datatype", () => {
       const rows: RawUdfSystemCatalogRow[] = [
         makeUdfFunctionRow("A"),
         makeUdfParameterRow("A", "param1", 1, { dataType: "INT" }),

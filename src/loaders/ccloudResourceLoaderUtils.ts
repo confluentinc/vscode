@@ -217,7 +217,7 @@ export function transformUdfSystemCatalogRows(
       }
 
       // Add parameter to currentParameters array. They're already in order due to the sorting above.
-      let param: FlinkUdfParameter = {
+      const param: FlinkUdfParameter = {
         name: row.parameterName,
         dataType: row.fullDataType,
         isOptional: row.isParameterOptional === "YES",
