@@ -88,15 +88,30 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
   await vscode.window.showTextDocument(doc, { preview: false });
 }
-
+/**
+ * Monitors a Flink statement and fires the UDF change emitter when a CREATE_FUNCTION statement completes.
+ *
+ * @param statement - The FlinkStatement to monitor for CREATE_FUNCTION completion
+ * @param database - The CCloudFlinkDbKafkaCluster where the UDF will be created and which should be notified of changes
+ * @returns Promise that resolves when monitoring is complete (immediately if not a CREATE_FUNCTION, or after completion if it is)
+ */
 export async function fireEmitterWhenFlinkStatementIsCreatingFunction(
   statement: FlinkStatement,
   database: CCloudFlinkDbKafkaCluster,
 ): Promise<void> {
-  if (statement?.status.traits?.sql_kind === "CREATE_FUNCTION") {
-    udfsChanged.fire(database);
+  if (statement?.status.traits?.sql_kind !== "CREATE_FUNCTION") {
+    return;
   }
+
+  const completedStatement = await waitForStatementCompletion(statement);
+
+  if (completedStatement.status.phase !== Phase.COMPLETED) {
+    return;
+  }
+
+  udfsChanged.fire(database);
 }
+
 /**
  * Submit a Flink statement to a Flink cluster.
  *
@@ -242,7 +257,6 @@ export async function submitFlinkStatementCommand(
     // (This is a whole empty + reload of view data, so have to wait until it's done.
     //  before we can focus our new statement.)
     await statementsView.refresh();
-    await waitForStatementCompletion(newStatement);
     await fireEmitterWhenFlinkStatementIsCreatingFunction(
       newStatement,
       currentDatabaseKafkaCluster,

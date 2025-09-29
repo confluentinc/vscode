@@ -3,18 +3,24 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 
 import { TextDocument } from "vscode-json-languageservice";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import * as flinkCodeLens from "../codelens/flinkSqlProvider";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { FlinkStatement } from "../models/flinkStatement";
+import { FlinkStatement, Phase } from "../models/flinkStatement";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { viewStatementSqlCommand } from "./flinkStatements";
+import {
+  fireEmitterWhenFlinkStatementIsCreatingFunction,
+  viewStatementSqlCommand,
+} from "./flinkStatements";
 
 describe("commands/flinkStatements.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -124,6 +130,82 @@ describe("commands/flinkStatements.ts", () => {
         [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
         [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
       });
+    });
+  });
+
+  describe("fireEmitterWhenFlinkStatementIsCreatingFunction", () => {
+    it("should fire the emitter", async () => {
+      const statement = createFlinkStatement({
+        sqlStatement:
+          "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
+      });
+      statement.status = {
+        ...statement.status,
+        phase: Phase.COMPLETED,
+        traits: {
+          sql_kind: "CREATE_FUNCTION",
+        },
+      };
+      const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
+      const stubbedEventEmitters = eventEmitterStubs(sandbox);
+      const waitForStatementCompletionStub = sandbox.stub(
+        statementUtils,
+        "waitForStatementCompletion",
+      );
+      waitForStatementCompletionStub.resolves(statement); // This should resolve with a COMPLETED statement
+      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
+      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
+
+      sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
+    });
+
+    it("should not fire the emitter on other types of statements", async () => {
+      const statement = createFlinkStatement({
+        sqlStatement:
+          "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
+      });
+      statement.status = {
+        ...statement.status,
+        phase: Phase.COMPLETED,
+        traits: {
+          sql_kind: "NOT A CREATE FUNCTION",
+        },
+      };
+      const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
+      const stubbedEventEmitters = eventEmitterStubs(sandbox);
+      const waitForStatementCompletionStub = sandbox.stub(
+        statementUtils,
+        "waitForStatementCompletion",
+      );
+      waitForStatementCompletionStub.resolves(statement);
+      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
+      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
+
+      sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
+    });
+
+    it("should not fire the emitter on a statement with a non-COMPLETED phase ", async () => {
+      const statement = createFlinkStatement({
+        sqlStatement: "SELECT * FROM my_test_flink_statement_table",
+      });
+      statement.status = {
+        ...statement.status,
+        phase: Phase.RUNNING,
+        traits: {
+          sql_kind: "CREATE_FUNCTION",
+        },
+      };
+      const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
+      const stubbedEventEmitters = eventEmitterStubs(sandbox);
+      const waitForStatementCompletionStub = sandbox.stub(
+        statementUtils,
+        "waitForStatementCompletion",
+      );
+      waitForStatementCompletionStub.resolves(statement);
+      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
+      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
+
+      sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
   });
 });
