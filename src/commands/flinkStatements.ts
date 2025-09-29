@@ -16,6 +16,7 @@ import {
   determineFlinkStatementName,
   submitFlinkStatement,
   waitForResultsFetchable,
+  waitForStatementCompletion,
 } from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
@@ -88,13 +89,23 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   await vscode.window.showTextDocument(doc, { preview: false });
 }
 
-export async function checkIfFlinkStatementIsCreatingFunction(
-  newStatement: FlinkStatement,
+export async function fireEmitterWhenFlinkStatementIsCreatingFunction(
+  statement: FlinkStatement,
   database: CCloudFlinkDbKafkaCluster,
 ): Promise<void> {
-  if (newStatement?.status.traits?.sql_kind === "CREATE_FUNCTION" && Phase.COMPLETED) {
-    udfsChanged.fire(database); // notify that UDFs have changed,
+  if (statement?.status.traits?.sql_kind === "CREATE_FUNCTION") {
+    udfsChanged.fire(database);
   }
+}
+
+/**
+ * Submit a Flink statement to a Flink cluster.
+ *
+ * The flow of the command is as follows:
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -242,6 +253,11 @@ export async function submitFlinkStatementCommand(
     // (This is a whole empty + reload of view data, so have to wait until it's done.
     //  before we can focus our new statement.)
     await statementsView.refresh();
+    await waitForStatementCompletion(newStatement);
+    await fireEmitterWhenFlinkStatementIsCreatingFunction(
+      newStatement,
+      currentDatabaseKafkaCluster,
+    );
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
