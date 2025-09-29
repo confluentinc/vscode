@@ -1,14 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import {
-  CancellationToken,
-  Disposable,
-  Progress,
-  TextDocument,
-  TextEditor,
-  window,
-  workspace,
-} from "vscode";
+import * as vscode from "vscode";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources";
@@ -76,11 +68,11 @@ describe("flinkUDFs command", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    withProgressStub = sandbox.stub(window, "withProgress").callsFake((_, callback) => {
+    withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
       const mockProgress = {
         report: sandbox.stub(),
-      } as Progress<unknown>;
-      const mockToken = {} as CancellationToken;
+      } as vscode.Progress<unknown>;
+      const mockToken = {} as vscode.CancellationToken;
       return Promise.resolve(callback(mockProgress, mockToken));
     });
   });
@@ -91,12 +83,12 @@ describe("flinkUDFs command", () => {
 
   it("should open a new Flink SQL document with placeholder query for valid artifact", async () => {
     const openTextDocStub = sandbox
-      .stub(workspace, "openTextDocument")
-      .resolves({} as TextDocument);
+      .stub(vscode.workspace, "openTextDocument")
+      .resolves({} as vscode.TextDocument);
     const insertSnippetStub = sandbox.stub().resolves();
-    const showTextDocStub = sandbox.stub(window, "showTextDocument").resolves({
+    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument").resolves({
       insertSnippet: insertSnippetStub,
-    } as unknown as TextEditor);
+    } as unknown as vscode.TextEditor);
 
     await createUdfRegistrationDocumentCommand(artifact);
 
@@ -114,8 +106,8 @@ describe("flinkUDFs command", () => {
   });
 
   it("should return early if no artifact is provided in createUdfRegistrationDocumentCommand", async () => {
-    const openTextDocStub = sandbox.stub(workspace, "openTextDocument");
-    const showTextDocStub = sandbox.stub(window, "showTextDocument");
+    const openTextDocStub = sandbox.stub(vscode.workspace, "openTextDocument");
+    const showTextDocStub = sandbox.stub(vscode.window, "showTextDocument");
 
     await createUdfRegistrationDocumentCommand(undefined as any);
 
@@ -126,7 +118,7 @@ describe("flinkUDFs command", () => {
   it("should register startGuidedUdfCreationCommand and createUdfRegistrationDocumentCommand", () => {
     const registerCommandWithLoggingStub = sandbox
       .stub(commands, "registerCommandWithLogging")
-      .returns({} as Disposable);
+      .returns({} as vscode.Disposable);
 
     registerFlinkUDFCommands();
 
@@ -150,8 +142,8 @@ describe("flinkUDFs command", () => {
   });
 
   it("should return early if no artifact is provided in startGuidedUdfCreationCommand", async () => {
-    const showInfoStub = sandbox.stub(window, "showInformationMessage");
-    const showErrorStub = sandbox.stub(window, "showErrorMessage");
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
     const result = await startGuidedUdfCreationCommand(undefined as any);
 
@@ -160,8 +152,8 @@ describe("flinkUDFs command", () => {
     sinon.assert.notCalled(showErrorStub);
   });
   it("should throw an error if flinkDatabases is empty", async () => {
-    const showInfoStub = sandbox.stub(window, "showInformationMessage");
-    const showErrorStub = sandbox.stub(window, "showErrorMessage");
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
     await startGuidedUdfCreationCommand(artifact);
 
@@ -171,8 +163,8 @@ describe("flinkUDFs command", () => {
   });
 
   it("should prompt for function name and classname and show info message on success", async () => {
-    const showInfoStub = sandbox.stub(window, "showInformationMessage");
-    const showErrorStub = sandbox.stub(window, "showErrorMessage");
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+    const showErrorStub = sandbox.stub(vscode.window, "showErrorMessage");
 
     const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
       functionName: "testFunction",
@@ -287,7 +279,7 @@ describe("flinkUDFs command", () => {
   });
 
   it("should update UDFs list when a new one is created", async () => {
-    const showInfoStub = sandbox.stub(window, "showInformationMessage");
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
     const promptStub = sandbox.stub(uploadArtifact, "promptForFunctionAndClassName").resolves({
       functionName: "testFunction",
       className: "com.test.TestClass",
@@ -317,7 +309,7 @@ describe("flinkUDFs command", () => {
     const executeStub = sandbox
       .stub(CCloudResourceLoader.getInstance(), "executeFlinkStatement")
       .resolves([{ created_at: JSON.stringify(new Date().toISOString()) }]);
-    const showInfoStub = sandbox.stub(window, "showInformationMessage").resolves();
+    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
     await executeCreateFunction(
       artifact,
