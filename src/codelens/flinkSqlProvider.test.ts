@@ -521,7 +521,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
       const databaseName = "cluster_0";
 
       // two Kafka clusters/databases, both of which share a common name but are in different
-      // catalogs/environments and have different provider/region values
+      // catalogs/environments and have different IDs and provider/region values
       const correctDatabase: CCloudKafkaCluster = CCloudKafkaCluster.create({
         ...TEST_CCLOUD_KAFKA_CLUSTER,
         name: databaseName,
