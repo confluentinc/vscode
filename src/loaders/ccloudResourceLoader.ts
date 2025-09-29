@@ -348,7 +348,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       );
 
       // Convert the raw results into FlinkUdf objects.
-      udfs = transformUdfSystemCatalogRows(rawResults, cluster);
+      udfs = transformUdfSystemCatalogRows(cluster, rawResults);
 
       // Cache them in the resource manager for future reference.
       await rm.setFlinkUDFs(cluster, udfs);

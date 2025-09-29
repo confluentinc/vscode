@@ -121,34 +121,48 @@ export type RawUdfSystemCatalogParameterRow = {
   parameterTraits: string;
 };
 
+/**
+ * Parse raw UDF system catalog rows into FlinkUdf objects, one per function, with parameters populated.
+ * The input rows should be the result of UDF_SYSTEM_CATALOG_QUERY.
+ *
+ * @param cluster What cluster these UDFs belong to
+ * @param rawResults The raw rows from the UDF system catalog query, will be either function-describing rows (RawUdfSystemCatalogFunctionRow) or parameter-describing (RawUdfSystemCatalogParameterRow) rows.
+ * @returns
+ */
 export function transformUdfSystemCatalogRows(
-  rawResults: RawUdfSystemCatalogRow[],
   cluster: CCloudFlinkDbKafkaCluster,
+  rawResults: RawUdfSystemCatalogRow[],
 ): FlinkUdf[] {
   logger.debug(
     `Transforming ${rawResults.length} raw UDF system catalog rows for cluster ${cluster.name} (${cluster.id})`,
   );
 
-  let udfs: FlinkUdf[] = [];
+  /*
+   * This is done in the general style of a SAX parser, in that we process each row in order,
+   * accumulating parameter details as we go, and when we hit a function-describing row,
+   * we know to push the current parameters into a new FlinkUdf object.
+   *
+   * We sort the rows first by functionSpecificName, then by parameterOrdinalPosition (with nulls first so the function-describing
+   * row comes first). This ensures that all rows for a given function are together, with the function row first,
+   * followed by its parameters in order.
+   */
 
-  // First sort the rows by functionSpecificName, then by parameterOrdinalPosition (with nulls first so the function-describing
-  // row comes first).
   const sortedRows = sortUdfSystemCatalogRows(rawResults);
 
-  // Will convert the raw rows into FlinkUdf objects, one per function group, by
+  let udfs: FlinkUdf[] = [];
+
+  // Will convert the raw rows into FlinkUdf objects, one per specific function overload, by
   // accumulating parameter details as we go, then knowing to push the current
   // parameter array into a new FlinkUdf object when we hit the null parameter position
   // row (i.e. the function row).
-  let currentFunctionSpecificName: string | null = null;
   let currentParameters: FlinkUdfParameter[] = [];
   let currentUDF: FlinkUdf | null = null;
   const seenfunctionSpecificNames = new Set<string>();
+  const currentParameterPositions = new Set<number>();
 
   for (const row of sortedRows) {
-    if (row.functionSpecificName !== currentFunctionSpecificName) {
-      // New function group, so reset current parameters
-      currentFunctionSpecificName = row.functionSpecificName;
-      currentParameters = [];
+    if (row.parameterOrdinalPosition === null) {
+      // Is a RawUdfSystemCatalogFunctionRow instance describing a new function overload.
 
       // Create new UDF, append it to the list.
 
@@ -160,16 +174,11 @@ export function transformUdfSystemCatalogRows(
           `Duplicate functionSpecificName ${row.functionSpecificName} in UDF system catalog results`,
         );
       }
-
-      // The first time we encounter this function should be via a parameterOrdinalPosition === null row (i.e. the function row),
-      // and should correspond to sub-type RawUdfSystemCatalogFunctionRow.
-      if (row.parameterOrdinalPosition !== null) {
-        // This should never happen due to the sorting above, but just in case...
-        throw new Error(
-          `Expected function row with null parameterOrdinalPosition for functionSpecificName ${row.functionSpecificName}, but got parameterOrdinalPosition ${row.parameterOrdinalPosition}`,
-        );
-      }
       seenfunctionSpecificNames.add(row.functionSpecificName);
+
+      // Reset current parameter tracking state.
+      currentParameters = [];
+      currentParameterPositions.clear();
 
       currentUDF = new FlinkUdf({
         environmentId: cluster.environmentId,
@@ -193,11 +202,17 @@ export function transformUdfSystemCatalogRows(
 
       udfs.push(currentUDF);
     } else {
-      // Must be a parameter row for the current function
-      if (row.parameterOrdinalPosition === null) {
-        // This should never happen due to the sorting strategy, but just in case...
+      // Parameter row for the current function, so add to currentParameters.
+
+      if (currentUDF === null || currentUDF.id !== row.functionSpecificName) {
         throw new Error(
-          `Expected parameter row with non-null parameterOrdinalPosition for functionSpecificName ${row.functionSpecificName}, but got null`,
+          `Unexpected parameter row for unknown functionSpecificName ${row.functionSpecificName} when current UDF is ${currentUDF?.id}`,
+        );
+      }
+
+      if (currentParameterPositions.has(row.parameterOrdinalPosition)) {
+        throw new Error(
+          `Duplicate parameter position ${row.parameterOrdinalPosition} for functionSpecificName ${row.functionSpecificName} in UDF system catalog results`,
         );
       }
 
@@ -214,6 +229,7 @@ export function transformUdfSystemCatalogRows(
           : [],
       };
       currentParameters.push(param);
+      currentParameterPositions.add(row.parameterOrdinalPosition);
     }
   }
 
@@ -227,7 +243,7 @@ export function transformUdfSystemCatalogRows(
  * with function rows (parameterOrdinalPosition === null) first in each group.
  */
 export function sortUdfSystemCatalogRows(rows: RawUdfSystemCatalogRow[]): RawUdfSystemCatalogRow[] {
-  return [...rows].sort((a, b) => {
+  return rows.sort((a, b) => {
     if (a.functionSpecificName < b.functionSpecificName) return -1;
     if (a.functionSpecificName > b.functionSpecificName) return 1;
     // Same function name, so sort by parameter position (nulls first so the main function-describing
