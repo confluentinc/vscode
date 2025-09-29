@@ -13,7 +13,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { handleNewOrUpdatedExtensionInstallation } from "./activation/compareVersions";
-import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
+import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
@@ -88,7 +88,7 @@ import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
-import { getUriHandler } from "./uriHandler";
+import { UriEventHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
@@ -286,7 +286,9 @@ async function _activateExtension(
     context.subscriptions.push(flinkLanguageClientManager);
   }
 
-  const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(getUriHandler());
+  const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(
+    UriEventHandler.getInstance(),
+  );
 
   // If the user is already authenticated to ccloud (this being not the first
   // workspace activated), this will eventually cause ccloudConnected to be fired.
@@ -532,7 +534,7 @@ async function setupStorage(): Promise<void> {
  * @returns A {@link vscode.Disposable} for the auth provider
  */
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {
-  const provider: ConfluentCloudAuthProvider = getAuthProvider();
+  const provider = ConfluentCloudAuthProvider.getInstance();
   const providerDisposable = vscode.authentication.registerAuthenticationProvider(
     AUTH_PROVIDER_ID,
     AUTH_PROVIDER_LABEL,
