@@ -1,6 +1,7 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedLocalResourceLoader } from "../../tests/stubs/resourceLoaders";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -27,7 +28,7 @@ import * as errors from "../errors";
 import { ConnectionId } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import * as notifications from "../notifications";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import { clearWorkspaceState } from "../storage/utils";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
@@ -584,17 +585,10 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
 
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
+    stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
 
-    const mockHandle = {
-      getSubjectsV1Api: () => {
-        return stubbedSubjectsV1Api;
-      },
-    };
-
-    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
-
-    getSidecarStub.resolves(mockHandle);
     clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
   });
 
@@ -695,16 +689,9 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
     sandbox = sinon.createSandbox();
     loaderInstance = LocalResourceLoader.getInstance();
 
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
-
-    const mockHandle = {
-      getSubjectsV1Api: () => {
-        return stubbedSubjectsV1Api;
-      },
-    };
-
-    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
-    getSidecarStub.resolves(mockHandle);
+    stubbedSidecar.getSubjectsV1Api.returns(stubbedSubjectsV1Api);
 
     sandbox
       .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")

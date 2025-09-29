@@ -1,9 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
 import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData, TopicV3Api } from "../clients/kafkaRest";
-import * as sidecar from "../sidecar";
+import { SidecarHandle } from "../sidecar";
 import { KAFKA_TOPIC_OPERATIONS } from "./constants";
 import { fetchTopicAuthorizedOperations } from "./topics";
 
@@ -14,12 +15,9 @@ describe("authz.topics", function () {
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
+    const stubbedSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
     mockClient = sandbox.createStubInstance(TopicV3Api);
-    mockSidecarHandle.getTopicV3Api.returns(mockClient);
-    // stub the getSidecar function to return the mock sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+    stubbedSidecar.getTopicV3Api.returns(mockClient);
   });
 
   afterEach(function () {

@@ -9,6 +9,7 @@ import {
 import { CCloudResourceLoader } from "../src/loaders/ccloudResourceLoader";
 import { FlinkStatement } from "../src/models/flinkStatement";
 import * as sidecar from "../src/sidecar";
+import { SidecarHandle } from "../src/sidecar";
 import { WebviewStorage } from "../src/webview/comms/comms";
 import {
   FlinkStatementResultsViewModel,
@@ -16,6 +17,7 @@ import {
 } from "../src/webview/flink-statement-results";
 import { eventually } from "./eventually";
 import { loadFixtureFromFile } from "./fixtures/utils";
+import { getSidecarStub } from "./stubs/sidecar";
 
 class FakeWebviewStorage<T> implements WebviewStorage<T> {
   private storage: T | undefined;
@@ -68,8 +70,7 @@ export async function createTestResultsManagerContext(
   vm: FlinkStatementResultsViewModel;
 }> {
   // Create sidecar and API mocks
-  const mockSidecar = sandbox.createStubInstance(sidecar.SidecarHandle);
-  sandbox.stub(sidecar, "getSidecar").resolves(mockSidecar);
+  const mockSidecar: sinon.SinonStubbedInstance<SidecarHandle> = getSidecarStub(sandbox);
 
   const flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
   mockSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
