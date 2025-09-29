@@ -127,7 +127,7 @@ export type RawUdfSystemCatalogParameterRow = {
  *
  * @param cluster What cluster these UDFs belong to
  * @param rawResults The raw rows from the UDF system catalog query, will be either function-describing rows (RawUdfSystemCatalogFunctionRow) or parameter-describing (RawUdfSystemCatalogParameterRow) rows.
- * @returns
+ * @returns Array of FlinkUdf objects sorted by their id (functionSpecificName).
  */
 export function transformUdfSystemCatalogRows(
   cluster: CCloudFlinkDbKafkaCluster,
