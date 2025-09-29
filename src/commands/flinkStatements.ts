@@ -97,17 +97,6 @@ export async function fireEmitterWhenFlinkStatementIsCreatingFunction(
     udfsChanged.fire(database);
   }
 }
-
-/**
- * Submit a Flink statement to a Flink cluster.
- *
- * The flow of the command is as follows:
-  ) {
-    return true;
-  }
-  return false;
-}
-
 /**
  * Submit a Flink statement to a Flink cluster.
  *
