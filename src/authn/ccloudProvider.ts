@@ -20,7 +20,7 @@ import {
   getCCloudConnection,
 } from "../sidecar/connections/ccloud";
 import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
-import { getLastSidecarLogLines } from "../sidecar/logging";
+import { gatherSidecarOutputs } from "../sidecar/logging";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
@@ -663,8 +663,8 @@ export class ConfluentCloudAuthProvider
    */
   async signInError(message: string): Promise<CCloudSignInError> {
     const error = new CCloudSignInError(message);
-    const sidecarLogs: string[] = await getLastSidecarLogLines();
-    await logError(error, message, { extra: { sidecarLogs } });
+    const { logLines } = await gatherSidecarOutputs();
+    await logError(error, message, { extra: { sidecarLogs: logLines } });
     return error;
   }
 }

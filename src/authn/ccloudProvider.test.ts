@@ -529,15 +529,17 @@ describe("authn/ccloudProvider.ts", () => {
     });
 
     describe("signInError()", () => {
-      let getLastSidecarLogLinesStub: sinon.SinonStub;
+      let gatherSidecarOutputsStub: sinon.SinonStub;
       let logErrorStub: sinon.SinonStub;
 
       const fakeErrorMsg = "uh oh, something went wrong";
 
       beforeEach(() => {
-        getLastSidecarLogLinesStub = sandbox
-          .stub(sidecarLogging, "getLastSidecarLogLines")
-          .resolves([]);
+        gatherSidecarOutputsStub = sandbox.stub(sidecarLogging, "gatherSidecarOutputs").resolves({
+          logLines: [],
+          parsedLogLines: [],
+          stderrLines: [],
+        });
         logErrorStub = sandbox.stub(errors, "logError").resolves();
       });
 
@@ -550,11 +552,15 @@ describe("authn/ccloudProvider.ts", () => {
 
       it("should call logError() with the provided message and recent sidecar logs", async () => {
         const sidecarLogs = ["log line 1", "log line 2"];
-        getLastSidecarLogLinesStub.resolves(sidecarLogs);
+        gatherSidecarOutputsStub.resolves({
+          logLines: sidecarLogs,
+          parsedLogLines: [],
+          stderrLines: [],
+        });
 
         await authProvider.signInError(fakeErrorMsg);
 
-        sinon.assert.calledOnce(getLastSidecarLogLinesStub);
+        sinon.assert.calledOnce(gatherSidecarOutputsStub);
         sinon.assert.calledOnce(logErrorStub);
         sinon.assert.calledOnceWithExactly(
           logErrorStub,

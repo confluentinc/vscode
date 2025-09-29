@@ -56,6 +56,16 @@ const fakeException = {
 } satisfies SidecarLogExceptionFormat;
 
 describe("sidecar/logging.ts", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   describe("divineSidecarStartupFailureReason()", () => {
     it("should return PORT_IN_USE when the log contains 'seems to be in use by another process'", () => {
       const outputs: SidecarOutputs = {
@@ -97,7 +107,10 @@ describe("sidecar/logging.ts", () => {
      *
      * @return pair of the resulting sidecar log path and stderr path.
      **/
-    function useGoldenFiles(fixtureName: string): string[] {
+    function useGoldenFiles(fixtureName: string): {
+      sidecarLogfilePath: string;
+      stderrPath: string;
+    } {
       const parentPath = path.join(
         __dirname,
         "..",
@@ -109,16 +122,16 @@ describe("sidecar/logging.ts", () => {
         fixtureName,
       );
 
-      const sidecarLogPath = path.join(parentPath, "vscode-confluent-sidecar.log");
+      const sidecarLogfilePath = path.join(parentPath, "vscode-confluent-sidecar.log");
       const stderrPath = path.join(parentPath, "vscode-confluent-sidecar.log.stderr");
 
-      return [sidecarLogPath, stderrPath];
+      return { sidecarLogfilePath, stderrPath };
     }
 
     it("should read happy logs and empty stderr", async () => {
       // Has 11 parseable log lines, 1 degenerate stderr line
-      const [sidecarLogPath, stderrPath] = useGoldenFiles("clean");
-      const result = await gatherSidecarOutputs(sidecarLogPath, stderrPath);
+      const { sidecarLogfilePath } = useGoldenFiles("clean");
+      const result = await gatherSidecarOutputs({ sidecarLogfilePath });
       assert.strictEqual(result.logLines.length, 11);
       assert.strictEqual(result.parsedLogLines.length, 11);
 
@@ -133,8 +146,8 @@ describe("sidecar/logging.ts", () => {
 
     it("Will skip broken json log lines", async () => {
       // Has 11 log lines, first 2 of which are broken JSON.
-      const [sidecarLogPath, stderrPath] = useGoldenFiles("broken-json");
-      const result = await gatherSidecarOutputs(sidecarLogPath, stderrPath);
+      const { sidecarLogfilePath } = useGoldenFiles("broken-json");
+      const result = await gatherSidecarOutputs({ sidecarLogfilePath });
       assert.strictEqual(result.logLines.length, 11);
 
       // First two lines were skipped / broken json format
@@ -149,16 +162,16 @@ describe("sidecar/logging.ts", () => {
 
     it("Will skip unexpected format json log lines", async () => {
       // has 1 line, missing timestamp. Will not be parsed.
-      const [sidecarLogPath, stderrPath] = useGoldenFiles("unexpected-json-structure");
-      const result = await gatherSidecarOutputs(sidecarLogPath, stderrPath);
+      const { sidecarLogfilePath } = useGoldenFiles("unexpected-json-structure");
+      const result = await gatherSidecarOutputs({ sidecarLogfilePath });
       assert.strictEqual(result.logLines.length, 1);
       assert.strictEqual(result.parsedLogLines.length, 0);
     });
 
     it("Reads nonempty stderr + empty log", async () => {
       // Has 0 log lines, 1 degenerate stderr line
-      const [sidecarLogPath, stderrPath] = useGoldenFiles("sidecar-glibc-death");
-      const result = await gatherSidecarOutputs(sidecarLogPath, stderrPath);
+      const { sidecarLogfilePath } = useGoldenFiles("sidecar-glibc-death");
+      const result = await gatherSidecarOutputs({ sidecarLogfilePath });
       assert.strictEqual(result.logLines.length, 0);
       assert.strictEqual(result.parsedLogLines.length, 0);
 
@@ -168,8 +181,8 @@ describe("sidecar/logging.ts", () => {
 
     it("Handles nonexistent log and stderr files", async () => {
       // empty directory!
-      const [sidecarLogPath, stderrPath] = useGoldenFiles("nonexistent");
-      const result = await gatherSidecarOutputs(sidecarLogPath, stderrPath);
+      const { sidecarLogfilePath } = useGoldenFiles("nonexistent");
+      const result = await gatherSidecarOutputs({ sidecarLogfilePath });
       assert.strictEqual(result.logLines.length, 0);
       assert.strictEqual(result.parsedLogLines.length, 0);
 
@@ -177,9 +190,7 @@ describe("sidecar/logging.ts", () => {
     });
   });
 
-  describe("appendSidecarLogToOutputChannel() tests", () => {
-    let sandbox: sinon.SinonSandbox;
-
+  describe("appendSidecarLogToOutputChannel()", () => {
     let debugStub: sinon.SinonStub;
     let infoStub: sinon.SinonStub;
     let warnStub: sinon.SinonStub;
@@ -189,8 +200,6 @@ describe("sidecar/logging.ts", () => {
     let mainOutputErrorStub: sinon.SinonStub;
 
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
-
       debugStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "debug");
       infoStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "info");
       warnStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "warn");
@@ -198,10 +207,6 @@ describe("sidecar/logging.ts", () => {
       appendLineStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "appendLine");
 
       mainOutputErrorStub = sandbox.stub(EXTENSION_OUTPUT_CHANNEL, "error");
-    });
-
-    afterEach(() => {
-      sandbox.restore();
     });
 
     it("handles valid JSON logs with different levels", () => {
@@ -316,17 +321,11 @@ describe("sidecar/logging.ts", () => {
     });
   });
 
-  describe("getSidecarLogfilePath() tests", () => {
-    let sandbox: sinon.SinonSandbox;
+  describe("getSidecarLogfilePath()", () => {
     let writeableTmpDirMock: sinon.SinonMock;
 
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
       writeableTmpDirMock = sandbox.mock(WriteableTmpDir.getInstance());
-    });
-
-    afterEach(() => {
-      sandbox.restore();
     });
 
     it("Returns the expected path when getWriteableTmpDir() succeeds", () => {

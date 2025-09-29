@@ -26,11 +26,10 @@ import {
   determineSidecarStartupFailureReason,
   disposeSidecarLogTail,
   gatherSidecarOutputs,
-  getLastSidecarLogLines,
   getSidecarLogfilePath,
   getSidecarLogTail,
 } from "./logging";
-import { SidecarStartupFailureReason } from "./types";
+import { SidecarOutputs, SidecarStartupFailureReason } from "./types";
 import {
   checkSidecarFile,
   constructSidecarEnv,
@@ -446,7 +445,7 @@ export class SidecarManager {
             // write any stderr to the file
             setTimeout(async () => {
               try {
-                await this.confirmSidecarProcessIsRunning(sidecarPid, logPrefix, stderrPath);
+                await this.confirmSidecarProcessIsRunning(sidecarPid, logPrefix);
               } catch (err) {
                 // Reject the startSidecar promise.
                 reject(err);
@@ -507,10 +506,7 @@ export class SidecarManager {
 
         const mainComplaint = `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts.`;
 
-        const [stderrLines, formattedLines] = await Promise.all([
-          getLastSidecarLogLines(20, "stderr"),
-          getLastSidecarLogLines(10, "formattedLogs"),
-        ]);
+        const { logLines, stderrLines } = await gatherSidecarOutputs();
 
         logger.error(
           `${mainComplaint}
@@ -519,7 +515,7 @@ Sidecar stderr:
 ${stderrLines.join("\n")}
 
 Sidecar logs (last 10 lines only):
-${formattedLines.join("\n")}
+${logLines.slice(-10).join("\n")}
 `,
         );
 
@@ -570,11 +566,7 @@ ${formattedLines.join("\n")}
    * @param logPrefix A prefix for logging messages.
    * @param stderrPath The path to the sidecar's stderr file defined at process spawn time.
    */
-  async confirmSidecarProcessIsRunning(
-    pid: number,
-    logPrefix: string,
-    stderrPath: string,
-  ): Promise<void> {
+  async confirmSidecarProcessIsRunning(pid: number, logPrefix: string): Promise<void> {
     const isRunning: boolean = isProcessRunning(pid);
     logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
 
@@ -585,7 +577,7 @@ ${formattedLines.join("\n")}
 
     // For some reason the sidecar process died immediately after startup, so log the error and
     // report to Sentry so we can investigate.
-    const outputs = await gatherSidecarOutputs(getSidecarLogfilePath(), stderrPath);
+    const outputs: SidecarOutputs = await gatherSidecarOutputs();
 
     let failureReason: SidecarStartupFailureReason = determineSidecarStartupFailureReason(outputs);
 
