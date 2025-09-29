@@ -1,53 +1,241 @@
 /** CCLoudResourceLoader Flink statement utils */
 
-const UDF_SYSTEM_CATALOG_QUERY = `
+import { FlinkUdf, FlinkUdfParameter } from "../models/flinkUDF";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+
+import { Logger } from "../logging";
+
+const logger = new Logger("ccloudResourceLoaderUtils");
+
+/**
+ * Query that unions together bits describing user-supplied functions and their parameters. The rows
+ * will be of two types: those describing a function and those describing a parameter.  The two types
+ * can be distinguished by the parameterOrdinalPosition being null (for function rows) or a number (for parameter rows).
+ * The function rows will have details about the function itself, while the parameter rows will have details
+ * about each parameter. The two can be joined on functionSpecificName.
+ */
+export const UDF_SYSTEM_CATALOG_QUERY = `
 (select 
-  specific_name as \`specificName\`, 
-  routine_name as \`routineName\`,
-  -1 as ordinal_position as \`ordinalPosition\`,
-  'routine_output' as \`parameterName\`,
-  full_data_type as \`fullDataType\`, 
-  external_name as \`externalName\`, 
-  external_language as \`externalLanguage\`, 
-  external_artifacts as \`externalArtifacts\`, 
-  is_deterministic as \`isDeterministic\`, 
-  cast(created as string) as \`functionCreatedTs\`, 
-  function_kind as \`functionKind\`,
+  SPECIFIC_NAME as \`functionSpecificName\`, 
+  ROUTINE_NAME as \`functionRoutineName\`,
+  cast(null as int) as \`parameterOrdinalPosition\`,
+  cast(null as string) as \`parameterName\`,
+  FULL_DATA_TYPE as \`fullDataType\`, 
+  EXTERNAL_NAME as \`functionExternalName\`, 
+  EXTERNAL_LANGUAGE as \`functionExternalLanguage\`, 
+  EXTERNAL_ARTIFACTS as \`functionExternalArtifacts\`, 
+  IS_DETERMINISTIC as \`isDeterministic\`, 
+  cast(CREATED as string) as \`functionCreatedTs\`, 
+  FUNCTION_KIND as \`functionKind\`,
   cast(false as string) as \`isParameterOptional\`,
-  cast(null as string)  as \`parameterTraits\`,
-from information_schema.routines)
+  cast(null as string)  as \`parameterTraits\`
+from \`INFORMATION_SCHEMA\`.\`ROUTINES\`
+where ROUTINE_TYPE = 'FUNCTION')
 
 union all
 
 (select 
-  specific_name as \`specificName\`, 
-  routine_name as \`routineName\`,
-  ordinal_position as \`ordinalPosition\`,
-  parameter_name as \`parameterName\`,
-  full_data_type as \`fullDataType\`, 
-  cast(null as string) as \`externalName\`, 
-  cast(null as string) as \`externalLanguage\`, 
-  cast(null as string) as \`externalArtifacts\`, 
-  cast(null as string) as \`isDeterministic\` 
+  SPECIFIC_NAME as \`functionSpecificName\`, 
+  ROUTINE_NAME as \`functionRoutineName\`,
+  ORDINAL_POSITION as \`parameterOrdinalPosition\`,
+  PARAMETER_NAME as \`parameterName\`,
+  FULL_DATA_TYPE as \`fullDataType\`, 
+  cast(null as string) as \`functionExternalName\`, 
+  cast(null as string) as \`functionExternalLanguage\`, 
+  cast(null as string) as \`functionExternalArtifacts\`, 
+  cast(null as string) as \`isDeterministic\`,
   cast(null as string) as \`functionCreatedTs\`, 
   cast(null as string) as \`functionKind\`,
-  is_optional as \`isParameterOptional\`,
-  traits as \`parameterTraits\`,
-from information_schema.parameters)
+  IS_OPTIONAL as \`isParameterOptional\`,
+  TRAITS as \`parameterTraits\`
+from \`INFORMATION_SCHEMA\`.\`PARAMETERS\`)
 `;
 
-export type RawUdfSystemCatalogRow = {
-  specificName: string;
-  routineName: string;
-  ordinalPosition: number;
-  parameterName: string;
-  fullDataType: string;
-  externalName: string | null;
-  externalLanguage: string | null;
-  externalArtifacts: string | null;
-  isDeterministic: string | null;
-  functionCreatedTs: string | null;
+/** Raw results type corresponding to UDF_SYSTEM_CATALOG_QUERY */
+export type RawUdfSystemCatalogRow =
+  | RawUdfSystemCatalogFunctionRow
+  | RawUdfSystemCatalogParameterRow;
+
+/** Describes rows from UDF_SYSTEM_CATALOG_QUERY describing the function as a whole */
+export type RawUdfSystemCatalogFunctionRow = {
+  /** Unique for function name + parameter signature */
+  functionSpecificName: string;
+  /** Function name */
+  functionRoutineName: string;
+  /** Name of the language-specific UDF implementation class / function */
+  functionExternalName: string;
+  /** Language the UDF is implemented in */
+  functionExternalLanguage: string;
+  /**
+   * Artifact reference containing the implementation (only for the function row).
+   * Will be of form "confluent-artifact://<artifact-id>/<version-id>"
+   */
+  functionExternalArtifacts: string;
+  /** Whether the function is deterministic (only for the function row). Will be YES, NO, or null. */
+  isDeterministic: string;
+  /** Creation timestamp of the function (only for the function row) */
+  functionCreatedTs: string;
+  /**
+   * One of 'SCALAR', 'TABLE', 'AGGREGATE', 'PROCESS_TABLE', or even null (if a PROCEDURE and the row describes the function, not a parameter), else null for parameter rows
+   */
   functionKind: string | null;
-  isParameterOptional: string;
-  parameterTraits: string | null;
+  /** Full SQL data type of the return type for the function */
+  fullDataType: string;
+  /** Always null for function rows */
+  parameterOrdinalPosition: null;
+  /** Always null for function rows */
+  parameterName: null;
+  /** Always null for function rows */
+  isParameterOptional: null;
+  /** Always null for function rows */
+  parameterTraits: null;
 };
+
+/** Describes rows from UDF_SYSTEM_CATALOG_QUERY describing a single parameter for a function */
+export type RawUdfSystemCatalogParameterRow = {
+  /** Unique for function name + parameter signature */
+  functionSpecificName: string;
+  /** Function name */
+  functionRoutineName: string;
+  /** Always null for parameter rows */
+  functionExternalName: null;
+  /** Always null for parameter rows */
+  functionExternalLanguage: null;
+  /** Always null for parameter rows */
+  functionExternalArtifacts: null;
+  /** Always null for parameter rows */
+  isDeterministic: null;
+  /** Always null for parameter rows */
+  functionCreatedTs: null;
+  /** Always null for parameter rows */
+  functionKind: null;
+  /** Full SQL data type of the parameter */
+  fullDataType: string;
+  /** Parameter number if describing a parameter */
+  parameterOrdinalPosition: number;
+  /** Parameter name if describing a parameter */
+  parameterName: string;
+  /** Is this parameter optional? Will be YES, NO, or null */
+  isParameterOptional: string;
+  /** Semicolon separated list of traits. By default, SCALAR only. */
+  parameterTraits: string;
+};
+
+export function transformUdfSystemCatalogRows(
+  rawResults: RawUdfSystemCatalogRow[],
+  cluster: CCloudFlinkDbKafkaCluster,
+): FlinkUdf[] {
+  logger.debug(
+    `Transforming ${rawResults.length} raw UDF system catalog rows for cluster ${cluster.name} (${cluster.id})`,
+  );
+
+  let udfs: FlinkUdf[] = [];
+
+  // First sort the rows by functionSpecificName, then by parameterOrdinalPosition (with nulls first so the function-describing
+  // row comes first).
+  const sortedRows = sortUdfSystemCatalogRows(rawResults);
+
+  // Will convert the raw rows into FlinkUdf objects, one per function group, by
+  // accumulating parameter details as we go, then knowing to push the current
+  // parameter array into a new FlinkUdf object when we hit the null parameter position
+  // row (i.e. the function row).
+  let currentFunctionSpecificName: string | null = null;
+  let currentParameters: FlinkUdfParameter[] = [];
+  let currentUDF: FlinkUdf | null = null;
+  const seenfunctionSpecificNames = new Set<string>();
+
+  for (const row of sortedRows) {
+    if (row.functionSpecificName !== currentFunctionSpecificName) {
+      // New function group, so reset current parameters
+      currentFunctionSpecificName = row.functionSpecificName;
+      currentParameters = [];
+
+      // Create new UDF, append it to the list.
+
+      // Keep shared reference to currentParameters so we can add to it as we go
+      // when we see parameter rows for this function.
+      if (seenfunctionSpecificNames.has(row.functionSpecificName)) {
+        // This should never happen due to the sorting above, but just in case...
+        throw new Error(
+          `Duplicate functionSpecificName ${row.functionSpecificName} in UDF system catalog results`,
+        );
+      }
+
+      // The first time we encounter this function should be via a parameterOrdinalPosition === null row (i.e. the function row),
+      // and should correspond to sub-type RawUdfSystemCatalogFunctionRow.
+      if (row.parameterOrdinalPosition !== null) {
+        // This should never happen due to the sorting above, but just in case...
+        throw new Error(
+          `Expected function row with null parameterOrdinalPosition for functionSpecificName ${row.functionSpecificName}, but got parameterOrdinalPosition ${row.parameterOrdinalPosition}`,
+        );
+      }
+      seenfunctionSpecificNames.add(row.functionSpecificName);
+
+      currentUDF = new FlinkUdf({
+        environmentId: cluster.environmentId,
+        provider: cluster.provider,
+        region: cluster.region,
+        databaseId: cluster.id,
+
+        id: row.functionSpecificName, // Unique for function name + parameter signature
+        name: row.functionRoutineName,
+        externalName: row.functionExternalName,
+        language: row.functionExternalLanguage,
+        artifactReference: row.functionExternalArtifacts,
+        isDeterministic: row.isDeterministic === "YES",
+        creationTs: new Date(row.functionCreatedTs),
+        kind: row.functionKind,
+        returnType: row.fullDataType,
+
+        description: "", // for now. Perhaps determine from language-specific docstring later?
+        parameters: currentParameters, // retain reference so we can add to it as we go.
+      });
+
+      udfs.push(currentUDF);
+    } else {
+      // Must be a parameter row for the current function
+      if (row.parameterOrdinalPosition === null) {
+        // This should never happen due to the sorting strategy, but just in case...
+        throw new Error(
+          `Expected parameter row with non-null parameterOrdinalPosition for functionSpecificName ${row.functionSpecificName}, but got null`,
+        );
+      }
+
+      // Add parameter to currentParameters array. They're already in order due to the sorting above.
+      let param: FlinkUdfParameter = {
+        name: row.parameterName,
+        dataType: row.fullDataType,
+        isOptional: row.isParameterOptional === "YES",
+        traits: row.parameterTraits
+          ? row.parameterTraits
+              .split(";")
+              .map((t) => t.trim())
+              .filter((t) => t.length > 0)
+          : [],
+      };
+      currentParameters.push(param);
+    }
+  }
+
+  logger.debug(`Transformed to ${udfs.length} FlinkUdf objects`);
+
+  return udfs;
+}
+
+/**
+ * Sorts RawUdfSystemCatalogRow[] by functionSpecificName, then by parameterOrdinalPosition,
+ * with function rows (parameterOrdinalPosition === null) first in each group.
+ */
+export function sortUdfSystemCatalogRows(rows: RawUdfSystemCatalogRow[]): RawUdfSystemCatalogRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.functionSpecificName < b.functionSpecificName) return -1;
+    if (a.functionSpecificName > b.functionSpecificName) return 1;
+    // Same function name, so sort by parameter position (nulls first so the main function-describing
+    // row comes first (will have null parameterOrdinalPosition))
+    if (a.parameterOrdinalPosition === null && b.parameterOrdinalPosition !== null) return -1;
+    if (a.parameterOrdinalPosition !== null && b.parameterOrdinalPosition === null) return 1;
+    if (a.parameterOrdinalPosition === null && b.parameterOrdinalPosition === null) return 0;
+    // Both non-null
+    return a.parameterOrdinalPosition! - b.parameterOrdinalPosition!;
+  });
+}
