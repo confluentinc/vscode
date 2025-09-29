@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
+import { createFlinkUDF } from "../../../tests/unit/testResources/flinkUDF";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkUdf } from "../../models/flinkUDF";
 import { FlinkDatabaseViewProvider } from "../flinkDatabase";
@@ -23,15 +24,7 @@ describe("viewProviders/multiViewDelegates/flinkUDFsDelegate.ts", () => {
     let udfsDelegate: FlinkUDFsDelegate;
     let stubbedCCloudResourceLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
-    const TEST_UDF: FlinkUdf = new FlinkUdf({
-      environmentId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.environmentId,
-      provider: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.provider,
-      region: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.region,
-      databaseId: TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id,
-      id: "TestUDF", // No unique ID available, so use name as ID.
-      name: "TestUDF",
-      description: "",
-    });
+    const TEST_UDF: FlinkUdf = createFlinkUDF("TestUDF");
 
     beforeEach(() => {
       provider = FlinkDatabaseViewProvider.getInstance();
