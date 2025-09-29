@@ -1,12 +1,8 @@
 import { QuickPickItemKind, window } from "vscode";
-import {
-  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-  TEST_CCLOUD_KAFKA_CLUSTER,
-} from "../../tests/unit/testResources";
 import { FcpmV2RegionListDataInner } from "../clients/flinkComputePool";
 import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader, loadProviderRegions } from "../loaders/ccloudResourceLoader";
-import { CCloudFlinkDbKafkaCluster, CCloudKafkaCluster } from "../models/kafkaCluster";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { IProviderRegion } from "../models/resource";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { QuickPickItemWithValue } from "./types";
@@ -124,22 +120,8 @@ export async function cloudProviderRegionQuickPick(
 export async function flinkDatabaseRegionsQuickPick(
   filter?: regionFilter,
 ): Promise<IProviderRegion | undefined> {
-  // TODO Cleanup the fake test code once https://github.com/confluentinc/vscode/pull/2695 merges
-  // const loader = CCloudResourceLoader.getInstance();
-
-  // We only care about CCloud Kafka clusters that are Flinkable (aka databases).
-  // TODO Cleanup the fake test code once https://github.com/confluentinc/vscode/pull/2695 merges
-  // await loader.getFlinkDatabases();
-  const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = [
-    CCloudKafkaCluster.create({
-      ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
-      id: "cluster-123",
-    }) as CCloudFlinkDbKafkaCluster,
-    CCloudKafkaCluster.create({
-      ...TEST_CCLOUD_KAFKA_CLUSTER,
-      id: "cluster-456",
-    }) as CCloudFlinkDbKafkaCluster,
-  ];
+  const loader = CCloudResourceLoader.getInstance();
+  const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases();
 
   // Group by provider then region, collecting the database (cluster) names.
   const clusterRegions = new Map<string, IProviderRegion & { names: string[] }>();
