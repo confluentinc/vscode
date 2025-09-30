@@ -23,7 +23,7 @@ import {
 } from "./cloudProviderRegions";
 import { QuickPickItemWithValue } from "./types";
 
-describe.only("quickpicks/cloudProviderRegions.ts", () => {
+describe("quickpicks/cloudProviderRegions.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let loadProviderRegionsStub: sinon.SinonStub;
   let showQuickPickStub: sinon.SinonStub;
