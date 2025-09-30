@@ -18,10 +18,7 @@ import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
-import {
-  fireEmitterWhenFlinkStatementIsCreatingFunction,
-  viewStatementSqlCommand,
-} from "./flinkStatements";
+import { fireUdfsChangedEmitter, viewStatementSqlCommand } from "./flinkStatements";
 
 describe("commands/flinkStatements.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -159,7 +156,7 @@ describe("commands/flinkStatements.ts", () => {
         },
       };
       waitForStatementCompletionStub.resolves(createFuncStatement);
-      await fireEmitterWhenFlinkStatementIsCreatingFunction(createFuncStatement, database);
+      await fireUdfsChangedEmitter(createFuncStatement, database);
 
       sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
     });
@@ -173,7 +170,7 @@ describe("commands/flinkStatements.ts", () => {
         },
       };
       waitForStatementCompletionStub.resolves(createFuncStatement);
-      await fireEmitterWhenFlinkStatementIsCreatingFunction(createFuncStatement, database);
+      await fireUdfsChangedEmitter(createFuncStatement, database);
 
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
@@ -190,7 +187,7 @@ describe("commands/flinkStatements.ts", () => {
         },
       };
       waitForStatementCompletionStub.resolves(statement);
-      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
+      await fireUdfsChangedEmitter(statement, database);
 
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });

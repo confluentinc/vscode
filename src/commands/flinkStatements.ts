@@ -95,7 +95,7 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
  * @param database - The CCloudFlinkDbKafkaCluster where the UDF will be created and which should be notified of changes
  * @returns Promise that resolves when monitoring is complete (immediately if not a CREATE_FUNCTION, or after completion if it is)
  */
-export async function fireEmitterWhenFlinkStatementIsCreatingFunction(
+export async function fireUdfsChangedEmitter(
   statement: FlinkStatement,
   database: CCloudFlinkDbKafkaCluster,
 ): Promise<void> {
@@ -257,10 +257,7 @@ export async function submitFlinkStatementCommand(
     // (This is a whole empty + reload of view data, so have to wait until it's done.
     //  before we can focus our new statement.)
     await statementsView.refresh();
-    await fireEmitterWhenFlinkStatementIsCreatingFunction(
-      newStatement,
-      currentDatabaseKafkaCluster,
-    );
+    await fireUdfsChangedEmitter(newStatement, currentDatabaseKafkaCluster);
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
