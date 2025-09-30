@@ -170,7 +170,7 @@ export async function flinkDatabaseRegionsQuickPick(
 
   quickPickItems.push(
     {
-      label: "View All Available Regions",
+      label: "",
       description: "",
       kind: QuickPickItemKind.Separator,
     },
