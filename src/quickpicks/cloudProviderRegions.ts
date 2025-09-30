@@ -4,6 +4,7 @@ import { FLINK_CONFIG_COMPUTE_POOL } from "../extensionSettings/constants";
 import { CCloudResourceLoader, loadProviderRegions } from "../loaders/ccloudResourceLoader";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { IProviderRegion } from "../models/resource";
+import { ObjectSet } from "../utils/objectset";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { QuickPickItemWithValue } from "./types";
 
@@ -123,37 +124,31 @@ export async function flinkDatabaseRegionsQuickPick(
   const loader = CCloudResourceLoader.getInstance();
   const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases();
 
-  // Apply filter to remove databases in GCP (not supported)
-  const filteredDbs = flinkDbClusters.filter((c) => {
-    return c.provider !== "GCP";
-  });
-
-  // Group by provider then region, collecting the database (cluster) names.
-  const clusterRegions = new Map<string, IProviderRegion & { names: string[] }>();
-  for (const c of filteredDbs) {
-    const key = `${c.provider}|${c.region}`;
-    let agg = clusterRegions.get(key);
-    if (!agg) {
-      agg = { provider: c.provider, region: c.region, names: [] };
-      clusterRegions.set(key, agg);
+  const awsSet = new ObjectSet<IProviderRegion>((pr) => `${pr.provider}-${pr.region}`);
+  const azureSet = new ObjectSet<IProviderRegion>((pr) => `${pr.provider}-${pr.region}`);
+  // GCP not supported for Flink artifacts yet
+  for (const db of flinkDbClusters) {
+    const pr = {
+      provider: db.provider,
+      region: db.region,
+      name: db.name,
+    };
+    if (db.provider === "AWS") {
+      awsSet.add(pr);
+    } else if (db.provider === "AZURE") {
+      azureSet.add(pr);
     }
-    agg.names.push(c.name);
   }
-
-  // Convert to array and sort by provider then region then first database name.
-  const regionsList = Array.from(clusterRegions.values()).sort((a, b) => {
-    if (a.provider !== b.provider) {
-      return a.provider.localeCompare(b.provider);
-    }
-    if (a.region !== b.region) {
-      return a.region.localeCompare(b.region);
-    }
-    return a.names[0].localeCompare(b.names[0]);
-  });
+  const awsProviderRegions: IProviderRegion[] = awsSet
+    .items()
+    .sort((a, b) => a.region.localeCompare(b.region));
+  const azureProviderRegions: IProviderRegion[] = azureSet
+    .items()
+    .sort((a, b) => a.region.localeCompare(b.region));
 
   const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] = [];
   let lastProvider = "";
-  for (const entry of regionsList) {
+  for (const entry of [...awsProviderRegions, ...azureProviderRegions]) {
     if (entry.provider !== lastProvider) {
       lastProvider = entry.provider;
       quickPickItems.push({
@@ -162,11 +157,13 @@ export async function flinkDatabaseRegionsQuickPick(
         kind: QuickPickItemKind.Separator,
       });
     }
+    // make the description out of the names of the databases in this provider+region
+    const matchingDatabases = flinkDbClusters.filter(
+      (db) => db.provider === entry.provider && db.region === entry.region,
+    );
     quickPickItems.push({
       label: `${entry.provider} | ${entry.region}`,
-      description: Array.from(entry.names)
-        .sort((a, b) => a.localeCompare(b))
-        .join(", "),
+      description: matchingDatabases.map((db) => db.name).join(", "),
       value: { provider: entry.provider, region: entry.region },
     });
   }
@@ -178,9 +175,9 @@ export async function flinkDatabaseRegionsQuickPick(
       kind: QuickPickItemKind.Separator,
     },
     {
-    label: "View All Available Regions",
-    description: "Show the complete list of regions",
-    value: "VIEW_ALL",
+      label: "View All Available Regions",
+      description: "Show the complete list of regions",
+      value: "VIEW_ALL",
       alwaysShow: true,
     },
   );
