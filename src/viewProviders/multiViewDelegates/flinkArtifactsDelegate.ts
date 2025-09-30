@@ -1,9 +1,8 @@
 import { TreeItem } from "vscode";
-import { isResponseError, logError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 
@@ -21,17 +20,9 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
     forceDeepRefresh: boolean,
   ): Promise<FlinkArtifact[]> {
     this.children = [];
-    try {
-      const loader = CCloudResourceLoader.getInstance();
-      this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
-      return this.children;
-    } catch (error) {
-      const { showNotification, message } = triageGetFlinkArtifactsError(error);
-      if (showNotification) {
-        void showErrorNotificationWithButtons(message);
-      }
-      throw error;
-    }
+    const loader = CCloudResourceLoader.getInstance();
+    this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
+    return this.children; // FlinkDatabaseViewProvider catches any errors and calls triageGetFlinkArtifactsError() below
   }
 
   getTreeItem(element: FlinkArtifact): TreeItem {
@@ -39,20 +30,28 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   }
 }
 
-export function triageGetFlinkArtifactsError(error: unknown): {
+export async function triageGetFlinkArtifactsError(error: unknown): Promise<{
   showNotification: boolean;
   message: string;
-} {
+}> {
   let showNotification = false;
   let message = "Failed to load Flink artifacts.";
 
   if (isResponseError(error)) {
     const status = error.response.status;
-    /* Note: This switch statement intentionally excludes 400 errors.
-     Otherwise, they may pop up on loading the compute pool if it is using an unsupported cloud provider. */
-    if (status >= 401 && status < 600) {
+    const body = await extractResponseBody(error);
+
+    if (status >= 400 && status < 600) {
       showNotification = true;
       switch (status) {
+        case 400:
+          if (body.errors[0].detail)
+            message = `Bad request when loading Flink artifacts: ${body.errors[0].detail}`;
+          // expect errors w/ specific detail for 400s but just in case...
+          else
+            message =
+              "Bad request when loading Flink artifacts. Ensure your compute pool is configured correctly.";
+          break;
         case 401:
           message = "Authentication required to load Flink artifacts.";
           break;

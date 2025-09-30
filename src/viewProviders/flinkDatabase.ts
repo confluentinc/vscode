@@ -15,7 +15,10 @@ import { IEnvProviderRegion } from "../models/resource";
 import { showErrorNotificationWithButtons } from "../notifications";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
-import { FlinkArtifactsDelegate } from "./multiViewDelegates/flinkArtifactsDelegate";
+import {
+  FlinkArtifactsDelegate,
+  triageGetFlinkArtifactsError,
+} from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
 /** The row models used as view children */
@@ -123,8 +126,12 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
             this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
           } catch (error) {
             const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
+            const { showNotification, message: userMessage } =
+              await triageGetFlinkArtifactsError(error);
+            if (showNotification) {
+              void showErrorNotificationWithButtons(userMessage);
+            }
             void logError(error, msg);
-            void showErrorNotificationWithButtons(msg);
           }
         },
         false,
