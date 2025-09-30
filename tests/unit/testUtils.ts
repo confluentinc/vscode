@@ -1,9 +1,17 @@
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../../src/authz/types";
+import { ResponseError as DockerResponseError } from "../../src/clients/docker";
+import { ResponseError as FlinkArtifactsResponseError } from "../../src/clients/flinkArtifacts";
+import { ResponseError as FlinkComputePoolResponseError } from "../../src/clients/flinkComputePool";
+import { ResponseError as FlinkSqlResponseError } from "../../src/clients/flinkSql";
+import { ResponseError as KafkaResponseError } from "../../src/clients/kafkaRest";
 import { TopicData, TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
-import { ResponseError } from "../../src/clients/sidecar";
+import { ResponseError as ScaffoldingServiceResponseError } from "../../src/clients/scaffoldingService";
+import { ResponseError as SchemaRegistryResponseError } from "../../src/clients/schemaRegistryRest";
+import { ResponseError as SidecarResponseError } from "../../src/clients/sidecar";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
+import { AnyResponseError } from "../../src/errors";
 import { Subject } from "../../src/models/schema";
 import { SchemaRegistry } from "../../src/models/schemaRegistry";
 
@@ -93,18 +101,32 @@ export function createTestSubject(schemaRegistry: SchemaRegistry, name: string):
     schemaRegistry.id,
   );
 }
+
+export enum ResponseErrorSource {
+  Docker = "docker",
+  FlinkArtifacts = "flinkArtifacts",
+  FlinkComputePool = "flinkComputePool",
+  FlinkSql = "flinkSql",
+  KafkaRest = "kafkaRest",
+  ScaffoldingService = "scaffoldingService",
+  SchemaRegistryRest = "schemaRegistryRest",
+  Sidecar = "sidecar",
+}
+
 /**
  * Create a mock ResponseError for testing.
  * @param status - HTTP status code
  * @param statusText - HTTP status text
  * @param body - Response body
+ * @param source - Which {@link ResponseErrorSource client source} ResponseError is returned, defaults to sidecar
  * @returns A ResponseError instance
  */
 export function createResponseError(
   status: number,
   statusText: string,
   body: string,
-): ResponseError {
+  source: ResponseErrorSource = ResponseErrorSource.Sidecar,
+): AnyResponseError {
   const response = {
     status,
     statusText,
@@ -115,5 +137,27 @@ export function createResponseError(
     text: () => Promise.resolve(body),
     json: () => Promise.resolve(JSON.parse(body)),
   } as Response;
-  return new ResponseError(response);
+
+  // any callers that end up using `isResponseError()` will need to know which client code subdir
+  // the error came from, so we need to return the correct subclass of ResponseError
+  switch (source) {
+    case ResponseErrorSource.Docker:
+      return new DockerResponseError(response);
+    case ResponseErrorSource.FlinkArtifacts:
+      return new FlinkArtifactsResponseError(response);
+    case ResponseErrorSource.FlinkComputePool:
+      return new FlinkComputePoolResponseError(response);
+    case ResponseErrorSource.FlinkSql:
+      return new FlinkSqlResponseError(response);
+    case ResponseErrorSource.KafkaRest:
+      return new KafkaResponseError(response);
+    case ResponseErrorSource.ScaffoldingService:
+      return new ScaffoldingServiceResponseError(response);
+    case ResponseErrorSource.SchemaRegistryRest:
+      return new SchemaRegistryResponseError(response);
+    case ResponseErrorSource.Sidecar:
+      return new SidecarResponseError(response);
+    default:
+      throw new Error(`Unknown ResponseError source: ${source}`);
+  }
 }

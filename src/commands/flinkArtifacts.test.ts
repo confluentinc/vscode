@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
+import { createResponseError } from "../../tests/unit/testUtils";
 import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
@@ -100,6 +101,62 @@ describe("flinkArtifacts", () => {
 
     sinon.assert.calledOnce(showErrorStub);
     sinon.assert.calledWithMatch(showErrorStub, customErrorMessage);
+  });
+
+  it("should show custom clarification error when 500 status code is returned for invalid JAR file", async () => {
+    const params = { ...mockParams };
+    const uploadUrl = { ...mockPresignedUrlResponse };
+
+    sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(params);
+    sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+    sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+
+    sandbox
+      .stub(uploadArtifact, "uploadArtifactToCCloud")
+      .rejects(createResponseError(500, "Oops, something went wrong", ""));
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    await uploadArtifactCommand();
+
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWithMatch(
+      showErrorStub,
+      "Please make sure that you provided a valid JAR file",
+    );
+  });
+
+  it("should error for other status codes", async () => {
+    const params = { ...mockParams };
+    const uploadUrl = { ...mockPresignedUrlResponse };
+
+    sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(params);
+    sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+    sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+
+    sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(
+      createResponseError(
+        400,
+        "Custom Bad Request",
+        JSON.stringify({
+          errors: [
+            {
+              detail: "Custom Bad Request Body",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+
+    await uploadArtifactCommand();
+
+    sinon.assert.calledOnce(showErrorStub);
+    sinon.assert.calledWithMatch(
+      showErrorStub,
+      "Failed to upload artifact: Custom Bad Request Body",
+    );
   });
 
   it("should send the create artifact request to Confluent Cloud", async () => {

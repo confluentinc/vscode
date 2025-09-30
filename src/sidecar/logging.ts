@@ -277,22 +277,31 @@ export function appendSidecarLogToOutputChannel(line: string) {
  *
  * @param sidecarLogfilePath The path to the sidecar log file.
  * @param stderrPath The path to the sidecar's stderr file.
+ * @param numLogLines The number of most recent log lines to read and parse (default: 20).
  *
  * @returns SidecarOutputs structure containing the log lines, parsed log lines, and stderr lines.
  */
-export async function gatherSidecarOutputs(
-  sidecarLogfilePath: string,
-  stderrPath: string,
-): Promise<SidecarOutputs> {
+export async function gatherSidecarOutputs(options?: {
+  sidecarLogfilePath?: string;
+  stderrPath?: string;
+  numLogLines?: number;
+}): Promise<SidecarOutputs> {
+  const numLines: number = options?.numLogLines ?? 20;
+  const sidecarLogfilePath: string = options?.sidecarLogfilePath ?? getSidecarLogfilePath();
+  const stderrPath: string = options?.stderrPath ?? `${sidecarLogfilePath}.stderr`;
+
   const myLogger = logger.withCallpoint("gatherSidecarOutputs");
-  // Try to read+parse most recent 20 sidecar logs to notice any startup errors (occupied port, missing
-  // configs, etc.)
+  // Try to read+parse most recent `numLogLines` sidecar logs to notice any startup errors
+  // (occupied port, missing configs, etc.)
   const reformattedLogLines: string[] = [];
   const parsedLines: SidecarLogFormat[] = [];
 
   let rawLogs: string[] = [];
   try {
-    rawLogs = (await readFileString(Uri.file(sidecarLogfilePath))).trim().split("\n").slice(-20);
+    rawLogs = (await readFileString(Uri.file(sidecarLogfilePath)))
+      .trim()
+      .split("\n")
+      .slice(-numLines);
   } catch (e) {
     myLogger.error(`Failed to read sidecar log file: ${e}`);
   }

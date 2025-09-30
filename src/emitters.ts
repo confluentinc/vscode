@@ -11,6 +11,8 @@ import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegate
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
 
+/** Fires when we get a `vscode://confluentinc.vscode-confluent/authCallback` URI to handle. */
+export const ccloudAuthCallback = new vscode.EventEmitter<vscode.Uri>();
 /**
  * Indicate whether or not we have a CCloud connection (controlled by our auth provider).
  *

@@ -8,9 +8,12 @@ import {
 } from "../../clients/flinkArtifacts";
 import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { FlinkArtifact } from "../../models/flinkArtifact";
+import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
@@ -261,7 +264,7 @@ export async function promptForFunctionAndClassName(
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
   const functionName = await vscode.window.showInputBox({
-    prompt: "Enter a name for the new UDF function",
+    prompt: "Enter a name for the new UDF",
     placeHolder: defaultFunctionName,
     validateInput: (value) => validateUdfInput(value, functionNameRegex),
     ignoreFocusOut: true,
@@ -272,8 +275,8 @@ export async function promptForFunctionAndClassName(
   }
 
   const className = await vscode.window.showInputBox({
-    prompt: "Enter the class name for the new UDF",
-    placeHolder: `your.class.NameHere`,
+    prompt: 'Enter the fully qualified class name, e.g. "com.example.MyUDF"',
+    placeHolder: `your.package.ClassName`,
     validateInput: (value) => validateUdfInput(value, classNameRegex),
     ignoreFocusOut: true,
   });
@@ -281,4 +284,28 @@ export async function promptForFunctionAndClassName(
     return undefined;
   }
   return { functionName, className };
+}
+
+/**
+ * Submit a `CREATE FUNCTION` statement to register a UDF for the provided artifact, function and
+ * class names defined by the user, and Flink database.
+ */
+export async function executeCreateFunction(
+  artifact: FlinkArtifact,
+  userInput: {
+    functionName: string;
+    className: string;
+  },
+  database: CCloudFlinkDbKafkaCluster,
+) {
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
+    `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${artifact.id}';`,
+    database,
+    {
+      timeout: 60000, // custom timeout of 60 seconds
+    },
+  );
+  const createdMsg = `${userInput.functionName} function created successfully.`;
+  void showInfoNotificationWithButtons(createdMsg);
 }

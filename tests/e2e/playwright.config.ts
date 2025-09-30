@@ -26,7 +26,11 @@ export default defineConfig({
   },
   reporter: process.env.CI
     ? [
-        ["html"],
+        ["list"],
+        // Generate blob reports for each test so they can be merged into a single per-job HTML
+        // report, including traces (see mk-files/semaphore.mk).
+        // (see https://playwright.dev/docs/test-reporters#blob-reporter)
+        ["blob"],
         [
           "junit",
           {
@@ -49,7 +53,7 @@ export default defineConfig({
       testDir: path.join(__dirname),
     },
     {
-      name: vscodeVersion,
+      name: `vscode-${vscodeVersion}`,
       dependencies: ["setup"],
     },
   ],

@@ -5,8 +5,7 @@ import { Logger } from "../../logging";
 import { CCloudFlinkComputePool } from "../../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider } from "../../models/resource";
-import { showErrorNotificationWithButtons } from "../../notifications";
-import { cloudProviderRegionQuickPick } from "../../quickpicks/cloudProviderRegions";
+import { flinkDatabaseRegionsQuickPick } from "../../quickpicks/cloudProviderRegions";
 import { flinkCcloudEnvironmentQuickPick } from "../../quickpicks/environments";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { ArtifactUploadParams } from "./uploadArtifactOrUDF";
@@ -35,7 +34,9 @@ export async function artifactUploadQuickPickForm(
   const assignStateFromKnownResource = async (
     resource: CCloudKafkaCluster | CCloudFlinkComputePool,
   ) => {
+    // Only set cloud/region if not GCP (not supported)
     state.cloudRegion = { provider: resource.provider, region: resource.region };
+
     // Only call getEnvironment if we do not already have this environment in state
     // Starting upload from right-clicking on Flink database cluster will override the selectedFlinkDatabase env
     if (!state.environment || state.environment.id !== resource.environmentId) {
@@ -153,7 +154,7 @@ export async function artifactUploadQuickPickForm(
       }
 
       case "cloudRegion": {
-        const cloudRegion = await cloudProviderRegionQuickPick((region) => region.cloud !== "GCP");
+        const cloudRegion = await flinkDatabaseRegionsQuickPick();
         if (cloudRegion) {
           state.cloudRegion = {
             provider: cloudRegion.provider,
@@ -255,11 +256,7 @@ export async function artifactUploadQuickPickForm(
         } else if (state.cloudRegion!.provider === "AWS") {
           cloud = CloudProvider.AWS;
         } else {
-          // We are filitering GCP out of the pick list, so this should never happen, but it's here as a safeguard
-          void showErrorNotificationWithButtons(
-            `Upload Artifact cancelled: Unsupported cloud provider: ${state.cloudRegion!.provider}`,
-          );
-          continue;
+          cloud = CloudProvider.GCP;
         }
 
         // Our file picker and context menu filter on `.jar`, so this should be safe

@@ -1,18 +1,18 @@
-import { authentication, AuthenticationSession } from "vscode";
+import { authentication, AuthenticationGetSessionOptions, AuthenticationSession } from "vscode";
 import { AUTH_PROVIDER_ID } from "../constants";
 
-/** Convenience function to check with the authentication API and get a CCloud auth session, if
+/**
+ * Convenience function to check with the authentication API and get a CCloud auth session, if
  * one exists.
  *
- * NOTE: If any callers need to check for general CCloud connection status, they should do it here.
- * Any reactions to CCloud connection change should also use an event listener for the
- * `ccloudConnected` event emitter.
+ * NOTE: Use this to check for CCloud authentication status. Any change in CCloud connection status
+ * will be fired through the `ccloudConnected` event emitter.
  *
- * @param createIfNone If `true`, create a new session if one doesn't exist. This starts the
- * browser-based sign-in flow to CCloud. (default: `false`)
+ * @param options Optional {@link AuthenticationGetSessionOptions}. If not provided, defaults to
+ * {@linkcode AuthenticationGetSessionOptions.createIfNone createIfNone}:`false`.
  */
 export async function getCCloudAuthSession(
-  createIfNone: boolean = false,
+  options?: AuthenticationGetSessionOptions,
 ): Promise<AuthenticationSession | undefined> {
-  return await authentication.getSession(AUTH_PROVIDER_ID, [], { createIfNone: createIfNone });
+  return await authentication.getSession(AUTH_PROVIDER_ID, [], options ?? { createIfNone: false });
 }

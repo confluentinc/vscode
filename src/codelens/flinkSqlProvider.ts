@@ -188,7 +188,8 @@ export async function getCatalogDatabaseFromMetadata(
 ): Promise<CatalogDatabase> {
   let catalogDatabase: CatalogDatabase = { catalog: undefined, database: undefined };
 
-  const envs: CCloudEnvironment[] = await CCloudResourceLoader.getInstance().getEnvironments();
+  const loader = CCloudResourceLoader.getInstance();
+  const envs: CCloudEnvironment[] = await loader.getEnvironments();
 
   // first look up the default catalog/database from user settings
   let defaultCatalog: CCloudEnvironment | undefined;
@@ -199,16 +200,39 @@ export async function getCatalogDatabaseFromMetadata(
     defaultDatabase = defaults.database;
   }
 
+  let catalogId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_ID];
+  let catalogName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_NAME];
+  if (catalogId) {
+    const catalog = envs.find((e) => e.id === catalogId);
+    if (catalog) {
+      catalogName = catalog.name;
+    }
+  }
+
+  let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
+  let databaseName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_NAME];
+  if (databaseId) {
+    // need to look up the database name from the ID, which requires looking through all catalogs
+    for (const env of envs) {
+      const cluster: CCloudKafkaCluster | undefined = env.kafkaClusters.find(
+        (c) => c.id === databaseId,
+      );
+      if (cluster) {
+        databaseName = cluster.name;
+        // also set the catalog name and ID since we have them from the environment
+        catalogName = env.name;
+        catalogId = env.id;
+        break;
+      }
+    }
+  }
+
   // only fall back to the default values if metadata wasn't set at all, since `null` indicates
   // it was cleared via the "Clear Settings" codelens
-  let catalogName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_NAME];
-  let catalogId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_CATALOG_ID];
   if (defaultCatalog && catalogName === undefined && catalogId === undefined) {
     catalogName = defaultCatalog.name;
     catalogId = defaultCatalog.id;
   }
-  let databaseName: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_NAME];
-  let databaseId: string | null | undefined = metadata?.[UriMetadataKeys.FLINK_DATABASE_ID];
   if (defaultDatabase && databaseName === undefined && databaseId === undefined) {
     databaseName = defaultDatabase.name;
     databaseId = defaultDatabase.id;
