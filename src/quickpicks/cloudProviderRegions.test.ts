@@ -249,7 +249,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
     const makeTestFlinkDbCluster = (
       id: string,
       name: string,
-      provider: "AWS" | "AZURE",
+      provider: "AWS" | "AZURE" | "GCP",
       region: string,
       environmentId: EnvironmentId,
     ): CCloudFlinkDbKafkaCluster =>
@@ -288,11 +288,19 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
       "eastus",
       "env-3" as EnvironmentId,
     );
+    const testFlinkDbCluster4: CCloudFlinkDbKafkaCluster = makeTestFlinkDbCluster(
+      "lkc-flink-db-gcp",
+      "test-flink-db-cluster-gcp",
+      "GCP",
+      "us-central1",
+      "env-gcp" as EnvironmentId,
+    );
 
     const testFlinkDbClusters: CCloudFlinkDbKafkaCluster[] = [
       testFlinkDbCluster1,
       testFlinkDbCluster2,
       testFlinkDbCluster3,
+      testFlinkDbCluster4,
     ];
 
     beforeEach(() => {
@@ -317,8 +325,8 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
       const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] =
         showQuickPickStub.firstCall.args[0];
 
-      // Should have AWS separator + 2 AWS regions + AZURE separator + 1 AZURE region + View All separator + View All item
-      assert.strictEqual(quickPickItems.length, 7);
+      // Should have 4 separators + 4 DBs + View All item
+      assert.strictEqual(quickPickItems.length, 9);
 
       // Check AWS separator
       const awsSeparator = quickPickItems[0];
@@ -358,8 +366,22 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
         provider: "AZURE",
       });
 
+      // Check GCP separator
+      const gcpSeparator = quickPickItems[5];
+      assert.strictEqual(gcpSeparator.label, "GCP");
+      assert.strictEqual(gcpSeparator.kind, QuickPickItemKind.Separator);
+
+      // Check GCP region
+      const gcpRegion = quickPickItems[6];
+      assert.strictEqual(gcpRegion.label, "GCP | us-central1");
+      assert.strictEqual(gcpRegion.description, "test-flink-db-cluster-gcp");
+      assert.deepStrictEqual(gcpRegion.value, {
+        region: "us-central1",
+        provider: "GCP",
+      });
+
       // Check "View All" item
-      const viewAllItem = quickPickItems[6];
+      const viewAllItem = quickPickItems[8];
       assert.strictEqual(viewAllItem.label, "View All Available Regions");
       assert.strictEqual(viewAllItem.description, "Show the complete list of regions");
       assert.strictEqual(viewAllItem.value, "VIEW_ALL");
@@ -398,35 +420,6 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
 
       sinon.assert.calledOnce(loadProviderRegionsStub); // called within cloudProviderRegionQuickPick
       assert.strictEqual(result, undefined);
-    });
-
-    it("should filter out GCP databases", async () => {
-      const gcpCluster: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
-        id: "lkc-flink-db-gcp",
-        name: "test-flink-db-cluster-gcp",
-        provider: "GCP",
-        region: "us-central1",
-        bootstrapServers: "SASL_SSL://pkc-flink-db-gcp.us-central1.gcp.confluent.cloud:9092",
-        uri: "https://pkc-flink-db-gcp.us-central1.gcp.confluent.cloud:443",
-        environmentId: "env-gcp" as EnvironmentId,
-        flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-      }) as CCloudFlinkDbKafkaCluster;
-
-      ccloudLoaderStub.getFlinkDatabases.resolves([...testFlinkDbClusters, gcpCluster]);
-
-      await flinkDatabaseRegionsQuickPick();
-
-      const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] =
-        showQuickPickStub.firstCall.args[0];
-
-      // Should not include GCP region, only AWS and AZURE
-      const gcpItem = quickPickItems.find(
-        (item) =>
-          item.kind !== QuickPickItemKind.Separator &&
-          item.value !== "VIEW_ALL" &&
-          (item.value as IProviderRegion).provider === "GCP",
-      );
-      assert.strictEqual(gcpItem, undefined);
     });
 
     it("should group multiple databases in the same provider/region", async () => {
