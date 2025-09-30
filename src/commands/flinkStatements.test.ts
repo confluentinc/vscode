@@ -13,12 +13,13 @@ import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
-import { fireUdfsChangedEmitter, viewStatementSqlCommand } from "./flinkStatements";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import { handleStatementSubmission, viewStatementSqlCommand } from "./flinkStatements";
+import * as statements from "./utils/statements";
 
 describe("commands/flinkStatements.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -137,6 +138,8 @@ describe("commands/flinkStatements.ts", () => {
       vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
     >;
     let waitForStatementCompletionStub: sinon.SinonStub;
+    let waitForResultsFetchableStub: sinon.SinonStub;
+    let openFlinkStatementResultsViewStub: sinon.SinonStub;
     const createFuncStatement = createFlinkStatement({
       sqlStatement:
         "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
@@ -144,6 +147,8 @@ describe("commands/flinkStatements.ts", () => {
 
     beforeEach(() => {
       waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
+      waitForResultsFetchableStub = sandbox.stub(statementUtils, "waitForResultsFetchable");
+      openFlinkStatementResultsViewStub = sandbox.stub(statements, "openFlinkStatementResultsView");
       stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
     });
 
@@ -155,10 +160,17 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "CREATE_FUNCTION",
         },
       };
+      waitForResultsFetchableStub.resolves();
+      openFlinkStatementResultsViewStub.resolves();
       waitForStatementCompletionStub.resolves(createFuncStatement);
-      await fireUdfsChangedEmitter(createFuncStatement, database);
 
-      sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
+      await handleStatementSubmission(createFuncStatement, database);
+
+      sinon.assert.calledWithExactly(waitForResultsFetchableStub, createFuncStatement);
+      sinon.assert.calledWithExactly(openFlinkStatementResultsViewStub, createFuncStatement);
+      sinon.assert.calledWithExactly(waitForStatementCompletionStub, createFuncStatement);
+
+      sinon.assert.calledWithExactly(stubbedUDFsChangedEmitter.fire, database);
     });
 
     it("should not fire the emitter on other types of statements", async () => {
@@ -169,13 +181,19 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "NOT A CREATE FUNCTION",
         },
       };
+      waitForResultsFetchableStub.resolves();
+      openFlinkStatementResultsViewStub.resolves();
       waitForStatementCompletionStub.resolves(createFuncStatement);
-      await fireUdfsChangedEmitter(createFuncStatement, database);
 
+      await handleStatementSubmission(createFuncStatement, database);
+
+      sinon.assert.calledOnce(waitForResultsFetchableStub);
+      sinon.assert.calledOnce(openFlinkStatementResultsViewStub);
+      sinon.assert.notCalled(waitForStatementCompletionStub);
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
 
-    it("should not fire the emitter on a statement with a non-COMPLETED phase ", async () => {
+    it("should not fire the emitter on a statement with a non-COMPLETED phase", async () => {
       const statement = createFlinkStatement({
         sqlStatement: "SELECT * FROM my_test_flink_statement_table",
       });
@@ -186,9 +204,15 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "CREATE_FUNCTION",
         },
       };
+      waitForResultsFetchableStub.resolves();
+      openFlinkStatementResultsViewStub.resolves();
       waitForStatementCompletionStub.resolves(statement);
-      await fireUdfsChangedEmitter(statement, database);
 
+      await handleStatementSubmission(statement, database);
+
+      sinon.assert.calledOnce(waitForResultsFetchableStub);
+      sinon.assert.calledOnce(openFlinkStatementResultsViewStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
   });

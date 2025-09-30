@@ -1,4 +1,3 @@
-import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
@@ -9,7 +8,6 @@ import {
 import { udfsChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
-import { FlinkStatementResultsManager } from "../flinkSql/flinkStatementResultsManager";
 import {
   FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
@@ -27,16 +25,15 @@ import { showErrorNotificationWithButtons } from "../notifications";
 import { flinkComputePoolQuickPick } from "../quickpicks/flinkComputePools";
 import { flinkDatabaseQuickpick } from "../quickpicks/kafkaClusters";
 import { uriQuickpick } from "../quickpicks/uris";
-import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
-import { handleWebviewMessage } from "../webview/comms/comms";
+import { openFlinkStatementResultsView } from "./utils/statements";
 
-const logger = new Logger("commands.flinkStatements");
+export const logger = new Logger("commands.flinkStatements");
 
 /** View the SQL statement portion of a FlinkStatement in a read-only document. */
 export async function viewStatementSqlCommand(statement: FlinkStatement): Promise<void> {
@@ -88,30 +85,6 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
   await vscode.window.showTextDocument(doc, { preview: false });
 }
-/**
- * Monitors a Flink statement and fires the UDF change emitter when a CREATE_FUNCTION statement completes.
- *
- * @param statement - The FlinkStatement to monitor for CREATE_FUNCTION completion
- * @param database - The CCloudFlinkDbKafkaCluster where the UDF will be created and which should be notified of changes
- * @returns Promise that resolves when monitoring is complete (immediately if not a CREATE_FUNCTION, or after completion if it is)
- */
-export async function fireUdfsChangedEmitter(
-  statement: FlinkStatement,
-  database: CCloudFlinkDbKafkaCluster,
-): Promise<void> {
-  if (statement?.status.traits?.sql_kind !== "CREATE_FUNCTION") {
-    return;
-  }
-
-  const completedStatement = await waitForStatementCompletion(statement);
-
-  if (completedStatement.status.phase !== Phase.COMPLETED) {
-    return;
-  }
-
-  udfsChanged.fire(database);
-}
-
 /**
  * Submit a Flink statement to a Flink cluster.
  *
@@ -249,15 +222,13 @@ export async function submitFlinkStatementCommand(
     // Wait for the statement to start running, then open the results view.
     // Show a progress indicator over the Flink Statements view while we wait.
     await statementsView.withProgress(`Submitting statement ${newStatement.name}`, async () => {
-      await waitForResultsFetchable(newStatement);
-      await openFlinkStatementResultsView(newStatement);
+      await handleStatementSubmission(newStatement, currentDatabaseKafkaCluster);
     });
 
     // Refresh the statements view again to show the new state of the statement.
     // (This is a whole empty + reload of view data, so have to wait until it's done.
     //  before we can focus our new statement.)
     await statementsView.refresh();
-    await fireUdfsChangedEmitter(newStatement, currentDatabaseKafkaCluster);
     // Focus again, but don't need to wait for it.
     void statementsView.focus(newStatement.id);
   } catch (err) {
@@ -303,74 +274,9 @@ export async function submitFlinkStatementCommand(
 }
 
 /** Max number of statement results rows to display. */
-const DEFAULT_RESULT_LIMIT = 100_000;
+export const DEFAULT_RESULT_LIMIT = 100_000;
 /** Cache of statement result webviews by env/statement name. */
-const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
-
-/**
- * Handles the display of Flink statement results in a webview panel.
- * Creates or finds an existing panel, sets up the results manager and message handler.
- *
- * @param statement - The Flink statement to display results for
- */
-async function openFlinkStatementResultsView(statement: FlinkStatement | undefined) {
-  if (!statement) return;
-
-  if (!(statement instanceof FlinkStatement)) {
-    logger.error("handleFlinkStatementResults", "statement is not an instance of FlinkStatement");
-    return;
-  }
-
-  const [panel, cached] = statementResultsViewCache.getPanelForStatement(statement);
-  if (cached) {
-    // Existing panel for this statement found, just reveal it.
-    panel.reveal();
-    return;
-  }
-
-  const os = ObservableScope();
-
-  /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
-  const panelActive = os.produce(true, (value, signal) => {
-    const disposed = panel.onDidDispose(() => value(false));
-    const changedState = panel.onDidChangeViewState(() => value(panel.visible));
-    signal.onabort = () => {
-      disposed.dispose();
-      changedState.dispose();
-    };
-  });
-
-  /** Notify an active webview only after flushing the rest of updates. */
-  const notifyUI = () => {
-    queueMicrotask(() => {
-      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
-    });
-  };
-
-  const sidecar = await getSidecar();
-  const resultsManager = new FlinkStatementResultsManager(
-    os,
-    statement,
-    sidecar,
-    notifyUI,
-    DEFAULT_RESULT_LIMIT,
-  );
-
-  // Handle messages from the webview and delegate to the results manager
-  const handler = handleWebviewMessage(panel.webview, (...args) => {
-    let result;
-    // handleMessage() may end up reassigning many signals, so do
-    // so in a batch.
-    os.batch(() => (result = resultsManager.handleMessage(...args)));
-    return result;
-  });
-
-  panel.onDidDispose(() => {
-    resultsManager.dispose();
-    handler.dispose();
-    os.dispose();
-  });
-}
+export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
@@ -379,4 +285,22 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     // Different naming scheme due to legacy telemetry reasons.
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
   ];
+}
+export async function handleStatementSubmission(
+  statement: FlinkStatement,
+  database: CCloudFlinkDbKafkaCluster,
+): Promise<void> {
+  await waitForResultsFetchable(statement);
+  await openFlinkStatementResultsView(statement);
+  if (statement?.status.traits?.sql_kind !== "CREATE_FUNCTION") {
+    return;
+  }
+
+  const completedStatement = await waitForStatementCompletion(statement);
+
+  if (completedStatement.status.phase !== Phase.COMPLETED) {
+    return;
+  }
+
+  udfsChanged.fire(database);
 }
