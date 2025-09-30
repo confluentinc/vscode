@@ -1,10 +1,17 @@
 import { ObservableScope } from "inertial";
 import { FlinkStatementResultsManager } from "../../flinkSql/flinkStatementResultsManager";
+import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
+import { Logger } from "../../logging";
 import { FlinkStatement } from "../../models/flinkStatement";
 import { getSidecar } from "../../sidecar";
 import { handleWebviewMessage } from "../../webview/comms/comms";
-import { DEFAULT_RESULT_LIMIT, logger, statementResultsViewCache } from "../flinkStatements";
 
+/** Max number of statement results rows to display. */
+export const DEFAULT_RESULT_LIMIT = 100_000;
+/** Cache of statement result webviews by env/statement name. */
+export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
+
+const logger = new Logger("commands.flinkStatements");
 /**
  * Handles the display of Flink statement results in a webview panel.
  * Creates or finds an existing panel, sets up the results manager and message handler.

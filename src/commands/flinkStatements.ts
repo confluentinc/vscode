@@ -9,7 +9,6 @@ import { udfsChanged } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FLINK_SQL_FILE_EXTENSIONS, FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import {
-  FlinkStatementWebviewPanelCache,
   IFlinkStatementSubmitParameters,
   determineFlinkStatementName,
   submitFlinkStatement,
@@ -33,7 +32,7 @@ import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { openFlinkStatementResultsView } from "./utils/statements";
 
-export const logger = new Logger("commands.flinkStatements");
+const logger = new Logger("commands.flinkStatements");
 
 /** View the SQL statement portion of a FlinkStatement in a read-only document. */
 export async function viewStatementSqlCommand(statement: FlinkStatement): Promise<void> {
@@ -272,11 +271,6 @@ export async function submitFlinkStatementCommand(
     }
   }
 }
-
-/** Max number of statement results rows to display. */
-export const DEFAULT_RESULT_LIMIT = 100_000;
-/** Cache of statement result webviews by env/statement name. */
-export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
