@@ -280,6 +280,18 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
   ];
 }
+
+/**
+ * After a statement is submitted, wait for it to be running and then show results.
+ *
+ * If the statement is not in a state where results can be shown, this is a no-op.
+ *
+ * If the statement is a CREATE FUNCTION statement, fire the `udfsChanged` emitter
+ * when the statement completes successfully.
+ *
+ * @param statement - The Flink statement that was just submitted.
+ * @param database - The database (Kafka cluster) the statement was submitted against.
+ */
 export async function handleStatementSubmission(
   statement: FlinkStatement,
   database: CCloudFlinkDbKafkaCluster,
