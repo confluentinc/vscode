@@ -3,7 +3,6 @@ import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import { showErrorNotificationWithButtons } from "../../notifications";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 
@@ -21,17 +20,9 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
     forceDeepRefresh: boolean,
   ): Promise<FlinkArtifact[]> {
     this.children = [];
-    try {
-      const loader = CCloudResourceLoader.getInstance();
-      this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
-      return this.children;
-    } catch (error) {
-      const { showNotification, message } = await triageGetFlinkArtifactsError(error);
-      if (showNotification) {
-        void showErrorNotificationWithButtons(message);
-      }
-      throw error;
-    }
+    const loader = CCloudResourceLoader.getInstance();
+    this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
+    return this.children; // FlinkDatabaseViewProvider catches any errors and calls triageGetFlinkArtifactsError() below
   }
 
   getTreeItem(element: FlinkArtifact): TreeItem {
