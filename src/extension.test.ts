@@ -10,8 +10,8 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
+import { BaseViewProvider } from "./viewProviders/baseModels/base";
 import { NewResourceViewProvider } from "./viewProviders/newResources";
-import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
 
@@ -40,9 +40,9 @@ describe("ExtensionContext", () => {
   it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
     const extensionContextSingletons = [
       {
-        callable: () => ResourceViewProvider.getInstance(),
+        callable: () => NewResourceViewProvider.getInstance(),
         source: "ResourceViewProvider",
-        clear: () => (ResourceViewProvider["instance"] = null),
+        clear: () => BaseViewProvider["instanceMap"].delete("NewResourceViewProvider"),
       },
       {
         callable: () => TopicViewProvider.getInstance(),
@@ -111,9 +111,7 @@ describe("Refreshable views tests", () => {
     const seenKinds = new Set<string>();
     const seenViewProviderConstructorNames = new Set<string>();
 
-    const refreshableViewProviders = getRefreshableViewProviders(
-      NewResourceViewProvider.getInstance(),
-    );
+    const refreshableViewProviders = getRefreshableViewProviders();
 
     assert.strictEqual(
       refreshableViewProviders.length,

@@ -20,7 +20,7 @@ import * as ccloudConnections from "../sidecar/connections/ccloud";
 import { SecretStorageKeys } from "../storage/constants";
 import { CustomConnectionSpec, ResourceManager } from "../storage/resourceManager";
 import * as fsWrappers from "../utils/fsWrappers";
-import { ResourceViewProvider } from "../viewProviders/resources";
+import { NewResourceViewProvider } from "../viewProviders/newResources";
 import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {
@@ -377,7 +377,10 @@ Sign out from this extension?`,
       openDirectConnectionFormStub = sandbox.stub(directConnect, "openDirectConnectionForm");
       showErrorMessageStub = sandbox.stub(window, "showErrorMessage");
 
-      resourceViewProviderRefreshStub = sandbox.stub(ResourceViewProvider.getInstance(), "refresh");
+      resourceViewProviderRefreshStub = sandbox.stub(
+        NewResourceViewProvider.getInstance(),
+        "refresh",
+      );
     });
 
     it("should return early if the passed argument is not a DirectEnvironment or string", async function () {
@@ -456,7 +459,10 @@ Sign out from this extension?`,
       showInformationMessageStub = sandbox.stub(window, "showInformationMessage");
       showTextDocumentStub = sandbox.stub(window, "showTextDocument");
       writeFileStub = sandbox.stub(fsWrappers, "writeFile");
-      resourceViewProviderRefreshStub = sandbox.stub(ResourceViewProvider.getInstance(), "refresh");
+      resourceViewProviderRefreshStub = sandbox.stub(
+        NewResourceViewProvider.getInstance(),
+        "refresh",
+      );
       showErrorNotificationWithButtonsStub = sandbox.stub(
         notifications,
         "showErrorNotificationWithButtons",
