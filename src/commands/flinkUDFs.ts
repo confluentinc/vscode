@@ -47,10 +47,11 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   }
   const snippetString = new SnippetString()
     .appendText(`-- Register UDF for artifact "${selectedArtifact.name}"\n`)
+    .appendText(`-- Class name must be fully qualified (e.g. "com.example.MyUDF")\n`)
     .appendText("CREATE FUNCTION `")
-    .appendPlaceholder("yourFunctionNameHere", 1)
+    .appendPlaceholder("registeredFunctionName", 1)
     .appendText("` AS '")
-    .appendPlaceholder("your.class.NameHere", 2)
+    .appendPlaceholder("your.package.ClassName", 2)
     .appendText(`' USING JAR 'confluent-artifact://${selectedArtifact.id}';\n`)
     .appendText("-- confirm with 'SHOW USER FUNCTIONS';\n");
 

@@ -261,7 +261,7 @@ export async function promptForFunctionAndClassName(
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
   const classNameRegex = /^[a-zA-Z_][a-zA-Z0-9_.]*$/;
   const functionName = await vscode.window.showInputBox({
-    prompt: "Enter a name for the new UDF function",
+    prompt: "Enter a name for the new UDF",
     placeHolder: defaultFunctionName,
     validateInput: (value) => validateUdfInput(value, functionNameRegex),
     ignoreFocusOut: true,
@@ -272,8 +272,8 @@ export async function promptForFunctionAndClassName(
   }
 
   const className = await vscode.window.showInputBox({
-    prompt: "Enter the class name for the new UDF",
-    placeHolder: `your.class.NameHere`,
+    prompt: 'Enter the fully qualified class name, e.g. "com.example.MyUDF"',
+    placeHolder: `your.package.ClassName`,
     validateInput: (value) => validateUdfInput(value, classNameRegex),
     ignoreFocusOut: true,
   });
