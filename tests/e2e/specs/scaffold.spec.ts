@@ -5,6 +5,7 @@ import { tmpdir } from "os";
 import path from "path";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
+import { TextDocument } from "../objects/editor/TextDocument";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SupportView } from "../objects/views/SupportView";
@@ -13,12 +14,18 @@ import {
   SelectKafkaCluster,
   TopicsView,
 } from "../objects/views/TopicsView";
+import { View } from "../objects/views/View";
+import { FlinkComputePoolItem } from "../objects/views/viewItems/FlinkComputePoolItem";
 import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
-import { verifyGeneratedProject } from "../utils/scaffold";
+import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
+
+const TEST_ENV_NAME = "main-test-env";
+const TEST_COMPUTE_POOL_NAME = "main-test-pool";
+const TEST_COMPUTE_POOL_ID = "lfcp-5ovn9q";
 
 /**
  * E2E test suite for testing the Project Scaffolding functionality.
@@ -55,6 +62,60 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
     [ConnectionType.Direct, Tag.Direct, DEFAULT_CCLOUD_TOPIC_REPLICATION_FACTOR],
     [ConnectionType.Local, Tag.Local, 1],
   ];
+
+  test.describe("CCloud connection", { tag: [Tag.CCloud] }, () => {
+    test.use({ connectionType: ConnectionType.Ccloud });
+
+    test.beforeEach(async ({ connectionItem }) => {
+      // ensure connection tree item has resources available to work with
+      await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+    });
+
+    test(`should apply Flink Table API In Java For Confluent Cloud template from Flink compute pool`, async ({
+      page,
+    }) => {
+      const resourcesView = new ResourcesView(page);
+      // First, expand the CCloud env
+      await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
+      await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
+      // Then verify we can see the Flink compute pool
+      await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
+      const computePool = new FlinkComputePoolItem(
+        page,
+        resourcesView.ccloudFlinkComputePools.getByText(TEST_COMPUTE_POOL_NAME),
+      );
+
+      // If we start the generate project flow from the right-click context menu
+      await computePool.generateProject();
+      // and we choose a project template from the quickpick
+      const projectQuickpick = new Quickpick(page);
+      await expect(projectQuickpick.locator).toBeVisible();
+      await projectQuickpick.selectItemByText("Flink Table API In Java For Confluent Cloud");
+      // and we submit the form using the pre-filled configuration
+      const scaffoldForm = new ProjectScaffoldWebview(page);
+      await expect(scaffoldForm.computePoolIdField).not.toBeEmpty();
+      await scaffoldForm.submitForm();
+
+      // Then we should see that the project was generated successfully
+      await openGeneratedProjectInCurrentWindow(page);
+      // and we should see that the configuration file cloud.properties holds the correct values
+      const configFileName = "cloud.properties";
+      const explorerView = new View(page, "Explorer");
+      for (const name of ["src", "resources", configFileName]) {
+        const item = explorerView.treeItems.filter({
+          hasText: name,
+        });
+        await expect(item).toBeVisible();
+        await item.click();
+      }
+      const configFileDocument = new TextDocument(page, configFileName);
+      await expect(configFileDocument.tab).toBeVisible();
+      await expect(configFileDocument.editorContent).toBeVisible();
+      await expect(configFileDocument.editorContent).toContainText(
+        `client.compute-pool-id=${TEST_COMPUTE_POOL_ID}`,
+      );
+    });
+  });
 
   for (const [templateDisplayName, templateName] of templates) {
     test(`should apply ${templateDisplayName} template from Support view`, async ({ page }) => {
