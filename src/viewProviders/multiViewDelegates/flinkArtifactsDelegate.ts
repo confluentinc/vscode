@@ -40,9 +40,9 @@ export async function getFlinkArtifactsErrorMessage(error: unknown): Promise<str
     if (status >= 400 && status < 600) {
       switch (status) {
         case 400:
-          if (body.errors[0].detail)
+          // We expect errors w/ specific structure + detail for 400s but just in case...
+          if (Array.isArray(body.errors) && body.errors.length > 0 && body.errors[0].detail)
             message = `Bad request when loading Flink artifacts: ${body.errors[0].detail}`;
-          // expect errors w/ specific detail for 400s but just in case...
           else
             message =
               "Bad request when loading Flink artifacts. Ensure your compute pool is configured correctly.";
