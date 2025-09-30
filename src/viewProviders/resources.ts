@@ -441,7 +441,7 @@ type NewResourceViewProviderData =
 
 export type AnyConnectionRow = ConnectionRow<ConcreteEnvironment, ResourceLoader>;
 
-export class NewResourceViewProvider
+export class ResourceViewProvider
   extends BaseViewProvider<NewResourceViewProviderData>
   implements TreeDataProvider<NewResourceViewProviderData>
 {

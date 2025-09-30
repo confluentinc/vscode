@@ -47,7 +47,7 @@ import {
   DirectConnectionRow,
   LocalConnectionRow,
   mergeUpdates,
-  NewResourceViewProvider,
+  ResourceViewProvider,
   SingleEnvironmentConnectionRow,
 } from "./resources";
 import * as collapsing from "./utils/collapsing";
@@ -678,10 +678,10 @@ describe("viewProviders/resources.ts", () => {
       schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
     });
 
-    let provider: NewResourceViewProvider;
+    let provider: ResourceViewProvider;
 
     beforeEach(() => {
-      provider = new NewResourceViewProvider();
+      provider = new ResourceViewProvider();
 
       // would have been called if we obtained through getInstance().
       provider["initialize"]();
@@ -701,18 +701,17 @@ describe("viewProviders/resources.ts", () => {
 
       // Define test cases as corresponding pairs of
       // [event emitter name, view provider handler method name]
-      const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof NewResourceViewProvider]> =
-        [
-          // Those set in NewResourceViewProvider::setCustomEventListeners()
-          ["ccloudConnected", "ccloudConnectedEventHandler"],
-          ["localKafkaConnected", "localConnectedEventHandler"],
-          ["localSchemaRegistryConnected", "localConnectedEventHandler"],
-          // @ts-expect-error references private method.
-          ["directConnectionsChanged", "reconcileDirectConnections"],
-          ["connectionStable", "refreshConnection"],
-          ["connectionDisconnected", "refreshConnection"],
-          ["resourceSearchSet", "setSearch"],
-        ];
+      const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof ResourceViewProvider]> = [
+        // Those set in NewResourceViewProvider::setCustomEventListeners()
+        ["ccloudConnected", "ccloudConnectedEventHandler"],
+        ["localKafkaConnected", "localConnectedEventHandler"],
+        ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+        // @ts-expect-error references private method.
+        ["directConnectionsChanged", "reconcileDirectConnections"],
+        ["connectionStable", "refreshConnection"],
+        ["connectionDisconnected", "refreshConnection"],
+        ["resourceSearchSet", "setSearch"],
+      ];
 
       it("setEventListeners() + setCustomEventListeners() should return the expected number of listeners", () => {
         // @ts-expect-error protected method

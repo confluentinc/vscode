@@ -93,7 +93,7 @@ import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
-import { NewResourceViewProvider } from "./viewProviders/resources";
+import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -203,7 +203,7 @@ async function _activateExtension(
 
   // set up the different view providers
 
-  const resourceViewProvider = NewResourceViewProvider.getInstance();
+  const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
@@ -496,7 +496,7 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   // When adding a new refreshable view, also update the test block
   // "Refreshable views tests" in extension.test.ts.
   const refreshables = [
-    NewResourceViewProvider.getInstance(),
+    ResourceViewProvider.getInstance(),
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),

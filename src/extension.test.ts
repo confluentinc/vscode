@@ -11,7 +11,7 @@ import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
 import { BaseViewProvider } from "./viewProviders/baseModels/base";
-import { NewResourceViewProvider } from "./viewProviders/resources";
+import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
 
@@ -40,7 +40,7 @@ describe("ExtensionContext", () => {
   it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
     const extensionContextSingletons = [
       {
-        callable: () => NewResourceViewProvider.getInstance(),
+        callable: () => ResourceViewProvider.getInstance(),
         source: "ResourceViewProvider",
         clear: () => BaseViewProvider["instanceMap"].delete("NewResourceViewProvider"),
       },

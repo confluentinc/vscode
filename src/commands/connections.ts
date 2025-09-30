@@ -19,7 +19,7 @@ import {
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { readFileString, writeFile } from "../utils/fsWrappers";
-import { DirectConnectionRow, NewResourceViewProvider } from "../viewProviders/resources";
+import { DirectConnectionRow, ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 
@@ -209,7 +209,7 @@ export async function editDirectConnectionCommand(item: ConnectionId | DirectEnv
     logger.error("Direct connection not found, can't edit");
     // possibly stale Resources view? this shouldn't happen
     window.showErrorMessage("Connection not found.");
-    NewResourceViewProvider.getInstance().refresh();
+    ResourceViewProvider.getInstance().refresh();
     return;
   }
 
@@ -230,7 +230,7 @@ export async function exportDirectConnectionCommand(item: DirectEnvironment | Di
   if (!spec) {
     logger.error("Direct connection not found, can't share");
     window.showErrorMessage("Connection not found.");
-    NewResourceViewProvider.getInstance().refresh();
+    ResourceViewProvider.getInstance().refresh();
     return;
   }
 
