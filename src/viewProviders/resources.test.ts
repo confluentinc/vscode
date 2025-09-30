@@ -671,7 +671,7 @@ describe("viewProviders/resources.ts", () => {
     });
   });
 
-  describe("NewResourceViewProvider", () => {
+  describe("ResourceViewProvider", () => {
     const TEST_CCLOUD_ENVIRONMENT_WITH_KAFKA_AND_SR = new CCloudEnvironment({
       ...TEST_CCLOUD_ENVIRONMENT,
       kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
@@ -702,7 +702,7 @@ describe("viewProviders/resources.ts", () => {
       // Define test cases as corresponding pairs of
       // [event emitter name, view provider handler method name]
       const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof ResourceViewProvider]> = [
-        // Those set in NewResourceViewProvider::setCustomEventListeners()
+        // Those set in ResourceViewProvider::setCustomEventListeners()
         ["ccloudConnected", "ccloudConnectedEventHandler"],
         ["localKafkaConnected", "localConnectedEventHandler"],
         ["localSchemaRegistryConnected", "localConnectedEventHandler"],

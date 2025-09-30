@@ -432,7 +432,7 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   }
 }
 
-type NewResourceViewProviderData =
+type ResourceViewProviderData =
   | ConnectionRow<ConcreteEnvironment, ResourceLoader>
   | ConcreteEnvironment
   | ConcreteKafkaCluster
@@ -442,8 +442,8 @@ type NewResourceViewProviderData =
 export type AnyConnectionRow = ConnectionRow<ConcreteEnvironment, ResourceLoader>;
 
 export class ResourceViewProvider
-  extends BaseViewProvider<NewResourceViewProviderData>
-  implements TreeDataProvider<NewResourceViewProviderData>
+  extends BaseViewProvider<ResourceViewProviderData>
+  implements TreeDataProvider<ResourceViewProviderData>
 {
   readonly kind = "resources";
   readonly viewId = "confluent-resources";
@@ -583,7 +583,7 @@ export class ResourceViewProvider
    * Also reevaluates some global context values based on the data
    * we have across all of our ConnectionRow instances after the repaint.
    */
-  repaint(object: NewResourceViewProviderData | undefined = undefined): void {
+  repaint(object: ResourceViewProviderData | undefined = undefined): void {
     this._onDidChangeTreeData.fire(object);
 
     // And since some view data has changed, reevaluate context values
@@ -646,8 +646,8 @@ export class ResourceViewProvider
     });
   }
 
-  getChildren(element: NewResourceViewProviderData | undefined): NewResourceViewProviderData[] {
-    let children: NewResourceViewProviderData[] = [];
+  getChildren(element: ResourceViewProviderData | undefined): ResourceViewProviderData[] {
+    let children: ResourceViewProviderData[] = [];
 
     this.logger.debug("Getting children", {
       element: element ? element.constructor.name : "undefined",
@@ -690,7 +690,7 @@ export class ResourceViewProvider
     return this.filterChildren(element, children);
   }
 
-  getTreeItem(element: NewResourceViewProviderData): TreeItem {
+  getTreeItem(element: ResourceViewProviderData): TreeItem {
     let treeItem: TreeItem;
     if (element instanceof ConnectionRow) {
       treeItem = element.getTreeItem();

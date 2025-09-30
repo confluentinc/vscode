@@ -42,7 +42,7 @@ describe("ExtensionContext", () => {
       {
         callable: () => ResourceViewProvider.getInstance(),
         source: "ResourceViewProvider",
-        clear: () => BaseViewProvider["instanceMap"].delete("NewResourceViewProvider"),
+        clear: () => BaseViewProvider["instanceMap"].delete("ResourceViewProvider"),
       },
       {
         callable: () => TopicViewProvider.getInstance(),
