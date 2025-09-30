@@ -36,9 +36,8 @@ export async function artifactUploadQuickPickForm(
     resource: CCloudKafkaCluster | CCloudFlinkComputePool,
   ) => {
     // Only set cloud/region if not GCP (not supported)
-    if (resource.provider !== "GCP") {
       state.cloudRegion = { provider: resource.provider, region: resource.region };
-    }
+
     // Only call getEnvironment if we do not already have this environment in state
     // Starting upload from right-clicking on Flink database cluster will override the selectedFlinkDatabase env
     if (!state.environment || state.environment.id !== resource.environmentId) {
@@ -156,7 +155,7 @@ export async function artifactUploadQuickPickForm(
       }
 
       case "cloudRegion": {
-        const cloudRegion = await flinkDatabaseRegionsQuickPick((region) => region.cloud !== "GCP");
+        const cloudRegion = await flinkDatabaseRegionsQuickPick();
         if (cloudRegion) {
           state.cloudRegion = {
             provider: cloudRegion.provider,
