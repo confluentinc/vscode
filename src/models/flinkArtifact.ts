@@ -92,8 +92,14 @@ export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkd
     .addHeader("Flink Artifact", IconNames.FLINK_ARTIFACT)
     .addField("ID", resource.id)
     .addField("Description", resource.description)
-    .addField("Created At", resource.createdAt?.toLocaleString())
-    .addField("Updated At", resource.updatedAt?.toLocaleString());
+    .addField(
+      "Created At",
+      resource.createdAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
+    .addField(
+      "Updated At",
+      resource.updatedAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    );
 
   if (!resource.documentationLink || resource.documentationLink === "") {
     tooltip.addLink("No documentation link", "");

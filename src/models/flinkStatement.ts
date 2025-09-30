@@ -391,8 +391,14 @@ export function createFlinkStatementTooltip(resource: FlinkStatement) {
     .addHeader("Flink Statement", getFlinkStatementThemeIcon(resource.phase).id as IconNames)
     .addField("Kind", resource.sqlKindDisplay)
     .addField("Status", resource.phase)
-    .addField("Created At", resource.createdAt?.toLocaleString())
-    .addField("Updated At", resource.updatedAt?.toLocaleString())
+    .addField(
+      "Created At",
+      resource.createdAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
+    .addField(
+      "Updated At",
+      resource.updatedAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
     .addField("Environment", resource.environmentId)
     .addField("Compute Pool", resource.computePoolId)
     .addField("Detail", resource.status.detail)
