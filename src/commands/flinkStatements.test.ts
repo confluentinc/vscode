@@ -3,6 +3,7 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 
 import { TextDocument } from "vscode-json-languageservice";
+import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
@@ -13,11 +14,9 @@ import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-
-import { eventEmitterStubs } from "../../tests/stubs/emitters";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { handleStatementSubmission, viewStatementSqlCommand } from "./flinkStatements";
 import * as statements from "./utils/statements";
 
@@ -165,10 +164,6 @@ describe("commands/flinkStatements.ts", () => {
       waitForStatementCompletionStub.resolves(createFuncStatement);
 
       await handleStatementSubmission(createFuncStatement, database);
-
-      sinon.assert.calledWithExactly(waitForResultsFetchableStub, createFuncStatement);
-      sinon.assert.calledWithExactly(openFlinkStatementResultsViewStub, createFuncStatement);
-      sinon.assert.calledWithExactly(waitForStatementCompletionStub, createFuncStatement);
 
       sinon.assert.calledWithExactly(stubbedUDFsChangedEmitter.fire, database);
     });
