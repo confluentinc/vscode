@@ -67,6 +67,14 @@ describe("TopicViewProvider", () => {
       assert.strictEqual(provider["forceDeepRefresh"], false);
     });
 
+    it("no-arg refresh() when no cluster is set should still call onDidChangeTreeData.fire() and set this.forceDeepRefresh to false (disconnect scenario)", () => {
+      provider["forceDeepRefresh"] = true;
+      provider.kafkaCluster = null;
+      provider.refresh();
+      sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+      assert.strictEqual(provider["forceDeepRefresh"], false);
+    });
+
     it("true-arg refresh() when focused on a cluster should call onDidChangeTreeData.fire() and set this.forceDeepRefresh to true", () => {
       provider["forceDeepRefresh"] = false;
       provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
