@@ -31,6 +31,11 @@ import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
+import {
+  RawUdfSystemCatalogRow,
+  transformUdfSystemCatalogRows,
+  UDF_SYSTEM_CATALOG_QUERY,
+} from "./ccloudResourceLoaderUtils";
 import { generateFlinkStatementKey } from "./loaderUtils";
 
 const logger = new Logger("storage.ccloudResourceLoader");
@@ -366,23 +371,13 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       // Will raise Error if the cluster isn't Flinkable or if the statement
       // execution fails. Will use the first compute pool in the cluster's
       // flinkPools array to execute the statement.
-      const rawResults = await this.executeFlinkStatement<FunctionNameRow>(
-        "SHOW USER FUNCTIONS",
+      const rawResults = await this.executeFlinkStatement<RawUdfSystemCatalogRow>(
+        UDF_SYSTEM_CATALOG_QUERY,
         cluster,
       );
 
-      udfs = rawResults.map((row) => {
-        return new FlinkUdf({
-          environmentId: cluster.environmentId,
-          provider: cluster.provider,
-          region: cluster.region,
-          databaseId: cluster.id,
-
-          id: row["Function Name"], // No unique ID available, so use name as ID.
-          name: row["Function Name"],
-          description: "", // No description available from SHOW FUNCTIONS.
-        });
-      });
+      // Convert the raw results into FlinkUdf objects.
+      udfs = transformUdfSystemCatalogRows(cluster, rawResults);
 
       // Cache them in the resource manager for future reference.
       await rm.setFlinkUDFs(cluster, udfs);
@@ -504,13 +499,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
     return resultRows;
   }
-}
-
-/**
- * Row type returned by "SHOW (USER) FUNCTIONS" Flink SQL statements.
- */
-export interface FunctionNameRow {
-  "Function Name": string;
 }
 
 /**

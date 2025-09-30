@@ -13,6 +13,7 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import { makeUdfFunctionRow } from "../../tests/unit/testResources/makeUdfRow";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
@@ -59,10 +60,10 @@ import { ResourceManager } from "../storage/resourceManager";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
   CCloudResourceLoader,
-  FunctionNameRow,
   loadArtifactsForProviderRegion,
   loadProviderRegions,
 } from "./ccloudResourceLoader";
+import { RawUdfSystemCatalogRow } from "./ccloudResourceLoaderUtils";
 
 describe("CCloudResourceLoader", () => {
   let sandbox: sinon.SinonSandbox;
@@ -782,18 +783,19 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should handle some UDFs returned from the statement", async () => {
-      const someUDFNames: FunctionNameRow[] = [
-        { "Function Name": "my_udf_1" },
-        { "Function Name": "my_udf_2" },
-        { "Function Name": "my_udf_3" },
+      const udfResultRows: RawUdfSystemCatalogRow[] = [
+        makeUdfFunctionRow("A"),
+        makeUdfFunctionRow("B"),
+        makeUdfFunctionRow("C"),
       ];
-      executeFlinkStatementStub.resolves(someUDFNames);
+
+      executeFlinkStatementStub.resolves(udfResultRows);
 
       const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false);
       assert.ok(Array.isArray(udfs));
-      assert.strictEqual(udfs.length, someUDFNames.length);
-      for (let i = 0; i < someUDFNames.length; i++) {
-        assert.strictEqual(udfs[i].name, someUDFNames[i]["Function Name"]);
+      assert.strictEqual(udfs.length, udfResultRows.length);
+      for (let i = 0; i < udfResultRows.length; i++) {
+        assert.strictEqual(udfs[i].name, udfResultRows[i].functionRoutineName);
         assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
       }
       sinon.assert.calledOnce(executeFlinkStatementStub);
@@ -820,22 +822,26 @@ describe("CCloudResourceLoader", () => {
     });
 
     it("should honor forceDeepRefresh=true to skip cache and reload", async () => {
-      const cachedUDFs: FlinkUdf[] = [createFlinkUDF("func1"), createFlinkUDF("func2")];
+      const cachedUDFs: FlinkUdf[] = [
+        createFlinkUDF("A"),
+        createFlinkUDF("B"),
+        createFlinkUDF("C"),
+      ];
       stubbedResourceManager.getFlinkUDFs.resolves(cachedUDFs); // would be a cache hit, but...
 
-      const someUDFNames: FunctionNameRow[] = [
-        { "Function Name": "my_udf_1" },
-        { "Function Name": "my_udf_2" },
-        { "Function Name": "my_udf_3" },
+      const udfResultRows: RawUdfSystemCatalogRow[] = [
+        makeUdfFunctionRow("A"),
+        makeUdfFunctionRow("B"),
+        makeUdfFunctionRow("C"),
       ];
-      executeFlinkStatementStub.resolves(someUDFNames);
+      executeFlinkStatementStub.resolves(udfResultRows);
 
       // call with forceDeepRefresh=true
       const udfs = await loader.getFlinkUDFs(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, true);
       assert.ok(Array.isArray(udfs));
-      assert.strictEqual(udfs.length, someUDFNames.length);
-      for (let i = 0; i < someUDFNames.length; i++) {
-        assert.strictEqual(udfs[i].name, someUDFNames[i]["Function Name"]);
+      assert.strictEqual(udfs.length, udfResultRows.length);
+      for (let i = 0; i < udfResultRows.length; i++) {
+        assert.strictEqual(udfs[i].name, udfResultRows[i].functionRoutineName);
         assert.strictEqual(udfs[i].databaseId, TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id);
       }
 
