@@ -819,14 +819,6 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
-          },
-          "confluent.preview.useNewResourcesViewProvider": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Use the new Resources view provider for displaying resources in the Confluent extension.\n\n---\n\n⚠️ **WARNING**: This setting is currently in preview and may not be fully functional or stable. Must restart extensions for change to take effect.",
-            "tags": [
-              "preview"
-            ]
           }
         }
       },
@@ -1635,11 +1627,6 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.resources.refresh",
-          "when": "!config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources",
-          "group": "navigation@3"
-        },
-        {
           "command": "confluent.schemas.search",
           "when": "view == confluent-schemas && confluent.schemaRegistrySelected && !confluent.schemaSearchApplied",
           "group": "navigation@1"
@@ -1793,7 +1780,7 @@
         },
         {
           "command": "confluent.resources.refreshConnection",
-          "when": "config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "when": "view == confluent-resources && viewItem =~ /.*-container.*/",
           "group": "inline"
         },
         {

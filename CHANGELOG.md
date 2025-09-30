@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## Changed
+
+- Removed the configuration option controlling which resources view provider implementation to use.
+  The new, individual-connection-refreshable implementation is the only one.
+
 ## Fixed
 
 - Two Flink enablement settings
