@@ -7,12 +7,12 @@ import { ConnectionType } from "../clients/sidecar";
 
 describe("FlinkUdfParameter", () => {
   describe("formatSqlType", () => {
-    it("should remove max int size", () => {
+    it("should remove max varchar size", () => {
       const result = FlinkUdfParameter.formatSqlType("VARCHAR(2147483647)");
       assert.strictEqual(result, "VARCHAR");
     });
 
-    it("should preserve small sizes", () => {
+    it("should preserve small varchar sizes", () => {
       const result = FlinkUdfParameter.formatSqlType("VARCHAR(100)");
       assert.strictEqual(result, "VARCHAR(100)");
     });
@@ -22,7 +22,7 @@ describe("FlinkUdfParameter", () => {
       assert.strictEqual(result, "ROW<field VARCHAR>");
     });
 
-    it("should handle complex types with max int and backticks", () => {
+    it("should handle complex types with max varchar and backticks", () => {
       const result = FlinkUdfParameter.formatSqlType("ROW<`name` VARCHAR(2147483647), `age` INT>");
       assert.strictEqual(result, "ROW<name VARCHAR, age INT>");
     });
@@ -32,7 +32,6 @@ describe("FlinkUdfParameter", () => {
 describe("FlinkUdf", () => {
   it("should return correct details", () => {
     const udf = createFlinkUDF("testFunc");
-    udf.description = "A test function";
     assert.strictEqual(udf.connectionId, CCLOUD_CONNECTION_ID);
     assert.strictEqual(udf.connectionType, ConnectionType.Ccloud);
   });
