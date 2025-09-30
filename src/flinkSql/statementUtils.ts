@@ -114,7 +114,7 @@ export async function waitForResultsFetchable(statement: FlinkStatement): Promis
 }
 
 /**
- * Wait for a vscode-generated and just now-submitted 'hidden' Flink statement to complete.
+ * Wait for a vscode-generated and just now-submitted Flink statement to complete.
  * @returns Promise that resolves to the statement when it has entered a terminal phase.
  */
 export async function waitForStatementCompletion(
