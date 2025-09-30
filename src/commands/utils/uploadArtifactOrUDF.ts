@@ -272,8 +272,8 @@ export async function promptForFunctionAndClassName(
   }
 
   const className = await vscode.window.showInputBox({
-    prompt: "Enter the fully qualified class name",
-    placeHolder: `your.class.NameHere`,
+    prompt: 'Enter the fully qualified class name, e.g. "com.example.MyUDF"',
+    placeHolder: `your.package.ClassName`,
     validateInput: (value) => validateUdfInput(value, classNameRegex),
     ignoreFocusOut: true,
   });
