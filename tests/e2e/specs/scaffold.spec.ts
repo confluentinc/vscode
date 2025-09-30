@@ -78,7 +78,7 @@ test.describe("Project Scaffolding", () => {
       // First, expand the CCloud env
       await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
       await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
-      // Then click on a Flink compute pool
+      // Then verify we can see the Flink compute pool
       await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
       const computePool = new FlinkComputePoolItem(
         page,
@@ -89,6 +89,7 @@ test.describe("Project Scaffolding", () => {
       await computePool.generateProject();
       // and we choose a project template from the quickpick
       const projectQuickpick = new Quickpick(page);
+      await expect(projectQuickpick.locator).toBeVisible();
       await projectQuickpick.selectItemByText("Flink Table API In Java For Confluent Cloud");
       // and we submit the form using the pre-filled configuration
       const scaffoldForm = new ProjectScaffoldWebview(page);
