@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-88",
+  "version": "1.7.0-92",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -274,7 +274,7 @@
     "commands": [
       {
         "command": "confluent.artifacts.createUdfRegistrationDocument",
-        "title": "Register Flink Artifact with Flink SQL",
+        "title": "Register With Flink SQL",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -285,7 +285,7 @@
       },
       {
         "command": "confluent.artifacts.startGuidedUdfCreation",
-        "title": "Register UDF",
+        "title": "Register As UDF",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -2273,6 +2273,20 @@
               "onCommand:confluent.statements.refresh",
               "onCommand:confluent.statements.viewstatementsql",
               "onCommand:confluent.flinkStatementResults"
+            ]
+          },
+          {
+            "id": "cc-flink-artifact-udf",
+            "title": "Develop and Deploy Flink UDFs",
+            "description": "Create User-Defined Functions from templates, develop and test locally, upload artifacts to Confluent Cloud, and register UDFs for use in Flink SQL statements.\n[Generate Flink Artifact](command:confluent.artifacts.scaffold)\n[Upload Flink Artifact](command:confluent.uploadArtifact)",
+            "media": {
+              "markdown": "resources/walkthrough/flink/udf.md"
+            },
+            "completionEvents": [
+              "onCommand:confluent.artifacts.scaffold",
+              "onCommand:confluent.uploadArtifact",
+              "onCommand:confluent.artifacts.createUdfRegistrationDocument",
+              "onCommand:confluent.artifacts.startGuidedUdfCreation"
             ]
           },
           {

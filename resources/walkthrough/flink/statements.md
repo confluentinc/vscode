@@ -1,5 +1,3 @@
-> **Note:** Flink support is currently in **preview**, enable it in the extension settings before using these features.
-
 With the Confluent extension, you can author and execute Flink SQL statements directly from your local code editor, leveraging the full power of VS Code.
 
 ## Authoring Flink SQL Statements
