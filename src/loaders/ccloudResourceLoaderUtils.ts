@@ -15,17 +15,17 @@ const logger = new Logger("ccloudResourceLoaderUtils");
  * about each parameter. The two can be joined on functionSpecificName.
  */
 export const UDF_SYSTEM_CATALOG_QUERY = `
-(select 
-  SPECIFIC_NAME as \`functionSpecificName\`, 
+(select
+  SPECIFIC_NAME as \`functionSpecificName\`,
   ROUTINE_NAME as \`functionRoutineName\`,
   cast(null as int) as \`parameterOrdinalPosition\`,
   cast(null as string) as \`parameterName\`,
-  FULL_DATA_TYPE as \`fullDataType\`, 
-  EXTERNAL_NAME as \`functionExternalName\`, 
-  EXTERNAL_LANGUAGE as \`functionExternalLanguage\`, 
-  EXTERNAL_ARTIFACTS as \`functionExternalArtifacts\`, 
-  IS_DETERMINISTIC as \`isDeterministic\`, 
-  cast(CREATED as string) as \`functionCreatedTs\`, 
+  FULL_DATA_TYPE as \`fullDataType\`,
+  EXTERNAL_NAME as \`functionExternalName\`,
+  EXTERNAL_LANGUAGE as \`functionExternalLanguage\`,
+  EXTERNAL_ARTIFACTS as \`functionExternalArtifacts\`,
+  IS_DETERMINISTIC as \`isDeterministic\`,
+  cast(CREATED as string) as \`functionCreatedTs\`,
   FUNCTION_KIND as \`functionKind\`,
   cast(false as string) as \`isParameterOptional\`,
   cast(null as string)  as \`parameterTraits\`
@@ -34,17 +34,17 @@ where ROUTINE_TYPE = 'FUNCTION')
 
 union all
 
-(select 
-  SPECIFIC_NAME as \`functionSpecificName\`, 
+(select
+  SPECIFIC_NAME as \`functionSpecificName\`,
   ROUTINE_NAME as \`functionRoutineName\`,
   ORDINAL_POSITION as \`parameterOrdinalPosition\`,
   PARAMETER_NAME as \`parameterName\`,
-  FULL_DATA_TYPE as \`fullDataType\`, 
-  cast(null as string) as \`functionExternalName\`, 
-  cast(null as string) as \`functionExternalLanguage\`, 
-  cast(null as string) as \`functionExternalArtifacts\`, 
+  FULL_DATA_TYPE as \`fullDataType\`,
+  cast(null as string) as \`functionExternalName\`,
+  cast(null as string) as \`functionExternalLanguage\`,
+  cast(null as string) as \`functionExternalArtifacts\`,
   cast(null as string) as \`isDeterministic\`,
-  cast(null as string) as \`functionCreatedTs\`, 
+  cast(null as string) as \`functionCreatedTs\`,
   cast(null as string) as \`functionKind\`,
   IS_OPTIONAL as \`isParameterOptional\`,
   TRAITS as \`parameterTraits\`
@@ -192,7 +192,7 @@ export function transformUdfSystemCatalogRows(
         language: row.functionExternalLanguage,
         artifactReference: row.functionExternalArtifacts,
         isDeterministic: row.isDeterministic === "YES",
-        creationTs: new Date(row.functionCreatedTs),
+        creationTs: new Date(row.functionCreatedTs + "Z"),
         kind: row.functionKind,
         returnType: row.fullDataType,
 
