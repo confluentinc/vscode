@@ -121,7 +121,7 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
 
   get artifactReferenceExtracted(): string {
     // Extract artifact ID and version from "confluent-artifact://<artifact-id>/<version-id>"
-    return this.artifactReference.replace(/^confluent-artifact:\/\//, "") || this.artifactReference;
+    return this.artifactReference.replace(/^confluent-artifact:\/\//, "");
   }
 }
 
@@ -160,7 +160,10 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
   tooltip.addField("Language", resource.language);
   tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
   tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
-  tooltip.addField("Created At", resource.creationTs.toLocaleString());
+  tooltip.addField(
+    "Created At",
+    resource.creationTs.toLocaleString(undefined, { timeZoneName: "short" }),
+  );
   tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
   return tooltip;
 }
