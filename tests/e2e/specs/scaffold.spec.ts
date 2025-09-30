@@ -23,6 +23,10 @@ import { Tag } from "../tags";
 import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
+const TEST_ENV_NAME = "main-test-env";
+const TEST_COMPUTE_POOL_NAME = "main-test-pool";
+const TEST_COMPUTE_POOL_ID = "lfcp-5ovn9q";
+
 /**
  * E2E test suite for testing the Project Scaffolding functionality.
  * {@see https://github.com/confluentinc/vscode/issues/1840}
@@ -73,12 +77,12 @@ test.describe("Project Scaffolding", () => {
       const resourcesView = new ResourcesView(page);
       // First, expand the CCloud env
       await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-      await resourcesView.ccloudEnvironments.getByText("main-test-env").click();
+      await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
       // Then click on a Flink compute pool
       await expect(resourcesView.ccloudFlinkComputePools).not.toHaveCount(0);
       const computePool = new FlinkComputePoolItem(
         page,
-        resourcesView.ccloudFlinkComputePools.getByText("main-test-pool"),
+        resourcesView.ccloudFlinkComputePools.getByText(TEST_COMPUTE_POOL_NAME),
       );
 
       // If we start the generate project flow from the right-click context menu
@@ -96,7 +100,7 @@ test.describe("Project Scaffolding", () => {
       // and we should see that the configuration file cloud.properties holds the correct values
       const configFileName = "cloud.properties";
       const explorerView = new View(page, "Explorer");
-      for (var name of ["src", "resources", configFileName]) {
+      for (const name of ["src", "resources", configFileName]) {
         const item = explorerView.treeItems.filter({
           hasText: name,
         });
@@ -107,7 +111,7 @@ test.describe("Project Scaffolding", () => {
       await expect(configFileDocument.tab).toBeVisible();
       await expect(configFileDocument.editorContent).toBeVisible();
       await expect(configFileDocument.editorContent).toContainText(
-        "client.compute-pool-id=lfcp-5ovn9q",
+        `client.compute-pool-id=${TEST_COMPUTE_POOL_ID}`,
       );
     });
   });
