@@ -10,10 +10,10 @@ import {
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
-import { makeUdfFunctionRow } from "../../tests/unit/testResources/ccloudResourceLoader";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import { makeUdfFunctionRow } from "../../tests/unit/testResources/makeUdfRow";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
 import {

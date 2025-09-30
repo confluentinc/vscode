@@ -10,7 +10,7 @@ export class FlinkUdfParameter {
   isOptional: boolean;
   traits: string[];
 
-  constructor(props: { name: string; dataType: string; isOptional: boolean; traits: string[] }) {
+  constructor(props: Pick<FlinkUdfParameter, "name" | "dataType" | "isOptional" | "traits">) {
     this.name = props.name;
     this.dataType = props.dataType;
     this.isOptional = props.isOptional;

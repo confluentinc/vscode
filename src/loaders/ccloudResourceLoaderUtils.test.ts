@@ -1,10 +1,7 @@
 import * as assert from "assert";
 
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
-import {
-  makeUdfFunctionRow,
-  makeUdfParameterRow,
-} from "../../tests/unit/testResources/ccloudResourceLoader";
+import { makeUdfFunctionRow, makeUdfParameterRow } from "../../tests/unit/testResources/makeUdfRow";
 import {
   RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,

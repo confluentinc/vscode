@@ -125,16 +125,16 @@ export type RawUdfSystemCatalogParameterRow = {
  * Parse raw UDF system catalog rows into FlinkUdf objects, one per function, with parameters populated.
  * The input rows should be the result of UDF_SYSTEM_CATALOG_QUERY.
  *
- * @param cluster What cluster these UDFs belong to
+ * @param database What cluster these UDFs belong to
  * @param rawResults The raw rows from the UDF system catalog query, will be either function-describing rows (RawUdfSystemCatalogFunctionRow) or parameter-describing (RawUdfSystemCatalogParameterRow) rows.
  * @returns Array of FlinkUdf objects sorted by their id (functionSpecificName).
  */
 export function transformUdfSystemCatalogRows(
-  cluster: CCloudFlinkDbKafkaCluster,
+  database: CCloudFlinkDbKafkaCluster,
   rawResults: RawUdfSystemCatalogRow[],
 ): FlinkUdf[] {
   logger.debug(
-    `Transforming ${rawResults.length} raw UDF system catalog rows for cluster ${cluster.name} (${cluster.id})`,
+    `Transforming ${rawResults.length} raw UDF system catalog rows for cluster ${database.name} (${database.id})`,
   );
 
   /*
@@ -181,10 +181,10 @@ export function transformUdfSystemCatalogRows(
       currentParameterPositions.clear();
 
       currentUDF = new FlinkUdf({
-        environmentId: cluster.environmentId,
-        provider: cluster.provider,
-        region: cluster.region,
-        databaseId: cluster.id,
+        environmentId: database.environmentId,
+        provider: database.provider,
+        region: database.region,
+        databaseId: database.id,
 
         id: row.functionSpecificName, // Unique for function name + parameter signature
         name: row.functionRoutineName,
