@@ -171,11 +171,19 @@ export async function flinkDatabaseRegionsQuickPick(
     });
   }
 
-  quickPickItems.push({
+  quickPickItems.push(
+    {
+      label: "View All Available Regions",
+      description: "",
+      kind: QuickPickItemKind.Separator,
+    },
+    {
     label: "View All Available Regions",
     description: "Show the complete list of regions",
     value: "VIEW_ALL",
-  });
+      alwaysShow: true,
+    },
+  );
 
   const choice = await window.showQuickPick(quickPickItems, {
     placeHolder: "Select a region containing a Flink database",

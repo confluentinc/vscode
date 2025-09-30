@@ -53,8 +53,8 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
   };
 
   const testRegions: FcpmV2RegionListDataInner[] = [testRegionDataAWS, testRegionDataAzure];
-  before(() => {
-    getTestExtensionContext();
+  before(async () => {
+    await getTestExtensionContext();
   });
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -301,8 +301,8 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
       const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] =
         showQuickPickStub.firstCall.args[0];
 
-      // Should have separators + regions + "View All" item: AWS separator + 2 AWS regions + AZURE separator + 1 AZURE region + "View All" item
-      assert.strictEqual(quickPickItems.length, 6);
+      // Should have AWS separator + 2 AWS regions + AZURE separator + 1 AZURE region + View All separator + View All item
+      assert.strictEqual(quickPickItems.length, 7);
 
       // Check AWS separator
       const awsSeparator = quickPickItems[0];
@@ -343,7 +343,7 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
       });
 
       // Check "View All" item
-      const viewAllItem = quickPickItems[5];
+      const viewAllItem = quickPickItems[6];
       assert.strictEqual(viewAllItem.label, "View All Available Regions");
       assert.strictEqual(viewAllItem.description, "Show the complete list of regions");
       assert.strictEqual(viewAllItem.value, "VIEW_ALL");
