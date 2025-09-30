@@ -125,10 +125,12 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
           try {
             this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
           } catch (error) {
-            const logMsg = `Failed to load Flink ${this.currentDelegate.mode}`;
-            const userMessage = await getFlinkArtifactsErrorMessage(error);
-            void showErrorNotificationWithButtons(userMessage);
-            void logError(error, logMsg);
+            let msg = `Failed to load Flink ${this.currentDelegate.mode}`;
+            if (this.currentDelegate.mode === FlinkDatabaseViewProviderMode.Artifacts) {
+              msg = await getFlinkArtifactsErrorMessage(error);
+            }
+            void showErrorNotificationWithButtons(msg);
+            void logError(error, msg);
           }
         },
         false,
