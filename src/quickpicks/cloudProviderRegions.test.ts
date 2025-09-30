@@ -3,6 +3,9 @@ import sinon from "sinon";
 import { QuickPickItemKind, window } from "vscode";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import {
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, // reuse base fixture
+} from "../../tests/unit/testResources/kafkaCluster";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   FcpmV2RegionListDataInner,
@@ -242,38 +245,49 @@ describe.only("quickpicks/cloudProviderRegions.ts", () => {
   });
 
   describe("flinkDatabaseRegionsQuickPick()", () => {
-    const testFlinkDbCluster1: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
-      id: "lkc-flink-db-1",
-      name: "test-flink-db-cluster-1",
-      provider: "AWS",
-      region: "us-east-1",
-      bootstrapServers: "SASL_SSL://pkc-flink-db-1.us-east-1.aws.confluent.cloud:9092",
-      uri: "https://pkc-flink-db-1.us-east-1.aws.confluent.cloud:443",
-      environmentId: "env-1" as EnvironmentId,
-      flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    }) as CCloudFlinkDbKafkaCluster;
+    // Helper to clone TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER mock with overrides.
+    const makeTestFlinkDbCluster = (
+      id: string,
+      name: string,
+      provider: "AWS" | "AZURE",
+      region: string,
+      environmentId: EnvironmentId,
+    ): CCloudFlinkDbKafkaCluster =>
+      CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+        id,
+        name,
+        provider,
+        region,
+        environmentId,
+        // Derived to stay consistent with provider/region overrides.
+        bootstrapServers: `SASL_SSL://pkc-${id}.${region}.${provider.toLowerCase()}.confluent.cloud:9092`,
+        uri: `https://pkc-${id}.${region}.${provider.toLowerCase()}.confluent.cloud:443`,
+      }) as CCloudFlinkDbKafkaCluster;
 
-    const testFlinkDbCluster2: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
-      id: "lkc-flink-db-2",
-      name: "test-flink-db-cluster-2",
-      provider: "AWS",
-      region: "us-west-2",
-      bootstrapServers: "SASL_SSL://pkc-flink-db-2.us-west-2.aws.confluent.cloud:9092",
-      uri: "https://pkc-flink-db-2.us-west-2.aws.confluent.cloud:443",
-      environmentId: "env-2" as EnvironmentId,
-      flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    }) as CCloudFlinkDbKafkaCluster;
+    const testFlinkDbCluster1: CCloudFlinkDbKafkaCluster = makeTestFlinkDbCluster(
+      "lkc-flink-db-1",
+      "test-flink-db-cluster-1",
+      "AWS",
+      "us-east-1",
+      "env-1" as EnvironmentId,
+    );
 
-    const testFlinkDbCluster3: CCloudFlinkDbKafkaCluster = CCloudKafkaCluster.create({
-      id: "lkc-flink-db-3",
-      name: "test-flink-db-cluster-3",
-      provider: "AZURE",
-      region: "eastus",
-      bootstrapServers: "SASL_SSL://pkc-flink-db-3.eastus.azure.confluent.cloud:9092",
-      uri: "https://pkc-flink-db-3.eastus.azure.confluent.cloud:443",
-      environmentId: "env-3" as EnvironmentId,
-      flinkPools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
-    }) as CCloudFlinkDbKafkaCluster;
+    const testFlinkDbCluster2: CCloudFlinkDbKafkaCluster = makeTestFlinkDbCluster(
+      "lkc-flink-db-2",
+      "test-flink-db-cluster-2",
+      "AWS",
+      "us-west-2",
+      "env-2" as EnvironmentId,
+    );
+
+    const testFlinkDbCluster3: CCloudFlinkDbKafkaCluster = makeTestFlinkDbCluster(
+      "lkc-flink-db-3",
+      "test-flink-db-cluster-3",
+      "AZURE",
+      "eastus",
+      "env-3" as EnvironmentId,
+    );
 
     const testFlinkDbClusters: CCloudFlinkDbKafkaCluster[] = [
       testFlinkDbCluster1,
