@@ -1,7 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { IdItem } from "./main";
+import { CustomMarkdownString, IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 export class FlinkUdfParameter {
@@ -90,6 +90,7 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     this.artifactReference = props.artifactReference;
     this.isDeterministic = props.isDeterministic;
     this.creationTs = props.creationTs;
+    this.parameters = props.parameters || [];
     this.kind = props.kind;
     this.returnType = props.returnType;
 
@@ -107,6 +108,11 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   get connectionType(): ConnectionType {
     return ConnectionType.Ccloud;
   }
+
+  get artifactReferenceExtracted(): string {
+    // Extract artifact ID and version from "confluent-artifact://<artifact-id>/<version-id>"
+    return this.artifactReference.replace(/^confluent-artifact:\/\//, "") || this.artifactReference;
+  }
 }
 
 export class FlinkUdfTreeItem extends TreeItem {
@@ -118,6 +124,32 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
-    this.description = resource.description;
+    // Show return type in the description
+    this.description = `→ ${resource.returnType}`;
+    this.tooltip = createFlinkUdfToolTip(resource);
   }
+}
+
+export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
+    .addField("ID", resource.id)
+    .addField("Description", resource.description)
+    .addField("Return Type", resource.returnType);
+
+  // Parameters section - most important non-terse information
+  if (resource.parameters.length > 0) {
+    const params = resource.parameters.map((p) => `${p.dataType}: ${p.name}`).join(", ");
+    tooltip.addField("Parameters", `(${params})`);
+  } else {
+    tooltip.addField("Parameters", "None");
+  }
+
+  // Additional function properties
+  tooltip.addField("Language", resource.language);
+  tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
+  tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
+  tooltip.addField("Created", resource.creationTs.toLocaleString());
+  tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
+  return tooltip;
 }
