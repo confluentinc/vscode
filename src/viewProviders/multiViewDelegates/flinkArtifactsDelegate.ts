@@ -49,19 +49,18 @@ export async function triageGetFlinkArtifactsError(error: unknown): Promise<{
   if (isResponseError(error)) {
     const status = error.response.status;
     const body = await extractResponseBody(error);
-    if (status === 400) {
-      showNotification = true;
-      if (body.errors[0].detail)
-        message = `Bad request: ${body.errors[0].detail}`; // expect errors w/ specific detail for 400s
-      // but just in case...
-      else
-        message =
-          "Bad request when loading Flink artifacts. Please ensure your compute pool is configured correctly.";
-      return { showNotification, message };
-    }
-    if (status >= 401 && status < 600) {
+
+    if (status >= 400 && status < 600) {
       showNotification = true;
       switch (status) {
+        case 400:
+          if (body.errors[0].detail)
+            message = `Bad request when loading Flink artifacts: ${body.errors[0].detail}`;
+          // expect errors w/ specific detail for 400s but just in case...
+          else
+            message =
+              "Bad request when loading Flink artifacts. Ensure your compute pool is configured correctly.";
+          break;
         case 401:
           message = "Authentication required to load Flink artifacts.";
           break;
