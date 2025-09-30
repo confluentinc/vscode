@@ -21,12 +21,16 @@ import { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
+  deleteFlinkUDFCommand,
   registerFlinkUDFCommands,
   setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
 } from "./flinkUDFs";
 import * as commands from "./index";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
+import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
+import { ConnectionType } from "../clients/sidecar";
 
 describe("commands/flinkUDFs.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -52,6 +56,142 @@ describe("commands/flinkUDFs.ts", () => {
     sandbox.restore();
   });
 
+  describe("deleteFlinkUDFCommand", () => {
+    const mockUDF = createFlinkUDF("123");
+    let executeFlinkStatementStub: sinon.SinonStub;
+    let showWarningStub: sinon.SinonStub;
+    let mockFlinkDatabaseViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+
+    const mockCluster = {
+      id: "cluster-123",
+      name: "Flink DB Cluster",
+      connectionId: artifact.connectionId,
+      connectionType: ConnectionType.Ccloud,
+      environmentId: artifact.environmentId,
+      bootstrapServers: "pkc-xyz",
+      provider: "aws",
+      region: "us-west-2",
+      flinkPools: [{ id: "compute-pool-1" }],
+      isFlinkable: true,
+      isSameCloudRegion: () => true,
+      toFlinkSpecProperties: () => ({
+        toProperties: () => ({}),
+      }),
+    } as unknown as CCloudFlinkDbKafkaCluster;
+
+    beforeEach(() => {
+      executeFlinkStatementStub = sandbox.stub(
+        CCloudResourceLoader.getInstance(),
+        "executeFlinkStatement",
+      );
+      showWarningStub = sandbox.stub(vscode.window, "showWarningMessage");
+      mockFlinkDatabaseViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+
+      // By default, set the mock provider to return a valid cluster
+      mockFlinkDatabaseViewProvider.resource = mockCluster;
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockFlinkDatabaseViewProvider);
+    });
+
+    it("should return early if no UDF is provided", async () => {
+      await deleteFlinkUDFCommand(undefined as any);
+
+      sinon.assert.notCalled(showWarningStub);
+      sinon.assert.notCalled(executeFlinkStatementStub);
+    });
+
+    it("should open a confirmation modal and return early if the user cancels", async () => {
+      showWarningStub.resolves({ title: "Cancel" });
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showWarningStub);
+
+      sinon.assert.notCalled(executeFlinkStatementStub);
+    });
+
+    it("should handle 'No Flink database' error", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      // Override the mock provider to return no database
+      mockFlinkDatabaseViewProvider.resource = null;
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: No Flink database.");
+      sinon.assert.notCalled(executeFlinkStatementStub);
+    });
+
+    it("should handle ResponseError in catch block", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      const responseError: FlinkArtifactsResponseError = createResponseError(
+        500,
+        "Internal Server Error",
+        "Database connection failed",
+      );
+      executeFlinkStatementStub.rejects(responseError);
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: Database connection failed");
+    });
+
+    it("should extract flink detail from error message when available", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      const errorWithDetail = new Error(
+        "Some error occurred Error detail: Function not found in catalog",
+      );
+      executeFlinkStatementStub.rejects(errorWithDetail);
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: Function not found in catalog");
+    });
+
+    it("should use regular error message when no flink detail available", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      const regularError = new Error("Connection timeout");
+      executeFlinkStatementStub.rejects(regularError);
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: Connection timeout");
+    });
+
+    it("should report progress messages during successful deletion", async () => {
+      const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+      showWarningStub.resolves("Yes, delete");
+
+      const progressReportStub = sandbox.stub();
+      withProgressStub.callsFake(async (options, callback) => {
+        return await callback(
+          {
+            report: progressReportStub,
+          },
+          {} as vscode.CancellationToken,
+        );
+      });
+
+      executeFlinkStatementStub.resolves({ dropped_at: new Date().toISOString() });
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledThrice(progressReportStub);
+      sinon.assert.calledOnce(mockFlinkDatabaseViewProvider.refresh);
+      sinon.assert.calledWith(mockFlinkDatabaseViewProvider.refresh, true);
+      sinon.assert.calledOnce(showInfoStub);
+    });
+  });
+
   describe("registerFlinkUDFCommands()", () => {
     it("should register expected Flink UDF commands", () => {
       const registerCommandWithLoggingStub = sandbox
@@ -60,20 +200,25 @@ describe("commands/flinkUDFs.ts", () => {
 
       registerFlinkUDFCommands();
 
-      sinon.assert.calledThrice(registerCommandWithLoggingStub);
+      sinon.assert.callCount(registerCommandWithLoggingStub, 4);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub.getCall(0),
+        "confluent.deleteFlinkUDF",
+        deleteFlinkUDFCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub.getCall(1),
         "confluent.flinkdatabase.setUDFsViewMode",
         setFlinkUDFViewModeCommand,
       );
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(1),
+        registerCommandWithLoggingStub.getCall(2),
         "confluent.artifacts.createUdfRegistrationDocument",
         createUdfRegistrationDocumentCommand,
       );
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(2),
+        registerCommandWithLoggingStub.getCall(3),
         "confluent.artifacts.startGuidedUdfCreation",
         startGuidedUdfCreationCommand,
       );

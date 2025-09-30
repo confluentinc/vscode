@@ -36,7 +36,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
     `Are you sure you want to delete the UDF "${selectedUdf.name}"?`,
     {
       modal: true,
-      detail: `Deleting this UDF will run 'DROP FUNCTION' within the Flinkable CCloud Kafka Cluster "${selectedUdf.databaseId}". This action cannot be undone.`,
+      detail: `Deleting this UDF will also delete all other overloaded versions of this UDF. It will run 'DROP FUNCTION' within the Flinkable CCloud Kafka Cluster "${selectedUdf.databaseId}". This action cannot be undone.`,
     },
     confirmButton,
   );
