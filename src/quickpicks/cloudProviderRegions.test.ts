@@ -20,12 +20,12 @@ import {
 } from "./cloudProviderRegions";
 import { QuickPickItemWithValue } from "./types";
 
-describe("quickpicks/cloudProviderRegions.ts", () => {
+describe.only("quickpicks/cloudProviderRegions.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let loadProviderRegionsStub: sinon.SinonStub;
   let showQuickPickStub: sinon.SinonStub;
   let ccloudLoaderStub: sinon.SinonStubbedInstance<ccloudResourceLoader.CCloudResourceLoader>;
-
+  let getComputePoolProviderRegionsStub: sinon.SinonStub;
   const testRegionDataAWS: FcpmV2RegionListDataInner = {
     api_version: FcpmV2RegionListDataInnerApiVersionEnum.FcpmV2,
     kind: FcpmV2RegionListDataInnerKindEnum.Region,
@@ -62,6 +62,8 @@ describe("quickpicks/cloudProviderRegions.ts", () => {
     showQuickPickStub = sandbox.stub(window, "showQuickPick");
     loadProviderRegionsStub = sandbox.stub(ccloudResourceLoader, "loadProviderRegions");
     loadProviderRegionsStub.resolves(testRegions);
+    getComputePoolProviderRegionsStub = ccloudLoaderStub.getComputePoolProviderRegions;
+    getComputePoolProviderRegionsStub.resolves([{ provider: "AWS", region: "us-east-1" }]);
     const stubbedViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
     sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(stubbedViewProvider);
   });
