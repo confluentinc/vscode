@@ -124,48 +124,44 @@ export async function flinkDatabaseRegionsQuickPick(
   const loader = CCloudResourceLoader.getInstance();
   const flinkDbClusters: CCloudFlinkDbKafkaCluster[] = await loader.getFlinkDatabases();
 
-  const awsSet = new ObjectSet<IProviderRegion>((pr) => `${pr.provider}-${pr.region}`);
-  const azureSet = new ObjectSet<IProviderRegion>((pr) => `${pr.provider}-${pr.region}`);
-  // GCP not supported for Flink artifacts yet
+  // Track unique provider-region pairs for all supported providers - AWS, AZURE, GCP (future GCP support expected)
+  const providerRegionSets: Record<string, ObjectSet<IProviderRegion>> = {};
   for (const db of flinkDbClusters) {
-    const pr = {
-      provider: db.provider,
-      region: db.region,
-      name: db.name,
-    };
-    if (db.provider === "AWS") {
-      awsSet.add(pr);
-    } else if (db.provider === "AZURE") {
-      azureSet.add(pr);
+    if (!providerRegionSets[db.provider]) {
+      providerRegionSets[db.provider] = new ObjectSet<IProviderRegion>(
+        (pr) => `${pr.provider}-${pr.region}`,
+      );
     }
+    providerRegionSets[db.provider].add({ provider: db.provider, region: db.region });
   }
-  const awsProviderRegions: IProviderRegion[] = awsSet
-    .items()
-    .sort((a, b) => a.region.localeCompare(b.region));
-  const azureProviderRegions: IProviderRegion[] = azureSet
-    .items()
-    .sort((a, b) => a.region.localeCompare(b.region));
 
+  // Sort providers alphabetically
+  const sortedProviders = Object.keys(providerRegionSets).sort((a, b) => a.localeCompare(b));
   const quickPickItems: QuickPickItemWithValue<IProviderRegion | "VIEW_ALL">[] = [];
   let lastProvider = "";
-  for (const entry of [...awsProviderRegions, ...azureProviderRegions]) {
-    if (entry.provider !== lastProvider) {
-      lastProvider = entry.provider;
+  for (const provider of sortedProviders) {
+    const regions = providerRegionSets[provider]
+      .items()
+      .sort((a, b) => a.region.localeCompare(b.region));
+    for (const entry of regions) {
+      if (entry.provider !== lastProvider) {
+        lastProvider = entry.provider;
+        quickPickItems.push({
+          label: entry.provider,
+          description: "",
+          kind: QuickPickItemKind.Separator,
+        });
+      }
+      // make the description out of the names of the databases in this provider+region
+      const matchingDatabases = flinkDbClusters.filter(
+        (db) => db.provider === entry.provider && db.region === entry.region,
+      );
       quickPickItems.push({
-        label: entry.provider,
-        description: "",
-        kind: QuickPickItemKind.Separator,
+        label: `${entry.provider} | ${entry.region}`,
+        description: matchingDatabases.map((db) => db.name).join(", "),
+        value: { provider: entry.provider, region: entry.region },
       });
     }
-    // make the description out of the names of the databases in this provider+region
-    const matchingDatabases = flinkDbClusters.filter(
-      (db) => db.provider === entry.provider && db.region === entry.region,
-    );
-    quickPickItems.push({
-      label: `${entry.provider} | ${entry.region}`,
-      description: matchingDatabases.map((db) => db.name).join(", "),
-      value: { provider: entry.provider, region: entry.region },
-    });
   }
 
   quickPickItems.push(
