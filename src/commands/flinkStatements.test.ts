@@ -17,10 +17,8 @@ import { FlinkStatement, Phase } from "../models/flinkStatement";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import {
-  fireEmitterWhenFlinkStatementIsCreatingFunction,
-  viewStatementSqlCommand,
-} from "./flinkStatements";
+import { handleStatementSubmission, viewStatementSqlCommand } from "./flinkStatements";
+import * as statements from "./utils/statements";
 
 describe("commands/flinkStatements.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -133,58 +131,64 @@ describe("commands/flinkStatements.ts", () => {
     });
   });
 
-  describe("fireEmitterWhenFlinkStatementIsCreatingFunction", () => {
+  describe("fire emitter when the Flink Statement creates a function", () => {
+    const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
+    let waitForStatementCompletionStub: sinon.SinonStub;
+    let waitForResultsFetchableStub: sinon.SinonStub;
+    let openFlinkStatementResultsViewStub: sinon.SinonStub;
+    const createFuncStatement = createFlinkStatement({
+      sqlStatement:
+        "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
+    });
+    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
+      vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
+    >;
+
+    beforeEach(() => {
+      waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
+      waitForResultsFetchableStub = sandbox.stub(statementUtils, "waitForResultsFetchable");
+      openFlinkStatementResultsViewStub = sandbox.stub(statements, "openFlinkStatementResultsView");
+      stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
+    });
+
     it("should fire the emitter", async () => {
-      const statement = createFlinkStatement({
-        sqlStatement:
-          "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
-      });
-      statement.status = {
-        ...statement.status,
+      createFuncStatement.status = {
+        ...createFuncStatement.status,
         phase: Phase.COMPLETED,
         traits: {
           sql_kind: "CREATE_FUNCTION",
         },
       };
-      const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
-      const stubbedEventEmitters = eventEmitterStubs(sandbox);
-      const waitForStatementCompletionStub = sandbox.stub(
-        statementUtils,
-        "waitForStatementCompletion",
-      );
-      waitForStatementCompletionStub.resolves(statement);
-      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
-      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
+      waitForResultsFetchableStub.resolves();
+      openFlinkStatementResultsViewStub.resolves();
+      waitForStatementCompletionStub.resolves(createFuncStatement);
 
-      sinon.assert.calledOnce(stubbedUDFsChangedEmitter.fire);
+      await handleStatementSubmission(createFuncStatement, database);
+
+      sinon.assert.calledWithExactly(stubbedUDFsChangedEmitter.fire, database);
     });
 
     it("should not fire the emitter on other types of statements", async () => {
-      const statement = createFlinkStatement({
-        sqlStatement:
-          "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
-      });
-      statement.status = {
-        ...statement.status,
+      createFuncStatement.status = {
+        ...createFuncStatement.status,
         phase: Phase.COMPLETED,
         traits: {
           sql_kind: "NOT A CREATE FUNCTION",
         },
       };
-      const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
-      const stubbedEventEmitters = eventEmitterStubs(sandbox);
-      const waitForStatementCompletionStub = sandbox.stub(
-        statementUtils,
-        "waitForStatementCompletion",
-      );
-      waitForStatementCompletionStub.resolves(statement);
-      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
-      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
+      waitForResultsFetchableStub.resolves();
+      openFlinkStatementResultsViewStub.resolves();
+      waitForStatementCompletionStub.resolves(createFuncStatement);
 
+      await handleStatementSubmission(createFuncStatement, database);
+
+      sinon.assert.calledOnce(waitForResultsFetchableStub);
+      sinon.assert.calledOnce(openFlinkStatementResultsViewStub);
+      sinon.assert.notCalled(waitForStatementCompletionStub);
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
 
-    it("should not fire the emitter on a statement with a non-COMPLETED phase ", async () => {
+    it("should not fire the emitter on a statement with a non-COMPLETED phase", async () => {
       const statement = createFlinkStatement({
         sqlStatement: "SELECT * FROM my_test_flink_statement_table",
       });
@@ -195,16 +199,15 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "CREATE_FUNCTION",
         },
       };
-      const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
-      const stubbedEventEmitters = eventEmitterStubs(sandbox);
-      const waitForStatementCompletionStub = sandbox.stub(
-        statementUtils,
-        "waitForStatementCompletion",
-      );
+      waitForResultsFetchableStub.resolves();
+      openFlinkStatementResultsViewStub.resolves();
       waitForStatementCompletionStub.resolves(statement);
-      const stubbedUDFsChangedEmitter = stubbedEventEmitters.udfsChanged!;
-      await fireEmitterWhenFlinkStatementIsCreatingFunction(statement, database);
 
+      await handleStatementSubmission(statement, database);
+
+      sinon.assert.calledOnce(waitForResultsFetchableStub);
+      sinon.assert.calledOnce(openFlinkStatementResultsViewStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
   });
