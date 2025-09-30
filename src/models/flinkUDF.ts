@@ -16,6 +16,16 @@ export class FlinkUdfParameter {
     this.isOptional = props.isOptional;
     this.traits = props.traits;
   }
+
+  /**
+   * Returns a display-friendly version of the data type by removing max-int size specifications and escaping backticks.
+   */
+  static formatSqlType(sqlType: string): string {
+    // Remove noisy (2GBs) max size type values
+    const cleaned = sqlType.replace(/\(2147483647\)/g, "");
+    // Remove backticks that are part of SQL syntax (e.g., in ROW<`field` VARCHAR>)
+    return cleaned.replace(/`/g, "");
+  }
 }
 
 export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
@@ -124,8 +134,8 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
-    // Show return type in the description
-    this.description = `→ ${resource.returnType}`;
+
+    this.description = `→ ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
     this.tooltip = createFlinkUdfToolTip(resource);
   }
 }
@@ -135,11 +145,12 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
     .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
     .addField("ID", resource.id)
     .addField("Description", resource.description)
-    .addField("Return Type", resource.returnType);
+    .addField("Return Type", FlinkUdfParameter.formatSqlType(resource.returnType));
 
-  // Parameters section - most important non-terse information
   if (resource.parameters.length > 0) {
-    const params = resource.parameters.map((p) => `${p.dataType}: ${p.name}`).join(", ");
+    const params = resource.parameters
+      .map((p) => `${p.name} : ${FlinkUdfParameter.formatSqlType(p.dataType)}`)
+      .join(", ");
     tooltip.addField("Parameters", `(${params})`);
   } else {
     tooltip.addField("Parameters", "None");
@@ -149,7 +160,7 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
   tooltip.addField("Language", resource.language);
   tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
   tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
-  tooltip.addField("Created", resource.creationTs.toLocaleString());
+  tooltip.addField("Created At", resource.creationTs.toLocaleString());
   tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
   return tooltip;
 }
