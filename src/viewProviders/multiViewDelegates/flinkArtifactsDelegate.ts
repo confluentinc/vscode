@@ -1,5 +1,5 @@
 import { TreeItem } from "vscode";
-import { isResponseError, logError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
@@ -26,7 +26,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
       this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
       return this.children;
     } catch (error) {
-      const { showNotification, message } = triageGetFlinkArtifactsError(error);
+      const { showNotification, message } = await triageGetFlinkArtifactsError(error);
       if (showNotification) {
         void showErrorNotificationWithButtons(message);
       }
@@ -39,17 +39,26 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   }
 }
 
-export function triageGetFlinkArtifactsError(error: unknown): {
+export async function triageGetFlinkArtifactsError(error: unknown): Promise<{
   showNotification: boolean;
   message: string;
-} {
+}> {
   let showNotification = false;
   let message = "Failed to load Flink artifacts.";
 
   if (isResponseError(error)) {
     const status = error.response.status;
-    /* Note: This switch statement intentionally excludes 400 errors.
-     Otherwise, they may pop up on loading the compute pool if it is using an unsupported cloud provider. */
+    const body = await extractResponseBody(error);
+    if (status === 400) {
+      showNotification = true;
+      if (body.errors[0].detail)
+        message = `Bad request: ${body.errors[0].detail}`; // expect errors w/ specific detail for 400s
+      // but just in case...
+      else
+        message =
+          "Bad request when loading Flink artifacts. Please ensure your compute pool is configured correctly.";
+      return { showNotification, message };
+    }
     if (status >= 401 && status < 600) {
       showNotification = true;
       switch (status) {
