@@ -47,7 +47,7 @@ export async function createUdfRegistrationDocumentCommand(selectedArtifact: Fli
   }
   const snippetString = new SnippetString()
     .appendText(`-- Register UDF for artifact "${selectedArtifact.name}"\n`)
-    .appendText(`-- Class name must be a fully qualified class name (e.g. "com.example.MyUDF")\n`)
+    .appendText(`-- Class name must be fully qualified (e.g. "com.example.MyUDF")\n`)
     .appendText("CREATE FUNCTION `")
     .appendPlaceholder("yourFunctionNameHere", 1)
     .appendText("` AS '")
