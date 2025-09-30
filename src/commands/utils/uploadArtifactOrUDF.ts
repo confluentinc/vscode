@@ -8,9 +8,12 @@ import {
 } from "../../clients/flinkArtifacts";
 import { artifactsChanged } from "../../emitters";
 import { logError } from "../../errors";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { FlinkArtifact } from "../../models/flinkArtifact";
+import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { CloudProvider, EnvironmentId, IEnvProviderRegion } from "../../models/resource";
+import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
 import { readFileBuffer } from "../../utils/fsWrappers";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
@@ -281,4 +284,28 @@ export async function promptForFunctionAndClassName(
     return undefined;
   }
   return { functionName, className };
+}
+
+/**
+ * Submit a `CREATE FUNCTION` statement to register a UDF for the provided artifact, function and
+ * class names defined by the user, and Flink database.
+ */
+export async function executeCreateFunction(
+  artifact: FlinkArtifact,
+  userInput: {
+    functionName: string;
+    className: string;
+  },
+  database: CCloudFlinkDbKafkaCluster,
+) {
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
+    `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${artifact.id}';`,
+    database,
+    {
+      timeout: 60000, // custom timeout of 60 seconds
+    },
+  );
+  const createdMsg = `${userInput.functionName} function created successfully.`;
+  void showInfoNotificationWithButtons(createdMsg);
 }
