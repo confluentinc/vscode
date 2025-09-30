@@ -5,10 +5,10 @@ TEST_RESULT_WEBVIEW_FILE = $(CURDIR)/TEST-result-webview.xml
 # How many days cache entries can stay in the semaphore cache before they are considered stale
 SEM_CACHE_DURATION_DAYS ?= 7
 current_time := $(shell date +"%s")
-# OS Name
+# platform+arch info for agent-specific handling (test names, cache keys, etc)
 os_name := $(shell uname -s)
-os_name_and_arch := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')_$$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')")
-platform_arch := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/') $$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')")
+export PLATFORM := $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')")
+export ARCH := $(shell uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
@@ -25,13 +25,13 @@ else
 	@echo "Mocha test results not found at $(TEST_RESULT_FILE)"
 endif
 ifneq ($(wildcard $(TEST_RESULT_E2E_FILE)),)
-	test-results publish $(TEST_RESULT_E2E_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: E2E ($(platform_arch))" --force
+	test-results publish $(TEST_RESULT_E2E_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: E2E ($(PLATFORM) $(ARCH))" --force
 	@echo "Published E2E test results from $(TEST_RESULT_E2E_FILE)"
 else
 	@echo "E2E test results not found at $(TEST_RESULT_E2E_FILE)"
 endif
 ifneq ($(wildcard $(TEST_RESULT_WEBVIEW_FILE)),)
-	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: Webview ($(platform_arch))" --force
+	test-results publish $(TEST_RESULT_WEBVIEW_FILE) --name "VS Code ($${VSCODE_VERSION:-stable}) Extension Tests: Webview ($(PLATFORM) $(ARCH))" --force
 	@echo "Published Webview test results from $(TEST_RESULT_WEBVIEW_FILE)"
 else
 	@echo "Webview test results not found at $(TEST_RESULT_WEBVIEW_FILE)"
@@ -42,10 +42,10 @@ endif
 ci-bin-sem-cache-store:
 ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 	@echo "Storing semaphore caches"
-	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
+	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
 # Cache packages installed by `npx playwright install`
-	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
-	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
+	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
+	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(PLATFORM)_$(ARCH)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -73,5 +73,20 @@ _ci-bin-sem-cache-store:
 .PHONY: ci-bin-sem-cache-restore
 ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
-	cache restore $(os_name_and_arch)_npm_cache
-	cache restore $(os_name_and_arch)_playwright_cache || true
+	cache restore $(PLATFORM)_$(ARCH)_npm_cache
+	cache restore $(PLATFORM)_$(ARCH)_playwright_cache || true
+
+# Merge per-job blob reports into one HTML report by test job:
+# - Each job's blob reporter will write a report zip to `blob-report/`, so we'll have multiple files
+#  like `blob-report/report-abc123.zip`, `blob-report/report-xyz456.zip` (one for each test)
+# - When we merge them into an HTML report, we'll get one HTML report in `playwright-report/`
+#  containing all tests from each job, which we then zip up and push to Semaphore artifacts
+#  so each job's results can be downloaded separately.
+# (To avoid making large zip files, we're not bundling these into per-agent reports.)
+.PHONY: merge-blob-reports
+merge-blob-reports:
+	npx playwright merge-reports --reporter html blob-report
+	$(eval TEST_SUITE_NAME := $(subst @,, $(or $(TEST_SUITE_TAG),all)))
+	$(eval FILENAME := playwright-report-$(PLATFORM)-$(ARCH)-vscode-$(VSCODE_VERSION)--$(TEST_SUITE_NAME).zip)
+	tar -zcvf $(FILENAME) playwright-report
+	artifact push workflow $(FILENAME) --destination "playwright-reports/$(FILENAME)" --force

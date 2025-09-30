@@ -48,7 +48,7 @@ enum ConfigType {
   KafkaAndSchemaRegistry = "Kafka+Schema Registry",
 }
 
-test.describe("Direct Connection CRUD Lifecycle", () => {
+test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCRUD] }, () => {
   test.beforeEach(async ({ electronApp }) => {
     // stub the disconnect confirmation dialog
     const confirmButtonIndex = process.platform === "linux" ? 1 : 0;
