@@ -1,5 +1,5 @@
 import { TreeItem } from "vscode";
-import { extractResponseBody, isResponseError, logError } from "../../errors";
+import { extractResponseBody, isResponseError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../../models/flinkArtifact";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
@@ -22,7 +22,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
     this.children = [];
     const loader = CCloudResourceLoader.getInstance();
     this.children = await loader.getFlinkArtifacts(resource, forceDeepRefresh);
-    return this.children; // FlinkDatabaseViewProvider catches any errors and calls triageGetFlinkArtifactsError() below
+    return this.children; // FlinkDatabaseViewProvider catches any errors and calls getFlinkArtifactsErrorMessage() below
   }
 
   getTreeItem(element: FlinkArtifact): TreeItem {
@@ -30,11 +30,7 @@ export class FlinkArtifactsDelegate extends ViewProviderDelegate<
   }
 }
 
-export async function triageGetFlinkArtifactsError(error: unknown): Promise<{
-  showNotification: boolean;
-  message: string;
-}> {
-  let showNotification = false;
+export async function getFlinkArtifactsErrorMessage(error: unknown): Promise<string> {
   let message = "Failed to load Flink artifacts.";
 
   if (isResponseError(error)) {
@@ -42,7 +38,6 @@ export async function triageGetFlinkArtifactsError(error: unknown): Promise<{
     const body = await extractResponseBody(error);
 
     if (status >= 400 && status < 600) {
-      showNotification = true;
       switch (status) {
         case 400:
           if (body.errors[0].detail)
@@ -73,12 +68,7 @@ export async function triageGetFlinkArtifactsError(error: unknown): Promise<{
           break;
       }
     }
-    void logError(error, "Failed to load Flink artifacts");
-  } else {
-    message = "Failed to load Flink artifacts. Please check your connection and try again.";
-    showNotification = true;
-    void logError(error, "Failed to load Flink artifacts");
   }
 
-  return { showNotification, message };
+  return message;
 }

@@ -17,7 +17,7 @@ import { MultiModeViewProvider, ViewProviderDelegate } from "./baseModels/multiV
 import { FlinkDatabaseViewProviderMode } from "./multiViewDelegates/constants";
 import {
   FlinkArtifactsDelegate,
-  triageGetFlinkArtifactsError,
+  getFlinkArtifactsErrorMessage,
 } from "./multiViewDelegates/flinkArtifactsDelegate";
 import { FlinkUDFsDelegate } from "./multiViewDelegates/flinkUDFsDelegate";
 
@@ -125,13 +125,10 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
           try {
             this.children = await this.currentDelegate.fetchChildren(db, forceDeepRefresh);
           } catch (error) {
-            const msg = `Failed to load Flink ${this.currentDelegate.mode}`;
-            const { showNotification, message: userMessage } =
-              await triageGetFlinkArtifactsError(error);
-            if (showNotification) {
-              void showErrorNotificationWithButtons(userMessage);
-            }
-            void logError(error, msg);
+            const logMsg = `Failed to load Flink ${this.currentDelegate.mode}`;
+            const userMessage = await getFlinkArtifactsErrorMessage(error);
+            void showErrorNotificationWithButtons(userMessage);
+            void logError(error, logMsg);
           }
         },
         false,
