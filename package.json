@@ -274,7 +274,7 @@
     "commands": [
       {
         "command": "confluent.artifacts.createUdfRegistrationDocument",
-        "title": "Register Flink Artifact with Flink SQL",
+        "title": "Register with Flink SQL",
         "category": "Confluent: Flink Artifacts"
       },
       {
@@ -285,7 +285,7 @@
       },
       {
         "command": "confluent.artifacts.startGuidedUdfCreation",
-        "title": "Register UDF",
+        "title": "Register as UDF",
         "category": "Confluent: Flink Artifacts"
       },
       {
