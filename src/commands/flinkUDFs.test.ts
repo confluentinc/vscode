@@ -30,7 +30,6 @@ import * as commands from "./index";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
-import { ConnectionType } from "../clients/sidecar";
 
 describe("commands/flinkUDFs.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -62,23 +61,6 @@ describe("commands/flinkUDFs.ts", () => {
     let showWarningStub: sinon.SinonStub;
     let mockFlinkDatabaseViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
 
-    const mockCluster = {
-      id: "cluster-123",
-      name: "Flink DB Cluster",
-      connectionId: artifact.connectionId,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: artifact.environmentId,
-      bootstrapServers: "pkc-xyz",
-      provider: "aws",
-      region: "us-west-2",
-      flinkPools: [{ id: "compute-pool-1" }],
-      isFlinkable: true,
-      isSameCloudRegion: () => true,
-      toFlinkSpecProperties: () => ({
-        toProperties: () => ({}),
-      }),
-    } as unknown as CCloudFlinkDbKafkaCluster;
-
     beforeEach(() => {
       executeFlinkStatementStub = sandbox.stub(
         CCloudResourceLoader.getInstance(),
@@ -88,7 +70,7 @@ describe("commands/flinkUDFs.ts", () => {
       mockFlinkDatabaseViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
 
       // By default, set the mock provider to return a valid cluster
-      mockFlinkDatabaseViewProvider.resource = mockCluster;
+      mockFlinkDatabaseViewProvider.resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
       sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockFlinkDatabaseViewProvider);
     });
 
