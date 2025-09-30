@@ -133,9 +133,6 @@ describe("commands/flinkStatements.ts", () => {
 
   describe("fire emitter when the Flink Statement creates a function", () => {
     const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
-    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
-      vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
-    >;
     let waitForStatementCompletionStub: sinon.SinonStub;
     let waitForResultsFetchableStub: sinon.SinonStub;
     let openFlinkStatementResultsViewStub: sinon.SinonStub;
@@ -143,6 +140,9 @@ describe("commands/flinkStatements.ts", () => {
       sqlStatement:
         "CREATE FUNCTION `testFunction` AS 'com.test.TestClass' USING JAR 'confluent-artifact://artifact-id';",
     });
+    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
+      vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
+    >;
 
     beforeEach(() => {
       waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
