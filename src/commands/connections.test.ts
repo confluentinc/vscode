@@ -20,7 +20,7 @@ import * as ccloudConnections from "../sidecar/connections/ccloud";
 import { SecretStorageKeys } from "../storage/constants";
 import { CustomConnectionSpec, ResourceManager } from "../storage/resourceManager";
 import * as fsWrappers from "../utils/fsWrappers";
-import { NewResourceViewProvider } from "../viewProviders/newResources";
+import { NewResourceViewProvider } from "../viewProviders/resources";
 import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {

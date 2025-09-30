@@ -11,7 +11,7 @@ import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
 import { BaseViewProvider } from "./viewProviders/baseModels/base";
-import { NewResourceViewProvider } from "./viewProviders/newResources";
+import { NewResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
 

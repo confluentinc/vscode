@@ -49,11 +49,11 @@ import {
   mergeUpdates,
   NewResourceViewProvider,
   SingleEnvironmentConnectionRow,
-} from "./newResources";
+} from "./resources";
 import * as collapsing from "./utils/collapsing";
 import * as viewProvidersSearch from "./utils/search";
 
-describe("viewProviders/newResources.ts", () => {
+describe("viewProviders/resources.ts", () => {
   let sandbox: sinon.SinonSandbox;
 
   before(async () => {

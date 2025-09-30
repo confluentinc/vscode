@@ -97,7 +97,7 @@ export abstract class ConnectionRow<ET extends ConcreteEnvironment, LT extends R
     public baseContextValue: string,
   ) {
     this.environments = [];
-    this.logger = new Logger(`viewProviders.newResources.ConnectionRow.${this.connectionId}`);
+    this.logger = new Logger(`viewProviders.resources.ConnectionRow.${this.connectionId}`);
   }
 
   /**
@@ -447,7 +447,7 @@ export class NewResourceViewProvider
 {
   readonly kind = "resources";
   readonly viewId = "confluent-resources";
-  readonly loggerName = "viewProviders.newResources";
+  readonly loggerName = "viewProviders.resources";
   readonly searchChangedEmitter = resourceSearchSet;
   readonly searchContextValue = ContextValues.resourceSearchApplied;
 
