@@ -114,10 +114,7 @@ describe("viewProviders/flinkDatabase.ts", () => {
           `Failed to load Flink ${viewProvider["currentDelegate"].mode}`,
         );
         sinon.assert.calledOnce(showErrorNotificationStub);
-        sinon.assert.calledWith(
-          showErrorNotificationStub,
-          `Failed to load Flink ${viewProvider["currentDelegate"].mode}`,
-        );
+        sinon.assert.calledWith(showErrorNotificationStub, "Failed to load Flink artifacts.");
       });
 
       it("should use the current delegate's loading message in progress indicator", async () => {
