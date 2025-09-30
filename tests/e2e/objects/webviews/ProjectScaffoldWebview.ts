@@ -21,6 +21,10 @@ export class ProjectScaffoldWebview extends Webview {
     return this.form.locator('[name="cc_topic"]');
   }
 
+  get computePoolIdField(): Locator {
+    return this.form.locator('[name="cc_compute_pool_id"]');
+  }
+
   async submitForm(): Promise<void> {
     return this.form.locator('input[type="submit"]').click();
   }

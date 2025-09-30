@@ -5,6 +5,24 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { View } from "../objects/views/View";
 
 /**
+ * Opens the generated project in the current window.
+ *
+ * @param page - The Playwright page object.
+ */
+export async function openGeneratedProjectInCurrentWindow(page: Page) {
+  // We should see that the project was generated successfully
+  const notificationArea = new NotificationArea(page);
+  const infoNotifications = notificationArea.infoNotifications.filter({
+    hasText: "Project Generated",
+  });
+  await expect(infoNotifications).not.toHaveCount(0);
+
+  // Open the generated project in the current window
+  const successNotification = new Notification(page, infoNotifications.first());
+  await successNotification.clickActionButton("Open in Current Window");
+}
+
+/**
  * Verifies that the project was generated successfully and that its .env file holds
  * the expected configuration.
  *
@@ -19,16 +37,7 @@ export async function verifyGeneratedProject(
   bootstrapServers: string,
   topic?: string,
 ) {
-  // We should see that the project was generated successfully
-  const notificationArea = new NotificationArea(page);
-  const infoNotifications = notificationArea.infoNotifications.filter({
-    hasText: "Project Generated",
-  });
-  await expect(infoNotifications).not.toHaveCount(0);
-
-  // Open the generated project in the current window
-  const successNotification = new Notification(page, infoNotifications.first());
-  await successNotification.clickActionButton("Open in Current Window");
+  await openGeneratedProjectInCurrentWindow(page);
 
   // Open the configuration file .env
   const envFileName = ".env";
