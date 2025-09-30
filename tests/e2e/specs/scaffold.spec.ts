@@ -5,7 +5,9 @@ import { tmpdir } from "os";
 import path from "path";
 import { test } from "../baseTest";
 import { ConnectionType } from "../connectionTypes";
+import { URI_SCHEME } from "../constants";
 import { TextDocument } from "../objects/editor/TextDocument";
+import { InputBox } from "../objects/quickInputs/InputBox";
 import { Quickpick } from "../objects/quickInputs/Quickpick";
 import { ResourcesView } from "../objects/views/ResourcesView";
 import { SupportView } from "../objects/views/SupportView";
@@ -20,6 +22,7 @@ import { KafkaClusterItem } from "../objects/views/viewItems/KafkaClusterItem";
 import { TopicItem } from "../objects/views/viewItems/TopicItem";
 import { ProjectScaffoldWebview } from "../objects/webviews/ProjectScaffoldWebview";
 import { Tag } from "../tags";
+import { executeVSCodeCommand } from "../utils/commands";
 import { openGeneratedProjectInCurrentWindow, verifyGeneratedProject } from "../utils/scaffold";
 import { openConfluentSidebar } from "../utils/sidebarNavigation";
 
@@ -133,6 +136,25 @@ test.describe("Project Scaffolding", { tag: [Tag.ProjectScaffolding] }, () => {
 
       // Then we should see that the project was generated successfully
       await verifyGeneratedProject(page, templateName, "localhost:9092");
+    });
+
+    test(`should apply ${templateDisplayName} template from URI`, async ({ page }) => {
+      // Given we call the projectScaffold URI handler
+      await executeVSCodeCommand(page, "confluent.handleUri");
+      const uriInputBox = new InputBox(page);
+      await expect(uriInputBox.locator).toBeVisible();
+      await uriInputBox.input.fill(
+        `${URI_SCHEME}://confluentinc.vscode-confluent/projectScaffold?collection=vscode&template=${templateName}&cc_bootstrap_server=localhost:9092&isFormNeeded=true`,
+      );
+      await uriInputBox.confirm();
+      // and we submit the form using the pre-filled configuration
+      const scaffoldForm = new ProjectScaffoldWebview(page);
+      await expect(scaffoldForm.bootstrapServersField).not.toBeEmpty();
+      const bootstrapServers = await scaffoldForm.bootstrapServersField.inputValue();
+      await scaffoldForm.submitForm();
+
+      // Then we should see that the project was generated successfully
+      await verifyGeneratedProject(page, templateName, bootstrapServers);
     });
 
     for (const [connectionType, connectionTag, replicationFactor] of connectionTypes) {
