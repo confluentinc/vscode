@@ -5,7 +5,7 @@ import { NotificationArea } from "../objects/notifications/NotificationArea";
 import { View } from "../objects/views/View";
 
 /**
- * Opens the generated project in the current window.
+ * Verifies that the project was generated successfully and opens it in the current window.
  *
  * @param page - The Playwright page object.
  */
