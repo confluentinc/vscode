@@ -50,9 +50,18 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
 
     this.metadata = {
       ...props.metadata,
-      created_at: props.metadata?.created_at ? new Date(props.metadata.created_at) : undefined,
-      updated_at: props.metadata?.updated_at ? new Date(props.metadata.updated_at) : undefined,
-      deleted_at: props.metadata?.deleted_at ? new Date(props.metadata.deleted_at) : undefined,
+      created_at:
+        typeof props.metadata?.created_at === "string"
+          ? new Date(props.metadata.created_at)
+          : props.metadata?.created_at,
+      updated_at:
+        typeof props.metadata?.updated_at === "string"
+          ? new Date(props.metadata.updated_at)
+          : props.metadata?.updated_at,
+      deleted_at:
+        typeof props.metadata?.deleted_at === "string"
+          ? new Date(props.metadata.deleted_at)
+          : props.metadata?.deleted_at,
     };
   }
 
