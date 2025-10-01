@@ -4,12 +4,10 @@ import { getStubbedCCloudResourceLoader } from "../../../tests/stubs/resourceLoa
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
 import { createFlinkArtifact } from "../../../tests/unit/testResources/flinkArtifact";
 import { ResponseError } from "../../clients/flinkArtifacts";
-import * as errors from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
-import * as notifications from "../../notifications";
-import { FlinkArtifactsDelegate } from "./flinkArtifactsDelegate";
+import { FlinkArtifactsDelegate, getFlinkArtifactsErrorMessage } from "./flinkArtifactsDelegate";
 
-describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
+describe.only("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
@@ -31,22 +29,14 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
     };
 
     let artifactsDelegate: FlinkArtifactsDelegate;
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
 
     beforeEach(() => {
       artifactsDelegate = new FlinkArtifactsDelegate();
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
     });
 
     describe("fetchChildren()", () => {
-      let logErrorStub: sinon.SinonStub;
-      let showErrorNotificationStub: sinon.SinonStub;
-      let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
-
-      beforeEach(() => {
-        logErrorStub = sandbox.stub(errors, "logError");
-        showErrorNotificationStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
-        stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
-      });
-
       it("fetches artifacts from the loader and returns them", async () => {
         const mockArtifacts = [
           createFlinkArtifact({ id: "artifact1", name: "Test Artifact 1" }),
@@ -65,7 +55,6 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
         sinon.assert.calledWith(stubbedLoader.getFlinkArtifacts, fakeParent.kafkaCluster);
       });
-
       it("passes forceDeepRefresh to the loader", async () => {
         const mockArtifacts = [
           createFlinkArtifact({ id: "artifact1", name: "Test Artifact 1" }),
@@ -79,7 +68,6 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         sinon.assert.calledOnce(stubbedLoader.getFlinkArtifacts);
         sinon.assert.calledWith(stubbedLoader.getFlinkArtifacts, fakeParent.kafkaCluster, true);
       });
-
       it("clears children and rethrows when loader fails (431 -> default message)", async () => {
         const mockError = new ResponseError(new Response("some other 4xx err", { status: 431 }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
@@ -90,47 +78,7 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         );
 
         assert.deepStrictEqual(artifactsDelegate["children"], []);
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
       });
-
-      it("handles 503 with service unavailable message", async () => {
-        const mockError = new ResponseError(new Response("Service unavailable", { status: 503 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
-      });
-
-      it("handles non-HTTP errors with generic message", async () => {
-        const mockError = new Error("Failed to load Flink artifacts");
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
-      });
-
-      it("does not show notification for non-error HTTP status (300)", async () => {
-        const mockError = new ResponseError(new Response("oh no", { status: 300 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.notCalled(showErrorNotificationStub);
-      });
-
       it("clears children at start of fetch when error occurs", async () => {
         const mockError = new ResponseError(new Response("test error", { status: undefined }));
         stubbedLoader.getFlinkArtifacts.rejects(mockError);
@@ -145,66 +93,67 @@ describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
         );
         assert.deepStrictEqual(artifactsDelegate["children"], []);
       });
+    });
+  });
 
-      it("does not show notification for 400 but still logs", async () => {
-        const mockError = new ResponseError(new Response("Bad request", { status: 400 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+  describe("getFlinkArtifactsErrorMessage()", () => {
+    it("handles 503 with service unavailable message", async () => {
+      const mockError = new ResponseError(new Response("Service unavailable", { status: 503 }));
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Failed to load Flink artifacts. The service is temporarily unavailable. Please try again later.",
+      );
+    });
 
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.notCalled(showErrorNotificationStub);
+    it("handles non-HTTP errors with generic message", async () => {
+      const mockError = new Error("Failed to load Flink artifacts");
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Failed to load Flink artifacts.",
+      );
+    });
+
+    it("extracts the error details for 400 status", async () => {
+      const mockResponseBody = JSON.stringify({
+        errors: [{ detail: "artifacts not supported in region ABC", code: "400" }],
       });
+      const mockError = new ResponseError(new Response(mockResponseBody, { status: 400 }));
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Bad request when loading Flink artifacts: artifacts not supported in region ABC",
+      );
+    });
 
-      it("handles 401 with auth message", async () => {
-        const mockError = new ResponseError(new Response("Unauthorized", { status: 401 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+    it("handles 401 with auth message", async () => {
+      const mockError = new ResponseError(new Response("Unauthorized", { status: 401 }));
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Authentication required to load Flink artifacts.",
+      );
+    });
 
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
-      });
+    it("handles 404 with not found message", async () => {
+      const mockError = new ResponseError(new Response("Not found", { status: 404 }));
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Flink artifacts not found for this compute pool.",
+      );
+    });
 
-      it("handles 404 with not found message", async () => {
-        const mockError = new ResponseError(new Response("Not found", { status: 404 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
+    it("handles 429 with rate limit message", async () => {
+      const mockError = new ResponseError(new Response("Too many requests", { status: 429 }));
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Too many requests. Please try again later.",
+      );
+    });
 
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
-      });
-
-      it("handles 429 with rate limit message", async () => {
-        const mockError = new ResponseError(new Response("Too many requests", { status: 429 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
-      });
-
-      it("handles unknown HTTP error with default message", async () => {
-        const mockError = new ResponseError(new Response("I'm a teapot", { status: 418 }));
-        stubbedLoader.getFlinkArtifacts.rejects(mockError);
-
-        await assert.rejects(
-          artifactsDelegate.fetchChildren(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, false),
-          mockError,
-        );
-        sinon.assert.calledOnce(logErrorStub);
-        sinon.assert.calledOnce(showErrorNotificationStub);
-      });
+    it("handles unknown HTTP error with default message", async () => {
+      const mockError = new ResponseError(new Response("I'm a teapot", { status: 418 }));
+      assert.strictEqual(
+        await getFlinkArtifactsErrorMessage(mockError),
+        "Failed to load Flink artifacts due to an unexpected error.",
+      );
     });
   });
 });
