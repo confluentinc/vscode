@@ -1220,6 +1220,7 @@ describe("CCloudResourceLoader", () => {
     let submitFlinkStatementStub: sinon.SinonStub;
     let waitForStatementCompletionStub: sinon.SinonStub;
     let parseAllFlinkStatementResultsStub: sinon.SinonStub;
+    let deleteStatementStub: sinon.SinonStub;
 
     interface TestResult {
       EXPR0: number;
@@ -1233,6 +1234,7 @@ describe("CCloudResourceLoader", () => {
         "parseAllFlinkStatementResults",
       );
       sinon.stub(loader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+      deleteStatementStub = sandbox.stub(loader, "deleteFlinkStatement");
     });
 
     it("should throw if provided compute pool is for different cloud/region", async () => {
@@ -1281,6 +1283,32 @@ describe("CCloudResourceLoader", () => {
         parseAllFlinkStatementResultsStub.getCall(0).args[0],
         completedStatement,
       );
+      sinon.assert.calledOnce(deleteStatementStub);
+      sinon.assert.calledWithExactly(deleteStatementStub, completedStatement);
+    });
+
+    it("should return results even if deletion fails", async () => {
+      const completedStatement = { phase: Phase.COMPLETED } as FlinkStatement;
+      waitForStatementCompletionStub.resolves(completedStatement);
+
+      const parseResults: Array<TestResult> = [{ EXPR0: 1 }];
+      parseAllFlinkStatementResultsStub.returns(parseResults);
+
+      const deletionError = new Error("Simulated deletion failure");
+      deleteStatementStub.rejects(deletionError);
+
+      const returnedResults = await loader.executeFlinkStatement<TestResult>(
+        "SELECT 1",
+        TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+      );
+
+      assert.deepStrictEqual(returnedResults, parseResults);
+
+      sinon.assert.calledOnce(submitFlinkStatementStub);
+      sinon.assert.calledOnce(waitForStatementCompletionStub);
+      sinon.assert.calledOnce(parseAllFlinkStatementResultsStub);
+      sinon.assert.calledOnce(deleteStatementStub);
+      sinon.assert.calledWithExactly(deleteStatementStub, completedStatement);
     });
 
     it("should throw if statement does not complete successfully", async () => {
@@ -1295,6 +1323,7 @@ describe("CCloudResourceLoader", () => {
       sinon.assert.calledOnce(waitForStatementCompletionStub);
       sinon.assert.calledOnce(submitFlinkStatementStub);
       sinon.assert.notCalled(parseAllFlinkStatementResultsStub);
+      sinon.assert.notCalled(deleteStatementStub);
     });
 
     it("should override timeout if provided", async () => {
@@ -1412,6 +1441,24 @@ describe("CCloudResourceLoader", () => {
       const emitterStubs = eventEmitterStubs(sandbox);
 
       flinkStatementDeletedFireStub = emitterStubs.flinkStatementDeleted!.fire;
+    });
+
+    it("should raise if no organization is available", async () => {
+      getOrganizationStub.resolves(null);
+
+      const statementToDelete = createFlinkStatement();
+      await assert.rejects(
+        async () => {
+          await loader.deleteFlinkStatement(statementToDelete);
+        },
+        {
+          name: "Error",
+          message: "Not connected to CCloud, cannot delete Flink statement.",
+        },
+      );
+      sinon.assert.calledOnce(getOrganizationStub);
+      sinon.assert.notCalled(flinkSqlStatementsApi.deleteSqlv1Statement);
+      sinon.assert.notCalled(flinkStatementDeletedFireStub);
     });
 
     it("should successfully delete a statement", async () => {

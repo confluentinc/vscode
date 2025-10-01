@@ -646,6 +646,11 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.delete",
+        "title": "Delete Statement",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -660,11 +665,6 @@
       {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
-        "category": "Confluent: Flink Statements"
-      },
-      {
-        "command": "confluent.statements.delete",
-        "title": "Delete Statement",
         "category": "Confluent: Flink Statements"
       },
       {
@@ -1477,6 +1477,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.delete",
+          "when": "false"
+        },
+        {
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "confluent.ccloudConnectionAvailable"
         },
@@ -1486,10 +1490,6 @@
         },
         {
           "command": "confluent.statements.viewstatementsql",
-          "when": "false"
-        },
-        {
-          "command": "confluent.statements.delete",
           "when": "false"
         },
         {
