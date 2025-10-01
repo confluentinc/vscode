@@ -5,7 +5,7 @@ import { FcpmV2RegionListDataInner, ListFcpmV2RegionsRequest } from "../clients/
 import { ListSqlv1StatementsRequest } from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudConnected } from "../emitters";
+import { ccloudConnected, flinkStatementDeleted } from "../emitters";
 import {
   determineFlinkStatementName,
   IFlinkStatementSubmitParameters,
@@ -324,6 +324,38 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
+   * Delete the given Flink statement via the sidecar API.
+   * @param statement The Flink statement to delete.
+   */
+  public async deleteFlinkStatement(statement: FlinkStatement): Promise<void> {
+    const organization = await this.getOrganization();
+    if (!organization) {
+      throw new Error("Not connected to CCloud, cannot delete Flink statement.");
+    }
+
+    const handle = await getSidecar();
+    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
+
+    logger.info(
+      `Deleting Flink statement ${statement.id} on ${statement.provider}-${statement.region} in environment ${statement.environmentId}`,
+    );
+
+    try {
+      await statementsClient.deleteSqlv1Statement({
+        organization_id: organization.id,
+        environment_id: statement.environmentId,
+        statement_name: statement.name,
+      });
+    } catch (error) {
+      logger.error(`Error deleting Flink statement ${statement.id}`, { error });
+      throw error;
+    }
+
+    // fire event to get the UI refreshed
+    flinkStatementDeleted.fire(statement.id);
+  }
+
+  /**
    * Query the Flink artifacts for the given CCloudFlinkDbKafkaCluster's CCloud environment + provider-region.
    * Looks to the resource manager cache first, and only does a deep fetch if not found (or told to force refresh).
    * @returns The Flink artifacts for the given environment + provider-region.
@@ -496,7 +528,16 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     // Consume all results.
     const resultRows: Array<RT> = await parseAllFlinkStatementResults<RT>(statement);
 
-    // call to delete the statement here when doing issue 2597.
+    // Delete the now completed statement. Even though is a hidden statement and won't be displayed
+    // in the UI, we still want to delete it to avoid accumulating so many completed statements
+    // in the backend. And also to avoid potential name collisions if the user runs the same
+    // statement again within the same second (statement names must be unique per compute cluster).
+    try {
+      await this.deleteFlinkStatement(statement);
+    } catch (error) {
+      logger.error(`Error deleting completed Flink statement ${statement.id}`, { error });
+      // Don't re-raise, as the statement did complete successfully and we do have results.
+    }
 
     return resultRows;
   }
