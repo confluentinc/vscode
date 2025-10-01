@@ -36,6 +36,25 @@ describe("FlinkUdf", () => {
     assert.strictEqual(udf.connectionType, ConnectionType.Ccloud);
   });
 
+  it("should convert date strings to Date objects when rehydrating from cache", () => {
+    // simulate when dates are stored as strings after JSON.stringify() when retrieved from cache
+    const original = createFlinkUDF("testFunc");
+    const deserialized = JSON.parse(JSON.stringify(original));
+
+    assert.strictEqual(typeof deserialized.creationTs, "string");
+
+    // constructor should convert string back to Date object
+    const rehydrated = createFlinkUDF("testFunc", undefined, deserialized);
+    assert.ok(rehydrated.creationTs instanceof Date);
+    assert.strictEqual(rehydrated.creationTs.toISOString(), original.creationTs.toISOString());
+
+    // verify timezone formatting works
+    const localeString = rehydrated.creationTs.toLocaleString(undefined, {
+      timeZoneName: "short",
+    });
+    assert.notStrictEqual(localeString, rehydrated.creationTs.toISOString());
+  });
+
   describe("artifactReferenceExtracted", () => {
     it("should extract artifact ID and version", () => {
       const udf = createFlinkUDF("testFunc", undefined, {
