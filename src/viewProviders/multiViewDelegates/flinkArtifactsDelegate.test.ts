@@ -7,7 +7,7 @@ import { ResponseError } from "../../clients/flinkArtifacts";
 import { CCloudResourceLoader } from "../../loaders";
 import { FlinkArtifactsDelegate, getFlinkArtifactsErrorMessage } from "./flinkArtifactsDelegate";
 
-describe.only("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
+describe("multiViewDelegates/flinkArtifactsDelegate.ts (delegate only)", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
