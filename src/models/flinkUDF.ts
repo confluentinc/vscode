@@ -99,7 +99,7 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     this.externalName = props.externalName;
     this.artifactReference = props.artifactReference;
     this.isDeterministic = props.isDeterministic;
-    this.creationTs = props.creationTs;
+    this.creationTs = new Date(props.creationTs);
     this.parameters = props.parameters || [];
     this.kind = props.kind;
     this.returnType = props.returnType;
