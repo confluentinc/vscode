@@ -19,8 +19,7 @@ import {
 } from "../storage/resourceManager";
 import { getSecretStorage } from "../storage/utils";
 import { readFileString, writeFile } from "../utils/fsWrappers";
-import { DirectConnectionRow } from "../viewProviders/newResources";
-import { ResourceViewProvider } from "../viewProviders/resources";
+import { DirectConnectionRow, ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 

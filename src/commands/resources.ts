@@ -1,11 +1,7 @@
 import { Disposable } from "vscode";
 
 import { registerCommandWithLogging } from ".";
-import {
-  AnyConnectionRow,
-  ConnectionRow,
-  NewResourceViewProvider,
-} from "../viewProviders/newResources";
+import { AnyConnectionRow, ConnectionRow, ResourceViewProvider } from "../viewProviders/resources";
 
 /** User gestured to refresh a single connection in the resources view when new resource view provider is enabled. */
 export async function refreshConnectionCommand(connectionRow: AnyConnectionRow): Promise<void> {
@@ -17,7 +13,7 @@ export async function refreshConnectionCommand(connectionRow: AnyConnectionRow):
     throw new Error("Provided object is not a ConnectionRow");
   }
 
-  const provider = NewResourceViewProvider.getInstance();
+  const provider = ResourceViewProvider.getInstance();
   await provider.refreshConnection(connectionRow.connectionId);
 }
 
