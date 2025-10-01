@@ -1,6 +1,8 @@
 # Confluent for VS Code
-
+<div align = center>
 [![Schedule Call Button]][Schedule Call Link] with the Confluent team.
+</div>
+<!---------------------------------[ Badges ]---------------------------------->
 [Schedule Call Button]: https://img.shields.io/badge/SCHEDULE%20A%20DEMO%20CALL-37a779?style=for-the-badge
 [Schedule Call Link]: http://bit.ly/4pXvya7
 
