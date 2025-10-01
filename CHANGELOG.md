@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- New "Delete Flink Statement" context menu item in the Flink Statements view.
+
 ## 1.7.0
 
 ### Added

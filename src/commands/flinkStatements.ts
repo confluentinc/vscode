@@ -375,11 +375,31 @@ async function openFlinkStatementResultsView(statement: FlinkStatement | undefin
   });
 }
 
+export async function deleteFlinkStatementCommand(statement: FlinkStatement): Promise<void> {
+  if (!statement || !(statement instanceof FlinkStatement)) {
+    logger.error("deleteFlinkStatementCommand", "statement is invalid");
+    return;
+  }
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  try {
+    await ccloudLoader.deleteFlinkStatement(statement);
+  } catch (err) {
+    logger.error("deleteFlinkStatementCommand", `Error deleting statement: ${err}`);
+    await showErrorNotificationWithButtons(`Error deleting statement: ${err}`);
+    return;
+  }
+
+  // Show a notification that the statement was deleted.
+  void vscode.window.showInformationMessage(`Deleted statement ${statement.name}`);
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
     registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
     // Different naming scheme due to legacy telemetry reasons.
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
+    registerCommandWithLogging("confluent.statements.delete", deleteFlinkStatementCommand),
   ];
 }

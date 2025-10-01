@@ -646,6 +646,11 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.statements.delete",
+        "title": "Delete Statement",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -1472,6 +1477,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.delete",
+          "when": "false"
+        },
+        {
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "confluent.ccloudConnectionAvailable"
         },
@@ -2014,8 +2023,14 @@
         },
         {
           "command": "confluent.flinkStatementResults",
+          "comment": "statements whose results are not viewable will have context value of '...flink-statement-not-viewable', so note the $ at the end of the regex to exclude those",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
+        },
+        {
+          "command": "confluent.statements.delete",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement.*/",
+          "group": "3_statements_crudl@1"
         }
       ],
       "explorer/context": [
