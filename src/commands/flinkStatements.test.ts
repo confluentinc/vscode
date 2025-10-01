@@ -15,9 +15,11 @@ import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import * as notifications from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import {
+  deleteFlinkStatementCommand,
   fireEmitterWhenFlinkStatementIsCreatingFunction,
   viewStatementSqlCommand,
 } from "./flinkStatements";
@@ -130,6 +132,70 @@ describe("commands/flinkStatements.ts", () => {
         [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
         [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
       });
+    });
+  });
+
+  describe("deleteFlinkStatementCommand", () => {
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let showInformationMessageStub: sinon.SinonStub;
+    let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+      showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+    });
+
+    it("should hate undefined statement", async () => {
+      await deleteFlinkStatementCommand(undefined as unknown as FlinkStatement);
+      sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
+    it("should hate non-FlinkStatement statement", async () => {
+      await deleteFlinkStatementCommand({} as FlinkStatement);
+      sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
+    it("should delete a valid FlinkStatement", async () => {
+      const statement = createFlinkStatement();
+      stubbedLoader.deleteFlinkStatement.resolves();
+
+      await deleteFlinkStatementCommand(statement);
+
+      sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.calledWithExactly(stubbedLoader.deleteFlinkStatement, statement);
+
+      sinon.assert.calledOnce(showInformationMessageStub);
+      sinon.assert.calledWithExactly(
+        showInformationMessageStub,
+        `Deleted statement ${statement.name}`,
+      );
+
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
+    it("should handle errors when deleting a FlinkStatement", async () => {
+      const statement = createFlinkStatement();
+      const testError = new Error("Test error deleting statement");
+      stubbedLoader.deleteFlinkStatement.rejects(testError);
+
+      await deleteFlinkStatementCommand(statement);
+
+      sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      sinon.assert.calledWithExactly(
+        showErrorNotificationWithButtonsStub,
+        `Error deleting statement: ${testError}`,
+      );
     });
   });
 
