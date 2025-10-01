@@ -1394,4 +1394,58 @@ describe("CCloudResourceLoader", () => {
       });
     });
   });
+
+  describe("deleteFlinkStatement", () => {
+    let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    let getOrganizationStub: sinon.SinonStub;
+    let flinkStatementDeletedFireStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      stubbedSidecar = getSidecarStub(sandbox);
+      flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
+      stubbedSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
+      getOrganizationStub = sandbox
+        .stub(loader, "getOrganization")
+        .resolves(TEST_CCLOUD_ORGANIZATION);
+
+      const emitterStubs = eventEmitterStubs(sandbox);
+
+      flinkStatementDeletedFireStub = emitterStubs.flinkStatementDeleted!.fire;
+    });
+
+    it("should successfully delete a statement", async () => {
+      flinkSqlStatementsApi.deleteSqlv1Statement.resolves();
+
+      const statementToDelete = createFlinkStatement();
+      await loader.deleteFlinkStatement(statementToDelete);
+
+      sinon.assert.calledOnceWithExactly(flinkSqlStatementsApi.deleteSqlv1Statement, {
+        organization_id: TEST_CCLOUD_ORGANIZATION.id,
+        environment_id: statementToDelete.environmentId,
+        statement_name: statementToDelete.name,
+      });
+      sinon.assert.calledOnce(getOrganizationStub);
+      sinon.assert.calledOnceWithExactly(flinkStatementDeletedFireStub, statementToDelete.id);
+    });
+
+    it("should raise if deletion fails", async () => {
+      const error = new Error("API request failed");
+      flinkSqlStatementsApi.deleteSqlv1Statement.rejects(error);
+
+      const statementToDelete = createFlinkStatement();
+      await assert.rejects(async () => {
+        await loader.deleteFlinkStatement(statementToDelete);
+      }, error);
+
+      sinon.assert.calledOnceWithExactly(flinkSqlStatementsApi.deleteSqlv1Statement, {
+        organization_id: TEST_CCLOUD_ORGANIZATION.id,
+        environment_id: statementToDelete.environmentId,
+        statement_name: statementToDelete.name,
+      });
+      sinon.assert.calledOnce(getOrganizationStub);
+      // Should not have fired the deletion event.
+      sinon.assert.notCalled(flinkStatementDeletedFireStub);
+    });
+  });
 });
