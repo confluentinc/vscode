@@ -11,7 +11,7 @@ All notable changes to this extension will be documented in this file.
 
   - New view for browsing uploaded Flink artifacts and registered UDFs in Confluent Cloud Kafka
     clusters. Future updates will add support for viewing Flink tables, views, columns, and models.
-  - Convienent user flows for uploading Java jar files into a Confluent Cloud environment/region for
+  - Convenient user flows for uploading Java jar files into a Confluent Cloud environment/region for
     use as Flink artifacts, then also registering UDFs from those artifacts. More work in this area
     will be coming!
 
