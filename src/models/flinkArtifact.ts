@@ -48,7 +48,12 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
     this.region = props.region;
     this.documentationLink = props.documentationLink;
 
-    this.metadata = props.metadata;
+    this.metadata = {
+      ...props.metadata,
+      created_at: props.metadata?.created_at ? new Date(props.metadata.created_at) : undefined,
+      updated_at: props.metadata?.updated_at ? new Date(props.metadata.updated_at) : undefined,
+      deleted_at: props.metadata?.deleted_at ? new Date(props.metadata.deleted_at) : undefined,
+    };
   }
 
   searchableText(): string {
