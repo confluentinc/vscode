@@ -1,3 +1,5 @@
+[![Try Confluent Cloud - The Data Streaming Platform](./resources/confluent-banner-v2.png)](https://confluent.cloud/signup?utm_source=github&utm_medium=banner&utm_campaign=tm.plg.cflt-oss-repos&utm_term=vscode)
+
 # Confluent for VS Code
 
 [![](https://img.shields.io/badge/Schedule_a_demo_call-with_the_Confluent_Team-blue)](http://bit.ly/4pXvya7)
