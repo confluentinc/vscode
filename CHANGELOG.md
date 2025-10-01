@@ -2,6 +2,8 @@
 
 All notable changes to this extension will be documented in this file.
 
+## Unreleased
+
 ## 1.7.0
 
 ### Added
