@@ -34,7 +34,7 @@ export abstract class ParentedBaseViewProvider<
    * - Topics view: `KafkaCluster`
    * - Schemas view: `SchemaRegistry`
    * - Flink Statements view: `FlinkComputePool`
-   * - Flink Artifacts view: `FlinkComputePool`
+   * - Flink Databases view: `KafkaCluster` (as Flink database)
    */
   resource: P | null = null;
   /**

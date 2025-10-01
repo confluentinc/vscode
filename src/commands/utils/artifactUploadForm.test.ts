@@ -60,6 +60,7 @@ describe("commands/utils/artifactUploadForm", () => {
 
   it("should complete happy path and return ArtifactUploadParams", async () => {
     const tempUri = vscode.Uri.file("/tmp/happy-artifact.jar");
+    ccloudLoader.getFlinkDatabases.resolves([]);
 
     // Simulates the sequence of user actions in order of appearance in menu:
     showQuickPickStub
@@ -84,8 +85,7 @@ describe("commands/utils/artifactUploadForm", () => {
       .stub(environmentsQuickPick, "flinkCcloudEnvironmentQuickPick")
       .resolves(TEST_CCLOUD_ENVIRONMENT);
 
-    // Selecting region/provider
-    sandbox.stub(regionsQuickPick, "cloudProviderRegionQuickPick").resolves({
+    sandbox.stub(regionsQuickPick, "flinkDatabaseRegionsQuickPick").resolves({
       provider: "AWS",
       region: "us-east-1",
     });
