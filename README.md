@@ -1,5 +1,9 @@
 # Confluent for VS Code
 
+[![Schedule Call Button]][Schedule Call Link] with the Confluent team.
+[Schedule Call Button]: https://img.shields.io/badge/SCHEDULE%20A%20DEMO%20CALL-37a779?style=for-the-badge
+[Schedule Call Link]: http://bit.ly/4pXvya7
+
 The Confluent extension makes it easy for developers to build stream processing applications using
 Confluent technology. This extension provides a robust, delightful experience for
 [Confluent Cloud](https://confluent.cloud/) products from within the
