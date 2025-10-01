@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-93",
+  "version": "1.7.0-96",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -359,6 +359,11 @@
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts"
+      },
+      {
+        "command": "confluent.deleteFlinkUDF",
+        "title": "Delete UDF",
+        "category": "Confluent: Flink UDFs"
       },
       {
         "command": "confluent.diff.compareWithSelected",
@@ -890,7 +895,10 @@
           "confluent.localDocker.kafkaImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "description": "Docker image tag to use when starting a local Kafka container"
+            "description": "Docker image tag to use when starting a local Kafka container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           },
           "confluent.localDocker.schemaRegistryImageRepo": {
             "type": "string",
@@ -903,7 +911,10 @@
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
+            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           }
         }
       },
@@ -1270,6 +1281,10 @@
         },
         {
           "command": "confluent.deleteArtifact",
+          "when": "false"
+        },
+        {
+          "command": "confluent.deleteFlinkUDF",
           "when": "false"
         },
         {
@@ -1914,6 +1929,11 @@
           "command": "confluent.deleteArtifact",
           "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
           "group": "artifacts"
+        },
+        {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-udf$/",
+          "group": "udfs"
         },
         {
           "command": "confluent.schemas.upload",

@@ -8,6 +8,7 @@ export function createFlinkUDF(
   flinkDbCluster: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
   opts: {
     id?: string;
+    description?: string;
     language?: string;
     externalName?: string;
     isDeterministic?: boolean;
@@ -32,7 +33,6 @@ export function createFlinkUDF(
     returnType: opts.returnType ?? "STRING",
     creationTs: opts.creationTs ?? new Date(),
     parameters: [], // for now.
-
-    description: "", // for now.
+    description: opts.description ?? "description", // for now.
   });
 }
