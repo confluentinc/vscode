@@ -272,15 +272,6 @@ export async function submitFlinkStatementCommand(
   }
 }
 
-export function registerFlinkStatementCommands(): vscode.Disposable[] {
-  return [
-    registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
-    registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
-    // Different naming scheme due to legacy telemetry reasons.
-    registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
-  ];
-}
-
 /**
  * After a statement is submitted, wait for it to be running and then show results.
  *
@@ -309,4 +300,13 @@ export async function handleStatementSubmission(
   }
 
   udfsChanged.fire(database);
+}
+
+export function registerFlinkStatementCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
+    registerCommandWithLogging("confluent.statements.create", submitFlinkStatementCommand),
+    // Different naming scheme due to legacy telemetry reasons.
+    registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
+  ];
 }
