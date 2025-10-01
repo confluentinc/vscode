@@ -895,7 +895,10 @@
           "confluent.localDocker.kafkaImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "description": "Docker image tag to use when starting a local Kafka container"
+            "description": "Docker image tag to use when starting a local Kafka container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           },
           "confluent.localDocker.schemaRegistryImageRepo": {
             "type": "string",
@@ -908,7 +911,10 @@
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
+            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           }
         }
       },
