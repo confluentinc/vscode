@@ -165,5 +165,6 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
     resource.creationTs.toLocaleString(undefined, { timeZoneName: "short" }),
   );
   tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
+  tooltip.addField("External Name", resource.externalName);
   return tooltip;
 }

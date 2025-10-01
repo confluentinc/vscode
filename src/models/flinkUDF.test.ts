@@ -73,6 +73,7 @@ describe("FlinkUdf", () => {
     it("should format tooltip with all UDF details", () => {
       const udf = createFlinkUDF("testFunc", undefined, {
         returnType: "VARCHAR(2147483647)",
+        externalName: "com.example.testFunc",
         isDeterministic: true,
       });
       udf.parameters = [
@@ -87,6 +88,7 @@ describe("FlinkUdf", () => {
 
       assert.match(tooltip.value, /Return Type: `VARCHAR`/);
       assert.match(tooltip.value, /Deterministic: `Yes`/);
+      assert.match(tooltip.value, /External Name: `com\.example\.testFunc`/);
       assert.match(tooltip.value, /Parameters: `\(input : VARCHAR\)`/);
     });
 
