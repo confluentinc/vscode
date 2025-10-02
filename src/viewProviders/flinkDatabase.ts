@@ -4,6 +4,7 @@ import {
   artifactsChanged,
   flinkDatabaseViewMode,
   flinkDatabaseViewResourceChanged,
+  flinkDatabaseViewSearchSet,
   udfsChanged,
 } from "../emitters";
 import { logError } from "../errors";
@@ -41,6 +42,9 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
 
   parentResourceChangedEmitter = flinkDatabaseViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkDatabaseSelected;
+
+  searchChangedEmitter = flinkDatabaseViewSearchSet;
+  searchContextValue = ContextValues.flinkDatabaseSearchApplied;
 
   children: ArtifactOrUdf[] = [];
 
