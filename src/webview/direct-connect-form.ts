@@ -218,6 +218,10 @@ class DirectConnectFormViewModel extends ViewModel {
         ).map((option) => option.value);
         if (!validAuthTypes.includes(this.kafkaAuthType())) {
           this.kafkaAuthType(validAuthTypes[0]);
+          await post("SaveFormAuthType", {
+            inputName: "kafka_cluster.auth_type",
+            inputValue: validAuthTypes[0],
+          });
         }
         break;
       }
