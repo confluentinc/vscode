@@ -158,6 +158,7 @@ describe("commands/flinkUDFs.ts", () => {
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
       showWarningStub.resolves("Yes, delete");
       const progressReportStub = sandbox.stub();
+
       withProgressStub.callsFake(async (options, callback) => {
         return await callback(
           {
