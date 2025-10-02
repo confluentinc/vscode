@@ -38,7 +38,7 @@ export function getUdfSystemCatalogQuery(database: CCloudFlinkDbKafkaCluster): s
     cast(null as string)  as \`parameterTraits\`
   from \`INFORMATION_SCHEMA\`.\`ROUTINES\`
   where ROUTINE_TYPE = 'FUNCTION'
-    and ROUTINE_SCHEMA_ID = '${database.id}')
+    and SPECIFIC_SCHEMA_ID = '${database.id}')
 
   union all
 
