@@ -8,48 +8,58 @@ import { Logger } from "../logging";
 const logger = new Logger("ccloudResourceLoaderUtils");
 
 /**
- * Query that unions together bits describing user-supplied functions and their parameters. The rows
- * will be of two types: those describing a function and those describing a parameter.  The two types
- * can be distinguished by the parameterOrdinalPosition being null (for function rows) or a number (for parameter rows).
- * The function rows will have details about the function itself, while the parameter rows will have details
- * about each parameter. The two can be joined on functionSpecificName.
+ * Instantiate the UDF system catalog query for a given database (cluster) as the limiting "Flink Schema ID".
+ *
+ * @param database The database (cluster) to get UDFs for
+ * @returns The SQL query string
  */
-export const UDF_SYSTEM_CATALOG_QUERY = `
-(select
-  SPECIFIC_NAME as \`functionSpecificName\`,
-  ROUTINE_NAME as \`functionRoutineName\`,
-  cast(null as int) as \`parameterOrdinalPosition\`,
-  cast(null as string) as \`parameterName\`,
-  FULL_DATA_TYPE as \`fullDataType\`,
-  EXTERNAL_NAME as \`functionExternalName\`,
-  EXTERNAL_LANGUAGE as \`functionExternalLanguage\`,
-  EXTERNAL_ARTIFACTS as \`functionExternalArtifacts\`,
-  IS_DETERMINISTIC as \`isDeterministic\`,
-  cast(CREATED as string) as \`functionCreatedTs\`,
-  FUNCTION_KIND as \`functionKind\`,
-  cast(false as string) as \`isParameterOptional\`,
-  cast(null as string)  as \`parameterTraits\`
-from \`INFORMATION_SCHEMA\`.\`ROUTINES\`
-where ROUTINE_TYPE = 'FUNCTION')
+export function getUdfSystemCatalogQuery(database: CCloudFlinkDbKafkaCluster): string {
+  /**
+   * Query that unions together bits describing user-supplied functions and their parameters. The rows
+   * will be of two types: those describing a function and those describing a parameter.  The two types
+   * can be distinguished by the parameterOrdinalPosition being null (for function rows) or a number (for parameter rows).
+   * The function rows will have details about the function itself, while the parameter rows will have details
+   * about each parameter. The two can be joined on functionSpecificName.
+   */
+  return `
+  (select
+    SPECIFIC_NAME as \`functionSpecificName\`,
+    ROUTINE_NAME as \`functionRoutineName\`,
+    cast(null as int) as \`parameterOrdinalPosition\`,
+    cast(null as string) as \`parameterName\`,
+    FULL_DATA_TYPE as \`fullDataType\`,
+    EXTERNAL_NAME as \`functionExternalName\`,
+    EXTERNAL_LANGUAGE as \`functionExternalLanguage\`,
+    EXTERNAL_ARTIFACTS as \`functionExternalArtifacts\`,
+    IS_DETERMINISTIC as \`isDeterministic\`,
+    cast(CREATED as string) as \`functionCreatedTs\`,
+    FUNCTION_KIND as \`functionKind\`,
+    cast(false as string) as \`isParameterOptional\`,
+    cast(null as string)  as \`parameterTraits\`
+  from \`INFORMATION_SCHEMA\`.\`ROUTINES\`
+  where ROUTINE_TYPE = 'FUNCTION'
+    and ROUTINE_SCHEMA_ID = '${database.id}')
 
-union all
+  union all
 
-(select
-  SPECIFIC_NAME as \`functionSpecificName\`,
-  ROUTINE_NAME as \`functionRoutineName\`,
-  ORDINAL_POSITION as \`parameterOrdinalPosition\`,
-  PARAMETER_NAME as \`parameterName\`,
-  FULL_DATA_TYPE as \`fullDataType\`,
-  cast(null as string) as \`functionExternalName\`,
-  cast(null as string) as \`functionExternalLanguage\`,
-  cast(null as string) as \`functionExternalArtifacts\`,
-  cast(null as string) as \`isDeterministic\`,
-  cast(null as string) as \`functionCreatedTs\`,
-  cast(null as string) as \`functionKind\`,
-  IS_OPTIONAL as \`isParameterOptional\`,
-  TRAITS as \`parameterTraits\`
-from \`INFORMATION_SCHEMA\`.\`PARAMETERS\`)
-`;
+  (select
+    SPECIFIC_NAME as \`functionSpecificName\`,
+    ROUTINE_NAME as \`functionRoutineName\`,
+    ORDINAL_POSITION as \`parameterOrdinalPosition\`,
+    PARAMETER_NAME as \`parameterName\`,
+    FULL_DATA_TYPE as \`fullDataType\`,
+    cast(null as string) as \`functionExternalName\`,
+    cast(null as string) as \`functionExternalLanguage\`,
+    cast(null as string) as \`functionExternalArtifacts\`,
+    cast(null as string) as \`isDeterministic\`,
+    cast(null as string) as \`functionCreatedTs\`,
+    cast(null as string) as \`functionKind\`,
+    IS_OPTIONAL as \`isParameterOptional\`,
+    TRAITS as \`parameterTraits\`
+  from \`INFORMATION_SCHEMA\`.\`PARAMETERS\`
+  WHERE \`SPECIFIC_SCHEMA_ID\` = '${database.id}')
+  `;
+}
 
 /** Raw results type corresponding to UDF_SYSTEM_CATALOG_QUERY */
 export type RawUdfSystemCatalogRow =
