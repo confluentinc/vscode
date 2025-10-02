@@ -19,8 +19,8 @@ const logger = new Logger("commands.search");
 /**
  * Class used for implementing the commands to search or clear search for a searchable view.
  * Binds together the the logging label noun, view name (for command name interpolation),
- * context value describing wether search has been applied or not, and the emitter holding the
- * chosen search critera for a single view
+ * context value describing whether search has been applied or not, and the emitter holding the
+ * chosen search criteria for a single view
  *
  * Provides command implementations and registration.
  * */
