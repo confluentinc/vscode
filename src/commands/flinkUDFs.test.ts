@@ -157,8 +157,8 @@ describe("commands/flinkUDFs.ts", () => {
     it("should report progress messages during successful deletion", async () => {
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
       showWarningStub.resolves("Yes, delete");
-      const progressReportStub = sandbox.stub();
 
+      const progressReportStub = sandbox.stub();
       withProgressStub.callsFake(async (options, callback) => {
         return await callback(
           {
