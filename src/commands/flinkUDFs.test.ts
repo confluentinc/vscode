@@ -3,12 +3,14 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
+import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   createFlinkArtifact,
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { createResponseError, ResponseErrorSource } from "../../tests/unit/testUtils";
 import { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
@@ -28,8 +30,6 @@ import {
 } from "./flinkUDFs";
 import * as commands from "./index";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
-import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
-import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 
 describe("commands/flinkUDFs.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -39,9 +39,14 @@ describe("commands/flinkUDFs.ts", () => {
   const mockDatabase: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
 
   let withProgressStub: sinon.SinonStub;
+  let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
+    vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
+  >;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
+
     withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
       const mockProgress = {
         report: sandbox.stub(),
@@ -152,7 +157,6 @@ describe("commands/flinkUDFs.ts", () => {
     it("should report progress messages during successful deletion", async () => {
       const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
       showWarningStub.resolves("Yes, delete");
-
       const progressReportStub = sandbox.stub();
       withProgressStub.callsFake(async (options, callback) => {
         return await callback(
@@ -168,8 +172,7 @@ describe("commands/flinkUDFs.ts", () => {
       await deleteFlinkUDFCommand(mockUDF);
 
       sinon.assert.calledThrice(progressReportStub);
-      sinon.assert.calledOnce(mockFlinkDatabaseViewProvider.refresh);
-      sinon.assert.calledWith(mockFlinkDatabaseViewProvider.refresh, true);
+      sinon.assert.calledOnceWithExactly(stubbedUDFsChangedEmitter.fire, mockDatabase);
       sinon.assert.calledOnce(showInfoStub);
     });
   });
@@ -290,9 +293,6 @@ describe("commands/flinkUDFs.ts", () => {
     let fakeViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
     let promptStub: sinon.SinonStub;
     let executeCreateFunctionStub: sinon.SinonStub;
-    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
-      vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
-    >;
     let showErrorStub: sinon.SinonStub;
 
     const functionName = "testFunction";
@@ -309,7 +309,6 @@ describe("commands/flinkUDFs.ts", () => {
         className,
       });
       executeCreateFunctionStub = sandbox.stub(uploadArtifact, "executeCreateFunction").resolves();
-      stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
 
       showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     });

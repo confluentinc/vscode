@@ -3,10 +3,11 @@ import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
 import { flinkDatabaseViewMode, udfsChanged } from "../emitters";
 import { isResponseError, logError } from "../errors";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import { FlinkUdf } from "../models/flinkUDF";
+import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
@@ -17,7 +18,6 @@ import { UriMetadata } from "../storage/types";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { executeCreateFunction, promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
-import { CCloudResourceLoader } from "../loaders";
 
 const logger = new Logger("commands.flinkUDFs");
 
@@ -73,7 +73,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
 
         progress.report({ message: "Updating cache..." });
 
-        flinkDatabaseProvider.refresh(true);
+        udfsChanged.fire(database);
 
         progress.report({ message: "UDF deleted successfully." });
       },
