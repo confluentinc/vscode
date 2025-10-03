@@ -174,14 +174,12 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
       it("should clear internal search state when no value is passed", () => {
         provider.itemSearchString = "running";
         provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
-        provider.totalItemCount = 3;
         provider.searchStringSetCount = 2;
 
         provider.setSearch(null);
 
         assert.strictEqual(provider.itemSearchString, null);
         assert.strictEqual(provider.searchMatches.size, 0, "searchMatches should be cleared");
-        assert.strictEqual(provider.totalItemCount, 0, "totalItemCount should be reset");
         assert.strictEqual(
           provider.searchStringSetCount,
           2,

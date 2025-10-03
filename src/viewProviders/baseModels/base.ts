@@ -160,11 +160,6 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
       this.searchStringSetCount++;
     }
 
-    // zero out the known child count, otherwise grows uncontrolled with
-    // every search string set call. This concept is flawed and should
-    // probably be removed in the future (James opinion).
-    this.totalItemCount = 0;
-
     // Inform the view that parent resource's children have changed and should
     // call getChildren() again.
     this._onDidChangeTreeData.fire();

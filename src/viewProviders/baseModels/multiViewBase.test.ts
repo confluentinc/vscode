@@ -160,10 +160,12 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
     describe("switchMode()", () => {
       let refreshStub: sinon.SinonStub;
       let setContextStub: sinon.SinonStub;
+      let searchMatchesClearSpy: sinon.SinonSpy;
 
       beforeEach(() => {
         refreshStub = sandbox.stub(provider, "refresh").resolves();
         setContextStub = sandbox.stub(contextValues, "setContextValue").resolves();
+        searchMatchesClearSpy = sandbox.spy(provider["searchMatches"], "clear");
       });
 
       it("should update delegate, title, context, and then call refresh()", async () => {
@@ -174,6 +176,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
         assert.strictEqual(provider["treeView"].title, "Mode Bar");
         sinon.assert.calledWith(setContextStub, TEST_CONTEXT_VALUE, TestMode.Bar);
         sinon.assert.calledOnce(refreshStub);
+        sinon.assert.calledOnce(searchMatchesClearSpy);
       });
 
       it("should just call refresh() when passed the same mode", async () => {
@@ -181,6 +184,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
 
         sinon.assert.calledOnce(refreshStub);
         sinon.assert.notCalled(setContextStub);
+        sinon.assert.notCalled(searchMatchesClearSpy);
       });
 
       it("should not change the delegate when an unknown mode is passed", async () => {
@@ -191,6 +195,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
         assert.strictEqual(provider["currentDelegate"], delegate);
         sinon.assert.notCalled(refreshStub);
         sinon.assert.notCalled(setContextStub);
+        sinon.assert.notCalled(searchMatchesClearSpy);
       });
     });
 

@@ -114,8 +114,6 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
     this.children = [];
 
-    this.totalItemCount = 0;
-
     if (this.database) {
       // Capture the database in a local variable so that will never change
       // while we're in the middle of this async operation.
