@@ -109,7 +109,7 @@ export async function executeInWorkerPool<T, R>(
         results[taskIndex] = { result };
       } catch (error) {
         errorCount++;
-        logError(error, "workerPool", {
+        void logError(error, "workerPool", {
           extra: {
             taskName: String(options.taskName),
             errorCount: errorCount.toString(),
