@@ -15,6 +15,7 @@ import {
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
 import { UriMetadata } from "../storage/types";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { executeCreateFunction, promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
@@ -193,7 +194,19 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
         udfsChanged.fire(database);
       },
     );
+    logUsage(UserEvent.FlinkUDFAction, {
+      action: "created",
+      status: "succeeded",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
   } catch (err) {
+    logUsage(UserEvent.FlinkUDFAction, {
+      action: "created",
+      status: "failed",
+      cloud: selectedArtifact.provider,
+      region: selectedArtifact.region,
+    });
     if (!(err instanceof Error && err.message.includes("Failed to create UDF function"))) {
       let errorMessage = "Failed to create UDF function";
 
