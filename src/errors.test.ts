@@ -186,7 +186,7 @@ describe("errors.ts extractResponseBody()", () => {
 
   it("should throw if the error is not a ResponseError", async () => {
     const error = new Error("test");
-    assert.rejects(
+    await assert.rejects(
       async () => {
         await extractResponseBody(error as any);
       },
