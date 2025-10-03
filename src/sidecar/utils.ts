@@ -47,6 +47,10 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
   sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH"] = CCLOUD_BASE_PATH;
 
+  // For testing against CCloud staging (i.e. for testing pre-prod scaffolding server / templates changes)
+  // uncomment this, but never for merging into main! Shame on you and PR reviewers if you do!
+  // sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_BASE_PATH"] = "stag.cpdev.cloud";
+
   // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
   // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
   // port will still be guarded by the firewall.
