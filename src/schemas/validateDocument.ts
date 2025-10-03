@@ -85,23 +85,23 @@ export async function validateDocument(
   });
   // if the document is modified or saved, re-validate it
   const docChangeSub: Disposable = workspace.onDidChangeTextDocument(
-    (e: TextDocumentChangeEvent) => {
+    async (e: TextDocumentChangeEvent) => {
       if (e.document.uri.fsPath === documentUri.fsPath && e.contentChanges.length > 0) {
         JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
         docCloseSub.dispose();
         docChangeSub.dispose();
         docSaveSub.dispose();
-        validateDocument(documentUri, schema);
+        await validateDocument(documentUri, schema);
       }
     },
   );
-  const docSaveSub: Disposable = workspace.onDidSaveTextDocument((e: TextDocument) => {
+  const docSaveSub: Disposable = workspace.onDidSaveTextDocument(async (e: TextDocument) => {
     if (e.uri.fsPath === documentUri.fsPath) {
       JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
       docCloseSub.dispose();
       docChangeSub.dispose();
       docSaveSub.dispose();
-      validateDocument(documentUri, schema);
+      await validateDocument(documentUri, schema);
     }
   });
 
