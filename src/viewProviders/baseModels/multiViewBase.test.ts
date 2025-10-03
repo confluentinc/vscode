@@ -6,6 +6,8 @@ import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
+import * as collapsingUtils from "../utils/collapsing";
+import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./multiViewBase";
 
 const TEST_CONTEXT_VALUE: ContextValues = "test-value" as ContextValues;
@@ -199,16 +201,45 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
       });
     });
 
-    it("getTreeItem() delegates to the current mode's getTreeItem()", () => {
+    describe("getTreeItem()", () => {
       const fakeChildItem = new TestDelegateChild("id1", "Test Item 1");
-      provider["resource"] = new TestParentResource();
-      const delegate = provider["currentDelegate"];
-      delegate.children = [fakeChildItem];
-      const item = provider.getTreeItem(delegate.children[0]);
+      let updateCollapsibleStateFromSearchStub: sinon.SinonStub;
 
-      assert.strictEqual(item.label, fakeChildItem.name);
+      beforeEach(() => {
+        updateCollapsibleStateFromSearchStub = sandbox
+          .stub(collapsingUtils, "updateCollapsibleStateFromSearch")
+          .callThrough();
+      });
+
+      it("getTreeItem() delegates to the current mode's getTreeItem()", () => {
+        provider["resource"] = new TestParentResource();
+        const delegate = provider["currentDelegate"];
+        delegate.children = [fakeChildItem];
+        const item = provider.getTreeItem(delegate.children[0]);
+
+        assert.strictEqual(item.label, fakeChildItem.name);
+        // should not smell search resulty by default
+        assert.strictEqual(item.resourceUri, undefined);
+        sinon.assert.notCalled(updateCollapsibleStateFromSearchStub);
+      });
+
+      it("getTreeItem() decorates the item when it matches the search string", () => {
+        provider["resource"] = new TestParentResource();
+        const delegate = provider["currentDelegate"];
+        delegate.children = [fakeChildItem];
+        provider["itemSearchString"] = "Item 1";
+        const item = provider.getTreeItem(delegate.children[0]);
+
+        assert.strictEqual(item.label, fakeChildItem.name);
+        // should have the special URI scheme to indicate a search match
+        assert.ok(item.resourceUri);
+        assert.strictEqual(item.resourceUri!.scheme, SEARCH_DECORATION_URI_SCHEME);
+        sinon.assert.calledOnce(updateCollapsibleStateFromSearchStub);
+      });
     });
+  });
 
+  describe("reset()", () => {
     it("reset() reverts to the default delegate and updates context", async () => {
       const setContextStub = sandbox.stub(contextValues, "setContextValue").resolves();
       provider["currentDelegate"] = provider["treeViewDelegates"].get(TestMode.Bar)!;
