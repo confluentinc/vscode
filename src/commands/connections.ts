@@ -154,7 +154,7 @@ export async function createNewDirectConnectionCommand() {
         // use it to open the Direct Connection form (form will populate the fields with spec values)
         openDirectConnectionForm(newSpec);
       } catch (error) {
-        showErrorNotificationWithButtons("Error parsing spec file. See logs for details.");
+        void showErrorNotificationWithButtons("Error parsing spec file. See logs for details.");
         logger.error(`Error parsing spec file: ${error}`);
         return;
       }
@@ -209,7 +209,7 @@ export async function editDirectConnectionCommand(item: ConnectionId | DirectEnv
     logger.error("Direct connection not found, can't edit");
     // possibly stale Resources view? this shouldn't happen
     window.showErrorMessage("Connection not found.");
-    ResourceViewProvider.getInstance().refresh();
+    await ResourceViewProvider.getInstance().refresh();
     return;
   }
 
@@ -230,7 +230,7 @@ export async function exportDirectConnectionCommand(item: DirectEnvironment | Di
   if (!spec) {
     logger.error("Direct connection not found, can't share");
     window.showErrorMessage("Connection not found.");
-    ResourceViewProvider.getInstance().refresh();
+    await ResourceViewProvider.getInstance().refresh();
     return;
   }
 
@@ -280,7 +280,7 @@ export async function exportDirectConnectionCommand(item: DirectEnvironment | Di
           });
       } catch (err) {
         logger.error(`Failed to save file: ${err}`);
-        showErrorNotificationWithButtons("Unable to save connection spec file.");
+        void showErrorNotificationWithButtons("Unable to save connection spec file.");
       }
     }
   }

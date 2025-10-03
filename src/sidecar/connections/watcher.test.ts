@@ -100,7 +100,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
     sandbox.restore();
   });
 
-  function announceConnectionState(connection: Connection): void {
+  async function announceConnectionState(connection: Connection): Promise<void> {
     // inject a event to updated the connection state
     // as if sent from sidecar from websocket.
     const websocketMessage: Message<MessageType.CONNECTION_EVENT> = {
@@ -112,7 +112,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
     };
 
     // As if had been just sent from sidecar.
-    connectionStateWatcher.handleConnectionUpdateEvent(websocketMessage);
+    await connectionStateWatcher.handleConnectionUpdateEvent(websocketMessage);
   }
 
   // dynamically set up tests for `waitForConnectionToBeStable()` using different connections and states
@@ -159,7 +159,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
         },
       });
 
-      announceConnectionState(testConnection);
+      await announceConnectionState(testConnection);
 
       const connection = await waitForConnectionToBeStable(testConnectionId);
 
@@ -178,7 +178,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           ccloud: { state: pendingState },
         },
       });
-      announceConnectionState(testConnection);
+      await announceConnectionState(testConnection);
 
       // set a short timeout, even though we're using fake timers
       const shortTimeoutMs = 10;
@@ -222,7 +222,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
         assert.ok(isConnectionStableSpy.notCalled);
 
         // simulate a websocket event that updates the connection state to this new stable state.
-        announceConnectionState(testConnection);
+        await announceConnectionState(testConnection);
 
         // And now isConnectionStable should have been called.
         assert.ok(isConnectionStableSpy.calledOnce);

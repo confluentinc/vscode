@@ -61,15 +61,15 @@ describe("sidecar/connections/ccloud.ts", () => {
     assert.ok(currentSchemaRegistryChangedFireStub.notCalled);
   });
 
-  it("hasCCloudAuthSession() should return false when the context value is false or undefined", () => {
-    for (const value of [false, undefined]) {
-      setContextValue(ContextValues.ccloudConnectionAvailable, value);
+  for (const value of [false, undefined]) {
+    it(`hasCCloudAuthSession() should return false when the context value is ${value}`, async () => {
+      await setContextValue(ContextValues.ccloudConnectionAvailable, value);
       assert.strictEqual(hasCCloudAuthSession(), false, `Expected ${value} to return false`);
-    }
-  });
+    });
+  }
 
-  it("hasCCloudAuthSession() should return true when the context value is true", () => {
-    setContextValue(ContextValues.ccloudConnectionAvailable, true);
+  it("hasCCloudAuthSession() should return true when the context value is true", async () => {
+    await setContextValue(ContextValues.ccloudConnectionAvailable, true);
     assert.strictEqual(hasCCloudAuthSession(), true);
   });
 });

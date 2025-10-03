@@ -281,11 +281,11 @@ export class SidecarManager {
   }
 
   /** Called whenever websocket connection goes CONNECTED or DISCONNECTED. */
-  private onWebsocketStateChange(event: WebsocketStateEvent) {
+  private async onWebsocketStateChange(event: WebsocketStateEvent) {
     if (event === WebsocketStateEvent.DISCONNECTED) {
       // Try to get a new sidecar handle, which will start a new sidecar process
       // and reconnect websocket.
-      this.getHandle();
+      await this.getHandle();
     }
   }
 

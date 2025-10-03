@@ -227,7 +227,7 @@ describe("TopicViewProvider", () => {
     it("getChildren() should filter root-level topics based on search string", async () => {
       getTopicsForClusterStub.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
       // Topic name matches the search string
-      provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
+      await provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
 
       const rootElements = await provider.getChildren();
 
@@ -251,7 +251,7 @@ describe("TopicViewProvider", () => {
       ]);
       getSchemasForSubjectStub.resolves([TEST_CCLOUD_SCHEMA]);
       // Schema subject matches the search string
-      provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
+      await provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
 
       const children = await provider.getChildren(TEST_CCLOUD_KAFKA_TOPIC);
 
@@ -269,7 +269,7 @@ describe("TopicViewProvider", () => {
       ]);
       // Topic name matches the search string of one topic
       const searchStr = TEST_CCLOUD_KAFKA_TOPIC.name;
-      provider.topicSearchSetHandler(searchStr);
+      await provider.topicSearchSetHandler(searchStr);
 
       await provider.getChildren();
 
@@ -283,16 +283,16 @@ describe("TopicViewProvider", () => {
 
     it("getChildren() should clear tree view message when search is cleared", async () => {
       // Search cleared
-      provider.topicSearchSetHandler(null);
+      await provider.topicSearchSetHandler(null);
 
       await provider.getChildren();
 
       assert.strictEqual(provider["treeView"].message, undefined);
     });
 
-    it("getTreeItem() should set the resourceUri of topic items whose name matches the search string", () => {
+    it("getTreeItem() should set the resourceUri of topic items whose name matches the search string", async () => {
       // Topic name matches the search string
-      provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
+      await provider.topicSearchSetHandler(TEST_CCLOUD_KAFKA_TOPIC.name);
 
       const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
 
@@ -300,9 +300,9 @@ describe("TopicViewProvider", () => {
       assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
     });
 
-    it("getTreeItem() should set the resourceUri of schema subject containers whose subject matches the search string", () => {
+    it("getTreeItem() should set the resourceUri of schema subject containers whose subject matches the search string", async () => {
       // Schema ID matches the search string
-      provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
+      await provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
 
       const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
 
@@ -311,26 +311,26 @@ describe("TopicViewProvider", () => {
       assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
     });
 
-    it("getTreeItem() should expand topic items when their schemas match search", () => {
+    it("getTreeItem() should expand topic items when their schemas match search", async () => {
       const topic = KafkaTopic.create({
         ...TEST_CCLOUD_KAFKA_TOPIC,
         children: [TEST_CCLOUD_SUBJECT],
       });
       // Schema subject matches search
-      provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
+      await provider.topicSearchSetHandler(TEST_CCLOUD_SCHEMA.subject);
 
       const treeItem = provider.getTreeItem(topic);
 
       assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
     });
 
-    it("getTreeItem() should collapse topic items when schemas exist but don't match search", () => {
+    it("getTreeItem() should collapse topic items when schemas exist but don't match search", async () => {
       const topic = KafkaTopic.create({
         ...TEST_CCLOUD_KAFKA_TOPIC,
         children: [TEST_CCLOUD_SUBJECT],
       });
       // Search string doesn't match topic or schema
-      provider.topicSearchSetHandler("non-matching-search");
+      await provider.topicSearchSetHandler("non-matching-search");
 
       const treeItem = provider.getTreeItem(topic);
 
@@ -399,25 +399,25 @@ describe("TopicViewProvider", () => {
 
     describe("ccloudConnectedHandler", () => {
       for (const nowConnected of [true, false]) {
-        it(`should call reset() when initially connected to CCloud and connected event: ${nowConnected}`, () => {
+        it(`should call reset() when initially connected to CCloud and connected event: ${nowConnected}`, async () => {
           provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a CCloud context
-          provider.ccloudConnectedHandler(nowConnected);
+          await provider.ccloudConnectedHandler(nowConnected);
           sinon.assert.calledOnce(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);
         });
 
-        it(`should not call any methods when looking at a non-CCloud cluster and connected event: ${nowConnected}`, () => {
+        it(`should not call any methods when looking at a non-CCloud cluster and connected event: ${nowConnected}`, async () => {
           provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a non-CCloud context
-          provider.ccloudConnectedHandler(nowConnected);
+          await provider.ccloudConnectedHandler(nowConnected);
           sinon.assert.notCalled(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);
         });
 
-        it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, () => {
+        it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, async () => {
           provider.kafkaCluster = null; // No cluster set
-          provider.ccloudConnectedHandler(nowConnected);
+          await provider.ccloudConnectedHandler(nowConnected);
           sinon.assert.notCalled(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);
@@ -427,25 +427,25 @@ describe("TopicViewProvider", () => {
 
     describe("localKafkaConnectedHandler", () => {
       for (const nowConnected of [true, false]) {
-        it(`should call reset() when initially connected to local Kafka and connected event: ${nowConnected}`, () => {
+        it(`should call reset() when initially connected to local Kafka and connected event: ${nowConnected}`, async () => {
           provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER; // Ensure we are in a local context
-          provider.localKafkaConnectedHandler(nowConnected);
+          await provider.localKafkaConnectedHandler(nowConnected);
           sinon.assert.calledOnce(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);
         });
 
-        it(`should not call any methods when looking at a non-local cluster and connected event: ${nowConnected}`, () => {
+        it(`should not call any methods when looking at a non-local cluster and connected event: ${nowConnected}`, async () => {
           provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER; // Ensure we are in a non-local context
-          provider.localKafkaConnectedHandler(nowConnected);
+          await provider.localKafkaConnectedHandler(nowConnected);
           sinon.assert.notCalled(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);
         });
 
-        it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, () => {
+        it(`should not call any methods when no cluster is set and connected event: ${nowConnected}`, async () => {
           provider.kafkaCluster = null; // No cluster set
-          provider.localKafkaConnectedHandler(nowConnected);
+          await provider.localKafkaConnectedHandler(nowConnected);
           sinon.assert.notCalled(resetStub);
           sinon.assert.notCalled(updateTreeViewDescriptionStub);
           sinon.assert.notCalled(refreshStub);

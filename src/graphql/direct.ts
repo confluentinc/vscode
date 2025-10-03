@@ -81,7 +81,7 @@ export async function getDirectResources(
       // Kafka/Schema Registry resources and will appear broken
       const spec: CustomConnectionSpec | null =
         await getResourceManager().getDirectConnection(connectionId);
-      showWarningNotificationWithButtons(
+      void showWarningNotificationWithButtons(
         `Unable to fetch resources for connection "${spec?.name}": timed out waiting for connection to stabilize.`,
         {
           "View Connection Details": () =>
@@ -114,7 +114,7 @@ export async function getDirectResources(
     logError(error, "direct connection resources", {
       extra: { functionName: "getDirectResources" },
     });
-    showErrorNotificationWithButtons(
+    void showErrorNotificationWithButtons(
       `Failed to fetch resources for direct Kafka / Schema Registry connection(s): ${error}`,
     );
 

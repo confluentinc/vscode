@@ -113,7 +113,7 @@ export async function updatePreferences() {
         }
       }
       if (errorMsg) {
-        showErrorNotificationWithButtons(`Failed to sync settings: ${errorMsg}`, buttons);
+        void showErrorNotificationWithButtons(`Failed to sync settings: ${errorMsg}`, buttons);
       }
       if (!(error instanceof ResponseError) || error.response.status !== 400) {
         // no need to send error 400 responses to Sentry; the notification should tell the user what

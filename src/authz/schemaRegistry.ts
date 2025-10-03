@@ -112,7 +112,7 @@ export function showNoSchemaAccessWarningNotification(): void {
     return;
   }
 
-  showWarningNotificationWithButtons(
+  void showWarningNotificationWithButtons(
     "You do not have permission to access schema(s) for this topic. Messages will still appear, but may not be deserializeable.",
     { "Don't Show Again": async () => await SCHEMA_RBAC_WARNINGS_ENABLED.update(false, true) },
   );
