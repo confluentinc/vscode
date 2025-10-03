@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- The Flink Artifacts / Flink UDFs view is now searchable.
+
 ## 1.7.0
 
 ### Added

@@ -100,15 +100,23 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     this.artifactReference = props.artifactReference;
     this.isDeterministic = props.isDeterministic;
     this.creationTs = new Date(props.creationTs);
-    this.parameters = props.parameters || [];
     this.kind = props.kind;
     this.returnType = props.returnType;
 
-    this.parameters = props.parameters || [];
+    this.parameters = props.parameters;
   }
 
   searchableText(): string {
-    return `${this.name} ${this.description}`;
+    const parts = [];
+
+    parts.push(this.name);
+    parts.push(this.description);
+    parts.push(this.externalName);
+    // in near future, break down artifact reference into id and version via new getters and/or parse at construction time.
+    parts.push(this.artifactReference);
+    parts.push(this.kind ?? "");
+
+    return parts.join(" ");
   }
 
   get connectionId(): ConnectionId {
@@ -158,6 +166,7 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
 
   // Additional function properties
   tooltip.addField("Language", resource.language);
+  tooltip.addField("External Name", resource.externalName);
   tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
   tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
   tooltip.addField(
@@ -165,6 +174,5 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
     resource.creationTs.toLocaleString(undefined, { timeZoneName: "short" }),
   );
   tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
-  tooltip.addField("External Name", resource.externalName);
   return tooltip;
 }

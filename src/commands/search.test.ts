@@ -110,6 +110,7 @@ describe("commands/search", () => {
       { labelNoun: "Topics", viewName: "topics" },
       { labelNoun: "Schemas", viewName: "schemas" },
       { labelNoun: "Flink Statements", viewName: "flink.statements" },
+      { labelNoun: "Flink Database", viewName: "flink.database" },
     ];
 
     let allSearchCommandsInstances: ViewSearchCommands[];
