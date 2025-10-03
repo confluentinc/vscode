@@ -1,5 +1,7 @@
-import { TreeItem } from "vscode";
+import { TreeItem, Uri } from "vscode";
 import { ContextValues, setContextValue } from "../../context/values";
+import { updateCollapsibleStateFromSearch } from "../utils/collapsing";
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import { BaseViewProviderData } from "./base";
 import { EnvironmentedBaseViewProviderData, ParentedBaseViewProvider } from "./parentedBase";
 
@@ -87,6 +89,13 @@ export abstract class MultiModeViewProvider<
       await setContextValue(this.delegateContextValue, mode);
     }
     this.treeView.title = this.currentDelegate.viewTitle;
+
+    // Reset the number of children matched by search, since the new mode will have
+    // a different set of children. The refresh call will reevaluate the search string
+    // against the new mode's children and update the count when getChildren()
+    // and filterChildren() are called.
+    this.searchMatches.clear();
+
     await this.refresh();
   }
 
@@ -99,7 +108,17 @@ export abstract class MultiModeViewProvider<
   }
 
   getTreeItem(element: T): TreeItem {
-    return this.currentDelegate.getTreeItem(element);
+    const treeItem = this.currentDelegate.getTreeItem(element);
+    if (this.itemSearchString !== null) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+      }
+
+      updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+    }
+    return treeItem;
   }
 
   override async reset(): Promise<void> {
