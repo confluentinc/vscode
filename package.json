@@ -1336,16 +1336,16 @@
           "when": "config.confluent.flink.artifacts"
         },
         {
+          "command": "confluent.flink.database.search.clear",
+          "when": "confluent.flinkDatabaseSearchApplied"
+        },
+        {
           "command": "confluent.flink.statements.search",
           "when": "true"
         },
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "confluent.flinkStatementsSearchApplied"
-        },
-        {
-          "command": "confluent.flink.statements.search.clear",
-          "when": "confluent.flinkDatabaseSearchApplied"
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
