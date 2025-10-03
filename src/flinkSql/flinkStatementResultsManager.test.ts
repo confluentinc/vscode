@@ -217,7 +217,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
     await hasResults(10);
 
-    vm.toggleColumnVisibility(1);
+    await vm.toggleColumnVisibility(1);
     await eventually(() => assert.deepEqual(vm.visibleColumns(), ["when_reported", "tempf"]));
 
     await hasResults(10);
@@ -759,7 +759,7 @@ describe("FlinkStatementResultsViewModel only", () => {
       assert.equal(vm.viewMode(), "table");
 
       // Try changing view mode
-      vm.setViewMode("changelog");
+      await vm.setViewMode("changelog");
 
       // No effect
       assert.equal(vm.viewMode(), "table");
