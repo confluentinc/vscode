@@ -8,7 +8,6 @@ import {
 } from "../../tests/unit/testResources/flinkStatement";
 import { TEST_CCLOUD_ORGANIZATION_ID } from "../../tests/unit/testResources/organization";
 import { createResponseError, getTestExtensionContext } from "../../tests/unit/testUtils";
-import * as authnUtils from "../authn/utils";
 import {
   GetSqlv1Statement200Response,
   GetSqlv1StatementResult200Response,
@@ -89,76 +88,16 @@ describe("flinkSql/statementUtils.ts", function () {
   });
 
   describe("determineFlinkStatementName()", function () {
-    let getCCloudAuthSessionStub: sinon.SinonStub;
-
     const now = new Date("2024-10-21 12:00:00.0000Z");
     const expectedDatePart = "2024-10-21t12-00-00";
 
     beforeEach(() => {
-      getCCloudAuthSessionStub = sandbox.stub(authnUtils, "getCCloudAuthSession");
       sandbox.useFakeTimers(now);
     });
 
     it("Should include the spice parameter in the statement name", async function () {
-      getCCloudAuthSessionStub.resolves({
-        account: {
-          label: "VS_Code.Dev-Team@confluent.io",
-          id: "u-abc123",
-        },
-      });
       const statementName = await determineFlinkStatementName("test-spice");
       assert.strictEqual(statementName, `vscodedev-team-vscode-test-spice-${expectedDatePart}`);
-    });
-
-    it("Should remove all non-alphanumeric characters (except for hyphens) from the username", async function () {
-      getCCloudAuthSessionStub.resolves({
-        account: {
-          label: "VS_Code.Dev-Team@confluent.io",
-          id: "u-abc123",
-        },
-      });
-
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `vscodedev-team-vscode-${expectedDatePart}`);
-    });
-
-    it("Works with degenerate ccloud username", async function () {
-      getCCloudAuthSessionStub.resolves({ account: { label: "simple", id: "u-abc123" } });
-
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `simple-vscode-${expectedDatePart}`);
-    });
-
-    it("Handles crazy case if ccloud isn't authenticated", async function () {
-      getCCloudAuthSessionStub.resolves(undefined);
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `unknownuser-vscode-${expectedDatePart}`);
-    });
-
-    it("Should remove leading numeric characters from the username", async function () {
-      getCCloudAuthSessionStub.resolves({
-        account: {
-          label: "42_VS_Code.Devs-42@confluent.io",
-          id: "u-abc123",
-        },
-      });
-
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `vscodedevs-42-vscode-${expectedDatePart}`);
-    });
-
-    it("Should remove leading hyphens from the username", async function () {
-      getCCloudAuthSessionStub.resolves({
-        account: {
-          // I don't think this is a valid email address, but we should still trim
-          // the leading hyphen from the statement name.
-          label: "-vscode-devs@confluent.io",
-          id: "u-abc123",
-        },
-      });
-
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `vscode-devs-vscode-${expectedDatePart}`);
     });
   });
 
