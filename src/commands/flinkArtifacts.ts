@@ -98,8 +98,8 @@ export async function uploadArtifactCommand(
     } else if (err instanceof Error) {
       errorMessage = `${errorMessage} ${err.message}`;
     }
-    logError(err, errorMessage);
-    showErrorNotificationWithButtons(errorMessage);
+    void logError(err, errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
   }
 }
 
