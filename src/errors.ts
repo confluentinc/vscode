@@ -135,7 +135,7 @@ export function logError(
   });
 }
 
-export async function _logError(
+async function _logError(
   e: unknown,
   message: string,
   sentryContext: Partial<ScopeContext> = {},
