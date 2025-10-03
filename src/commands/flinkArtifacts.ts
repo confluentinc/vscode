@@ -13,6 +13,7 @@ import {
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
@@ -42,6 +43,14 @@ export async function uploadArtifactCommand(
     // 1. Gather the request parameters from user or item
     const params = await artifactUploadQuickPickForm(item);
     if (!params) return; // User cancelled the prompt
+
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "upload",
+      status: "started",
+      kind: "CloudProviderUpload",
+      cloud: params.cloud,
+      region: params.region,
+    });
 
     const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
       environment: params.environment,
@@ -82,6 +91,10 @@ export async function uploadArtifactCommand(
       },
     );
   } catch (err) {
+    logUsage(UserEvent.FlinkArtifactAction, {
+      action: "upload",
+      status: "failed",
+    });
     let errorMessage = "Failed to upload artifact:";
     if (isResponseError(err)) {
       if (err.response.status === 500) {

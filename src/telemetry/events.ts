@@ -5,7 +5,12 @@ import { getTelemetryLogger } from "./telemetryLogger";
 
 const logger = new Logger("telemetry.events");
 
-/** The names of user events that can be logged when telemetry is enabled. */
+/** The names of user events that can be logged when telemetry is enabled.
+ *
+ * Segment Event name best practices: https://segment.com/docs/getting-started/04-full-install/#event-naming-best-practices
+ * Use Proper Case, Noun + Past Tense Verb to represent the user's action (e.g. "Order Completed", "File Downloaded", "User Registered")
+ *
+ */
 export enum UserEvent {
   CommandInvoked = "Command Invoked",
   DirectConnectionAction = "Direct Connection Action",
@@ -24,6 +29,8 @@ export enum UserEvent {
   CopilotInteraction = "Copilot Interaction",
   FlinkSqlClientInteraction = "Flink SQL Language Client Interaction",
   SidecarStartupFailure = "Sidecar Startup Failure",
+  FlinkArtifactAction = "Flink Artifact Action",
+  FlinkUDFAction = "Flink UDF Action",
   /**
    * Used for basic settings changes like enabling/disabling a feature or changing enum/numeric
    * values.
