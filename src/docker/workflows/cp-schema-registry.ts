@@ -135,7 +135,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       kafkaNetworks,
     );
     if (!container) {
-      showErrorNotificationWithButtons(`Failed to create ${this.resourceKind} container.`);
+      void showErrorNotificationWithButtons(`Failed to create ${this.resourceKind} container.`);
       return;
     }
     this.sendTelemetryEvent(UserEvent.LocalDockerAction, {

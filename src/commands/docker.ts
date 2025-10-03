@@ -157,7 +157,7 @@ export async function runWorkflowWithProgress(
             } else {
               errorMsg = error.message;
             }
-            showErrorNotificationWithButtons(
+            void showErrorNotificationWithButtons(
               `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${errorMsg}`,
             );
           }

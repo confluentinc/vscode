@@ -134,7 +134,7 @@ export class FlinkDatabaseViewProvider extends MultiModeViewProvider<
               msg = await getFlinkArtifactsErrorMessage(error);
             }
             void showErrorNotificationWithButtons(msg);
-            void logError(error, msg);
+            logError(error, msg);
           }
         },
         false,

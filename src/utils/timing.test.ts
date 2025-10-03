@@ -53,14 +53,14 @@ describe("utils/timing", () => {
         }
       });
 
-      it("should throw on invalid inputs", () => {
-        assert.rejects(async () => {
+      it("should throw on invalid inputs", async () => {
+        await assert.rejects(async () => {
           await pauseWithJitter(-1, 100);
         });
-        assert.rejects(async () => {
+        await assert.rejects(async () => {
           await pauseWithJitter(100, -1);
         });
-        assert.rejects(async () => {
+        await assert.rejects(async () => {
           await pauseWithJitter(100, 99);
         });
       });
