@@ -17,6 +17,6 @@ export async function fetchCCloudStatus(): Promise<CCloudStatusSummary | undefin
   } catch (error) {
     // don't send these to Sentry since any network errors or Statuspage service issues are out of
     // our control, and at worst mean the status bar item won't show the latest status
-    logError(error, "CCloud status");
+    void logError(error, "CCloud status");
   }
 }
