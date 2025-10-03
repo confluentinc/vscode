@@ -34,14 +34,6 @@ describe("flinkUDF.ts", () => {
 
   describe("FlinkUdf", () => {
     describe("constructor", () => {
-      it("should retain connectionId / connectionType", () => {
-        // this is more a test on basics of createFlinkUDF() helper function,
-        // but it's important enough to verify.
-        const udf = createFlinkUDF("testFunc");
-        assert.strictEqual(udf.connectionId, CCLOUD_CONNECTION_ID);
-        assert.strictEqual(udf.connectionType, ConnectionType.Ccloud);
-      });
-
       it("should convert date strings to Date objects when rehydrating from cache", () => {
         // simulate when dates are stored as strings after JSON.stringify() when retrieved from cache
         const original = createFlinkUDF("testFunc");
@@ -59,6 +51,14 @@ describe("flinkUDF.ts", () => {
           timeZoneName: "short",
         });
         assert.notStrictEqual(localeString, rehydrated.creationTs.toISOString());
+      });
+    });
+
+    describe("getters", () => {
+      it("get connectionId(), get connectionType() smell like CCloud", () => {
+        const udf = createFlinkUDF("testFunc");
+        assert.strictEqual(udf.connectionId, CCLOUD_CONNECTION_ID);
+        assert.strictEqual(udf.connectionType, ConnectionType.Ccloud);
       });
     });
 
