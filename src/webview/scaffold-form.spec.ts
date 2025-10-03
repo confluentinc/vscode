@@ -247,7 +247,7 @@ test("form prevents invalid submissions", async ({ execute, page }) => {
   await page.keyboard.type("not a key");
   await page.focus("[name=cc_bootstrap_server]"); // blur to invoke validation
 
-  expect(submitBtn).toBeDisabled();
+  await expect(submitBtn).toBeDisabled();
 
   // Delete value and submit
   await page.focus("[name=api_key]");

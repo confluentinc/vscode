@@ -909,7 +909,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
       // Don't send with undefined settings, server will override existing settings with empty/undefined values
       if (settings.databaseName && settings.computePoolId && settings.catalogName) {
-        this.languageClient.sendNotification("workspace/didChangeConfiguration", {
+        await this.languageClient.sendNotification("workspace/didChangeConfiguration", {
           settings: {
             AuthToken: "{{ ccloud.data_plane_token }}",
             Catalog: settings.catalogName,

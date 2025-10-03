@@ -71,7 +71,9 @@ async function resourceScaffoldProjectRequest(
     ).getKafkaClustersForEnvironmentId(item.environmentId);
     const cluster = clusters.find((c) => c.id === item.clusterId);
     if (!cluster) {
-      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
+      void showErrorNotificationWithButtons(
+        `Unable to find Kafka cluster for topic "${item.name}".`,
+      );
       return;
     }
     const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
@@ -157,7 +159,7 @@ export const scaffoldProjectRequest = async (
             templateCollection: templateRequestOptions.templateCollection,
           },
         });
-        showErrorNotificationWithButtons(errMsg);
+        void showErrorNotificationWithButtons(errMsg);
         return { success: false, message: errMsg };
       }
     } else {
@@ -451,7 +453,7 @@ export async function handleProjectScaffoldUri(
   if (result) {
     if (!result.success) {
       if (result.message !== "Project generation cancelled before save.") {
-        showErrorNotificationWithButtons(
+        void showErrorNotificationWithButtons(
           "Error generating project. Check the template options and try again.",
         );
         logUsage(UserEvent.ProjectScaffoldingAction, {
