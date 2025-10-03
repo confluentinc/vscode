@@ -40,6 +40,8 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
       // replacement of ESLint's no-redeclare with support for function overload
       "@typescript-eslint/no-redeclare": "error",
+      // require awaiting or .then() chaining for promises
+      "@typescript-eslint/no-floating-promises": "warn",
       // ignore line endings between Windows and Unix
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
@@ -49,6 +51,10 @@ export default [
         ...globals.builtin,
         ...globals.browser,
         ...globals.node,
+      },
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },

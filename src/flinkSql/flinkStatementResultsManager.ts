@@ -293,10 +293,10 @@ export class FlinkStatementResultsManager {
               }
               default: {
                 reportable = { message: "Something went wrong." };
-                logError(error, "flink statement results", {
+                void logError(error, "flink statement results", {
                   extra: { status: status.toString(), payload },
                 });
-                showErrorNotificationWithButtons(
+                void showErrorNotificationWithButtons(
                   "Error response while fetching statement results.",
                 );
                 break;
@@ -396,7 +396,7 @@ export class FlinkStatementResultsManager {
         await this._stopStatement();
       }, "stop statement");
     } catch (err) {
-      logError(err, "Failed to stop Flink statement", {
+      void logError(err, "Failed to stop Flink statement", {
         extra: { functionName: "stopStatement" },
       });
       this._latestError({ message: "Failed to stop Flink statement" });

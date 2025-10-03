@@ -281,11 +281,11 @@ export class SidecarManager {
   }
 
   /** Called whenever websocket connection goes CONNECTED or DISCONNECTED. */
-  private onWebsocketStateChange(event: WebsocketStateEvent) {
+  private async onWebsocketStateChange(event: WebsocketStateEvent) {
     if (event === WebsocketStateEvent.DISCONNECTED) {
       // Try to get a new sidecar handle, which will start a new sidecar process
       // and reconnect websocket.
-      this.getHandle();
+      await this.getHandle();
     }
   }
 
@@ -586,7 +586,7 @@ ${logLines.slice(-10).join("\n")}
     const error = new SidecarFatalError(failureReason, failureMsg);
 
     // Send to sentry and error logger.
-    logError(error, `sidecar process failed to start`, {
+    void logError(error, `sidecar process failed to start`, {
       extra: {
         stderr: outputs.stderrLines.join("\n"),
         logs: outputs.logLines.join("\n"),

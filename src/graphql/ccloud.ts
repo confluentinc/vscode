@@ -54,8 +54,8 @@ export async function getCCloudResources(): Promise<CCloudEnvironment[]> {
   try {
     response = await sidecar.query(query, CCLOUD_CONNECTION_ID, true, { id: CCLOUD_CONNECTION_ID });
   } catch (error) {
-    logError(error, "CCloud environments", { extra: { connectionId: CCLOUD_CONNECTION_ID } });
-    showErrorNotificationWithButtons(`Failed to fetch CCloud resources: ${error}`);
+    void logError(error, "CCloud environments", { extra: { connectionId: CCLOUD_CONNECTION_ID } });
+    void showErrorNotificationWithButtons(`Failed to fetch CCloud resources: ${error}`);
     return envs;
   }
 

@@ -57,7 +57,7 @@ export async function uploadFileToAzure({
         fileSize: file.size,
       },
     };
-    logError(error, "Failed to upload file to Azure", sentryContext);
+    void logError(error, "Failed to upload file to Azure", sentryContext);
     void showErrorNotificationWithButtons("Failed to upload file to Azure. See logs for details.");
     throw error;
   }
@@ -133,7 +133,7 @@ export async function uploadFileToS3({
         ...{ responseBody: (error as any)?.responseText }, // include the full XML response
       },
     };
-    logError(error, "Failed to upload file to S3", sentryContext);
+    void logError(error, "Failed to upload file to S3", sentryContext);
     void showErrorNotificationWithButtons("Failed to upload file to S3. See logs for details.");
     throw error;
   }

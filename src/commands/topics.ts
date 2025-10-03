@@ -112,7 +112,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       topic_name: topic.name,
     });
   } catch (err) {
-    logError(err, "list topic configs", { extra: { error: {} } });
+    void logError(err, "list topic configs", { extra: { error: {} } });
     vscode.window.showErrorMessage("Failed to retrieve topic configs");
     return;
   }
@@ -160,7 +160,9 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
         const errorBody = await err.response.json();
         formError = errorBody.message;
       } else {
-        logError(err, "update topic config", { extra: { functionName: "validateOrUpdateConfig" } });
+        void logError(err, "update topic config", {
+          extra: { functionName: "validateOrUpdateConfig" },
+        });
         if (err instanceof Error && err.message) formError = err.message;
       }
       return { success: false, message: formError };
@@ -266,7 +268,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
       uriScheme: messageUri.scheme,
       problemCount: diagnostics.length,
     });
-    showErrorNotificationWithButtons(
+    void showErrorNotificationWithButtons(
       "Unable to produce message(s): JSON schema validation failed.",
       {
         "Show Validation Errors": () => {
@@ -479,7 +481,7 @@ async function produceMessages(
 
     // if we only have validation errors, no summary will be shown, but we should provide the
     // "Show Validation Errors" button
-    showErrorNotificationWithButtons(
+    void showErrorNotificationWithButtons(
       `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}"${errorSummary ? `:\n${errorSummary}` : ""}`,
       buttons,
     );

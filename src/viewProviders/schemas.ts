@@ -584,7 +584,7 @@ export class SchemasViewProvider
     try {
       await this.treeView.reveal(schema, { focus: true, select: true });
     } catch (e) {
-      logError(e, "Error revealing schema in tree view", {
+      void logError(e, "Error revealing schema in tree view", {
         extra: { functionName: "revealSchema" },
       });
     }

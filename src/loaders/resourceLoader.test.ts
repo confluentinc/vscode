@@ -546,7 +546,7 @@ describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
 
   it("Hates schema registry from wrong environment", async () => {
     // loader is LocalResourceLoader, so it will not accept a schema registry from a different environment.
-    assert.rejects(loaderInstance.getTopicSubjectGroups(TEST_CCLOUD_KAFKA_TOPIC), (err) => {
+    await assert.rejects(loaderInstance.getTopicSubjectGroups(TEST_CCLOUD_KAFKA_TOPIC), (err) => {
       return (err as Error).message.startsWith("Mismatched connectionId");
     });
   });

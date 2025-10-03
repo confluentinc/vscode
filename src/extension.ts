@@ -219,17 +219,19 @@ async function _activateExtension(
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
-  topicViewProvider.reset();
-  schemasViewProvider.reset();
+  await Promise.all([topicViewProvider.reset(), schemasViewProvider.reset()]);
 
   // Register refresh commands for our refreshable resource view providers.
   const refreshCommands: vscode.Disposable[] = [];
   for (const instance of getRefreshableViewProviders()) {
     refreshCommands.push(
-      registerCommandWithLogging(`confluent.${instance.kind}.refresh`, (): boolean => {
-        instance.refresh(true);
-        return true;
-      }),
+      registerCommandWithLogging(
+        `confluent.${instance.kind}.refresh`,
+        async (): Promise<boolean> => {
+          await instance.refresh(true);
+          return true;
+        },
+      ),
     );
   }
 
@@ -486,7 +488,7 @@ async function setupFeatureFlags(): Promise<void> {
 
   const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
   if (disabledMessage) {
-    showExtensionDisabledNotification(disabledMessage);
+    void showExtensionDisabledNotification(disabledMessage);
     throw new Error(disabledMessage);
   }
 }
@@ -553,7 +555,10 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
       userInfo: undefined,
       session: cloudSession,
     });
-    (await getLaunchDarklyClient())?.identify({ key: cloudSession.account.id });
+    const launchDarklyClient = await getLaunchDarklyClient();
+    if (launchDarklyClient) {
+      await launchDarklyClient.identify({ key: cloudSession.account.id });
+    }
   }
 
   logger.info("Confluent Cloud auth provider registered");
@@ -585,9 +590,9 @@ export function deactivate() {
     getTelemetryLogger().dispose();
   } catch (e) {
     const msg = "Error disposing telemetry logger during extension deactivation";
-    logError(new Error(msg, { cause: e }), msg, { extra: {} });
+    void logError(new Error(msg, { cause: e }), msg, { extra: {} });
   }
-  closeSentryClient();
+  void closeSentryClient();
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();

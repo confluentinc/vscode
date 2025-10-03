@@ -30,8 +30,8 @@ export async function getOrganizations(): Promise<CCloudOrganization[]> {
       id: CCLOUD_CONNECTION_ID,
     });
   } catch (error) {
-    logError(error, "CCloud organizations", { extra: { connectionId: CCLOUD_CONNECTION_ID } });
-    showErrorNotificationWithButtons(`Failed to fetch CCloud organizations: ${error}`);
+    void logError(error, "CCloud organizations", { extra: { connectionId: CCLOUD_CONNECTION_ID } });
+    void showErrorNotificationWithButtons(`Failed to fetch CCloud organizations: ${error}`);
     return orgs;
   }
 
