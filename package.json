@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.7.0-92",
+  "version": "1.8.0-6",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -359,6 +359,11 @@
         "command": "confluent.deleteArtifact",
         "title": "Delete Artifact",
         "category": "Confluent: Flink Artifacts"
+      },
+      {
+        "command": "confluent.deleteFlinkUDF",
+        "title": "Delete UDF",
+        "category": "Confluent: Flink UDFs"
       },
       {
         "command": "confluent.diff.compareWithSelected",
@@ -819,14 +824,6 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Show notifications when the extension is first installed or updated to a new version. Disabling this will prevent welcome messages and update notifications from appearing during extension activation.\n\n_NOTE: This does not affect error notifications or other extension functionality._"
-          },
-          "confluent.preview.useNewResourcesViewProvider": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Use the new Resources view provider for displaying resources in the Confluent extension.\n\n---\n\n⚠️ **WARNING**: This setting is currently in preview and may not be fully functional or stable. Must restart extensions for change to take effect.",
-            "tags": [
-              "preview"
-            ]
           }
         }
       },
@@ -890,7 +887,10 @@
           "confluent.localDocker.kafkaImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "description": "Docker image tag to use when starting a local Kafka container"
+            "description": "Docker image tag to use when starting a local Kafka container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           },
           "confluent.localDocker.schemaRegistryImageRepo": {
             "type": "string",
@@ -903,7 +903,10 @@
           "confluent.localDocker.schemaRegistryImageTag": {
             "type": "string",
             "default": "7.9.0",
-            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container"
+            "markdownDescription": "Docker image tag to use when starting a local Schema Registry container",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$",
+            "patternErrorMessage": "Image tag must start with an alphanumeric character or underscore, and can only contain alphanumeric characters, underscores, periods, or hyphens."
           }
         }
       },
@@ -1273,6 +1276,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "false"
+        },
+        {
           "command": "confluent.diff.compareWithSelected",
           "when": "false"
         },
@@ -1635,11 +1642,6 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.resources.refresh",
-          "when": "!config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources",
-          "group": "navigation@3"
-        },
-        {
           "command": "confluent.schemas.search",
           "when": "view == confluent-schemas && confluent.schemaRegistrySelected && !confluent.schemaSearchApplied",
           "group": "navigation@1"
@@ -1793,7 +1795,7 @@
         },
         {
           "command": "confluent.resources.refreshConnection",
-          "when": "config.confluent.preview.useNewResourcesViewProvider && view == confluent-resources && viewItem =~ /.*-container.*/",
+          "when": "view == confluent-resources && viewItem =~ /.*-container.*/",
           "group": "inline"
         },
         {
@@ -1858,12 +1860,12 @@
         },
         {
           "command": "confluent.flinkdatabase.kafka-cluster.select",
-          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/",
+          "when": "view == confluent-resources && viewItem =~ /.*-flinkable.*-kafka-cluster/ && config.confluent.flink.artifacts",
           "group": "4_flink@1"
         },
         {
           "command": "confluent.uploadArtifact",
-          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*compute-pool*/) && config.confluent.flink.artifacts",
           "group": "4_flink@1"
         },
         {
@@ -1914,6 +1916,11 @@
           "command": "confluent.deleteArtifact",
           "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
           "group": "artifacts"
+        },
+        {
+          "command": "confluent.deleteFlinkUDF",
+          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-udf$/",
+          "group": "udfs"
         },
         {
           "command": "confluent.schemas.upload",

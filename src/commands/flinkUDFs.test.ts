@@ -3,12 +3,14 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedResourceManager } from "../../tests/stubs/extensionStorage";
+import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
   createFlinkArtifact,
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
+import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
 import { createResponseError, ResponseErrorSource } from "../../tests/unit/testUtils";
 import { ResponseError as FlinkArtifactsResponseError } from "../clients/flinkArtifacts";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
@@ -21,6 +23,7 @@ import { ResourceManager } from "../storage/resourceManager";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import {
   createUdfRegistrationDocumentCommand,
+  deleteFlinkUDFCommand,
   registerFlinkUDFCommands,
   setFlinkUDFViewModeCommand,
   startGuidedUdfCreationCommand,
@@ -35,10 +38,15 @@ describe("commands/flinkUDFs.ts", () => {
   const mockEnvironment: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
   const mockDatabase: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
 
+  let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
+    vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
+  >;
+
   let withProgressStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
     withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
       const mockProgress = {
         report: sandbox.stub(),
@@ -52,6 +60,124 @@ describe("commands/flinkUDFs.ts", () => {
     sandbox.restore();
   });
 
+  describe("deleteFlinkUDFCommand", () => {
+    const mockUDF = createFlinkUDF("123");
+    let executeFlinkStatementStub: sinon.SinonStub;
+    let showWarningStub: sinon.SinonStub;
+    let mockFlinkDatabaseViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
+
+    beforeEach(() => {
+      executeFlinkStatementStub = sandbox.stub(
+        CCloudResourceLoader.getInstance(),
+        "executeFlinkStatement",
+      );
+      showWarningStub = sandbox.stub(vscode.window, "showWarningMessage");
+      mockFlinkDatabaseViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
+
+      // By default, set the mock provider to return a valid cluster
+      mockFlinkDatabaseViewProvider.resource = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
+      sandbox.stub(FlinkDatabaseViewProvider, "getInstance").returns(mockFlinkDatabaseViewProvider);
+    });
+
+    it("should return early if no UDF is provided", async () => {
+      await deleteFlinkUDFCommand(undefined as any);
+
+      sinon.assert.notCalled(showWarningStub);
+      sinon.assert.notCalled(executeFlinkStatementStub);
+    });
+
+    it("should open a confirmation modal and return early if the user cancels", async () => {
+      showWarningStub.resolves({ title: "Cancel" });
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showWarningStub);
+
+      sinon.assert.notCalled(executeFlinkStatementStub);
+    });
+
+    it("should handle 'No Flink database' error", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      // Override the mock provider to return no database
+      mockFlinkDatabaseViewProvider.resource = null;
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: No Flink database.");
+      sinon.assert.notCalled(executeFlinkStatementStub);
+    });
+
+    it("should handle ResponseError in catch block", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      const responseError: FlinkArtifactsResponseError = createResponseError(
+        500,
+        "Internal Server Error",
+        "Database connection failed",
+      );
+      executeFlinkStatementStub.rejects(responseError);
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: Database connection failed");
+    });
+
+    it("should extract flink detail from error message when available", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      const errorWithDetail = new Error(
+        "Some error occurred Error detail: Function not found in catalog",
+      );
+      executeFlinkStatementStub.rejects(errorWithDetail);
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: Function not found in catalog");
+    });
+
+    it("should use regular error message when no flink detail available", async () => {
+      const showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
+      showWarningStub.resolves("Yes, delete");
+
+      const regularError = new Error("Connection timeout");
+      executeFlinkStatementStub.rejects(regularError);
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledOnce(showErrorStub);
+      sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: Connection timeout");
+    });
+
+    it("should report progress messages during successful deletion", async () => {
+      const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
+      showWarningStub.resolves("Yes, delete");
+
+      const progressReportStub = sandbox.stub();
+      withProgressStub.callsFake(async (options, callback) => {
+        return await callback(
+          {
+            report: progressReportStub,
+          },
+          {} as vscode.CancellationToken,
+        );
+      });
+
+      executeFlinkStatementStub.resolves({ dropped_at: new Date().toISOString() });
+
+      await deleteFlinkUDFCommand(mockUDF);
+
+      sinon.assert.calledThrice(progressReportStub);
+      sinon.assert.calledOnceWithExactly(stubbedUDFsChangedEmitter.fire, mockDatabase);
+      sinon.assert.calledOnce(showInfoStub);
+    });
+  });
+
   describe("registerFlinkUDFCommands()", () => {
     it("should register expected Flink UDF commands", () => {
       const registerCommandWithLoggingStub = sandbox
@@ -60,20 +186,25 @@ describe("commands/flinkUDFs.ts", () => {
 
       registerFlinkUDFCommands();
 
-      sinon.assert.calledThrice(registerCommandWithLoggingStub);
+      sinon.assert.callCount(registerCommandWithLoggingStub, 4);
 
       sinon.assert.calledWithExactly(
         registerCommandWithLoggingStub.getCall(0),
+        "confluent.deleteFlinkUDF",
+        deleteFlinkUDFCommand,
+      );
+      sinon.assert.calledWithExactly(
+        registerCommandWithLoggingStub.getCall(1),
         "confluent.flinkdatabase.setUDFsViewMode",
         setFlinkUDFViewModeCommand,
       );
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(1),
+        registerCommandWithLoggingStub.getCall(2),
         "confluent.artifacts.createUdfRegistrationDocument",
         createUdfRegistrationDocumentCommand,
       );
       sinon.assert.calledWithExactly(
-        registerCommandWithLoggingStub.getCall(2),
+        registerCommandWithLoggingStub.getCall(3),
         "confluent.artifacts.startGuidedUdfCreation",
         startGuidedUdfCreationCommand,
       );
@@ -163,9 +294,6 @@ describe("commands/flinkUDFs.ts", () => {
     let fakeViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
     let promptStub: sinon.SinonStub;
     let executeCreateFunctionStub: sinon.SinonStub;
-    let stubbedUDFsChangedEmitter: sinon.SinonStubbedInstance<
-      vscode.EventEmitter<CCloudFlinkDbKafkaCluster>
-    >;
     let showErrorStub: sinon.SinonStub;
 
     const functionName = "testFunction";
@@ -182,7 +310,6 @@ describe("commands/flinkUDFs.ts", () => {
         className,
       });
       executeCreateFunctionStub = sandbox.stub(uploadArtifact, "executeCreateFunction").resolves();
-      stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
 
       showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     });

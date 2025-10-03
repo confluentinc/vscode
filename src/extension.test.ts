@@ -10,7 +10,7 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
-import { NewResourceViewProvider } from "./viewProviders/newResources";
+import { BaseViewProvider } from "./viewProviders/baseModels/base";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -42,7 +42,7 @@ describe("ExtensionContext", () => {
       {
         callable: () => ResourceViewProvider.getInstance(),
         source: "ResourceViewProvider",
-        clear: () => (ResourceViewProvider["instance"] = null),
+        clear: () => BaseViewProvider["instanceMap"].delete("ResourceViewProvider"),
       },
       {
         callable: () => TopicViewProvider.getInstance(),
@@ -111,9 +111,7 @@ describe("Refreshable views tests", () => {
     const seenKinds = new Set<string>();
     const seenViewProviderConstructorNames = new Set<string>();
 
-    const refreshableViewProviders = getRefreshableViewProviders(
-      NewResourceViewProvider.getInstance(),
-    );
+    const refreshableViewProviders = getRefreshableViewProviders();
 
     assert.strictEqual(
       refreshableViewProviders.length,

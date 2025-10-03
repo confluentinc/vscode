@@ -32,9 +32,9 @@ import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
+  getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   transformUdfSystemCatalogRows,
-  UDF_SYSTEM_CATALOG_QUERY,
 } from "./ccloudResourceLoaderUtils";
 import { generateFlinkStatementKey } from "./loaderUtils";
 
@@ -368,12 +368,16 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     if (udfs === undefined || forceDeepRefresh) {
       // Run the statement to list UDFs.
 
+      // Get the query to run, limiting by the given cluster's ID.
+      const udfSystemCatalogQuery = getUdfSystemCatalogQuery(cluster);
+
       // Will raise Error if the cluster isn't Flinkable or if the statement
       // execution fails. Will use the first compute pool in the cluster's
       // flinkPools array to execute the statement.
       const rawResults = await this.executeFlinkStatement<RawUdfSystemCatalogRow>(
-        UDF_SYSTEM_CATALOG_QUERY,
+        udfSystemCatalogQuery,
         cluster,
+        { nameSpice: "list-udfs" },
       );
 
       // Convert the raw results into FlinkUdf objects.
@@ -407,9 +411,9 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @param sqlStatement The SQL statement (string) to execute.
    * @param database The database (CCloudKafkaCluster) to execute the statement against.
    * @param options Optional parameters for statement execution
-   * @param options.computePool The compute pool to use for execution, defaults to the first compute pool in the database's flinkPools array
-   * @param options.timeout Custom timeout for the statement execution
-   * @param options.spice Additional spice parameter for extending statement name
+   * @param options.computePool The compute pool to use for execution, defaults to the first compute pool in the database's flinkPools array.
+   * @param options.timeout Custom timeout for the statement execution.
+   * @param options.nameSpice Additional spice parameter for extending statement name to prevent different statement operations from colliding when executed quickly in succession.
    * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
    *
    */
@@ -419,7 +423,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     options: {
       computePool?: CCloudFlinkComputePool;
       timeout?: number;
-      spice?: string;
+      nameSpice?: string;
     } = {},
   ): Promise<Array<RT>> {
     const organization = await this.getOrganization();
@@ -438,7 +442,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
     const statementParams: IFlinkStatementSubmitParameters = {
       statement: sqlStatement,
-      statementName: await determineFlinkStatementName(options.spice),
+      statementName: await determineFlinkStatementName(options.nameSpice),
       organizationId: organization.id,
       computePool: options.computePool,
       hidden: true, // Hidden statement, user didn't author it.

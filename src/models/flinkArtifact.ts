@@ -48,7 +48,21 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
     this.region = props.region;
     this.documentationLink = props.documentationLink;
 
-    this.metadata = props.metadata;
+    this.metadata = {
+      ...props.metadata,
+      created_at:
+        typeof props.metadata?.created_at === "string"
+          ? new Date(props.metadata.created_at)
+          : props.metadata?.created_at,
+      updated_at:
+        typeof props.metadata?.updated_at === "string"
+          ? new Date(props.metadata.updated_at)
+          : props.metadata?.updated_at,
+      deleted_at:
+        typeof props.metadata?.deleted_at === "string"
+          ? new Date(props.metadata.deleted_at)
+          : props.metadata?.deleted_at,
+    };
   }
 
   searchableText(): string {
@@ -92,8 +106,14 @@ export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkd
     .addHeader("Flink Artifact", IconNames.FLINK_ARTIFACT)
     .addField("ID", resource.id)
     .addField("Description", resource.description)
-    .addField("Created At", resource.createdAt?.toLocaleString())
-    .addField("Updated At", resource.updatedAt?.toLocaleString());
+    .addField(
+      "Created At",
+      resource.createdAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    )
+    .addField(
+      "Updated At",
+      resource.updatedAt?.toLocaleString(undefined, { timeZoneName: "short" }),
+    );
 
   if (!resource.documentationLink || resource.documentationLink === "") {
     tooltip.addLink("No documentation link", "");

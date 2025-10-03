@@ -3,12 +3,24 @@ import * as assert from "assert";
 import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { makeUdfFunctionRow, makeUdfParameterRow } from "../../tests/unit/testResources/makeUdfRow";
 import {
+  getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
 } from "./ccloudResourceLoaderUtils";
 
 describe("loaders/ccloudResourceLoaderUtils.ts", () => {
+  describe("getUdfSystemCatalogQuery()", () => {
+    // This function is trivial, just returns a constant string with the cluster ID filled in twice.
+    // Ensure is mentioned twice. Only E2E / clicktesting can prove that the query is otherwise sound.
+    it("should return string with cluster's id mixed in 2x", () => {
+      const query = getUdfSystemCatalogQuery(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER);
+      const occurrences = query.match(new RegExp(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER.id, "g"));
+      assert.ok(occurrences);
+      assert.strictEqual(occurrences.length, 2);
+    });
+  });
+
   describe("transformUDFSystemCatalogRows()", () => {
     it("should balk if encounters repeated function rows describing same functionSpecificName", () => {
       const rows: RawUdfSystemCatalogRow[] = [

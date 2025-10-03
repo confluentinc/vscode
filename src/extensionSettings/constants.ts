@@ -30,11 +30,6 @@ export const SHOW_NEW_INSTALL_OR_UPDATE_NOTIFICATIONS = new ExtensionSetting<boo
   SettingsSection.GENERAL,
 );
 
-export const USE_NEW_RESOURCES_VIEW_PROVIDER = new ExtensionSetting<boolean>(
-  "confluent.preview.useNewResourcesViewProvider",
-  SettingsSection.GENERAL,
-);
-
 // ===== CCLOUD CONFIGS =====
 
 /**

@@ -1,7 +1,7 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { IdItem } from "./main";
+import { CustomMarkdownString, IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 export class FlinkUdfParameter {
@@ -15,6 +15,16 @@ export class FlinkUdfParameter {
     this.dataType = props.dataType;
     this.isOptional = props.isOptional;
     this.traits = props.traits;
+  }
+
+  /**
+   * Returns a display-friendly version of the data type by removing max-int size specifications and escaping backticks.
+   */
+  static formatSqlType(sqlType: string): string {
+    // Remove noisy (2GBs) max size type values
+    const cleaned = sqlType.replace(/\(2147483647\)/g, "");
+    // Remove backticks that are part of SQL syntax (e.g., in ROW<`field` VARCHAR>)
+    return cleaned.replace(/`/g, "");
   }
 }
 
@@ -89,7 +99,8 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     this.externalName = props.externalName;
     this.artifactReference = props.artifactReference;
     this.isDeterministic = props.isDeterministic;
-    this.creationTs = props.creationTs;
+    this.creationTs = new Date(props.creationTs);
+    this.parameters = props.parameters || [];
     this.kind = props.kind;
     this.returnType = props.returnType;
 
@@ -107,6 +118,11 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   get connectionType(): ConnectionType {
     return ConnectionType.Ccloud;
   }
+
+  get artifactReferenceExtracted(): string {
+    // Extract artifact ID and version from "confluent-artifact://<artifact-id>/<version-id>"
+    return this.artifactReference.replace(/^confluent-artifact:\/\//, "");
+  }
 }
 
 export class FlinkUdfTreeItem extends TreeItem {
@@ -118,6 +134,37 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
-    this.description = resource.description;
+
+    this.description = `→ ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
+    this.tooltip = createFlinkUdfToolTip(resource);
   }
+}
+
+export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .addHeader("Flink UDF", IconNames.FLINK_FUNCTION)
+    .addField("ID", resource.id)
+    .addField("Description", resource.description)
+    .addField("Return Type", FlinkUdfParameter.formatSqlType(resource.returnType));
+
+  if (resource.parameters.length > 0) {
+    const params = resource.parameters
+      .map((p) => `${p.name} : ${FlinkUdfParameter.formatSqlType(p.dataType)}`)
+      .join(", ");
+    tooltip.addField("Parameters", `(${params})`);
+  } else {
+    tooltip.addField("Parameters", "None");
+  }
+
+  // Additional function properties
+  tooltip.addField("Language", resource.language);
+  tooltip.addField("Deterministic", resource.isDeterministic ? "Yes" : "No");
+  tooltip.addField("Kind", resource.kind ?? "UNKNOWN");
+  tooltip.addField(
+    "Created At",
+    resource.creationTs.toLocaleString(undefined, { timeZoneName: "short" }),
+  );
+  tooltip.addField("Artifact Reference", resource.artifactReferenceExtracted);
+  tooltip.addField("External Name", resource.externalName);
+  return tooltip;
 }
