@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-2",
+  "version": "1.8.0-8",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -502,12 +502,6 @@
         "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
         "title": "Copy Bootstrap Server(s)",
         "category": "Confluent: Kafka Clusters"
-      },
-      {
-        "command": "confluent.resources.refresh",
-        "icon": "$(sync)",
-        "title": "Refresh",
-        "category": "Confluent: Resources"
       },
       {
         "command": "confluent.resources.refreshConnection",
@@ -1375,10 +1369,6 @@
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
           "when": "false"
-        },
-        {
-          "command": "confluent.resources.refresh",
-          "when": "true"
         },
         {
           "command": "confluent.resources.refreshConnection",

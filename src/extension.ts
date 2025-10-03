@@ -498,7 +498,6 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   // When adding a new refreshable view, also update the test block
   // "Refreshable views tests" in extension.test.ts.
   const refreshables = [
-    ResourceViewProvider.getInstance(),
     TopicViewProvider.getInstance(),
     SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),

@@ -32,9 +32,9 @@ import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
 import {
+  getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   transformUdfSystemCatalogRows,
-  UDF_SYSTEM_CATALOG_QUERY,
 } from "./ccloudResourceLoaderUtils";
 import { generateFlinkStatementKey } from "./loaderUtils";
 
@@ -400,11 +400,14 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     if (udfs === undefined || forceDeepRefresh) {
       // Run the statement to list UDFs.
 
+      // Get the query to run, limiting by the given cluster's ID.
+      const udfSystemCatalogQuery = getUdfSystemCatalogQuery(cluster);
+
       // Will raise Error if the cluster isn't Flinkable or if the statement
       // execution fails. Will use the first compute pool in the cluster's
       // flinkPools array to execute the statement.
       const rawResults = await this.executeFlinkStatement<RawUdfSystemCatalogRow>(
-        UDF_SYSTEM_CATALOG_QUERY,
+        udfSystemCatalogQuery,
         cluster,
         { nameSpice: "list-udfs" },
       );

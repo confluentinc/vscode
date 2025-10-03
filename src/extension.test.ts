@@ -10,8 +10,6 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
-import { BaseViewProvider } from "./viewProviders/baseModels/base";
-import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
 
@@ -39,11 +37,6 @@ describe("ExtensionContext", () => {
 
   it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
     const extensionContextSingletons = [
-      {
-        callable: () => ResourceViewProvider.getInstance(),
-        source: "ResourceViewProvider",
-        clear: () => BaseViewProvider["instanceMap"].delete("ResourceViewProvider"),
-      },
       {
         callable: () => TopicViewProvider.getInstance(),
         source: "TopicViewProvider",
@@ -101,7 +94,7 @@ describe("Refreshable views tests", () => {
    *
    * When a new one is added, its `kind` attribute value should be added to this list.
    */
-  const expectedKinds = ["resources", "topics", "schemas", "statements", "flinkdatabase"];
+  const expectedKinds = ["topics", "schemas", "statements", "flinkdatabase"];
 
   before(async () => {
     await getTestExtensionContext();
