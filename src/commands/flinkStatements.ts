@@ -279,7 +279,7 @@ export async function submitFlinkStatementCommand(
 
         // Log in Sentry and logger (we invite the user to open logs / file issue in
         // showErrorNotificationWithButtons(), so good for them to see this in the logs.)
-        logError(err, `Unparseable 400 response submitting statement: ${errorMessages}`, {
+        void logError(err, `Unparseable 400 response submitting statement: ${errorMessages}`, {
           extra: {
             errorMessages,
             statementLength: statement.length,
@@ -292,7 +292,7 @@ export async function submitFlinkStatementCommand(
       await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
     } else {
       // wasn't a 400 ResponseError. So who knows? We don't expect this to happen.
-      logError(err, "Submit Flink statement unexpected error", {
+      void logError(err, "Submit Flink statement unexpected error", {
         extra: {
           statementLength: statement.length,
           computePoolId: computePool.id,
