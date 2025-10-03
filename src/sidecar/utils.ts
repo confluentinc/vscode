@@ -191,7 +191,7 @@ export function checkSidecarFile(executablePath: string) {
   try {
     fs.accessSync(executablePath, fs.constants.X_OK);
   } catch (e) {
-    logError(e, `Sidecar executable "${executablePath}" does not exist or is not executable`, {
+    void logError(e, `Sidecar executable "${executablePath}" does not exist or is not executable`, {
       extra: {
         executablePath,
         originalExecutablePath: sidecarExecutablePath,
@@ -331,7 +331,7 @@ export async function triageSidecarStartupError(e: any): Promise<void> {
 
   // Call logError which will always log to logger, but will only
   // send to Sentry if sentryExtra is non-undefined.
-  logError(e, logErrorMessage, maybeSentryExtra);
+  void logError(e, logErrorMessage, maybeSentryExtra);
 
   // Show the error to the user, possibly with custom buttons. Do not block on
   // any buttonpress.
