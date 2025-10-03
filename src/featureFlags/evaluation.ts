@@ -83,5 +83,5 @@ export async function showExtensionDisabledNotification(reason: string) {
       commands.executeCommand("workbench.extensions.search", `@id:${EXTENSION_ID}`);
     };
   }
-  showErrorNotificationWithButtons(msg, buttons);
+  void showErrorNotificationWithButtons(msg, buttons);
 }
