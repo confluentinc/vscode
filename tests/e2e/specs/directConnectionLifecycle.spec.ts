@@ -81,7 +81,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
         schemaRegistryConfig = undefined;
       });
 
-      test.describe.only("CCloud API key+secret", { tag: [Tag.Direct] }, () => {
+      test.describe("CCloud API key+secret", { tag: [Tag.Direct] }, () => {
         const name = "CCloud API key+secret";
         const formConnectionType = FormConnectionType.ConfluentCloud;
 
