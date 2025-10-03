@@ -71,7 +71,9 @@ async function resourceScaffoldProjectRequest(
     ).getKafkaClustersForEnvironmentId(item.environmentId);
     const cluster = clusters.find((c) => c.id === item.clusterId);
     if (!cluster) {
-      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
+      void showErrorNotificationWithButtons(
+        `Unable to find Kafka cluster for topic "${item.name}".`,
+      );
       return;
     }
     const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
@@ -151,13 +153,13 @@ export const scaffoldProjectRequest = async (
       if (!pickedTemplate) {
         const errMsg =
           "Project template not found. Check the template name and collection and try again.";
-        logError(new Error(errMsg), "template not found", {
+        void logError(new Error(errMsg), "template not found", {
           extra: {
             templateName: templateRequestOptions.templateName,
             templateCollection: templateRequestOptions.templateCollection,
           },
         });
-        showErrorNotificationWithButtons(errMsg);
+        void showErrorNotificationWithButtons(errMsg);
         return { success: false, message: errMsg };
       }
     } else {
@@ -165,7 +167,7 @@ export const scaffoldProjectRequest = async (
       pickedTemplate = await pickTemplate(templateList);
     }
   } catch (err) {
-    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
+    void logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return { success: false, message: "Failed to retrieve template list" };
   }
@@ -353,7 +355,7 @@ export async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
+    void logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
       message = e.message;
@@ -451,7 +453,7 @@ export async function handleProjectScaffoldUri(
   if (result) {
     if (!result.success) {
       if (result.message !== "Project generation cancelled before save.") {
-        showErrorNotificationWithButtons(
+        void showErrorNotificationWithButtons(
           "Error generating project. Check the template options and try again.",
         );
         logUsage(UserEvent.ProjectScaffoldingAction, {
