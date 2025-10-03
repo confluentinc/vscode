@@ -163,8 +163,6 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "CREATE_FUNCTION",
         },
       };
-      waitForResultsFetchableStub();
-      openFlinkStatementResultsViewStub();
       waitForStatementCompletionStub.resolves(createFuncStatement);
 
       await handleStatementSubmission(createFuncStatement, database);
@@ -180,8 +178,6 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "NOT A CREATE FUNCTION",
         },
       };
-      waitForResultsFetchableStub.resolves();
-      openFlinkStatementResultsViewStub.resolves();
       waitForStatementCompletionStub.resolves(createFuncStatement);
 
       await handleStatementSubmission(createFuncStatement, database);
@@ -203,8 +199,6 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "CREATE_FUNCTION",
         },
       };
-      waitForResultsFetchableStub.resolves();
-      openFlinkStatementResultsViewStub.resolves();
       waitForStatementCompletionStub.resolves(statement);
 
       await handleStatementSubmission(statement, database);
