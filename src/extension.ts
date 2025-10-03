@@ -486,7 +486,7 @@ async function setupFeatureFlags(): Promise<void> {
 
   const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
   if (disabledMessage) {
-    showExtensionDisabledNotification(disabledMessage);
+    void showExtensionDisabledNotification(disabledMessage);
     throw new Error(disabledMessage);
   }
 }
@@ -585,9 +585,9 @@ export function deactivate() {
     getTelemetryLogger().dispose();
   } catch (e) {
     const msg = "Error disposing telemetry logger during extension deactivation";
-    logError(new Error(msg, { cause: e }), msg, { extra: {} });
+    void logError(new Error(msg, { cause: e }), msg, { extra: {} });
   }
-  closeSentryClient();
+  void closeSentryClient();
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
