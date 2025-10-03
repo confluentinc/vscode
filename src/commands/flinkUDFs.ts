@@ -80,7 +80,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
       },
     );
 
-    showInfoNotificationWithButtons(
+    void showInfoNotificationWithButtons(
       `UDF "${selectedUdf.name}" deleted successfully from Confluent Cloud.`,
     );
   } catch (err) {
@@ -99,8 +99,8 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
         errorMessage = `${errorMessage} ${err.message}`;
       }
     }
-    logError(err, errorMessage);
-    showErrorNotificationWithButtons(errorMessage);
+    void logError(err, errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
   }
 }
 
@@ -215,9 +215,9 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
         errorMessage = `${errorMessage}: ${resp}`;
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage}: ${err.message}`;
-        logError(err, errorMessage);
+        void logError(err, errorMessage);
       }
-      showErrorNotificationWithButtons(errorMessage);
+      void showErrorNotificationWithButtons(errorMessage);
     }
   }
 }

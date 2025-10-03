@@ -179,9 +179,7 @@ export async function openLatestSchemasCommand(topic: KafkaTopic) {
       title: message,
     },
     async () => {
-      const promises = highestVersionedSchemas.map((schema) => {
-        openReadOnlySchemaDocument(schema);
-      });
+      const promises = highestVersionedSchemas.map((schema) => openReadOnlySchemaDocument(schema));
       await Promise.all(promises);
     },
   );
@@ -263,7 +261,7 @@ export async function deleteSchemaVersionCommand(schema: Schema) {
     const found = schemaGroup && schemaGroup.find((s) => s.id === schema.id) !== undefined;
 
     if (!found) {
-      showErrorNotificationWithButtons("Schema not found in registry.", {
+      void showErrorNotificationWithButtons("Schema not found in registry.", {
         "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
         ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
       });
@@ -279,13 +277,13 @@ export async function deleteSchemaVersionCommand(schema: Schema) {
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
         // not a 404, something unexpected
-        logError(e, "Error fetching schemas for subject while deleting schema version", {
+        void logError(e, "Error fetching schemas for subject while deleting schema version", {
           extra: { error: {} },
         });
       }
     }
 
-    showErrorNotificationWithButtons("Schema not found in registry.", {
+    void showErrorNotificationWithButtons("Schema not found in registry.", {
       "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
       ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
     });
@@ -357,8 +355,8 @@ export async function deleteSchemaVersionCommand(schema: Schema) {
     }
   } catch (e) {
     success = false;
-    logError(e, "Error deleting schema version", { extra: { error: {} } });
-    showErrorNotificationWithButtons(
+    void logError(e, "Error deleting schema version", { extra: { error: {} } });
+    void showErrorNotificationWithButtons(
       `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
@@ -396,7 +394,7 @@ export async function deleteSchemaSubjectCommand(subject: Subject) {
     schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
 
     if (!Array.isArray(schemaGroup) || schemaGroup.length === 0) {
-      showErrorNotificationWithButtons("Schema subject not found in registry.", {
+      void showErrorNotificationWithButtons("Schema subject not found in registry.", {
         "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
         ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
       });
@@ -409,12 +407,12 @@ export async function deleteSchemaSubjectCommand(subject: Subject) {
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
         // not a 404, something unexpected/
-        logError(e, "Error fetching schemas for subject while deleting schema subject", {
+        void logError(e, "Error fetching schemas for subject while deleting schema subject", {
           extra: { error: {} },
         });
       }
     }
-    showErrorNotificationWithButtons("Schema subject not found in registry.", {
+    void showErrorNotificationWithButtons("Schema subject not found in registry.", {
       "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
       ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
     });
@@ -479,8 +477,8 @@ export async function deleteSchemaSubjectCommand(subject: Subject) {
     );
   } catch (e) {
     success = false;
-    logError(e, "Error deleting schema subject", { extra: { error: {} } });
-    showErrorNotificationWithButtons(
+    void logError(e, "Error deleting schema subject", { extra: { error: {} } });
+    void showErrorNotificationWithButtons(
       `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
     );
   } finally {

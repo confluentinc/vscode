@@ -104,7 +104,7 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
     sandbox.restore();
   });
 
-  it("should show a notification with default values when no options provided", () => {
+  it("should show a notification with default values when no options provided", async () => {
     const showErrorStub = sandbox.stub(notifications, "showErrorNotificationWithButtons");
     const openExternalStub = sandbox.stub(env, "openExternal");
 
@@ -123,7 +123,7 @@ describe("utils/privateNetworking.ts showPrivateNetworkingHelpNotification()", (
     assert.ok("View Docs" in buttons, "Should have a 'View Docs' button");
 
     // Call the button callback and verify it opens the docs URL
-    buttons["View Docs"]();
+    await buttons["View Docs"]();
     sinon.assert.calledOnce(openExternalStub);
     sinon.assert.calledWith(
       openExternalStub,

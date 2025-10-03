@@ -64,7 +64,7 @@ export async function waitForConnectionToBeStable(
     environmentChanged.fire({ id: id as unknown as EnvironmentId, wasDeleted: false });
     const lastConnectionEvent = connectionStateWatcher.getLatestConnectionEvent(id);
     if (lastConnectionEvent) {
-      showErrorNotificationWithButtons(
+      void showErrorNotificationWithButtons(
         `Timed out establishing "${lastConnectionEvent.connection.spec.name}" connection.`,
       );
     }
@@ -114,7 +114,7 @@ export async function reportUsableState(connection: Connection) {
     const failedTypes: ConfigType[] = failedConnectionSummaries.map((state) => state.configType);
     // the notifications don't allow rich formatting here, so we'll just list out the failed resources
     // and then try to show the errors themselves in the item tooltips if possible
-    showErrorNotificationWithButtons(
+    void showErrorNotificationWithButtons(
       `Failed to establish connection to ${failedTypes.join(" and ")} for "${connection.spec.name}".`,
       notificationButtons,
     );

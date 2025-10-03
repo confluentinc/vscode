@@ -111,8 +111,8 @@ export async function uploadArtifactCommand(
     } else if (err instanceof Error) {
       errorMessage = `${errorMessage} ${err.message}`;
     }
-    logError(err, errorMessage);
-    showErrorNotificationWithButtons(errorMessage);
+    void logError(err, errorMessage);
+    void showErrorNotificationWithButtons(errorMessage);
   }
 }
 
@@ -120,7 +120,7 @@ export async function deleteArtifactCommand(
   selectedArtifact: FlinkArtifact | undefined,
 ): Promise<void> {
   if (!selectedArtifact) {
-    showErrorNotificationWithButtons("No Flink artifact selected for deletion.");
+    void showErrorNotificationWithButtons("No Flink artifact selected for deletion.");
     return;
   }
   const request: DeleteArtifactV1FlinkArtifactRequest = {

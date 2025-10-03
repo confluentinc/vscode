@@ -295,7 +295,7 @@ export class WebsocketManager extends DisposableCollection {
       try {
         message.body = additionalDeserializer(body);
       } catch (e) {
-        logError(e, "Websocket message body higher-level body deserialization error", {
+        void logError(e, "Websocket message body higher-level body deserialization error", {
           extra: {
             message: strMessage,
           },
