@@ -7,25 +7,42 @@ import {
 import { createFlinkArtifactToolTip, FlinkArtifactTreeItem } from "./flinkArtifact";
 
 describe("FlinkArtifact", () => {
-  it("should convert date strings to Date objects when rehydrating from cache", () => {
-    // simulate when dates are stored as strings after JSON.stringify() when retrieved from cache
-    const original = createFlinkArtifact({ id: "test" });
-    const deserialized = JSON.parse(JSON.stringify(original));
+  describe("constructor", () => {
+    it("should convert date strings to Date objects when rehydrating from cache", () => {
+      // simulate when dates are stored as strings after JSON.stringify() when retrieved from cache
+      const original = createFlinkArtifact({ id: "test" });
+      const deserialized = JSON.parse(JSON.stringify(original));
 
-    assert.strictEqual(typeof deserialized.metadata.created_at, "string");
-    assert.strictEqual(typeof deserialized.metadata.updated_at, "string");
+      assert.strictEqual(typeof deserialized.metadata.created_at, "string");
+      assert.strictEqual(typeof deserialized.metadata.updated_at, "string");
 
-    // constructor should convert strings back to Date objects
-    const rehydrated = createFlinkArtifact(deserialized);
-    assert.ok(rehydrated.createdAt instanceof Date);
-    assert.ok(rehydrated.updatedAt instanceof Date);
-    assert.strictEqual(rehydrated.createdAt?.toISOString(), original.createdAt?.toISOString());
-    assert.strictEqual(rehydrated.updatedAt?.toISOString(), original.updatedAt?.toISOString());
+      // constructor should convert strings back to Date objects
+      const rehydrated = createFlinkArtifact(deserialized);
+      assert.ok(rehydrated.createdAt instanceof Date);
+      assert.ok(rehydrated.updatedAt instanceof Date);
+      assert.strictEqual(rehydrated.createdAt?.toISOString(), original.createdAt?.toISOString());
+      assert.strictEqual(rehydrated.updatedAt?.toISOString(), original.updatedAt?.toISOString());
 
-    const localeString = rehydrated.createdAt?.toLocaleString(undefined, {
-      timeZoneName: "short",
+      const localeString = rehydrated.createdAt?.toLocaleString(undefined, {
+        timeZoneName: "short",
+      });
+      assert.notStrictEqual(localeString, rehydrated.createdAt?.toISOString());
     });
-    assert.notStrictEqual(localeString, rehydrated.createdAt?.toISOString());
+  });
+
+  describe("searchableText", () => {
+    it("should return a concatenated string of searchable fields id, name, description", () => {
+      const artifact = createFlinkArtifact({
+        id: "search-test",
+        name: "Test Artifact",
+        description: "Test artifact description",
+      });
+      const searchText = artifact.searchableText();
+
+      assert.ok(searchText.includes("search-test"));
+      assert.ok(searchText.includes("Test Artifact"));
+      assert.ok(searchText.includes("Test artifact description"));
+    });
   });
 });
 

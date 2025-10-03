@@ -1,73 +1,99 @@
 import assert from "assert";
 import { describe, it } from "mocha";
 import { createFlinkUDF } from "../../tests/unit/testResources/flinkUDF";
-import { FlinkUdfParameter, FlinkUdfTreeItem, createFlinkUdfToolTip } from "./flinkUDF";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { FlinkUdfParameter, FlinkUdfTreeItem, createFlinkUdfToolTip } from "./flinkUDF";
 
-describe("FlinkUdfParameter", () => {
-  describe("formatSqlType", () => {
-    it("should remove max varchar size", () => {
-      const result = FlinkUdfParameter.formatSqlType("VARCHAR(2147483647)");
-      assert.strictEqual(result, "VARCHAR");
-    });
-
-    it("should preserve small varchar sizes", () => {
-      const result = FlinkUdfParameter.formatSqlType("VARCHAR(100)");
-      assert.strictEqual(result, "VARCHAR(100)");
-    });
-
-    it("should remove backticks", () => {
-      const result = FlinkUdfParameter.formatSqlType("ROW<`field` VARCHAR>");
-      assert.strictEqual(result, "ROW<field VARCHAR>");
-    });
-
-    it("should handle complex types with max varchar and backticks", () => {
-      const result = FlinkUdfParameter.formatSqlType("ROW<`name` VARCHAR(2147483647), `age` INT>");
-      assert.strictEqual(result, "ROW<name VARCHAR, age INT>");
-    });
-  });
-});
-
-describe("FlinkUdf", () => {
-  it("should return correct details", () => {
-    const udf = createFlinkUDF("testFunc");
-    assert.strictEqual(udf.connectionId, CCLOUD_CONNECTION_ID);
-    assert.strictEqual(udf.connectionType, ConnectionType.Ccloud);
-  });
-
-  it("should convert date strings to Date objects when rehydrating from cache", () => {
-    // simulate when dates are stored as strings after JSON.stringify() when retrieved from cache
-    const original = createFlinkUDF("testFunc");
-    const deserialized = JSON.parse(JSON.stringify(original));
-
-    assert.strictEqual(typeof deserialized.creationTs, "string");
-
-    // constructor should convert string back to Date object
-    const rehydrated = createFlinkUDF("testFunc", undefined, deserialized);
-    assert.ok(rehydrated.creationTs instanceof Date);
-    assert.strictEqual(rehydrated.creationTs.toISOString(), original.creationTs.toISOString());
-
-    // verify timezone formatting works
-    const localeString = rehydrated.creationTs.toLocaleString(undefined, {
-      timeZoneName: "short",
-    });
-    assert.notStrictEqual(localeString, rehydrated.creationTs.toISOString());
-  });
-
-  describe("artifactReferenceExtracted", () => {
-    it("should extract artifact ID and version", () => {
-      const udf = createFlinkUDF("testFunc", undefined, {
-        artifactReference: "confluent-artifact://abc123/v1.2.3",
+describe("flinkUDF.ts", () => {
+  describe("FlinkUdfParameter", () => {
+    describe("formatSqlType", () => {
+      it("should remove max varchar size", () => {
+        const result = FlinkUdfParameter.formatSqlType("VARCHAR(2147483647)");
+        assert.strictEqual(result, "VARCHAR");
       });
-      assert.strictEqual(udf.artifactReferenceExtracted, "abc123/v1.2.3");
+
+      it("should preserve small varchar sizes", () => {
+        const result = FlinkUdfParameter.formatSqlType("VARCHAR(100)");
+        assert.strictEqual(result, "VARCHAR(100)");
+      });
+
+      it("should remove backticks", () => {
+        const result = FlinkUdfParameter.formatSqlType("ROW<`field` VARCHAR>");
+        assert.strictEqual(result, "ROW<field VARCHAR>");
+      });
+
+      it("should handle complex types with max varchar and backticks", () => {
+        const result = FlinkUdfParameter.formatSqlType(
+          "ROW<`name` VARCHAR(2147483647), `age` INT>",
+        );
+        assert.strictEqual(result, "ROW<name VARCHAR, age INT>");
+      });
+    });
+  });
+
+  describe("FlinkUdf", () => {
+    describe("constructor", () => {
+      it("should retain connectionId / connectionType", () => {
+        // this is more a test on basics of createFlinkUDF() helper function,
+        // but it's important enough to verify.
+        const udf = createFlinkUDF("testFunc");
+        assert.strictEqual(udf.connectionId, CCLOUD_CONNECTION_ID);
+        assert.strictEqual(udf.connectionType, ConnectionType.Ccloud);
+      });
+
+      it("should convert date strings to Date objects when rehydrating from cache", () => {
+        // simulate when dates are stored as strings after JSON.stringify() when retrieved from cache
+        const original = createFlinkUDF("testFunc");
+        const deserialized = JSON.parse(JSON.stringify(original));
+
+        assert.strictEqual(typeof deserialized.creationTs, "string");
+
+        // constructor should convert string back to Date object
+        const rehydrated = createFlinkUDF("testFunc", undefined, deserialized);
+        assert.ok(rehydrated.creationTs instanceof Date);
+        assert.strictEqual(rehydrated.creationTs.toISOString(), original.creationTs.toISOString());
+
+        // verify timezone formatting works
+        const localeString = rehydrated.creationTs.toLocaleString(undefined, {
+          timeZoneName: "short",
+        });
+        assert.notStrictEqual(localeString, rehydrated.creationTs.toISOString());
+      });
     });
 
-    it("should return original if not standard format", () => {
-      const udf = createFlinkUDF("testFunc", undefined, {
-        artifactReference: "custom-format:123",
+    describe("artifactReferenceExtracted", () => {
+      it("should extract artifact ID and version", () => {
+        const udf = createFlinkUDF("testFunc", undefined, {
+          artifactReference: "confluent-artifact://abc123/v1.2.3",
+        });
+        assert.strictEqual(udf.artifactReferenceExtracted, "abc123/v1.2.3");
       });
-      assert.strictEqual(udf.artifactReferenceExtracted, "custom-format:123");
+
+      it("should return original if not standard format", () => {
+        const udf = createFlinkUDF("testFunc", undefined, {
+          artifactReference: "custom-format:123",
+        });
+        assert.strictEqual(udf.artifactReferenceExtracted, "custom-format:123");
+      });
+    });
+
+    describe("searchableText", () => {
+      it("should return a concatenated string of searchable fields", () => {
+        const udf = createFlinkUDF("searchTestUDF", undefined, {
+          description: "Test UDF description",
+          externalName: "com.example.searchTest",
+          artifactReference: "confluent-artifact://artifact123/v1.0.0",
+          kind: "SCALAR",
+        });
+        const searchText = udf.searchableText();
+
+        assert.ok(searchText.includes("searchTestUDF"));
+        assert.ok(searchText.includes("Test UDF description"));
+        assert.ok(searchText.includes("com.example.searchTest"));
+        assert.ok(searchText.includes("confluent-artifact://artifact123/v1.0.0"));
+        assert.ok(searchText.includes("SCALAR"));
+      });
     });
   });
 
