@@ -68,7 +68,7 @@ export async function isDockerAvailable(showNotification: boolean = false): Prom
     // either float this as an `error` log if it's a ResponseError or was an explicit action that
     // warrants notifying the user that something is wrong
     if (error instanceof ResponseError || showNotification) {
-      void logError(error, "docker ping");
+      logError(error, "docker ping");
     } else {
       // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
       logger.debug("docker ping error:", error);

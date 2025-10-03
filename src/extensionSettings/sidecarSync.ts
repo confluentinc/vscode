@@ -121,6 +121,6 @@ export async function updatePreferences() {
         sentryContext = { extra: { functionName: "updatePreferences" } };
       }
     }
-    void logError(error, "syncing settings to sidecar preferences API", sentryContext);
+    logError(error, "syncing settings to sidecar preferences API", sentryContext);
   }
 }

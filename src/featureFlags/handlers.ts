@@ -44,7 +44,7 @@ export function handleErrorEvent(error: unknown) {
     if (!error.message.includes("network error")) {
       // send any non-'network error' events to Sentry (if online) so we can troubleshoot
       // https://support.launchdarkly.com/hc/en-us/articles/12998125691419-Error-LaunchDarklyFlagFetchError-network-error
-      void logError(error, "LD error event", { extra: { functionName: "handleErrorEvent" } });
+      logError(error, "LD error event", { extra: { functionName: "handleErrorEvent" } });
     }
   } else {
     logger.error("LD error event:", error);

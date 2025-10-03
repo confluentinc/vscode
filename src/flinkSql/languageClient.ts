@@ -71,7 +71,7 @@ export async function createLanguageClientFromWebsocket(
     },
     initializationFailedHandler: (error) => {
       let msg = "Language client initialization failed";
-      void logError(error, msg, {
+      logError(error, msg, {
         extra: {
           wsUrl: url,
         },
@@ -81,7 +81,7 @@ export async function createLanguageClientFromWebsocket(
     errorHandler: {
       error: (error: Error, message: Message): ErrorHandlerResult => {
         let msg = "Language client error handler invoked.";
-        void logError(error, msg, {
+        logError(error, msg, {
           extra: {
             wsUrl: url,
           },

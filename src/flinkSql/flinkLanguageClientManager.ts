@@ -492,7 +492,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       return null;
     } catch (error) {
       let msg = "Error while looking up compute pool";
-      void logError(error, msg, {
+      logError(error, msg, {
         extra: {
           compute_pool_id: computePoolId,
         },
@@ -663,7 +663,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
         await this.initializeNewClient(uri, prereqCheck.computePoolId, prereqCheck.websocketUrl);
       } catch (error) {
         // Should never happen, but if it does, we should log the error and continue
-        void logError(error, "Error in maybeStartLanguageClient", {
+        logError(error, "Error in maybeStartLanguageClient", {
           extra: { uri: uri?.toString() },
         });
       } finally {
@@ -699,7 +699,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     );
     if (!accessToken) {
       let msg = "Failed to initialize Flink SQL language client: No access token found";
-      void logError(new Error(msg), "No token found in secret storage");
+      logError(new Error(msg), "No token found in secret storage");
       return null;
     }
     return new Promise((resolve, reject) => {
@@ -753,7 +753,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
             })
             .catch((e: Error) => {
               let msg = "Error while creating FlinkSQL language server";
-              void logError(e, msg, {
+              logError(e, msg, {
                 extra: {
                   wsUrl: url,
                 },
@@ -781,7 +781,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
       ws.onerror = (error: ErrorEvent) => {
         let msg = "WebSocket error connecting to Flink SQL language server.";
-        void logError(error, msg, {
+        logError(error, msg, {
           extra: {
             wsUrl: url,
           },
@@ -810,7 +810,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
         // 1000 is normal closure
         if (closeEvent.code !== 1000) {
-          void logError(
+          logError(
             new Error(`WebSocket closed unexpectedly: ${closeEvent.reason}`),
             "WebSocket onClose handler called",
             {
@@ -838,7 +838,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     // If we've reached max attempts, stop trying to reconnect
     if (this.reconnectCounter >= this.MAX_RECONNECT_ATTEMPTS) {
       let msg = `Failed to reconnect after ${this.MAX_RECONNECT_ATTEMPTS} attempts`;
-      void logError(new Error(msg), msg, {
+      logError(new Error(msg), msg, {
         extra: {
           reconnectCounter: this.reconnectCounter,
           lastWebSocketUrl: this.lastWebSocketUrl,
@@ -866,7 +866,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       this.reconnectCounter = 0;
     } catch (e) {
       let msg = "Failed to restart language client";
-      void logError(e, msg, {
+      logError(e, msg, {
         extra: {
           reconnectCounter: this.reconnectCounter,
           lastWebSocketUrl: this.lastWebSocketUrl,
@@ -887,7 +887,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
       }
     } catch (error) {
       let msg = "Error stopping language client during cleanup";
-      void logError(error, msg);
+      logError(error, msg);
     }
     // Make sure we clean up even if there's an error
     this.languageClient = null;
@@ -948,7 +948,7 @@ export class FlinkLanguageClientManager extends DisposableCollection {
     // Start the async cleanup without waiting
     this.asyncDispose().catch((error) => {
       let msg = "Error during async language client cleanup";
-      void logError(error, msg);
+      logError(error, msg);
     });
 
     // Immediately perform synchronous disposal operations

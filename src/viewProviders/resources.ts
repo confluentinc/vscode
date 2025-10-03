@@ -302,7 +302,7 @@ export class CCloudConnectionRow extends ConnectionRow<CCloudEnvironment, CCloud
         this.ccloudOrganization = results[0] as CCloudOrganization;
       } catch (e) {
         const msg = `Failed to load Confluent Cloud information for the "${this.ccloudOrganization?.name}" organization.`;
-        void logError(e, "loading CCloud environments or organization", {
+        logError(e, "loading CCloud environments or organization", {
           extra: { functionName: "loadCCloudResources" },
         });
         void showErrorNotificationWithButtons(msg);
@@ -761,7 +761,7 @@ export class ResourceViewProvider
       })
       .catch((e) => {
         const msg = `Failed to load resources for connection "${connectionRow.name}".`;
-        void logError(e, "loading resources for connection", {
+        logError(e, "loading resources for connection", {
           extra: {
             functionName: "loadAndStoreConnection",
             connectionId: connectionRow.connectionId,

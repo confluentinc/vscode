@@ -208,11 +208,11 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
       } else if (isResponseError(error)) {
         // Some other route error. Not much we can do about it here. Let's not spam Sentry with
         // it, but do log it.
-        void logError(error, "getSubjects(): Route error fetching subjects");
+        logError(error, "getSubjects(): Route error fetching subjects");
         throw error;
       } else {
         // Unexpected error, log it to sentry.
-        void logError(error, "Unexpected error within getSubjects", {
+        logError(error, "Unexpected error within getSubjects", {
           extra: { registryOrEnvironmentId: JSON.stringify(registryOrEnvironmentId, null, 2) },
         });
       }
@@ -352,7 +352,7 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
 
       await subjectApi.deleteSchemaVersion(deleteRequest);
     } catch (error) {
-      void logError(error, "Error deleting schema version", {
+      logError(error, "Error deleting schema version", {
         extra: {
           connectionId: schema.connectionId,
           environmentId: schema.environmentId ? schema.environmentId : "unknown",
@@ -402,7 +402,7 @@ export abstract class ResourceLoader extends DisposableCollection implements IRe
         await subjectApi.deleteSubject(request);
       }
     } catch (error) {
-      void logError(error, "Error deleting schema subject", {
+      logError(error, "Error deleting schema subject", {
         extra: {
           connectionId: subject.connectionId,
           environmentId: subject.environmentId,

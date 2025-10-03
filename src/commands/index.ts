@@ -55,7 +55,7 @@ export function createWrappedCommand(
       if (e instanceof Error) {
         // gather more (possibly-ResponseError) context and send to Sentry (only enabled in
         // production builds)
-        void logError(e, commandName, { extra: { command: commandName } });
+        logError(e, commandName, { extra: { command: commandName } });
         // also show error notification to the user with default buttons
         void showErrorNotificationWithButtons(`Error invoking command "${commandName}": ${e}`);
       }

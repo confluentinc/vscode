@@ -38,7 +38,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
     // When docker SR does come online, we'll re-query again and be happy.
     response = await sidecar.query(query, LOCAL_CONNECTION_ID, false);
   } catch (error) {
-    void logError(error, "local resources", { extra: { connectionId: LOCAL_CONNECTION_ID } });
+    logError(error, "local resources", { extra: { connectionId: LOCAL_CONNECTION_ID } });
     void showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
     return envs;
   }

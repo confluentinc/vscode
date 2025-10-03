@@ -24,7 +24,7 @@ export async function clientInit(): Promise<LDClientBase | undefined> {
       logger.debug("using Node client SDK");
       return nodeClient;
     } catch (error) {
-      void logError(error, "Failed to initialize Node LaunchDarkly client", {
+      logError(error, "Failed to initialize Node LaunchDarkly client", {
         extra: { remoteName: env.remoteName },
       });
       return;

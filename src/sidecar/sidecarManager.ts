@@ -586,7 +586,7 @@ ${logLines.slice(-10).join("\n")}
     const error = new SidecarFatalError(failureReason, failureMsg);
 
     // Send to sentry and error logger.
-    void logError(error, `sidecar process failed to start`, {
+    logError(error, `sidecar process failed to start`, {
       extra: {
         stderr: outputs.stderrLines.join("\n"),
         logs: outputs.logLines.join("\n"),

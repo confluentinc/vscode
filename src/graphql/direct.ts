@@ -111,7 +111,7 @@ export async function getDirectResources(
     });
     response = await sidecar.query(query, connectionId, true, { id: connectionId });
   } catch (error) {
-    void logError(error, "direct connection resources", {
+    logError(error, "direct connection resources", {
       extra: { functionName: "getDirectResources" },
     });
     void showErrorNotificationWithButtons(

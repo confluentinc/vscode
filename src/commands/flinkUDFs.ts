@@ -98,7 +98,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
         errorMessage = `${errorMessage} ${err.message}`;
       }
     }
-    void logError(err, errorMessage);
+    logError(err, errorMessage);
     void showErrorNotificationWithButtons(errorMessage);
   }
 }
@@ -202,7 +202,7 @@ export async function startGuidedUdfCreationCommand(selectedArtifact: FlinkArtif
         errorMessage = `${errorMessage}: ${resp}`;
       } else if (err instanceof Error) {
         errorMessage = `${errorMessage}: ${err.message}`;
-        void logError(err, errorMessage);
+        logError(err, errorMessage);
       }
       void showErrorNotificationWithButtons(errorMessage);
     }

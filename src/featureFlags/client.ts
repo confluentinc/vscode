@@ -45,7 +45,7 @@ export async function getLaunchDarklyClient(): Promise<LDClientBase | undefined>
   } catch (error) {
     // try to send any client init issues to Sentry, but if the user is offline and the extension
     // can't reach LD (which probably means Sentry isn't available either), this will just log
-    void logError(error, "LD client init", { extra: { functionName: "getLaunchDarklyClient" } });
+    logError(error, "LD client init", { extra: { functionName: "getLaunchDarklyClient" } });
   }
 }
 
@@ -57,7 +57,7 @@ function handleFailedEvent(error: unknown) {
     if (!error.message.includes("network error")) {
       // send any non-'network error' events to Sentry (if online) so we can troubleshoot
       // https://support.launchdarkly.com/hc/en-us/articles/12998125691419-Error-LaunchDarklyFlagFetchError-network-error
-      void logError(error, "LD failed event", { extra: { functionName: "handleFailedEvent" } });
+      logError(error, "LD failed event", { extra: { functionName: "handleFailedEvent" } });
     }
   } else {
     logger.error("LD failed event:", error);

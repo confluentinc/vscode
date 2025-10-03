@@ -153,7 +153,7 @@ export const scaffoldProjectRequest = async (
       if (!pickedTemplate) {
         const errMsg =
           "Project template not found. Check the template name and collection and try again.";
-        void logError(new Error(errMsg), "template not found", {
+        logError(new Error(errMsg), "template not found", {
           extra: {
             templateName: templateRequestOptions.templateName,
             templateCollection: templateRequestOptions.templateCollection,
@@ -167,7 +167,7 @@ export const scaffoldProjectRequest = async (
       pickedTemplate = await pickTemplate(templateList);
     }
   } catch (err) {
-    void logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
+    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return { success: false, message: "Failed to retrieve template list" };
   }
@@ -355,7 +355,7 @@ export async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    void logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
+    logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
       message = e.message;

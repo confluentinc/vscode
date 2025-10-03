@@ -130,7 +130,7 @@ export async function chatHandler(
         // this scenario and return a more user-friendly error message.
         const errMsg = `The "${model.name}" model is not currently supported. Please choose a different model from the dropdown and try again.`;
         // keep track of how often this is happening so we can
-        void logError(new ModelNotSupportedError(`${model.id} is not supported`), "chatHandler", {
+        logError(new ModelNotSupportedError(`${model.id} is not supported`), "chatHandler", {
           extra: {
             model: JSON.stringify(modelInfo),
           },
@@ -141,7 +141,7 @@ export async function chatHandler(
         };
       }
       // some other kind of error when sending the request or streaming the response
-      void logError(error, "chatHandler", { extra: { model: JSON.stringify(modelInfo) } });
+      logError(error, "chatHandler", { extra: { model: JSON.stringify(modelInfo) } });
       return {
         errorDetails: { message: error.message },
         metadata: { modelInfo },

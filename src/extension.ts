@@ -590,7 +590,7 @@ export function deactivate() {
     getTelemetryLogger().dispose();
   } catch (e) {
     const msg = "Error disposing telemetry logger during extension deactivation";
-    void logError(new Error(msg, { cause: e }), msg, { extra: {} });
+    logError(new Error(msg, { cause: e }), msg, { extra: {} });
   }
   void closeSentryClient();
 

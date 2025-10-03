@@ -277,7 +277,7 @@ export async function deleteSchemaVersionCommand(schema: Schema) {
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
         // not a 404, something unexpected
-        void logError(e, "Error fetching schemas for subject while deleting schema version", {
+        logError(e, "Error fetching schemas for subject while deleting schema version", {
           extra: { error: {} },
         });
       }
@@ -355,7 +355,7 @@ export async function deleteSchemaVersionCommand(schema: Schema) {
     }
   } catch (e) {
     success = false;
-    void logError(e, "Error deleting schema version", { extra: { error: {} } });
+    logError(e, "Error deleting schema version", { extra: { error: {} } });
     void showErrorNotificationWithButtons(
       `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
     );
@@ -407,7 +407,7 @@ export async function deleteSchemaSubjectCommand(subject: Subject) {
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
         // not a 404, something unexpected/
-        void logError(e, "Error fetching schemas for subject while deleting schema subject", {
+        logError(e, "Error fetching schemas for subject while deleting schema subject", {
           extra: { error: {} },
         });
       }
@@ -477,7 +477,7 @@ export async function deleteSchemaSubjectCommand(subject: Subject) {
     );
   } catch (e) {
     success = false;
-    void logError(e, "Error deleting schema subject", { extra: { error: {} } });
+    logError(e, "Error deleting schema subject", { extra: { error: {} } });
     void showErrorNotificationWithButtons(
       `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
     );
