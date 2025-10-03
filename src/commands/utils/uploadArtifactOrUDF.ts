@@ -61,7 +61,7 @@ export async function prepareUploadFileFromUri(uri: vscode.Uri): Promise<{
     }
     return { blob, contentType };
   } catch (err) {
-    logError(err, `Failed to read file from URI: ${uri.toString()}`);
+    void logError(err, `Failed to read file from URI: ${uri.toString()}`);
     throw err;
   }
 }
@@ -209,7 +209,7 @@ export async function uploadArtifactToCCloud(
       cloud: params.cloud,
       region: params.region,
     };
-    logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
+    void logError(error, "Failed to create Flink artifact in Confluent Cloud", { extra });
     throw error;
   }
 }
