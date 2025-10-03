@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- The existing uses of `any` model the same patterns in our `src/clients` model files. */
+
 /**
  * A Statuspage page object.
  * @see https://status.confluent.cloud/api/v2
