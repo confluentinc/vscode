@@ -219,8 +219,7 @@ async function _activateExtension(
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
-  topicViewProvider.reset();
-  schemasViewProvider.reset();
+  await Promise.all([topicViewProvider.reset(), schemasViewProvider.reset()]);
 
   // Register refresh commands for our refreshable resource view providers.
   const refreshCommands: vscode.Disposable[] = [];
