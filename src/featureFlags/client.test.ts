@@ -54,12 +54,12 @@ describe("featureFlags/client.ts", function () {
     assert.strictEqual(client, undefined);
   });
 
-  it("getLaunchDarklyClient() should not set up the client event listeners when LD_CLIENT_ID is not set", function () {
+  it("getLaunchDarklyClient() should not set up the client event listeners when LD_CLIENT_ID is not set", async function () {
     // no client ID set
     ldClientIdStub.value(undefined);
     clientInitStub.returns(undefined);
 
-    clientModule.getLaunchDarklyClient();
+    await clientModule.getLaunchDarklyClient();
 
     sinon.assert.calledOnce(clientInitStub);
     // event listeners should not be registered

@@ -57,7 +57,7 @@ export async function getSubjectNameForStrategy(
         const subjectExists = schemaSubjects.some((s) => s.name === schemaSubjectName);
         if (!subjectExists) {
           const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}" using the ${strategy} strategy.`;
-          showErrorNotificationWithButtons(noSubjectMsg, {
+          void showErrorNotificationWithButtons(noSubjectMsg, {
             "Open Settings": () => {
               commands.executeCommand(
                 "workbench.action.openSettings",

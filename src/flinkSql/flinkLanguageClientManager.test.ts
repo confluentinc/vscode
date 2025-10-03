@@ -1177,7 +1177,7 @@ describe("FlinkLanguageClientManager", () => {
 
     describe("onDidChangeActiveTextEditorHandler", () => {
       for (const goodScheme of ["file", "untitled"]) {
-        it(`should call maybeStartLanguageClient for flinksql document in ${goodScheme} scheme`, () => {
+        it(`should call maybeStartLanguageClient for flinksql document in ${goodScheme} scheme`, async () => {
           const fakeUri = vscode.Uri.parse(`${goodScheme}:///fake/path/test.flinksql`);
           const fakeDocument = {
             languageId: FLINKSQL_LANGUAGE_ID,
@@ -1186,25 +1186,25 @@ describe("FlinkLanguageClientManager", () => {
           const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
 
           // Simulate active editor change
-          flinkManager.onDidChangeActiveTextEditorHandler(fakeEditor);
+          await flinkManager.onDidChangeActiveTextEditorHandler(fakeEditor);
 
           sinon.assert.calledOnce(maybeStartLanguageClientStub);
           sinon.assert.calledWith(maybeStartLanguageClientStub, fakeUri);
         });
       }
 
-      it("should not call maybeStartLanguageClient when active editor is not flinksql", () => {
+      it("should not call maybeStartLanguageClient when active editor is not flinksql", async () => {
         const fakeUri = vscode.Uri.parse("file:///fake/path/test.txt");
         const fakeDocument = { languageId: "plaintext", uri: fakeUri } as vscode.TextDocument;
         const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
 
         // Simulate active editor change
-        flinkManager.onDidChangeActiveTextEditorHandler(fakeEditor);
+        await flinkManager.onDidChangeActiveTextEditorHandler(fakeEditor);
 
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
 
-      it("Should not call maybeStartLanguageClient when active editor is flinksql but not a valid uri", () => {
+      it("Should not call maybeStartLanguageClient when active editor is flinksql but not a valid uri", async () => {
         const fakeUri = vscode.Uri.parse(`${FLINKSTATEMENT_URI_SCHEME}:///fake/path/test.flinksql`);
         const fakeDocument = {
           languageId: FLINKSQL_LANGUAGE_ID,
@@ -1213,14 +1213,14 @@ describe("FlinkLanguageClientManager", () => {
         const fakeEditor = { document: fakeDocument } as vscode.TextEditor;
 
         // Simulate active editor change
-        flinkManager.onDidChangeActiveTextEditorHandler(fakeEditor);
+        await flinkManager.onDidChangeActiveTextEditorHandler(fakeEditor);
 
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });
 
-      it("should not call when no active editor", () => {
+      it("should not call when no active editor", async () => {
         // Simulate no active editor
-        flinkManager.onDidChangeActiveTextEditorHandler(undefined);
+        await flinkManager.onDidChangeActiveTextEditorHandler(undefined);
 
         sinon.assert.notCalled(maybeStartLanguageClientStub);
       });

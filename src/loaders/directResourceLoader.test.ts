@@ -99,7 +99,7 @@ describe("DirectResourceLoader", () => {
     it("Clears the cached environments", async () => {
       await loader.getEnvironments(); // Load and cache first.
       sinon.assert.calledOnce(getDirectResourcesStub);
-      loader.reset(); // Clear the cache.
+      await loader.reset(); // Clear the cache.
       await loader.getEnvironments(); // Should call the stub again.
       sinon.assert.calledTwice(getDirectResourcesStub); // Should have called the stub again.
     });

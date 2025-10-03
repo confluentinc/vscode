@@ -216,7 +216,11 @@ export class ConfluentCloudAuthProvider
       userInfo,
       session: undefined,
     });
-    (await getLaunchDarklyClient())?.identify({ key: userInfo.id });
+
+    const launchDarklyClient = await getLaunchDarklyClient();
+    if (launchDarklyClient) {
+      await launchDarklyClient.identify({ key: userInfo.id });
+    }
 
     void vscode.window.showInformationMessage(
       `Successfully signed in to Confluent Cloud as ${ccloudStatus.user?.username}`,
@@ -603,7 +607,7 @@ export class ConfluentCloudAuthProvider
       // if we had a session before, we need to remove it, as well as inform the Accounts action to
       // show the sign-in badge again
       if (this._session) {
-        this.handleSessionRemoved();
+        await this.handleSessionRemoved();
       } else {
         logger.debug(
           "No auth session, and no cached _session (for this extension instance) found to remove; not taking any action",
@@ -613,7 +617,7 @@ export class ConfluentCloudAuthProvider
       // SCENARIO 2: user signed in / auth session was added
       // add a new auth session to the Accounts action and populate this instance's cached session
       // state
-      this.handleSessionCreated(session);
+      await this.handleSessionCreated(session);
     }
   }
 

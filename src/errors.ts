@@ -125,7 +125,17 @@ export class CustomError extends Error {
  * @param message Text to add in the logger.error() message and top-level Sentry error message
  * @param sentryContext Optional Sentry context to include with the error
  * */
-export async function logError(
+export function logError(
+  e: unknown,
+  message: string,
+  sentryContext: Partial<ScopeContext> = {},
+): void {
+  _logError(e, message, sentryContext).catch((err) => {
+    logger.error(`Failed to log error: ${err}`, { originalError: String(e) });
+  });
+}
+
+async function _logError(
   e: unknown,
   message: string,
   sentryContext: Partial<ScopeContext> = {},

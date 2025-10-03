@@ -241,7 +241,7 @@ describe("WebsocketTransport", () => {
       sinon.assert.called(mockSocket.close);
     });
 
-    it("should attempt to end the writer before disposing", () => {
+    it("should attempt to end the writer before disposing", async () => {
       const transport = new WebsocketTransport(mockSocket);
 
       // Need to get the writer instance to spy on end
@@ -249,7 +249,7 @@ describe("WebsocketTransport", () => {
       const writerEndSpy = sandbox.stub(writer, "end").resolves();
 
       // Dispose the transport
-      transport.dispose();
+      await transport.dispose();
 
       // Verify that end was called on writer
       sinon.assert.calledOnce(writerEndSpy);
