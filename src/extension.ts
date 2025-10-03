@@ -225,10 +225,13 @@ async function _activateExtension(
   const refreshCommands: vscode.Disposable[] = [];
   for (const instance of getRefreshableViewProviders()) {
     refreshCommands.push(
-      registerCommandWithLogging(`confluent.${instance.kind}.refresh`, (): boolean => {
-        instance.refresh(true);
+      registerCommandWithLogging(
+        `confluent.${instance.kind}.refresh`,
+        async (): Promise<boolean> => {
+          await instance.refresh(true);
         return true;
-      }),
+        },
+      ),
     );
   }
 
