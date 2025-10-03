@@ -535,8 +535,10 @@ function messageViewerStartPollingCommand(
             }
             default: {
               reportable = { message: "Something went wrong." };
-              logError(error, "message viewer", { extra: { status: status.toString(), payload } });
-              showErrorNotificationWithButtons("Error response while consuming messages.");
+              void logError(error, "message viewer", {
+                extra: { status: status.toString(), payload },
+              });
+              void showErrorNotificationWithButtons("Error response while consuming messages.");
               break;
             }
           }
