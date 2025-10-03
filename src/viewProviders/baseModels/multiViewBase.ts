@@ -87,6 +87,14 @@ export abstract class MultiModeViewProvider<
       await setContextValue(this.delegateContextValue, mode);
     }
     this.treeView.title = this.currentDelegate.viewTitle;
+
+    // Reset the number of children matched by search, since the new mode will have
+    // a different set of children. The refresh call will reevaluate the search string
+    // against the new mode's children and update the count.
+    this.searchMatches.clear();
+    // likewise reset the total item count, a buggy concept anyway.
+    this.totalItemCount = 0;
+
     await this.refresh();
   }
 

@@ -155,6 +155,11 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
     // clear from any previous search filter
     this.searchMatches.clear();
 
+    if (searchString) {
+      // Increment the count of how many times the user has set a search string
+      this.searchStringSetCount++;
+    }
+
     // zero out the known child count, otherwise grows uncontrolled with
     // every search string set call. This concept is flawed and should
     // probably be removed in the future (James opinion).
@@ -167,7 +172,14 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
 
   /** Filter results from any {@link itemSearchString search string} applied to the current view. */
   filterChildren(element: T | undefined, children: T[]): T[] {
+    if (!element) {
+      // if no parent element, we're at the root, so reset the total item count
+      // for this pass through the children
+      this.totalItemCount = 0;
+    }
+    // Always increment the total item count with this amount of children
     this.totalItemCount += children.length;
+
     if (!this.itemSearchString) {
       this.treeView.message = undefined;
       return children;
