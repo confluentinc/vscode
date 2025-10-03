@@ -90,7 +90,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
       logger.error("Error", { ...exception, ...data });
     },
     flush: () => {
-      analytics?.closeAndFlush({ timeout: 5000 }); // force resolve after 5000ms
+      void analytics?.closeAndFlush({ timeout: 5000 }); // force resolve after 5000ms
     },
   });
 

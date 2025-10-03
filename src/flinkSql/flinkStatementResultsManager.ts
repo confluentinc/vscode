@@ -296,7 +296,7 @@ export class FlinkStatementResultsManager {
                 logError(error, "flink statement results", {
                   extra: { status: status.toString(), payload },
                 });
-                showErrorNotificationWithButtons(
+                void showErrorNotificationWithButtons(
                   "Error response while fetching statement results.",
                 );
                 break;

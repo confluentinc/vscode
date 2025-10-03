@@ -99,7 +99,7 @@ describe("getEditorOrFileContents", () => {
     sandbox.stub(vscode.window, "visibleTextEditors").get(() => []);
     sandbox.stub(fsWrappers, "readFileString").rejects(new Error("File not found"));
 
-    assert.rejects(async () => {
+    await assert.rejects(async () => {
       await getEditorOrFileContents(uri);
     });
   });

@@ -77,7 +77,7 @@ export function disposeLaunchDarklyClient(): void {
     client.off("change", handleFlagChanges);
     client.off("error", handleErrorEvent);
     client.off("failed", handleFailedEvent);
-    client.close();
+    void client.close();
   } catch (error) {
     logger.error("Error closing LD client:", error);
   }

@@ -54,7 +54,7 @@ export function createConfigChangeListener(): Disposable {
         // user toggled the "Enable Chat Participant" experimental setting
         const enabled: boolean = ENABLE_CHAT_PARTICIPANT.value;
         logger.debug(`"${ENABLE_CHAT_PARTICIPANT.id}" setting changed`, { enabled });
-        setContextValue(ContextValues.chatParticipantEnabled, enabled);
+        await setContextValue(ContextValues.chatParticipantEnabled, enabled);
         // telemetry for how often users opt in or out of the chat participant feature
         logUsage(UserEvent.ExtensionSettingsChange, {
           settingId: ENABLE_CHAT_PARTICIPANT.id,

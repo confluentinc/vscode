@@ -30,7 +30,7 @@ export async function promptForSchema(
   );
   if (!registry) {
     const noRegistryMsg = `No Schema Registry available for topic "${topic.name}".`;
-    showErrorNotificationWithButtons(noRegistryMsg);
+    void showErrorNotificationWithButtons(noRegistryMsg);
     throw new Error(noRegistryMsg);
   }
 
@@ -67,7 +67,7 @@ export async function promptForSchema(
     (schemaVersions && schemaVersions.length > 0 && schemaVersions[0]) || undefined;
   if (!latestSchema) {
     const noVersionsMsg = `No schema versions found for subject "${schemaSubject}".`;
-    showErrorNotificationWithButtons(noVersionsMsg);
+    void showErrorNotificationWithButtons(noVersionsMsg);
     throw new Error(noVersionsMsg);
   }
   return latestSchema;
