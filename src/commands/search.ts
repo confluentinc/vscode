@@ -1,21 +1,26 @@
 import { Disposable, EventEmitter, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import {
-  flinkStatementSearchSet,
-  resourceSearchSet,
-  schemaSearchSet,
-  topicSearchSet,
-} from "../emitters";
+import { schemaSearchSet, topicSearchSet } from "../emitters";
 import { Logger } from "../logging";
+import { BaseViewProvider } from "../viewProviders/baseModels/base";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
+import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.search");
+
+/*
+  When creating a new searchable view, define a new instance of ViewSearchCommands
+  and add it to the getAllSearchCommandsInstances array below.
+
+  Then touch up search.test.ts to verify the commands are registered correctly.
+*/
 
 /**
  * Class used for implementing the commands to search or clear search for a searchable view.
  * Binds together the the logging label noun, view name (for command name interpolation),
- * context value describing wether search has been applied or not, and the emitter holding the
- * chosen search critera for a single view
+ * context value describing whether search has been applied or not, and the emitter holding the
+ * chosen search criteria for a single view
  *
  * Provides command implementations and registration.
  * */
@@ -78,44 +83,49 @@ export class ViewSearchCommands {
   }
 }
 
-/** Instance to assist in searching the resources view */
-export const searchResourcesViewCommands = new ViewSearchCommands(
-  "Resources",
-  "resources",
-  ContextValues.resourceSearchApplied,
-  resourceSearchSet,
-);
+export class BaseViewProviderSearchableCommands<
+  V extends BaseViewProvider<any>,
+> extends ViewSearchCommands {
+  constructor(view: V, labelNoun: string, viewName: string) {
+    super(labelNoun, viewName, view.searchContextValue!, view.searchChangedEmitter!);
+  }
+}
 
-/** Instance to assist in searching the topics view */
-export const searchTopicsViewCommands = new ViewSearchCommands(
-  "Topics",
-  "topics",
-  ContextValues.topicSearchApplied,
-  topicSearchSet,
-);
+/**
+ * Return all of the ViewSearchCommands instances. Can only be
+ * called after setExtensionContext() has been called, so that
+ * the referenced view providers have been initialized.
+ */
+export function getAllSearchCommandsInstances(): ViewSearchCommands[] {
+  return [
+    // Instance to assist in searching the Resources view
+    new BaseViewProviderSearchableCommands(
+      ResourceViewProvider.getInstance(),
+      "Resources",
+      "resources",
+    ),
 
-/** Instance to assist in searching the topics view */
-export const searchSchemasViewCommands = new ViewSearchCommands(
-  "Schemas",
-  "schemas",
-  ContextValues.schemaSearchApplied,
-  schemaSearchSet,
-);
+    // Instance to assist in searching the Topics view
+    new ViewSearchCommands("Topics", "topics", ContextValues.topicSearchApplied, topicSearchSet),
 
-/** Instance to assist in searching the topics view */
-export const searchFlinkStatementsViewCommands = new ViewSearchCommands(
-  "Flink Statements",
-  "flink.statements",
-  ContextValues.flinkStatementsSearchApplied,
-  flinkStatementSearchSet,
-);
+    // Instance to assist in searching the Schemas view
+    new ViewSearchCommands(
+      "Schemas",
+      "schemas",
+      ContextValues.schemaSearchApplied,
+      schemaSearchSet,
+    ),
+
+    // Instance to assist in searching the Flink Statements view
+    new BaseViewProviderSearchableCommands(
+      FlinkStatementsViewProvider.getInstance(),
+      "Flink Statements",
+      "flink.statements",
+    ),
+  ];
+}
 
 /** Register the search + clear commands for each searchable view. */
 export function registerSearchCommands(): Disposable[] {
-  return [
-    ...searchResourcesViewCommands.registerCommands(),
-    ...searchTopicsViewCommands.registerCommands(),
-    ...searchSchemasViewCommands.registerCommands(),
-    ...searchFlinkStatementsViewCommands.registerCommands(),
-  ];
+  return getAllSearchCommandsInstances().flatMap((instance) => instance.registerCommands());
 }
