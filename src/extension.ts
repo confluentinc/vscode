@@ -229,7 +229,7 @@ async function _activateExtension(
         `confluent.${instance.kind}.refresh`,
         async (): Promise<boolean> => {
           await instance.refresh(true);
-        return true;
+          return true;
         },
       ),
     );
@@ -555,7 +555,10 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
       userInfo: undefined,
       session: cloudSession,
     });
-    (await getLaunchDarklyClient())?.identify({ key: cloudSession.account.id });
+    const launchDarklyClient = await getLaunchDarklyClient();
+    if (launchDarklyClient) {
+      await launchDarklyClient.identify({ key: cloudSession.account.id });
+    }
   }
 
   logger.info("Confluent Cloud auth provider registered");
