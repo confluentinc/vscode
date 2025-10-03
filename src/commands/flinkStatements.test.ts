@@ -5,7 +5,11 @@ import * as vscode from "vscode";
 import { TextDocument } from "vscode-json-languageservice";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+} from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import * as flinkCodeLens from "../codelens/flinkSqlProvider";
@@ -132,7 +136,7 @@ describe("commands/flinkStatements.ts", () => {
   });
 
   describe("fire emitter when the Flink Statement creates a function", () => {
-    const database = TEST_CCLOUD_KAFKA_CLUSTER as CCloudFlinkDbKafkaCluster;
+    const database: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
     let waitForStatementCompletionStub: sinon.SinonStub;
     let waitForResultsFetchableStub: sinon.SinonStub;
     let openFlinkStatementResultsViewStub: sinon.SinonStub;
@@ -159,8 +163,8 @@ describe("commands/flinkStatements.ts", () => {
           sql_kind: "CREATE_FUNCTION",
         },
       };
-      waitForResultsFetchableStub.resolves();
-      openFlinkStatementResultsViewStub.resolves();
+      waitForResultsFetchableStub();
+      openFlinkStatementResultsViewStub();
       waitForStatementCompletionStub.resolves(createFuncStatement);
 
       await handleStatementSubmission(createFuncStatement, database);

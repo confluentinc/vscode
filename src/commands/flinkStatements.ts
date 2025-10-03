@@ -287,19 +287,17 @@ export async function handleStatementSubmission(
   statement: FlinkStatement,
   database: CCloudFlinkDbKafkaCluster,
 ): Promise<void> {
+  // always try to show results
   await waitForResultsFetchable(statement);
   await openFlinkStatementResultsView(statement);
-  if (statement?.status.traits?.sql_kind !== "CREATE_FUNCTION") {
-    return;
+
+  // if we're registering a UDF, inform any listeners (e.g. Flink Databases view)
+  if (statement?.status.traits?.sql_kind === "CREATE_FUNCTION") {
+    const completedStatement = await waitForStatementCompletion(statement);
+    if (completedStatement.status.phase === Phase.COMPLETED) {
+      udfsChanged.fire(database);
+    }
   }
-
-  const completedStatement = await waitForStatementCompletion(statement);
-
-  if (completedStatement.status.phase !== Phase.COMPLETED) {
-    return;
-  }
-
-  udfsChanged.fire(database);
 }
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
