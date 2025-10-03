@@ -71,7 +71,7 @@ export async function createLanguageClientFromWebsocket(
     },
     initializationFailedHandler: (error) => {
       let msg = "Language client initialization failed";
-      logError(error, msg, {
+      void logError(error, msg, {
         extra: {
           wsUrl: url,
         },
@@ -81,7 +81,7 @@ export async function createLanguageClientFromWebsocket(
     errorHandler: {
       error: (error: Error, message: Message): ErrorHandlerResult => {
         let msg = "Language client error handler invoked.";
-        logError(error, msg, {
+        void logError(error, msg, {
           extra: {
             wsUrl: url,
           },
@@ -113,7 +113,7 @@ export async function createLanguageClientFromWebsocket(
 
   await languageClient.start();
   logger.debug("FlinkSQL Language Server started");
-  languageClient.setTrace(Trace.Compact);
+  await languageClient.setTrace(Trace.Compact);
   return languageClient;
 }
 
