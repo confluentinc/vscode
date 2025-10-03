@@ -504,12 +504,6 @@
         "category": "Confluent: Kafka Clusters"
       },
       {
-        "command": "confluent.resources.refresh",
-        "icon": "$(sync)",
-        "title": "Refresh",
-        "category": "Confluent: Resources"
-      },
-      {
         "command": "confluent.resources.refreshConnection",
         "icon": "$(sync)",
         "title": "Refresh Connection",
@@ -1370,10 +1364,6 @@
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
           "when": "false"
-        },
-        {
-          "command": "confluent.resources.refresh",
-          "when": "true"
         },
         {
           "command": "confluent.resources.refreshConnection",
