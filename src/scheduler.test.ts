@@ -111,7 +111,7 @@ describe("semaphore", () => {
 
   it("should await for release", async () => {
     const { acquire, release } = semaphore(1);
-    acquire();
+    await acquire();
     setTimeout(() => release(), 0);
     const pending = acquire();
     equal(pending instanceof Promise, true);

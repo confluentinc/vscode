@@ -229,7 +229,10 @@ describe("SchemasViewProvider", () => {
         provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
 
         // simulate firing the event
-        provider.environmentChangedHandler({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
+        await provider.environmentChangedHandler({
+          id: TEST_LOCAL_ENVIRONMENT_ID,
+          wasDeleted: true,
+        });
 
         // Should have called .reset()
         assert.ok(resetStub.calledOnce);
@@ -251,7 +254,7 @@ describe("SchemasViewProvider", () => {
       });
 
       for (const currentRegistry of [TEST_LOCAL_SCHEMA_REGISTRY, null]) {
-        it(`Firing environmentChanged when SR set a ${currentRegistry?.environmentId} environment SR and event is for other env should do nothing`, () => {
+        it(`Firing environmentChanged when SR set a ${currentRegistry?.environmentId} environment SR and event is for other env should do nothing`, async () => {
           const resetFake = sandbox.fake();
           const updateTreeViewDescriptionFake = sandbox.fake();
           const refreshFake = sandbox.fake();
@@ -264,7 +267,7 @@ describe("SchemasViewProvider", () => {
           provider.schemaRegistry = currentRegistry;
 
           // Call the event handler against some other environment.
-          provider.environmentChangedHandler({
+          await provider.environmentChangedHandler({
             id: TEST_CCLOUD_ENVIRONMENT_ID,
             wasDeleted: false,
           });

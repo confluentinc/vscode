@@ -113,7 +113,7 @@ export async function createLanguageClientFromWebsocket(
 
   await languageClient.start();
   logger.debug("FlinkSQL Language Server started");
-  languageClient.setTrace(Trace.Compact);
+  await languageClient.setTrace(Trace.Compact);
   return languageClient;
 }
 

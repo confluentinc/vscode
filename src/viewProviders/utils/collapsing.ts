@@ -5,6 +5,8 @@ import { matchesOrHasMatchingChild } from "./search";
 /**
  * Adjust the {@link TreeItemCollapsibleState TreeItemCollapsibleState} of a tree item that
  * was returned from a tree data provider's `getChildren()` while a search string was applied.
+ *
+ * Updates the treeItem in place and also returns it for convenience.
  */
 export function updateCollapsibleStateFromSearch(
   element: ISearchable,
