@@ -99,6 +99,16 @@ blocks:
                 - linux-arm64
                 - win32-x64
           commands:
+            # Adjust RELEASE_NAME for prereleases, if necessary
+            - |
+              if [ "$IS_PRERELEASE" = "true" ]; then
+                PRE_RELEASE_FLAG="--prerelease"
+                if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
+                  RELEASE_NAME="${RELEASE_NAME}-pre"
+                fi
+              else
+                PRE_RELEASE_FLAG=""
+              fi
             - |
               case "$TARGET" in
                 darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
@@ -112,7 +122,12 @@ blocks:
             - make download-third-party-notices-sidecar || true
             - npx gulp bundle
             - VSIX_FILE=$(find out/ -name "*.vsix")
-            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE}) --force
+            # Remove the existing (micro-versioned) version and replace with RELEASE_NAME
+            - |
+              ARTIFACT_FILENAME=$(basename "${VSIX_FILE}")
+              prefix="${ARTIFACT_FILENAME%%${TARGET}*}${TARGET}"
+              ARTIFACT_FILENAME="${prefix}-${RELEASE_NAME}.vsix"
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/${ARTIFACT_FILENAME} --force
   - name: "Multi-arch Packaging and Upload"
     dependencies: ["Package VSIX Files"]
     task:
