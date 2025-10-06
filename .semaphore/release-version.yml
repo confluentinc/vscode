@@ -82,8 +82,39 @@ blocks:
                 --target "$COMMIT_SHA" \
                 --title "$RELEASE_NAME" \
                 $NOTES_FLAGS
-  - name: "Multi-arch Packaging and Upload"
+  - name: "Package VSIX Files"
     dependencies: ["Create GitHub Release and Tag"]
+    task:
+      prologue:
+        commands:
+          - make install-dependencies
+      jobs:
+        - name: "Package VSIX Files"
+          matrix:
+            - env_var: TARGET
+              values:
+                - darwin-x64
+                - darwin-arm64
+                - linux-x64
+                - linux-arm64
+                - win32-x64
+          commands:
+            - |
+              case "$TARGET" in
+                darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
+                darwin-arm64) export SIDECAR_OS_ARCH=macos-arm64 ;;
+                linux-x64)   export SIDECAR_OS_ARCH=linux-amd64 ;;
+                linux-arm64) export SIDECAR_OS_ARCH=linux-arm64 ;;
+                win32-x64)   export SIDECAR_OS_ARCH=windows-x64 ;;
+                *) echo "Unknown TARGET: $TARGET" && exit 1 ;;
+              esac
+            - make download-sidecar-executable
+            - make download-third-party-notices-sidecar || true
+            - npx gulp bundle
+            - VSIX_FILE=$(find out/ -name "*.vsix")
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE}) --force
+  - name: "Multi-arch Packaging and Upload"
+    dependencies: ["Package VSIX Files"]
     task:
       jobs:
         - name: "Multi-arch Packaging and Upload"
