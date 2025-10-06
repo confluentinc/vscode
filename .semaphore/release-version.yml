@@ -130,6 +130,7 @@ blocks:
                 PRE_RELEASE_FLAG=""
               fi
             - artifact pull workflow packaged-vsix-files/
-            - for vsix in packaged-vsix-files/*.vsix; do
+            - |
+              for vsix in packaged-vsix-files/*.vsix; do
                 gh release upload "$RELEASE_NAME" "$vsix" --clobber
               done
