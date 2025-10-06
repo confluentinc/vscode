@@ -7,21 +7,22 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - New preview setting [`confluent.flink.artifacts`](vscode://settings/confluent.flink.artifacts) to
-  opt-in to Confluent Cloud Flink Artifacts and user defined functions (UDFs) functionality.
-
+  opt-in to Confluent Cloud Flink
+  [artifacts](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html#artifacts)
+  and [user-defined functions](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html)
+  (UDFs) functionality.
   - New view for browsing uploaded Flink artifacts and registered UDFs in Confluent Cloud Kafka
     clusters. Future updates will add support for viewing Flink tables, views, columns, and models.
   - Convenient user flows for uploading Java jar files into a Confluent Cloud environment/region for
     use as Flink artifacts, then also registering UDFs from those artifacts. More work in this area
     will be coming!
-
-- Date/time picker for message viewer when consuming from a specific point in time.
+- Date/time picker for message viewer when consuming from a specific point in time
+  ([#212](https://github.com/confluentinc/vscode/issues/212))
 
 ### Changed
 
 - Removed the configuration option controlling which resources view provider implementation to use.
   The new, individual-connection-refreshable implementation is the only one.
-
 - Flink language server setting
   [`confluent.flink.languageServer`](vscode://settings/confluent.flink.languageServer) has been
   renamed for clarity. Users may need to verify or update their Flink Language Server setting.
@@ -31,6 +32,8 @@ All notable changes to this extension will be documented in this file.
 - Fixed automatically refreshing the Topics view when creating or deleting subjects in the
   corresponding schema registry (re-correlating the new set of schemas to topics).
   ([#2556](https://github.com/confluentinc/vscode/issues/2556))
+- Fixed encoding of Avro union values in message viewer
+  ([ide-sidecar#417](https://github.com/confluentinc/ide-sidecar/issues/417))
 
 ## 1.6.2
 
