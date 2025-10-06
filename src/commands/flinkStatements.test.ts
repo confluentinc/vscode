@@ -19,9 +19,14 @@ import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { FlinkStatement, Phase } from "../models/flinkStatement";
 import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import * as notifications from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
-import { handleStatementSubmission, viewStatementSqlCommand } from "./flinkStatements";
+import {
+  deleteFlinkStatementCommand,
+  handleStatementSubmission,
+  viewStatementSqlCommand,
+} from "./flinkStatements";
 import * as statements from "./utils/statements";
 
 describe("commands/flinkStatements.ts", () => {
@@ -135,7 +140,71 @@ describe("commands/flinkStatements.ts", () => {
     });
   });
 
-  describe("fire emitter when the Flink Statement creates a function", () => {
+  describe("deleteFlinkStatementCommand", () => {
+    let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
+    let showInformationMessageStub: sinon.SinonStub;
+    let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
+      showInformationMessageStub = sandbox.stub(vscode.window, "showInformationMessage");
+      showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+    });
+
+    it("should hate undefined statement", async () => {
+      await deleteFlinkStatementCommand(undefined as unknown as FlinkStatement);
+      sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
+    it("should hate non-FlinkStatement statement", async () => {
+      await deleteFlinkStatementCommand({} as FlinkStatement);
+      sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
+    it("should delete a valid FlinkStatement", async () => {
+      const statement = createFlinkStatement();
+      stubbedLoader.deleteFlinkStatement.resolves();
+
+      await deleteFlinkStatementCommand(statement);
+
+      sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.calledWithExactly(stubbedLoader.deleteFlinkStatement, statement);
+
+      sinon.assert.calledOnce(showInformationMessageStub);
+      sinon.assert.calledWithExactly(
+        showInformationMessageStub,
+        `Deleted statement ${statement.name}`,
+      );
+
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
+    it("should handle errors when deleting a FlinkStatement", async () => {
+      const statement = createFlinkStatement();
+      const testError = new Error("Test error deleting statement");
+      stubbedLoader.deleteFlinkStatement.rejects(testError);
+
+      await deleteFlinkStatementCommand(statement);
+
+      sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      sinon.assert.calledWithExactly(
+        showErrorNotificationWithButtonsStub,
+        `Error deleting statement: ${testError}`,
+      );
+    });
+  });
+
+  describe("handleStatementSubmission()", () => {
     const database: CCloudFlinkDbKafkaCluster = TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER;
     let waitForStatementCompletionStub: sinon.SinonStub;
     let waitForResultsFetchableStub: sinon.SinonStub;
@@ -155,7 +224,7 @@ describe("commands/flinkStatements.ts", () => {
       stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
     });
 
-    it("should fire the emitter", async () => {
+    it("should fire udfsChanged emitter when having run a statement registering a new UDF", async () => {
       createFuncStatement.status = {
         ...createFuncStatement.status,
         phase: Phase.COMPLETED,
@@ -170,7 +239,7 @@ describe("commands/flinkStatements.ts", () => {
       sinon.assert.calledWithExactly(stubbedUDFsChangedEmitter.fire, database);
     });
 
-    it("should not fire the emitter on other types of statements", async () => {
+    it("should not fire udfsChanged for non-UDF-registering statements", async () => {
       createFuncStatement.status = {
         ...createFuncStatement.status,
         phase: Phase.COMPLETED,
@@ -188,7 +257,7 @@ describe("commands/flinkStatements.ts", () => {
       sinon.assert.notCalled(stubbedUDFsChangedEmitter.fire);
     });
 
-    it("should not fire the emitter on a statement with a non-COMPLETED phase", async () => {
+    it("should not fire udfsChanged on a statement with a non-COMPLETED phase", async () => {
       const statement = createFlinkStatement({
         sqlStatement: "SELECT * FROM my_test_flink_statement_table",
       });
