@@ -82,9 +82,23 @@ blocks:
                 --target "$COMMIT_SHA" \
                 --title "$RELEASE_NAME" \
                 $NOTES_FLAGS
-
-promotions:
-  - name: Multi-Arch VSIX Packaging and Upload
-    pipeline_file: multi-arch-packaging.yml
-    auto_promote:
-      when: "result = 'passed' and branch =~ '.*'"
+  - name: "Multi-arch Packaging and Upload"
+    dependencies: ["Create GitHub Release and Tag"]
+    task:
+      jobs:
+        - name: "Multi-arch Packaging and Upload"
+          commands:
+            # Adjust RELEASE_NAME for prereleases, if necessary
+            - |
+              if [ "$IS_PRERELEASE" = "true" ]; then
+                PRE_RELEASE_FLAG="--prerelease"
+                if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
+                  RELEASE_NAME="${RELEASE_NAME}-pre"
+                fi
+              else
+                PRE_RELEASE_FLAG=""
+              fi
+            - artifact pull workflow packaged-vsix-files/
+            - for vsix in packaged-vsix-files/*.vsix; do
+                gh release upload "$RELEASE_NAME" "$vsix" --clobber
+              done
