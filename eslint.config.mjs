@@ -37,7 +37,7 @@ export default [
       // "require-await": "warn",
       "@typescript-eslint/no-unused-vars": "error",
       // Some untyped things may require extra effort to be fixed
-      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
       // replacement of ESLint's no-redeclare with support for function overload
       "@typescript-eslint/no-redeclare": "error",
       // require awaiting or .then() chaining for promises
