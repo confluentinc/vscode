@@ -66,7 +66,14 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   }
 
   searchableText(): string {
-    return `${this.name} ${this.description}`;
+    const parts = [];
+    parts.push(this.id);
+    parts.push(this.name);
+    parts.push(this.description);
+
+    // All artifacts in a single view will share the same environment, provider, and region, so no need to search on those.
+
+    return parts.join(" ");
   }
 
   get ccloudUrl(): string {
@@ -113,7 +120,9 @@ export function createFlinkArtifactToolTip(resource: FlinkArtifact): CustomMarkd
     .addField(
       "Updated At",
       resource.updatedAt?.toLocaleString(undefined, { timeZoneName: "short" }),
-    );
+    )
+    .addField("Provider", resource.provider)
+    .addField("Region", resource.region);
 
   if (!resource.documentationLink || resource.documentationLink === "") {
     tooltip.addLink("No documentation link", "");

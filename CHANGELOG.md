@@ -7,6 +7,7 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - New "Delete Flink Statement" context menu item in the Flink Statements view.
+- The Flink Database (Artifacts / UDFs) view is now searchable.
 
 ## 1.7.0
 

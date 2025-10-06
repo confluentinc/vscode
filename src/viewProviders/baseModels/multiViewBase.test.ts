@@ -6,6 +6,8 @@ import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as contextValues from "../../context/values";
 import { ContextValues } from "../../context/values";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
+import * as collapsingUtils from "../utils/collapsing";
+import { SEARCH_DECORATION_URI_SCHEME } from "../utils/search";
 import { MultiModeViewProvider, ViewProviderDelegate } from "./multiViewBase";
 
 const TEST_CONTEXT_VALUE: ContextValues = "test-value" as ContextValues;
@@ -160,10 +162,12 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
     describe("switchMode()", () => {
       let refreshStub: sinon.SinonStub;
       let setContextStub: sinon.SinonStub;
+      let searchMatchesClearSpy: sinon.SinonSpy;
 
       beforeEach(() => {
         refreshStub = sandbox.stub(provider, "refresh").resolves();
         setContextStub = sandbox.stub(contextValues, "setContextValue").resolves();
+        searchMatchesClearSpy = sandbox.spy(provider["searchMatches"], "clear");
       });
 
       it("should update delegate, title, context, and then call refresh()", async () => {
@@ -174,6 +178,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
         assert.strictEqual(provider["treeView"].title, "Mode Bar");
         sinon.assert.calledWith(setContextStub, TEST_CONTEXT_VALUE, TestMode.Bar);
         sinon.assert.calledOnce(refreshStub);
+        sinon.assert.calledOnce(searchMatchesClearSpy);
       });
 
       it("should just call refresh() when passed the same mode", async () => {
@@ -181,6 +186,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
 
         sinon.assert.calledOnce(refreshStub);
         sinon.assert.notCalled(setContextStub);
+        sinon.assert.notCalled(searchMatchesClearSpy);
       });
 
       it("should not change the delegate when an unknown mode is passed", async () => {
@@ -191,19 +197,49 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
         assert.strictEqual(provider["currentDelegate"], delegate);
         sinon.assert.notCalled(refreshStub);
         sinon.assert.notCalled(setContextStub);
+        sinon.assert.notCalled(searchMatchesClearSpy);
       });
     });
 
-    it("getTreeItem() delegates to the current mode's getTreeItem()", () => {
+    describe("getTreeItem()", () => {
       const fakeChildItem = new TestDelegateChild("id1", "Test Item 1");
-      provider["resource"] = new TestParentResource();
-      const delegate = provider["currentDelegate"];
-      delegate.children = [fakeChildItem];
-      const item = provider.getTreeItem(delegate.children[0]);
+      let updateCollapsibleStateFromSearchStub: sinon.SinonStub;
 
-      assert.strictEqual(item.label, fakeChildItem.name);
+      beforeEach(() => {
+        updateCollapsibleStateFromSearchStub = sandbox
+          .stub(collapsingUtils, "updateCollapsibleStateFromSearch")
+          .callThrough();
+      });
+
+      it("getTreeItem() delegates to the current mode's getTreeItem()", () => {
+        provider["resource"] = new TestParentResource();
+        const delegate = provider["currentDelegate"];
+        delegate.children = [fakeChildItem];
+        const item = provider.getTreeItem(delegate.children[0]);
+
+        assert.strictEqual(item.label, fakeChildItem.name);
+        // should not smell search resulty by default
+        assert.strictEqual(item.resourceUri, undefined);
+        sinon.assert.notCalled(updateCollapsibleStateFromSearchStub);
+      });
+
+      it("getTreeItem() decorates the item when it matches the search string", () => {
+        provider["resource"] = new TestParentResource();
+        const delegate = provider["currentDelegate"];
+        delegate.children = [fakeChildItem];
+        provider["itemSearchString"] = "Item 1";
+        const item = provider.getTreeItem(delegate.children[0]);
+
+        assert.strictEqual(item.label, fakeChildItem.name);
+        // should have the special URI scheme to indicate a search match
+        assert.ok(item.resourceUri);
+        assert.strictEqual(item.resourceUri!.scheme, SEARCH_DECORATION_URI_SCHEME);
+        sinon.assert.calledOnce(updateCollapsibleStateFromSearchStub);
+      });
     });
+  });
 
+  describe("reset()", () => {
     it("reset() reverts to the default delegate and updates context", async () => {
       const setContextStub = sandbox.stub(contextValues, "setContextValue").resolves();
       provider["currentDelegate"] = provider["treeViewDelegates"].get(TestMode.Bar)!;

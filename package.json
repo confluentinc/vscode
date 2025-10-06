@@ -421,6 +421,17 @@
         "category": "Confluent: Flink Defaults"
       },
       {
+        "command": "confluent.flink.database.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Flink Database View"
+      },
+      {
+        "command": "confluent.flink.database.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Flink Database View"
+      },
+      {
         "command": "confluent.flink.statements.search",
         "icon": "$(search)",
         "title": "Search",
@@ -1063,6 +1074,12 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == confluent-flink-statements"
+      },
+      {
+        "command": "confluent.flink.database.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-flink-database"
       }
     ],
     "viewsContainers": {
@@ -1206,6 +1223,11 @@
         "view": "confluent-flink-database",
         "contents": "No UDFs found.\n[Generate a new Flink UDF from template](command:confluent.artifacts.scaffold)",
         "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'"
+      },
+      {
+        "view": "confluent-flink-database",
+        "contents": "No Flink database contents matches search string. [Clear search](command:confluent.flink.database.search.clear) or [try a new search](command:confluent.flink.database.search).",
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied"
       }
     ],
     "menus": {
@@ -1313,6 +1335,14 @@
         {
           "command": "confluent.flink.configureFlinkDefaults",
           "when": "true"
+        },
+        {
+          "command": "confluent.flink.database.search",
+          "when": "config.confluent.flink.artifacts"
+        },
+        {
+          "command": "confluent.flink.database.search.clear",
+          "when": "confluent.flinkDatabaseSearchApplied"
         },
         {
           "command": "confluent.flink.statements.search",
@@ -1723,6 +1753,16 @@
         {
           "command": "confluent.flink.statements.search.clear",
           "when": "view == confluent-flink-statements && confluent.flinkStatementsPoolSelected && confluent.flinkStatementsSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.database.search",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && !confluent.flinkDatabaseSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.flink.database.search.clear",
+          "when": "view == confluent-flink-database && confluent.flinkDatabaseSelected && confluent.flinkDatabaseSearchApplied",
           "group": "navigation@1"
         },
         {
