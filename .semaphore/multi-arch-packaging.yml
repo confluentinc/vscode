@@ -55,7 +55,7 @@ blocks:
             - make download-third-party-notices-sidecar || true
             - npx gulp bundle
             - VSIX_FILE=$(find out/ -name "*.vsix")
-            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE}) --force
 
   - name: "Upload VSIX files to GitHub"
     run:
