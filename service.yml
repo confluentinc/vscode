@@ -15,17 +15,6 @@ semaphore:
   pipeline_enable: false
   triggers: ["branches", "pull_requests"]
   tasks:
-    - name: run-playwright-e2e-tests
-      branch: main
-      pipeline_file: ".semaphore/playwright-e2e.yml"
-      parameters:
-        - name: VSCODE_VERSION
-          required: true
-          description: The version of VS Code to test against (e.g., 'stable', 'insiders', or a specific version like '1.100.0').
-          default_value: "stable"
-        - name: TEST_SUITE
-          required: false
-          description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
     - name: prerelease-multi-arch-packaging
       branch: main
       pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
@@ -38,6 +27,41 @@ semaphore:
           required: true
           description: |
             The commit SHA to create the release and tag from.
+    - name: release-version
+      branch: main
+      pipeline_file: ".semaphore/release-version.yml"
+      parameters:
+        - name: IS_PRERELEASE
+          required: true
+          options:
+            - "true"
+            - "false"
+          default: "true"
+          description: |
+            Whether the release is a pre-release (true/false)
+        - name: RELEASE_NAME
+          required: true
+          description: |
+            The name of the GitHub Release (and tag) to create (e.g., 'v1.2.3'). NOTE: Do not include '-pre' suffixes for prereleases; instead, set the IS_PRERELEASE parameter to true and it will be added automatically.
+        - name: COMMIT_SHA
+          required: true
+          description: |
+            The commit SHA to create the release and tag from, must be a valid SHA/tag/branch.
+        - name: PREVIOUS_RELEASE_TAG
+          required: false
+          description: |
+            The previous release tag (e.g., 'v1.2.2') to compare against when generating release notes. If not provided, will use the latest (non-prerelease) GitHub Release.
+    - name: run-playwright-e2e-tests
+      branch: main
+      pipeline_file: ".semaphore/playwright-e2e.yml"
+      parameters:
+        - name: VSCODE_VERSION
+          required: true
+          description: The version of VS Code to test against (e.g., 'stable', 'insiders', or a specific version like '1.100.0').
+          default_value: "stable"
+        - name: TEST_SUITE
+          required: false
+          description: The test name or tag(s) (pipe-separated, e.g. `@ccloud|@direct`) to run. If not specified, will run all E2E tests.
     - name: scheduled-prerelease-multi-arch-packaging
       branch: main
       pipeline_file: ".semaphore/prerelease-multi-arch-packaging.yml"
