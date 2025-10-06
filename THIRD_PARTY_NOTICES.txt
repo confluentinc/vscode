@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-10-1
+Date generated: 2025-10-6
 
-Revision ID: 24cf47558ba976c48b2656c580a46385a2d18dbb
+Revision ID: 6f03785aaa92905b16bc7598ca1454ef39c8c7d4
 
 ================================================================================
 ================================================================================
@@ -288,7 +288,7 @@ No licenses found
 - fn.name (1.1.0) [MIT]
 - foreground-child (3.3.1) [ISC]
 - forwarded-parse (2.1.2) [MIT]
-- fs.realpath (1.0.0) [ISC, MIT]
+- fs.realpath (1.0.0) [MIT, ISC]
 - fsevents (2.3.3) [MIT]
 - function-bind (1.1.2) [MIT]
 - gensync (1.0.0-beta.2) [MIT]
@@ -341,7 +341,7 @@ No licenses found
 - locate-character (3.0.0) [MIT]
 - locate-path (6.0.0) [MIT]
 - lockfile (1.0.4) [ISC]
-- lodash (4.17.21) [CC0-1.0, MIT]
+- lodash (4.17.21) [MIT, CC0-1.0]
 - logform (2.7.0) [MIT]
 - loose-envify (1.4.0) [MIT]
 - lower-case (2.0.2) [MIT]
@@ -13570,7 +13570,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-index.d.ts
+ts5.6/index.d.ts
 --------------------------------------------------------------------------------
 
     MIT License
@@ -15261,7 +15261,7 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+LICENSE
 --------------------------------------------------------------------------------
 
 Apache License
@@ -15481,7 +15481,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 Copyright (c) 2010-2018 Caolan McMahon
@@ -15818,10 +15818,6 @@ Package Depth: Transitive
 * Declared Licenses *
 Apache-2.0
 
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
                                  Apache License
                            Version 2.0, January 2004
@@ -16457,10 +16453,6 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 The MIT License (MIT)
 
@@ -17492,6 +17484,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 This software is released under the MIT license:
 
@@ -19683,6 +19679,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+package.json
+--------------------------------------------------------------------------------
 
 Copyright Mathias Bynens <https://mathiasbynens.be/>
 
@@ -20472,7 +20472,33 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-ISC, MIT
+MIT, ISC
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+old.js
+--------------------------------------------------------------------------------
+
+Copyright (c)  Isaac Z. Schlueter and Contributors
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 * ISC *
 --------------------------------------------------------------------------------
@@ -20525,32 +20551,6 @@ the licensed code:
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
   DEALINGS IN THE SOFTWARE.
 
-
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-LICENSE
-old.js
---------------------------------------------------------------------------------
-
-Copyright (c)  Isaac Z. Schlueter and Contributors
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -21543,10 +21543,6 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
---------------------------------------------------------------------------------
-File matches:
-package.json
---------------------------------------------------------------------------------
 
 The ISC License
 
@@ -22034,10 +22030,6 @@ Package Depth: Transitive
 * Declared Licenses *
 ISC
 
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 The ISC License
 
@@ -22819,7 +22811,33 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-CC0-1.0, MIT
+MIT, CC0-1.0
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+package.json
+--------------------------------------------------------------------------------
+
+Copyright (c)  OpenJS Foundation and other contributors <https://openjsf.org/>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 * CC0-1.0 *
 --------------------------------------------------------------------------------
@@ -22875,32 +22893,6 @@ maintained libraries used by this software which have their own
 licenses; we recommend you read them, as their terms may differ from the
 terms above.
 
-
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-LICENSE
-package.json
---------------------------------------------------------------------------------
-
-Copyright (c)  OpenJS Foundation and other contributors <https://openjsf.org/>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -23328,7 +23320,7 @@ ISC
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 The ISC License
@@ -23578,7 +23570,6 @@ MIT
 File matches:
 LICENSE
 package.json
-README.md
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -25046,7 +25037,6 @@ MIT
 File matches:
 LICENSE
 package.json
-README.md
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -28175,7 +28165,7 @@ Package Depth: Transitive
 
 --------------------------------------------------------------------------------
 File matches:
-tslib.js
+package.json
 --------------------------------------------------------------------------------
 
 Copyright (c) Microsoft Corporation.
@@ -28720,7 +28710,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-LICENSE.md
+package.json
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -39501,4 +39491,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-10-1
+Report Generated by FOSSA on 2025-10-6
