@@ -1212,12 +1212,12 @@
       {
         "view": "confluent-flink-database",
         "contents": "No Flink artifacts found.\n[Generate a new Flink Artifact from template](command:confluent.artifacts.scaffold)",
-        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'"
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts' && !confluent.flinkDatabaseSearchApplied"
       },
       {
         "view": "confluent-flink-database",
         "contents": "No UDFs found.\n[Generate a new Flink UDF from template](command:confluent.artifacts.scaffold)",
-        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'"
+        "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs' && !confluent.flinkDatabaseSearchApplied"
       },
       {
         "view": "confluent-flink-database",
