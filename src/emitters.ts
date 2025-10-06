@@ -148,3 +148,6 @@ export const udfsChanged = new vscode.EventEmitter<CCloudFlinkDbKafkaCluster>();
 
 /** Event emitter for switching Flink Database view modes. */
 export const flinkDatabaseViewMode = new vscode.EventEmitter<FlinkDatabaseViewProviderMode>();
+
+/** Event emitter for searching the Flink Database view */
+export const flinkDatabaseViewSearchSet = new vscode.EventEmitter<string | null>();

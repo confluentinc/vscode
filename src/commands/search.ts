@@ -4,6 +4,7 @@ import { ContextValues, setContextValue } from "../context/values";
 import { schemaSearchSet, topicSearchSet } from "../emitters";
 import { Logger } from "../logging";
 import { BaseViewProvider } from "../viewProviders/baseModels/base";
+import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
@@ -121,6 +122,13 @@ export function getAllSearchCommandsInstances(): ViewSearchCommands[] {
       FlinkStatementsViewProvider.getInstance(),
       "Flink Statements",
       "flink.statements",
+    ),
+
+    // Instance for the Flink Database view
+    new BaseViewProviderSearchableCommands(
+      FlinkDatabaseViewProvider.getInstance(),
+      "Flink Database",
+      "flink.database",
     ),
   ];
 }
