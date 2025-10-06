@@ -9,7 +9,11 @@ import {
   SystemEventsRequest,
 } from "../clients/docker";
 import { ContextValues, getContextValue, setContextValue } from "../context/values";
-import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
+import {
+  dockerServiceAvailable,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections/local";
@@ -54,13 +58,14 @@ export class EventListener {
     this.poller = new IntervalPoller(
       "pollDockerEvents",
       () => {
-        this.listenForEvents();
+        void this.listenForEvents();
       },
       15_000,
       1_000,
       true, // run immediately on start()
     );
   }
+
   static getInstance(): EventListener {
     if (!EventListener.instance) {
       EventListener.instance = new EventListener();
@@ -117,12 +122,14 @@ export class EventListener {
       if (currentDockerContextValue) {
         // Just edged from available to unavailable. Inform the UI.
         await setContextValue(ContextValues.dockerServiceAvailable, false);
+        dockerServiceAvailable.fire(false);
       }
       return;
     } else {
       if (!currentDockerContextValue) {
         // Just edged from unavailable to available. Inform the UI.
         await setContextValue(ContextValues.dockerServiceAvailable, true);
+        dockerServiceAvailable.fire(true);
       }
     }
 
@@ -197,9 +204,18 @@ export class EventListener {
         if (error.cause && (error.cause as Error).message === "other side closed") {
           // Docker shut down and we can't listen for events anymore
           logger.error("lost connection to Docker socket");
-          // also inform the UI that the local resources are no longer available
-          await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+
+          // Inform the UI that the local resources are no longer available
+          await Promise.all([
+            setContextValue(ContextValues.localKafkaClusterAvailable, false),
+            setContextValue(ContextValues.localSchemaRegistryAvailable, false),
+            setContextValue(ContextValues.dockerServiceAvailable, false),
+          ]);
+
+          dockerServiceAvailable.fire(false);
+          localSchemaRegistryConnected.fire(false);
           localKafkaConnected.fire(false);
+
           // don't stop the poller; let it go through another time and revert to the slower polling
         }
       } else {
