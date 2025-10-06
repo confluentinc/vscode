@@ -1830,7 +1830,7 @@
         },
         {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && confluent.dockerServiceAvailable && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
           "group": "inline"
         },
         {

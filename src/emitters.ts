@@ -36,6 +36,11 @@ export const directConnectionsChanged = new vscode.EventEmitter<void>();
 /** Fired when websocket event for a CREATED direct connection environment is received. */
 export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
+/**
+ * Did we just notice the Docker Engine subsystem just edge on or off? Should
+ * correspond to ContextValues.dockerServiceAvailable.
+ */
+export const dockerServiceAvailable = new vscode.EventEmitter<boolean>();
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 
