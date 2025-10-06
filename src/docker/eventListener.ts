@@ -86,6 +86,7 @@ export class EventListener {
   stop(): void {
     this.poller.stop();
     this.stopped = true;
+    this.handlingEventStream = false;
   }
 
   /**
@@ -148,8 +149,9 @@ export class EventListener {
       await this.handleEventStreamWorkflow();
     } catch (error) {
       logger.error("error handling event stream:", error);
+    } finally {
+      this.handlingEventStream = false;
     }
-    this.handlingEventStream = false;
   }
 
   private async handleEventStreamWorkflow(): Promise<void> {

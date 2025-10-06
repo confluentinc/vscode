@@ -729,6 +729,7 @@ describe("viewProviders/resources.ts", () => {
         ["ccloudConnected", "ccloudConnectedEventHandler"],
         ["localKafkaConnected", "localConnectedEventHandler"],
         ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+        ["dockerServiceAvailable", "localConnectedEventHandler"],
         // @ts-expect-error references private method.
         ["directConnectionsChanged", "reconcileDirectConnections"],
         ["connectionStable", "refreshConnection"],
