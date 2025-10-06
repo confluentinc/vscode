@@ -433,6 +433,10 @@ async function setupContextValues() {
     ContextValues.flinkDatabaseViewMode,
     FlinkDatabaseViewProviderMode.Artifacts,
   );
+
+  // Default to Docker daemon not being available until proven otherwise
+  const dockerAvailable = setContextValue(ContextValues.dockerServiceAvailable, false);
+
   await Promise.all([
     e2eTestEnvironment,
     chatParticipantEnabled,
@@ -445,6 +449,7 @@ async function setupContextValues() {
     resourcesWithURIs,
     diffableResources,
     flinkViewMode,
+    dockerAvailable,
   ]);
 }
 

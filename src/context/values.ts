@@ -57,6 +57,9 @@ export enum ContextValues {
   /** A direct connection has been made and a Schema Registry is available for selecting in the Schemas view. */
   directSchemaRegistryAvailable = "confluent.directSchemaRegistryAvailable",
 
+  /** Is Docker daemon/service (or authentic workalike) available / running? */
+  dockerServiceAvailable = "confluent.dockerServiceAvailable",
+
   /** A resource has been selected for comparison. */
   resourceSelectedForCompare = "confluent.resourceSelectedForCompare",
 

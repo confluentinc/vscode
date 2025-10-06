@@ -8,7 +8,7 @@ import {
   SystemApi,
   SystemEventsRequest,
 } from "../clients/docker";
-import { ContextValues, setContextValue } from "../context/values";
+import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../extensionSettings/constants";
 import { Logger } from "../logging";
@@ -85,7 +85,7 @@ export class EventListener {
 
   /**
    * Main workflow method for the {@link EventListener} class, handling the following:
-   * - checking if Docker is available and adjusting the poller frequency accordingly
+   * - checking if Docker is available and adjusting both the poller frequency and context value accordingly
    * - starting the event stream and reading events from it
    * - handling container start and die events for the `confluentinc/confluent-local` image, to
    *   include checking for a specific log line to appear in the container logs and informing the UI
@@ -104,11 +104,26 @@ export class EventListener {
     // check if Docker is available before trying to listen for events, taking into account the user
     // may have started the extension before Docker is running
     this.dockerAvailable = await isDockerAvailable();
-    logger.debug("dockerAvailable:", this.dockerAvailable);
+    logger.trace("dockerAvailable:", this.dockerAvailable);
+
+    const currentDockerContextValue = getContextValue<boolean>(
+      ContextValues.dockerServiceAvailable,
+    );
+
     if (!this.dockerAvailable) {
       // use the slower polling frequency (15sec) if Docker isn't available
       this.poller.useSlowFrequency();
+
+      if (currentDockerContextValue) {
+        // Just edged from available to unavailable. Inform the UI.
+        await setContextValue(ContextValues.dockerServiceAvailable, false);
+      }
       return;
+    } else {
+      if (!currentDockerContextValue) {
+        // Just edged from unavailable to available. Inform the UI.
+        await setContextValue(ContextValues.dockerServiceAvailable, true);
+      }
     }
 
     // Docker is available, so we can use the more frequent (at most every 1sec) polling for events
