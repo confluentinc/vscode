@@ -352,7 +352,8 @@
       },
       {
         "command": "confluent.copyResourceUri",
-        "title": "Copy URI",
+        "title": "Copy URL",
+        "comment": "Using the label 'URL' here instead of 'URI' since these are web URLs, not URIs, and 'URL' matches the terminolog used in scaffolding templates.",
         "category": "Confluent: Resources"
       },
       {

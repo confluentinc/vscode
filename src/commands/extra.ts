@@ -42,6 +42,11 @@ async function copyResourceName(item: any) {
   window.showInformationMessage(`Copied "${item.name}" to clipboard.`);
 }
 
+/**
+ * Copy a SR or Kafka Cluster's URI property to the clipboard.
+ * (The command label uses the "URL" terminology since that's more familiar to users, and
+ *  matches the prompts for "Schema Registry URL" in scaffolding templates.)
+ * */
 async function copyResourceUri(item: any) {
   logger.debug("Copying resource URI", item);
   // make sure the item has the "uri" property
