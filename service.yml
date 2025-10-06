@@ -39,6 +39,10 @@ semaphore:
           default: "true"
           description: |
             Whether the release is a pre-release (true/false)
+        - name: TARGET_BRANCH
+          required: true
+          default_value: "main"
+          description: The target branch to create the release from, must be a valid branch.
         - name: RELEASE_NAME
           required: true
           description: |
