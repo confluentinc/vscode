@@ -8,6 +8,12 @@ All notable changes to this extension will be documented in this file.
 
 - The Flink Artifacts / Flink UDFs view is now searchable.
 
+### Changed
+
+- The Local row in the Resources view now better describes the user's Docker Engine state in its
+  state and tooltip, and the "play" button call-to-action will not be offerred if Docker Engine is
+  not detected.
+
 ## 1.7.0
 
 ### Added
@@ -15,7 +21,8 @@ All notable changes to this extension will be documented in this file.
 - New preview setting [`confluent.flink.artifacts`](vscode://settings/confluent.flink.artifacts) to
   opt-in to Confluent Cloud Flink
   [artifacts](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html#artifacts)
-  and [user-defined functions](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html)
+  and
+  [user-defined functions](https://docs.confluent.io/cloud/current/flink/concepts/user-defined-functions.html)
   (UDFs) functionality.
   - New view for browsing uploaded Flink artifacts and registered UDFs in Confluent Cloud Kafka
     clusters. Future updates will add support for viewing Flink tables, views, columns, and models.
