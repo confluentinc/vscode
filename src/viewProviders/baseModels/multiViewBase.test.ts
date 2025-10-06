@@ -211,7 +211,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
           .callThrough();
       });
 
-      it("getTreeItem() delegates to the current mode's getTreeItem()", () => {
+      it("delegates to the current mode's getTreeItem()", () => {
         provider["resource"] = new TestParentResource();
         const delegate = provider["currentDelegate"];
         delegate.children = [fakeChildItem];
@@ -223,7 +223,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
         sinon.assert.notCalled(updateCollapsibleStateFromSearchStub);
       });
 
-      it("getTreeItem() decorates the item when it matches the search string", () => {
+      it("decorates the item when it matches the search string", () => {
         provider["resource"] = new TestParentResource();
         const delegate = provider["currentDelegate"];
         delegate.children = [fakeChildItem];
@@ -240,7 +240,7 @@ describe("viewProviders/baseModels/multiViewBase.ts", () => {
   });
 
   describe("reset()", () => {
-    it("reset() reverts to the default delegate and updates context", async () => {
+    it("reverts to the default delegate and updates context", async () => {
       const setContextStub = sandbox.stub(contextValues, "setContextValue").resolves();
       provider["currentDelegate"] = provider["treeViewDelegates"].get(TestMode.Bar)!;
 
