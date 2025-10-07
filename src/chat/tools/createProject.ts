@@ -8,9 +8,9 @@ import {
   LanguageModelToolResult,
 } from "vscode";
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
+import { scaffoldProjectRequest } from "../../commands/utils/scaffoldUtils";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../projectGeneration/templates";
-import { scaffoldProjectRequest } from "../../scaffold";
 import { PostResponse } from "../../webview/scaffold-form";
 import { BaseLanguageModelTool, TextOnlyToolResultPart } from "./base";
 
