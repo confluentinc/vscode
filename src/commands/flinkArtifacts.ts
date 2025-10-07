@@ -8,14 +8,12 @@ import { extractResponseBody, isResponseError, logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId } from "../models/resource";
 import {
   showErrorNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
@@ -74,7 +72,7 @@ export async function uploadArtifactCommand(
     await handleUploadToCloudProvider(params, uploadUrl);
 
     // 4. Show our progress while creating the Artifact in Confluent Cloud
-    const uploadResponse = await vscode.window.withProgress(
+    await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: `Uploading artifact "${params.artifactName}" to Confluent Cloud`,
@@ -83,9 +81,18 @@ export async function uploadArtifactCommand(
       async () => {
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
         if (response) {
-          void vscode.window.showInformationMessage(
+          const action = await vscode.window.showInformationMessage(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+            "Register UDFs",
+            // "View in sidebar", // TODO https://github.com/confluentinc/vscode/issues/2661
           );
+          if (action === "Register UDFs") {
+            // Start the UDF registration flow in the background (don't await to avoid blocking)
+            await promptForUdfRegistrationAfterUpload(params, response.id).catch((error) => {
+              // Log the error but don't show it to user since this is a bonus feature
+              console.error("UDF registration flow failed:", error);
+            });
+          }
         } else {
           void showWarningNotificationWithButtons(
             `Artifact upload completed, but no response was returned from Confluent Cloud.`,
@@ -94,36 +101,6 @@ export async function uploadArtifactCommand(
         return response;
       },
     );
-
-    // 5. After successful upload, prompt for UDF registration if a Flink database is available
-    if (uploadResponse && params.selectedFile.fsPath.toLowerCase().endsWith(".jar")) {
-      const flinkDatabaseProvider = FlinkDatabaseViewProvider.getInstance();
-      const database = flinkDatabaseProvider.database;
-
-      if (database) {
-        // Convert the upload response to a FlinkArtifact model
-        const artifact = new FlinkArtifact({
-          connectionId: database.connectionId,
-          connectionType: database.connectionType,
-          environmentId: params.environment as EnvironmentId,
-          id: uploadResponse.id!,
-          name: uploadResponse.display_name!,
-          description: uploadResponse.description || "",
-          provider: params.cloud,
-          region: params.region,
-          documentationLink: uploadResponse.documentation_link || "",
-          metadata: uploadResponse.metadata!,
-        });
-
-        // Start the UDF registration flow in the background (don't await to avoid blocking)
-        promptForUdfRegistrationAfterUpload(artifact, params.selectedFile, database).catch(
-          (error) => {
-            // Log the error but don't show it to user since this is a bonus feature
-            console.error("UDF registration flow failed:", error);
-          },
-        );
-      }
-    }
   } catch (err) {
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "upload",

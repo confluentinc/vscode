@@ -1,4 +1,6 @@
+import { execFile } from "child_process";
 import path from "path";
+import { promisify } from "util";
 import * as vscode from "vscode";
 import {
   CreateArtifactV1FlinkArtifact201Response,
@@ -17,6 +19,7 @@ import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
 
@@ -355,60 +358,99 @@ export interface UdfRegistrationData {
 }
 
 /**
+ * Promisified execFile (safer than exec: no shell, avoids injection & quoting issues)
+ */
+const execFileAsync = promisify(execFile);
+
+// Max buffer for listing JAR contents (5MB should be ample for class listings)
+const LIST_JAR_MAX_BUFFER = 5 * 1024 * 1024;
+
+/**
+ * List the contents of a JAR file using system tooling.
+ * Tries `unzip -l` first (fast, commonly available), falls back to `jar tf`.
+ * @param jarPath Absolute filesystem path to the JAR
+ * @returns stdout listing of the archive contents
+ * @throws Error with actionable guidance if neither tool is available or execution fails
+ */
+async function listJarContents(jarPath: string): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync("unzip", ["-l", jarPath], {
+      maxBuffer: LIST_JAR_MAX_BUFFER,
+    });
+    return stdout;
+  } catch (unzipErr) {
+    // If unzip is missing (ENOENT) or failed, attempt fallback to `jar`
+    const unzipMissing =
+      (unzipErr as NodeJS.ErrnoException)?.code === "ENOENT" ||
+      /not (found|recognized)/i.test(String(unzipErr));
+
+    try {
+      if (unzipMissing) {
+        throw unzipErr;
+      }
+      const { stdout } = await execFileAsync("jar", ["tf", jarPath], {
+        maxBuffer: LIST_JAR_MAX_BUFFER,
+      });
+      // Normalize output format to loosely mimic unzip -l lines (one entry per line already)
+      return stdout
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .join("\n");
+    } catch (jarErr) {
+      const logger = new Logger("commands/listJarContents");
+      logger.error("Failed to list JAR contents with both unzip and jar", {
+        unzipError: String(unzipErr),
+        jarError: String(jarErr),
+      });
+      throw new Error(
+        "Failed to inspect JAR contents. Ensure either 'unzip' or a JDK providing the 'jar' tool is installed and available in your PATH.",
+      );
+    }
+  }
+}
+
+/**
  * Inspects a JAR file and extracts Java class names using the unzip command.
  * @param jarFileUri The URI of the JAR file to inspect
  * @returns Promise that resolves to an array of class information
  */
 export async function inspectJarContents(jarFileUri: vscode.Uri): Promise<JarClassInfo[]> {
   const logger = new Logger("commands/inspectJarContents");
-
   try {
-    // Use a child process to run unzip -l on the JAR file
-    const { exec } = await import("child_process");
-    const { promisify } = await import("util");
-    const execAsync = promisify(exec);
-
     const jarPath = jarFileUri.fsPath;
     logger.debug(`Inspecting JAR contents: ${jarPath}`);
 
-    // Run unzip -l to list contents, then filter for .class files
-    const { stdout } = await execAsync(`unzip -l "${jarPath}"`);
+    // Replaced dynamic import + exec with safer helper using execFile
+    const stdout = await listJarContents(jarPath);
 
     // Parse the output to find .class files
     const lines = stdout.split("\n");
     const classFiles: string[] = [];
 
     for (const line of lines) {
-      // Look for lines containing .class files
-      const match = line.match(/^\s*\d+\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+(.+\.class)$/);
-      if (match) {
-        const classPath = match[1];
-        // Skip inner classes (containing $) and other non-UDF classes
+      // unzip -l format vs jar tf format: pattern handles both by focusing on .class suffix
+      const classMatch = line.match(/([A-Za-z0-9/_$.-]+\.class)$/);
+      if (classMatch) {
+        const classPath = classMatch[1];
         if (!classPath.includes("$") && !classPath.includes("META-INF")) {
           classFiles.push(classPath);
         }
       }
     }
 
-    // Convert file paths to class names
     const classInfos: JarClassInfo[] = classFiles.map((filePath) => {
-      // Convert path like "com/example/MyUDF.class" to "com.example.MyUDF"
       const className = filePath.replace(/\//g, ".").replace(/\.class$/, "");
       const simpleName = className.split(".").pop() || className;
-
-      return {
-        className,
-        simpleName,
-      };
+      return { className, simpleName };
     });
 
-    logger.debug(`Found ${classInfos.length} class(es) in JAR:`, classInfos);
+    logger.debug(`Found ${classInfos.length} class(es) in JAR`, { count: classInfos.length });
     return classInfos;
   } catch (error) {
-    logger.error("Failed to inspect JAR contents:", error);
-    throw new Error(
-      `Failed to inspect JAR contents: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    const message = error instanceof Error ? error.message : "Unknown error listing JAR contents";
+    logger.error("Failed to inspect JAR contents", { error: message });
+    throw new Error(`Failed to inspect JAR contents: ${message}`);
   }
 }
 
@@ -420,16 +462,15 @@ export async function inspectJarContents(jarFileUri: vscode.Uri): Promise<JarCla
  * @returns Promise that resolves when the UDF registration process completes
  */
 export async function promptForUdfRegistrationAfterUpload(
-  artifact: FlinkArtifact,
-  jarFileUri: vscode.Uri,
-  database: CCloudFlinkDbKafkaCluster,
+  params: ArtifactUploadParams,
+  artifactId?: string,
 ): Promise<void> {
   const logger = new Logger("commands/udfRegistrationPrompt");
 
   try {
     // Ask user if they want to register UDFs
     const registerUdfs = await vscode.window.showInformationMessage(
-      `Artifact "${artifact.name}" uploaded successfully! Would you like to register User-Defined Functions (UDFs) from this JAR?`,
+      `Artifact "${params.artifactName}" uploaded successfully! Would you like to register User-Defined Functions (UDFs) from this JAR?`,
       { modal: false },
       "Yes, register UDFs",
       "No, maybe later",
@@ -439,7 +480,7 @@ export async function promptForUdfRegistrationAfterUpload(
       return;
     }
 
-    logger.debug(`User chose to register UDFs for artifact: ${artifact.name}`);
+    logger.debug(`User chose to register UDFs for artifact: ${params.artifactName}`);
 
     // Inspect JAR contents to find classes
     await vscode.window.withProgress(
@@ -451,7 +492,7 @@ export async function promptForUdfRegistrationAfterUpload(
       async (progress) => {
         progress.report({ message: "Extracting class information from JAR..." });
 
-        const classInfos = await inspectJarContents(jarFileUri);
+        const classInfos = await inspectJarContents(params.selectedFile);
 
         if (classInfos.length === 0) {
           void vscode.window.showWarningMessage(
@@ -470,14 +511,14 @@ export async function promptForUdfRegistrationAfterUpload(
         }
 
         // Get function names for selected classes
-        const udfRegistrations = await promptForFunctionNames(selectedClasses, artifact);
+        const udfRegistrations = await promptForFunctionNames(selectedClasses);
 
         if (!udfRegistrations || udfRegistrations.length === 0) {
           return; // User cancelled
         }
 
         // Register the UDFs
-        await registerMultipleUdfs(artifact, udfRegistrations, database);
+        await registerMultipleUdfs(params, udfRegistrations, artifactId);
       },
     );
   } catch (error) {
@@ -521,7 +562,6 @@ export async function selectClassesForUdfRegistration(
  */
 export async function promptForFunctionNames(
   selectedClasses: JarClassInfo[],
-  artifact: FlinkArtifact,
 ): Promise<UdfRegistrationData[] | undefined> {
   const registrations: UdfRegistrationData[] = [];
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
@@ -559,12 +599,16 @@ export async function promptForFunctionNames(
  * @param database The Flink database to register the UDFs in
  */
 export async function registerMultipleUdfs(
-  artifact: FlinkArtifact,
+  params: ArtifactUploadParams,
   registrations: UdfRegistrationData[],
-  database: CCloudFlinkDbKafkaCluster,
-): Promise<void> {
+  artifactId?: string,
+) {
+  if (!artifactId) {
+    throw new Error("Artifact ID is required to register UDFs.");
+  }
   const logger = new Logger("commands/registerMultipleUdfs");
   const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  const selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
 
   await vscode.window.withProgress(
     {
@@ -587,8 +631,8 @@ export async function registerMultipleUdfs(
           );
 
           await ccloudResourceLoader.executeFlinkStatement(
-            `CREATE FUNCTION \`${registration.functionName}\` AS '${registration.classInfo.className}' USING JAR 'confluent-artifact://${artifact.id}';`,
-            database,
+            `CREATE FUNCTION \`${registration.functionName}\` AS '${registration.classInfo.className}' USING JAR 'confluent-artifact://${artifactId}';`,
+            selectedFlinkDatabase!,
             {
               timeout: 60000, // 60 second timeout
             },
@@ -599,8 +643,8 @@ export async function registerMultipleUdfs(
           logUsage(UserEvent.FlinkUDFAction, {
             action: "created",
             status: "succeeded",
-            cloud: artifact.provider,
-            region: artifact.region,
+            cloud: params.cloud,
+            region: params.region,
           });
         } catch (error) {
           logger.error(`Failed to register UDF ${registration.functionName}:`, error);
@@ -620,15 +664,15 @@ export async function registerMultipleUdfs(
           logUsage(UserEvent.FlinkUDFAction, {
             action: "created",
             status: "failed",
-            cloud: artifact.provider,
-            region: artifact.region,
+            cloud: params.cloud,
+            region: params.region,
           });
         }
       }
 
       // Update the UDFs cache
       progress.report({ message: "Updating UDF cache..." });
-      udfsChanged.fire(database);
+      udfsChanged.fire(selectedFlinkDatabase!);
 
       // Show results to user
       if (successfulRegistrations.length > 0) {
