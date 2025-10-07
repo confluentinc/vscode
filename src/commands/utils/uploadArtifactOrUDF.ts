@@ -6,7 +6,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200Response,
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
-import { artifactsChanged } from "../../emitters";
+import { artifactsChanged, udfsChanged } from "../../emitters";
 import { logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
@@ -332,4 +332,325 @@ export async function executeCreateFunction(
   );
   const createdMsg = `${userInput.functionName} function created successfully.`;
   void showInfoNotificationWithButtons(createdMsg);
+}
+
+/**
+ * Interface representing a class found in a JAR file
+ */
+export interface JarClassInfo {
+  /** The fully qualified class name */
+  className: string;
+  /** The simple class name (without package) */
+  simpleName: string;
+}
+
+/**
+ * Interface for UDF registration data
+ */
+export interface UdfRegistrationData {
+  /** The class to register as a UDF */
+  classInfo: JarClassInfo;
+  /** The function name to use for the UDF */
+  functionName: string;
+}
+
+/**
+ * Inspects a JAR file and extracts Java class names using the unzip command.
+ * @param jarFileUri The URI of the JAR file to inspect
+ * @returns Promise that resolves to an array of class information
+ */
+export async function inspectJarContents(jarFileUri: vscode.Uri): Promise<JarClassInfo[]> {
+  const logger = new Logger("commands/inspectJarContents");
+
+  try {
+    // Use a child process to run unzip -l on the JAR file
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    const jarPath = jarFileUri.fsPath;
+    logger.debug(`Inspecting JAR contents: ${jarPath}`);
+
+    // Run unzip -l to list contents, then filter for .class files
+    const { stdout } = await execAsync(`unzip -l "${jarPath}"`);
+
+    // Parse the output to find .class files
+    const lines = stdout.split("\n");
+    const classFiles: string[] = [];
+
+    for (const line of lines) {
+      // Look for lines containing .class files
+      const match = line.match(/^\s*\d+\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+(.+\.class)$/);
+      if (match) {
+        const classPath = match[1];
+        // Skip inner classes (containing $) and other non-UDF classes
+        if (!classPath.includes("$") && !classPath.includes("META-INF")) {
+          classFiles.push(classPath);
+        }
+      }
+    }
+
+    // Convert file paths to class names
+    const classInfos: JarClassInfo[] = classFiles.map((filePath) => {
+      // Convert path like "com/example/MyUDF.class" to "com.example.MyUDF"
+      const className = filePath.replace(/\//g, ".").replace(/\.class$/, "");
+      const simpleName = className.split(".").pop() || className;
+
+      return {
+        className,
+        simpleName,
+      };
+    });
+
+    logger.debug(`Found ${classInfos.length} class(es) in JAR:`, classInfos);
+    return classInfos;
+  } catch (error) {
+    logger.error("Failed to inspect JAR contents:", error);
+    throw new Error(
+      `Failed to inspect JAR contents: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Prompts the user to register UDFs after a successful artifact upload.
+ * @param artifact The uploaded artifact
+ * @param jarFileUri The URI of the original JAR file
+ * @param database The Flink database to register UDFs in
+ * @returns Promise that resolves when the UDF registration process completes
+ */
+export async function promptForUdfRegistrationAfterUpload(
+  artifact: FlinkArtifact,
+  jarFileUri: vscode.Uri,
+  database: CCloudFlinkDbKafkaCluster,
+): Promise<void> {
+  const logger = new Logger("commands/udfRegistrationPrompt");
+
+  try {
+    // Ask user if they want to register UDFs
+    const registerUdfs = await vscode.window.showInformationMessage(
+      `Artifact "${artifact.name}" uploaded successfully! Would you like to register User-Defined Functions (UDFs) from this JAR?`,
+      { modal: false },
+      "Yes, register UDFs",
+      "No, maybe later",
+    );
+
+    if (registerUdfs !== "Yes, register UDFs") {
+      return;
+    }
+
+    logger.debug(`User chose to register UDFs for artifact: ${artifact.name}`);
+
+    // Inspect JAR contents to find classes
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Analyzing JAR contents...",
+        cancellable: false,
+      },
+      async (progress) => {
+        progress.report({ message: "Extracting class information from JAR..." });
+
+        const classInfos = await inspectJarContents(jarFileUri);
+
+        if (classInfos.length === 0) {
+          void vscode.window.showWarningMessage(
+            "No Java classes found in the uploaded JAR file. UDF registration skipped.",
+          );
+          return;
+        }
+
+        progress.report({ message: "Preparing UDF registration options..." });
+
+        // Show class selection to user
+        const selectedClasses = await selectClassesForUdfRegistration(classInfos);
+
+        if (!selectedClasses || selectedClasses.length === 0) {
+          return; // User cancelled or selected no classes
+        }
+
+        // Get function names for selected classes
+        const udfRegistrations = await promptForFunctionNames(selectedClasses, artifact);
+
+        if (!udfRegistrations || udfRegistrations.length === 0) {
+          return; // User cancelled
+        }
+
+        // Register the UDFs
+        await registerMultipleUdfs(artifact, udfRegistrations, database);
+      },
+    );
+  } catch (error) {
+    logger.error("Error in UDF registration flow:", error);
+    void vscode.window.showErrorMessage(
+      `Failed to register UDFs: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/**
+ * Shows a quickpick to let the user select which classes to register as UDFs.
+ * @param classInfos Array of class information from the JAR
+ * @returns Promise that resolves to selected classes or undefined if cancelled
+ */
+export async function selectClassesForUdfRegistration(
+  classInfos: JarClassInfo[],
+): Promise<JarClassInfo[] | undefined> {
+  const quickPickItems = classInfos.map((classInfo) => ({
+    label: classInfo.simpleName,
+    description: classInfo.className,
+    detail: `Register "${classInfo.simpleName}" as a UDF`,
+    classInfo,
+  }));
+
+  const selectedItems = await vscode.window.showQuickPick(quickPickItems, {
+    title: "Select Classes to Register as UDFs",
+    placeHolder: "Choose which classes from the JAR should be registered as User-Defined Functions",
+    canPickMany: true,
+    ignoreFocusOut: true,
+  });
+
+  return selectedItems?.map((item) => item.classInfo);
+}
+
+/**
+ * Prompts the user for function names for each selected class.
+ * @param selectedClasses The classes selected for UDF registration
+ * @param artifact The artifact containing the classes
+ * @returns Promise that resolves to UDF registration data or undefined if cancelled
+ */
+export async function promptForFunctionNames(
+  selectedClasses: JarClassInfo[],
+  artifact: FlinkArtifact,
+): Promise<UdfRegistrationData[] | undefined> {
+  const registrations: UdfRegistrationData[] = [];
+  const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+
+  for (const classInfo of selectedClasses) {
+    // Generate a default function name based on the simple class name
+    const defaultFunctionName = classInfo.simpleName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, "_");
+
+    const functionName = await vscode.window.showInputBox({
+      title: `Function Name for ${classInfo.simpleName}`,
+      prompt: `Enter the function name for class "${classInfo.className}"`,
+      value: defaultFunctionName,
+      validateInput: (value) => validateUdfInput(value, functionNameRegex),
+      ignoreFocusOut: true,
+    });
+
+    if (functionName === undefined) {
+      // User cancelled, abort the entire registration process
+      return undefined;
+    }
+
+    registrations.push({
+      classInfo,
+      functionName,
+    });
+  }
+
+  return registrations;
+}
+
+/**
+ * Registers multiple UDFs from the provided registration data.
+ * @param artifact The artifact containing the UDF implementations
+ * @param registrations Array of UDF registration data
+ * @param database The Flink database to register the UDFs in
+ */
+export async function registerMultipleUdfs(
+  artifact: FlinkArtifact,
+  registrations: UdfRegistrationData[],
+  database: CCloudFlinkDbKafkaCluster,
+): Promise<void> {
+  const logger = new Logger("commands/registerMultipleUdfs");
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Registering ${registrations.length} UDF(s)`,
+      cancellable: false,
+    },
+    async (progress) => {
+      const successfulRegistrations: string[] = [];
+      const failedRegistrations: Array<{ functionName: string; error: string }> = [];
+
+      for (let i = 0; i < registrations.length; i++) {
+        const registration = registrations[i];
+        const progressMessage = `Registering ${registration.functionName} (${i + 1}/${registrations.length})...`;
+        progress.report({ message: progressMessage });
+
+        try {
+          logger.debug(
+            `Registering UDF: ${registration.functionName} -> ${registration.classInfo.className}`,
+          );
+
+          await ccloudResourceLoader.executeFlinkStatement(
+            `CREATE FUNCTION \`${registration.functionName}\` AS '${registration.classInfo.className}' USING JAR 'confluent-artifact://${artifact.id}';`,
+            database,
+            {
+              timeout: 60000, // 60 second timeout
+            },
+          );
+
+          successfulRegistrations.push(registration.functionName);
+
+          logUsage(UserEvent.FlinkUDFAction, {
+            action: "created",
+            status: "succeeded",
+            cloud: artifact.provider,
+            region: artifact.region,
+          });
+        } catch (error) {
+          logger.error(`Failed to register UDF ${registration.functionName}:`, error);
+
+          let errorMessage = "Unknown error";
+          if (error instanceof Error) {
+            // Extract meaningful error detail from Flink error messages
+            const flinkDetail = error.message.split("Error detail:")[1]?.trim();
+            errorMessage = flinkDetail || error.message;
+          }
+
+          failedRegistrations.push({
+            functionName: registration.functionName,
+            error: errorMessage,
+          });
+
+          logUsage(UserEvent.FlinkUDFAction, {
+            action: "created",
+            status: "failed",
+            cloud: artifact.provider,
+            region: artifact.region,
+          });
+        }
+      }
+
+      // Update the UDFs cache
+      progress.report({ message: "Updating UDF cache..." });
+      udfsChanged.fire(database);
+
+      // Show results to user
+      if (successfulRegistrations.length > 0) {
+        const successMessage =
+          successfulRegistrations.length === registrations.length
+            ? `All ${successfulRegistrations.length} UDF(s) registered successfully!`
+            : `${successfulRegistrations.length} of ${registrations.length} UDF(s) registered successfully.`;
+
+        void showInfoNotificationWithButtons(
+          `${successMessage} Functions: ${successfulRegistrations.join(", ")}`,
+        );
+      }
+
+      if (failedRegistrations.length > 0) {
+        const errorDetails = failedRegistrations
+          .map((f) => `${f.functionName}: ${f.error}`)
+          .join("; ");
+
+        void vscode.window.showErrorMessage(
+          `Failed to register ${failedRegistrations.length} UDF(s): ${errorDetails}`,
+        );
+      }
+    },
+  );
 }
