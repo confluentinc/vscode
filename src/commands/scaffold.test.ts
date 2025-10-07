@@ -1,8 +1,15 @@
 import * as sinon from "sinon";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
-import { TEST_CCLOUD_KAFKA_CLUSTER, TEST_CCLOUD_KAFKA_TOPIC } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { CCloudResourceLoader } from "../loaders";
+import { CCloudEnvironment } from "../models/environment";
+import { KafkaTopic } from "../models/topic";
 import * as notifications from "../notifications";
 import {
   resourceScaffoldProjectCommand,
@@ -50,8 +57,34 @@ describe("commands/scaffold.ts", () => {
       "",
     );
 
+    const TEST_ENV_WITH_KAFKA_AND_SR = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+    });
+
     beforeEach(() => {
       stubbedResourceLoader = getStubbedCCloudResourceLoader(sandbox);
+
+      // By default, have the stubbed resource loader return an environment with a Kafka cluster and Schema Registry
+      stubbedResourceLoader.getEnvironment.resolves(TEST_ENV_WITH_KAFKA_AND_SR);
+    });
+
+    it("should show an error notification if environment for item is not found", async () => {
+      const showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+
+      stubbedResourceLoader.getEnvironment.resolves(undefined);
+      await resourceScaffoldProjectCommand(TEST_CCLOUD_KAFKA_CLUSTER);
+
+      sinon.assert.notCalled(scaffoldProjectRequestStub);
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      sinon.assert.calledWithExactly(
+        showErrorNotificationWithButtonsStub,
+        "Unable to find environment for the selected item.",
+      );
     });
 
     it("should call scaffoldProjectRequest with correct parameters for KafkaCluster", async () => {
@@ -63,8 +96,31 @@ describe("commands/scaffold.ts", () => {
           bootstrap_server: expectedBootstrapServers,
           cc_bootstrap_server: expectedBootstrapServers,
           templateType: "kafka",
+          cc_schema_registry_url: TEST_CCLOUD_SCHEMA_REGISTRY.uri,
         },
         "cluster",
+      );
+    });
+
+    it("should show an error notification if environment for topic is not found", async () => {
+      const showErrorNotificationWithButtonsStub = sandbox.stub(
+        notifications,
+        "showErrorNotificationWithButtons",
+      );
+
+      // make a new topic with an environment ID that won't be found
+      const topicWithMissingEnv = KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        clusterId: "missing-cluster-id",
+      });
+
+      await resourceScaffoldProjectCommand(topicWithMissingEnv);
+
+      sinon.assert.notCalled(scaffoldProjectRequestStub);
+      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+      sinon.assert.calledWithExactly(
+        showErrorNotificationWithButtonsStub,
+        `Unable to find Kafka cluster for topic "${TEST_CCLOUD_KAFKA_TOPIC.name}".`,
       );
     });
 
@@ -83,6 +139,7 @@ describe("commands/scaffold.ts", () => {
           cc_topic: TEST_CCLOUD_KAFKA_TOPIC.name,
           topic: TEST_CCLOUD_KAFKA_TOPIC.name,
           templateType: "kafka",
+          cc_schema_registry_url: TEST_CCLOUD_SCHEMA_REGISTRY.uri,
         },
         "topic",
       );
@@ -100,28 +157,31 @@ describe("commands/scaffold.ts", () => {
           cloud_provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
           cc_compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
           templateType: "flink",
+          cc_schema_registry_url: TEST_CCLOUD_SCHEMA_REGISTRY.uri,
         },
         "compute pool",
       );
     });
 
-    it("should show an error notification if Kafka cluster for topic is not found", async () => {
-      const showErrorNotificationWithButtonsStub = sandbox.stub(
-        notifications,
-        "showErrorNotificationWithButtons",
-      );
+    it("will omit cc_schema_registry_url if environment has no schema registry", async () => {
+      const envWithoutSR = new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+        schemaRegistry: undefined,
+      });
+      stubbedResourceLoader.getEnvironment.resolves(envWithoutSR);
 
-      stubbedResourceLoader.getKafkaClustersForEnvironmentId
-        .withArgs(TEST_CCLOUD_KAFKA_TOPIC.environmentId)
-        .resolves([]); // No clusters returned
+      await resourceScaffoldProjectCommand(TEST_CCLOUD_KAFKA_CLUSTER);
 
-      await resourceScaffoldProjectCommand(TEST_CCLOUD_KAFKA_TOPIC);
-
-      sinon.assert.notCalled(scaffoldProjectRequestStub);
-      sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-      sinon.assert.calledWithExactly(
-        showErrorNotificationWithButtonsStub,
-        `Unable to find Kafka cluster for topic "${TEST_CCLOUD_KAFKA_TOPIC.name}".`,
+      sinon.assert.calledOnceWithExactly(
+        scaffoldProjectRequestStub,
+        {
+          bootstrap_server: expectedBootstrapServers,
+          cc_bootstrap_server: expectedBootstrapServers,
+          templateType: "kafka",
+          // no cc_schema_registry_url
+        },
+        "cluster",
       );
     });
   });
