@@ -12,12 +12,12 @@ import { removeProtocolPrefix } from "../utils/bootstrapServers";
 import { scaffoldProjectRequest } from "./utils/scaffoldUtils";
 
 /** Scaffold a project w/o any additional information. Offers all templates, no pre-filled-out information. */
-async function scaffoldProjectCommand() {
+export async function scaffoldProjectCommand() {
   return await scaffoldProjectRequest();
 }
 
 /** Scaffold a project around a Flink Artifact. */
-async function scaffoldFlinkArtifactCommand() {
+export async function scaffoldFlinkArtifactCommand() {
   return await scaffoldProjectRequest(
     {
       templateType: "artifact",
@@ -27,7 +27,7 @@ async function scaffoldFlinkArtifactCommand() {
 }
 
 /** Scaffold a project from a KafkaCluster, KafkaTopic, or CCloudFlinkComputePool. */
-async function resourceScaffoldProjectCommand(
+export async function resourceScaffoldProjectCommand(
   item: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
 ) {
   if (item instanceof KafkaCluster) {
