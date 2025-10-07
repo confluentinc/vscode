@@ -10,9 +10,9 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- The Local row in the Resources view now better describes the user's Docker Engine state in its
-  state and tooltip, and the "play" button call-to-action will not be offerred if Docker Engine is
-  not detected.
+- The Local row in the Resources view now better describes the user's Docker Engine availability in
+  its description and tooltip, and the "Start Local Resources" action will not be offered if the
+  extension cannot ping the local Docker Engine.
 
 ## 1.7.0
 
