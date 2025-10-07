@@ -416,6 +416,11 @@ async function setupContextValues() {
     "direct-kafka-cluster",
     // topics also have names, but their context values vary wildly and must be regex-matched
   ]);
+
+  /**
+   * CCloud and Local Kafka Clusters and all Schema Registries have REST URI / URLs
+   * (Direct Kafka clusters might be running the REST gateway, but we can't guarantee it)
+   */
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-kafka-cluster",
     "ccloud-flinkable-kafka-cluster",
