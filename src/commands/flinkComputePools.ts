@@ -1,7 +1,11 @@
 import { commands, Disposable, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
-import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
+import {
+  FLINK_CONFIG_COMPUTE_POOL,
+  FLINK_CONFIG_DATABASE,
+  FLINK_CONFIG_STATEMENT_PREFIX,
+} from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -55,6 +59,17 @@ export async function configureFlinkDefaults(): Promise<void> {
     return;
   }
   await FLINK_CONFIG_COMPUTE_POOL.update(computePool.id, true);
+
+  const statementPrefix: string | undefined = await window.showInputBox({
+    prompt: "Enter a default statement prefix (optional)",
+    placeHolder: "e.g. 'dev_'",
+    ignoreFocusOut: true,
+  });
+  if (!statementPrefix) {
+    logger.debug("User canceled the default statement prefix input box");
+    return;
+  }
+  await FLINK_CONFIG_STATEMENT_PREFIX.update(statementPrefix, true);
 
   const databaseCluster: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
   if (!databaseCluster) {

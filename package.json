@@ -981,6 +981,12 @@
             "minimum": 0,
             "maximum": 600
           },
+          "confluent.flink.statementPrefix": {
+            "type": "string",
+            "default": "Flink",
+            "description": "Prefix to use for your Flink SQL statements submitted from VS Code.",
+            "maxLength": 100
+          },
           "confluent.flink.statementPollingLimit": {
             "type": "number",
             "default": 20,
