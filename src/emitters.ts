@@ -140,6 +140,7 @@ export const schemaSearchSet = new vscode.EventEmitter<string | null>();
 /** The user set/unset a filter for the Flink Statements view. */
 export const flinkStatementSearchSet = new vscode.EventEmitter<string | null>();
 
+/** Fired with a URI when a vscode URL is opened asking for a scaffolding template to be materialized (linked from CCloud UI) */
 export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
 
 /** Metadata for a given {@link vscode.Uri} has been updated. */
