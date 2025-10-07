@@ -60,17 +60,6 @@ export async function configureFlinkDefaults(): Promise<void> {
   }
   await FLINK_CONFIG_COMPUTE_POOL.update(computePool.id, true);
 
-  const statementPrefix: string | undefined = await window.showInputBox({
-    prompt: "Enter a default statement prefix (optional)",
-    placeHolder: "e.g. 'dev_'",
-    ignoreFocusOut: true,
-  });
-  if (!statementPrefix) {
-    logger.debug("User canceled the default statement prefix input box");
-    return;
-  }
-  await FLINK_CONFIG_STATEMENT_PREFIX.update(statementPrefix, true);
-
   const databaseCluster: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
   if (!databaseCluster) {
     logger.debug("User canceled the default database quickpick");
@@ -78,6 +67,26 @@ export async function configureFlinkDefaults(): Promise<void> {
   }
   // Note: we can use name or ID for Language Server, but name used in Cloud UI since what you send is what shows in completions documentation
   await FLINK_CONFIG_DATABASE.update(databaseCluster.id, true);
+
+  const statementPrefix: string | undefined = await window.showInputBox({
+    prompt: "Enter a default statement prefix (optional)",
+    placeHolder: "e.g. 'dev_'",
+    ignoreFocusOut: true,
+  });
+
+  // Only return early if user explicitly canceled (undefined), not if they provided empty string
+  if (statementPrefix === undefined) {
+    logger.debug("User canceled the default statement prefix input box");
+    return;
+  }
+
+  // Update the setting even if it's an empty string (user hit Enter with no input)
+  if (statementPrefix.trim().length > 0) {
+    await FLINK_CONFIG_STATEMENT_PREFIX.update(statementPrefix, true);
+  } else {
+    // Optionally clear the setting if user provided empty input
+    await FLINK_CONFIG_STATEMENT_PREFIX.update("", true);
+  }
 
   window.showInformationMessage("Flink defaults updated.", "View").then((selection) => {
     if (selection === "View") {
