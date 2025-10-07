@@ -40,32 +40,43 @@ export async function resourceScaffoldProjectCommand(
     return;
   }
 
-  if (item instanceof KafkaCluster) {
-    const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
-    templateParams = {
-      bootstrap_server: bootstrapServers,
-      cc_bootstrap_server: bootstrapServers,
-      templateType: "kafka",
-    };
-    telemetrySource = "cluster";
-  } else if (item instanceof KafkaTopic) {
-    const clusters = environment.kafkaClusters;
-    const cluster = clusters.find((c) => c.id === item.clusterId);
-    if (!cluster) {
-      void showErrorNotificationWithButtons(
-        `Unable to find Kafka cluster for topic "${item.name}".`,
-      );
-      return;
+  if (item instanceof KafkaCluster || item instanceof KafkaTopic) {
+    if (item instanceof KafkaCluster) {
+      const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
+      templateParams = {
+        bootstrap_server: bootstrapServers,
+        cc_bootstrap_server: bootstrapServers,
+        templateType: "kafka",
+      };
+      telemetrySource = "cluster";
+    } else {
+      // KafkaTopic
+      const clusters = environment.kafkaClusters;
+      const cluster = clusters.find((c) => c.id === item.clusterId);
+      if (!cluster) {
+        void showErrorNotificationWithButtons(
+          `Unable to find Kafka cluster for topic "${item.name}".`,
+        );
+        return;
+      }
+      const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
+      templateParams = {
+        bootstrap_server: bootstrapServers,
+        cc_bootstrap_server: bootstrapServers,
+        cc_topic: item.name,
+        topic: item.name,
+        templateType: "kafka",
+      };
+      telemetrySource = "topic";
     }
-    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
-    templateParams = {
-      bootstrap_server: bootstrapServers,
-      cc_bootstrap_server: bootstrapServers,
-      cc_topic: item.name,
-      topic: item.name,
-      templateType: "kafka",
-    };
-    telemetrySource = "topic";
+
+    // Mix in cc_schema_registry_url if the environment has a schema registry, regardless
+    // of the item type.
+    if (environment.schemaRegistry) {
+      // URI, URL. Tomato, tomahto. This field is modeled as "uri" but it's really a URL,
+      // in that it starts with "http[s]://".
+      templateParams["cc_schema_registry_url"] = environment.schemaRegistry.uri;
+    }
   } else {
     // flink compute pool
     const organization: CCloudOrganization | undefined =
@@ -79,14 +90,6 @@ export async function resourceScaffoldProjectCommand(
       templateType: "flink",
     };
     telemetrySource = "compute pool";
-  }
-
-  // Mix in cc_schema_registry_url if the environment has a schema registry, regardless
-  // of the item type.
-  if (environment.schemaRegistry) {
-    // URI, URL. Tomato, tomahto. This field is modeled as "uri" but it's really a URL,
-    // in that it starts with "http[s]://".
-    templateParams["cc_schema_registry_url"] = environment.schemaRegistry.uri;
   }
 
   await scaffoldProjectRequest(templateParams, telemetrySource);

@@ -145,25 +145,7 @@ describe("commands/scaffold.ts", () => {
       );
     });
 
-    it("should call scaffoldProjectRequest with correct parameters for CCloudFlinkComputePool", async () => {
-      await resourceScaffoldProjectCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-
-      sinon.assert.calledOnceWithExactly(
-        scaffoldProjectRequestStub,
-        {
-          cc_environment_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
-          cc_organization_id: undefined,
-          cloud_region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
-          cloud_provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
-          cc_compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
-          templateType: "flink",
-          cc_schema_registry_url: TEST_CCLOUD_SCHEMA_REGISTRY.uri,
-        },
-        "compute pool",
-      );
-    });
-
-    it("will omit cc_schema_registry_url if environment has no schema registry", async () => {
+    it("will omit cc_schema_registry_url for Kafka cluster/topic if environment has no schema registry", async () => {
       const envWithoutSR = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
         kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
@@ -182,6 +164,23 @@ describe("commands/scaffold.ts", () => {
           // no cc_schema_registry_url
         },
         "cluster",
+      );
+    });
+
+    it("should call scaffoldProjectRequest with correct parameters for CCloudFlinkComputePool", async () => {
+      await resourceScaffoldProjectCommand(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+
+      sinon.assert.calledOnceWithExactly(
+        scaffoldProjectRequestStub,
+        {
+          cc_environment_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId,
+          cc_organization_id: undefined,
+          cloud_region: TEST_CCLOUD_FLINK_COMPUTE_POOL.region,
+          cloud_provider: TEST_CCLOUD_FLINK_COMPUTE_POOL.provider,
+          cc_compute_pool_id: TEST_CCLOUD_FLINK_COMPUTE_POOL.id,
+          templateType: "flink",
+        },
+        "compute pool",
       );
     });
   });
