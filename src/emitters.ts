@@ -106,7 +106,7 @@ export const topicsViewResourceChanged = new vscode.EventEmitter<KafkaCluster | 
  * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
  * (or CCloud organization) change.
  */
-export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistry | null>();
+export const schemasViewResourceChanged = new vscode.EventEmitter<SchemaRegistry | null>();
 /**
  * Fired whenever a Flink compute pool is selected from the Resources view or the Flink Statements
  * view, chosen from the "Select Flink Compute Pool" action from the Flink Statements view or

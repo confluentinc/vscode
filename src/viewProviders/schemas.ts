@@ -12,12 +12,12 @@ import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
-  currentSchemaRegistryChanged,
   environmentChanged,
   EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
   schemaSubjectChanged,
+  schemasViewResourceChanged,
   SchemaVersionChangeEvent,
   schemaVersionsChanged,
   SubjectChangeEvent,
@@ -342,7 +342,7 @@ export class SchemasViewProvider
       environmentChanged.event(this.environmentChangedHandler.bind(this)),
       ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localSchemaRegistryConnectedHandler.bind(this)),
-      currentSchemaRegistryChanged.event(this.currentSchemaRegistryChangedHandler.bind(this)),
+      schemasViewResourceChanged.event(this.schemasViewResourceChangedHandler.bind(this)),
       schemaSearchSet.event(this.schemaSearchSetHandler.bind(this)),
       schemaSubjectChanged.event(this.schemaSubjectChangedHandler.bind(this)),
       schemaVersionsChanged.event(this.schemaVersionsChangedHandler.bind(this)),
@@ -394,10 +394,10 @@ export class SchemasViewProvider
     }
   }
 
-  async currentSchemaRegistryChangedHandler(schemaRegistry: SchemaRegistry | null): Promise<void> {
+  async schemasViewResourceChangedHandler(schemaRegistry: SchemaRegistry | null): Promise<void> {
     // User has either selected a (probably different) SR to view, or has closed
     // a connection to a SR (null). React accordingly.
-    logger.debug("currentSchemaRegistryChanged event fired");
+    logger.debug("schemasViewResourceChanged event fired");
     await this.setSchemaRegistry(schemaRegistry);
   }
 
