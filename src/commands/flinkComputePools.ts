@@ -60,17 +60,6 @@ export async function configureFlinkDefaults(): Promise<void> {
   }
   await FLINK_CONFIG_COMPUTE_POOL.update(computePool.id, true);
 
-  const statementPrefix: string | undefined = await window.showInputBox({
-    prompt: "Enter a default statement prefix (optional)",
-    placeHolder: "e.g. 'dev_'",
-    ignoreFocusOut: true,
-  });
-  if (!statementPrefix) {
-    logger.debug("User canceled the default statement prefix input box");
-    return;
-  }
-  await FLINK_CONFIG_STATEMENT_PREFIX.update(statementPrefix, true);
-
   const databaseCluster: KafkaCluster | undefined = await flinkDatabaseQuickpick(computePool);
   if (!databaseCluster) {
     logger.debug("User canceled the default database quickpick");

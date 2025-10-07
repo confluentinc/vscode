@@ -98,7 +98,7 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("Should include the spice parameter in the statement name", async function () {
       const statementName = await determineFlinkStatementName("test-spice");
-      assert.strictEqual(statementName, `vscode-test-spice-${expectedDatePart}`);
+      assert.strictEqual(statementName, `flink-vscode-test-spice-${expectedDatePart}`);
     });
 
     it("Should return a name without spice if spice is not provided", async function () {
