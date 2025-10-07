@@ -62,7 +62,7 @@ export async function isDockerAvailable(showNotification: boolean = false): Prom
   const init: RequestInit = await defaultRequestInit();
   try {
     const resp: string = await client.systemPing(init);
-    logger.debug("docker ping response:", resp);
+    logger.trace("docker ping response:", resp);
     return true;
   } catch (error) {
     // either float this as an `error` log if it's a ResponseError or was an explicit action that
@@ -71,7 +71,7 @@ export async function isDockerAvailable(showNotification: boolean = false): Prom
       logError(error, "docker ping");
     } else {
       // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
-      logger.debug("docker ping error:", error);
+      logger.trace("docker ping error:", error);
     }
     //...and then actually show the notification if it's requested
     if (showNotification) {
