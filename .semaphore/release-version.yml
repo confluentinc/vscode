@@ -35,12 +35,19 @@ global_job_config:
       value: "production"
 
 blocks:
-  - name: "Delete GitHub Release and Tag"
-    dependencies: []
+  - name: "Parameter Verification"
     task:
       jobs:
-        - name: "Delete GitHub Release and Tag"
+        - name: "Parameter Verification"
           commands:
+            # Fail early if the package.json version includes a micro-version when IS_PRERELEASE is false
+            - |
+              PKG_VERSION=$(jq -r '.version' package.json)
+              echo "package.json version: $PKG_VERSION"
+              if [ "$IS_PRERELEASE" != "true" ] && echo "$PKG_VERSION" | grep -q '-'; then
+                echo "ERROR: package.json version contains a micro-version or prerelease segment ($PKG_VERSION) but IS_PRERELEASE is false. Aborting."
+                exit 1
+              fi
             # Adjust RELEASE_NAME for prereleases, if necessary
             - |
               if [ "$IS_PRERELEASE" = "true" ]; then
@@ -48,6 +55,15 @@ blocks:
                   RELEASE_NAME="${RELEASE_NAME}-pre"
                 fi
               fi
+            - artifact push workflow RELEASE_NAME.txt --destination RELEASE_NAME.txt --content "$RELEASE_NAME" --force
+  - name: "Delete GitHub Release and Tag"
+    dependencies: ["Parameter Verification"]
+    task:
+      jobs:
+        - name: "Delete GitHub Release and Tag"
+          commands:
+            - artifact pull workflow RELEASE_NAME.txt
+            - RELEASE_NAME=$(cat RELEASE_NAME.txt)
             # Delete the existing GitHub Release and tag if they exist
             - gh release delete "$RELEASE_NAME" --yes || true
             - git tag -d "$RELEASE_NAME" || true
@@ -58,16 +74,8 @@ blocks:
       jobs:
         - name: "Create GitHub Release and Tag"
           commands:
-            # Adjust RELEASE_NAME for prereleases, if necessary
-            - |
-              if [ "$IS_PRERELEASE" = "true" ]; then
-                PRE_RELEASE_FLAG="--prerelease"
-                if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
-                  RELEASE_NAME="${RELEASE_NAME}-pre"
-                fi
-              else
-                PRE_RELEASE_FLAG=""
-              fi
+            - artifact pull workflow RELEASE_NAME.txt
+            - RELEASE_NAME=$(cat RELEASE_NAME.txt)
             # Try to determine previous release tag for generating release notes
             - |
               if [ -n "$PREVIOUS_RELEASE_TAG" ] && [ "$PREVIOUS_RELEASE_TAG" != "PREVIOUS_RELEASE_TAG" ]; then
@@ -85,7 +93,13 @@ blocks:
                   NOTES_FLAGS="--generate-notes --notes-start-tag $PREV_TAG"
                 fi
               fi
-            # Create the GitHub release, possibly with automatically-generated notes
+            # Create the GitHub (pre)release, possibly with automatically-generated notes
+            - |
+              if [ "$IS_PRERELEASE" = "true" ]; then
+                PRE_RELEASE_FLAG="--prerelease"
+              else
+                PRE_RELEASE_FLAG=""
+              fi
             - |
               gh release create "$RELEASE_NAME" \
                 $PRE_RELEASE_FLAG \
@@ -109,16 +123,6 @@ blocks:
                 - linux-arm64
                 - win32-x64
           commands:
-            # Adjust RELEASE_NAME for prereleases, if necessary
-            - |
-              if [ "$IS_PRERELEASE" = "true" ]; then
-                PRE_RELEASE_FLAG="--prerelease"
-                if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
-                  RELEASE_NAME="${RELEASE_NAME}-pre"
-                fi
-              else
-                PRE_RELEASE_FLAG=""
-              fi
             - |
               case "$TARGET" in
                 darwin-x64)  export SIDECAR_OS_ARCH=macos-amd64 ;;
@@ -132,28 +136,19 @@ blocks:
             - make download-third-party-notices-sidecar || true
             - npx gulp bundle
             - VSIX_FILE=$(find out/ -name "*.vsix")
-            # Remove the existing (micro-versioned) version and replace with RELEASE_NAME
-            - |
-              ARTIFACT_FILENAME=$(basename "${VSIX_FILE}")
-              prefix="${ARTIFACT_FILENAME%%${TARGET}*}${TARGET}"
-              ARTIFACT_FILENAME="${prefix}-${RELEASE_NAME}.vsix"
-            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/${ARTIFACT_FILENAME} --force
-  - name: "Multi-arch Packaging and Upload"
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename "${VSIX_FILE}") --force
+            # NOTE: If you see micro-versions in the VSIX filename and this isn't for a pre-release,
+            # it's because the wrong commit SHA was used. Look for a commit with a message like
+            # 'chore: version bump v1.7.0' before any other commits that start incrementing micro-
+            # versions (like 'chore: version bump v1.7.1-1 [ci skip]').
+  - name: "Upload VSIX Files to GitHub Release"
     dependencies: ["Package VSIX Files"]
     task:
       jobs:
-        - name: "Multi-arch Packaging and Upload"
+        - name: "Upload VSIX Files to GitHub Release"
           commands:
-            # Adjust RELEASE_NAME for prereleases, if necessary
-            - |
-              if [ "$IS_PRERELEASE" = "true" ]; then
-                PRE_RELEASE_FLAG="--prerelease"
-                if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
-                  RELEASE_NAME="${RELEASE_NAME}-pre"
-                fi
-              else
-                PRE_RELEASE_FLAG=""
-              fi
+            - artifact pull workflow RELEASE_NAME.txt
+            - RELEASE_NAME=$(cat RELEASE_NAME.txt)
             - artifact pull workflow packaged-vsix-files/
             - |
               for vsix in packaged-vsix-files/*.vsix; do
