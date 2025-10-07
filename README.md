@@ -2,7 +2,7 @@
 
 # Confluent for VS Code
 
-[![](https://img.shields.io/badge/Meet_the_developer_team-behind_this_extension-blue)](http://bit.ly/4pXvya7)
+Questions? [Hop on a call](http://bit.ly/4pXvya7) with the developer team that built this extension.
 
 The Confluent extension makes it easy for developers to build stream processing applications using
 Confluent technology. This extension provides a robust, delightful experience for
