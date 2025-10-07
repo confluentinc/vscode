@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { getCCloudAuthSession } from "../authn/utils";
 import {
   CreateSqlv1StatementOperationRequest,
   CreateSqlv1StatementRequest,
@@ -180,21 +179,6 @@ async function waitForStatementState(
  */
 export async function determineFlinkStatementName(spice?: string): Promise<string> {
   const parts: string[] = [];
-
-  // If we're creating flink statements, then we're ccloud authed. Use their
-  // ccloud account name as primary part of the statement name.
-  const ccloudAccountName = (await getCCloudAuthSession())?.account.label;
-  if (ccloudAccountName) {
-    let userNamePart = ccloudAccountName.split("@")[0];
-    // strip anything to the right of any '+' character if present, don't want their
-    // email buckets involved.
-    userNamePart = userNamePart.split("+")[0];
-
-    parts.push(userNamePart);
-  } else {
-    // Wacky. Not ccloud authed?
-    parts.push("unknownuser");
-  }
 
   parts.push("vscode");
   if (spice) {
