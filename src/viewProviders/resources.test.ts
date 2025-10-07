@@ -441,20 +441,43 @@ describe("viewProviders/resources.ts", () => {
         assert.strictEqual(localConnectionRow.iconPath.id, IconNames.LOCAL_RESOURCE_GROUP);
       });
 
-      it("tooltip getter should return the correct tooltip", () => {
-        assert.ok(/Local Kafka clusters/.test(localConnectionRow.tooltip.value));
-      });
+      describe("tooltip() and status()", () => {
+        let getContextValueStub: sinon.SinonStub;
 
-      it("status getter should return the correct status", () => {
-        // w/o a connection ...
-        assert.strictEqual(localConnectionRow.status, "(Not Running)");
+        beforeEach(() => {
+          getContextValueStub = sandbox.stub(contextValues, "getContextValue");
+        });
 
-        // ... and with a fully fleshed out connection
-        localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
-        assert.strictEqual(
-          localConnectionRow.status,
-          TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR.kafkaClusters[0].uri!,
-        );
+        for (const [dockerAvailable, matchingRe] of [
+          [true, /Local Kafka clusters/],
+          [false, /Docker is not available/],
+        ] as [boolean, RegExp][]) {
+          it(`tooltip getter should return the correct tooltip when docker engine is available: ${dockerAvailable}`, () => {
+            getContextValueStub.returns(dockerAvailable);
+            assert.ok(matchingRe.test(localConnectionRow.tooltip.value));
+          });
+        }
+
+        for (const [label, dockerAvailable, connectedness, expectedStatus] of [
+          ["No docker service", false, false, "(Docker Unavailable)"],
+          ["Docker service but no kafka container", true, false, "(Local Kafka not running)"],
+          [
+            "Docker and local kafka running",
+            true,
+            true,
+            TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR.kafkaClusters[0].uri!,
+          ],
+        ] as [string, boolean, boolean, string][]) {
+          it(`status getter should return the correct status: ${label}`, () => {
+            getContextValueStub.returns(dockerAvailable);
+            if (connectedness) {
+              // ... and with a fully fleshed out connection
+              localConnectionRow.environments.push(TEST_LOCAL_ENVIRONMENT_WITH_KAFKA_AND_SR);
+            }
+
+            assert.strictEqual(localConnectionRow.status, expectedStatus);
+          });
+        }
       });
 
       describe("ConnectionRow methods via LocalConnectionRow", () => {
@@ -706,6 +729,7 @@ describe("viewProviders/resources.ts", () => {
         ["ccloudConnected", "ccloudConnectedEventHandler"],
         ["localKafkaConnected", "localConnectedEventHandler"],
         ["localSchemaRegistryConnected", "localConnectedEventHandler"],
+        ["dockerServiceAvailable", "localConnectedEventHandler"],
         // @ts-expect-error references private method.
         ["directConnectionsChanged", "reconcileDirectConnections"],
         ["connectionStable", "refreshConnection"],
