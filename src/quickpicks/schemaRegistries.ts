@@ -7,7 +7,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { getSchemasViewProvider } from "../viewProviders/newSchemas";
 import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.schemaRegistry");
@@ -94,7 +94,7 @@ export async function schemaRegistryQuickPick(
   const registryItems: QuickPickItemWithValue<SchemaRegistry>[] = [];
 
   // Determine the "current" Schema Registry to focus, if any.
-  const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().resource;
   const defaultRegistry: SchemaRegistry | null = defaultRegistryId
     ? schemaRegistries.find((registry) => registry.id === defaultRegistryId) ?? null
     : focusedRegistry;

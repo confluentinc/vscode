@@ -18,7 +18,7 @@ import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../../../quickpicks
 import { getSidecar } from "../../../sidecar";
 import { hashed, logUsage, UserEvent } from "../../../telemetry/events";
 import { fileUriExists } from "../../../utils/file";
-import { getSchemasViewProvider } from "../../../viewProviders/schemas";
+import { getSchemasViewProvider } from "../../../viewProviders/newSchemas";
 
 const logger = new Logger("commands.utils.schemaManagement.upload");
 

@@ -96,7 +96,7 @@ export class FlinkStatementsViewProvider
    * @returns A promise that resolves when the refresh is complete.
    */
   async refresh(): Promise<void> {
-    // Out with any existing subjects.
+    // Out with any existing statements.
     this.resourcesInTreeView.clear();
     this.statementManager.clearClient(this.managerClientId);
 
