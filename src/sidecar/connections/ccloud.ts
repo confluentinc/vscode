@@ -3,8 +3,8 @@ import { Connection } from "../../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../../constants";
 import { ContextValues, getContextValue } from "../../context/values";
 import {
-  currentSchemaRegistryChanged,
   flinkDatabaseViewResourceChanged,
+  schemasViewResourceChanged,
   topicsViewResourceChanged,
 } from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
@@ -48,7 +48,7 @@ export async function clearCurrentCCloudResources() {
   // Likewise for the Schema Registry view.
   const schemasViewProvider = SchemasViewProvider.getInstance();
   if (schemasViewProvider.isFocusedOnCCloud()) {
-    currentSchemaRegistryChanged.fire(null);
+    schemasViewResourceChanged.fire(null);
   }
 
   // Likewise for the Flink Database view, which can only
