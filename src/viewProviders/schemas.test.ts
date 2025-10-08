@@ -348,13 +348,13 @@ describe("SchemasViewProvider", () => {
       }
     });
 
-    describe("currentSchemaRegistryChangedHandler", () => {
+    describe("schemasViewResourceChangedHandler", () => {
       for (const newRegistry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
         it(`should call setSchemaRegistry() with new registry: ${newRegistry?.id}`, async () => {
           const setSchemaRegistryStub = sandbox.stub(provider, "setSchemaRegistry");
 
           // Call the handler with the new registry
-          await provider.currentSchemaRegistryChangedHandler(newRegistry);
+          await provider.schemasViewResourceChangedHandler(newRegistry);
 
           // Should have called .setSchemaRegistry() with the new registry
           assert.ok(setSchemaRegistryStub.calledOnce);
@@ -572,7 +572,7 @@ describe("SchemasViewProvider", () => {
       ["environmentChanged", "environmentChangedHandler"],
       ["ccloudConnected", "ccloudConnectedHandler"],
       ["localSchemaRegistryConnected", "localSchemaRegistryConnectedHandler"],
-      ["currentSchemaRegistryChanged", "currentSchemaRegistryChangedHandler"],
+      ["schemasViewResourceChanged", "schemasViewResourceChangedHandler"],
       ["schemaSearchSet", "schemaSearchSetHandler"],
       ["schemaSubjectChanged", "schemaSubjectChangedHandler"],
       ["schemaVersionsChanged", "schemaVersionsChangedHandler"],

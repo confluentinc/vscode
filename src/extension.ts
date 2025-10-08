@@ -36,12 +36,14 @@ import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerNewResourceViewCommands } from "./commands/resources";
+import { registerProjectGenerationCommands } from "./commands/scaffold";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSearchCommands } from "./commands/search";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { registerUriCommands } from "./commands/uris";
+import { setProjectScaffoldListener } from "./commands/utils/scaffoldUtils";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, IconNames } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
@@ -74,7 +76,6 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
-import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
@@ -418,6 +419,11 @@ async function setupContextValues() {
     "direct-kafka-cluster",
     // topics also have names, but their context values vary wildly and must be regex-matched
   ]);
+
+  /**
+   * CCloud and Local Kafka Clusters and all Schema Registries have REST URI / URLs
+   * (Direct Kafka clusters might be running the REST gateway, but we can't guarantee it)
+   */
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-kafka-cluster",
     "ccloud-flinkable-kafka-cluster",
@@ -435,6 +441,10 @@ async function setupContextValues() {
     ContextValues.flinkDatabaseViewMode,
     FlinkDatabaseViewProviderMode.Artifacts,
   );
+
+  // Default to Docker daemon not being available until proven otherwise
+  const dockerAvailable = setContextValue(ContextValues.dockerServiceAvailable, false);
+
   await Promise.all([
     e2eTestEnvironment,
     chatParticipantEnabled,
@@ -447,6 +457,7 @@ async function setupContextValues() {
     resourcesWithURIs,
     diffableResources,
     flinkViewMode,
+    dockerAvailable,
   ]);
 }
 

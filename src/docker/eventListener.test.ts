@@ -10,7 +10,11 @@ import {
   SystemApi,
 } from "../clients/docker";
 import * as contextValues from "../context/values";
-import { localKafkaConnected } from "../emitters";
+import {
+  dockerServiceAvailable,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { LOCAL_KAFKA_IMAGE } from "../extensionSettings/constants";
 import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
@@ -29,6 +33,10 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
   before(async function () {
     await getTestExtensionContext();
+
+    // Stop any running instance of the event listener before starting tests to minimize hilarious interference.
+    const existingInstance = EventListener.getInstance();
+    existingInstance.stop();
   });
 
   beforeEach(function () {
@@ -45,6 +53,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
   afterEach(function () {
     // reset the singleton instance so we can re-instantiate it with fresh properties between tests
+    eventListener.stop();
     EventListener["instance"] = null;
     sandbox.restore();
   });
@@ -67,10 +76,29 @@ describe("docker/eventListener.ts EventListener methods", function () {
     assert.ok(pollStopSpy.calledOnce);
   });
 
+  it("listenForEvents() should exit early if already handling the event stream", async function () {
+    eventListener["handlingEventStream"] = true;
+
+    const isDockerAvailableStub = sandbox.stub(configs, "isDockerAvailable").resolves(true);
+    await eventListener.listenForEvents();
+
+    // should not have called isDockerAvailable() since we exited early
+    assert.ok(isDockerAvailableStub.notCalled);
+  });
+
   it("listenForEvents() should poll slowly if Docker is not available", async function () {
     this.retries(2); // retry this test up to 2 times if it fails
 
     const dockerAvailable = false;
+
+    // Make it as if we previously thought that Docker was available
+    const getContextValueStub = sandbox.stub(contextValues, "getContextValue");
+    getContextValueStub.withArgs(contextValues.ContextValues.dockerServiceAvailable).returns(true);
+
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
+
+    const dockerServiceAvailableFireStub = sandbox.stub(dockerServiceAvailable, "fire");
+
     // stub the isDockerAvailable method so we don't actually check for Docker availability
     const isDockerAvailableStub = sandbox
       .stub(configs, "isDockerAvailable")
@@ -103,7 +131,22 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // advance the clock to allow the event listener logic to execute
     await clock.tickAsync(100);
 
-    // we should have called these two, then bailed until the next poll
+    // we should have called these, then bailed until the next poll
+    assert.ok(
+      getContextValueStub.calledOnceWith(contextValues.ContextValues.dockerServiceAvailable),
+      "getContextValue(ContextValues.dockerServiceAvailable) not called as expected",
+    );
+
+    assert.ok(
+      setContextValueStub.calledOnceWith(contextValues.ContextValues.dockerServiceAvailable, false),
+      "setContextValue(ContextValues.dockerServiceAvailable, false) not called as expected",
+    );
+
+    assert.ok(
+      dockerServiceAvailableFireStub.calledOnceWith(false),
+      "dockerServiceAvailable.fire(false) not called as expected",
+    );
+
     assert.ok(
       isDockerAvailableStub.calledOnce,
       `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
@@ -201,7 +244,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     );
   });
 
-  it("listenForEvents() should update the 'localKafkaClusterAvailable' context value if the connection to Docker is lost and an error with cause 'other side closed' is thrown while reading from the event stream", async function () {
+  it("listenForEvents() should update context values and fire events if the connection to Docker is lost and an error with cause 'other side closed' is thrown while reading from the event stream", async function () {
     this.retries(2); // retry this test up to 2 times if it fails
 
     const dockerAvailable = true;
@@ -238,6 +281,8 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // stub the setContextValue and localKafkaConnected.fire methods so we can assert that they're called
     const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
+    const dockerServiceAvailableFireStub = sandbox.stub(dockerServiceAvailable, "fire");
+    const localSchemaRegistryConnectedFireStub = sandbox.stub(localSchemaRegistryConnected, "fire");
 
     // start the poller, which calls into `listenForEvents()` immediately
     eventListener.start();
@@ -274,19 +319,21 @@ describe("docker/eventListener.ts EventListener methods", function () {
       handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT),
       `handleEvent() called ${handleEventStub.callCount} times`,
     );
-    // we'll get the event returned, but then catch the error and inform the UI that the local
-    // resources are no longer reachable/available
-    assert.ok(
-      setContextValueStub.calledOnceWith(
-        contextValues.ContextValues.localKafkaClusterAvailable,
-        false,
-      ),
-      `setContextValue() called ${setContextValueStub.callCount} times with ${JSON.stringify(setContextValueStub.args)}`,
-    );
-    assert.ok(
-      localKafkaConnectedFireStub.calledOnceWith(false),
-      `localKafkaConnected.fire() called ${localKafkaConnectedFireStub.callCount} times with ${JSON.stringify(localKafkaConnectedFireStub.args)}`,
-    );
+    for (const contextValue of [
+      contextValues.ContextValues.localKafkaClusterAvailable,
+      contextValues.ContextValues.dockerServiceAvailable,
+      contextValues.ContextValues.localSchemaRegistryAvailable,
+    ]) {
+      sinon.assert.calledWith(setContextValueStub, contextValue, false);
+    }
+
+    for (const emitterFireStub of [
+      dockerServiceAvailableFireStub,
+      localKafkaConnectedFireStub,
+      localSchemaRegistryConnectedFireStub,
+    ]) {
+      sinon.assert.calledOnceWithExactly(emitterFireStub, false);
+    }
   });
 
   it("readValuesFromStream() should successfully read a value from a ReadableStream before yielding", async function () {

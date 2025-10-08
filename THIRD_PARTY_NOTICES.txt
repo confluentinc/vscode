@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-10-6
+Date generated: 2025-10-7
 
-Revision ID: c3d697a1fcfea5a22f3333184b54c4c58f01ec83
+Revision ID: 4a7905cc3d9d06497e6c8c5dbb233cf3bb27dd68
 
 ================================================================================
 ================================================================================
@@ -160,7 +160,7 @@ No licenses found
 - @types/connect (3.4.38) [MIT]
 - @types/estree (1.0.6) [MIT]
 - @types/mysql (2.15.26) [MIT]
-- @types/node (18.19.67) [MIT]
+- @types/node (22.17.0) [MIT]
 - @types/pg (8.6.1) [MIT]
 - @types/pg-pool (2.0.6) [MIT]
 - @types/shimmer (1.2.0) [MIT]
@@ -449,7 +449,7 @@ No licenses found
 - tslib (2.8.1) [0BSD]
 - typescript (5.4.5) [Apache-2.0]
 - undici (6.21.2) [MIT]
-- undici-types (5.26.5) [MIT]
+- undici-types (6.21.0) [MIT]
 - unplugin (1.0.1) [MIT]
 - unzipit (1.4.3) [MIT]
 - update-browserslist-db (1.0.16) [MIT]
@@ -13558,9 +13558,9 @@ package.json
 
 
 --------------------------------------------------------------------------------
-Package Title: @types/node (18.19.67)
+Package Title: @types/node (22.17.0)
 
-Package Locator: npm+@types/node$18.19.67
+Package Locator: npm+@types/node$22.17.0
 
 Package Depth: Direct
 --------------------------------------------------------------------------------
@@ -13570,7 +13570,7 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
-ts5.6/index.d.ts
+package.json
 --------------------------------------------------------------------------------
 
     MIT License
@@ -17946,6 +17946,10 @@ Package Depth: Direct
 * Declared Licenses *
 ISC
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 Copyright 2010-2023 Mike Bostock
 
@@ -28165,7 +28169,7 @@ Package Depth: Transitive
 
 --------------------------------------------------------------------------------
 File matches:
-package.json
+tslib.js
 --------------------------------------------------------------------------------
 
 Copyright (c) Microsoft Corporation.
@@ -28402,8 +28406,6 @@ MIT
 --------------------------------------------------------------------------------
 File matches:
 lib/web/fetch/LICENSE
-LICENSE
-package.json
 --------------------------------------------------------------------------------
 
 MIT License
@@ -28431,9 +28433,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: undici-types (5.26.5)
+Package Title: undici-types (6.21.0)
 
-Package Locator: npm+undici-types$5.26.5
+Package Locator: npm+undici-types$6.21.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -28443,10 +28445,14 @@ MIT
 
 --------------------------------------------------------------------------------
 File matches:
+LICENSE
 package.json
 --------------------------------------------------------------------------------
 
-Copyright (c) <year> <copyright holders>
+MIT License
+
+Copyright (c) Matteo Collina and Undici contributors
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -28464,6 +28470,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
 
 
 --------------------------------------------------------------------------------
@@ -38815,8 +38822,6 @@ MIT License
 
 Copyright (c) Microsoft Corporation.
 
-Copyright (c)  Node.js contributors. All rights reserved.
-
 Copyright (c)  Microsoft Corporation. All rights reserved.
 
 Copyright (c)  Microsoft Corporation.
@@ -38936,6 +38941,8 @@ Copyright (c) 2022 Justin Ridgewell <justin@ridgewell.name>
 Copyright (c) Mathias Bynens <https://mathiasbynens.be/>
 
 Copyright (c) Node.js contributors. All rights reserved.
+
+Copyright (c)  Node.js contributors. All rights reserved.
 
 Copyright (c)  Joyent, Inc. and other Node contributors.
 
@@ -39068,8 +39075,6 @@ Copyright (c)  Jordan Harband and contributors
 Copyright (c) Matteo Collina and Undici contributors
 
 Copyright (c) 2020 Ethan Arrowood
-
-Copyright (c)  Matteo Collina and Undici contributors
 
 Copyright (c) Marak Squires
 
@@ -39491,4 +39496,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-10-6
+Report Generated by FOSSA on 2025-10-7

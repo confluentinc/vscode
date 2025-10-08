@@ -10,12 +10,13 @@ import {
 } from "vscode";
 import { ConnectionStatus, ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { ContextValues, setContextValue } from "../context/values";
+import { ContextValues, getContextValue, setContextValue } from "../context/values";
 import {
   ccloudConnected,
   connectionDisconnected,
   connectionStable,
   directConnectionsChanged,
+  dockerServiceAvailable,
   localKafkaConnected,
   localSchemaRegistryConnected,
   resourceSearchSet,
@@ -416,7 +417,14 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   }
 
   get tooltip(): MarkdownString {
-    return new MarkdownString("Local Kafka clusters discoverable at port `8082` are shown here.");
+    const isDockerAvailable = getContextValue(ContextValues.dockerServiceAvailable) === true;
+    if (isDockerAvailable) {
+      return new MarkdownString("Local Kafka clusters discoverable at port `8082` are shown here.");
+    } else {
+      return new MarkdownString(
+        "Docker is not available. Start (or install) Docker to control local Kafka clusters and Schema Registry here.",
+      );
+    }
   }
 
   override async refresh(deepRefresh: boolean): Promise<void> {
@@ -428,7 +436,13 @@ export class LocalConnectionRow extends SingleEnvironmentConnectionRow<
   }
 
   get status(): string {
-    return this.connected ? this.kafkaCluster!.uri! : "(Not Running)";
+    const isDockerAvailable = getContextValue(ContextValues.dockerServiceAvailable) === true;
+
+    if (isDockerAvailable) {
+      return this.connected ? this.kafkaCluster!.uri! : "(Local Kafka not running)";
+    } else {
+      return "(Docker Unavailable)";
+    }
   }
 }
 
@@ -476,6 +490,7 @@ export class ResourceViewProvider
       ccloudConnected.event(this.ccloudConnectedEventHandler.bind(this)),
       localKafkaConnected.event(this.localConnectedEventHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localConnectedEventHandler.bind(this)),
+      dockerServiceAvailable.event(this.localConnectedEventHandler.bind(this)),
       directConnectionsChanged.event(this.reconcileDirectConnections.bind(this)),
       connectionStable.event(this.refreshConnection.bind(this)),
       connectionDisconnected.event(this.refreshConnection.bind(this)),
@@ -496,7 +511,8 @@ export class ResourceViewProvider
    * connection state changes.
    */
   async localConnectedEventHandler(): Promise<void> {
-    // Refresh the local connection row when either local Kafka or local Schema Registry
+    // Refresh the local connection row when local Kafka, local Schema Registry,
+    // or entire Docker subsystem connection state changes.
     // connection state changes.
     await this.refreshConnection(LOCAL_CONNECTION_ID, true);
   }

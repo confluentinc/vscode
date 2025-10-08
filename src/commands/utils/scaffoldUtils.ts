@@ -1,3 +1,4 @@
+/** Utilities used by the scaffold commands */
 import * as vscode from "vscode";
 
 import { posix } from "path";
@@ -5,114 +6,39 @@ import { unzip } from "unzipit";
 import { ViewColumn } from "vscode";
 import {
   ApplyScaffoldV1TemplateOperationRequest,
+  ResponseError,
   ScaffoldV1Template,
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
-} from "./clients/scaffoldingService";
-import { ResponseError } from "./clients/sidecar";
-import { registerCommandWithLogging } from "./commands";
-import { projectScaffoldUri } from "./emitters";
-import { logError } from "./errors";
-import { ResourceLoader } from "./loaders";
-import { CCloudResourceLoader } from "./loaders/ccloudResourceLoader";
-import { Logger } from "./logging";
-import { CCloudFlinkComputePool } from "./models/flinkComputePool";
-import { KafkaCluster } from "./models/kafkaCluster";
-import { CCloudOrganization } from "./models/organization";
-import { KafkaTopic } from "./models/topic";
-import { showErrorNotificationWithButtons } from "./notifications";
-import { getTemplatesList, pickTemplate } from "./projectGeneration/templates";
-import { getSidecar } from "./sidecar";
-import { UserEvent, logUsage } from "./telemetry/events";
-import { removeProtocolPrefix } from "./utils/bootstrapServers";
-import { fileUriExists } from "./utils/file";
-import { WebviewPanelCache } from "./webview-cache";
-import { handleWebviewMessage } from "./webview/comms/comms";
-import { PostResponse, type post } from "./webview/scaffold-form";
-import scaffoldFormTemplate from "./webview/scaffold-form.html";
-type MessageSender = OverloadUnion<typeof post>;
-type MessageResponse<MessageType extends string> = Awaited<
-  ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
->;
+} from "../../clients/scaffoldingService";
+import { projectScaffoldUri } from "../../emitters";
+import { logError } from "../../errors";
+import { Logger } from "../../logging";
+import { showErrorNotificationWithButtons } from "../../notifications";
+import { getTemplatesList, pickTemplate } from "../../projectGeneration/templates";
+import { getSidecar } from "../../sidecar";
+import { logUsage, UserEvent } from "../../telemetry/events";
+import { fileUriExists } from "../../utils/file";
+import { WebviewPanelCache } from "../../webview-cache";
+import { handleWebviewMessage } from "../../webview/comms/comms";
+import { PostResponse, type post } from "../../webview/scaffold-form";
+import scaffoldFormTemplate from "../../webview/scaffold-form.html";
 
-interface PrefilledTemplateOptions {
+const logger = new Logger("scaffoldutils");
+const scaffoldWebviewCache = new WebviewPanelCache();
+
+export interface PrefilledTemplateOptions {
   templateCollection?: string;
   templateName?: string;
   templateType?: string;
   [key: string]: string | undefined;
 }
-const logger = new Logger("scaffold");
 
-const scaffoldWebviewCache = new WebviewPanelCache();
-export function registerProjectGenerationCommands(): vscode.Disposable[] {
-  return [
-    registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
-    registerCommandWithLogging("confluent.resources.scaffold", resourceScaffoldProjectRequest),
-    registerCommandWithLogging("confluent.artifacts.scaffold", scaffoldFlinkArtifact),
-  ];
-}
+type MessageSender = OverloadUnion<typeof post>;
+type MessageResponse<MessageType extends string> = Awaited<
+  ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
+>;
 
-async function resourceScaffoldProjectRequest(
-  item?: KafkaCluster | KafkaTopic | CCloudFlinkComputePool,
-) {
-  if (item instanceof KafkaCluster) {
-    const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
-    return await scaffoldProjectRequest(
-      {
-        bootstrap_server: bootstrapServers,
-        cc_bootstrap_server: bootstrapServers,
-        templateType: "kafka",
-      },
-      "cluster",
-    );
-  } else if (item instanceof KafkaTopic) {
-    const clusters = await ResourceLoader.getInstance(
-      item.connectionId,
-    ).getKafkaClustersForEnvironmentId(item.environmentId);
-    const cluster = clusters.find((c) => c.id === item.clusterId);
-    if (!cluster) {
-      void showErrorNotificationWithButtons(
-        `Unable to find Kafka cluster for topic "${item.name}".`,
-      );
-      return;
-    }
-    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
-    return await scaffoldProjectRequest(
-      {
-        bootstrap_server: bootstrapServers,
-        cc_bootstrap_server: bootstrapServers,
-        cc_topic: item.name,
-        topic: item.name,
-        templateType: "kafka",
-      },
-      "topic",
-    );
-  } else if (item instanceof CCloudFlinkComputePool) {
-    const organization: CCloudOrganization | undefined =
-      await CCloudResourceLoader.getInstance().getOrganization();
-    return await scaffoldProjectRequest(
-      {
-        cc_environment_id: item.environmentId,
-        cc_organization_id: organization?.id,
-        cloud_region: item.region,
-        cloud_provider: item.provider,
-        cc_compute_pool_id: item.id,
-        templateType: "flink",
-      },
-      "compute pool",
-    );
-  }
-}
-
-// Simple wrapper to set the templateType to "artifact" for Flink Artifacts/UDFs scaffold command
-async function scaffoldFlinkArtifact() {
-  return await scaffoldProjectRequest(
-    {
-      templateType: "artifact",
-    },
-    "artifact",
-  );
-}
 export const scaffoldProjectRequest = async (
   templateRequestOptions?: PrefilledTemplateOptions,
   telemetrySource?: string,
@@ -374,6 +300,26 @@ export async function applyTemplate(
   }
 }
 
+function parseErrorMessage(rawMessage: string): string {
+  try {
+    const parsed = JSON.parse(rawMessage);
+    if (parsed.errors && Array.isArray(parsed.errors)) {
+      return parsed.errors
+        .map((error: any) => {
+          const detail = error.detail || "Unknown error";
+          const pointer = error.source?.pointer || "unknown field";
+          const optionName = pointer.replace("/options/", "");
+          return `Invalid format for option '${optionName}': ${detail}`;
+        })
+        .join("\n");
+    }
+  } catch (e) {
+    logger.error("Failed to parse error message:", e);
+    return rawMessage;
+  }
+  return rawMessage;
+}
+
 async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) {
   try {
     const { entries } = await unzip(buffer);
@@ -483,49 +429,30 @@ export async function handleProjectScaffoldUri(
   }
 }
 
-function parseErrorMessage(rawMessage: string): string {
-  try {
-    const parsed = JSON.parse(rawMessage);
-    if (parsed.errors && Array.isArray(parsed.errors)) {
-      return parsed.errors
-        .map((error: any) => {
-          const detail = error.detail || "Unknown error";
-          const pointer = error.source?.pointer || "unknown field";
-          const optionName = pointer.replace("/options/", "");
-          return `Invalid format for option '${optionName}': ${detail}`;
-        })
-        .join("\n");
-    }
-  } catch (e) {
-    logger.error("Failed to parse error message:", e);
-    return rawMessage;
-  }
-  return rawMessage;
+/** Register a handler for handleProjectScaffoldUriEvent emitter. */
+export function setProjectScaffoldListener(): vscode.Disposable {
+  return projectScaffoldUri.event(handleProjectScaffoldUriEvent);
 }
 
-export function setProjectScaffoldListener(): vscode.Disposable {
-  const disposable = projectScaffoldUri.event(async (uri: vscode.Uri) => {
-    // manually parse the URI query since URLSearchParams will attempt to decode it again
-    const params = new Map<string, string>();
-    if (uri.query) {
-      const parts = uri.query.split("&");
-      for (const part of parts) {
-        const [key, value] = part.split("=");
-        if (key && typeof value !== "undefined") {
-          params.set(key, value);
-        }
+export async function handleProjectScaffoldUriEvent(uri: vscode.Uri): Promise<void> {
+  // manually parse the URI query since URLSearchParams will attempt to decode it again
+  const params = new Map<string, string>();
+  if (uri.query) {
+    const parts = uri.query.split("&");
+    for (const part of parts) {
+      const [key, value] = part.split("=");
+      if (key && typeof value !== "undefined") {
+        params.set(key, value);
       }
     }
+  }
 
-    const collection = params.get("collection") ?? null;
-    const template = params.get("template") ?? null;
-    const isFormNeeded = params.get("isFormNeeded") === "true";
+  const collection = params.get("collection") ?? null;
+  const template = params.get("template") ?? null;
+  const isFormNeeded = params.get("isFormNeeded") === "true";
 
-    params.delete("collection");
-    params.delete("template");
-    const options: { [key: string]: string } = Object.fromEntries(params.entries());
-    await handleProjectScaffoldUri(collection, template, isFormNeeded, options);
-  });
-
-  return disposable;
+  params.delete("collection");
+  params.delete("template");
+  const options: { [key: string]: string } = Object.fromEntries(params.entries());
+  return await handleProjectScaffoldUri(collection, template, isFormNeeded, options);
 }

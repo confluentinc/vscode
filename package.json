@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-14",
+  "version": "1.8.0-18",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -352,7 +352,8 @@
       },
       {
         "command": "confluent.copyResourceUri",
-        "title": "Copy URI",
+        "title": "Copy URL",
+        "comment": "Using the label 'URL' here instead of 'URI' since these are web URLs, not URIs, and 'URL' matches the terminology used in scaffolding templates.",
         "category": "Confluent: Resources"
       },
       {
@@ -1839,7 +1840,7 @@
         },
         {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && confluent.dockerServiceAvailable && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
           "group": "inline"
         },
         {
@@ -2415,7 +2416,7 @@
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^18.19.67",
+    "@types/node": "^22.17.0",
     "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
