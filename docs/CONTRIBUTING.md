@@ -1,4 +1,4 @@
-# Confluent For VS Code Contributing Guide 📖
+# Confluent for VS Code Contributing Guide 📖
 
 We are grateful for your interest in contributing to the Confluent VSCode extension. This guide
 includes information on:
@@ -28,36 +28,21 @@ There are three main ways to contribute:
      follow our
      [Code of Conduct](https://github.com/confluentinc/vscode/blob/cc4f9e149bca18776bd9dfdbcf241de332495dfc/CODE_OF_CONDUCT.md#L4).
 
-## Getting Started For the First Time
+## Getting started for the first time
 
 Quicklinks:
 
-- [Project Overview](#project-overview)
-- [Codebase Overview](#codebase-overview)
+- [Project overview](#project-overview)
 - [Issues](#issues)
 - [Tools and Prerequisites](#tools-and-prerequisites)
 - [One Time Setup and Pull Requests](#one-time-setup-and-pull-requests)
 - [Testing](#testing)
 
-### Project Overview
+### Project overview
 
-Our README contains a project overview, including a description of the extension's features and
-functionality. You can find it
-[on the main page of the repository](https://github.com/confluentinc/vscode?tab=readme-ov-file#confluent-for-vs-code).
-Again, you can also find the official documentation for the extension
+Our [README](../README.md) contains a project overview, including a description of the extension's
+features and functionality. Again, you can also find the official documentation for the extension
 [on the Confluent website](https://docs.confluent.io/cloud/current/client-apps/vs-code-extension.html).
-
-### Codebase Overview
-
-```mermaid
-flowchart TD
-    vscode --> resources["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/resources'>Static resources</a>"]
-    vscode --> src["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src'>Source code</a>"]
-    src --> clients["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src/clients'>Generated API clients</a>"]
-    src --> graphql["<a href='https://github.com/confluentinc/vscode/tree/2bbeecad5a021d793082135c33019eea333bf940/src/graphql'>GraphQL definitions</a>"]
-    src --> extension["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/src/extension.ts'>Extension entry point</a>"]
-    vscode --> package.json["<a href='https://github.com/confluentinc/vscode/blob/2bbeecad5a021d793082135c33019eea333bf940/package.json'>package.json</a>"]
-```
 
 ### Issues
 
@@ -74,15 +59,18 @@ If a related issue doesn't exist, you can open a new issue using a relevant
 
 #### Solve an issue
 
-Scan through our [existing issues](https://github.com/github/confluentinc/vscode/issues) to find one
-that interests you. You can narrow down the search using `labels` as filters. See
-"[Label reference](https://docs.github.com/en/contributing/collaborating-on-github-docs/label-reference)"
-for more information. As a general rule, you are welcome to open a PR with a fix unless that issue
-is already assigned to someone else, or someone else has added a comment that they are working on
-it. Currently unassigned issues can be found using
-[this filter](https://github.com/confluentinc/vscode/issues?q=is%3Aissue%20state%3Aopen%20no%3Aassignee%20-label%3Arelease%20).
+Scan through our [existing issues](https://github.com/confluentinc/vscode/issues) to find one that
+interests you. You can narrow down the search using `labels` as filters. See GitHub's
+[label reference docs](https://docs.github.com/en/contributing/collaborating-on-github-docs/label-reference)
+for more information.
 
-### One Time Setup and Pull Requests
+<!-- prettier-ignore -->
+> [!NOTE]
+> As a general rule, you are welcome to open a PR with a fix unless that issue is already assigned
+> to someone else, or someone else has added a comment that they are working on it.
+> Currently unassigned issues can be found using [this filter](https://github.com/confluentinc/vscode/issues?q=is%3Aissue%20state%3Aopen%20no%3Aassignee%20-label%3Arelease%20).
+
+### One-time setup and pull requests
 
 All changes are made through [pull requests (PRs)](https://github.com/confluentinc/vscode/pulls).
 Every PR's [Semaphore CI/CD build](https://semaphoreci.com/) must pass. The Confluent team will
@@ -106,7 +94,7 @@ needed for development. These steps are outlined below.
 - [ ] Set up your local Git repository to track the upstream repository, learn to build, clean and
       format locally (see [Sync your repo with ours](#sync-your-repo-with-ours)).
 
-### Tools and Prerequisites
+### Tools and prerequisites
 
 If you want to work with this project's codebase and maybe contribute to it, you will need to have
 some development tools. We use GitHub, so
@@ -132,7 +120,7 @@ should be at least `2.40.0` or later,
     node --version
 ```
 
-should be `18.12.0` or later, and
+should be `22.17.0` or later, and
 
 ```bash
     code --version
@@ -332,7 +320,7 @@ The build will create a lot of local files. You can clean up these generated fil
 Cleaning is often useful to ensure that all generated files, JARs and executables are removed,
 before rerunning the build and tests.
 
-#### Formatting
+### Formatting
 
 We use [Prettier](https://prettier.io/) for code formatting. To format the code, run:
 
@@ -347,38 +335,33 @@ which will format `typescript` documents **on save** based on the `.prettierrc` 
 
 ### Testing
 
-This project uses unit tests and integration tests to verify functionality and identify regressions.
+This project uses unit, integration, functional (webview), and end-to-end (E2E) tests to verify
+functionality and identify regressions.
 
-#### Unit tests
+#### Unit and integration tests
 
-Unit tests usually located next to modules they cover. Look for `xxx.test.ts` pattern of files in
-`src` folder. We use [Mocha](https://mochajs.org) for writing unit tests. To run the existing tests:
+We use [Mocha](https://mochajs.org) for writing unit and integration tests, and
+[Sinon](https://sinonjs.org/) for stubbing. These tests are located in the same directories as the
+production code they test, and follow the `*.test.ts` naming pattern. (For example,
+[`src/commands/connections.test.ts`](../src/commands/connections.test.ts) contains tests for
+[`src/commands/connections.ts`](../src/commands/connections.ts).)
+
+To run the existing tests:
 
 ```bash
     gulp test
 ```
 
-You can also specify a pattern (either for `describe` label or `it` labels) to lookup to run
-specific tests:
+You can also specify a test name/title (either from a `describe` or `it` block) to run specific
+tests:
 
 ```bash
     gulp test -t 'should register all commands'
     gulp test -t 'Extension manifest tests'
 ```
 
-Unit tests should test small, isolated classes and functionality, and should not be unnecessarily
-complex.
-
-#### Running a single unit test
-
-You can run individual unit tests by using the following syntax:
-
-```bash
-    gulp test -t 'should register all commands'
-    gulp test -t 'Extension manifest tests'
-```
-
-Or by adding `.only` after a `describe` or `it` block in the test file:
+Or add `.only` after a `describe` or `it` block in the test file (see
+[docs](https://mochajs.org/#exclusive-tests)):
 
 ```typescript
 describe.only("Extension manifest tests", () => {
@@ -388,7 +371,55 @@ describe.only("Extension manifest tests", () => {
 });
 ```
 
-Remember to remove `.only` after running the test and before making a PR!
+<!-- prettier-ignore -->
+> [!WARNING]
+> Remember to remove `.only` after running the test(s) and before raising a PR for review!
+
+#### Functional webview tests
+
+Functional tests are written for the content the extension displays in
+[webviews](https://code.visualstudio.com/api/ux-guidelines/webviews). These tests run using the
+[Playwright Test](https://playwright.dev) framework and cover the webviews' content and behavior
+from the perspective of user interactions.
+
+To run the existing tests:
+
+```bash
+    gulp functional
+```
+
+#### End-to-end tests
+
+End-to-end (E2E) tests are written for the extension's functionality in a real VS Code environment.
+These tests use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to launch
+VS Code and interact with it programmatically. The tests are located in the
+[`tests/e2e`](../tests/e2e) directory.
+
+See [E2E tests using Playwright](../tests/README.md#e2e-tests-using-playwright) for more information
+on running, writing, and debugging E2E tests.
+
+To run the existing tests::
+
+```bash
+    gulp e2e
+```
+
+#### Filtering Playwright tests
+
+Similar to the Mocha tests, Playwright tests (functional or E2E) can also be filtered by test
+name/title using the `-t` flag:
+
+```bash
+    gulp functional -t 'should render with the correct title'
+```
+
+```bash
+    gulp e2e -t 'Project Scaffolding'
+```
+
+The `.only` pattern is also supported by using
+[`test.describe.only`](https://playwright.dev/docs/api/class-test#test-describe-only) and/or
+[`test.only`](https://playwright.dev/docs/api/class-test#test-only) in the test file.
 
 #### Clicktesting the VS Code extension against the sidecar
 
@@ -446,63 +477,24 @@ directory to the `vscode/bin/` directory.
 8. Run the extension either via **Run > Start Debugging** (F5) or by packaging the .vsix and
    installing with `gulp clicktest`.
 
-#### Functional tests
+## Reference for contributors
 
-Functional tests are written for the content the extension display in Web views. These tests run
-using [Playwright Test](https://playwright.dev) framework. The tests cover UI behavior of the Web
-views content from perspective of the user interacting with them. To run the tests, use respective
-task:
+### Release process
 
-```bash
-    gulp functional
-```
+Most development occurs on the `main` branch. Larger feature branches may be created off of `main`
+for development, and then merged back into `main` when complete.
 
-#### E2E tests
+We use [semantic versioning](https://semver.org/), so our version numbers are of the form
+`v.MAJOR.MINOR.PATCH`, such as `v1.2.0`. We create release branches off of `main` using a
+`v.MAJOR.MINOR.x` pattern (for example, `v1.2.x`), and create and publish releases off of those
+branches.
 
-End-to-end (E2E) tests are written for the extension's functionality in a real VS Code environment.
-These tests use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to launch
-VS Code and interact with it programmatically. The tests are located in the
-[`tests/e2e`](../tests/e2e) directory.
+If we need to patch a release, we will create a PR against the associated `v.MAJOR.MINOR.x` release
+branch before releasing a patch version (for example, `v1.2.1`). If we need to make additional
+fixes, we'll continue to do so against this same branch and release subsequent patch versions (e.g.,
+`v1.2.2`, `v1.2.3`, etc).
 
-Go to [E2E Tests using Playwright](../tests/README.md#e2e-tests-using-playwright) section for more
-information on running, debugging and writing E2E tests.
-
-In short, to run the E2E tests, use the following command:
-
-```bash
-    gulp e2e
-```
-
-#### Running the tests
-
-To run unit tests:
-
-```bash
-    gulp test
-```
-
-To run functional tests:
-
-```bash
-    gulp functional
-```
-
-## Reference for Contributors
-
-### Release Process
-
-Most development occurs on the `main` branch. Therefore, most PRs will target the `main` branch, and
-be merged to the `main` branch. We use [semantic versioning](https://semver.org/), so our version
-numbers are of the form `v.MAJOR.MINOR.PATCH`, such as `v1.2.0`. We will release all major and minor
-releases from the `main` branch.
-
-If we need to patch a previously-released major or minor release, we will create a `v.MAJOR.MINOR.x`
-branch (e.g., `v1.2.x`), and we create PRs against this branch for all fixes and changes. When the
-patch is ready, we'll release the first `v.MAJOR.MINOR.1` patch version (e.g., `v1.2.1`). If we need
-to make additional fixes, we'll continue to do so against this same branch and release subsequent
-patch versions (e.g., `v1.2.2`, `v1.2.3`, etc).
-
-This project's releases will be published to
+This project's releases (and pre-releases) are published to
 [GitHub releases](https://github.com/confluentinc/vscode/releases).
 
 ### Updating OpenAPI clients
