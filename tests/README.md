@@ -1,27 +1,39 @@
 # VS Code Extension Tests
 
+This extension uses multiple testing approaches to ensure quality:
+
+- **[Mocha](https://mochajs.org)** for unit and integration tests (with
+  [Sinon](https://sinonjs.org/) for stubbing)
+- **[Playwright](https://playwright.dev/)** for functional webview tests and end-to-end (E2E) tests
+
+Unit and integration tests are co-located with production code in `*.test.ts` files, while
+functional and E2E tests have dedicated locations described below.
+
 ## Folder structure
 
-- `unit` directory contains the a few utility functions that are used by the unit tests co-located
-  with the production code in the [`src/`](../src) directory.
-- `stubs` directory contains the stubs for the production code that are used by the unit tests.
-- `e2e` as the name suggests, contains the end-to-end (E2E) tests.
-- `fixtures` directory contains the fixtures for all tests. Use the `loadFixture` function in
-  [`fixtures/utils.ts`](fixtures/utils.ts) to read a particular fixture file.
+- [`./e2e/`](./e2e/) contains the E2E test specs, utility functions, and page object models.
+- [`./fixtures/`](./fixtures/) contains the fixtures for all tests. Use the `loadFixture` function
+  in [`./fixtures/utils.ts`](fixtures/utils.ts) to read a particular fixture file.
+- [`./stubs/`](./stubs/) contains commonly-used Sinon
+  [stub](https://sinonjs.org/releases/latest/stubs/) helper functions that are used by the Mocha
+  tests.
+- [`./unit/`](./unit/) contains utility functions and fixtures for Mocha tests (`*.test.ts`)
+  co-located with the production code in the [`src/`](../src) directory.
 
-## E2E Tests using Playwright
+## E2E testing with Playwright
 
 The E2E tests use [Playwright with Electron](https://playwright.dev/docs/api/class-electron) to
 launch VS Code and interact with it programmatically.
 
-### E2E Folder structure
+### E2E folder structure
 
-- `playwright.config.ts` file contains the configuration for the E2E tests. (Note: This is not to be
-  confused with the `playwright.config.ts` file in the root of the project. The root configuration
-  file is used to run the `*.spec.ts` files in the `src` directory for webview-specific testing via
-  `gulp functional`.).)
-- `specs` directory contains the test files.
-- `specs/utils` directory contains utility functions for the tests.
+- [`./e2e/playwright.config.ts`](./e2e/playwright.config.ts) contains the Playwright configuration
+  for E2E tests. (The root [`playwright.config.ts`](../playwright.config.ts) is used for functional
+  webview tests via `gulp functional`.)
+- [`./e2e/specs/`](./e2e/specs/) contains the test files.
+- [`./e2e/utils/`](./e2e/utils/) contains utility functions for the tests.
+- [`./e2e/objects/`](./e2e/objects/) contains [page object models](https://playwright.dev/docs/pom)
+  for the tests.
 
 <!-- prettier-ignore -->
 > [!NOTE]
@@ -34,12 +46,6 @@ launch VS Code and interact with it programmatically.
 
 ### Running the E2E tests
 
-<!-- prettier-ignore -->
-> [!IMPORTANT]
-> Please close any already-open VS Code windows before running the tests. This is
-> because the tests launch their own VS Code instance and need to properly handle browser auth
-> callbacks.
-
 We currently run the tests against Confluent Cloud production environment. We may add support for
 running against other non-production environments in the future.
 
@@ -51,45 +57,203 @@ First, we'll need to install the dependencies:
 make install-dependencies
 ```
 
-Next, we'll need a `.env` file with the following environment variables:
+#### Configure environment variables
 
-- `E2E_USERNAME`: Confluent Cloud username
-- `E2E_PASSWORD`: Confluent Cloud password
-- `E2E_SR_API_KEY`: Confluent Cloud API key text for accessing a particular Schema Registry server
+Next, we'll need a `.env` file with the following environment variables depending on which test(s)
+are being run:
 
-If you're a Confluent engineer, you can run the following commands to set this up:
+- For running tests requiring a Confluent Cloud connection (tagged with `@ccloud`):
+  - `E2E_USERNAME`: Confluent Cloud username
+  - `E2E_PASSWORD`: Confluent Cloud password
+- For running tests requiring a direct connection (tagged with `@direct`) using CCloud API keys:
+  - Including a configuration for a Kafka cluster:
+    - `E2E_KAFKA_API_KEY`: API key for the Kafka cluster
+    - `E2E_KAFKA_API_SECRET`: API secret for the Kafka cluster
+    - `E2E_KAFKA_BOOTSTRAP_SERVERS`: Bootstrap servers for the Kafka cluster
+  - Including a configuration for a Schema Registry:
+    - `E2E_SR_API_KEY`: API key for the Schema Registry server
+    - `E2E_SR_API_SECRET`: API secret for the Schema Registry server
+    - `E2E_SR_URL`: URL for the Schema Registry server
+
+If you're a Confluent engineer, you can run the following commands to populate the `.env` file with
+the environment variables listed above:
 
 ```bash
 vault login -method=oidc -path=okta
 make setup-test-env
 ```
 
-#### Running all tests
+#### Running tests
 
-As simple as:
+To run all existing E2E tests:
 
 ```bash
 gulp e2e
 ```
 
-#### Running a specific test
-
 To run a specific test, use the `-t` flag:
 
 ```bash
-gulp e2e -t <test-name>
+gulp e2e -t "<test-name>"
 # For example, to run the test for submitting a Flink statement with a SELECT query:
 gulp e2e -t "should submit Flink statement - SELECT"
 ```
 
+The `.only` pattern is also supported by using
+[`test.describe.only`](https://playwright.dev/docs/api/class-test#test-describe-only) and/or
+[`test.only`](https://playwright.dev/docs/api/class-test#test-only) in the test file.
+
 #### Running the tests using a specific VS Code version
 
-If you wanted to run the tests in a specific VS Code version, you can set the `VSCODE_VERSION`
-environment variable:
+If you want to run the tests in a specific VS Code version, set the `VSCODE_VERSION` environment
+variable to a valid VS Code version (like `1.104.0`) or to `insiders` to use the latest VS Code
+Insiders build.
+
+For example, to run the tests in VS Code `1.104.0`:
 
 ```bash
-VSCODE_VERSION=1.93.2 gulp e2e
+VSCODE_VERSION=1.104.0 gulp e2e
 ```
+
+### Writing E2E tests
+
+E2E tests use
+[`electron-playwright-helpers`](https://github.com/spaceagetv/electron-playwright-helpers?tab=readme-ov-file#functions)
+to interact with native system dialogs and Electron-specific functionality.
+
+To create a new E2E test:
+
+1. **Check for existing patterns.** Review tests in `tests/e2e/specs` for similar functionality.
+   Create a new file named `<feature-name>.spec.ts` if needed.
+
+1. **Start with the basic structure.** Use this example as a starting point:
+
+   ```typescript
+   import { expect } from "@playwright/test";
+   import { test } from "../baseTest";
+   import { ConnectionType } from "../connectionTypes";
+   import { TopicsView } from "../objects/views/TopicsView";
+   import { TopicItem } from "../objects/views/viewItems/TopicItem";
+   import { Tag } from "../tags";
+
+   test.describe("<feature-name>", { tag: [Tag.FeatureNameHere] }, () => {
+     // Use the `connectionItem` fixture to automatically set up a connection for your test, if the
+     // test requires a CCloud, local, and/or direct connection.
+     test.use({ connectionType: ConnectionType.Ccloud });
+
+     test.beforeEach(async ({ connectionItem }) => {
+       // The connectionItem fixture ensures the connection is set up and expanded in the Resources
+       // view, and handles teardown automatically after the test completes.
+       await expect(connectionItem.locator).toHaveAttribute("aria-expanded", "true");
+     });
+
+     test("should open message viewer from a topic", async ({ page }) => {
+       // Use existing page object models for common interactions
+       const topicsView = new TopicsView(page);
+       await topicsView.loadTopics(ConnectionType.Ccloud, SelectKafkaCluster.FromResourcesView);
+
+       // Find a specific topic using the `.topics` locator getter method
+       const targetTopic = topicsView.topics.filter({ hasText: "my-topic" }).first();
+       await expect(targetTopic).toBeVisible();
+
+       // Use the TopicItem page object to interact with the topic
+       const topicItem = new TopicItem(page, targetTopic);
+       // Perform actions like opening the message viewer
+       const messageViewer = await topicItem.clickViewMessages();
+       await expect(messageViewer.content).toBeVisible();
+     });
+   });
+   ```
+
+1. **Leverage fixtures for setup and teardown.** Playwright
+   [fixtures](https://playwright.dev/docs/test-fixtures) are set up in
+   [`tests/e2e/baseTest.ts`](./e2e/baseTest.ts). These mainly include common setup and teardown
+   operations for different connection types (CCloud, local, and/or direct) that you can use in your
+   tests.
+
+1. **Reuse page object models.** Review existing
+   [page object models](https://playwright.dev/docs/pom) in [`tests/e2e/objects`](./e2e/objects/) to
+   see if you can reuse or extend them for commonly-used locators and interactions.
+
+   - Before creating or extending page object models, you'll need to determine which locator(s) are
+     needed for the test(s). Here are some common ways to find the right locators:
+
+     - **Inspect the DOM directly**: Open VS Code and navigate to `Help > Toggle Developer Tools` to
+       inspect the DOM while clicking around the UI. This is useful for understanding the structure
+       of the elements you want to interact with.
+
+       ![](../resources/tests-readme-devtools-elements.png)
+
+     - **Use Playwright inspector in debug mode**: Start debugging your test and use the "Record"
+       button in the Playwright inspector to record actions and generate locators automatically.
+       This even works for webview iframes!
+
+       ```bash
+       PWDEBUG=1 gulp e2e -t "<test-name>"
+       ```
+
+       ![](../resources/tests-readme-playwright-inspector.png)
+
+#### Tips for writing tests
+
+1. **Use narrowly-focused locators to avoid multiple matches.** Playwright runs in
+   [strict mode](https://playwright.dev/docs/locators#strictness) by default, which means locators
+   that match multiple elements will throw an error. To avoid this:
+
+   - Use specific attributes like `data-testid`, `role`, or `aria-label` when possible
+   - Chain locators to narrow the scope: `page.locator('.container').getByText('Submit')`
+   - Use `.first()`, `.last()`, or `.nth()` only when you genuinely need one of multiple identical
+     elements
+   - Use `.filter()` to narrow down matches based on additional criteria
+
+   ```typescript
+   // ❌ May match multiple elements in strict mode
+   await page.getByText("Hello").click();
+
+   // ✅ Narrow the scope using chaining
+   await page.locator(".greeting-container").getByText("Hello").click();
+
+   // ✅ Use .first() only when multiple matches are expected
+   await page.getByText("Hello").first().click();
+
+   // ✅ Filter by additional criteria
+   await page.getByRole("button").filter({ hasText: "Submit" }).click();
+   ```
+
+1. **Always use [auto-await](https://playwright.dev/docs/actionability) patterns instead of
+   arbitrary timeouts.** Playwright's assertions automatically wait and retry until the condition is
+   met (or timeout). This makes tests more reliable and faster than using `page.waitForTimeout()`,
+   which may not behave as expected on different systems (especially tests run locally versus in
+   CI).
+
+   ```typescript
+   // ❌ Avoid arbitrary timeouts - brittle and slow
+   await page.waitForTimeout(3000);
+   const text = await page.locator(".status").textContent();
+   if (text === "Ready") {
+     // ...
+   }
+
+   // ✅ Use auto-waiting assertions - reliable and fast
+   await expect(page.locator(".status")).toHaveText("Ready");
+
+   // ✅ Wait for elements to be in the right state before interacting
+   await expect(button).toBeEnabled();
+   await button.click();
+
+   // ✅ Wait for visibility before proceeding
+   await expect(page.locator(".modal")).toBeVisible();
+   await expect(page.locator(".loading-spinner")).not.toBeVisible();
+   ```
+
+1. **For webview `iframe` elements, set the `data-testid` attribute** on elements you're testing.
+   (See existing implementations
+   [here](https://github.com/search?q=repo%3Aconfluentinc%2Fvscode+data-testid+language%3AHTML&type=code&l=HTML).)
+   This makes it easy to locate elements within your test code or page object model(s).
+
+1. **Skip bundling when iterating on tests.** If you haven't changed production code in the `src`
+   directory, use `gulp e2eRun` instead of `gulp e2e` to bypass the bundling step and speed up test
+   iteration.
 
 ### Debugging the E2E tests
 
@@ -99,138 +263,8 @@ for a detailed guide on debugging Playwright tests.
 To debug a particular test, set the `PWDEBUG` environment variable to `1` and run the test:
 
 ```bash
-PWDEBUG=1 gulp e2e -t <test-name>
+PWDEBUG=1 gulp e2e -t "<test-name>"
 ```
 
-This will launch the test in debug mode, and you can use the Playwright inspector to debug the test.
-The Playwright inspector is extremely useful to pick locators in the VS Code window to use in the
-tests.
-
-### Writing E2E tests
-
-#### Getting familiar with the libraries we use
-
-1. [`vscode-test-playwright`](https://github.com/ruifigueira/vscode-test-playwright/) -- the main
-   library we use to run the Playwright tests in a VS Code Electron instance.
-
-   Here are some of the key features that the library provides (taken from its README):
-
-   - Enables direct interaction with VSCode UI elements using Playwright selectors.
-   - Allows programmatic interaction with VSCode APIs to simulate user actions or access internal
-     state.
-   - Captures detailed information about test execution, including screenshots, network requests,
-     and console logs.
-
-   See
-   [here](https://github.com/ruifigueira/vscode-test-playwright/blob/48b0eeb60c9e6bec3b77df032707155daffa8d74/src/index.ts#L24-L31)
-   for the list of test fixtures offered by the library.
-
-1. [`electron-playwright-helpers`](https://github.com/spaceagetv/electron-playwright-helpers?tab=readme-ov-file#functions)
-   -- like the name suggests, it offers useful helpers to stub the Electron dialog windows among
-   other utilities.
-
-   Grep for `stubMultipleDialogs` to see how we use it to stub the Electron dialog windows during
-   the Confluent Cloud authentication flow.
-
-#### Process for writing new tests
-
-This section outlines our current approach to writing E2E tests. As our testing practices evolve,
-this guide will be updated accordingly.
-
-To create a new E2E test:
-
-1. Review existing tests in `tests/e2e/specs` for similar functionality. If none exist, create a new
-   test file named `<feature-name>.spec.ts`.
-
-1. Use this basic test structure as a starting point:
-
-   ```typescript
-   import { expect } from "@playwright/test";
-   import { test } from "./baseTest";
-   import { openConfluentSidebar } from "../utils/sidebarNavigation";
-
-   test.describe("<feature-name>", () => {
-     test.beforeEach(async ({ page }) => {
-       // This is a helper function that opens the extension sidebar in the VS Code window.
-       await openConfluentSidebar(page);
-     });
-
-     test("should do something", async ({ page, electronApp }) => {
-       // Write the test code here, use the `page` object to
-       // interact with the VS Code window.
-
-       // Use the `expect` function to assert any expected behavior.
-       await expect(true).toBe(true);
-     });
-   });
-   ```
-
-1. You'll need to figure out the UI locators to use in the test. For this, start debugging the test
-   you just created and then click the "Record" button in the Playwright inspector. This will record
-   the actions you perform in the VS Code window and generate the locators for you. This even works
-   for Webview iframes!
-
-   ```bash
-   PWDEBUG=1 gulp e2e -t <test-name>
-   ```
-
-1. That's it. You can now start writing the test using the generated locators.
-
-#### Tips for writing tests
-
-1. If you're testing a Webview iframe, **make sure to set the `data-testid` attribute** on the
-   elements you're testing. This makes it _much_ easier to locate the elements from your test code.
-1. **The [`tests`](https://github.com/ruifigueira/vscode-test-playwright/tree/main/tests) directory
-   in the vscode-test-playwright repository is a good reference** if you're looking for examples of
-   how to use the library. For instance, here's a
-   [test](https://github.com/ruifigueira/vscode-test-playwright/blob/main/tests/integration.spec.ts#L11-L18)
-   that demonstrates testing Webview iframes in the Electron window. This proved mighty useful for
-   testing the [Flink Statement Results Viewer](./e2e/specs/flinkStatement.spec.ts#L58) which is
-   implemented as a Webview iframe.
-1. If you haven't changed anything in the production code in the `src` directory, you don't have to
-   bundle a new VSIX each time while iterating on the tests. **Use `gulp e2eRun` in place of
-   `gulp e2e` to run the tests to bypass the bundling step.**
-
-#### Gotchas encountered while developing and debugging tests
-
-Here are some gotchas that we've encountered while developing and debugging the tests:
-
-1. **Brace yourself for a lot of flakiness.**
-
-   To illustrate from a particular example, we've found that the VS Code Command Palette disappears
-   when focus shifts to another UI element. For example, consider a test that expands a subject in
-   the Schemas view, then opens the Command Palette and starts typing. If the subject's schemas
-   finish loading during this sequence, it can steal focus from the Command Palette, causing it to
-   close unexpectedly. Any remaining keystrokes would then be sent to a different UI element, like
-   an open editor.
-
-   In most cases, you wouldn't be able to predict exactly what sequence of actions will cause
-   flakiness, so you'll have to be patient and debug the root cause using the
-   [Playwright Trace Viewer](https://playwright.dev/docs/trace-viewer), Then, once you've narrowed
-   down a potential root cause, add sufficient guardrails (or worst case, time delays) to ensure the
-   flakiness goes away. In the example mentioned above, a deterministic fix would be to wait (using
-   `await expect(<locator>).toBeVisible();`) for the subject schemas to be listed before proceeding
-   to open the Command Palette.
-
-1. If you're using `page.getByText` (or similar `getBy*` APIs) to locate an element, you may (almost
-   always) run into cases where it's going to match multiple elements. In most cases, the first
-   element is what you want, so you can use the `first` modifier to get the first element.
-
-   ```typescript
-   await page.getByText("Hello").first();
-   ```
-
-### Future improvements and areas for exploration
-
-Here are some areas that we've yet to explore and that we may explore in the future:
-
-1. **Running the tests in Semaphore CI**
-
-   The test suite is not yet set up to run in Semaphore CI. Take a look at
-   [this PR](https://github.com/confluentinc/vscode/pull/1885) for a previous attempt at this.
-
-1. **Code coverage from the E2E tests**
-
-   We've not yet explored the possibility of generating code coverage reports from the E2E tests.
-   This would be useful to identify which parts of the production code are not being exercised by
-   the tests.
+This will launch the test with a Playwright inspector window to debug the test. The Playwright
+inspector is extremely useful to pick locators in the VS Code window to use in the tests.
