@@ -170,7 +170,6 @@ describe("commands/flinkStatements.ts", () => {
 
     it("should delete a valid FlinkStatement", async () => {
       const statement = createFlinkStatement();
-      stubbedLoader.deleteFlinkStatement.resolves();
 
       await deleteFlinkStatementCommand(statement);
 

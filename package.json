@@ -353,7 +353,6 @@
       {
         "command": "confluent.copyResourceUri",
         "title": "Copy URL",
-        "comment": "Using the label 'URL' here instead of 'URI' since these are web URLs, not URIs, and 'URL' matches the terminology used in scaffolding templates.",
         "category": "Confluent: Resources"
       },
       {
@@ -2054,7 +2053,6 @@
         },
         {
           "command": "confluent.flinkStatementResults",
-          "comment": "statements whose results are not viewable will have context value of '...flink-statement-not-viewable', so note the $ at the end of the regex to exclude those",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
         },
