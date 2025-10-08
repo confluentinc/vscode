@@ -10,7 +10,6 @@ import {
 import { ExtensionContextNotSetError } from "./errors";
 import { getRefreshableViewProviders } from "./extension";
 import { ResourceManager } from "./storage/resourceManager";
-import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
 
 describe("Base Extension Test", () => {
@@ -41,11 +40,6 @@ describe("ExtensionContext", () => {
         callable: () => TopicViewProvider.getInstance(),
         source: "TopicViewProvider",
         clear: () => (TopicViewProvider["instance"] = null),
-      },
-      {
-        callable: () => SchemasViewProvider.getInstance(),
-        source: "SchemasViewProvider",
-        clear: () => (SchemasViewProvider["instance"] = null),
       },
       {
         callable: () => ConfluentCloudAuthProvider.getInstance(),
