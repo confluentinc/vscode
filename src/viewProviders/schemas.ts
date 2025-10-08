@@ -606,7 +606,6 @@ export class SchemasViewProvider
     return this.schemaRegistry !== null && isCCloud(this.schemaRegistry);
   }
 }
-
 /** Get the singleton instance of the {@link SchemasViewProvider} */
 export function getSchemasViewProvider() {
   return SchemasViewProvider.getInstance();

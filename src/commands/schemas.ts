@@ -22,7 +22,7 @@ import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
-import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { getSchemasViewProvider } from "../viewProviders/newSchemas";
 import {
   confirmSchemaSubjectDeletion,
   confirmSchemaVersionDeletion,
@@ -94,7 +94,7 @@ export async function viewLocallyCommand(schema: Schema) {
 
 /** Copy the Schema Registry ID from the Schemas tree provider nav action. */
 export async function copySchemaRegistryIdCommand() {
-  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().resource;
   if (!schemaRegistry) {
     return;
   }
@@ -568,7 +568,7 @@ export async function uploadSchemaFromFileCommand(
     // the only way we get here is if the user clicked the action in the Schemas view nav area, so
     // we need to get the focused schema registry
     const schemaViewProvider = getSchemasViewProvider();
-    registry = schemaViewProvider.schemaRegistry!;
+    registry = schemaViewProvider.resource!;
   }
   if (!registry) {
     logger.error("Could not determine schema registry");
