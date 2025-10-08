@@ -58,10 +58,6 @@ export class SchemasViewProvider
     this.setParentResource(schemaRegistry);
   }
 
-  isFocusedOnCCloud(): boolean {
-    return (this.resource && isCCloud(this.resource)) || false;
-  }
-
   /**
    * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
    * in the schema registry.
@@ -393,6 +389,11 @@ export class SchemasViewProvider
         extra: { functionName: "revealSchema" },
       });
     }
+  }
+
+  /** Are we currently viewing a CCloud-based schema registry? */
+  isFocusedOnCCloud(): boolean {
+    return (this.resource && isCCloud(this.resource)) || false;
   }
 }
 
