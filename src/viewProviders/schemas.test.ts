@@ -659,7 +659,7 @@ describe("SchemasViewProvider", () => {
 
     it("should call treeView.reveal() to reveal the schema if in map", async () => {
       // Add the schema's subject to the map with schemas
-      subjectsInTreeView.set(TEST_CCLOUD_SCHEMA.subject, TEST_CCLOUD_SUBJECT);
+      subjectsInTreeView.set(TEST_CCLOUD_SCHEMA.subject, TEST_CCLOUD_SCHEMA.subjectObject());
 
       stubbedCCloudResourceLoader.getSchemasForSubject.resolves([TEST_CCLOUD_SCHEMA]);
 
@@ -670,7 +670,7 @@ describe("SchemasViewProvider", () => {
 
     it("should bail early if cannot find the schema registry for the schema", async () => {
       provider.schemaRegistry = null;
-      stubbedCCloudResourceLoader.getSchemaRegistryForEnvironmentId.resolves(null);
+      stubbedCCloudResourceLoader.getSchemaRegistryForEnvironmentId.resolves(undefined);
 
       await provider.revealSchema(TEST_CCLOUD_SCHEMA);
 
