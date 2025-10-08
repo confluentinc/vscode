@@ -41,28 +41,43 @@ export class NewSchemasViewProvider
   // Map of subject string -> subject object currently in the tree view.
   private subjectsInTreeView: Map<string, Subject> = new Map();
 
-  async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    // Out with any existing subjects.
-    this.subjectsInTreeView.clear();
+  /** Project the current selected schema registry (if any) under backwards-compatible name. */
+  get schemaRegistry(): SchemaRegistry | null {
+    return this.resource;
+  }
 
-    if (this.resource) {
+  /**
+   * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
+   * in the schema registry.
+   */
+  async refresh(forceDeepRefresh: boolean = false): Promise<void> {
+    if (!this.resource) {
+      return;
+    }
+
+    // Capture the SR instance locally in case it changes before the
+    // async withProgress() call is run.
+    const schemaRegistry = this.resource;
+
+    await this.withProgress("Loading subjects...", async () => {
+      // Out with any existing subjects.
+      this.subjectsInTreeView.clear();
+
       // Immediately inform the view that we (temporarily) have no data so it will clear.
       this._onDidChangeTreeData.fire();
 
       // Load subjects from the current schema registry.
-      const loader = ResourceLoader.getInstance(this.resource.connectionId);
-      // Capture the SR instance locally in case it changes while we're loading.
-      const schemaRegistry = this.resource;
+      const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
 
-      await this.withProgress(`Loading subjects from schema registry ...`, async () => {
-        const subjects = await loader.getSubjects(schemaRegistry, forceDeepRefresh);
-        subjects.forEach((subject) => {
-          this.subjectsInTreeView.set(subject.name, subject);
-        }, false);
+      const subjects = await loader.getSubjects(schemaRegistry, forceDeepRefresh);
+
+      subjects.forEach((subject) => {
+        this.subjectsInTreeView.set(subject.name, subject);
       });
-    }
-    // inform the view that we have new toplevel data.
-    this._onDidChangeTreeData.fire();
+
+      // Indicate to view that toplevel items have changed.
+      this._onDidChangeTreeData.fire();
+    });
   }
 
   /**
@@ -112,7 +127,6 @@ export class NewSchemasViewProvider
       treeItem = new SchemaTreeItem(element);
     }
 
-    // XXX TODO This block is extremely common, push down into BaseViewProvider
     if (this.itemSearchString) {
       if (itemMatchesSearch(element, this.itemSearchString)) {
         // special URI scheme to decorate the tree item with a dot to the right of the label,
