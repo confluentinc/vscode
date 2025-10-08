@@ -340,13 +340,13 @@ functionality and identify regressions.
 
 #### Unit and integration tests
 
-We use [Mocha](https://mochajs.org) for writing unit and integration tests, and
+We use [Mocha](https://mochajs.org) for unit and integration tests, and
 [Sinon](https://sinonjs.org/) for stubbing. These tests are located in the same directories as the
 production code they test, and follow the `*.test.ts` naming pattern. (For example,
 [`src/commands/connections.test.ts`](../src/commands/connections.test.ts) contains tests for
 [`src/commands/connections.ts`](../src/commands/connections.ts).)
 
-To run the existing tests:
+To run the existing unit/integration tests:
 
 ```bash
     gulp test
@@ -356,8 +356,8 @@ You can also specify a test name/title (either from a `describe` or `it` block) 
 tests:
 
 ```bash
-    gulp test -t 'should register all commands'
-    gulp test -t 'Extension manifest tests'
+    gulp test -t "Extension manifest tests" # describe() title
+    gulp test -t "should register all commands"  # it() title
 ```
 
 Or add `.only` after a `describe` or `it` block in the test file (see
@@ -382,7 +382,7 @@ Functional tests are written for the content the extension displays in
 [Playwright Test](https://playwright.dev) framework and cover the webviews' content and behavior
 from the perspective of user interactions.
 
-To run the existing tests:
+To run all existing functional tests:
 
 ```bash
     gulp functional
@@ -398,7 +398,7 @@ VS Code and interact with it programmatically. The tests are located in the
 See [E2E tests using Playwright](../tests/README.md#e2e-tests-using-playwright) for more information
 on running, writing, and debugging E2E tests.
 
-To run the existing tests::
+To run all existing E2E tests:
 
 ```bash
     gulp e2e
@@ -410,16 +410,20 @@ Similar to the Mocha tests, Playwright tests (functional or E2E) can also be fil
 name/title using the `-t` flag:
 
 ```bash
-    gulp functional -t 'should render with the correct title'
-```
+# Functional/webview tests
+gulp functional -t "should render with the correct title"
 
-```bash
-    gulp e2e -t 'Project Scaffolding'
+# E2E tests
+gulp e2e -t "Project Scaffolding"
 ```
 
 The `.only` pattern is also supported by using
 [`test.describe.only`](https://playwright.dev/docs/api/class-test#test-describe-only) and/or
 [`test.only`](https://playwright.dev/docs/api/class-test#test-only) in the test file.
+
+<!-- prettier-ignore -->
+> [!WARNING]
+> Remember to remove `.only` after running the test(s) and before raising a PR for review!
 
 #### Clicktesting the VS Code extension against the sidecar
 
