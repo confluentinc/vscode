@@ -1,19 +1,6 @@
+import { Disposable, TreeDataProvider, TreeItem, Uri } from "vscode";
+import { ContextValues } from "../context/values";
 import {
-  Disposable,
-  Event,
-  EventEmitter,
-  TreeDataProvider,
-  TreeItem,
-  TreeView,
-  Uri,
-  window,
-} from "vscode";
-import { getExtensionContext } from "../context/extension";
-import { ContextValues, setContextValue } from "../context/values";
-import {
-  ccloudConnected,
-  environmentChanged,
-  EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
   schemaSubjectChanged,
@@ -22,20 +9,14 @@ import {
   schemaVersionsChanged,
   SubjectChangeEvent,
 } from "../emitters";
-import { ExtensionContextNotSetError, logError } from "../errors";
+import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
-import { Logger } from "../logging";
-import { isCCloud, ISearchable, isLocal } from "../models/resource";
+import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { logUsage, UserEvent } from "../telemetry/events";
-import { DisposableCollection } from "../utils/disposables";
-import { RefreshableTreeViewProvider } from "./baseModels/base";
+import { ParentedBaseViewProvider } from "./baseModels/parentedBase";
 import { updateCollapsibleStateFromSearch } from "./utils/collapsing";
-import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
-
-const logger = new Logger("viewProviders.schemas");
-
+import { itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./utils/search";
 /**
  * The types managed by the {@link SchemasViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
@@ -43,52 +24,74 @@ const logger = new Logger("viewProviders.schemas");
 type SchemasViewProviderData = Subject | Schema;
 
 export class SchemasViewProvider
-  extends DisposableCollection
-  implements TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
+  extends ParentedBaseViewProvider<SchemaRegistry, SchemasViewProviderData>
+  implements TreeDataProvider<SchemasViewProviderData>
 {
-  readonly kind = "schemas";
+  readonly viewId: string = "confluent-schemas";
 
-  private _onDidChangeTreeData: EventEmitter<SchemasViewProviderData | undefined | void> =
-    new EventEmitter<SchemasViewProviderData | undefined | void>();
-  readonly onDidChangeTreeData: Event<SchemasViewProviderData | undefined | void> =
-    this._onDidChangeTreeData.event;
+  readonly kind = "schemas";
+  loggerName = "viewProviders.newSchemas";
+
+  parentResourceChangedEmitter = schemasViewResourceChanged;
+  parentResourceChangedContextValue = ContextValues.schemaRegistrySelected;
+
+  searchContextValue = ContextValues.schemaSearchApplied;
+  searchChangedEmitter = schemaSearchSet;
 
   // Map of subject string -> subject object currently in the tree view.
   private subjectsInTreeView: Map<string, Subject> = new Map();
+
+  /** Project the current selected schema registry (if any) under backwards-compatible name. */
+  get schemaRegistry(): SchemaRegistry | null {
+    return this.resource;
+  }
+
+  /** Legacy attribute setter. */
+  set schemaRegistry(schemaRegistry: SchemaRegistry | null) {
+    this.resource = schemaRegistry;
+  }
+
+  // legacy functional alias
+  setSchemaRegistry(schemaRegistry: SchemaRegistry | null) {
+    this.setParentResource(schemaRegistry);
+  }
+
+  isFocusedOnCCloud(): boolean {
+    return (this.resource && isCCloud(this.resource)) || false;
+  }
 
   /**
    * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
    * in the schema registry.
    */
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    await window.withProgress(
-      {
-        location: { viewId: this.viewId },
-        title: "Loading subject...",
-      },
-      async () => {
-        // Out with any existing subjects.
-        this.subjectsInTreeView.clear();
+    if (!this.resource) {
+      return;
+    }
 
-        if (this.schemaRegistry !== null) {
-          const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+    // Capture the SR instance locally in case it changes before the
+    // async withProgress() call is run.
+    const schemaRegistry = this.resource;
 
-          // Fetch subjects using the loader, pushing down need to do deep refresh.
-          const subjects: Subject[] = await loader.getSubjects(
-            this.schemaRegistry,
-            forceDeepRefresh,
-          );
+    await this.withProgress("Loading subjects...", async () => {
+      // Out with any existing subjects.
+      this.subjectsInTreeView.clear();
 
-          // Repopulate this.subjectsInTreeView from getSubjects() result.
-          subjects.forEach((subject: Subject) =>
-            this.subjectsInTreeView.set(subject.name, subject),
-          );
-        }
+      // Immediately inform the view that we (temporarily) have no data so it will clear.
+      this._onDidChangeTreeData.fire();
 
-        // Indicate to view that toplevel items have changed.
-        this._onDidChangeTreeData.fire();
-      },
-    );
+      // Load subjects from the current schema registry.
+      const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
+
+      const subjects = await loader.getSubjects(schemaRegistry, forceDeepRefresh);
+
+      subjects.forEach((subject) => {
+        this.subjectsInTreeView.set(subject.name, subject);
+      });
+
+      // Indicate to view that toplevel items have changed.
+      this._onDidChangeTreeData.fire();
+    });
   }
 
   /**
@@ -101,118 +104,33 @@ export class SchemasViewProvider
    * @param newSchemas - The new array of schemas to update the subject with.
    */
   async updateSubjectSchemas(subjectString: string, newSchemas: Schema[] | null): Promise<void> {
-    await window.withProgress(
-      {
-        location: { viewId: this.viewId },
-        title: `Loading ${subjectString}...`,
-      },
-      async () => {
-        logger.debug("updateSubjectSchemas(): Refreshing single subject in tree view", {
-          subject: subjectString,
-          newSchemaCount: newSchemas?.length,
-        });
+    await this.withProgress(`Loading ${subjectString}...`, async () => {
+      this.logger.debug("updateSubjectSchemas(): Refreshing single subject in tree view", {
+        subject: subjectString,
+        newSchemaCount: newSchemas?.length,
+      });
 
-        if (newSchemas === null) {
-          // Go get the schemas for this subject
-          if (!this.schemaRegistry) {
-            throw new Error("No schema registry");
-          }
-          const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
-          newSchemas = await loader.getSchemasForSubject(this.schemaRegistry, subjectString);
+      if (newSchemas === null) {
+        // Go get the schemas for this subject
+        if (!this.resource) {
+          throw new Error("No schema registry");
         }
+        const loader = ResourceLoader.getInstance(this.resource.connectionId);
+        newSchemas = await loader.getSchemasForSubject(this.resource, subjectString);
+      }
 
-        const subjectInMap = this.subjectsInTreeView.get(subjectString);
-        if (!subjectInMap) {
-          logger.error("Strange, couldn't find subject in tree view", { subjectString });
-          return;
-        }
+      const subjectInMap = this.subjectsInTreeView.get(subjectString);
+      if (!subjectInMap) {
+        this.logger.error("Strange, couldn't find subject in tree view", { subjectString });
+        return;
+      }
 
-        subjectInMap.schemas = newSchemas;
+      subjectInMap.schemas = newSchemas;
 
-        this._onDidChangeTreeData.fire(subjectInMap);
-      },
-    );
+      this._onDidChangeTreeData.fire(subjectInMap);
+    });
   }
 
-  readonly viewId: string = "confluent-schemas";
-  private treeView: TreeView<SchemasViewProviderData>;
-  /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. Includes parent Environment ID */
-  public schemaRegistry: SchemaRegistry | null = null;
-
-  /** String to filter items returned by `getChildren`, if provided. */
-  itemSearchString: string | null = null;
-  /** Count of how many times the user has set a search string */
-  searchStringSetCount: number = 0;
-  /** Items directly matching the {@linkcode itemSearchString}, if provided. */
-  searchMatches: Set<SchemasViewProviderData> = new Set();
-  /** Count of all items returned from `getChildren()`. */
-  totalItemCount: number = 0;
-
-  private static instance: SchemasViewProvider | null = null;
-
-  private constructor() {
-    super();
-    if (!getExtensionContext()) {
-      // getChildren() will fail without the extension context
-      throw new ExtensionContextNotSetError("SchemasViewProvider");
-    }
-
-    this.treeView = window.createTreeView(this.viewId, { treeDataProvider: this });
-
-    const listeners: Disposable[] = this.setEventListeners();
-
-    this.disposables.push(this.treeView, this._onDidChangeTreeData, ...listeners);
-  }
-
-  static getInstance(): SchemasViewProvider {
-    if (!SchemasViewProvider.instance) {
-      SchemasViewProvider.instance = new SchemasViewProvider();
-    }
-    return SchemasViewProvider.instance;
-  }
-
-  /** Convenience method to revert this view to its original state. */
-  async reset(): Promise<void> {
-    logger.debug("reset() called, clearing tree view");
-    await this.setSchemaRegistry(null);
-  }
-
-  /** Change what SR is being viewed (if any) */
-  async setSchemaRegistry(schemaRegistry: SchemaRegistry | null): Promise<void> {
-    if (
-      // handles exact object reference or both nulls.
-      schemaRegistry === this.schemaRegistry ||
-      // handles same ID but different object reference
-      (schemaRegistry && this.schemaRegistry?.id === schemaRegistry.id)
-    ) {
-      logger.debug("setSchemaRegistry() called with same SR as being viewed already, ignoring.");
-      return;
-    }
-
-    logger.debug(
-      `setSchemaRegistry called, ${schemaRegistry ? "changing to new registry" : "resetting to empty"}.`,
-      {
-        id: schemaRegistry?.id,
-      },
-    );
-
-    this.schemaRegistry = schemaRegistry;
-
-    // Internally handles updating this.treeview.description and this.environment
-    // (schema registries are always different envs -- only one SR per env)
-    await this.updateTreeViewDescription();
-
-    // Set the context value to indicate whether a schema registry is selected.
-    await setContextValue(ContextValues.schemaRegistrySelected, schemaRegistry !== null);
-
-    // Always clear any existing search string.
-    this.setSearch(null);
-
-    // Clear or refresh the tree view subjects.
-    await this.refresh();
-  }
-
-  // we're not handling just `Schema` here since we may be expanding a container tree item
   getTreeItem(element: SchemasViewProviderData): TreeItem {
     let treeItem: TreeItem;
 
@@ -240,7 +158,7 @@ export class SchemasViewProvider
       // if we're a schema, our parent is the schema's Subject as found in our map
       const subject = this.subjectsInTreeView.get(element.subject);
       if (!subject) {
-        logger.error("Strange, couldn't find subject in tree view", { element });
+        this.logger.error("Strange, couldn't find subject in tree view", { element });
         return null;
       }
       return subject;
@@ -249,7 +167,7 @@ export class SchemasViewProvider
     return null;
   }
 
-  async getChildren(element?: SchemasViewProviderData): Promise<SchemasViewProviderData[]> {
+  getChildren(element?: SchemasViewProviderData): SchemasViewProviderData[] {
     // we should get the following hierarchy/structure of tree items from this method:
     // - topic1-value (Subject w/o schemas fetched preemptively)
     //   - schema1-V2 (Schema) (once the Subject is expanded)
@@ -260,18 +178,15 @@ export class SchemasViewProvider
     // Once the user has asked to expand a Subject, we'll on-demand fetch the Schema[] for
     // just that single Subject and return them as the children of the Subject.
 
-    if (!this.schemaRegistry) {
-      // No Schema Registry selected, so no subjects or schemas to show.
+    if (!this.resource) {
+      // no schema registry selected, so no children
       return [];
     }
 
-    // What will be returned.
     let children: SchemasViewProviderData[];
 
-    if (element == null) {
-      // Get children as the subjects in our map
-      children = [...this.subjectsInTreeView.values()];
-      logger.debug(`getChildren(): no element, assigned ${children.length} subjects`);
+    if (!element) {
+      children = Array.from(this.subjectsInTreeView.values());
     } else if (element instanceof Subject) {
       // be sure to be using subject as found in subjectsInTreeView.
       element = this.subjectsInTreeView.get(element.name);
@@ -279,7 +194,7 @@ export class SchemasViewProvider
         return [];
       }
       if (element.schemas) {
-        // Already fetched the schemas for this subject.
+        // Already fetched the schemas for this subject. Will at worst be an empty array.
         children = element.schemas;
       } else {
         // Need to fetch schemas for the subject. Kick off in background. In
@@ -290,135 +205,33 @@ export class SchemasViewProvider
         void this.updateSubjectSchemas(element.name, null);
       }
     } else {
-      // Selected a schema, no children there.
+      // must be a Schema, which is a leaf item with no children
       children = [];
     }
 
-    this.totalItemCount += children.length;
-    if (this.itemSearchString) {
-      // if the parent item matches the search string, return all children so the user can expand
-      // and see them all, even if just the parent item matched and shows the highlight(s)
-      const parentMatched = element && itemMatchesSearch(element, this.itemSearchString);
-      if (!parentMatched) {
-        // filter the children based on the search string
-        children = filterItems(
-          [...children] as ISearchable[],
-          this.itemSearchString,
-        ) as SchemasViewProviderData[];
-      }
-      // aggregate all elements that directly match the search string (not just how many were
-      // returned in the tree view since children of directly-matching parents will be included)
-      const matchingChildren = children.filter((child) =>
-        itemMatchesSearch(child, this.itemSearchString!),
-      );
-      matchingChildren.forEach((child) => this.searchMatches.add(child));
-      // update the tree view message to show how many results were found to match the search string
-      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
-      // will never be called and the message won't update
-      if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} for "${this.itemSearchString}"`;
-      } else {
-        // let empty state take over
-        this.treeView.message = undefined;
-      }
-      logUsage(UserEvent.ViewSearchAction, {
-        status: "view results filtered",
-        view: "Schemas",
-        fromItemExpansion: element !== undefined,
-        searchStringSetCount: this.searchStringSetCount,
-        filteredItemCount: this.searchMatches.size,
-        totalItemCount: this.totalItemCount,
-      });
-    } else {
-      this.treeView.message = undefined;
-    }
-
-    return children;
+    return this.filterChildren(element, children);
   }
 
-  /** Set up event listeners for this view provider. */
-  setEventListeners(): Disposable[] {
+  protected setCustomEventListeners(): Disposable[] {
     return [
-      environmentChanged.event(this.environmentChangedHandler.bind(this)),
-      ccloudConnected.event(this.ccloudConnectedHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localSchemaRegistryConnectedHandler.bind(this)),
-      schemasViewResourceChanged.event(this.schemasViewResourceChangedHandler.bind(this)),
-      schemaSearchSet.event(this.schemaSearchSetHandler.bind(this)),
       schemaSubjectChanged.event(this.schemaSubjectChangedHandler.bind(this)),
       schemaVersionsChanged.event(this.schemaVersionsChangedHandler.bind(this)),
     ];
   }
 
-  async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
-    if (this.schemaRegistry && this.schemaRegistry.environmentId === envEvent.id) {
-      if (!envEvent.wasDeleted) {
-        logger.debug(
-          "environmentChanged event fired with matching SR env ID, updating view description",
-          {
-            envEvent,
-          },
-        );
-        await this.updateTreeViewDescription();
-        await this.refresh();
-      } else {
-        logger.debug(
-          "environmentChanged deletion event fired with matching SR env ID, resetting view",
-          {
-            envEvent,
-          },
-        );
-        // environment was deleted, reset the view
-        await this.reset();
-      }
-    }
-  }
-
-  async ccloudConnectedHandler(connected: boolean): Promise<void> {
-    if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
-      // any transition of CCloud connection state should reset the tree view
-      // if we were previously looking at a ccloud-based SR.
-      logger.debug("ccloudConnected event fired while set to a CC-based SR, resetting", {
-        connected,
-      });
-      await this.reset();
-    }
-  }
-
+  /** Handler for when the local connection's schema registry appears or disappears. */
   async localSchemaRegistryConnectedHandler(connected: boolean): Promise<void> {
-    if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
-      logger.debug("localSchemaRegistryConnected event fired while set to local SR, resetting", {
-        connected,
-      });
+    if (this.resource && isLocal(this.resource)) {
+      this.logger.debug(
+        "localSchemaRegistryConnected event fired while set to local SR, resetting",
+        {
+          connected,
+        },
+      );
       // any transition of local schema registry connection state should reset the tree view
       await this.reset();
     }
-  }
-
-  async schemasViewResourceChangedHandler(schemaRegistry: SchemaRegistry | null): Promise<void> {
-    // User has either selected a (probably different) SR to view, or has closed
-    // a connection to a SR (null). React accordingly.
-    logger.debug("schemasViewResourceChanged event fired");
-    await this.setSchemaRegistry(schemaRegistry);
-  }
-
-  async schemaSearchSetHandler(searchString: string | null): Promise<void> {
-    logger.debug("schemaSearchSet event fired, refreshing", { searchString });
-    // mainly captures the last state of the search internals to see if search was adjusted after
-    // a previous search was used, or if this is the first time search is being used
-    if (searchString !== null) {
-      // used to group search events without sending the search string itself
-      this.searchStringSetCount++;
-    }
-    logUsage(UserEvent.ViewSearchAction, {
-      status: `search string ${searchString ? "set" : "cleared"}`,
-      view: "Schemas",
-      searchStringSetCount: this.searchStringSetCount,
-      hadExistingSearchString: this.itemSearchString !== null,
-      lastFilteredItemCount: this.searchMatches.size,
-      lastTotalItemCount: this.totalItemCount,
-    });
-    this.setSearch(searchString);
-    await this.refresh();
   }
 
   /** Handler for event firing when a schema registry *subject* has been created or deleted */
@@ -427,8 +240,8 @@ export class SchemasViewProvider
     // the same schema registry.
     const [subject, change] = [event.subject, event.change];
 
-    if (this.schemaRegistry?.id === subject.schemaRegistryId) {
-      logger.debug(`A subject ${change} in the registry being viewed, refreshing toplevel`, {
+    if (this.resource?.id === subject.schemaRegistryId) {
+      this.logger.debug(`A subject ${change} in the registry being viewed, refreshing toplevel`, {
         subject: subject.name,
       });
 
@@ -452,10 +265,13 @@ export class SchemasViewProvider
     // A schema version was added or deleted. Refresh the subject if we're looking at
     // the same schema registry.
     const [updatedSubject, change] = [event.subject, event.change];
-    if (this.schemaRegistry?.id === updatedSubject.schemaRegistryId) {
-      logger.debug(`A schema version ${change} in the registry being viewed, refreshing subject`, {
-        subject: updatedSubject.name,
-      });
+    if (this.resource?.id === updatedSubject.schemaRegistryId) {
+      this.logger.debug(
+        `A schema version ${change} in the registry being viewed, refreshing subject`,
+        {
+          subject: updatedSubject.name,
+        },
+      );
 
       // find the subject in the tree view and refresh just that subtree
       // Blow away the schemas in the cached subject, so that they will be
@@ -473,7 +289,7 @@ export class SchemasViewProvider
 
         // Now get the treeview to realize that the subject's getChildren() will
         // be different, so it needs to repaint the subject.
-        logger.debug(
+        this.logger.debug(
           `Firing change to subject, now has ${existingSubject.schemas!.length} schemas`,
         );
         // Repaint the subject in the tree view.
@@ -482,50 +298,11 @@ export class SchemasViewProvider
     }
   }
 
-  /**
-   * Update the tree view description to show the currently-focused Schema Registry's parent env
-   * name and the Schema Registry ID.
-   *
-   * Reassigns this.environment to the parent environment of the Schema Registry.
-   * */
-
-  async updateTreeViewDescription(): Promise<void> {
-    const schemaRegistry = this.schemaRegistry;
-
-    const subLogger = logger.withCallpoint("updateTreeViewDescription");
-
-    if (!schemaRegistry) {
-      subLogger.debug("called with no schema registry, simple short-circuit");
-      this.treeView.description = "";
-      return;
-    } else {
-      subLogger.debug("called with schema registry");
-    }
-
-    subLogger.debug("scanning for environments ...");
-
-    const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-    const envs = await loader.getEnvironments();
-    const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
-    if (parentEnv) {
-      subLogger.debug("found environment.");
-
-      this.treeView.description = `${parentEnv.name} | ${schemaRegistry.id}`;
-    } else {
-      subLogger.debug("couldn't find parent environment for Schema Registry");
-
-      // Probably because the environment was deleted.
-      this.treeView.description = "";
-    }
-
-    subLogger.debug("done.");
-  }
-
   /** Try to reveal+expand schema under a subject, if present */
   async revealSchema(schemaToShow: Schema): Promise<void> {
-    if (!this.schemaRegistry || this.schemaRegistry.id !== schemaToShow.schemaRegistryId) {
+    if (!this.resource || this.resource.id !== schemaToShow.schemaRegistryId) {
       // Reset what SR is being viewed.
-      logger.debug(
+      this.logger.debug(
         `revealSchema(): changing the view to look at schema registry ${schemaToShow.schemaRegistryId}`,
       );
 
@@ -535,7 +312,7 @@ export class SchemasViewProvider
       );
 
       if (!schemaRegistry) {
-        logger.error("Strange, couldn't find schema registry for schema", {
+        this.logger.error("Strange, couldn't find schema registry for schema", {
           schemaToShow,
         });
         return;
@@ -547,19 +324,19 @@ export class SchemasViewProvider
       // `this.subjectsInTreeView` will be populated with the schemas, especially
       // the one we want to reveal by the time we get to the `.find()` and `.reveal()`
       // lines lower down.
-      await this.setSchemaRegistry(schemaRegistry);
+      await this.setParentResource(schemaRegistry);
     }
 
     // Find the subject in the tree view's model.
     const subject = this.subjectsInTreeView.get(schemaToShow.subject);
     if (!subject) {
-      logger.error("Strange, couldn't find subject for schema in tree view", {
+      this.logger.error("Strange, couldn't find subject for schema in tree view", {
         schemaToShow,
       });
       return;
     }
 
-    logger.debug(
+    this.logger.debug(
       `revealSchema(): found subject ${subject.name} for schema ${schemaToShow.id}, ${subject.schemas?.length} schemas, revealing...`,
     );
 
@@ -567,7 +344,7 @@ export class SchemasViewProvider
     // Should update `subject` in place.
     await this.updateSubjectSchemas(subject.name, null);
 
-    logger.debug(
+    this.logger.debug(
       `revealSchema(): After updateSubjectSchemas(), ${subject.schemas?.length} schemas.`,
     );
 
@@ -575,7 +352,7 @@ export class SchemasViewProvider
     // something is coded wrong before here.
     const schema = subject.schemas!.find((schema) => schema.id === schemaToShow.id);
     if (!schema) {
-      logger.error(
+      this.logger.error(
         `Strange, found subject ${subject.name} but it did not contain the expected schema by id: ${schemaToShow.id}`,
       );
       return;
@@ -588,22 +365,6 @@ export class SchemasViewProvider
         extra: { functionName: "revealSchema" },
       });
     }
-  }
-
-  /** Update internal state when the search string is set or unset. */
-  setSearch(searchString: string | null): void {
-    // set/unset the filter so any calls to getChildren() will filter appropriately
-    this.itemSearchString = searchString;
-    // set context value to toggle between "search" and "clear search" actions
-    setContextValue(ContextValues.schemaSearchApplied, searchString !== null);
-    // clear from any previous search filter
-    this.searchMatches = new Set();
-    this.totalItemCount = 0;
-  }
-
-  /** Are we currently viewing a CCloud-based schema registry? */
-  isFocusedOnCCloud(): boolean {
-    return this.schemaRegistry !== null && isCCloud(this.schemaRegistry);
   }
 }
 
