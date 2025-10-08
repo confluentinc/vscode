@@ -4,7 +4,7 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-### Added
+### Changed
 
 - The Flink Artifacts / Flink UDFs view is now searchable.
 - Creating templated projects from resources which have related schema registries (Kafka topics or
