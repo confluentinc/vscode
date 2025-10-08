@@ -94,8 +94,9 @@ import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { FlinkDatabaseViewProviderMode } from "./viewProviders/multiViewDelegates/constants";
+import { NewSchemasViewProvider } from "./viewProviders/newSchemas";
 import { ResourceViewProvider } from "./viewProviders/resources";
-import { SchemasViewProvider } from "./viewProviders/schemas";
+// import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/utils/search";
@@ -206,7 +207,7 @@ async function _activateExtension(
 
   const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
-  const schemasViewProvider = SchemasViewProvider.getInstance();
+  const schemasViewProvider = NewSchemasViewProvider.getInstance(); // SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
@@ -510,7 +511,7 @@ export function getRefreshableViewProviders(): RefreshableTreeViewProvider[] {
   // "Refreshable views tests" in extension.test.ts.
   const refreshables = [
     TopicViewProvider.getInstance(),
-    SchemasViewProvider.getInstance(),
+    NewSchemasViewProvider.getInstance(), // SchemasViewProvider.getInstance(),
     FlinkStatementsViewProvider.getInstance(),
     FlinkDatabaseViewProvider.getInstance(),
   ];
