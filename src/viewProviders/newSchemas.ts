@@ -41,7 +41,7 @@ export class NewSchemasViewProvider
   // Map of subject string -> subject object currently in the tree view.
   private subjectsInTreeView: Map<string, Subject> = new Map();
 
-  async refresh(forceDeepRefresh = false): Promise<void> {
+  async refresh(forceDeepRefresh: boolean = false): Promise<void> {
     // Out with any existing subjects.
     this.subjectsInTreeView.clear();
 
@@ -55,7 +55,7 @@ export class NewSchemasViewProvider
       const schemaRegistry = this.resource;
 
       await this.withProgress(`Loading subjects from schema registry ...`, async () => {
-        const subjects = await loader.getSubjects(schemaRegistry);
+        const subjects = await loader.getSubjects(schemaRegistry, forceDeepRefresh);
         subjects.forEach((subject) => {
           this.subjectsInTreeView.set(subject.name, subject);
         }, false);
@@ -166,7 +166,7 @@ export class NewSchemasViewProvider
         return [];
       }
       if (element.schemas) {
-        // Already fetched the schemas for this subject.
+        // Already fetched the schemas for this subject. Will at worst be an empty array.
         children = element.schemas;
       } else {
         // Need to fetch schemas for the subject. Kick off in background. In
