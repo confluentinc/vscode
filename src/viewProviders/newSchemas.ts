@@ -1,6 +1,6 @@
 import { Disposable, TreeDataProvider, TreeItem, Uri } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentSchemaRegistryChanged, schemaSearchSet } from "../emitters";
+import { schemaSearchSet, schemasViewResourceChanged } from "../emitters";
 import { ResourceLoader } from "../loaders";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
@@ -22,7 +22,7 @@ export class NewSchemasViewProvider
   readonly kind = "schemas";
   loggerName = "viewProviders.newSchemas";
 
-  parentResourceChangedEmitter = currentSchemaRegistryChanged;
+  parentResourceChangedEmitter = schemasViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.schemaRegistrySelected;
 
   searchContextValue = ContextValues.schemaSearchApplied;
