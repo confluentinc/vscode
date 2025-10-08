@@ -4,12 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-### Added
-
-- The Flink Artifacts / Flink UDFs view is now searchable.
-
 ### Changed
 
+- The Flink Artifacts / Flink UDFs view is now searchable.
+- Creating templated projects from resources which have related schema registries (Kafka topics or
+  Kafka clusters) will now have the related schema registry URL automatically provided.
 - The Local row in the Resources view now better describes the user's Docker Engine availability in
   its description and tooltip, and the "Start Local Resources" action will not be offered if the
   extension cannot ping the local Docker Engine.
