@@ -797,10 +797,17 @@ function coverage(options) {
 }
 
 export function functional(done) {
-  const result = spawnSync("npx", ["playwright", "test", "src"], {
-    stdio: "inherit",
-    shell: IS_WINDOWS,
-  });
+  // Get <test-name> argument after 'npx gulp functional -t <test-name>'
+  const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
+
+  const result = spawnSync(
+    "npx",
+    ["playwright", "test", "src", ...(testFilter ? ["-g", testFilter] : [])],
+    {
+      stdio: "inherit",
+      shell: IS_WINDOWS,
+    },
+  );
   if (result.error) throw result.error;
   return done(result.status);
 }
