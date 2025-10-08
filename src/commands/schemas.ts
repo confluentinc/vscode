@@ -94,7 +94,7 @@ export async function viewLocallyCommand(schema: Schema) {
 
 /** Copy the Schema Registry ID from the Schemas tree provider nav action. */
 export async function copySchemaRegistryIdCommand() {
-  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().resource;
+  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   if (!schemaRegistry) {
     return;
   }
