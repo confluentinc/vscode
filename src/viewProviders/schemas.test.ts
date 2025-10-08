@@ -462,7 +462,7 @@ describe("SchemasViewProvider", () => {
           await provider.localSchemaRegistryConnectedHandler(connected);
 
           // Should not have called .reset()
-          assert.ok(resetStub.notCalled);
+          sinon.assert.notCalled(resetStub);
         });
 
         it(`Should not reset if not viewing a local schema registry, connected: ${connected}`, async () => {
@@ -472,7 +472,7 @@ describe("SchemasViewProvider", () => {
           await provider.localSchemaRegistryConnectedHandler(connected);
 
           // Should not have called .reset()
-          assert.ok(resetStub.notCalled);
+          sinon.assert.notCalled(resetStub);
         });
 
         it(`Should reset if viewing a local schema registry and connected state changes, connected: ${connected}`, async () => {
@@ -482,21 +482,12 @@ describe("SchemasViewProvider", () => {
           await provider.localSchemaRegistryConnectedHandler(connected);
 
           // Should have called .reset()
-          assert.ok(resetStub.calledOnce);
+          sinon.assert.calledOnce(resetStub);
         });
       }
     });
 
     describe("schemaSubjectChangedHandler", () => {
-      let refreshStub: sinon.SinonStub;
-      let subjectsInTreeView: Map<string, Subject>;
-
-      beforeEach(() => {
-        refreshStub = sandbox.stub(provider, "refresh");
-        subjectsInTreeView = provider["subjectsInTreeView"];
-        subjectsInTreeView.clear();
-      });
-
       it("should call refresh() when subject is deleted", async () => {
         // set to be viewing a schema registry
         provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
@@ -514,7 +505,7 @@ describe("SchemasViewProvider", () => {
         assert.strictEqual(subjectsInTreeView.size, 0);
 
         // Should have called .refresh()
-        assert.ok(refreshStub.calledOnce);
+        sinon.assert.calledOnce(refreshStub);
       });
 
       it("should call refresh() when subject is added", async () => {
@@ -538,7 +529,7 @@ describe("SchemasViewProvider", () => {
         );
 
         // Should have called .refresh()
-        assert.ok(refreshStub.calledOnce);
+        sinon.assert.calledOnce(refreshStub);
       });
 
       it("Does nothing if not viewing a schema registry", async () => {
@@ -552,7 +543,7 @@ describe("SchemasViewProvider", () => {
         await provider.schemaSubjectChangedHandler(event);
 
         // Should not have called .refresh()
-        assert.ok(refreshStub.notCalled);
+        sinon.assert.notCalled(refreshStub);
       });
 
       it("Does nothing if viewing a different schema registry", async () => {
@@ -566,7 +557,7 @@ describe("SchemasViewProvider", () => {
         await provider.schemaSubjectChangedHandler(event);
 
         // Should not have called .refresh()
-        assert.ok(refreshStub.notCalled);
+        sinon.assert.notCalled(refreshStub);
       });
     });
 
@@ -602,8 +593,8 @@ describe("SchemasViewProvider", () => {
         assert.deepEqual(subjectFromMap.schemas, updatedSubject.schemas);
 
         // Should have fired with the subject
-        assert.ok(onDidChangeTreeDataFireStub.calledOnce);
-        assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
+        sinon.assert.calledOnce(onDidChangeTreeDataFireStub);
+        sinon.assert.alwaysCalledWithExactly(onDidChangeTreeDataFireStub, scratchSubject);
       });
 
       it("Does nothing if not viewing a schema registry", async () => {
@@ -617,7 +608,7 @@ describe("SchemasViewProvider", () => {
         await provider.schemaVersionsChangedHandler(event);
 
         // Should not have called .refresh()
-        assert.ok(onDidChangeTreeDataFireStub.notCalled);
+        sinon.assert.notCalled(refreshStub);
       });
 
       it("Does nothing if viewing a different schema registry", async () => {
@@ -631,7 +622,7 @@ describe("SchemasViewProvider", () => {
         await provider.schemaVersionsChangedHandler(event);
 
         // Should not have called .refresh()
-        assert.ok(onDidChangeTreeDataFireStub.notCalled);
+        sinon.assert.notCalled(refreshStub);
       });
 
       it("Does nothing if subject not in map", async () => {
@@ -645,7 +636,7 @@ describe("SchemasViewProvider", () => {
         await provider.schemaVersionsChangedHandler(event);
 
         // Should not have called .refresh() or changed the map
-        assert.ok(onDidChangeTreeDataFireStub.notCalled);
+        sinon.assert.notCalled(refreshStub);
         assert.strictEqual(subjectsInTreeView.size, 0);
       });
     });
