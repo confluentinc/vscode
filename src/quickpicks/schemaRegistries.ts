@@ -94,7 +94,7 @@ export async function schemaRegistryQuickPick(
   const registryItems: QuickPickItemWithValue<SchemaRegistry>[] = [];
 
   // Determine the "current" Schema Registry to focus, if any.
-  const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().resource;
+  const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   const defaultRegistry: SchemaRegistry | null = defaultRegistryId
     ? schemaRegistries.find((registry) => registry.id === defaultRegistryId) ?? null
     : focusedRegistry;
