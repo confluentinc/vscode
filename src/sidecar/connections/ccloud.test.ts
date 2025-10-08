@@ -7,7 +7,7 @@ import {
 } from "../../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ContextValues, setContextValue } from "../../context/values";
-import { currentSchemaRegistryChanged, topicsViewResourceChanged } from "../../emitters";
+import { schemasViewResourceChanged, topicsViewResourceChanged } from "../../emitters";
 import { SchemasViewProvider } from "../../viewProviders/schemas";
 import { TopicViewProvider } from "../../viewProviders/topics";
 import { clearCurrentCCloudResources, hasCCloudAuthSession } from "./ccloud";
@@ -30,7 +30,7 @@ describe("sidecar/connections/ccloud.ts", () => {
     const mockedCCLoudLoader = getStubbedCCloudResourceLoader(sandbox);
 
     const currentKafkaClusterChangedFireStub = sandbox.stub(topicsViewResourceChanged, "fire");
-    const currentSchemaRegistryChangedFireStub = sandbox.stub(currentSchemaRegistryChanged, "fire");
+    const schemasViewResourceChangedFireStub = sandbox.stub(schemasViewResourceChanged, "fire");
 
     // Set the view controllers to be focused on CCloud resources
     const topicViewProvider = TopicViewProvider.getInstance();
@@ -42,12 +42,12 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     assert.ok(mockedCCLoudLoader.reset.calledOnce);
     assert.ok(currentKafkaClusterChangedFireStub.calledOnceWith(null));
-    assert.ok(currentSchemaRegistryChangedFireStub.calledOnceWith(null));
+    assert.ok(schemasViewResourceChangedFireStub.calledOnceWith(null));
 
     // Reset the stubs
     mockedCCLoudLoader.reset.resetHistory();
     currentKafkaClusterChangedFireStub.resetHistory();
-    currentSchemaRegistryChangedFireStub.resetHistory();
+    schemasViewResourceChangedFireStub.resetHistory();
 
     // Now set the view controllers to be focused on non-CCloud resources.
     // This should not fire any events, but still clear the resources.
@@ -58,7 +58,7 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     assert.ok(mockedCCLoudLoader.reset.calledOnce);
     assert.ok(currentKafkaClusterChangedFireStub.notCalled);
-    assert.ok(currentSchemaRegistryChangedFireStub.notCalled);
+    assert.ok(schemasViewResourceChangedFireStub.notCalled);
   });
 
   for (const value of [false, undefined]) {
