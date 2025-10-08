@@ -568,7 +568,7 @@ export async function uploadSchemaFromFileCommand(
     // the only way we get here is if the user clicked the action in the Schemas view nav area, so
     // we need to get the focused schema registry
     const schemaViewProvider = getSchemasViewProvider();
-    registry = schemaViewProvider.schemaRegistry!;
+    registry = schemaViewProvider.resource!;
   }
   if (!registry) {
     logger.error("Could not determine schema registry");
