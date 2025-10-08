@@ -7,7 +7,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { getSchemasViewProvider } from "../viewProviders/newSchemas";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.schemaRegistry");

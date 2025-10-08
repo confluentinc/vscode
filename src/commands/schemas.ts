@@ -22,7 +22,7 @@ import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
-import { getSchemasViewProvider } from "../viewProviders/newSchemas";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 import {
   confirmSchemaSubjectDeletion,
   confirmSchemaVersionDeletion,

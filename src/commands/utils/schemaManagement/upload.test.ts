@@ -51,7 +51,7 @@ import {
 import { KafkaTopic } from "../../../models/topic";
 import * as quickPicksSchemas from "../../../quickpicks/schemas";
 import { SidecarHandle } from "../../../sidecar";
-import { getSchemasViewProvider } from "../../../viewProviders/newSchemas";
+import { getSchemasViewProvider } from "../../../viewProviders/schemas";
 import {
   chooseSubject,
   determineDraftSchemaUri,
