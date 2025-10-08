@@ -158,13 +158,8 @@ export class NewSchemasViewProvider
     let children: SchemasViewProviderData[];
 
     if (!element) {
-      // return the subjects at the root of the tree
-      return Array.from(this.subjectsInTreeView.values()).sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-    }
-
-    if (element instanceof Subject) {
+      children = Array.from(this.subjectsInTreeView.values());
+    } else if (element instanceof Subject) {
       // be sure to be using subject as found in subjectsInTreeView.
       element = this.subjectsInTreeView.get(element.name);
       if (!element) {
@@ -181,12 +176,12 @@ export class NewSchemasViewProvider
         // When it is done, it will update the tree view.
         void this.updateSubjectSchemas(element.name, null);
       }
-
-      return this.filterChildren(element, children);
+    } else {
+      // must be a Schema, which is a leaf item with no children
+      children = [];
     }
 
-    // must be a Schema, which is a leaf item with no children
-    return [];
+    return this.filterChildren(element, children);
   }
 
   protected setCustomEventListeners(): Disposable[] {
