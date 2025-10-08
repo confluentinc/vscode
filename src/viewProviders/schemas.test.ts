@@ -10,8 +10,9 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { SchemaVersionChangeEvent, SubjectChangeEvent } from "../emitters";
+import { EnvironmentChangeEvent, SchemaVersionChangeEvent, SubjectChangeEvent } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
+import { EnvironmentId } from "../models/resource";
 import { Schema, SchemaTreeItem, SchemaType, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 
@@ -385,9 +386,71 @@ describe("SchemasViewProvider", () => {
 
   describe("SchemasViewProvider event handlers", () => {
     let resetStub: sinon.SinonStub;
+    let refreshStub: sinon.SinonStub;
+    let updateTreeViewDescriptionStub: sinon.SinonStub;
 
     beforeEach(() => {
       resetStub = sandbox.stub(provider, "reset");
+      refreshStub = sandbox.stub(provider, "refresh");
+      updateTreeViewDescriptionStub = sandbox.stub(provider, "updateTreeViewDescription");
+    });
+
+    describe("environmentChangedHandler", () => {
+      let fakeEvent: EnvironmentChangeEvent;
+
+      beforeEach(() => {
+        fakeEvent = {
+          id: "env-123" as EnvironmentId,
+          wasDeleted: false,
+        };
+      });
+
+      it("does nothing if not viewing a schema registry", async () => {
+        provider.schemaRegistry = null;
+
+        await provider.environmentChangedHandler(fakeEvent);
+
+        // Should not have done anything
+        sinon.assert.notCalled(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+
+      it("does nothing if viewing a schema registry in a different environment", async () => {
+        provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+        await provider.environmentChangedHandler(fakeEvent);
+
+        // Should not have done anything
+        sinon.assert.notCalled(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
+
+      it("should update the view description + refresh if viewing a schema registry in the changed environment", async () => {
+        provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+        fakeEvent.id = TEST_CCLOUD_SCHEMA_REGISTRY.environmentId;
+
+        await provider.environmentChangedHandler(fakeEvent);
+        // Should have called .updateTreeViewDescription() + .refresh()
+        sinon.assert.calledOnce(refreshStub);
+        sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(resetStub);
+      });
+
+      it("should reset if viewing a schema registry in the deleted environment", async () => {
+        provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+        fakeEvent.id = TEST_CCLOUD_SCHEMA_REGISTRY.environmentId;
+        fakeEvent.wasDeleted = true;
+
+        await provider.environmentChangedHandler(fakeEvent);
+
+        sinon.assert.calledOnce(resetStub);
+        sinon.assert.notCalled(updateTreeViewDescriptionStub);
+        sinon.assert.notCalled(refreshStub);
+      });
     });
 
     describe("localSchemaRegistryConnectedHandler", () => {
@@ -599,6 +662,7 @@ describe("SchemasViewProvider", () => {
     // Define test cases as corresponding pairs of
     // [event emitter name, view provider handler method name]
     const handlerEmitterPairs: Array<[keyof typeof emitterStubs, keyof SchemasViewProvider]> = [
+      ["environmentChanged", "environmentChangedHandler"],
       ["localSchemaRegistryConnected", "localSchemaRegistryConnectedHandler"],
       ["schemaSubjectChanged", "schemaSubjectChangedHandler"],
       ["schemaVersionsChanged", "schemaVersionsChangedHandler"],

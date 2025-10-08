@@ -1,6 +1,8 @@
 import { Disposable, TreeDataProvider, TreeItem, Uri } from "vscode";
 import { ContextValues } from "../context/values";
 import {
+  environmentChanged,
+  EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
   schemaSubjectChanged,
@@ -214,10 +216,36 @@ export class SchemasViewProvider
 
   protected setCustomEventListeners(): Disposable[] {
     return [
+      environmentChanged.event(this.environmentChangedHandler.bind(this)),
       localSchemaRegistryConnected.event(this.localSchemaRegistryConnectedHandler.bind(this)),
       schemaSubjectChanged.event(this.schemaSubjectChangedHandler.bind(this)),
       schemaVersionsChanged.event(this.schemaVersionsChangedHandler.bind(this)),
     ];
+  }
+
+  /** Handler for when the user has modified an environment. */
+  async environmentChangedHandler(envEvent: EnvironmentChangeEvent): Promise<void> {
+    if (this.schemaRegistry && this.schemaRegistry.environmentId === envEvent.id) {
+      if (!envEvent.wasDeleted) {
+        this.logger.debug(
+          "environmentChanged event fired with matching SR env ID, updating view description",
+          {
+            envEvent,
+          },
+        );
+        await this.updateTreeViewDescription();
+        await this.refresh();
+      } else {
+        this.logger.debug(
+          "environmentChanged deletion event fired with matching SR env ID, resetting view",
+          {
+            envEvent,
+          },
+        );
+        // environment was deleted, reset the view
+        await this.reset();
+      }
+    }
   }
 
   /** Handler for when the local connection's schema registry appears or disappears. */
