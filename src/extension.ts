@@ -379,6 +379,7 @@ async function setupContextValues() {
     "ccloud-schema-registry",
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
+    "ccloud-flink-statement-not-viewable",
   ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
@@ -412,6 +413,7 @@ async function setupContextValues() {
     "ccloud-flinkable-kafka-cluster",
     "ccloud-flink-compute-pool",
     "ccloud-flink-statement",
+    "ccloud-flink-statement-not-viewable",
     "ccloud-flink-artifact",
     "ccloud-flink-udf",
     "local-kafka-cluster",

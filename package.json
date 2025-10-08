@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-19",
+  "version": "1.8.0-20",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -353,7 +353,6 @@
       {
         "command": "confluent.copyResourceUri",
         "title": "Copy URL",
-        "comment": "Using the label 'URL' here instead of 'URI' since these are web URLs, not URIs, and 'URL' matches the terminology used in scaffolding templates.",
         "category": "Confluent: Resources"
       },
       {
@@ -649,6 +648,11 @@
         "command": "confluent.statements.create",
         "icon": "$(cloud-upload)",
         "title": "Submit Flink Statement",
+        "category": "Confluent: Flink Statements"
+      },
+      {
+        "command": "confluent.statements.delete",
+        "title": "Delete Statement",
         "category": "Confluent: Flink Statements"
       },
       {
@@ -1493,6 +1497,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.delete",
+          "when": "false"
+        },
+        {
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "confluent.ccloudConnectionAvailable"
         },
@@ -2047,6 +2055,11 @@
           "command": "confluent.flinkStatementResults",
           "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
           "group": "inline@1"
+        },
+        {
+          "command": "confluent.statements.delete",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement.*/",
+          "group": "3_statements_crudl@1"
         }
       ],
       "explorer/context": [
