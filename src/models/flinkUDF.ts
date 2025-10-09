@@ -131,6 +131,17 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     // Extract artifact ID and version from "confluent-artifact://<artifact-id>/<version-id>"
     return this.artifactReference.replace(/^confluent-artifact:\/\//, "");
   }
+
+  /** Returns a formatted string of the function parameters' signatures. */
+  get parametersSignature(): string {
+    return (
+      "(" +
+      this.parameters
+        .map((p) => `${p.name} : ${FlinkUdfParameter.formatSqlType(p.dataType)}`)
+        .join(", ") +
+      ")"
+    );
+  }
 }
 
 export class FlinkUdfTreeItem extends TreeItem {
@@ -143,7 +154,7 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
 
-    this.description = `→ ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
+    this.description = `${resource.parametersSignature} → ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
     this.tooltip = createFlinkUdfToolTip(resource);
   }
 }
@@ -156,10 +167,7 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
     .addField("Return Type", FlinkUdfParameter.formatSqlType(resource.returnType));
 
   if (resource.parameters.length > 0) {
-    const params = resource.parameters
-      .map((p) => `${p.name} : ${FlinkUdfParameter.formatSqlType(p.dataType)}`)
-      .join(", ");
-    tooltip.addField("Parameters", `(${params})`);
+    tooltip.addField("Parameters", `${resource.parametersSignature}`);
   } else {
     tooltip.addField("Parameters", "None");
   }

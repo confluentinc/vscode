@@ -95,6 +95,33 @@ describe("flinkUDF.ts", () => {
         assert.ok(searchText.includes("SCALAR"));
       });
     });
+
+    describe("parameterSignature", () => {
+      it("should return formatted parameter signature", () => {
+        const udf = createFlinkUDF("paramSigUDF");
+        udf.parameters = [
+          new FlinkUdfParameter({
+            name: "param1",
+            dataType: "INT",
+            isOptional: false,
+            traits: [],
+          }),
+          new FlinkUdfParameter({
+            name: "param2",
+            dataType: "VARCHAR(2147483647)",
+            isOptional: true,
+            traits: [],
+          }),
+        ];
+        assert.strictEqual(udf.parametersSignature, "(param1 : INT, param2 : VARCHAR)");
+      });
+
+      it("should return empty parentheses for no parameters", () => {
+        const udf = createFlinkUDF("noParamUDF");
+        const signature = udf.parametersSignature;
+        assert.strictEqual(signature, "()");
+      });
+    });
   });
 
   describe("FlinkUdfTreeItem", () => {
@@ -110,7 +137,7 @@ describe("flinkUDF.ts", () => {
         returnType: "VARCHAR(2147483647)",
       });
       const treeItem = new FlinkUdfTreeItem(udf);
-      assert.strictEqual(treeItem.description, "→ VARCHAR");
+      assert.strictEqual(treeItem.description, "() → VARCHAR");
     });
   });
 
