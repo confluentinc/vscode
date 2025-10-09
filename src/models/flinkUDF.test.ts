@@ -113,12 +113,12 @@ describe("flinkUDF.ts", () => {
             traits: [],
           }),
         ];
-        assert.strictEqual(udf.parameterSignature, "(param1 : INT, param2 : VARCHAR)");
+        assert.strictEqual(udf.parametersSignature, "(param1 : INT, param2 : VARCHAR)");
       });
 
       it("should return empty parentheses for no parameters", () => {
         const udf = createFlinkUDF("noParamUDF");
-        const signature = udf.parameterSignature;
+        const signature = udf.parametersSignature;
         assert.strictEqual(signature, "()");
       });
     });

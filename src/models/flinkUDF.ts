@@ -132,8 +132,8 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
     return this.artifactReference.replace(/^confluent-artifact:\/\//, "");
   }
 
-  /** Returns a formatted string of the parameter signature. */
-  get parameterSignature(): string {
+  /** Returns a formatted string of the function parameters' signatures. */
+  get parametersSignature(): string {
     return (
       "(" +
       this.parameters
@@ -154,7 +154,7 @@ export class FlinkUdfTreeItem extends TreeItem {
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-udf`;
 
-    this.description = `${resource.parameterSignature} → ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
+    this.description = `${resource.parametersSignature} → ${FlinkUdfParameter.formatSqlType(resource.returnType)}`;
     this.tooltip = createFlinkUdfToolTip(resource);
   }
 }
@@ -167,7 +167,7 @@ export function createFlinkUdfToolTip(resource: FlinkUdf): CustomMarkdownString 
     .addField("Return Type", FlinkUdfParameter.formatSqlType(resource.returnType));
 
   if (resource.parameters.length > 0) {
-    tooltip.addField("Parameters", `${resource.parameterSignature}`);
+    tooltip.addField("Parameters", `${resource.parametersSignature}`);
   } else {
     tooltip.addField("Parameters", "None");
   }
