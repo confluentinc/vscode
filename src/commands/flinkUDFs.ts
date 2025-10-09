@@ -63,7 +63,7 @@ export async function deleteFlinkUDFCommand(selectedUdf: FlinkUdf): Promise<void
       },
       async (progress) => {
         progress.report({ message: "Executing DROP FUNCTION statement..." });
-        await ccloudResourceLoader.executeFlinkStatement(
+        await ccloudResourceLoader.executeBackgroundFlinkStatement(
           `DROP FUNCTION \`${selectedUdf.name}\`;`,
           database,
           {

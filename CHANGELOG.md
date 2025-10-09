@@ -17,6 +17,10 @@ All notable changes to this extension will be documented in this file.
   its description and tooltip, and the "Start Local Resources" action will not be offered if the
   extension cannot ping the local Docker Engine.
 
+### Fixed
+
+- Issue with sometimes reporting the wrong number of "matching elements" when searching some views.
+
 ## 1.7.0
 
 ### Added
