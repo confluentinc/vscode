@@ -32,7 +32,7 @@ export class SchemasViewProvider
   readonly viewId: string = "confluent-schemas";
 
   readonly kind = "schemas";
-  loggerName = "viewProviders.newSchemas";
+  loggerName = "viewProviders.schemas";
 
   parentResourceChangedEmitter = schemasViewResourceChanged;
   parentResourceChangedContextValue = ContextValues.schemaRegistrySelected;
@@ -51,11 +51,6 @@ export class SchemasViewProvider
   /** Legacy attribute setter. */
   set schemaRegistry(schemaRegistry: SchemaRegistry | null) {
     this.resource = schemaRegistry;
-  }
-
-  // legacy functional alias
-  setSchemaRegistry(schemaRegistry: SchemaRegistry | null) {
-    this.setParentResource(schemaRegistry);
   }
 
   /**

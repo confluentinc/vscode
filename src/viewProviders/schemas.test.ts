@@ -58,15 +58,17 @@ describe("SchemasViewProvider", () => {
     });
   });
 
-  describe("setSchemaRegistry()", () => {
+  describe("setParentResource()", () => {
     it("Should set the parent resource to the given schema registry", () => {
       assert.strictEqual(provider.resource, null);
 
-      provider.setSchemaRegistry(TEST_CCLOUD_SCHEMA_REGISTRY);
+      provider.setParentResource(TEST_CCLOUD_SCHEMA_REGISTRY);
       assert.strictEqual(provider.resource, TEST_CCLOUD_SCHEMA_REGISTRY);
+      assert.strictEqual(provider.schemaRegistry, TEST_CCLOUD_SCHEMA_REGISTRY);
 
-      provider.setSchemaRegistry(null);
+      provider.setParentResource(null);
       assert.strictEqual(provider.resource, null);
+      assert.strictEqual(provider.schemaRegistry, null);
     });
   });
 
