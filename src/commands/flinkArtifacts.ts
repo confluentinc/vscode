@@ -19,8 +19,8 @@ import {
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { detectClassesAndRegisterUDFs } from "./flinkUDFs";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
-import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
   buildUploadErrorMessage,
   getPresignedUploadUrl,
