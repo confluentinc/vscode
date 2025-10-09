@@ -15,7 +15,7 @@ export interface JarClassInfo {
 
 const logger = new Logger("utils/jarInspector");
 
-// Promisified open for convenience
+// Promisified open for convenience, using yauzl library
 const openZip = (filePath: string): Promise<ZipFile> =>
   new Promise((resolve, reject) => {
     yauzl.open(
@@ -32,38 +32,25 @@ const openZip = (filePath: string): Promise<ZipFile> =>
   });
 
 /**
- * Error type for JAR inspection failures so callers can distinguish.
+ * List the raw entries of a JAR (zip) archive
+ * @param filePath Absolute filesystem path
+ * @returns Array of file names contained in the archive
  */
-export class JarInspectionError extends Error {
-  constructor(
-    message: string,
-    public cause?: unknown,
-  ) {
-    super(message);
-    this.name = "JarInspectionError";
-  }
-}
-
-/**
- * List the raw entries of a JAR (zip) archive using yauzl (pure JS, no external tools).
- * @param jarPath Absolute filesystem path
- * @returns Array of entry file names contained in the archive
- */
-export async function listJarContents(jarPath: string): Promise<string[]> {
+export async function listJarContents(filePath: string): Promise<string[]> {
   try {
-    await fs.promises.access(jarPath, fs.constants.R_OK);
+    await fs.promises.access(filePath, fs.constants.R_OK);
   } catch (e) {
-    throw new JarInspectionError(`JAR file not readable: ${jarPath}`, e);
+    throw new Error(`JAR file not readable: ${filePath}`, e);
   }
 
-  if (path.extname(jarPath).toLowerCase() !== ".jar") {
-    logger.warn("File inspected does not have .jar extension", { jarPath });
+  if (path.extname(filePath).toLowerCase() !== ".jar") {
+    logger.warn("File inspected does not have .jar extension", { filePath });
   }
 
   return new Promise<string[]>((resolve, reject) => {
     const entries: string[] = [];
 
-    openZip(jarPath)
+    openZip(filePath)
       .then((zipFile) => {
         zipFile.readEntry();
         zipFile.on("entry", (entry: Entry) => {
@@ -76,24 +63,20 @@ export async function listJarContents(jarPath: string): Promise<string[]> {
           zipFile.readEntry();
         });
         zipFile.on("end", () => resolve(entries));
-        zipFile.on("error", (err: Error) =>
-          reject(new JarInspectionError("Error reading JAR entries", err)),
-        );
+        zipFile.on("error", (err: Error) => reject(new Error("Error reading JAR entries", err)));
       })
-      .catch((err: unknown) =>
-        reject(new JarInspectionError("Failed to open JAR (is it a valid zip archive?)", err)),
-      );
+      .catch((err) => reject(new Error("Failed to open JAR (is it a valid zip archive?)", err)));
   });
 }
 
 /**
  * Inspect a JAR file and extract Java class names.
  * Filters out inner classes and META-INF resources.
- * @param jarPath Absolute path to JAR
+ * @param filePath Absolute path to JAR
  */
-export async function inspectJarClasses(jarPath: string): Promise<JarClassInfo[]> {
+export async function inspectJarClasses(filePath: string): Promise<JarClassInfo[]> {
   try {
-    const entries = await listJarContents(jarPath);
+    const entries = await listJarContents(filePath);
     const classFiles = entries.filter(
       (f) => f.endsWith(".class") && !f.includes("$") && !f.startsWith("META-INF/"),
     );
@@ -108,9 +91,9 @@ export async function inspectJarClasses(jarPath: string): Promise<JarClassInfo[]
     logger.debug("inspectJarClasses: extracted classes", { count: infos.length });
     return infos;
   } catch (err) {
-    if (err instanceof JarInspectionError) {
-      throw err; // Preserve semantic error
+    if (err instanceof Error) {
+      throw err; // Preserve existing error
     }
-    throw new JarInspectionError("Unexpected error while inspecting JAR", err);
+    throw new Error("Unexpected error while inspecting JAR", err);
   }
 }
