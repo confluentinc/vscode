@@ -1,4 +1,5 @@
 import { ObservableScope } from "inertial";
+import * as vscode from "vscode";
 import { FlinkStatementResultsManager } from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
@@ -76,4 +77,33 @@ export async function openFlinkStatementResultsView(statement: FlinkStatement | 
     handler.dispose();
     os.dispose();
   });
+}
+
+/** Show a user confirmation about doing this action to a statement */
+export async function confirmActionOnStatement(
+  action: "stop" | "delete",
+  statement: FlinkStatement,
+): Promise<boolean> {
+  let message: string;
+  let confirmationOption: string;
+
+  if (action === "stop") {
+    message = `Are you sure you want to stop Flink statement ${statement.name}? This will halt its processing but retain its definition.`;
+    confirmationOption = "Stop Statement";
+  } else {
+    message = `Are you sure you want to delete Flink statement ${statement.name}? This action is irreversible and will remove the statement permanently.`;
+    confirmationOption = "Delete Statement";
+  }
+
+  const answer = await vscode.window.showWarningMessage(
+    message,
+    { modal: true },
+    confirmationOption,
+  );
+  if (answer !== confirmationOption) {
+    // User cancelled.
+    return false;
+  }
+
+  return true;
 }

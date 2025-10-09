@@ -355,6 +355,55 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     flinkStatementDeleted.fire(statement.id);
   }
 
+  /** Stop a currently running Flink statement */
+  public async stopFlinkStatement(statement: FlinkStatement): Promise<void> {
+    const handle = await getSidecar();
+    const statementsClient = handle.getFlinkSqlStatementsApi(statement);
+
+    // Refresh the statement otherwise we cannot stop it, will always get an error.
+    const refreshedStatement = await this.refreshFlinkStatement(statement);
+
+    if (!refreshedStatement) {
+      throw new Error(`Could not find Flink statement ${statement.id} to stop.`);
+    }
+
+    if (!refreshedStatement.stoppable) {
+      throw new Error(`Statement ${statement.id} is not in a stoppable state.`);
+    }
+
+    logger.info(
+      `Stopping Flink statement ${statement.id} on ${statement.provider}-${statement.region} in environment ${statement.environmentId}`,
+    );
+
+    try {
+      // One does not merely stop a Flink statement, one must update its spec to indicate our desire
+      // for it to be stopped.
+      await statementsClient.updateSqlv1Statement({
+        organization_id: refreshedStatement.organizationId,
+        environment_id: refreshedStatement.environmentId,
+        statement_name: refreshedStatement.name,
+        UpdateSqlv1StatementRequest: {
+          metadata: refreshedStatement.metadata,
+          name: refreshedStatement.name,
+          organization_id: refreshedStatement.organizationId,
+          environment_id: refreshedStatement.environmentId,
+          status: refreshedStatement.status,
+          spec: {
+            ...refreshedStatement.spec,
+            stopped: true,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error(`Error stopping Flink statement ${statement.id}`, { error });
+      throw error;
+    }
+
+    // Since the statement was running, the FlinkStatementManager will already
+    // be polling its status, so no need to do anything more here. When it transitions
+    // to a terminal phase, the FlinkStatementManager will fire events to update the UI.
+  }
+
   /**
    * Query the Flink artifacts for the given CCloudFlinkDbKafkaCluster's CCloud environment + provider-region.
    * Looks to the resource manager cache first, and only does a deep fetch if not found (or told to force refresh).

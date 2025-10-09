@@ -30,7 +30,7 @@ import { UriMetadata } from "../storage/types";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { getEditorOrFileContents } from "../utils/file";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
-import { openFlinkStatementResultsView } from "./utils/statements";
+import { confirmActionOnStatement, openFlinkStatementResultsView } from "./utils/statements";
 
 const logger = new Logger("commands.flinkStatements");
 
@@ -305,6 +305,12 @@ export async function deleteFlinkStatementCommand(statement: FlinkStatement): Pr
     logger.error("deleteFlinkStatementCommand", "statement is invalid");
     return;
   }
+
+  if (!(await confirmActionOnStatement("delete", statement))) {
+    logger.debug("User canceled deleting statement");
+    return;
+  }
+
   const ccloudLoader = CCloudResourceLoader.getInstance();
 
   try {
@@ -319,6 +325,44 @@ export async function deleteFlinkStatementCommand(statement: FlinkStatement): Pr
   void vscode.window.showInformationMessage(`Deleted statement ${statement.name}`);
 }
 
+export async function stopFlinkStatementCommand(statement: FlinkStatement): Promise<void> {
+  // Should not happen, just be defensive.
+  if (!statement || !(statement instanceof FlinkStatement)) {
+    logger.error("stopFlinkStatementCommand", "statement is invalid");
+    return;
+  }
+
+  // Should not happen either if context menu is properly gated.
+  if (!statement.stoppable) {
+    logger.error(
+      "stopFlinkStatementCommand",
+      `statement ${statement.id} is not in a stoppable state (${statement.status.phase})`,
+    );
+    await showErrorNotificationWithButtons(
+      `Statement ${statement.name} is not in a stoppable state (${statement.status.phase})`,
+    );
+    return;
+  }
+
+  if (!(await confirmActionOnStatement("stop", statement))) {
+    logger.debug("User canceled stopping statement");
+    return;
+  }
+
+  const ccloudLoader = CCloudResourceLoader.getInstance();
+
+  try {
+    await ccloudLoader.stopFlinkStatement(statement);
+  } catch (err) {
+    logger.error("stopFlinkStatementCommand", `Error stopping statement: ${err}`);
+    await showErrorNotificationWithButtons(`Error stopping statement: ${err}`);
+    return;
+  }
+
+  // Show a notification that the statement was stopped.
+  void vscode.window.showInformationMessage(`Stopped statement ${statement.name}`);
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
@@ -326,5 +370,6 @@ export function registerFlinkStatementCommands(): vscode.Disposable[] {
     // Different naming scheme due to legacy telemetry reasons.
     registerCommandWithLogging("confluent.flinkStatementResults", openFlinkStatementResultsView),
     registerCommandWithLogging("confluent.statements.delete", deleteFlinkStatementCommand),
+    registerCommandWithLogging("confluent.statements.stop", stopFlinkStatementCommand),
   ];
 }
