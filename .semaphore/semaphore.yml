@@ -379,3 +379,10 @@ promotions:
     pipeline_file: validate-sidecar-version.yml
     auto_promote:
       when: "result = 'passed' and change_in(['/.versions/ide-sidecar.txt', '/src/clients/sidecar-openapi-specs/sidecar.openapi.yaml'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+  - name: Run Playwright E2E Tests for CUJs
+    pipeline_file: playwright-e2e.yml
+    parameters:
+      env_vars:
+        - name: TEST_SUITE
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud"
+          description: "Playwright E2E test tags to run, separated by |."
