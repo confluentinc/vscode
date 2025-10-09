@@ -82,6 +82,7 @@ describe("flinkComputePools.ts", () => {
       );
       sinon.assert.calledThrice(stubbedConfigs.update);
     });
+
     it("should not update prefix setting when user exits via the escape key", async () => {
       flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
@@ -91,6 +92,7 @@ describe("flinkComputePools.ts", () => {
 
       sinon.assert.notCalled(showInformationMessageStub);
     });
+
     it("should update prefix setting when user provides empty string", async () => {
       flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
