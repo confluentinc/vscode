@@ -171,22 +171,6 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
         assert.strictEqual(provider.searchStringSetCount, 2);
       });
 
-      it("should clear internal search state when no value is passed", () => {
-        provider.itemSearchString = "running";
-        provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
-        provider.searchStringSetCount = 2;
-
-        provider.setSearch(null);
-
-        assert.strictEqual(provider.itemSearchString, null);
-        assert.strictEqual(provider.searchMatches.size, 0, "searchMatches should be cleared");
-        assert.strictEqual(
-          provider.searchStringSetCount,
-          2,
-          "searchStringSetCount should not change when clearing search",
-        );
-      });
-
       for (const arg of ["First", null]) {
         it(`should update the search context value (arg=${arg}) when .searchContextValue is set`, () => {
           // context value must be set for setContextValue to be called
@@ -252,14 +236,19 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
         assert.strictEqual(provider.totalItemCount, 2);
       });
 
-      it("should update tree view message with search results when filterChildren() is called", () => {
-        provider.setSearch("running");
+      it("should maintain totalItemCount, searchMatches, and the treeview message properly", () => {
+        provider.setSearch("first");
+
+        // set up as if from a previous state, now provider.searchMatches.size == 1
+        provider.searchMatches.add(TEST_CCLOUD_FLINK_STATEMENT);
+        // Before these next two children are filtered, totalItemCount is 17
+        provider.totalItemCount = 17;
 
         const items = [
           new FlinkStatement({
             ...TEST_CCLOUD_FLINK_STATEMENT,
             name: "first-statement",
-            status: makeStatus(Phase.RUNNING),
+            status: makeStatus(Phase.STOPPED),
           }),
           new FlinkStatement({
             ...TEST_CCLOUD_FLINK_STATEMENT,
@@ -268,12 +257,23 @@ describe("viewProviders/base.ts BaseViewProvider", () => {
           }),
         ];
 
-        provider.filterChildren(undefined, items);
-
-        assert.ok(provider["treeView"].message);
+        // simulate a previous call with a parent element that populated searchMatches
+        provider.filterChildren(items[0], items);
+        // One more child match makes for two total matches
+        assert.strictEqual(provider.searchMatches.size, 2);
         assert.strictEqual(
           provider["treeView"].message,
-          `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} for "${provider.itemSearchString}"`,
+          `Showing 2 of 19 for "${provider.itemSearchString}"`,
+        );
+
+        // now call with no parent element, which should clear searchMatches, totalItemCount,
+        // and recount totalItemCount based on the children passed in (2)
+        provider.filterChildren(undefined, items);
+        assert.strictEqual(provider.searchMatches.size, 1); // only one of the two items matches
+        assert.strictEqual(provider.totalItemCount, 2);
+        assert.strictEqual(
+          provider["treeView"].message,
+          `Showing 1 of 2 for "${provider.itemSearchString}"`,
         );
       });
     });
