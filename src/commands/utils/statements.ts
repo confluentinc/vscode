@@ -79,7 +79,13 @@ export async function openFlinkStatementResultsView(statement: FlinkStatement | 
   });
 }
 
-/** Show a user confirmation about doing this action to a statement */
+/**
+ * Show a user confirmation about doing this action to a statement.
+ *
+ * @param action - The action to confirm ("stop" or "delete").
+ * @param statement - The Flink statement the action will be performed on.
+ * @returns Promise resolving to true if user confirmed, false if cancelled.
+ */
 export async function confirmActionOnStatement(
   action: "stop" | "delete",
   statement: FlinkStatement,
@@ -97,7 +103,7 @@ export async function confirmActionOnStatement(
 
   const answer = await vscode.window.showWarningMessage(
     message,
-    { modal: true },
+    { modal: false },
     confirmationOption,
   );
   if (answer !== confirmationOption) {

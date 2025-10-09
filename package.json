@@ -1833,7 +1833,7 @@
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/ || viewItem =~ /.*flink-statement$/)",
           "group": "2_copy@2"
         },
         {
