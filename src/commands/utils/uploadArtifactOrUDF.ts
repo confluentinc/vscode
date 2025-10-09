@@ -1,6 +1,4 @@
-import { execFile } from "child_process";
 import path from "path";
-import { promisify } from "util";
 import * as vscode from "vscode";
 import {
   CreateArtifactV1FlinkArtifact201Response,
@@ -19,6 +17,7 @@ import { showInfoNotificationWithButtons } from "../../notifications";
 import { getSidecar } from "../../sidecar";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { readFileBuffer } from "../../utils/fsWrappers";
+import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { uploadFileToAzure, uploadFileToS3 } from "./uploadToProvider";
 export { uploadFileToAzure };
@@ -337,15 +336,7 @@ export async function executeCreateFunction(
   void showInfoNotificationWithButtons(createdMsg);
 }
 
-/**
- * Interface representing a class found in a JAR file
- */
-export interface JarClassInfo {
-  /** The fully qualified class name */
-  className: string;
-  /** The simple class name (without package) */
-  simpleName: string;
-}
+// JarClassInfo moved to utils/jarInspector for reuse & testability
 
 /**
  * Interface for UDF registration data
@@ -357,102 +348,7 @@ export interface UdfRegistrationData {
   functionName: string;
 }
 
-/**
- * Promisified execFile (safer than exec: no shell, avoids injection & quoting issues)
- */
-const execFileAsync = promisify(execFile);
-
-// Max buffer for listing JAR contents (5MB should be ample for class listings)
-const LIST_JAR_MAX_BUFFER = 5 * 1024 * 1024;
-
-/**
- * List the contents of a JAR file using system tooling.
- * Tries `unzip -l` first (fast, commonly available), falls back to `jar tf`.
- * @param jarPath Absolute filesystem path to the JAR
- * @returns stdout listing of the archive contents
- * @throws Error with actionable guidance if neither tool is available or execution fails
- */
-async function listJarContents(jarPath: string): Promise<string> {
-  try {
-    const { stdout } = await execFileAsync("unzip", ["-l", jarPath], {
-      maxBuffer: LIST_JAR_MAX_BUFFER,
-    });
-    return stdout;
-  } catch (unzipErr) {
-    // If unzip is missing (ENOENT) or failed, attempt fallback to `jar`
-    const unzipMissing =
-      (unzipErr as NodeJS.ErrnoException)?.code === "ENOENT" ||
-      /not (found|recognized)/i.test(String(unzipErr));
-
-    try {
-      if (unzipMissing) {
-        throw unzipErr;
-      }
-      const { stdout } = await execFileAsync("jar", ["tf", jarPath], {
-        maxBuffer: LIST_JAR_MAX_BUFFER,
-      });
-      // Normalize output format to loosely mimic unzip -l lines (one entry per line already)
-      return stdout
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .join("\n");
-    } catch (jarErr) {
-      const logger = new Logger("commands/listJarContents");
-      logger.error("Failed to list JAR contents with both unzip and jar", {
-        unzipError: String(unzipErr),
-        jarError: String(jarErr),
-      });
-      throw new Error(
-        "Failed to inspect JAR contents. Ensure either 'unzip' or a JDK providing the 'jar' tool is installed and available in your PATH.",
-      );
-    }
-  }
-}
-
-/**
- * Inspects a JAR file and extracts Java class names using the unzip command.
- * @param jarFileUri The URI of the JAR file to inspect
- * @returns Promise that resolves to an array of class information
- */
-export async function inspectJarContents(jarFileUri: vscode.Uri): Promise<JarClassInfo[]> {
-  const logger = new Logger("commands/inspectJarContents");
-  try {
-    const jarPath = jarFileUri.fsPath;
-    logger.debug(`Inspecting JAR contents: ${jarPath}`);
-
-    // Replaced dynamic import + exec with safer helper using execFile
-    const stdout = await listJarContents(jarPath);
-
-    // Parse the output to find .class files
-    const lines = stdout.split("\n");
-    const classFiles: string[] = [];
-
-    for (const line of lines) {
-      // unzip -l format vs jar tf format: pattern handles both by focusing on .class suffix
-      const classMatch = line.match(/([A-Za-z0-9/_$.-]+\.class)$/);
-      if (classMatch) {
-        const classPath = classMatch[1];
-        if (!classPath.includes("$") && !classPath.includes("META-INF")) {
-          classFiles.push(classPath);
-        }
-      }
-    }
-
-    const classInfos: JarClassInfo[] = classFiles.map((filePath) => {
-      const className = filePath.replace(/\//g, ".").replace(/\.class$/, "");
-      const simpleName = className.split(".").pop() || className;
-      return { className, simpleName };
-    });
-
-    logger.debug(`Found ${classInfos.length} class(es) in JAR`, { count: classInfos.length });
-    return classInfos;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error listing JAR contents";
-    logger.error("Failed to inspect JAR contents", { error: message });
-    throw new Error(`Failed to inspect JAR contents: ${message}`);
-  }
-}
+// JAR inspection logic extracted to utils/jarInspector.ts for testability
 
 /**
  * Prompts the user to register UDFs after a successful artifact upload.
@@ -460,6 +356,14 @@ export async function inspectJarContents(jarFileUri: vscode.Uri): Promise<JarCla
  * @param jarFileUri The URI of the original JAR file
  * @param database The Flink database to register UDFs in
  * @returns Promise that resolves when the UDF registration process completes
+ */
+/**
+ * After uploading an artifact JAR, optionally help the user register UDFs by:
+ * 1. Asking for consent
+ * 2. Inspecting the JAR (now delegated to utils/jarInspector for testability)
+ * 3. Letting the user pick one or more classes
+ * 4. Prompting for function names
+ * 5. Submitting CREATE FUNCTION statements
  */
 export async function promptForUdfRegistrationAfterUpload(
   params: ArtifactUploadParams,
@@ -492,7 +396,7 @@ export async function promptForUdfRegistrationAfterUpload(
       async (progress) => {
         progress.report({ message: "Extracting class information from JAR..." });
 
-        const classInfos = await inspectJarContents(params.selectedFile);
+        const classInfos = await inspectJarClasses(params.selectedFile.fsPath);
 
         if (classInfos.length === 0) {
           void vscode.window.showWarningMessage(
@@ -568,7 +472,7 @@ export async function promptForFunctionNames(
 
   for (const classInfo of selectedClasses) {
     // Generate a default function name based on the simple class name
-    const defaultFunctionName = classInfo.simpleName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, "_");
+    const defaultFunctionName = classInfo.simpleName.toLowerCase().replace(/\W/g, "_");
 
     const functionName = await vscode.window.showInputBox({
       title: `Function Name for ${classInfo.simpleName}`,
