@@ -17,6 +17,7 @@ import {
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { detectClassesAndRegisterUDFs } from "./flinkUDFs";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
   getPresignedUploadUrl,
@@ -87,6 +88,7 @@ export async function uploadArtifactCommand(
             {
               "Register UDFs": () => {
                 /* Call register prompt */
+                void detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
                 logger.debug(`User wants to register UDFs for artifact: ${params.artifactName}`);
               },
             },
