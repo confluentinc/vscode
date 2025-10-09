@@ -152,8 +152,6 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
       // set context value to toggle between "search" and "clear search" actions
       setContextValue(this.searchContextValue, searchString !== null);
     }
-    // clear from any previous search filter
-    this.searchMatches.clear();
 
     if (searchString) {
       // Increment the count of how many times the user has set a search string
@@ -169,8 +167,9 @@ export abstract class BaseViewProvider<T extends BaseViewProviderData>
   filterChildren(element: T | undefined, children: T[]): T[] {
     if (!element) {
       // if no parent element, we're at the root, so reset the total item count
-      // for this pass through the children
+      // and the searchMatches set for this pass through all the children
       this.totalItemCount = 0;
+      this.searchMatches.clear();
     }
     // Always increment the total item count with this amount of children
     this.totalItemCount += children.length;
