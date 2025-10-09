@@ -406,7 +406,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       // Will raise Error if the cluster isn't Flinkable or if the statement
       // execution fails. Will use the first compute pool in the cluster's
       // flinkPools array to execute the statement.
-      const rawResults = await this.executeFlinkStatement<RawUdfSystemCatalogRow>(
+      const rawResults = await this.executeBackgroundFlinkStatement<RawUdfSystemCatalogRow>(
         udfSystemCatalogQuery,
         cluster,
         { nameSpice: "list-udfs" },
@@ -423,7 +423,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
   }
 
   /**
-   * Map of outstanding promises for calls to executeFlinkStatement(), keyed by hash
+   * Map of outstanding promises for calls to executeBackgroundFlinkStatement(), keyed by hash
    * of (databaseId, computePoolId, sqlStatement).
    */
   private readonly backgroundStatementPromises: Map<string, Promise<Array<any>>> = new Map();
@@ -449,7 +449,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @returns Array of results, each of type RT (generic type parameter) corresponding to the result row structure from the query.
    *
    */
-  async executeFlinkStatement<RT>(
+  async executeBackgroundFlinkStatement<RT>(
     sqlStatement: string,
     database: CCloudFlinkDbKafkaCluster,
     options: {
@@ -488,24 +488,26 @@ export class CCloudResourceLoader extends CachingResourceLoader<
       // If we already have a pending promise for this same statement in this same database/compute pool,
       // just return the existing promise.
       logger.debug(
-        `executeFlinkStatement() deduplicating identical pending statement: ${sqlStatement}`,
+        `executeBackgroundFlinkStatement() deduplicating identical pending statement: ${sqlStatement}`,
       );
       return this.backgroundStatementPromises.get(promiseKey)!;
     }
 
     // Create a new promise for this statement execution, and store it in the map of pending promises.
-    const statementPromise = this.doExecuteFlinkStatement<RT>(statementParams).finally(() => {
-      // When the promise settles (either resolves or rejects), remove it from the map of pending promises.
-      this.backgroundStatementPromises.delete(promiseKey);
-    });
+    const statementPromise = this.doExecuteBackgroundFlinkStatement<RT>(statementParams).finally(
+      () => {
+        // When the promise settles (either resolves or rejects), remove it from the map of pending promises.
+        this.backgroundStatementPromises.delete(promiseKey);
+      },
+    );
 
     this.backgroundStatementPromises.set(promiseKey, statementPromise);
 
     return statementPromise;
   }
 
-  /** Actual implementation of executeFlinkStatement(), without deduplication logic. */
-  private async doExecuteFlinkStatement<RT>(
+  /** Actual implementation of executeBackgroundFlinkStatement(), without deduplication logic. */
+  private async doExecuteBackgroundFlinkStatement<RT>(
     statementParams: IFlinkStatementSubmitParameters,
   ): Promise<Array<RT>> {
     const computePool = statementParams.computePool;

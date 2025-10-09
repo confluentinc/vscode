@@ -323,7 +323,7 @@ export async function executeCreateFunction(
   database: CCloudFlinkDbKafkaCluster,
 ) {
   const ccloudResourceLoader = CCloudResourceLoader.getInstance();
-  await ccloudResourceLoader.executeFlinkStatement<{ created_at?: string }>(
+  await ccloudResourceLoader.executeBackgroundFlinkStatement<{ created_at?: string }>(
     `CREATE FUNCTION \`${userInput.functionName}\` AS '${userInput.className}' USING JAR 'confluent-artifact://${artifact.id}';`,
     database,
     {

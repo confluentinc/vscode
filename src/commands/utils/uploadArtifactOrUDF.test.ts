@@ -421,7 +421,7 @@ describe("commands/utils/uploadArtifact", () => {
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
       // one environment with no pools by default
       stubbedLoader.getEnvironments.resolves([TEST_CCLOUD_ENVIRONMENT]);
-      stubbedLoader.executeFlinkStatement.resolves([
+      stubbedLoader.executeBackgroundFlinkStatement.resolves([
         { created_at: JSON.stringify(new Date().toISOString()) },
       ]);
 
@@ -438,9 +438,9 @@ describe("commands/utils/uploadArtifact", () => {
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
       );
 
-      sinon.assert.calledOnce(stubbedLoader.executeFlinkStatement);
+      sinon.assert.calledOnce(stubbedLoader.executeBackgroundFlinkStatement);
       sinon.assert.calledWith(
-        stubbedLoader.executeFlinkStatement,
+        stubbedLoader.executeBackgroundFlinkStatement,
         `CREATE FUNCTION \`${functionName}\` AS '${className}' USING JAR 'confluent-artifact://${fakeArtifact.id}';`,
         TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
         { timeout: 60000 },
