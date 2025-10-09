@@ -367,7 +367,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
     }
 
     logger.info(
-      `Stopping Flink statement ${statement.id} on ${statement.provider}-${statement.region} in environment ${statement.environmentId}`,
+      `Stopping Flink statement ${statement.id} in ${statement.cloudRegion} and environment ${statement.environmentId}`,
     );
 
     try {
