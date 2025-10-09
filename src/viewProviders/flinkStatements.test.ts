@@ -302,26 +302,22 @@ describe("FlinkStatementsViewProvider", () => {
       sinon.assert.calledWith(revealStub, statement, { focus: true, select: true });
     });
 
-    it("throws if reveal() fails", async () => {
+    it("does not throw if reveal() fails", async () => {
       const statement = createFlinkStatement();
       resourcesInTreeView.set(statement.id, statement);
+
+      // As would be the case if, oh, the item is not actually visible (e.g. filtered out by search).
       const revealStub = sandbox.stub(viewProvider["treeView"], "reveal").throws();
-      await assert.rejects(
-        async () => {
-          await viewProvider.focus(statement.id);
-        },
-        {
-          name: "Error",
-          message: "Error",
-        },
-      );
+
+      await viewProvider.focus(statement.id);
+
       sinon.assert.calledOnce(revealStub);
       sinon.assert.calledWith(revealStub, statement, { focus: true, select: true });
     });
 
     it("throws error if statement not found", async () => {
       const statementId = "non-existent-statement-id";
-      assert.rejects(
+      await assert.rejects(
         async () => {
           await viewProvider.focus(statementId);
         },
