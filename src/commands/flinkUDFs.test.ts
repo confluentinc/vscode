@@ -62,14 +62,14 @@ describe("commands/flinkUDFs.ts", () => {
 
   describe("deleteFlinkUDFCommand", () => {
     const mockUDF = createFlinkUDF("123");
-    let executeFlinkStatementStub: sinon.SinonStub;
+    let executeBackgroundFlinkStatementStub: sinon.SinonStub;
     let showWarningStub: sinon.SinonStub;
     let mockFlinkDatabaseViewProvider: sinon.SinonStubbedInstance<FlinkDatabaseViewProvider>;
 
     beforeEach(() => {
-      executeFlinkStatementStub = sandbox.stub(
+      executeBackgroundFlinkStatementStub = sandbox.stub(
         CCloudResourceLoader.getInstance(),
-        "executeFlinkStatement",
+        "executeBackgroundFlinkStatement",
       );
       showWarningStub = sandbox.stub(vscode.window, "showWarningMessage");
       mockFlinkDatabaseViewProvider = sandbox.createStubInstance(FlinkDatabaseViewProvider);
@@ -83,7 +83,7 @@ describe("commands/flinkUDFs.ts", () => {
       await deleteFlinkUDFCommand(undefined as any);
 
       sinon.assert.notCalled(showWarningStub);
-      sinon.assert.notCalled(executeFlinkStatementStub);
+      sinon.assert.notCalled(executeBackgroundFlinkStatementStub);
     });
 
     it("should open a confirmation modal and return early if the user cancels", async () => {
@@ -93,7 +93,7 @@ describe("commands/flinkUDFs.ts", () => {
 
       sinon.assert.calledOnce(showWarningStub);
 
-      sinon.assert.notCalled(executeFlinkStatementStub);
+      sinon.assert.notCalled(executeBackgroundFlinkStatementStub);
     });
 
     it("should handle 'No Flink database' error", async () => {
@@ -107,7 +107,7 @@ describe("commands/flinkUDFs.ts", () => {
 
       sinon.assert.calledOnce(showErrorStub);
       sinon.assert.calledWith(showErrorStub, "Failed to delete UDF: No Flink database.");
-      sinon.assert.notCalled(executeFlinkStatementStub);
+      sinon.assert.notCalled(executeBackgroundFlinkStatementStub);
     });
 
     it("should handle ResponseError in catch block", async () => {
@@ -119,7 +119,7 @@ describe("commands/flinkUDFs.ts", () => {
         "Internal Server Error",
         "Database connection failed",
       );
-      executeFlinkStatementStub.rejects(responseError);
+      executeBackgroundFlinkStatementStub.rejects(responseError);
       await deleteFlinkUDFCommand(mockUDF);
 
       sinon.assert.calledOnce(showErrorStub);
@@ -133,7 +133,7 @@ describe("commands/flinkUDFs.ts", () => {
       const errorWithDetail = new Error(
         "Some error occurred Error detail: Function not found in catalog",
       );
-      executeFlinkStatementStub.rejects(errorWithDetail);
+      executeBackgroundFlinkStatementStub.rejects(errorWithDetail);
 
       await deleteFlinkUDFCommand(mockUDF);
 
@@ -146,7 +146,7 @@ describe("commands/flinkUDFs.ts", () => {
       showWarningStub.resolves("Yes, delete");
 
       const regularError = new Error("Connection timeout");
-      executeFlinkStatementStub.rejects(regularError);
+      executeBackgroundFlinkStatementStub.rejects(regularError);
 
       await deleteFlinkUDFCommand(mockUDF);
 
@@ -168,7 +168,7 @@ describe("commands/flinkUDFs.ts", () => {
         );
       });
 
-      executeFlinkStatementStub.resolves({ dropped_at: new Date().toISOString() });
+      executeBackgroundFlinkStatementStub.resolves({ dropped_at: new Date().toISOString() });
 
       await deleteFlinkUDFCommand(mockUDF);
 
@@ -386,7 +386,7 @@ describe("commands/flinkUDFs.ts", () => {
       sinon.assert.calledWith(showErrorStub, `Failed to create UDF function: ${errorMessage}`);
     });
 
-    it("should show an error notification when executeFlinkStatement throws a non-ResponseError error", async () => {
+    it("should show an error notification when executeBackgroundFlinkStatement throws a non-ResponseError error", async () => {
       // returns one environment with no pools
       const error = new Error("Something went wrong with UDF creation");
       executeCreateFunctionStub.rejects(error);
