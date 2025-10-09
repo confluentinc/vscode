@@ -356,12 +356,35 @@ describe("FlinkStatement", () => {
 });
 
 describe("FlinkStatementTreeItem", () => {
-  // Prove context value is "ccloud-flink-statement"
-  it("has the correct context value", () => {
+  // Prove context value is "ccloud-viewable-stoppable-flink-statement"
+  it("has the correct context value when viewable+stoppable", () => {
     const statement = TEST_CCLOUD_FLINK_STATEMENT;
 
     const treeItem = new FlinkStatementTreeItem(statement);
-    assert.strictEqual(treeItem.contextValue, "ccloud-flink-statement");
+    assert.strictEqual(treeItem.contextValue, "ccloud-viewable-stoppable-flink-statement");
+  });
+
+  it("has the correct context value when viewable+deletable", () => {
+    const statement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: makeStatus(Phase.COMPLETED),
+    });
+
+    const treeItem = new FlinkStatementTreeItem(statement);
+    assert.strictEqual(treeItem.contextValue, "ccloud-viewable-deletable-flink-statement");
+  });
+
+  it("has the correct context value when not viewable", () => {
+    const statement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: makeStatus(Phase.COMPLETED),
+    });
+
+    // Won't be viewable because it's too old.
+    statement.metadata.created_at = new Date(Date.now() - 24 * 60 * 60 * 1000 * 2); // 2 days ago
+
+    const treeItem = new FlinkStatementTreeItem(statement);
+    assert.strictEqual(treeItem.contextValue, "ccloud-deletable-flink-statement");
   });
 
   it("has the correct context value for old statements", () => {
@@ -371,7 +394,8 @@ describe("FlinkStatementTreeItem", () => {
     });
 
     const treeItem = new FlinkStatementTreeItem(oldStatement);
-    assert.strictEqual(treeItem.contextValue, "ccloud-flink-statement-not-viewable");
+    // ensure 'viewable' is not in the context value
+    assert.ok(!treeItem.contextValue!.includes("viewable"));
   });
 
   it("tooltip hits the major properties", () => {

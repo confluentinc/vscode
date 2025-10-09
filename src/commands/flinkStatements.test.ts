@@ -27,7 +27,7 @@ import {
   handleStatementSubmission,
   viewStatementSqlCommand,
 } from "./flinkStatements";
-import * as statements from "./utils/statements";
+import * as statementsUtils from "./utils/statements";
 
 describe("commands/flinkStatements.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -144,6 +144,7 @@ describe("commands/flinkStatements.ts", () => {
     let stubbedLoader: sinon.SinonStubbedInstance<CCloudResourceLoader>;
     let showInformationMessageStub: sinon.SinonStub;
     let showErrorNotificationWithButtonsStub: sinon.SinonStub;
+    let confirmActionOnStatementStub: sinon.SinonStub;
 
     beforeEach(() => {
       stubbedLoader = getStubbedCCloudResourceLoader(sandbox);
@@ -152,6 +153,7 @@ describe("commands/flinkStatements.ts", () => {
         notifications,
         "showErrorNotificationWithButtons",
       );
+      confirmActionOnStatementStub = sandbox.stub(statementsUtils, "confirmActionOnStatement");
     });
 
     it("should hate undefined statement", async () => {
@@ -169,10 +171,13 @@ describe("commands/flinkStatements.ts", () => {
     });
 
     it("should delete a valid FlinkStatement", async () => {
+      confirmActionOnStatementStub.resolves(true);
       const statement = createFlinkStatement();
 
       await deleteFlinkStatementCommand(statement);
 
+      sinon.assert.calledOnce(confirmActionOnStatementStub);
+      sinon.assert.calledWithExactly(confirmActionOnStatementStub, "delete", statement);
       sinon.assert.calledOnce(stubbedLoader.deleteFlinkStatement);
       sinon.assert.calledWithExactly(stubbedLoader.deleteFlinkStatement, statement);
 
@@ -185,9 +190,23 @@ describe("commands/flinkStatements.ts", () => {
       sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
     });
 
+    it("should not delete a FlinkStatement if user cancels confirmation", async () => {
+      confirmActionOnStatementStub.resolves(false);
+      const statement = createFlinkStatement();
+
+      await deleteFlinkStatementCommand(statement);
+
+      sinon.assert.calledOnce(confirmActionOnStatementStub);
+      sinon.assert.calledWithExactly(confirmActionOnStatementStub, "delete", statement);
+      sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+      sinon.assert.notCalled(showInformationMessageStub);
+      sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
+    });
+
     it("should handle errors when deleting a FlinkStatement", async () => {
       const statement = createFlinkStatement();
       const testError = new Error("Test error deleting statement");
+      confirmActionOnStatementStub.resolves(true);
       stubbedLoader.deleteFlinkStatement.rejects(testError);
 
       await deleteFlinkStatementCommand(statement);
@@ -219,7 +238,10 @@ describe("commands/flinkStatements.ts", () => {
     beforeEach(() => {
       waitForStatementCompletionStub = sandbox.stub(statementUtils, "waitForStatementCompletion");
       waitForResultsFetchableStub = sandbox.stub(statementUtils, "waitForResultsFetchable");
-      openFlinkStatementResultsViewStub = sandbox.stub(statements, "openFlinkStatementResultsView");
+      openFlinkStatementResultsViewStub = sandbox.stub(
+        statementsUtils,
+        "openFlinkStatementResultsView",
+      );
       stubbedUDFsChangedEmitter = eventEmitterStubs(sandbox).udfsChanged!;
     });
 
