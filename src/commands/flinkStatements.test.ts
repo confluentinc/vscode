@@ -170,9 +170,24 @@ describe("commands/flinkStatements.ts", () => {
         sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
       });
 
+      it("should show error if statement is stoppable (should not have offered the delete action in first place)", async () => {
+        const statement = createFlinkStatement({ phase: Phase.RUNNING });
+        await deleteFlinkStatementCommand(statement);
+
+        sinon.assert.notCalled(confirmActionOnStatementStub);
+        sinon.assert.notCalled(stubbedLoader.deleteFlinkStatement);
+        sinon.assert.notCalled(showInformationMessageStub);
+
+        sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+        sinon.assert.calledWithExactly(
+          showErrorNotificationWithButtonsStub,
+          `Statement ${statement.name} is not in a deletable state (${statement.status.phase})`,
+        );
+      });
+
       it("should delete a valid FlinkStatement", async () => {
         confirmActionOnStatementStub.resolves(true);
-        const statement = createFlinkStatement();
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
 
         await deleteFlinkStatementCommand(statement);
 
@@ -192,7 +207,7 @@ describe("commands/flinkStatements.ts", () => {
 
       it("should not delete a FlinkStatement if user cancels confirmation", async () => {
         confirmActionOnStatementStub.resolves(false);
-        const statement = createFlinkStatement();
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
 
         await deleteFlinkStatementCommand(statement);
 
@@ -204,7 +219,7 @@ describe("commands/flinkStatements.ts", () => {
       });
 
       it("should handle errors when deleting a FlinkStatement", async () => {
-        const statement = createFlinkStatement();
+        const statement = createFlinkStatement({ phase: Phase.COMPLETED });
         const testError = new Error("Test error deleting statement");
         confirmActionOnStatementStub.resolves(true);
         stubbedLoader.deleteFlinkStatement.rejects(testError);

@@ -306,6 +306,19 @@ export async function deleteFlinkStatementCommand(statement: FlinkStatement): Pr
     return;
   }
 
+  // Stoppable statements should not have been offered the delete option.
+  // But be defensive.
+  if (statement.stoppable) {
+    logger.error(
+      "deleteFlinkStatementCommand",
+      `statement ${statement.id} is not in a deletable state (${statement.status.phase})`,
+    );
+    await showErrorNotificationWithButtons(
+      `Statement ${statement.name} is not in a deletable state (${statement.status.phase})`,
+    );
+    return;
+  }
+
   if (!(await confirmActionOnStatement("delete", statement))) {
     logger.debug("User canceled deleting statement");
     return;

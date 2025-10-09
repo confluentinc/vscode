@@ -328,11 +328,6 @@ export class CCloudResourceLoader extends CachingResourceLoader<
    * @param statement The Flink statement to delete.
    */
   public async deleteFlinkStatement(statement: FlinkStatement): Promise<void> {
-    const organization = await this.getOrganization();
-    if (!organization) {
-      throw new Error("Not connected to CCloud, cannot delete Flink statement.");
-    }
-
     const handle = await getSidecar();
     const statementsClient = handle.getFlinkSqlStatementsApi(statement);
 
@@ -342,7 +337,7 @@ export class CCloudResourceLoader extends CachingResourceLoader<
 
     try {
       await statementsClient.deleteSqlv1Statement({
-        organization_id: organization.id,
+        organization_id: statement.organizationId,
         environment_id: statement.environmentId,
         statement_name: statement.name,
       });
