@@ -87,7 +87,9 @@ export async function uploadArtifactCommand(
             // "View in sidebar", // TODO https://github.com/confluentinc/vscode/issues/2661
           );
           if (action === "Register UDFs") {
+            // TODO at this point we have "item" which could be a database to use...
             // Start the UDF registration flow in the background (don't await to avoid blocking)
+            // TODO don't await here, this should start a new process/flow?
             await promptForUdfRegistrationAfterUpload(params, response.id).catch((error) => {
               // Log the error but don't show it to user since this is a bonus feature
               console.error("UDF registration flow failed:", error);
