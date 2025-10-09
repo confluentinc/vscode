@@ -382,5 +382,7 @@ promotions:
   - name: Run Playwright E2E Tests for CUJs
     pipeline_file: playwright-e2e.yml
     parameters:
-      - name: TEST_SUITE
-        default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud"
+      env_vars:
+        - name: TEST_SUITE
+          default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud"
+          description: "Playwright E2E test tags to run, separated by |."
