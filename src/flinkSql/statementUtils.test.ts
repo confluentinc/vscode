@@ -88,44 +88,6 @@ describe("flinkSql/statementUtils.ts", function () {
     });
   });
 
-  describe("determineFlinkStatementName()", function () {
-    const now = new Date("2024-10-21 12:00:00.0000Z");
-    const expectedDatePart = "2024-10-21t12-00-00";
-
-    beforeEach(() => {
-      sandbox.useFakeTimers(now);
-    });
-
-    it("Should include the spice parameter in the statement name", async function () {
-      const statementName = await determineFlinkStatementName("test-spice");
-      assert.strictEqual(statementName, `flink-vscode-test-spice-${expectedDatePart}`);
-    });
-
-    it("Should return a name without spice if spice is not provided", async function () {
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `vscode-${expectedDatePart}`);
-    });
-
-    it("Should prepend the user-configured prefix to the statement name if set", async function () {
-      // Create a proper mock configuration object
-      const mockConfig: vscode.WorkspaceConfiguration = {
-        get: sandbox.stub() as sinon.SinonStub,
-        has: sandbox.stub(),
-        inspect: sandbox.stub(),
-        update: sandbox.stub(),
-        [Symbol.iterator]: function* () {},
-      };
-
-      const getConfigStub = sandbox.stub(vscode.workspace, "getConfiguration");
-      getConfigStub.withArgs("confluent").returns(mockConfig);
-
-      (mockConfig.get as sinon.SinonStub).withArgs("flink.statementPrefix").returns("dev");
-
-      const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `dev-vscode-${expectedDatePart}`);
-    });
-  });
-
   describe("utils.refreshFlinkStatement", function () {
     let stubbedStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
     let mockRouteResponse: GetSqlv1Statement200Response;
@@ -501,6 +463,30 @@ describe("flinkSql/statementUtils.ts", function () {
     it("Should include the spice parameter in the statement name", async function () {
       const statementName = await determineFlinkStatementName("test-spice");
       assert.strictEqual(statementName, `vscode-test-spice-${expectedDatePart}`);
+    });
+
+    it("Should return a name without spice if spice is not provided", async function () {
+      const statementName = await determineFlinkStatementName();
+      assert.strictEqual(statementName, `vscode-${expectedDatePart}`);
+    });
+
+    it("Should prepend the user-configured prefix to the statement name if set", async function () {
+      // Create a proper mock configuration object
+      const mockConfig: vscode.WorkspaceConfiguration = {
+        get: sandbox.stub() as sinon.SinonStub,
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub(),
+        [Symbol.iterator]: function* () {},
+      };
+
+      const getConfigStub = sandbox.stub(vscode.workspace, "getConfiguration");
+      getConfigStub.withArgs("confluent").returns(mockConfig);
+
+      (mockConfig.get as sinon.SinonStub).withArgs("flink.statementPrefix").returns("dev");
+
+      const statementName = await determineFlinkStatementName();
+      assert.strictEqual(statementName, `dev-vscode-${expectedDatePart}`);
     });
   });
 
