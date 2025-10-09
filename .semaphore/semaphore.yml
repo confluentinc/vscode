@@ -386,3 +386,6 @@ promotions:
         - name: TEST_SUITE
           default_value: "@smoke|@topic-message-viewer|@evolve-schema|@produce-message-to-topic|@project-scaffolding|@flink-statements|@direct-connection-crud"
           description: "Playwright E2E test tags to run, separated by |. By default, runs the smoketests and CUJ-related tests."
+        - name: VSCODE_VERSION
+          default_value: "stable"
+          description: "VS Code version to test against (stable, insiders, or a specific version)."
