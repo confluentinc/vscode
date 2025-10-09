@@ -816,6 +816,12 @@
         "icon": "$(cloud-upload)",
         "title": "Upload Flink Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts"
+      },
+      {
+        "command": "confluent.testInspectJar",
+        "icon": "$(file-binary)",
+        "title": "Inspect JAR File",
+        "category": "Confluent: Flink Artifacts"
       }
     ],
     "configuration": [
@@ -1628,6 +1634,10 @@
         {
           "command": "confluent.uploadArtifact",
           "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts"
+        },
+        {
+          "command": "confluent.testInspectJar",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -2085,6 +2095,11 @@
           "command": "confluent.uploadArtifact",
           "group": "confluent@1",
           "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
+        },
+        {
+          "command": "confluent.testInspectJar",
+          "group": "confluent@2",
+          "when": "resourceExtname == .jar"
         }
       ],
       "confluent.flinkdatabase.viewMode": [
