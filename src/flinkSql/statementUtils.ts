@@ -180,17 +180,6 @@ async function waitForStatementState(
 export async function determineFlinkStatementName(spice?: string): Promise<string> {
   const parts: string[] = [];
 
-<<<<<<< HEAD
-=======
-  // Fetch the user-configured prefix for statements, if any.
-  const statementPrefix = vscode.workspace
-    .getConfiguration("confluent")
-    .get<string>("flink.statementPrefix");
-  if (statementPrefix) {
-    parts.push(statementPrefix);
-  }
-
->>>>>>> 1581e551e72f0bc8fe131beeaa111d95a8b21604
   parts.push("vscode");
   if (spice) {
     parts.push(spice);
