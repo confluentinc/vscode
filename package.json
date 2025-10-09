@@ -822,6 +822,12 @@
         "icon": "$(cloud-upload)",
         "title": "Upload Flink Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts"
+      },
+      {
+        "command": "confluent.testInspectJar",
+        "icon": "$(file-binary)",
+        "title": "Inspect JAR File",
+        "category": "Confluent: Flink Artifacts"
       }
     ],
     "configuration": [
@@ -1667,6 +1673,10 @@
         {
           "command": "confluent.uploadArtifact",
           "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts"
+        },
+        {
+          "command": "confluent.testInspectJar",
+          "when": "false"
         }
       ],
       "editor/title": [
