@@ -282,7 +282,7 @@ test.describe("Direct Connection CRUD Lifecycle", { tag: [Tag.DirectConnectionCR
               page,
               localSchemaRegistry.first(),
             );
-            await localSchemaRegistryItem.copyUri();
+            await localSchemaRegistryItem.copyUrl();
             const uri = await page.evaluate(async () => await navigator.clipboard.readText());
             schemaRegistryConfig = {
               uri,
