@@ -356,7 +356,6 @@ describe("FlinkStatement", () => {
 });
 
 describe("FlinkStatementTreeItem", () => {
-  // Prove context value is "ccloud-viewable-stoppable-flink-statement"
   it("has the correct context value when viewable+stoppable", () => {
     const statement = TEST_CCLOUD_FLINK_STATEMENT;
 
@@ -364,7 +363,18 @@ describe("FlinkStatementTreeItem", () => {
     assert.strictEqual(treeItem.contextValue, "ccloud-viewable-stoppable-flink-statement");
   });
 
-  it("has the correct context value when viewable+deletable", () => {
+  it("has the correct context value when pending", () => {
+    const statement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: makeStatus(Phase.PENDING),
+    });
+    const treeItem = new FlinkStatementTreeItem(statement);
+    // Pending is not stoppable.
+    assert.strictEqual(treeItem.contextValue, "ccloud-viewable-flink-statement");
+  });
+
+  it("has the correct context value when viewable+completed", () => {
+    // Completed phase is deletable, not stoppable.
     const statement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
       status: makeStatus(Phase.COMPLETED),
