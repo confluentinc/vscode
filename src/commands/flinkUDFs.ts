@@ -248,7 +248,6 @@ export async function selectClassesForUdfRegistration(
   const quickPickItems = classInfos.map((classInfo) => ({
     label: classInfo.simpleName,
     description: classInfo.className,
-    detail: `Register "${classInfo.simpleName}" as a UDF`,
     classInfo,
   }));
 
