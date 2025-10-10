@@ -5,11 +5,11 @@ import {
   Position as LSPosition,
   TextDocument,
 } from "vscode-json-languageservice";
+import { initializeJsonDocument } from "../diagnostics/validateDocument";
 import { Logger } from "../logging";
 import { getEditorOrFileContents } from "../utils/file";
-import { initializeJsonDocument } from "./validateDocument";
 
-const logger = new Logger("schemas.parsing");
+const logger = new Logger("documentParsing.json");
 
 export async function getRangeForDocument(
   documentUri: Uri,

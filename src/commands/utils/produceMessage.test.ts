@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { TEST_LOCAL_KEY_SCHEMA, TEST_LOCAL_SCHEMA } from "../../../tests/unit/testResources";
+import { SchemaInfo, SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { Schema } from "../../models/schema";
-import { SchemaInfo, SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import { createProduceRequestData, extractSchemaInfo } from "./produceMessage";
 import { ProduceMessageSchemaOptions } from "./types";
 
