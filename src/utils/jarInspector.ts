@@ -92,7 +92,7 @@ const openZip = (filePath: string): Promise<ZipFile> =>
       { lazyEntries: true },
       (err: Error | null, zipFile: ZipFile | undefined) => {
         if (err || !zipFile) {
-          reject(err ?? new Error("Failed to open zip file"));
+          reject(err ?? new Error("Failed to unzip .jar file"));
           return;
         }
         resolve(zipFile);
