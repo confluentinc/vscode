@@ -73,8 +73,8 @@ export async function uploadArtifactCommand(
 async function executeArtifactUpload(
   params: Awaited<ReturnType<typeof artifactUploadQuickPickForm>>,
   progress: vscode.Progress<{ message?: string; increment?: number }>,
-): Promise<void> {
-  if (!params) return; // Makes TS happy; already checked by caller
+): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
+  if (!params) return;
 
   logUsage(UserEvent.FlinkArtifactAction, {
     action: "upload",

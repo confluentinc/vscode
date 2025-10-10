@@ -176,7 +176,7 @@ export async function handleUploadToCloudProvider(
 export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
-): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
+): Promise<CreateArtifactV1FlinkArtifact201Response> {
   try {
     const createRequest = buildCreateArtifactRequest(params, uploadId);
 
