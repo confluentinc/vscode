@@ -270,6 +270,12 @@ export async function selectClassesForUdfRegistration(
   return selectedItems?.map((item) => item.classInfo);
 }
 
+export interface UdfRegistrationData {
+  /** The class to register as a UDF */
+  classInfo: JarClassInfo;
+  /** The function name to use for the UDF */
+  functionName: string;
+}
 /**
  * Prompts the user for function names for each selected class.
  * @param selectedClasses The classes selected for UDF registration
@@ -277,8 +283,8 @@ export async function selectClassesForUdfRegistration(
  */
 export async function promptForFunctionNames(
   selectedClasses: JarClassInfo[],
-): Promise<{ classInfo: JarClassInfo; functionName: string }[] | undefined> {
-  const registrations: { classInfo: JarClassInfo; functionName: string }[] = [];
+): Promise<UdfRegistrationData[] | undefined> {
+  const registrations: UdfRegistrationData[] = [];
   const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
 
   for (const classInfo of selectedClasses) {
