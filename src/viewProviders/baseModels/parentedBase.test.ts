@@ -73,21 +73,22 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
     sandbox.restore();
   });
 
-  describe("event listeners", () => {
-    it("handleCCloudConnectionChange() should call reset() when the `ccloudConnected` event fires and a CCloud resource is focused", () => {
-      const resetSpy = sandbox.spy(provider, "reset");
+  describe("handleCCloudConnectionChange()", () => {
+    let setParentResourceStub: sinon.SinonStub;
 
-      // simulate CCloud connection state change
+    beforeEach(() => {
+      setParentResourceStub = sandbox.stub(provider, "setParentResource");
+    });
+    it("should call setParentResource(null) when the `ccloudConnected` event fires disconnected and a CCloud resource was focused", () => {
+      // simulate CCloud connection logout when a compute pool was focused
       provider.resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       provider["ccloudConnectedHandler"](false);
 
-      sinon.assert.calledOnce(resetSpy);
-      assert.strictEqual(provider.resource, null);
+      sinon.assert.calledOnce(setParentResourceStub);
+      sinon.assert.calledWith(setParentResourceStub, null);
     });
 
-    it("handleCCloudConnectionChange() should not call reset() when the `ccloudConnected` event fires and a non-CCloud resource is focused", () => {
-      const resetSpy = sandbox.spy(provider, "reset");
-
+    it("should not call setParentResource() when the `ccloudConnected` event fires and a non-CCloud resource is focused", () => {
       // simulate a non-CCloud resource
       const fakeResource = {
         ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
@@ -96,8 +97,7 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
       provider.resource = fakeResource;
       provider.ccloudConnectedHandler(false);
 
-      sinon.assert.notCalled(resetSpy);
-      assert.strictEqual(provider.resource, fakeResource);
+      sinon.assert.notCalled(setParentResourceStub);
     });
   });
 
