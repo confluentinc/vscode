@@ -254,6 +254,25 @@ describe("viewProviders/base.ts ParentedBaseViewProvider", () => {
       sinon.assert.notCalled(setContextValueStub); // should not change context when parent resource is unchanged
     });
 
+    it("Should handle setting to the same resource by id and connection id equality (partial no-op)", async () => {
+      // As if was focused on something and then set to the same thing
+      const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
+      provider.resource = resource;
+
+      // won't be same object reference, but should be considered "same" resource.
+      const equivalentResource = new CCloudFlinkComputePool({
+        ...TEST_CCLOUD_FLINK_COMPUTE_POOL,
+      });
+
+      await provider.setParentResource(equivalentResource);
+
+      assert.strictEqual(provider.resource, resource, "resource should be unchanged");
+      sinon.assert.notCalled(setSearchStub); // should not reset search when parent resource is unchanged
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.calledOnce(updateTreeViewDescriptionStub);
+      sinon.assert.notCalled(setContextValueStub); // should not change context when parent resource is unchanged
+    });
+
     it("Should be called when parentResourceChangedEmitter fires", () => {
       const resource = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       const setParentResourceStub = sandbox.stub(provider, "setParentResource");

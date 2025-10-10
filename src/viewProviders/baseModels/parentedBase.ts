@@ -60,7 +60,10 @@ export abstract class ParentedBaseViewProvider<
 
     const promises: Promise<unknown>[] = [];
 
-    if (this.resource !== resource) {
+    if (
+      this.resource?.id !== resource?.id ||
+      this.resource?.connectionId !== resource?.connectionId
+    ) {
       this.setSearch(null); // reset search when parent resource changes
 
       // If we have a boolean context value to adjust, and if the boolean value is changing, adjust it.
