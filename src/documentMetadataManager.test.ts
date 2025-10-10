@@ -46,9 +46,9 @@ describe("documentMetadataManager.ts", () => {
     DocumentMetadataManager["instance"] = null;
     DocumentMetadataManager.getInstance();
 
-    assert.ok(onDidOpenTextDocumentSpy.calledOnce);
-    assert.ok(onDidSaveTextDocumentSpy.calledOnce);
-    assert.ok(onDidCloseTextDocumentSpy.calledOnce);
+    sinon.assert.calledOnce(onDidOpenTextDocumentSpy);
+    sinon.assert.calledOnce(onDidSaveTextDocumentSpy);
+    sinon.assert.calledOnce(onDidCloseTextDocumentSpy);
   });
 
   it("handleDocumentSave() should exit early for 'untitled' documents", async () => {

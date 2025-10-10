@@ -120,18 +120,18 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
     // happy path: no existing containers, user selects 1 broker
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(createNetworkStub.calledOnce);
+    sinon.assert.calledOnce(createNetworkStub);
 
-    assert.ok(showInputBoxStub.calledOnce);
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(startContainerStub.calledOnce);
+    sinon.assert.calledOnce(showInputBoxStub);
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnce(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.calledOnce);
+    sinon.assert.calledOnce(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should handle existing containers and not create new ones", async () => {
@@ -140,18 +140,18 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.calledOnceWith(fakeContainers));
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.calledOnceWithExactly(handleExistingContainersStub, fakeContainers);
 
-    assert.ok(createNetworkStub.notCalled);
+    sinon.assert.notCalled(createNetworkStub);
 
-    assert.ok(showInputBoxStub.notCalled);
-    assert.ok(createContainerStub.notCalled);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.notCalled(showInputBoxStub);
+    sinon.assert.notCalled(createContainerStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should exit early when the user exits the broker container input box", async () => {
@@ -159,18 +159,18 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(createNetworkStub.calledOnce);
+    sinon.assert.calledOnce(createNetworkStub);
 
-    assert.ok(showInputBoxStub.calledOnce);
-    assert.ok(createContainerStub.notCalled);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.calledOnce(showInputBoxStub);
+    sinon.assert.notCalled(createContainerStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should exit early and show an error notification if a container fails to be created", async () => {
@@ -178,19 +178,19 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(createNetworkStub.calledOnce);
+    sinon.assert.calledOnce(createNetworkStub);
 
-    assert.ok(showInputBoxStub.calledOnce);
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(showErrorNotificationStub.calledOnce);
-    assert.ok(startContainerStub.notCalled);
+    sinon.assert.calledOnce(showInputBoxStub);
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnce(showErrorNotificationStub);
+    sinon.assert.notCalled(startContainerStub);
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("start() should exit early and if a container fails to start", async () => {
@@ -198,19 +198,19 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     await workflow.start(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(checkForImageStub.calledOnce);
+    sinon.assert.calledOnce(checkForImageStub);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(handleExistingContainersStub.notCalled);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.notCalled(handleExistingContainersStub);
 
-    assert.ok(createNetworkStub.calledOnce);
+    sinon.assert.calledOnce(createNetworkStub);
 
-    assert.ok(showInputBoxStub.calledOnce);
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(startContainerStub.calledOnce);
+    sinon.assert.calledOnce(showInputBoxStub);
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnce(startContainerStub);
     // notification tested in base.test.ts as part of .startContainer() tests
 
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("stop() should get the imageTag from workspace configuration", async () => {
@@ -232,9 +232,9 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(getContainersForImageStub.calledOnce);
-    assert.ok(stopContainerStub.calledOnceWith({ id: containerId, name: containerName }));
-    assert.ok(waitForLocalResourceEventChangeStub.calledOnce);
+    sinon.assert.calledOnce(getContainersForImageStub);
+    sinon.assert.calledOnceWithExactly(stopContainerStub, { id: containerId, name: containerName });
+    sinon.assert.calledOnce(waitForLocalResourceEventChangeStub);
   });
 
   it("stop() should exit early if there are no running Kafka containers", async () => {
@@ -242,16 +242,15 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 
-    assert.ok(getContainersForImageStub.calledOnce);
+    sinon.assert.calledOnce(getContainersForImageStub);
     // not the usual "Open Logs"+"File Issue" notification, just a basic error message with a button to open settings
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        `No ${workflow.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
-        "Open Settings",
-      ),
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `No ${workflow.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
+      "Open Settings",
     );
-    assert.ok(stopContainerStub.notCalled);
-    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+    sinon.assert.notCalled(stopContainerStub);
+    sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
   });
 
   it("waitForLocalResourceEventChange() should resolve when the localKafkaConnected event is emitted", async () => {
@@ -352,30 +351,27 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     assert.ok(result);
     assert.equal(result.id, "1");
     assert.equal(result.name, containerName);
-    assert.ok(createContainerStub.calledOnce);
-    assert.ok(
-      createContainerStub.calledWith(workflow.imageRepo, workflow.imageTag, {
-        body: {
-          Image: workflow.imageRepoTag,
-          Hostname: containerName,
-          ExposedPorts: { [`${plainTextPort}/tcp`]: {} },
-          HostConfig: {
-            NetworkMode: workflow.networkName,
-            PortBindings: {
-              [`${plainTextPort}/tcp`]: [{ HostIp: "0.0.0.0", HostPort: plainTextPort.toString() }],
-              [`${LOCAL_KAFKA_REST_PORT}/tcp`]: [
-                { HostIp: "0.0.0.0", HostPort: LOCAL_KAFKA_REST_PORT.toString() },
-              ],
-            },
+    sinon.assert.calledOnce(createContainerStub);
+    sinon.assert.calledOnceWithExactly(createContainerStub, workflow.imageRepo, workflow.imageTag, {
+      body: {
+        Image: workflow.imageRepoTag,
+        Hostname: containerName,
+        ExposedPorts: { [`${plainTextPort}/tcp`]: {} },
+        HostConfig: {
+          NetworkMode: workflow.networkName,
+          PortBindings: {
+            [`${plainTextPort}/tcp`]: [{ HostIp: "0.0.0.0", HostPort: plainTextPort.toString() }],
+            [`${LOCAL_KAFKA_REST_PORT}/tcp`]: [
+              { HostIp: "0.0.0.0", HostPort: LOCAL_KAFKA_REST_PORT.toString() },
+            ],
           },
-          Cmd: ["bash", "-c", "'/etc/confluent/docker/run'"],
-          Env: envVars,
-          Tty: false,
         },
-        name: containerName,
-      }),
-      `createContainerStub called with: ${JSON.stringify(createContainerStub.args, null, 2)}`,
-    );
+        Cmd: ["bash", "-c", "'/etc/confluent/docker/run'"],
+        Env: envVars,
+        Tty: false,
+      },
+      name: containerName,
+    });
   });
 });
 

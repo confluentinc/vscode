@@ -238,7 +238,7 @@ describe("loaderUtils.ts", () => {
         const results = await loaderUtils.fetchTopics(TEST_CCLOUD_KAFKA_CLUSTER);
         assert.deepStrictEqual(results, []);
 
-        assert.ok(showPrivateNetworkingHelpNotificationStub.calledOnce);
+        sinon.assert.calledOnce(showPrivateNetworkingHelpNotificationStub);
       });
 
       it("fetchTopics should throw TopicFetchError when not private networking symptom ResponseError", async () => {
@@ -249,7 +249,7 @@ describe("loaderUtils.ts", () => {
           loaderUtils.TopicFetchError,
         );
 
-        assert.ok(showPrivateNetworkingHelpNotificationStub.notCalled);
+        sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
       });
 
       it("fetchTopics should throw TopicFetchError when not a ResponseError", async () => {
@@ -260,7 +260,7 @@ describe("loaderUtils.ts", () => {
           loaderUtils.TopicFetchError,
         );
 
-        assert.ok(showPrivateNetworkingHelpNotificationStub.notCalled);
+        sinon.assert.notCalled(showPrivateNetworkingHelpNotificationStub);
       });
     });
   });
