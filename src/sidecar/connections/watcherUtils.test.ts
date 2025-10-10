@@ -64,10 +64,7 @@ describe("connectionEventHandler", () => {
         "handleUpdatedConnection called",
       );
 
-      assert.ok(
-        handleUpdatedConnectionStub.calledWith(TEST_CCLOUD_CONNECTION),
-        `handleUpdatedConnection called with ${handleUpdatedConnectionStub.getCall(0).args[0]}`,
-      );
+      sinon.assert.calledOnceWithExactly(handleUpdatedConnectionStub, TEST_CCLOUD_CONNECTION);
 
       // ccloud events should never fire directConnectionCreatedStub
       sinon.assert.notCalled(directConnectionCreatedStub);

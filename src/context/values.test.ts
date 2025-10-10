@@ -22,7 +22,7 @@ describe("ContextValue functions", () => {
 
     await setContextValue(key, value);
 
-    assert.ok(executeCommandStub.calledWith("setContext", key, value));
+    sinon.assert.calledOnceWithExactly(executeCommandStub, "setContext", key, value);
     assert.deepStrictEqual(getContextValue<boolean>(key), value);
   });
 

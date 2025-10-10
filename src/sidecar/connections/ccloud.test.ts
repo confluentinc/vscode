@@ -41,8 +41,8 @@ describe("sidecar/connections/ccloud.ts", () => {
     await clearCurrentCCloudResources();
 
     sinon.assert.calledOnce(mockedCCLoudLoader.reset);
-    assert.ok(currentKafkaClusterChangedFireStub.calledOnceWith(null));
-    assert.ok(schemasViewResourceChangedFireStub.calledOnceWith(null));
+    sinon.assert.calledOnceWithExactly(currentKafkaClusterChangedFireStub, null);
+    sinon.assert.calledOnceWithExactly(schemasViewResourceChangedFireStub, null);
 
     // Reset the stubs
     mockedCCLoudLoader.reset.resetHistory();
