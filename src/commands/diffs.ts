@@ -10,7 +10,7 @@ import { getWorkspaceState } from "../storage/utils";
 
 const logger = new Logger("commands.diffs");
 
-export async function selectForCompareCommand(item: any) {
+export async function selectForCompareCommand(item: vscode.Uri | Schema | undefined) {
   if (!item) {
     return;
   }
@@ -25,7 +25,7 @@ export async function selectForCompareCommand(item: any) {
   await setContextValue(ContextValues.resourceSelectedForCompare, true);
 }
 
-export async function compareWithSelectedCommand(item: any) {
+export async function compareWithSelectedCommand(item: vscode.Uri | Schema | undefined) {
   if (!item) {
     return;
   }
@@ -69,7 +69,7 @@ export function registerDiffCommands(): vscode.Disposable[] {
  * @returns The URI for the resource item
  * @throws Error if the resource item is not yet supported
  */
-function convertItemToUri(item: any): vscode.Uri {
+function convertItemToUri(item: vscode.Uri | Schema): vscode.Uri {
   if (item instanceof vscode.Uri) {
     return item;
   } else if (item instanceof Schema) {

@@ -677,7 +677,7 @@ describe("codelens/flinkSqlProvider.ts", () => {
         kafkaClusters: [
           CCloudKafkaCluster.create({
             ...TEST_CCLOUD_KAFKA_CLUSTER,
-            id: "lkc-duplicate" as any,
+            id: "lkc-duplicate",
             name: TEST_CCLOUD_KAFKA_CLUSTER.name,
           }),
         ],
