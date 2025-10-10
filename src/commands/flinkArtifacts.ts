@@ -50,7 +50,7 @@ export async function uploadArtifactCommand(
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Uploading artifact`,
+        title: `Creating artifact`,
         cancellable: false,
       },
       async (progress) => {
@@ -126,7 +126,7 @@ async function executeArtifactUpload(
 
   // Step 3: Create artifact in Confluent Cloud
   progress.report({
-    message: "Creating artifact in Confluent Cloud...",
+    message: "Adding artifact to Confluent Cloud...",
     increment: stepPortion,
   });
   const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
