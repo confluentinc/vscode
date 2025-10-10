@@ -7,7 +7,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactsChanged } from "../../emitters";
-import { logError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { FlinkArtifact } from "../../models/flinkArtifact";
@@ -273,6 +273,27 @@ export function validateUdfInput(
       severity: vscode.InputBoxValidationSeverity.Error,
     };
   }
+}
+/**
+ * Builds a user-presentable error message for an upload failure.
+ */
+export async function buildUploadErrorMessage(err: unknown, base: string): Promise<string> {
+  let errorMessage = base;
+  if (isResponseError(err)) {
+    if (err.response.status === 500) {
+      errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
+    } else {
+      const resp = await extractResponseBody(err);
+      try {
+        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+      } catch {
+        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+      }
+    }
+  } else if (err instanceof Error) {
+    errorMessage = `${errorMessage} ${err.message}`;
+  }
+  return errorMessage;
 }
 
 /**

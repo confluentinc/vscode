@@ -4,26 +4,27 @@ import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/
 import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
-import { extractResponseBody, isResponseError, logError } from "../errors";
+import { logError } from "../errors";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
-  showWarningNotificationWithButtons,
+  showInfoNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
+  buildUploadErrorMessage,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
 
 /**
- * Orchestrates the sub-functions from uploadArtifact.ts to complete the artifact upload process.
+ * Orchestrates the sub-functions to complete the artifact upload process.
  * Logs error and shows a user notification if sub-functions fail.
  * Steps are:
  * 1. Gathering request parameters from the user or a provided item.
@@ -33,87 +34,103 @@ import {
  *
  * @param item Optional. If command is invoked from a Flink Compute Pool, CCloud Kafka Cluster, or `.jar` file we use that to pre-fill upload options.
  * If not provided, the user will be prompted for all necessary information.
- * In the near future this will become a webview form with more inputs. See: https://github.com/confluentinc/vscode/issues/2539
  */
 
 export async function uploadArtifactCommand(
   item?: CCloudFlinkComputePool | CCloudKafkaCluster | vscode.Uri,
 ): Promise<void> {
+  // 1. Gather the request parameters from user or item (before showing progress)
+  const params = await artifactUploadQuickPickForm(item);
+  if (!params) return; // User cancelled the prompt
+
   try {
-    // 1. Gather the request parameters from user or item
-    const params = await artifactUploadQuickPickForm(item);
-    if (!params) return; // User cancelled the prompt
-
-    logUsage(UserEvent.FlinkArtifactAction, {
-      action: "upload",
-      status: "started",
-      kind: "CloudProviderUpload",
-      cloud: params.cloud,
-      region: params.region,
-    });
-
-    const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
-      environment: params.environment,
-      cloud: params.cloud,
-      region: params.region,
-      id: params.artifactName,
-      content_format: params.fileFormat,
-    };
-
-    // 2. Get presigned URL from Confluent Cloud via Sidecar
-    const uploadUrl = await getPresignedUploadUrl(request);
-
-    if (!uploadUrl) {
-      throw new Error("Upload ID is missing from the presigned URL response.");
-    }
-
-    // 3. Upload the artifact to the presigned URL (either AWS or Azure)
-    await handleUploadToCloudProvider(params, uploadUrl);
-
-    // 4/Last. Show our progress while creating the Artifact in Confluent Cloud (TODO should this wrap all the steps?)
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: `Uploading artifact "${params.artifactName}" to Confluent Cloud`,
         cancellable: false,
       },
-      async () => {
-        const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
-        if (response) {
-          void vscode.window.showInformationMessage(
-            `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-          );
-        } else {
-          void showWarningNotificationWithButtons(
-            `Artifact upload completed, but no response was returned from Confluent Cloud.`,
-          );
-        }
-      },
+      async (progress) => executeArtifactUpload(params, progress),
     );
   } catch (err) {
     logUsage(UserEvent.FlinkArtifactAction, {
       action: "upload",
       status: "failed",
+      kind: "CloudProviderUpload",
+      cloud: params.cloud,
+      region: params.region,
     });
-    let errorMessage = "Failed to upload artifact:";
-    if (isResponseError(err)) {
-      if (err.response.status === 500) {
-        // Temporary fix to clarify generic error message from invalid JAR files until validation of JAR files is implemented
-        errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
-      } else {
-        const resp = await extractResponseBody(err);
-        try {
-          errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
-        } catch {
-          errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
-        }
-      }
-    } else if (err instanceof Error) {
-      errorMessage = `${errorMessage} ${err.message}`;
-    }
+    const errorMessage = await buildUploadErrorMessage(err, "Failed to upload artifact:");
     logError(err, errorMessage);
     void showErrorNotificationWithButtons(errorMessage);
   }
+}
+
+/**
+ * Performs the multi-step artifact upload, reporting progress along the way.
+ * Throws on failure so the caller (upload command) can handle error telemetry + notification.
+ */
+async function executeArtifactUpload(
+  params: Awaited<ReturnType<typeof artifactUploadQuickPickForm>>,
+  progress: vscode.Progress<{ message?: string; increment?: number }>,
+): Promise<void> {
+  if (!params) return; // Makes TS happy; already checked by caller
+
+  logUsage(UserEvent.FlinkArtifactAction, {
+    action: "upload",
+    status: "started",
+    kind: "CloudProviderUpload",
+    cloud: params.cloud,
+    region: params.region,
+  });
+
+  const stepPortion = 100 / 3; // 3 internal steps
+
+  // Step 1: Request presigned URL
+  progress.report({ message: "Requesting presigned upload URL...", increment: stepPortion });
+  const request: PresignedUploadUrlArtifactV1PresignedUrlRequest = {
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    id: params.artifactName,
+    content_format: params.fileFormat,
+  };
+  const uploadUrl = await getPresignedUploadUrl(request);
+  if (!uploadUrl) {
+    throw new Error("Upload ID is missing from the presigned URL response.");
+  }
+
+  // Step 2: Upload binary to cloud storage (AWS/Azure)
+  progress.report({
+    message: "Uploading artifact binary to cloud storage...",
+    increment: stepPortion,
+  });
+  await handleUploadToCloudProvider(params, uploadUrl);
+
+  // Step 3: Create artifact in Confluent Cloud
+  progress.report({
+    message: "Creating artifact in Confluent Cloud...",
+    increment: stepPortion,
+  });
+  const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
+
+  if (response) {
+    void showInfoNotificationWithButtons(
+      `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+    );
+  } else {
+    void showInfoNotificationWithButtons(
+      `Artifact upload completed, but no response was returned from Confluent Cloud.`,
+    );
+  }
+
+  logUsage(UserEvent.FlinkArtifactAction, {
+    action: "upload",
+    status: "succeeded",
+    kind: "CloudProviderUpload",
+    cloud: params.cloud,
+    region: params.region,
+  });
 }
 
 export async function deleteArtifactCommand(
