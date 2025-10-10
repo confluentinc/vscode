@@ -5,7 +5,7 @@ import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 
 import { Logger } from "../logging";
 
-const logger = new Logger("ccloudResourceLoaderUtils");
+const logger = new Logger("udfSystemCatalogQuery");
 
 /**
  * Instantiate the UDF system catalog query for a given database (cluster) as the limiting "Flink Schema ID".

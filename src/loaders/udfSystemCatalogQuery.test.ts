@@ -7,7 +7,7 @@ import {
   RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
-} from "./ccloudResourceLoaderUtils";
+} from "./udfSystemCatalogQuery";
 
 describe("loaders/ccloudResourceLoaderUtils.ts", () => {
   describe("getUdfSystemCatalogQuery()", () => {
