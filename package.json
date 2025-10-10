@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.8.0-25",
+  "version": "1.8.0-30",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -665,6 +665,11 @@
         "command": "confluent.statements.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
+        "category": "Confluent: Flink Statements"
+      },
+      {
+        "command": "confluent.statements.stop",
+        "title": "Stop Statement Execution",
         "category": "Confluent: Flink Statements"
       },
       {
@@ -1515,6 +1520,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.stop",
+          "when": "false"
+        },
+        {
           "command": "confluent.statements.viewstatementsql",
           "when": "false"
         },
@@ -1834,7 +1843,7 @@
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/ || viewItem =~ /.*flink-statement$/)",
           "group": "2_copy@2"
         },
         {
@@ -2063,12 +2072,18 @@
         },
         {
           "command": "confluent.flinkStatementResults",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement$/",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*viewable.*flink-statement$/",
           "group": "inline@1"
         },
         {
+          "command": "confluent.statements.stop",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*stoppable.*flink-statement$/",
+          "comment": "A flink statement will either be stoppable or deletable, never both, so can use the same group position",
+          "group": "3_statements_crudl@1"
+        },
+        {
           "command": "confluent.statements.delete",
-          "when": "view == confluent-flink-statements && viewItem =~ /.*flink-statement.*/",
+          "when": "view == confluent-flink-statements && viewItem =~ /.*deletable.*flink-statement$/",
           "group": "3_statements_crudl@1"
         }
       ],

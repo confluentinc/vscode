@@ -53,7 +53,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     const result = await getContainersForImage({});
 
     assert.deepStrictEqual(result, fakeResponse);
-    assert.ok(containerListStub.calledOnce);
+    sinon.assert.calledOnce(containerListStub);
   });
 
   it("getContainersForImage() should re-throw any error from .containerList", async () => {
@@ -61,7 +61,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     containerListStub.rejects(fakeError);
 
     await assert.rejects(getContainersForImage({}), fakeError);
-    assert.ok(containerListStub.calledOnce);
+    sinon.assert.calledOnce(containerListStub);
   });
 
   it("createContainer() should return a ContainerCreateResponse after successfully creating a container", async () => {
@@ -72,7 +72,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     const result = await createContainer("repo", "tag", { body: {} });
 
     assert.deepStrictEqual(result, fakeResponse);
-    assert.ok(containerCreateStub.calledOnce);
+    sinon.assert.calledOnce(containerCreateStub);
   });
 
   // TODO: determine if we want to keep this behavior+test
@@ -85,9 +85,9 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     const result = await createContainer("repo", "tag", { body: {} });
 
     assert.deepStrictEqual(result, fakeResponse);
-    assert.ok(imageExistsStub.calledOnce);
-    assert.ok(pullImageStub.calledOnce);
-    assert.ok(containerCreateStub.calledOnce);
+    sinon.assert.calledOnce(imageExistsStub);
+    sinon.assert.calledOnce(pullImageStub);
+    sinon.assert.calledOnce(containerCreateStub);
   });
 
   it(`createContainer() should always add the "${MANAGED_CONTAINER_LABEL}" label to .containerCreate calls`, async () => {
@@ -97,16 +97,14 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
 
     await createContainer("repo", "tag", { body: {} });
 
-    assert.ok(containerCreateStub.calledOnce);
-    assert.ok(
-      containerCreateStub.calledWithMatch({
-        body: {
-          Labels: {
-            [MANAGED_CONTAINER_LABEL]: "true",
-          },
+    sinon.assert.calledOnce(containerCreateStub);
+    sinon.assert.calledOnceWithMatch(containerCreateStub, {
+      body: {
+        Labels: {
+          [MANAGED_CONTAINER_LABEL]: "true",
         },
-      }),
-    );
+      },
+    });
   });
 
   it("createContainer() should re-throw any error from .containerCreate", async () => {
@@ -115,7 +113,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     containerCreateStub.rejects(fakeError);
 
     await assert.rejects(createContainer("repo", "tag", { body: {} }), fakeError);
-    assert.ok(containerCreateStub.calledOnce);
+    sinon.assert.calledOnce(containerCreateStub);
   });
 
   it("startContainer() should return nothing after successfully starting a container", async () => {
@@ -124,7 +122,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     const result = await startContainer("1");
 
     assert.strictEqual(result, undefined);
-    assert.ok(containerStartStub.calledOnce);
+    sinon.assert.calledOnce(containerStartStub);
   });
 
   it("startContainer() should re-throw any error from .containerStart", async () => {
@@ -132,7 +130,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     containerStartStub.rejects(fakeError);
 
     await assert.rejects(startContainer("1"), fakeError);
-    assert.ok(containerStartStub.calledOnce);
+    sinon.assert.calledOnce(containerStartStub);
   });
 
   it("getContainer() should return a ContainerInspectResponse from a successful request", async () => {
@@ -142,7 +140,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     const result = await getContainer("1");
 
     assert.deepStrictEqual(result, fakeResponse);
-    assert.ok(containerInspectStub.calledOnce);
+    sinon.assert.calledOnce(containerInspectStub);
   });
 
   it("stopContainer() should return nothing after successfully stopping a container", async () => {
@@ -151,7 +149,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     const result = await stopContainer("1");
 
     assert.strictEqual(result, undefined);
-    assert.ok(containerStopStub.calledOnce);
+    sinon.assert.calledOnce(containerStopStub);
   });
 
   it("stopContainer() should re-throw any error from .containerStop", async () => {
@@ -159,7 +157,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     containerStopStub.rejects(fakeError);
 
     await assert.rejects(stopContainer("1"), fakeError);
-    assert.ok(containerStopStub.calledOnce);
+    sinon.assert.calledOnce(containerStopStub);
   });
 
   it("getContainer() should re-throw any error from .containerInspect", async () => {
@@ -167,6 +165,6 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     containerInspectStub.rejects(fakeError);
 
     await assert.rejects(getContainer("1"), fakeError);
-    assert.ok(containerInspectStub.calledOnce);
+    sinon.assert.calledOnce(containerInspectStub);
   });
 });

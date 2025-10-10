@@ -142,6 +142,6 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
       async () => promptForSchema(TEST_LOCAL_KAFKA_TOPIC, "value", SubjectNameStrategy.TOPIC_NAME),
       { message: `No schema versions found for subject "${TEST_LOCAL_SCHEMA.subject}".` },
     );
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(showErrorNotificationStub);
   });
 });

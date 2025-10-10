@@ -102,10 +102,12 @@ describe("ResourceLoader::getSubjects()", () => {
 
         assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
         // will have asked for the subjects from the resource manager, but none returned, so deep fetched.
-        assert.ok(rmGetSubjectsStub.calledOnce);
+        sinon.assert.calledOnce(rmGetSubjectsStub);
         /// will have stored the deep fetched subjects in the resource manager.
-        assert.ok(
-          rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+        sinon.assert.calledOnceWithExactly(
+          rmSetSubjectsStub,
+          TEST_LOCAL_SCHEMA_REGISTRY,
+          fetchSubjectsStubReturns,
         );
 
         // reset the resource manager stubs for next iteration.
@@ -128,11 +130,11 @@ describe("ResourceLoader::getSubjects()", () => {
         assert.deepStrictEqual(subjects, rmGetSubjectsStubReturns);
 
         // will have asked for the subjects from the resource manager, and found them.
-        assert.ok(rmGetSubjectsStub.calledOnce);
+        sinon.assert.calledOnce(rmGetSubjectsStub);
         // Not deep fetched 'cause of resource manager cache hit.
-        assert.ok(fetchSubjectsStub.notCalled);
+        sinon.assert.notCalled(fetchSubjectsStub);
         // will not call setSubjects() because of cache hit.
-        assert.ok(rmSetSubjectsStub.notCalled);
+        sinon.assert.notCalled(rmSetSubjectsStub);
 
         // reset the resource manager stub for next iteration.
         rmGetSubjectsStub.resetHistory();
@@ -152,10 +154,12 @@ describe("ResourceLoader::getSubjects()", () => {
 
       assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
       // will not have asked resource manager for subjects, since deep fetch is forced.
-      assert.ok(rmGetSubjectsStub.notCalled);
+      sinon.assert.notCalled(rmGetSubjectsStub);
       /// will have stored the deep fetched subjects in the resource manager.
-      assert.ok(
-        rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+      sinon.assert.calledOnceWithExactly(
+        rmSetSubjectsStub,
+        TEST_LOCAL_SCHEMA_REGISTRY,
+        fetchSubjectsStubReturns,
       );
 
       // reset the resource manager stubs for next iteration.
@@ -177,11 +181,11 @@ describe("ResourceLoader::getSubjects()", () => {
       assert.deepStrictEqual(subjects, []);
 
       // will have asked for the subjects from the resource manager, and found them.
-      assert.ok(rmGetSubjectsStub.calledOnce);
+      sinon.assert.calledOnce(rmGetSubjectsStub);
       // Not deep fetched 'cause of resource manager cache hit.
-      assert.ok(fetchSubjectsStub.notCalled);
+      sinon.assert.notCalled(fetchSubjectsStub);
       // will not call setSubjects() because of cache hit.
-      assert.ok(rmSetSubjectsStub.notCalled);
+      sinon.assert.notCalled(rmSetSubjectsStub);
 
       // reset the resource manager stub for next iteration.
       rmGetSubjectsStub.resetHistory();
@@ -234,8 +238,8 @@ describe("ResourceLoader::checkedGetSubjects()", () => {
 
     const result = await loaderInstance.checkedGetSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
     assert.deepStrictEqual(result, []);
-    assert.ok(isResponseErrorStub.calledOnce);
-    assert.ok(showWarningNotificationWithButtonsStub.calledOnce);
+    sinon.assert.calledOnce(isResponseErrorStub);
+    sinon.assert.calledOnce(showWarningNotificationWithButtonsStub);
     assert.ok(
       showWarningNotificationWithButtonsStub
         .getCall(0)
@@ -249,7 +253,7 @@ describe("ResourceLoader::checkedGetSubjects()", () => {
 
     await assert.rejects(loaderInstance.checkedGetSubjects(TEST_LOCAL_SCHEMA_REGISTRY), (err) => {
       assert.strictEqual((err as Error).message, "Test error");
-      assert.ok(isResponseErrorStub.calledOnce);
+      sinon.assert.calledOnce(isResponseErrorStub);
       return true;
     });
   });
@@ -359,9 +363,9 @@ describe("ResourceLoader::clearCache()", () => {
   it("clearCache(schemaRegistry) side effects", async () => {
     const schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
     await loaderInstance.clearCache(schemaRegistry);
-    assert.ok(rmSetSubjectsStub.calledOnce);
+    sinon.assert.calledOnce(rmSetSubjectsStub);
     // calling with undefined will clear out just this single schema registry's subjects.
-    assert.ok(rmSetSubjectsStub.calledWithExactly(schemaRegistry, undefined));
+    sinon.assert.calledOnceWithExactly(rmSetSubjectsStub, schemaRegistry, undefined);
   });
 });
 
@@ -405,10 +409,10 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
     assert.deepStrictEqual(topics, cachedTopics);
     // Should not have called fetchTopics() or getSubjects() since cache hit.
-    assert.ok(fetchTopicsStub.notCalled);
-    assert.ok(getSubjectsStub.notCalled);
+    sinon.assert.notCalled(fetchTopicsStub);
+    sinon.assert.notCalled(getSubjectsStub);
     // Should have called getTopicsForCluster() on the resource manager.
-    assert.ok(rmGetTopicsStub.calledOnce);
+    sinon.assert.calledOnce(rmGetTopicsStub);
   });
 
   it("Returns correlated topics with schema subjects", async () => {
@@ -431,8 +435,8 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     assert.ok(topics[1].hasSchema);
     assert.ok(!topics[2].hasSchema);
 
-    assert.ok(getSubjectsStub.calledOnce);
-    assert.ok(fetchTopicsStub.calledOnce);
+    sinon.assert.calledOnce(getSubjectsStub);
+    sinon.assert.calledOnce(fetchTopicsStub);
   });
 
   it("Returns topics without schemas if getSubjects() returns empty array", async () => {
@@ -453,8 +457,8 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     assert.ok(!topics[1].hasSchema);
     assert.ok(!topics[2].hasSchema);
 
-    assert.ok(getSubjectsStub.calledOnce);
-    assert.ok(fetchTopicsStub.calledOnce);
+    sinon.assert.calledOnce(getSubjectsStub);
+    sinon.assert.calledOnce(fetchTopicsStub);
   });
 
   it("Gracefully handles error from getSubjects()", async () => {
@@ -479,7 +483,7 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     // Returned topics def won't have schemas.
     assert.ok(!topics[0].hasSchema);
 
-    assert.ok(showWarningNotificationWithButtonsStub.calledOnce);
+    sinon.assert.calledOnce(showWarningNotificationWithButtonsStub);
   });
 });
 
@@ -507,7 +511,7 @@ describe("ResourceLoader::getSchemasForSubject()", () => {
       TEST_LOCAL_SUBJECT_WITH_SCHEMAS.name,
     );
     assert.deepStrictEqual(schemas, TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
-    assert.ok(fetchSchemasForSubjectStub.calledOnce);
+    sinon.assert.calledOnce(fetchSchemasForSubjectStub);
   });
 });
 
@@ -606,7 +610,7 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
         shouldClearSubjects,
       );
 
-      assert.ok(stubbedSubjectsV1Api.deleteSchemaVersion.calledOnce);
+      sinon.assert.calledOnce(stubbedSubjectsV1Api.deleteSchemaVersion);
 
       const expectedRequest = {
         subject: schema.subject,
@@ -620,10 +624,10 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
       );
 
       if (shouldClearSubjects) {
-        assert.ok(clearCacheStub.calledOnce);
-        assert.ok(clearCacheStub.calledWithExactly(schema.subjectObject()));
+        sinon.assert.calledOnce(clearCacheStub);
+        sinon.assert.calledOnceWithExactly(clearCacheStub, schema.subjectObject());
       } else {
-        assert.ok(clearCacheStub.notCalled);
+        sinon.assert.notCalled(clearCacheStub);
       }
     });
   }
@@ -726,7 +730,7 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
         );
       }
 
-      assert.ok(clearCacheStub.calledOnce);
+      sinon.assert.calledOnce(clearCacheStub);
     });
   }
 });
