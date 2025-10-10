@@ -93,84 +93,72 @@ export async function handleUploadToCloudProvider(
   params: ArtifactUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}`,
-      cancellable: false,
-    },
-    async (progress) => {
-      progress.report({ message: "Preparing file..." });
-      const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+  const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
 
-      logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    contentType,
+  });
+
+  switch (params.cloud) {
+    case CloudProvider.Azure: {
+      logger.debug("Uploading to Azure storage");
+      const response = await uploadFileToAzure({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
+        contentType,
+      });
+
+      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
         artifactName: params.artifactName,
         environment: params.environment,
         cloud: params.cloud,
         region: params.region,
+      });
+      break;
+    }
+    case CloudProvider.AWS: {
+      logger.debug("Uploading to AWS storage");
+
+      const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
+
+      if (!uploadFormData) {
+        throw new Error("AWS upload form data is missing from presigned URL response");
+      }
+
+      const response = await uploadFileToS3({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
         contentType,
+        uploadFormData,
       });
 
-      switch (params.cloud) {
-        case CloudProvider.Azure: {
-          progress.report({ message: "Uploading to Azure storage..." });
-          logger.debug("Uploading to Azure storage");
-          const response = await uploadFileToAzure({
-            file: blob,
-            presignedUrl: presignedURL.upload_url!,
-            contentType,
-          });
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "upload",
+        status: "succeeded",
+        kind: "CloudProviderUpload",
+        cloud: params.cloud,
+        region: params.region,
+      });
 
-          logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            artifactName: params.artifactName,
-            environment: params.environment,
-            cloud: params.cloud,
-            region: params.region,
-          });
-          break;
-        }
-        case CloudProvider.AWS: {
-          progress.report({ message: "Uploading to AWS storage..." });
-          logger.debug("Uploading to AWS storage");
-
-          const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
-
-          if (!uploadFormData) {
-            throw new Error("AWS upload form data is missing from presigned URL response");
-          }
-
-          const response = await uploadFileToS3({
-            file: blob,
-            presignedUrl: presignedURL.upload_url!,
-            contentType,
-            uploadFormData,
-          });
-
-          logUsage(UserEvent.FlinkArtifactAction, {
-            action: "upload",
-            status: "succeeded",
-            kind: "CloudProviderUpload",
-            cloud: params.cloud,
-            region: params.region,
-          });
-
-          logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            artifactName: params.artifactName,
-            environment: params.environment,
-            cloud: params.cloud,
-            region: params.region,
-          });
-          break;
-        }
-      }
-    },
-  );
+      logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+      });
+      break;
+    }
+  }
 }
 
 export async function uploadArtifactToCCloud(
