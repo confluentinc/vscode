@@ -26,7 +26,8 @@ export async function inspectJarClasses(file: Uri): Promise<JarClassInfo[]> {
     );
     const infos: JarClassInfo[] = classFiles.map((filePath) => {
       const className = filePath
-        .replace(/\\/g, "/")
+        // JAR/ZIP specs mandate forward slashes
+        .replace(/\\/g, "/") // still, defensively normalize back -> forward slashes
         .replace(/\.class$/, "")
         .replace(/\//g, ".");
       const simpleName = className.split(".").pop() || className;
