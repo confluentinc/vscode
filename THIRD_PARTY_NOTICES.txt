@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2025-10-8
+Date generated: 2025-10-10
 
-Revision ID: 3a615c7133e669b49f2cf05a94916faf25cf1864
+Revision ID: e2ce78d103d48700f3521af977ea13be8cb96cb7
 
 ================================================================================
 ================================================================================
@@ -240,7 +240,7 @@ No licenses found
 - d3-fetch (3.0.1) [ISC]
 - d3-force (3.0.0) [ISC]
 - d3-format (3.1.0) [ISC]
-- d3-geo (3.1.1) [ISC, MIT]
+- d3-geo (3.1.1) [MIT, ISC]
 - d3-hierarchy (3.1.2) [ISC]
 - d3-interpolate (3.0.1) [ISC]
 - d3-path (3.1.0) [ISC]
@@ -2298,6 +2298,10 @@ Package Depth: Transitive
 * Declared Licenses *
 MIT
 
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
 
 Copyright 2022 Justin Ridgewell <jridgewell@google.com>
 
@@ -13397,10 +13401,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 * BSD-3-Clause *
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
 
 # MIT License
 
@@ -18448,7 +18448,32 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-ISC, MIT
+MIT, ISC
+
+* MIT *
+--------------------------------------------------------------------------------
+File matches:
+LICENSE
+--------------------------------------------------------------------------------
+
+Copyright (c) 2010-2024 Mike Bostock
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 * ISC *
 --------------------------------------------------------------------------------
@@ -18492,31 +18517,6 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
-* MIT *
---------------------------------------------------------------------------------
-File matches:
-LICENSE
---------------------------------------------------------------------------------
-
-Copyright (c) 2010-2024 Mike Bostock
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -18764,7 +18764,7 @@ ISC, Apache-2.0
 * ISC *
 --------------------------------------------------------------------------------
 File matches:
-LICENSE
+package.json
 --------------------------------------------------------------------------------
 
 Copyright (c) 2010-2024 Mike Bostock
@@ -38750,8 +38750,6 @@ Copyright (c) 2017 Charmander <~@charmander.me>
 
 Copyright (c) Isaac Z. Schlueter and Contributors
 
-Copyright (c) 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State University
-
 Copyright (c) 2017-2024 Oleksii Raspopov
 
 Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
@@ -39247,15 +39245,19 @@ Copyright (c) 2010-2023 Mike Bostock
 
 Copyright (c) 2018 Vladimir Agafonkin.
 
+Copyright (c) 2010-2021 Mike Bostock
+
 Copyright (c) 2010-2022 Mike Bostock
 
 Copyright (c) 2012-2023 Mike Bostock
 
 Copyright (c) 2018-2021 Observable, Inc., 2021 Mapbox
 
-Copyright (c) 2010-2021 Mike Bostock
+Copyright (c) 2013-2021 Mike Bostock
 
 Copyright (c) 2010-2021 Mike Bostock, 2001 Robert Penner
+
+Copyright (c) 2016-2021 Mike Bostock
 
 Copyright (c) 2010-2024 Mike Bostock, 2008-2012 Charles Karney
 
@@ -39496,4 +39498,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2025-10-8
+Report Generated by FOSSA on 2025-10-10
