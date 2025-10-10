@@ -1,4 +1,4 @@
-import { RawUdfSystemCatalogRow } from "../../../src/loaders/udfSystemCatalogQuery";
+import { RawUdfSystemCatalogRow } from "../../../src/loaders/utils/udfSystemCatalogQuery";
 
 /**
  * Make a function-describing row as if from UDF_SYSTEM_CATALOG_QUERY.

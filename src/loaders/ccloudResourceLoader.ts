@@ -31,12 +31,12 @@ import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
 import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { CachingResourceLoader } from "./cachingResourceLoader";
-import { generateFlinkStatementKey } from "./loaderUtils";
+import { generateFlinkStatementKey } from "./utils/loaderUtils";
 import {
   getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   transformUdfSystemCatalogRows,
-} from "./udfSystemCatalogQuery";
+} from "./utils/udfSystemCatalogQuery";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 

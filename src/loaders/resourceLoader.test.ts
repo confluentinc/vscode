@@ -33,9 +33,9 @@ import { getResourceManager, ResourceManager } from "../storage/resourceManager"
 import { clearWorkspaceState } from "../storage/utils";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
 import { DirectResourceLoader } from "./directResourceLoader";
-import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
+import * as loaderUtils from "./utils/loaderUtils";
 
 // Tests over base loader class methods like getSubjects(), getTopicsForCluster(),  etc are done
 // against LocalKafkaClusterLoader class. This is because the base class ResourceLoader is abstract.

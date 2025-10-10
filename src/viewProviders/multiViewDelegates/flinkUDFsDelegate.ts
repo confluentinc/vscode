@@ -4,7 +4,7 @@ import {
   getRelationsAndColumnsSystemCatalogQuery,
   parseRelationsAndColumnsSystemCatalogQueryResponse,
   RawRelationsAndColumnsRow,
-} from "../../loaders/relationsAndColumnsSystemCatalogQuery";
+} from "../../loaders/utils/relationsAndColumnsSystemCatalogQuery";
 import { Logger } from "../../logging";
 import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkUDF";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";

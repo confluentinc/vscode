@@ -13,7 +13,7 @@ import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { DisposableCollection } from "../utils/disposables";
 import { DirectResourceLoader } from "./directResourceLoader";
-import { fetchSchemasForSubject, fetchSubjects } from "./loaderUtils";
+import { fetchSchemasForSubject, fetchSubjects } from "./utils/loaderUtils";
 
 const logger = new Logger("resourceLoader");
 
