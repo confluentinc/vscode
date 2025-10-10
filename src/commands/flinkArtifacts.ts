@@ -5,23 +5,26 @@ import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flin
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { extractResponseBody, isResponseError, logError } from "../errors";
+import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
+  showInfoNotificationWithButtons,
   showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
+import { detectClassesAndRegisterUDFs } from "./flinkUDFs";
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
-
+const logger = new Logger("commands/flinkArtifacts");
 /**
  * Orchestrates the sub-functions from uploadArtifact.ts to complete the artifact upload process.
  * Logs error and shows a user notification if sub-functions fail.
@@ -80,8 +83,15 @@ export async function uploadArtifactCommand(
       async () => {
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
         if (response) {
-          void vscode.window.showInformationMessage(
+          void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+            {
+              "Register UDFs": () => {
+                /* Call register prompt */
+                void detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+                logger.debug(`User wants to register UDFs for artifact: ${params.artifactName}`);
+              },
+            },
           );
         } else {
           void showWarningNotificationWithButtons(
