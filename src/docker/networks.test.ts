@@ -27,7 +27,7 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
 
     await createNetwork("test-network", "bridge");
 
-    assert.ok(networkCreateStub.calledOnce);
+    sinon.assert.calledOnce(networkCreateStub);
     assert.ok(
       networkCreateStub.calledWithMatch({
         networkConfig: { Name: "test-network", Driver: "bridge" },
@@ -47,7 +47,7 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
     const result = await createNetwork("test-network", "bridge");
 
     assert.strictEqual(result, undefined);
-    assert.ok(networkCreateStub.calledOnce);
+    sinon.assert.calledOnce(networkCreateStub);
   });
 
   it("createNetwork() should re-throw any ResponseError that doesn't contain 'already exists' in the message", async () => {
@@ -60,7 +60,7 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
     networkCreateStub.rejects(fakeError);
 
     await assert.rejects(createNetwork("test-network", "bridge"), fakeError);
-    assert.ok(networkCreateStub.calledOnce);
+    sinon.assert.calledOnce(networkCreateStub);
   });
 
   it("createNetwork() should re-throw any non-ResponseError error", async () => {
@@ -68,6 +68,6 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
     networkCreateStub.rejects(fakeError);
 
     await assert.rejects(createNetwork("test-network", "bridge"), fakeError);
-    assert.ok(networkCreateStub.calledOnce);
+    sinon.assert.calledOnce(networkCreateStub);
   });
 });

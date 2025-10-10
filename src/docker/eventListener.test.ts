@@ -64,7 +64,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     eventListener.start();
 
     assert.strictEqual(eventListener["stopped"], false);
-    assert.ok(pollStartSpy.calledOnce);
+    sinon.assert.calledOnce(pollStartSpy);
   });
 
   it("stop() should stop the poller", function () {
@@ -73,7 +73,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     eventListener.stop();
 
     assert.strictEqual(eventListener["stopped"], true);
-    assert.ok(pollStopSpy.calledOnce);
+    sinon.assert.calledOnce(pollStopSpy);
   });
 
   it("listenForEvents() should exit early if already handling the event stream", async function () {
@@ -83,7 +83,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     await eventListener.listenForEvents();
 
     // should not have called isDockerAvailable() since we exited early
-    assert.ok(isDockerAvailableStub.notCalled);
+    sinon.assert.notCalled(isDockerAvailableStub);
   });
 
   it("listenForEvents() should poll slowly if Docker is not available", async function () {
@@ -362,7 +362,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     });
     await eventListener.readValuesFromStream(stream);
 
-    assert.ok(handleEventStub.notCalled);
+    sinon.assert.notCalled(handleEventStub);
   });
 
   it("readValuesFromStream() should exit early if the event listener is stopped", async function () {
@@ -442,7 +442,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     };
     await eventListener.handleEvent(missingStatusEvent);
 
-    assert.ok(handleContainerEventStub.notCalled);
+    sinon.assert.notCalled(handleContainerEventStub);
   });
 
   it("handleEvent() should exit early if the event is not a container event", async function () {
@@ -454,7 +454,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     };
     await eventListener.handleEvent(imageEvent);
 
-    assert.ok(handleContainerEventStub.notCalled);
+    sinon.assert.notCalled(handleContainerEventStub);
   });
 
   it("handleContainerEvent() should pass a container 'start' event to handleContainerStartEvent()", async function () {
@@ -472,7 +472,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     await eventListener.handleContainerEvent(startEvent);
 
     assert.ok(handleContainerStartEventStub.calledOnceWith(startEvent));
-    assert.ok(handleContainerDieEventStub.notCalled);
+    sinon.assert.notCalled(handleContainerDieEventStub);
   });
 
   it("handleContainerEvent() should pass a container 'die' event to handleContainerDieEvent()", async function () {
@@ -489,7 +489,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     };
     await eventListener.handleEvent(dieEvent);
 
-    assert.ok(handleContainerStartEventStub.notCalled);
+    sinon.assert.notCalled(handleContainerStartEventStub);
     assert.ok(handleContainerDieEventStub.calledOnceWith(dieEvent));
   });
 
@@ -507,8 +507,8 @@ describe("docker/eventListener.ts EventListener methods", function () {
     };
     await eventListener.handleEvent(event);
 
-    assert.ok(handleContainerStartEventStub.notCalled);
-    assert.ok(handleContainerDieEventStub.notCalled);
+    sinon.assert.notCalled(handleContainerStartEventStub);
+    sinon.assert.notCalled(handleContainerDieEventStub);
   });
 
   it("handleContainerStartEvent() should set the 'localKafkaClusterAvailable' context value and cause the 'localKafkaConnected' event emitter to fire if a container from the 'confluent-local' image starts successfully", async function () {
@@ -527,8 +527,8 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     await eventListener.handleContainerStartEvent(TEST_CONTAINER_EVENT);
 
-    assert.ok(waitForContainerRunningStub.calledOnce);
-    assert.ok(waitForServerStartedLogStub.calledOnce);
+    sinon.assert.calledOnce(waitForContainerRunningStub);
+    sinon.assert.calledOnce(waitForServerStartedLogStub);
     assert.ok(
       setContextValueStub.calledOnceWith(
         contextValues.ContextValues.localKafkaClusterAvailable,
@@ -556,10 +556,10 @@ describe("docker/eventListener.ts EventListener methods", function () {
       Actor: { Attributes: { image: "not-confluent-local" } },
     });
 
-    assert.ok(waitForContainerRunningStub.notCalled);
-    assert.ok(waitForServerStartedLogStub.notCalled);
-    assert.ok(setContextValueStub.notCalled);
-    assert.ok(localKafkaConnectedFireStub.notCalled);
+    sinon.assert.notCalled(waitForContainerRunningStub);
+    sinon.assert.notCalled(waitForServerStartedLogStub);
+    sinon.assert.notCalled(setContextValueStub);
+    sinon.assert.notCalled(localKafkaConnectedFireStub);
   });
 
   it("handleContainerStartEvent() should exit early if the event is missing an id or image name", async function () {
@@ -575,10 +575,10 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     await eventListener.handleContainerStartEvent({ ...TEST_CONTAINER_EVENT, id: undefined });
 
-    assert.ok(waitForContainerRunningStub.notCalled);
-    assert.ok(waitForServerStartedLogStub.notCalled);
-    assert.ok(setContextValueStub.notCalled);
-    assert.ok(localKafkaConnectedFireStub.notCalled);
+    sinon.assert.notCalled(waitForContainerRunningStub);
+    sinon.assert.notCalled(waitForServerStartedLogStub);
+    sinon.assert.notCalled(setContextValueStub);
+    sinon.assert.notCalled(localKafkaConnectedFireStub);
   });
 
   it("handleContainerDieEvent() should set the 'localKafkaClusterAvailable' context value and cause the 'localKafkaConnected' event emitter to fire if a container from the 'confluent-local' image dies", async function () {
@@ -611,8 +611,8 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     await eventListener.handleContainerDieEvent(event);
 
-    assert.ok(setContextValueStub.notCalled);
-    assert.ok(localKafkaConnectedFireStub.notCalled);
+    sinon.assert.notCalled(setContextValueStub);
+    sinon.assert.notCalled(localKafkaConnectedFireStub);
   });
 
   it("handleContainerDieEvent() should exit early if the event is missing an image name", async function () {
@@ -626,8 +626,8 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     await eventListener.handleContainerDieEvent(event);
 
-    assert.ok(setContextValueStub.notCalled);
-    assert.ok(localKafkaConnectedFireStub.notCalled);
+    sinon.assert.notCalled(setContextValueStub);
+    sinon.assert.notCalled(localKafkaConnectedFireStub);
   });
 
   it("matchContainerStatus() should return true if the container status is matched", async function () {
@@ -705,7 +705,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     const result: boolean = await eventListener.waitForContainerLog(id, stringToMatch, since);
 
     assert.strictEqual(result, false);
-    assert.ok(containerLogsRawStub.calledOnce);
+    sinon.assert.calledOnce(containerLogsRawStub);
     assert.ok(containerLogsRawStub.calledOnceWith({ id, since, follow: true, stdout: true }));
   });
 });
