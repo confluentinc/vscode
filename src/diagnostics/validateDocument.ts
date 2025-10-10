@@ -19,9 +19,9 @@ import {
 } from "vscode-json-languageservice";
 import { Logger } from "../logging";
 import { getEditorOrFileContents } from "../utils/file";
-import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnosticCollection";
+import { JSON_DIAGNOSTIC_COLLECTION } from "./constants";
 
-const logger = new Logger("schemas.validateDocument");
+const logger = new Logger("diagnostics.validateDocument");
 
 /**
  * Validate a JSON document against a {@link JSONSchema} and attach any resulting diagnostics in the

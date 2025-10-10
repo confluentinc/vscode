@@ -8,10 +8,10 @@ import {
 } from "../../../tests/unit/testResources/schema";
 import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../../tests/unit/testResources/schemaRegistry";
 import { TEST_LOCAL_KAFKA_TOPIC } from "../../../tests/unit/testResources/topic";
+import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { ALLOW_OLDER_SCHEMA_VERSIONS } from "../../extensionSettings/constants";
 import { LocalResourceLoader } from "../../loaders";
 import * as notifications from "../../notifications";
-import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import * as schemaQuickPicks from "../schemas";
 import * as schemaSubjects from "./schemaSubjects";
 import { promptForSchema } from "./schemas";

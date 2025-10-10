@@ -14,6 +14,14 @@ import {
   ConfluentCloudProduceRecordsResourceApi,
 } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
+import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  ProduceMessage,
+  SubjectNameStrategy,
+} from "../diagnostics/produceMessage";
+import { validateDocument } from "../diagnostics/validateDocument";
+import { getRangeForDocument } from "../documentParsing/json";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { isResponseError, logError } from "../errors";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
@@ -31,14 +39,6 @@ import { schemaKindMultiSelect, SchemaKindSelection } from "../quickpicks/schema
 import { uriQuickpick } from "../quickpicks/uris";
 import { promptForSchema } from "../quickpicks/utils/schemas";
 import { getSubjectNameStrategy } from "../quickpicks/utils/schemaSubjects";
-import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
-import { getRangeForDocument } from "../schemas/parsing";
-import {
-  PRODUCE_MESSAGE_SCHEMA,
-  ProduceMessage,
-  SubjectNameStrategy,
-} from "../schemas/produceMessageSchema";
-import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";

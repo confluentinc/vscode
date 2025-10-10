@@ -104,7 +104,6 @@ export enum SubjectNameStrategy {
 }
 
 export interface SchemaInfo {
-  // TODO: add Schema Registry URI?
   schema_version: number;
   subject: string;
   subject_name_strategy: SubjectNameStrategy;
