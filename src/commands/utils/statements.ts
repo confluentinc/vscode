@@ -103,7 +103,7 @@ export async function confirmActionOnStatement(
 
   const answer = await vscode.window.showWarningMessage(
     message,
-    { modal: false },
+    { modal: true },
     confirmationOption,
   );
   if (answer !== confirmationOption) {
