@@ -25,16 +25,35 @@ describe("flinkComputePools.ts", () => {
   describe("configureFlinkDefaults command", () => {
     let flinkComputePoolQuickPickStub: sinon.SinonStub;
     let flinkDatabaseQuickpickStub: sinon.SinonStub;
+    let showInputBoxStub: sinon.SinonStub;
     let stubbedConfigs: StubbedWorkspaceConfiguration;
     let showInformationMessageStub: sinon.SinonStub;
 
     beforeEach(() => {
       flinkComputePoolQuickPickStub = sandbox.stub(quickpicks, "flinkComputePoolQuickPick");
       flinkDatabaseQuickpickStub = sandbox.stub(kafkaQuickpicks, "flinkDatabaseQuickpick");
+      showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
       stubbedConfigs = new StubbedWorkspaceConfiguration(sandbox);
       showInformationMessageStub = sandbox
         .stub(vscode.window, "showInformationMessage")
         .resolves(undefined);
+    });
+
+    it("should return early if user cancels statement prefix input", async () => {
+      showInputBoxStub.resolves(undefined); // User cancelled
+      await commandsModule.configureFlinkDefaults();
+
+      sinon.assert.notCalled(flinkDatabaseQuickpickStub);
+    });
+
+    it("should not update prefix setting when user exits via the escape key", async () => {
+      flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+      flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
+      showInputBoxStub.resolves(undefined); // User exits via escape key
+
+      await commandsModule.configureFlinkDefaults();
+
+      sinon.assert.notCalled(showInformationMessageStub);
     });
 
     it("should return early if no compute pool is selected", async () => {
@@ -68,6 +87,7 @@ describe("flinkComputePools.ts", () => {
     it("should update config and show info message after pool and database are selected", async () => {
       flinkComputePoolQuickPickStub.resolves(TEST_CCLOUD_FLINK_COMPUTE_POOL);
       flinkDatabaseQuickpickStub.resolves(TEST_CCLOUD_KAFKA_CLUSTER);
+      showInputBoxStub.resolves("dev_");
 
       await commandsModule.configureFlinkDefaults();
 
@@ -91,6 +111,7 @@ describe("flinkComputePools.ts", () => {
       const cluster = { name: "db1" };
       flinkComputePoolQuickPickStub.resolves(pool);
       flinkDatabaseQuickpickStub.resolves(cluster);
+      showInputBoxStub.resolves("dev_");
       showInformationMessageStub.resolves("View");
       const executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 

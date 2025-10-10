@@ -14,6 +14,7 @@ import {
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
@@ -97,10 +98,27 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("Should include the spice parameter in the statement name", async function () {
       const statementName = await determineFlinkStatementName("test-spice");
-      assert.strictEqual(statementName, `vscode-test-spice-${expectedDatePart}`);
+      const defaultPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value || "flink";
+
+      assert.strictEqual(statementName, `${defaultPrefix}-vscode-test-spice-${expectedDatePart}`);
+    });
+
+    it("Should return a name without spice if spice is not provided", async function () {
+      const statementName = await determineFlinkStatementName();
+      const defaultPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value || "flink";
+
+      assert.strictEqual(statementName, `${defaultPrefix}-vscode-${expectedDatePart}`);
+    });
+
+    it("Should prepend the user-configured prefix to the statement name if set", async function () {
+      const mockGetValue = sandbox.stub(FLINK_CONFIG_STATEMENT_PREFIX, "value").get(() => "dev");
+
+      const statementName = await determineFlinkStatementName();
+      assert.strictEqual(statementName, `dev-vscode-${expectedDatePart}`);
+
+      mockGetValue.restore();
     });
   });
-
   describe("utils.refreshFlinkStatement", function () {
     let stubbedStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
     let mockRouteResponse: GetSqlv1Statement200Response;
