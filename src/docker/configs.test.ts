@@ -69,8 +69,8 @@ describe("docker/configs functions", function () {
     const result = await configs.isDockerAvailable();
 
     assert.strictEqual(result, true);
-    assert.ok(systemPingStub.calledOnce);
-    assert.ok(showErrorMessageStub.notCalled);
+    sinon.assert.calledOnce(systemPingStub);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   it("isDockerAvailable() should return false when Docker is not available", async function () {
@@ -81,7 +81,7 @@ describe("docker/configs functions", function () {
     const result = await configs.isDockerAvailable();
 
     assert.strictEqual(result, false);
-    assert.ok(systemPingStub.calledOnce);
+    sinon.assert.calledOnce(systemPingStub);
   });
 
   it("isDockerAvailable() should show a notification if `showNotification` is set to true and Docker is not available", async function () {
@@ -91,8 +91,8 @@ describe("docker/configs functions", function () {
 
     await configs.isDockerAvailable(true);
 
-    assert.ok(systemPingStub.calledOnce);
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(systemPingStub);
+    sinon.assert.calledOnce(showErrorMessageStub);
   });
 
   it("showDockerUnavailableErrorNotification() should show ResponseError content in the error notification", async () => {

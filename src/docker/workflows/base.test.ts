@@ -76,7 +76,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     await workflow["checkForImage"]("repo", "tag");
 
     assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
-    assert.ok(pullImageStub.notCalled);
+    sinon.assert.notCalled(pullImageStub);
   });
 
   it("handleExistingContainers() should handle an existing container and automatically start it if it isn't running", async () => {
@@ -143,7 +143,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     assert.strictEqual(result, fakeResponse);
     assert.ok(startContainerStub.calledOnceWith(fakeContainer.id));
     assert.ok(getContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(showErrorMessageStub.notCalled);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   it("startContainer() should return nothing and show an error notification for port-in-use ResponseErrors", async () => {
@@ -163,7 +163,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     assert.strictEqual(result, undefined);
     assert.ok(startContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(getContainerStub.notCalled);
+    sinon.assert.notCalled(getContainerStub);
     assert.ok(
       showErrorMessageStub.calledOnceWith(
         'Failed to start test container "test-container": Port 8082 is already in use.',
@@ -181,7 +181,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     assert.strictEqual(result, undefined);
     assert.ok(startContainerStub.calledOnceWith(fakeContainer.id));
-    assert.ok(getContainerStub.notCalled);
+    sinon.assert.notCalled(getContainerStub);
     assert.ok(
       showErrorMessageStub.calledOnceWith('Failed to start test container "test-container": uh oh'),
     );
@@ -218,7 +218,7 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
       LocalResourceWorkflow.getKafkaWorkflow,
       new Error(`Unsupported Kafka image repo: ${unsupportedImageRepo}`),
     );
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(showErrorMessageStub);
   });
 
   it(`getKafkaWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE.id}" setting`, async () => {
@@ -237,7 +237,7 @@ describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
       LocalResourceWorkflow.getSchemaRegistryWorkflow,
       new Error(`Unsupported Schema Registry image repo: ${unsupportedImageRepo}`),
     );
-    assert.ok(showErrorMessageStub.calledOnce);
+    sinon.assert.calledOnce(showErrorMessageStub);
   });
 
   it(`getSchemaRegistryWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_SCHEMA_REGISTRY_IMAGE.id}" setting`, async () => {

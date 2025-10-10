@@ -42,8 +42,8 @@ describe("flinkComputePools.ts", () => {
 
       await commandsModule.configureFlinkDefaults();
 
-      assert.ok(stubbedConfigs.update.notCalled);
-      assert.ok(flinkDatabaseQuickpickStub.notCalled);
+      sinon.assert.notCalled(stubbedConfigs.update);
+      sinon.assert.notCalled(flinkDatabaseQuickpickStub);
     });
 
     it("should return early if no database is selected", async () => {

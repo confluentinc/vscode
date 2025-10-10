@@ -114,7 +114,7 @@ describe("extensionSettings/listener.ts", function () {
     createConfigChangeListener();
     await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
 
-    assert.ok(updatePreferencesStub.notCalled);
+    sinon.assert.notCalled(updatePreferencesStub);
   });
 
   const previewSettings: [ExtensionSetting<any>, contextValues.ContextValues][] = [
