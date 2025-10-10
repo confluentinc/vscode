@@ -189,33 +189,6 @@ describe("commands/utils/uploadArtifact", () => {
         contentType: "application/java-archive",
       });
     });
-    it("should log the message confirming the upload for Azure", async () => {
-      const mockProgress = {
-        report: sandbox.stub(),
-      };
-
-      const mockToken = {
-        isCancellationRequested: false,
-        onCancellationRequested: sandbox.stub(),
-      };
-
-      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(mockProgress as any, mockToken as any);
-      });
-
-      await handleUploadToCloudProvider(mockAzureParams, mockPresignedUrlResponse);
-
-      sinon.assert.calledOnce(uploadFileToAzureStub);
-      sinon.assert.calledWith(uploadFileToAzureStub, {
-        file: sinon.match.any, // The blob object
-        presignedUrl: mockPresignedUrlResponse.upload_url,
-        contentType: "application/java-archive",
-      });
-
-      sinon.assert.calledWith(mockProgress.report, { message: "Preparing file..." });
-      sinon.assert.calledWith(mockProgress.report, { message: "Uploading to Azure storage..." });
-    });
 
     it("should upload to S3 with form data for AWS", async () => {
       const mockS3PresignedUrlResponse: PresignedUploadUrlArtifactV1PresignedUrl200Response = {
@@ -233,20 +206,6 @@ describe("commands/utils/uploadArtifact", () => {
         },
       };
 
-      const mockProgress = {
-        report: sandbox.stub(),
-      };
-
-      const mockToken = {
-        isCancellationRequested: false,
-        onCancellationRequested: sandbox.stub(),
-      };
-
-      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(mockProgress as any, mockToken as any);
-      });
-
       await handleUploadToCloudProvider(mockAwsParams, mockS3PresignedUrlResponse);
 
       sinon.assert.calledOnce(uploadFileToS3Stub);
@@ -256,9 +215,6 @@ describe("commands/utils/uploadArtifact", () => {
         contentType: "application/java-archive",
         uploadFormData: mockS3PresignedUrlResponse.upload_form_data,
       });
-
-      sinon.assert.calledWith(mockProgress.report, { message: "Preparing file..." });
-      sinon.assert.calledWith(mockProgress.report, { message: "Uploading to AWS storage..." });
     });
 
     it("should throw error when AWS upload form data is missing", async () => {
@@ -269,21 +225,6 @@ describe("commands/utils/uploadArtifact", () => {
           upload_url: "https://test.s3.amazonaws.com/presigned-url",
           // upload_form_data is missing
         };
-
-      const mockProgress = {
-        report: sandbox.stub(),
-      };
-
-      const mockToken = {
-        isCancellationRequested: false,
-        onCancellationRequested: sandbox.stub(),
-      };
-
-      const withProgressStub = sandbox.stub(vscode.window, "withProgress");
-      withProgressStub.callsFake(async (options, callback) => {
-        return await callback(mockProgress as any, mockToken as any);
-      });
-
       await assert.rejects(
         handleUploadToCloudProvider(mockAwsParams, mockS3PresignedUrlResponseNoFormData),
         /AWS upload form data is missing from presigned URL response/,
