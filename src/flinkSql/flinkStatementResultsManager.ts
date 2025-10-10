@@ -392,7 +392,6 @@ export class FlinkStatementResultsManager {
 
     try {
       await this.retry(async () => {
-        await this.refreshStatement();
         await this._stopStatement();
       }, "stop statement");
     } catch (err) {
@@ -409,22 +408,7 @@ export class FlinkStatementResultsManager {
   }
 
   private async _stopStatement() {
-    await this._flinkStatementsSqlApi.updateSqlv1Statement({
-      organization_id: this.statement.organizationId,
-      environment_id: this.statement.environmentId,
-      statement_name: this.statement.name,
-      UpdateSqlv1StatementRequest: {
-        metadata: this.statement.metadata,
-        name: this.statement.name,
-        organization_id: this.statement.organizationId,
-        environment_id: this.statement.environmentId,
-        status: this.statement.status,
-        spec: {
-          ...this.statement.spec,
-          stopped: true,
-        },
-      },
-    });
+    await this.resourceLoader.stopFlinkStatement(this.statement);
   }
 
   handleMessage(type: MessageType, body: any): any {
