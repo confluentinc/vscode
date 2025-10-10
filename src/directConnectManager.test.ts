@@ -109,7 +109,7 @@ describe("DirectConnectionManager behavior", () => {
     });
 
     assert.ok(result.connection, JSON.stringify(result));
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
     assert.strictEqual(specArg.kafka_cluster, undefined);
     assert.deepStrictEqual(specArg.schema_registry, testSpec.schema_registry);
@@ -130,7 +130,7 @@ describe("DirectConnectionManager behavior", () => {
     });
     assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
     assert.strictEqual(specArg.schema_registry, undefined);
     assert.deepStrictEqual(specArg.kafka_cluster, testSpec.kafka_cluster);
@@ -154,7 +154,7 @@ describe("DirectConnectionManager behavior", () => {
 
     assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);
@@ -215,7 +215,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await manager.updateConnection(updatedSpec);
 
-    assert.ok(tryToUpdateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToUpdateConnectionStub);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);
@@ -257,7 +257,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await manager.rehydrateConnections();
 
-    assert.ok(tryToCreateConnectionStub.calledOnce);
+    sinon.assert.calledOnce(tryToCreateConnectionStub);
     const args = tryToCreateConnectionStub.getCall(0).args;
     assert.deepStrictEqual(
       ConnectionSpecFromJSON(args[0]),
@@ -283,7 +283,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await manager.rehydrateConnections();
 
-    assert.ok(tryToCreateConnectionStub.notCalled);
+    sinon.assert.notCalled(tryToCreateConnectionStub);
   });
 
   describe("deleteConnection()", () => {

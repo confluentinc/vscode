@@ -119,7 +119,7 @@ describe("storage/migrations/v2", () => {
 
     await migration.upgradeSecretStorage();
 
-    assert.ok(secretsStoreStub.notCalled);
+    sinon.assert.notCalled(secretsStoreStub);
   });
 
   it("downgradeSecretStorage() should remove 'ssl' configs from connection specs", async () => {
@@ -174,7 +174,7 @@ describe("storage/migrations/v2", () => {
     await migration.downgradeSecretStorage();
 
     // secrets.store() should be called once during a downgrade
-    assert.ok(secretsStoreStub.calledOnce);
+    sinon.assert.calledOnce(secretsStoreStub);
     // and now we have to pull out the stringified Map that was used for the call
     const mapStringArg = JSON.parse(secretsStoreStub.args[0][1]);
     const secretsStoreCallArgs: any = Object.values(mapStringArg)[0];
@@ -193,6 +193,6 @@ describe("storage/migrations/v2", () => {
 
     await migration.downgradeSecretStorage();
 
-    assert.ok(secretsStoreStub.notCalled);
+    sinon.assert.notCalled(secretsStoreStub);
   });
 });
