@@ -7,7 +7,7 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrlRequest,
 } from "../../clients/flinkArtifacts";
 import { artifactsChanged } from "../../emitters";
-import { logError } from "../../errors";
+import { extractResponseBody, isResponseError, logError } from "../../errors";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { FlinkArtifact } from "../../models/flinkArtifact";
@@ -93,90 +93,78 @@ export async function handleUploadToCloudProvider(
   params: ArtifactUploadParams,
   presignedURL: PresignedUploadUrlArtifactV1PresignedUrl200Response,
 ): Promise<void> {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Uploading ${params.artifactName}`,
-      cancellable: false,
-    },
-    async (progress) => {
-      progress.report({ message: "Preparing file..." });
-      const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
+  const { blob, contentType } = await prepareUploadFileFromUri(params.selectedFile);
 
-      logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+  logger.info(`Starting file upload for cloud provider: ${params.cloud}`, {
+    artifactName: params.artifactName,
+    environment: params.environment,
+    cloud: params.cloud,
+    region: params.region,
+    contentType,
+  });
+
+  switch (params.cloud) {
+    case CloudProvider.Azure: {
+      logger.debug("Uploading to Azure storage");
+      const response = await uploadFileToAzure({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
+        contentType,
+      });
+
+      logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
         artifactName: params.artifactName,
         environment: params.environment,
         cloud: params.cloud,
         region: params.region,
+      });
+      break;
+    }
+    case CloudProvider.AWS: {
+      logger.debug("Uploading to AWS storage");
+
+      const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
+
+      if (!uploadFormData) {
+        throw new Error("AWS upload form data is missing from presigned URL response");
+      }
+
+      const response = await uploadFileToS3({
+        file: blob,
+        presignedUrl: presignedURL.upload_url!,
         contentType,
+        uploadFormData,
       });
 
-      switch (params.cloud) {
-        case CloudProvider.Azure: {
-          progress.report({ message: "Uploading to Azure storage..." });
-          logger.debug("Uploading to Azure storage");
-          const response = await uploadFileToAzure({
-            file: blob,
-            presignedUrl: presignedURL.upload_url!,
-            contentType,
-          });
+      logUsage(UserEvent.FlinkArtifactAction, {
+        action: "upload",
+        status: "succeeded",
+        kind: "CloudProviderUpload",
+        cloud: params.cloud,
+        region: params.region,
+      });
 
-          logger.info(`Azure upload completed for artifact "${params.artifactName}"`, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            artifactName: params.artifactName,
-            environment: params.environment,
-            cloud: params.cloud,
-            region: params.region,
-          });
-          break;
-        }
-        case CloudProvider.AWS: {
-          progress.report({ message: "Uploading to AWS storage..." });
-          logger.debug("Uploading to AWS storage");
-
-          const uploadFormData = presignedURL.upload_form_data as Record<string, string>;
-
-          if (!uploadFormData) {
-            throw new Error("AWS upload form data is missing from presigned URL response");
-          }
-
-          const response = await uploadFileToS3({
-            file: blob,
-            presignedUrl: presignedURL.upload_url!,
-            contentType,
-            uploadFormData,
-          });
-
-          logUsage(UserEvent.FlinkArtifactAction, {
-            action: "upload",
-            status: "succeeded",
-            kind: "CloudProviderUpload",
-            cloud: params.cloud,
-            region: params.region,
-          });
-
-          logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
-            artifactName: params.artifactName,
-            environment: params.environment,
-            cloud: params.cloud,
-            region: params.region,
-          });
-          break;
-        }
-      }
-    },
-  );
+      logger.info(`AWS upload completed for artifact "${params.artifactName}"`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        artifactName: params.artifactName,
+        environment: params.environment,
+        cloud: params.cloud,
+        region: params.region,
+      });
+      break;
+    }
+  }
 }
 
 export async function uploadArtifactToCCloud(
   params: ArtifactUploadParams,
   uploadId: string,
-): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
+): Promise<CreateArtifactV1FlinkArtifact201Response> {
   try {
     const createRequest = buildCreateArtifactRequest(params, uploadId);
 
@@ -273,6 +261,27 @@ export function validateUdfInput(
       severity: vscode.InputBoxValidationSeverity.Error,
     };
   }
+}
+/**
+ * Builds a user-presentable error message for an upload failure.
+ */
+export async function buildUploadErrorMessage(err: unknown, base: string): Promise<string> {
+  let errorMessage = base;
+  if (isResponseError(err)) {
+    if (err.response.status === 500) {
+      errorMessage = `${errorMessage} Please make sure that you provided a valid JAR file`;
+    } else {
+      const resp = await extractResponseBody(err);
+      try {
+        errorMessage = `${errorMessage} ${resp?.errors?.[0]?.detail}`;
+      } catch {
+        errorMessage = `${errorMessage} ${typeof resp === "string" ? resp : JSON.stringify(resp)}`;
+      }
+    }
+  } else if (err instanceof Error) {
+    errorMessage = `${errorMessage} ${err.message}`;
+  }
+  return errorMessage;
 }
 
 /**
