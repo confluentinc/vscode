@@ -7,7 +7,6 @@ import {
   SqlV1StatementResultResults,
 } from "../clients/flinkSql";
 import { isResponseErrorWithStatus } from "../errors";
-import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import {
@@ -182,7 +181,9 @@ export async function determineFlinkStatementName(spice?: string): Promise<strin
   const parts: string[] = [];
 
   // Fetch the user-configured prefix for statements, if any.
-  const statementPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value;
+  const statementPrefix = vscode.workspace
+    .getConfiguration("confluent")
+    .get<string>("flink.statementPrefix");
   if (statementPrefix) {
     parts.push(statementPrefix);
   }

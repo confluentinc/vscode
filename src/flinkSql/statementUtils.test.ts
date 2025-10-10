@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import {
@@ -98,27 +99,31 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("Should include the spice parameter in the statement name", async function () {
       const statementName = await determineFlinkStatementName("test-spice");
-      const defaultPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value || "flink";
+      const defaultPrefix =
+        vscode.workspace.getConfiguration("confluent").get<string>("flink.statementPrefix") ||
+        "flink";
 
       assert.strictEqual(statementName, `${defaultPrefix}-vscode-test-spice-${expectedDatePart}`);
     });
 
     it("Should return a name without spice if spice is not provided", async function () {
       const statementName = await determineFlinkStatementName();
-      const defaultPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value || "flink";
+      const defaultPrefix =
+        vscode.workspace.getConfiguration("confluent").get<string>("flink.statementPrefix") ||
+        "flink";
 
       assert.strictEqual(statementName, `${defaultPrefix}-vscode-${expectedDatePart}`);
     });
 
     it("Should prepend the user-configured prefix to the statement name if set", async function () {
-      const mockGetValue = sandbox.stub(FLINK_CONFIG_STATEMENT_PREFIX, "value").get(() => "dev");
-
       const statementName = await determineFlinkStatementName();
-      assert.strictEqual(statementName, `dev-vscode-${expectedDatePart}`);
-
-      mockGetValue.restore();
+      assert.strictEqual(
+        statementName,
+        `${FLINK_CONFIG_STATEMENT_PREFIX.value}-vscode-${expectedDatePart}`,
+      );
     });
   });
+
   describe("utils.refreshFlinkStatement", function () {
     let stubbedStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
     let mockRouteResponse: GetSqlv1Statement200Response;
