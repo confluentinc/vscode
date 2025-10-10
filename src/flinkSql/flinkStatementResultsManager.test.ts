@@ -362,7 +362,7 @@ describe("FlinkStatementResultsViewModel and FlinkStatementResultsManager", () =
 
       // Wait for the request to actually start
       await eventually(() => {
-        assert.ok(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult.calledOnce);
+        sinon.assert.calledOnce(ctx.flinkSqlStatementResultsApi.getSqlv1StatementResult);
       });
 
       // While that's in flight, start stopping the statement

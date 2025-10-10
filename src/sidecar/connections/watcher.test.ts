@@ -71,8 +71,8 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
 
     await connectionStateWatcher.handleConnectionUpdateEvent(message);
 
-    assert.ok(connectionEventHandlerStub.calledOnce);
-    assert.ok(logErrorStub.notCalled);
+    sinon.assert.calledOnce(connectionEventHandlerStub);
+    sinon.assert.notCalled(logErrorStub);
     const cachedEvent = connectionStateWatcher.getLatestConnectionEvent(
       TEST_AUTHENTICATED_CCLOUD_CONNECTION.id as ConnectionId,
     );
@@ -192,7 +192,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
       const result = await connectionPromise;
       assert.strictEqual(result, null);
       // even if we hit a timeout, we need to stop the "loading" state
-      assert.ok(connectionStableFireStub.calledOnce);
+      sinon.assert.calledOnce(connectionStableFireStub);
     });
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should wait for websocket event if the connection is not found initially`, async () => {
@@ -219,13 +219,13 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
         await clock.tickAsync(100);
 
         // isConnectionStableSpy should not have been called yet.
-        assert.ok(isConnectionStableSpy.notCalled);
+        sinon.assert.notCalled(isConnectionStableSpy);
 
         // simulate a websocket event that updates the connection state to this new stable state.
         await announceConnectionState(testConnection);
 
         // And now isConnectionStable should have been called.
-        assert.ok(isConnectionStableSpy.calledOnce);
+        sinon.assert.calledOnce(isConnectionStableSpy);
         // and it should have returned true
         assert.ok(isConnectionStableSpy.returned(true));
       }
@@ -240,7 +240,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
       assert.deepStrictEqual(results[1], testConnection);
       // and that isDirectConnectionStable was called (after the websocket event)
       // log number of calls.
-      assert.ok(isConnectionStableSpy.calledOnce);
+      sinon.assert.calledOnce(isConnectionStableSpy);
     });
   }
 });
@@ -285,7 +285,7 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
     singleConnectionEntry.handleUpdate(firstEvent);
 
     assert.deepEqual(firstEvent, singleConnectionEntry.mostRecentEvent);
-    assert.ok(eventEmitterFireSub.calledOnce);
+    sinon.assert.calledOnce(eventEmitterFireSub);
     // Now assigned.
     assert.deepEqual(firstEvent.connection, singleConnectionEntry.connection);
 
@@ -304,7 +304,7 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
     };
 
     singleConnectionEntry.handleUpdate(secondEvent);
-    assert.ok(eventEmitterFireSub.calledOnce);
+    sinon.assert.calledOnce(eventEmitterFireSub);
     // reassigned.
     assert.deepEqual(secondEvent.connection, singleConnectionEntry.connection);
   });
@@ -391,7 +391,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(showErrorNotificationStub);
     const callArgs = showErrorNotificationStub.getCall(0).args;
     assert.strictEqual(
       callArgs[0],
@@ -411,7 +411,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(showErrorNotificationStub);
     const callArgs = showErrorNotificationStub.getCall(0).args;
     assert.strictEqual(
       callArgs[0],
@@ -431,7 +431,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.notCalled);
+    sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   it("should not show a notification if a CCLOUD connection does not have a FAILED `ccloud` state", async () => {
@@ -444,7 +444,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.notCalled);
+    sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   it("should show a notification if a CCLOUD connection has a FAILED `ccloud` state", async () => {
@@ -457,7 +457,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(showErrorNotificationStub);
     const callArgs = showErrorNotificationStub.getCall(0).args;
     assert.strictEqual(
       callArgs[0],
@@ -478,7 +478,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.notCalled);
+    sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   // TODO(shoup): remove this after the LOCAL connection migrates to a DIRECT connection
@@ -496,7 +496,7 @@ describe("sidecar/connections/watcher.ts reportUsableState() notifications", () 
 
     await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.notCalled);
+    sinon.assert.notCalled(showErrorNotificationStub);
   });
 });
 

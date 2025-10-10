@@ -40,7 +40,7 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     await clearCurrentCCloudResources();
 
-    assert.ok(mockedCCLoudLoader.reset.calledOnce);
+    sinon.assert.calledOnce(mockedCCLoudLoader.reset);
     assert.ok(currentKafkaClusterChangedFireStub.calledOnceWith(null));
     assert.ok(schemasViewResourceChangedFireStub.calledOnceWith(null));
 
@@ -56,9 +56,9 @@ describe("sidecar/connections/ccloud.ts", () => {
 
     await clearCurrentCCloudResources();
 
-    assert.ok(mockedCCLoudLoader.reset.calledOnce);
-    assert.ok(currentKafkaClusterChangedFireStub.notCalled);
-    assert.ok(schemasViewResourceChangedFireStub.notCalled);
+    sinon.assert.calledOnce(mockedCCLoudLoader.reset);
+    sinon.assert.notCalled(currentKafkaClusterChangedFireStub);
+    sinon.assert.notCalled(schemasViewResourceChangedFireStub);
   });
 
   for (const value of [false, undefined]) {

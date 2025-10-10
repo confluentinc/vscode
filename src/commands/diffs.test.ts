@@ -92,7 +92,7 @@ describe("commands/diffs.ts", () => {
 
     await diffs.compareWithSelectedCommand(schema);
 
-    assert.ok(executeCommandStub.notCalled);
+    sinon.assert.notCalled(executeCommandStub);
   });
 
   it("compareWithSelectedCommand() should throw an error when trying to compare unsupported resource type", async () => {
