@@ -28,6 +28,6 @@ set-node-bumped-version:
 create-gh-release:
 ifeq ($(CI),true)
 ifneq ($(SKIP_TAG_RELEASE),true)
-	gh release create $(BUMPED_VERSION) --generate-notes --latest --title "$(BUMPED_VERSION)"
+	gh release create $(BUMPED_VERSION) --latest --title "$(BUMPED_VERSION)"
 endif
 endif
