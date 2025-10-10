@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
+import { SubjectNameStrategy } from "../diagnostics/produceMessage";
 import { ResourceLoader } from "../loaders/";
 import { Logger } from "../logging";
 import { getConnectionLabel } from "../models/resource";
 import { getSubjectIcon, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { SubjectNameStrategy } from "../schemas/produceMessageSchema";
 import { logUsage, UserEvent } from "../telemetry/events";
 import { QuickPickItemWithValue } from "./types";
 
