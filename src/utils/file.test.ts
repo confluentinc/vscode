@@ -74,7 +74,7 @@ describe("getEditorOrFileContents", () => {
 
     assert.strictEqual(result.content, fakeDocumentContents);
     assert.strictEqual(result.openDocument, fakeDocument);
-    assert.ok(readFileStub.notCalled, "readFile should not be called if editor is open");
+    sinon.assert.notCalled(readFileStub);
   });
 
   it("should return file contents if editor is not open", async () => {

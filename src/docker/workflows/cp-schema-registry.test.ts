@@ -163,7 +163,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     sinon.assert.calledOnce(checkForImageStub);
 
     sinon.assert.calledOnce(getContainersForImageStub);
-    assert.ok(handleExistingContainersStub.calledOnceWith(fakeContainers));
+    sinon.assert.calledOnceWithExactly(handleExistingContainersStub, fakeContainers);
     // bailing here
 
     sinon.assert.notCalled(fetchAndFilterKafkaContainersStub);
@@ -207,18 +207,15 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     sinon.assert.notCalled(handleExistingContainersStub);
 
     sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
-        START_KAFKA_BUTTON,
-        IMAGE_SETTINGS_BUTTON,
-      ),
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
+      START_KAFKA_BUTTON,
+      IMAGE_SETTINGS_BUTTON,
     );
-    assert.ok(
-      executeCommandStub.calledOnceWith("confluent.docker.startLocalResources", [
-        LocalResourceKind.Kafka,
-      ]),
-    );
+    sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent.docker.startLocalResources", [
+      LocalResourceKind.Kafka,
+    ]);
     // bailing here
 
     sinon.assert.notCalled(createContainerStub);
@@ -240,18 +237,16 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     sinon.assert.notCalled(handleExistingContainersStub);
 
     sinon.assert.calledOnce(fetchAndFilterKafkaContainersStub);
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
-        START_KAFKA_BUTTON,
-        IMAGE_SETTINGS_BUTTON,
-      ),
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `No running Kafka containers found for image "${LOCAL_KAFKA_IMAGE.defaultValue}:${LOCAL_KAFKA_IMAGE_TAG.defaultValue}". Please start Kafka and try again.`,
+      START_KAFKA_BUTTON,
+      IMAGE_SETTINGS_BUTTON,
     );
-    assert.ok(
-      executeCommandStub.calledOnceWith(
-        "workbench.action.openSettings",
-        `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
-      ),
+    sinon.assert.calledOnceWithExactly(
+      executeCommandStub,
+      "workbench.action.openSettings",
+      `@id:${LOCAL_KAFKA_IMAGE.id} @id:${LOCAL_KAFKA_IMAGE_TAG.id}`,
     );
     // bailing here
 
@@ -392,9 +387,11 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       },
       name: CONTAINER_NAME,
     };
-    assert.ok(
-      createContainerStub.calledWith(workflow.imageRepo, workflow.imageTag, createBody),
-      `createContainerStub called with: ${JSON.stringify(createContainerStub.args, null, 2)}\n\nand not ${JSON.stringify([workflow.imageRepo, workflow.imageTag, createBody], null, 2)}`,
+    sinon.assert.calledOnceWithExactly(
+      createContainerStub,
+      workflow.imageRepo,
+      workflow.imageTag,
+      createBody,
     );
   });
 });

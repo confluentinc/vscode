@@ -1,4 +1,3 @@
-import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
@@ -96,11 +95,10 @@ describe("flinkComputePools.ts", () => {
 
       await commandsModule.configureFlinkDefaults();
 
-      assert.ok(
-        executeCommandStub.calledWith(
-          "workbench.action.openSettings",
-          "@ext:confluentinc.vscode-confluent flink",
-        ),
+      sinon.assert.calledWith(
+        executeCommandStub,
+        "workbench.action.openSettings",
+        "@ext:confluentinc.vscode-confluent flink",
       );
     });
   });
