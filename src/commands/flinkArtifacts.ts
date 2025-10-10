@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { DeleteArtifactV1FlinkArtifactRequest } from "../clients/flinkArtifacts/apis/FlinkArtifactsArtifactV1Api";
-import { PresignedUploadUrlArtifactV1PresignedUrlRequest } from "../clients/flinkArtifacts/models";
+import {
+  CreateArtifactV1FlinkArtifact201Response,
+  PresignedUploadUrlArtifactV1PresignedUrlRequest,
+} from "../clients/flinkArtifacts/models";
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { logError } from "../errors";
@@ -47,10 +50,24 @@ export async function uploadArtifactCommand(
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Uploading artifact "${params.artifactName}" to Confluent Cloud`,
+        title: `Uploading artifact`,
         cancellable: false,
       },
-      async (progress) => executeArtifactUpload(params, progress),
+      async (progress) => {
+        const response = await executeArtifactUpload(params, progress);
+        if (response) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "succeeded",
+            kind: "CloudProviderUpload",
+            cloud: params.cloud,
+            region: params.region,
+          });
+          void showInfoNotificationWithButtons(
+            `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+          );
+        }
+      },
     );
   } catch (err) {
     logUsage(UserEvent.FlinkArtifactAction, {
@@ -113,24 +130,7 @@ async function executeArtifactUpload(
     increment: stepPortion,
   });
   const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
-
-  if (response) {
-    void showInfoNotificationWithButtons(
-      `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-    );
-  } else {
-    void showInfoNotificationWithButtons(
-      `Artifact upload completed, but no response was returned from Confluent Cloud.`,
-    );
-  }
-
-  logUsage(UserEvent.FlinkArtifactAction, {
-    action: "upload",
-    status: "succeeded",
-    kind: "CloudProviderUpload",
-    cloud: params.cloud,
-    region: params.region,
-  });
+  return response;
 }
 
 export async function deleteArtifactCommand(
