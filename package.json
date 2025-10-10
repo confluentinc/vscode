@@ -713,6 +713,12 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.testInspectJar",
+        "icon": "$(file-binary)",
+        "title": "Inspect JAR File",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.topic.consume",
         "icon": "$(confluent-view-messages)",
         "title": "View Messages",
@@ -813,12 +819,6 @@
         "command": "confluent.uploadArtifact",
         "icon": "$(cloud-upload)",
         "title": "Upload Flink Artifact to Confluent Cloud",
-        "category": "Confluent: Flink Artifacts"
-      },
-      {
-        "command": "confluent.testInspectJar",
-        "icon": "$(file-binary)",
-        "title": "Inspect JAR File",
         "category": "Confluent: Flink Artifacts"
       }
     ],
@@ -1556,6 +1556,10 @@
           "when": "true"
         },
         {
+          "command": "confluent.testInspectJar",
+          "when": "false"
+        },
+        {
           "command": "confluent.topic.consume",
           "when": "true"
         },
@@ -1626,10 +1630,6 @@
         {
           "command": "confluent.uploadArtifact",
           "when": "confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts"
-        },
-        {
-          "command": "confluent.testInspectJar",
-          "when": "false"
         }
       ],
       "editor/title": [
