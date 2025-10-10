@@ -104,8 +104,10 @@ describe("ResourceLoader::getSubjects()", () => {
         // will have asked for the subjects from the resource manager, but none returned, so deep fetched.
         sinon.assert.calledOnce(rmGetSubjectsStub);
         /// will have stored the deep fetched subjects in the resource manager.
-        assert.ok(
-          rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+        sinon.assert.calledOnceWithExactly(
+          rmSetSubjectsStub,
+          TEST_LOCAL_SCHEMA_REGISTRY,
+          fetchSubjectsStubReturns,
         );
 
         // reset the resource manager stubs for next iteration.
@@ -154,8 +156,10 @@ describe("ResourceLoader::getSubjects()", () => {
       // will not have asked resource manager for subjects, since deep fetch is forced.
       sinon.assert.notCalled(rmGetSubjectsStub);
       /// will have stored the deep fetched subjects in the resource manager.
-      assert.ok(
-        rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+      sinon.assert.calledOnceWithExactly(
+        rmSetSubjectsStub,
+        TEST_LOCAL_SCHEMA_REGISTRY,
+        fetchSubjectsStubReturns,
       );
 
       // reset the resource manager stubs for next iteration.
@@ -361,7 +365,7 @@ describe("ResourceLoader::clearCache()", () => {
     await loaderInstance.clearCache(schemaRegistry);
     sinon.assert.calledOnce(rmSetSubjectsStub);
     // calling with undefined will clear out just this single schema registry's subjects.
-    assert.ok(rmSetSubjectsStub.calledWithExactly(schemaRegistry, undefined));
+    sinon.assert.calledOnceWithExactly(rmSetSubjectsStub, schemaRegistry, undefined);
   });
 });
 
@@ -621,7 +625,7 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
 
       if (shouldClearSubjects) {
         sinon.assert.calledOnce(clearCacheStub);
-        assert.ok(clearCacheStub.calledWithExactly(schema.subjectObject()));
+        sinon.assert.calledOnceWithExactly(clearCacheStub, schema.subjectObject());
       } else {
         sinon.assert.notCalled(clearCacheStub);
       }

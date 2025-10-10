@@ -85,7 +85,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
 
     assert.strictEqual(result, undefined);
     sinon.assert.calledOnce(imageCreateRawStub);
-    assert.ok(imageCreateRawStub.calledWithMatch({ fromImage: fakeImageRepoTag }));
+    sinon.assert.calledOnceWithMatch(imageCreateRawStub, { fromImage: fakeImageRepoTag });
   });
 
   it("pullImage() should re-throw any error from .imageCreate", async () => {

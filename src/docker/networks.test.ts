@@ -28,11 +28,9 @@ describe("docker/networks.ts NetworkApi wrappers", () => {
     await createNetwork("test-network", "bridge");
 
     sinon.assert.calledOnce(networkCreateStub);
-    assert.ok(
-      networkCreateStub.calledWithMatch({
-        networkConfig: { Name: "test-network", Driver: "bridge" },
-      }),
-    );
+    sinon.assert.calledWithMatch(networkCreateStub, {
+      networkConfig: { Name: "test-network", Driver: "bridge" },
+    });
   });
 
   it("createNetwork() should return nothing, but handle 'already exists' 409 ResponseErrors and not re-throw", async () => {

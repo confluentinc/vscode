@@ -98,15 +98,13 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     await createContainer("repo", "tag", { body: {} });
 
     sinon.assert.calledOnce(containerCreateStub);
-    assert.ok(
-      containerCreateStub.calledWithMatch({
-        body: {
-          Labels: {
-            [MANAGED_CONTAINER_LABEL]: "true",
-          },
+    sinon.assert.calledOnceWithMatch(containerCreateStub, {
+      body: {
+        Labels: {
+          [MANAGED_CONTAINER_LABEL]: "true",
         },
-      }),
-    );
+      },
+    });
   });
 
   it("createContainer() should re-throw any error from .containerCreate", async () => {

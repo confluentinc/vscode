@@ -132,48 +132,27 @@ describe("docker/eventListener.ts EventListener methods", function () {
     await clock.tickAsync(100);
 
     // we should have called these, then bailed until the next poll
-    assert.ok(
-      getContextValueStub.calledOnceWith(contextValues.ContextValues.dockerServiceAvailable),
-      "getContextValue(ContextValues.dockerServiceAvailable) not called as expected",
+    sinon.assert.calledOnceWithExactly(
+      getContextValueStub,
+      contextValues.ContextValues.dockerServiceAvailable,
     );
 
-    assert.ok(
-      setContextValueStub.calledOnceWith(contextValues.ContextValues.dockerServiceAvailable, false),
-      "setContextValue(ContextValues.dockerServiceAvailable, false) not called as expected",
+    sinon.assert.calledOnceWithExactly(
+      setContextValueStub,
+      contextValues.ContextValues.dockerServiceAvailable,
+      false,
     );
 
-    assert.ok(
-      dockerServiceAvailableFireStub.calledOnceWith(false),
-      "dockerServiceAvailable.fire(false) not called as expected",
-    );
+    sinon.assert.calledOnceWithExactly(dockerServiceAvailableFireStub, false);
 
-    assert.ok(
-      isDockerAvailableStub.calledOnce,
-      `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
-    );
-    assert.equal(
-      eventListener.dockerAvailable,
-      dockerAvailable,
-      `dockerAvailable should be ${dockerAvailable}, but is ${eventListener.dockerAvailable}`,
-    );
-    assert.ok(
-      useSlowFrequencySpy.calledOnce,
-      `useSlowFrequency() called ${useSlowFrequencySpy.callCount} times`,
-    );
+    sinon.assert.calledOnce(isDockerAvailableStub);
+    assert.equal(eventListener.dockerAvailable, dockerAvailable);
+    sinon.assert.calledOnce(useSlowFrequencySpy);
     // and we shouldn't have reached any of these
-    assert.ok(
-      useFastFrequencySpy.notCalled,
-      `useFastFrequency() called ${useFastFrequencySpy.callCount} times`,
-    );
-    assert.ok(
-      systemEventsRawStub.notCalled,
-      `systemEventsRaw() called ${systemEventsRawStub.callCount} time(s)`,
-    );
-    assert.ok(
-      readValuesFromStreamStub.notCalled,
-      `readValuesFromStream() called ${readValuesFromStreamStub.callCount} time(s)`,
-    );
-    assert.ok(handleEventStub.notCalled, `handleEvent() called ${handleEventStub.callCount} times`);
+    sinon.assert.notCalled(useFastFrequencySpy);
+    sinon.assert.notCalled(systemEventsRawStub);
+    sinon.assert.notCalled(readValuesFromStreamStub);
+    sinon.assert.notCalled(handleEventStub);
   });
 
   it("listenForEvents() should poll more frequently and make a request for system events if Docker is available", async function () {
@@ -213,35 +192,13 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // advance the clock to allow the event listener logic to execute
     await clock.tickAsync(100);
 
-    assert.ok(
-      isDockerAvailableStub.calledOnce,
-      `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
-    );
-    assert.equal(
-      eventListener.dockerAvailable,
-      dockerAvailable,
-      `dockerAvailable should be ${dockerAvailable}, but is ${eventListener.dockerAvailable}`,
-    );
-    assert.ok(
-      useSlowFrequencySpy.notCalled,
-      `useSlowFrequency() called ${useSlowFrequencySpy.callCount} times`,
-    );
-    assert.ok(
-      useFastFrequencySpy.calledOnce,
-      `useFastFrequency() called ${useFastFrequencySpy.callCount} times`,
-    );
-    assert.ok(
-      systemEventsRawStub.calledOnce,
-      `systemEventsRaw() called ${systemEventsRawStub.callCount} times`,
-    );
-    assert.ok(
-      readValuesFromStreamStub.calledOnceWith(stream),
-      `readValuesFromStream() called ${readValuesFromStreamStub.callCount} times with ${JSON.stringify(readValuesFromStreamStub.args)}`,
-    );
-    assert.ok(
-      handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT),
-      `handleEvent() called ${handleEventStub.callCount} times with ${JSON.stringify(handleEventStub.args)}`,
-    );
+    sinon.assert.calledOnce(isDockerAvailableStub);
+    assert.equal(eventListener.dockerAvailable, dockerAvailable);
+    sinon.assert.notCalled(useSlowFrequencySpy);
+    sinon.assert.calledOnce(useFastFrequencySpy);
+    sinon.assert.calledOnce(systemEventsRawStub);
+    sinon.assert.calledOnceWithExactly(readValuesFromStreamStub, stream);
+    sinon.assert.calledOnceWithExactly(handleEventStub, TEST_CONTAINER_EVENT);
   });
 
   it("listenForEvents() should update context values and fire events if the connection to Docker is lost and an error with cause 'other side closed' is thrown while reading from the event stream", async function () {
@@ -289,36 +246,13 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // advance the clock to allow the event listener logic to execute
     await clock.tickAsync(100);
 
-    assert.ok(
-      isDockerAvailableStub.calledOnce,
-      `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
-    );
-    assert.equal(
-      eventListener.dockerAvailable,
-      dockerAvailable,
-      `dockerAvailable should be ${dockerAvailable}, but is ${eventListener.dockerAvailable}`,
-    );
-    assert.ok(
-      useSlowFrequencySpy.notCalled,
-      `useSlowFrequency() called ${useSlowFrequencySpy.callCount} times`,
-    );
-    assert.ok(
-      useFastFrequencySpy.calledOnce,
-      `useFastFrequency() called ${useFastFrequencySpy.callCount} times`,
-    );
-
-    assert.ok(
-      systemEventsRawStub.calledOnce,
-      `systemEventsRaw() called ${systemEventsRawStub.callCount} times`,
-    );
-    assert.ok(
-      readValuesFromStreamStub.calledOnceWith(stream),
-      `readValuesFromStream() called ${readValuesFromStreamStub.callCount} times with ${JSON.stringify(readValuesFromStreamStub.args)}`,
-    );
-    assert.ok(
-      handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT),
-      `handleEvent() called ${handleEventStub.callCount} times`,
-    );
+    sinon.assert.calledOnce(isDockerAvailableStub);
+    assert.equal(eventListener.dockerAvailable, dockerAvailable);
+    sinon.assert.notCalled(useSlowFrequencySpy);
+    sinon.assert.calledOnce(useFastFrequencySpy);
+    sinon.assert.calledOnce(systemEventsRawStub);
+    sinon.assert.calledOnceWithExactly(readValuesFromStreamStub, stream);
+    sinon.assert.calledOnceWithExactly(handleEventStub, TEST_CONTAINER_EVENT);
     for (const contextValue of [
       contextValues.ContextValues.localKafkaClusterAvailable,
       contextValues.ContextValues.dockerServiceAvailable,
@@ -430,7 +364,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     };
     await eventListener.handleEvent(eventWithStatus);
 
-    assert.ok(handleContainerEventStub.calledOnceWith(eventWithStatus));
+    sinon.assert.calledOnceWithExactly(handleContainerEventStub, eventWithStatus);
   });
 
   it("handleEvent() should exit early if the event is missing 'status'", async function () {
@@ -471,7 +405,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     };
     await eventListener.handleContainerEvent(startEvent);
 
-    assert.ok(handleContainerStartEventStub.calledOnceWith(startEvent));
+    sinon.assert.calledOnceWithExactly(handleContainerStartEventStub, startEvent);
     sinon.assert.notCalled(handleContainerDieEventStub);
   });
 
@@ -490,7 +424,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     await eventListener.handleEvent(dieEvent);
 
     sinon.assert.notCalled(handleContainerStartEventStub);
-    assert.ok(handleContainerDieEventStub.calledOnceWith(dieEvent));
+    sinon.assert.calledOnceWithExactly(handleContainerDieEventStub, dieEvent);
   });
 
   it("handleContainerEvent() should exit early if 'status' is something other than 'start' or 'die'", async function () {
@@ -529,13 +463,12 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     sinon.assert.calledOnce(waitForContainerRunningStub);
     sinon.assert.calledOnce(waitForServerStartedLogStub);
-    assert.ok(
-      setContextValueStub.calledOnceWith(
-        contextValues.ContextValues.localKafkaClusterAvailable,
-        true,
-      ),
+    sinon.assert.calledOnceWithExactly(
+      setContextValueStub,
+      contextValues.ContextValues.localKafkaClusterAvailable,
+      true,
     );
-    assert.ok(localKafkaConnectedFireStub.calledOnceWith(true));
+    sinon.assert.calledOnceWithExactly(localKafkaConnectedFireStub, true);
   });
 
   it("handleContainerStartEvent() should exit early for containers from non-'confluent-local' images", async function () {
@@ -591,13 +524,12 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     await eventListener.handleContainerDieEvent(event);
 
-    assert.ok(
-      setContextValueStub.calledOnceWith(
-        contextValues.ContextValues.localKafkaClusterAvailable,
-        false,
-      ),
+    sinon.assert.calledOnceWithExactly(
+      setContextValueStub,
+      contextValues.ContextValues.localKafkaClusterAvailable,
+      false,
     );
-    assert.ok(localKafkaConnectedFireStub.calledOnceWith(false));
+    sinon.assert.calledOnceWithExactly(localKafkaConnectedFireStub, false);
   });
 
   it("handleContainerDieEvent() should exit early for containers from non-'confluent-local' images", async function () {
@@ -644,7 +576,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     );
 
     assert.strictEqual(result, true);
-    assert.ok(containerInspectStub.calledOnceWith({ id: containerId }));
+    sinon.assert.calledOnceWithMatch(containerInspectStub, { id: containerId });
   });
 
   it("matchContainerStatus() should return false if the container status is not matched", async function () {
@@ -661,7 +593,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     );
 
     assert.strictEqual(result, false);
-    assert.ok(containerInspectStub.calledOnceWith({ id: containerId }));
+    sinon.assert.calledOnceWithMatch(containerInspectStub, { id: containerId });
   });
 
   it("waitForContainerLog() should return true if the container logs contain the expected string", async function () {
@@ -683,7 +615,12 @@ describe("docker/eventListener.ts EventListener methods", function () {
     const result: boolean = await eventListener.waitForContainerLog(id, stringToMatch, Date.now());
 
     assert.strictEqual(result, true);
-    assert.ok(containerLogsRawStub.calledOnceWith({ id, since, follow: true, stdout: true }));
+    sinon.assert.calledOnceWithMatch(containerLogsRawStub, {
+      id,
+      since,
+      follow: true,
+      stdout: true,
+    });
   });
 
   it("waitForContainerLog() should return false if the container logs do not contain the expected string", async function () {
@@ -706,6 +643,11 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     assert.strictEqual(result, false);
     sinon.assert.calledOnce(containerLogsRawStub);
-    assert.ok(containerLogsRawStub.calledOnceWith({ id, since, follow: true, stdout: true }));
+    sinon.assert.calledOnceWithMatch(containerLogsRawStub, {
+      id,
+      since,
+      follow: true,
+      stdout: true,
+    });
   });
 });

@@ -133,7 +133,7 @@ describe("extensionSettings/listener.ts", function () {
         // simulate the setting being changed by the user
         await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
 
-        assert.ok(setContextValueStub.calledWith(previewContextValue, enabled));
+        sinon.assert.calledWith(setContextValueStub, previewContextValue, enabled);
       });
     }
   }
