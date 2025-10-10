@@ -6,7 +6,10 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- New "Delete Flink Statement" context menu item in the Flink Statements view.
+- New "Delete Flink Statement" context menu command in the Flink Statements view, only offerred for
+  statements not currently executing.
+- New "Stop Statement Execution" context menu command in the Flink Statements view, only offerred
+  for currently executing statements.
 
 ### Changed
 
