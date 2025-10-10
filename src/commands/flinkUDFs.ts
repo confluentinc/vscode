@@ -19,7 +19,11 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { inspectJarClasses, JarClassInfo } from "../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../viewProviders/flinkDatabase";
 import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegates/constants";
-import { executeCreateFunction, promptForFunctionAndClassName } from "./utils/uploadArtifactOrUDF";
+import {
+  executeCreateFunction,
+  promptForFunctionAndClassName,
+  validateUdfInput,
+} from "./utils/uploadArtifactOrUDF";
 
 const logger = new Logger("commands.flinkUDFs");
 
@@ -233,8 +237,13 @@ export async function detectClassesAndRegisterUDFs(params: { selectedFile: vscod
       return; // User cancelled or selected no classes
     }
     logger.debug(`User selected ${selectedClasses.length} classes for UDF registration.`);
+    const registrations = await promptForFunctionNames(selectedClasses);
+    if (!registrations || registrations.length === 0) {
+      return; // User cancelled or provided no function names
+    }
+    logger.debug(`User provided ${registrations.length} function names.`);
   } else {
-    logger.debug("No Java classes selected.");
+    logger.debug("No Java classes found in JAR file.");
   }
 }
 /**
@@ -259,4 +268,40 @@ export async function selectClassesForUdfRegistration(
   });
 
   return selectedItems?.map((item) => item.classInfo);
+}
+
+/**
+ * Prompts the user for function names for each selected class.
+ * @param selectedClasses The classes selected for UDF registration
+ * @returns Promise that resolves to UDF registration data or undefined if cancelled
+ */
+export async function promptForFunctionNames(
+  selectedClasses: JarClassInfo[],
+): Promise<{ classInfo: JarClassInfo; functionName: string }[] | undefined> {
+  const registrations: { classInfo: JarClassInfo; functionName: string }[] = [];
+  const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+
+  for (const classInfo of selectedClasses) {
+    // Generate a default function name based on the simple class name
+    let defaultFunctionName = classInfo.simpleName.toLowerCase().replace(/\W/g, "_");
+
+    const functionName = await vscode.window.showInputBox({
+      title: `Function Name for ${classInfo.simpleName}`,
+      prompt: `Enter a function name for class "${classInfo.className}"`,
+      value: defaultFunctionName,
+      validateInput: (value) => validateUdfInput(value, functionNameRegex),
+      ignoreFocusOut: true,
+    });
+
+    if (functionName === undefined) {
+      // User cancelled name input; continue to other classes but don't push undefined name to registrations
+      continue;
+    } else {
+      registrations.push({
+        classInfo,
+        functionName: functionName.trim(),
+      });
+    }
+  }
+  return registrations;
 }
