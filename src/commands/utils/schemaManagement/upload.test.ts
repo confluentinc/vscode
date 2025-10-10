@@ -611,7 +611,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
           expectedSchemaType,
           `Expected ${expectedSchemaType} given ${fileExtension}, got ${schemaType} instead`,
         );
-        assert.ok(schemaTypeQuickPickStub.notCalled);
+        sinon.assert.notCalled(schemaTypeQuickPickStub);
       }
     });
 
@@ -619,7 +619,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       const fileUri = Uri.file("some-file.txt");
       await determineSchemaType(fileUri, "plaintext");
 
-      assert.ok(schemaTypeQuickPickStub.calledOnce);
+      sinon.assert.calledOnce(schemaTypeQuickPickStub);
     });
 
     it("should show the schema type quickpick when the provided Uri has a JSON file extension and language ID", async () => {
@@ -628,14 +628,14 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
       const fileUri = Uri.file("some-file.json");
       const result = await determineSchemaType(fileUri, "json");
 
-      assert.ok(schemaTypeQuickPickStub.calledOnce);
+      sinon.assert.calledOnce(schemaTypeQuickPickStub);
       assert.strictEqual(result, undefined);
 
       // next, simulate the user selecting the JSON option
       schemaTypeQuickPickStub.resolves("JSON");
       const nextResult = await determineSchemaType(fileUri, "json");
 
-      assert.ok(schemaTypeQuickPickStub.calledTwice);
+      sinon.assert.calledTwice(schemaTypeQuickPickStub);
       assert.strictEqual(nextResult, SchemaType.Json);
     });
 
@@ -653,7 +653,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
           expectedSchemaType,
           `Expected ${expectedSchemaType} given ${languageId}, got ${schemaType} instead`,
         );
-        assert.ok(schemaTypeQuickPickStub.notCalled);
+        sinon.assert.notCalled(schemaTypeQuickPickStub);
       }
     });
 
@@ -671,7 +671,7 @@ describe("commands/utils/schemaManagement/upload.ts", function () {
           expectedSchemaType,
           `Expected ${expectedSchemaType} given .txt and ${languageId}, got ${schemaType} instead`,
         );
-        assert.ok(schemaTypeQuickPickStub.notCalled);
+        sinon.assert.notCalled(schemaTypeQuickPickStub);
       }
     });
 

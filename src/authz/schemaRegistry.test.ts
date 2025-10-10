@@ -51,7 +51,7 @@ describe("authz.schemaRegistry", function () {
   // it("canAccessSchemaForTopic() should return true if both key and value access are true", async function () {
   //   const stub = sandbox.stub(schemaRegistry, "canAccessSchemaTypeForTopic").resolves(true);
   //   const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-  //   assert.ok(stub.calledTwice);
+  //   sinon.assert.calledTwice(stub);
   //   assert.strictEqual(result, true);
   // });
 
@@ -65,14 +65,14 @@ describe("authz.schemaRegistry", function () {
   //     .withArgs(topic, "value")
   //     .resolves(false);
   //   const result = await schemaRegistry.canAccessSchemaForTopic(topic);
-  //   assert.ok(stub.calledTwice);
+  //   sinon.assert.calledTwice(stub);
   //   assert.strictEqual(result, true);
   // });
 
   // it("canAccessSchemaForTopic() should return false if both key and value access are false", async function () {
   //   const stub = sandbox.stub(schemaRegistry, "canAccessSchemaTypeForTopic").resolves(false);
   //   const result = await schemaRegistry.canAccessSchemaForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-  //   assert.ok(stub.calledTwice);
+  //   sinon.assert.calledTwice(stub);
   //   assert.strictEqual(result, false);
   // });
 
@@ -142,7 +142,7 @@ describe("authz.schemaRegistry", function () {
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
-    assert.ok(showWarningMessageStub.calledOnce);
+    sinon.assert.calledOnce(showWarningMessageStub);
   });
 
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
@@ -150,7 +150,7 @@ describe("authz.schemaRegistry", function () {
 
     const showWarningMessageStub = sandbox.stub(window, "showWarningMessage").resolves(undefined);
     schemaRegistry.showNoSchemaAccessWarningNotification();
-    assert.ok(showWarningMessageStub.notCalled);
+    sinon.assert.notCalled(showWarningMessageStub);
   });
 });
 

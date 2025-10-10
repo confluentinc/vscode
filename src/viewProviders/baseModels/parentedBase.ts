@@ -60,7 +60,10 @@ export abstract class ParentedBaseViewProvider<
 
     const promises: Promise<unknown>[] = [];
 
-    if (this.resource !== resource) {
+    if (
+      this.resource?.id !== resource?.id ||
+      this.resource?.connectionId !== resource?.connectionId
+    ) {
       this.setSearch(null); // reset search when parent resource changes
 
       // If we have a boolean context value to adjust, and if the boolean value is changing, adjust it.
@@ -104,7 +107,8 @@ export abstract class ParentedBaseViewProvider<
       // any transition of CCloud connection state should reset the tree view if we're focused on
       // a CCloud parent resource
       this.logger.debug("ccloudConnected event fired, resetting view", { connected });
-      void this.reset();
+      // Use setParentResource so all the right things happen, including context value adjustment.
+      void this.setParentResource(null);
     }
   }
 
