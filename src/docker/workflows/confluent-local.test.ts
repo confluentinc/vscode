@@ -143,7 +143,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     sinon.assert.calledOnce(checkForImageStub);
 
     sinon.assert.calledOnce(getContainersForImageStub);
-    assert.ok(handleExistingContainersStub.calledOnceWith(fakeContainers));
+    sinon.assert.calledOnceWithExactly(handleExistingContainersStub, fakeContainers);
 
     sinon.assert.notCalled(createNetworkStub);
 
@@ -233,7 +233,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     await workflow.stop(TEST_CANCELLATION_TOKEN);
 
     sinon.assert.calledOnce(getContainersForImageStub);
-    assert.ok(stopContainerStub.calledOnceWith({ id: containerId, name: containerName }));
+    sinon.assert.calledOnceWithExactly(stopContainerStub, { id: containerId, name: containerName });
     sinon.assert.calledOnce(waitForLocalResourceEventChangeStub);
   });
 
@@ -244,11 +244,10 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     sinon.assert.calledOnce(getContainersForImageStub);
     // not the usual "Open Logs"+"File Issue" notification, just a basic error message with a button to open settings
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        `No ${workflow.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
-        "Open Settings",
-      ),
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      `No ${workflow.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
+      "Open Settings",
     );
     sinon.assert.notCalled(stopContainerStub);
     sinon.assert.notCalled(waitForLocalResourceEventChangeStub);
@@ -353,29 +352,26 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     assert.equal(result.id, "1");
     assert.equal(result.name, containerName);
     sinon.assert.calledOnce(createContainerStub);
-    assert.ok(
-      createContainerStub.calledWith(workflow.imageRepo, workflow.imageTag, {
-        body: {
-          Image: workflow.imageRepoTag,
-          Hostname: containerName,
-          ExposedPorts: { [`${plainTextPort}/tcp`]: {} },
-          HostConfig: {
-            NetworkMode: workflow.networkName,
-            PortBindings: {
-              [`${plainTextPort}/tcp`]: [{ HostIp: "0.0.0.0", HostPort: plainTextPort.toString() }],
-              [`${LOCAL_KAFKA_REST_PORT}/tcp`]: [
-                { HostIp: "0.0.0.0", HostPort: LOCAL_KAFKA_REST_PORT.toString() },
-              ],
-            },
+    sinon.assert.calledOnceWithExactly(createContainerStub, workflow.imageRepo, workflow.imageTag, {
+      body: {
+        Image: workflow.imageRepoTag,
+        Hostname: containerName,
+        ExposedPorts: { [`${plainTextPort}/tcp`]: {} },
+        HostConfig: {
+          NetworkMode: workflow.networkName,
+          PortBindings: {
+            [`${plainTextPort}/tcp`]: [{ HostIp: "0.0.0.0", HostPort: plainTextPort.toString() }],
+            [`${LOCAL_KAFKA_REST_PORT}/tcp`]: [
+              { HostIp: "0.0.0.0", HostPort: LOCAL_KAFKA_REST_PORT.toString() },
+            ],
           },
-          Cmd: ["bash", "-c", "'/etc/confluent/docker/run'"],
-          Env: envVars,
-          Tty: false,
         },
-        name: containerName,
-      }),
-      `createContainerStub called with: ${JSON.stringify(createContainerStub.args, null, 2)}`,
-    );
+        Cmd: ["bash", "-c", "'/etc/confluent/docker/run'"],
+        Env: envVars,
+        Tty: false,
+      },
+      name: containerName,
+    });
   });
 });
 

@@ -102,7 +102,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     // shouldn't be possible based on the package.json configs, but just in case
     await produceMessagesFromDocument(null as any);
 
-    assert.ok(showErrorMessageStub.calledOnceWith("No topic selected."));
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, "No topic selected.");
   });
 
   it("should exit early if no file/editor is selected from the URI quickpick", async function () {
@@ -360,13 +360,12 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(getSubjectNameStrategyStub.calledOnceWith(TEST_LOCAL_KAFKA_TOPIC, "value"));
-    assert.ok(
-      promptForSchemaStub.calledOnceWith(
-        TEST_LOCAL_KAFKA_TOPIC,
-        "value",
-        SubjectNameStrategy.TOPIC_NAME,
-      ),
+    sinon.assert.calledOnceWithExactly(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "value");
+    sinon.assert.calledOnceWithExactly(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "value",
+      SubjectNameStrategy.TOPIC_NAME,
     );
     sinon.assert.calledOnce(recordsV3ApiStub.produceRecord);
   });
@@ -402,17 +401,19 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(getSubjectNameStrategyStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "key"));
-    assert.ok(getSubjectNameStrategyStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "value"));
-    assert.ok(
-      promptForSchemaStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "key", SubjectNameStrategy.TOPIC_NAME),
+    sinon.assert.calledWith(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "key");
+    sinon.assert.calledWith(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "value");
+    sinon.assert.calledWith(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "key",
+      SubjectNameStrategy.TOPIC_NAME,
     );
-    assert.ok(
-      promptForSchemaStub.calledWith(
-        TEST_LOCAL_KAFKA_TOPIC,
-        "value",
-        SubjectNameStrategy.RECORD_NAME,
-      ),
+    sinon.assert.calledWith(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "value",
+      SubjectNameStrategy.RECORD_NAME,
     );
     sinon.assert.calledOnce(recordsV3ApiStub.produceRecord);
   });
