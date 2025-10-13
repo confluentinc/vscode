@@ -1110,8 +1110,8 @@
       ],
       "panel": [
         {
-          "id": "confluent-panel",
-          "title": "Confluent",
+          "id": "confluent-flink-results-panel",
+          "title": "Confluent Flink Results",
           "icon": "resources/confluent-logo.svg"
         }
       ]
@@ -1157,7 +1157,7 @@
           "icon": "$(confluent-logo)"
         }
       ],
-      "confluent-panel": [
+      "confluent-flink-results-panel": [
         {
           "id": "confluent-flink-statement-results-panel",
           "name": "Flink Statement Results",
