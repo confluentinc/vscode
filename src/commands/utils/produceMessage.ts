@@ -1,10 +1,6 @@
 import { ProduceRequestData } from "../../clients/sidecar";
+import { ProduceMessage, SchemaInfo, SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { Schema } from "../../models/schema";
-import {
-  ProduceMessage,
-  SchemaInfo,
-  SubjectNameStrategy,
-} from "../../schemas/produceMessageSchema";
 import { ProduceMessageSchemaOptions } from "./types";
 
 /** Create the {@link ProduceRequestData} objects for the `key` and `value` of a produce request based on the provided `message` content and any schema options. */

@@ -1,4 +1,5 @@
 import { commands } from "vscode";
+import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { USE_TOPIC_NAME_STRATEGY } from "../../extensionSettings/constants";
 import { ResourceLoader } from "../../loaders";
 import { Subject } from "../../models/schema";
@@ -8,7 +9,6 @@ import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,
 } from "../../notifications";
-import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 import { schemaSubjectQuickPick, subjectNameStrategyQuickPick } from "../schemas";
 
 /**

@@ -17,6 +17,13 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
+import { JSON_DIAGNOSTIC_COLLECTION } from "../diagnostics/constants";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  ProduceMessage,
+  SubjectNameStrategy,
+} from "../diagnostics/produceMessage";
+import * as jsonParsing from "../documentParsing/json";
 import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -25,13 +32,6 @@ import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
 import * as schemaUtils from "../quickpicks/utils/schemas";
-import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
-import * as parsing from "../schemas/parsing";
-import {
-  PRODUCE_MESSAGE_SCHEMA,
-  ProduceMessage,
-  SubjectNameStrategy,
-} from "../schemas/produceMessageSchema";
 import { SidecarHandle } from "../sidecar";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";
@@ -566,7 +566,7 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
 
     // stub getRangeForDocument to return a predictable range
     getRangeForDocumentStub = sandbox
-      .stub(parsing, "getRangeForDocument")
+      .stub(jsonParsing, "getRangeForDocument")
       .resolves(new vscode.Range(0, 0, 1, 10));
 
     // stub the diagnostic collection's set method

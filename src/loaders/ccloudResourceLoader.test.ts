@@ -1430,38 +1430,16 @@ describe("CCloudResourceLoader", () => {
   describe("deleteFlinkStatement", () => {
     let flinkSqlStatementsApi: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
     let stubbedSidecar: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
-    let getOrganizationStub: sinon.SinonStub;
     let flinkStatementDeletedFireStub: sinon.SinonStub;
 
     beforeEach(() => {
       stubbedSidecar = getSidecarStub(sandbox);
       flinkSqlStatementsApi = sandbox.createStubInstance(StatementsSqlV1Api);
       stubbedSidecar.getFlinkSqlStatementsApi.returns(flinkSqlStatementsApi);
-      getOrganizationStub = sandbox
-        .stub(loader, "getOrganization")
-        .resolves(TEST_CCLOUD_ORGANIZATION);
 
       const emitterStubs = eventEmitterStubs(sandbox);
 
       flinkStatementDeletedFireStub = emitterStubs.flinkStatementDeleted!.fire;
-    });
-
-    it("should raise if no organization is available", async () => {
-      getOrganizationStub.resolves(null);
-
-      const statementToDelete = createFlinkStatement();
-      await assert.rejects(
-        async () => {
-          await loader.deleteFlinkStatement(statementToDelete);
-        },
-        {
-          name: "Error",
-          message: "Not connected to CCloud, cannot delete Flink statement.",
-        },
-      );
-      sinon.assert.calledOnce(getOrganizationStub);
-      sinon.assert.notCalled(flinkSqlStatementsApi.deleteSqlv1Statement);
-      sinon.assert.notCalled(flinkStatementDeletedFireStub);
     });
 
     it("should successfully delete a statement", async () => {
@@ -1475,7 +1453,6 @@ describe("CCloudResourceLoader", () => {
         environment_id: statementToDelete.environmentId,
         statement_name: statementToDelete.name,
       });
-      sinon.assert.calledOnce(getOrganizationStub);
       sinon.assert.calledOnceWithExactly(flinkStatementDeletedFireStub, statementToDelete.id);
     });
 
@@ -1493,9 +1470,98 @@ describe("CCloudResourceLoader", () => {
         environment_id: statementToDelete.environmentId,
         statement_name: statementToDelete.name,
       });
-      sinon.assert.calledOnce(getOrganizationStub);
       // Should not have fired the deletion event.
       sinon.assert.notCalled(flinkStatementDeletedFireStub);
+    });
+  });
+
+  describe("stopFlinkStatement", () => {
+    let statementsApiStub: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
+    let stubbedSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle>;
+    let refreshStub: sinon.SinonStub;
+
+    let original: FlinkStatement, refreshed: FlinkStatement;
+
+    beforeEach(() => {
+      stubbedSidecarHandle = getSidecarStub(sandbox);
+      statementsApiStub = sandbox.createStubInstance(StatementsSqlV1Api);
+      stubbedSidecarHandle.getFlinkSqlStatementsApi.returns(statementsApiStub);
+
+      original = createFlinkStatement({ phase: Phase.PENDING });
+      refreshed = createFlinkStatement({
+        name: original.name,
+        phase: Phase.RUNNING,
+      });
+
+      refreshStub = sandbox.stub(loader, "refreshFlinkStatement").resolves(refreshed);
+    });
+
+    it("should successfully stop a stoppable statement", async () => {
+      statementsApiStub.updateSqlv1Statement.resolves();
+
+      await loader.stopFlinkStatement(original);
+
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
+
+      const callArgs = statementsApiStub.updateSqlv1Statement.getCall(0).args[0];
+      assert.strictEqual(callArgs.organization_id, refreshed.organizationId);
+      assert.strictEqual(callArgs.environment_id, refreshed.environmentId);
+      assert.strictEqual(callArgs.statement_name, refreshed.name);
+      const calledWithSpec = callArgs.UpdateSqlv1StatementRequest!.spec! as Record<string, boolean>;
+      assert.strictEqual(
+        calledWithSpec["stopped"],
+        true,
+        "Expected stopped flag to be true in spec",
+      );
+    });
+
+    it("should raise if refreshed statement is not found", async () => {
+      refreshStub.resolves(null);
+
+      await assert.rejects(
+        async () => {
+          await loader.stopFlinkStatement(original);
+        },
+        {
+          message: `Could not find Flink statement ${original.id} to stop.`,
+        },
+      );
+
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.notCalled(statementsApiStub.updateSqlv1Statement);
+    });
+
+    it("should raise if refreshed statement is not stoppable", async () => {
+      refreshed = createFlinkStatement({
+        name: original.name,
+        phase: Phase.STOPPED,
+      });
+      refreshStub.resolves(refreshed);
+
+      await assert.rejects(
+        async () => {
+          await loader.stopFlinkStatement(original);
+        },
+        {
+          message: `Statement ${original.id} is not in a stoppable state.`,
+        },
+      );
+
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.notCalled(statementsApiStub.updateSqlv1Statement);
+    });
+
+    it("should propagate API errors when update fails", async () => {
+      const apiError = new Error("Update failed");
+      statementsApiStub.updateSqlv1Statement.rejects(apiError);
+
+      await assert.rejects(async () => {
+        await loader.stopFlinkStatement(original);
+      }, apiError);
+
+      sinon.assert.calledOnce(refreshStub);
+      sinon.assert.calledOnce(statementsApiStub.updateSqlv1Statement);
     });
   });
 });

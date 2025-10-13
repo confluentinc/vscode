@@ -49,6 +49,7 @@ import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
+import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnostics/constants";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
@@ -76,7 +77,6 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
-import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -411,13 +411,11 @@ async function setupContextValues() {
     "ccloud-kafka-cluster",
     "ccloud-flinkable-kafka-cluster",
     "ccloud-flink-compute-pool",
-    "ccloud-flink-statement",
-    "ccloud-flink-statement-not-viewable",
     "ccloud-flink-artifact",
     "ccloud-flink-udf",
     "local-kafka-cluster",
     "direct-kafka-cluster",
-    // topics also have names, but their context values vary wildly and must be regex-matched
+    // topics and Flink statements also have names, but their context values vary wildly and must be regex-matched
   ]);
 
   /**

@@ -6,7 +6,10 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- New "Delete Flink Statement" context menu item in the Flink Statements view.
+- New "Delete Flink Statement" context menu command in the Flink Statements view, only offerred for
+  statements not currently executing.
+- New "Stop Statement Execution" context menu command in the Flink Statements view, only offerred
+  for currently executing statements.
 
 ### Changed
 
@@ -16,6 +19,9 @@ All notable changes to this extension will be documented in this file.
 - The Local row in the Resources view now better describes the user's Docker Engine availability in
   its description and tooltip, and the "Start Local Resources" action will not be offered if the
   extension cannot ping the local Docker Engine.
+- Submitted Flink statements now allow you to choose your own statement name prefix (or to leave
+  generic). Set your prefix using preference:
+  [`confluent.flink.statementPrefix`](vscode://settings/confluent.flink.statementPrefix).
 
 ### Fixed
 

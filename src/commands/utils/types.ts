@@ -1,5 +1,5 @@
+import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { Schema } from "../../models/schema";
-import { SubjectNameStrategy } from "../../schemas/produceMessageSchema";
 
 export interface ProduceMessageSchemaOptions {
   keySchema?: Schema;

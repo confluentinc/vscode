@@ -14,6 +14,7 @@ import {
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import { FLINK_CONFIG_STATEMENT_PREFIX } from "../extensionSettings/constants";
 import * as flinkStatementModels from "../models/flinkStatement";
 import { FlinkSpecProperties, FlinkStatement } from "../models/flinkStatement";
 import * as sidecar from "../sidecar";
@@ -90,6 +91,7 @@ describe("flinkSql/statementUtils.ts", function () {
   describe("determineFlinkStatementName()", function () {
     const now = new Date("2024-10-21 12:00:00.0000Z");
     const expectedDatePart = "2024-10-21t12-00-00";
+    const defaultPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value || "flink";
 
     beforeEach(() => {
       sandbox.useFakeTimers(now);
@@ -97,7 +99,22 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("Should include the spice parameter in the statement name", async function () {
       const statementName = await determineFlinkStatementName("test-spice");
-      assert.strictEqual(statementName, `vscode-test-spice-${expectedDatePart}`);
+
+      assert.strictEqual(statementName, `${defaultPrefix}-vscode-test-spice-${expectedDatePart}`);
+    });
+
+    it("Should return a name without spice if spice is not provided", async function () {
+      const statementName = await determineFlinkStatementName();
+
+      assert.strictEqual(statementName, `${defaultPrefix}-vscode-${expectedDatePart}`);
+    });
+
+    it("Should prepend the user-configured prefix to the statement name if set", async function () {
+      const statementName = await determineFlinkStatementName();
+      assert.strictEqual(
+        statementName,
+        `${FLINK_CONFIG_STATEMENT_PREFIX.value}-vscode-${expectedDatePart}`,
+      );
     });
   });
 

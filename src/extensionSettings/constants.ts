@@ -115,6 +115,11 @@ export const FLINK_CONFIG_DATABASE = new ExtensionSetting<string>(
   "confluent.flink.database",
   SettingsSection.FLINK,
 );
+/** Default prefix to use for Flink SQL statements submitted from VS Code. */
+export const FLINK_CONFIG_STATEMENT_PREFIX = new ExtensionSetting<string>(
+  "confluent.flink.statementPrefix",
+  SettingsSection.FLINK,
+);
 /**
  * Whether or not to update {@link FLINK_CONFIG_COMPUTE_POOL} when interacting with the
  * "Set Compute Pool" codelens. Possible values are `never`, `ask`, or `always`.
