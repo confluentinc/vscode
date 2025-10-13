@@ -19,6 +19,7 @@ import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
+  openFlinkArtifactsView,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
 
@@ -80,9 +81,15 @@ export async function uploadArtifactCommand(
       async () => {
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
         if (response) {
-          void vscode.window.showInformationMessage(
+          const viewArtifactsButton = "View Artifacts";
+          const result = await vscode.window.showInformationMessage(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
+            viewArtifactsButton,
           );
+
+          if (result === viewArtifactsButton) {
+            await highlightArtifact(response.display_name);
+          }
         } else {
           void showWarningNotificationWithButtons(
             `Artifact upload completed, but no response was returned from Confluent Cloud.`,
@@ -170,9 +177,21 @@ export async function setFlinkArtifactsViewModeCommand() {
   );
 }
 
-/**
- * Registers the Flink Artifact commands with logging.
- */
+export async function highlightArtifact(artifactDisplayName: string) {
+  const message = `Opening Flink Artifact the Artifacts view with ${artifactDisplayName}.`;
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Window,
+      title: message,
+      cancellable: false,
+    },
+    async () => {
+      await openFlinkArtifactsView();
+    },
+  );
+}
+
 export function registerFlinkArtifactCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
@@ -181,5 +200,6 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
+    registerCommandWithLogging("confluent.highlightArtifact", highlightArtifact),
   ];
 }
