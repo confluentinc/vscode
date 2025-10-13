@@ -458,13 +458,15 @@
         "command": "confluent.flinkdatabase.setArtifactsViewMode",
         "title": "Switch to Flink Artifacts",
         "icon": "$(confluent-code)",
-        "category": "Confluent: Flink Database View"
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'artifacts'"
       },
       {
         "command": "confluent.flinkdatabase.setUDFsViewMode",
         "title": "Switch to Flink UDFs",
         "icon": "$(confluent-function)",
-        "category": "Confluent: Flink Database View"
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'UDFs'"
       },
       {
         "command": "confluent.flinkStatementResults",
@@ -1373,11 +1375,11 @@
         },
         {
           "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'UDFs'"
+          "when": "false"
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "confluent.flinkDatabaseViewMode == 'artifacts'"
+          "when": "false"
         },
         {
           "command": "confluent.flinkStatementResults",
@@ -1821,13 +1823,8 @@
           "group": "navigation@998"
         },
         {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'UDFs'",
-          "group": "navigation@999"
-        },
-        {
-          "command": "confluent.flinkdatabase.setUDFsViewMode",
-          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected && confluent.flinkDatabaseViewMode == 'artifacts'",
+          "submenu": "confluent.flinkdatabase.viewMode",
+          "when": "view == confluent-flink-database && confluent.ccloudConnectionAvailable && config.confluent.flink.artifacts && confluent.flinkDatabaseSelected",
           "group": "navigation@999"
         }
       ],
@@ -2089,8 +2086,25 @@
           "group": "confluent@1",
           "when": "config.confluent.flink.artifacts && confluent.ccloudConnectionAvailable && resourceExtname == .jar"
         }
+      ],
+      "confluent.flinkdatabase.viewMode": [
+        {
+          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "group": "viewMode@1"
+        },
+        {
+          "command": "confluent.flinkdatabase.setUDFsViewMode",
+          "group": "viewMode@2"
+        }
       ]
     },
+    "submenus": [
+      {
+        "id": "confluent.flinkdatabase.viewMode",
+        "label": "Switch View Mode",
+        "icon": "$(list-tree)"
+      }
+    ],
     "colors": [],
     "icons": {
       "apache-kafka": {
