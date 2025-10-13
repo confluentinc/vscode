@@ -1,4 +1,10 @@
 import { Logger } from "../../logging";
+import {
+  FlinkRelation,
+  FlinkRelationColumn,
+  FlinkRelationType,
+  relationColumnFactory,
+} from "../../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 
 const logger = new Logger("relationsAndColumnsSystemCatalogQuery");
@@ -117,32 +123,6 @@ export interface RawColumnRow {
 
 export type RawRelationsAndColumnsRow = RawRelationRow | RawColumnRow;
 
-export interface Column {
-  name: string;
-  dataType: string;
-  fullDataType: string;
-  isNullable: boolean;
-  distributionKeyNumber: number | null;
-  isGenerated: boolean;
-  isPersisted: boolean;
-  isHidden: boolean;
-  isMetadata: boolean;
-  metadataKey: string | null;
-}
-
-export interface Relation {
-  name: string;
-  comment: string | null;
-  type: "BASE_TABLE" | "VIEW";
-  distributionBucketCount: number;
-  isDistributed: boolean;
-  isWatermarked: boolean;
-  watermarkColumn: string | null;
-  watermarkExpression: string | null;
-  watermarkColumnIsHidden: boolean;
-  columns: Column[];
-}
-
 /**
  * Parses mixed relation + column rows into structured Relation objects.
  * Processing:
@@ -152,19 +132,20 @@ export interface Relation {
  */
 export function parseRelationsAndColumnsSystemCatalogQueryResponse(
   rows: RawRelationsAndColumnsRow[],
-): Relation[] {
+): FlinkRelation[] {
   // Sorts in-place to ensure relations come before their columns and all columns for a relation are together.
   sortRawRelationsAndColumnsRows(rows);
 
-  const relations: Relation[] = [];
-  let currentColumns: Column[] | undefined = undefined;
+  const relations: FlinkRelation[] = [];
+  let currentColumns: FlinkRelationColumn[] | undefined = undefined;
 
   for (const row of rows) {
     if (row.rowType === "relation") {
-      const newRelation: Relation = {
+      const newRelation: FlinkRelation = new FlinkRelation({
         name: row.relationName,
         comment: row.relationComment,
-        type: row.relationType,
+        type:
+          row.relationType === "BASE_TABLE" ? FlinkRelationType.BaseTable : FlinkRelationType.View,
         distributionBucketCount: row.relationDistributionBucketCount,
         isDistributed: row.relationIsDistributed === "YES",
         isWatermarked: row.relationIsWatermarked === "YES",
@@ -172,7 +153,7 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
         watermarkExpression: row.relationWatermarkExpression,
         watermarkColumnIsHidden: row.relationWatermarkColumnIsHidden === "YES",
         columns: [],
-      };
+      });
       relations.push(newRelation);
       currentColumns = newRelation.columns;
     } else {
@@ -181,18 +162,20 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
         logger.error(message);
         throw new Error(message);
       }
-      currentColumns.push({
-        name: row.columnName,
-        dataType: row.columnDataType,
-        fullDataType: row.columnFullDataType,
-        isNullable: row.columnIsNullable === "YES",
-        distributionKeyNumber: row.columnDistributionKeyNumber,
-        isGenerated: row.columnIsGenerated === "YES",
-        isPersisted: row.columnIsPersisted === "YES",
-        isHidden: row.columnIsHidden === "YES",
-        isMetadata: row.columnIsMetadata === "YES",
-        metadataKey: row.columnMetadataKey,
-      });
+      currentColumns.push(
+        relationColumnFactory({
+          relationName: row.relationName,
+          name: row.columnName,
+          dataType: row.columnDataType,
+          fullDataType: row.columnFullDataType,
+          isNullable: row.columnIsNullable === "YES",
+          distributionKeyNumber: row.columnDistributionKeyNumber,
+          isGenerated: row.columnIsGenerated === "YES",
+          isPersisted: row.columnIsPersisted === "YES",
+          isHidden: row.columnIsHidden === "YES",
+          metadataKey: row.columnMetadataKey,
+        }),
+      );
     }
   }
 

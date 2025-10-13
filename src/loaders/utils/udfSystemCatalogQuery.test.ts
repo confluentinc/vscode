@@ -5,7 +5,7 @@ import {
   makeUdfFunctionRow,
   makeUdfParameterRow,
 } from "../../../tests/unit/testResources/makeUdfRow";
-import { FlinkUdfParameter } from "../../models/flinkUDF";
+import { FlinkUdfParameter } from "../../models/flinkSystemCatalog";
 import {
   getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,

@@ -1129,7 +1129,7 @@
         },
         {
           "id": "confluent-flink-database",
-          "name": "Flink Artifacts (Preview)",
+          "name": "Flink Database (Preview)",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
           "when": "config.confluent.flink.artifacts",

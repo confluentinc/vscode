@@ -23,7 +23,7 @@ export abstract class ViewProviderDelegate<
   children: T[] = [];
 
   /** Returns the most recent results from fetchChildren() */
-  getChildren(): T[] {
+  getChildren(parent?: T): T[] {
     return this.children;
   }
 
@@ -103,7 +103,7 @@ export abstract class MultiModeViewProvider<
     if (!this.resource) {
       return [];
     }
-    const children = this.currentDelegate.getChildren();
+    const children = this.currentDelegate.getChildren(element);
     return this.filterChildren(element, children);
   }
 

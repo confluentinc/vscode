@@ -208,7 +208,7 @@ async function _activateExtension(
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
-  const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
+  const flinkDatabaseViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProvider,
@@ -216,7 +216,7 @@ async function _activateExtension(
     schemasViewProvider,
     supportViewProvider,
     statementsViewProvider,
-    artifactsViewProvider,
+    flinkDatabaseViewProvider,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
