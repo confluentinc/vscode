@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as vscode from "vscode";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import {
@@ -92,6 +91,7 @@ describe("flinkSql/statementUtils.ts", function () {
   describe("determineFlinkStatementName()", function () {
     const now = new Date("2024-10-21 12:00:00.0000Z");
     const expectedDatePart = "2024-10-21t12-00-00";
+    const defaultPrefix = FLINK_CONFIG_STATEMENT_PREFIX.value || "flink";
 
     beforeEach(() => {
       sandbox.useFakeTimers(now);
@@ -99,18 +99,12 @@ describe("flinkSql/statementUtils.ts", function () {
 
     it("Should include the spice parameter in the statement name", async function () {
       const statementName = await determineFlinkStatementName("test-spice");
-      const defaultPrefix =
-        vscode.workspace.getConfiguration("confluent").get<string>("flink.statementPrefix") ||
-        "flink";
 
       assert.strictEqual(statementName, `${defaultPrefix}-vscode-test-spice-${expectedDatePart}`);
     });
 
     it("Should return a name without spice if spice is not provided", async function () {
       const statementName = await determineFlinkStatementName();
-      const defaultPrefix =
-        vscode.workspace.getConfiguration("confluent").get<string>("flink.statementPrefix") ||
-        "flink";
 
       assert.strictEqual(statementName, `${defaultPrefix}-vscode-${expectedDatePart}`);
     });
