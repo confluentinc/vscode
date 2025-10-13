@@ -156,7 +156,7 @@ export const STATEMENT_POLLING_CONCURRENCY = new ExtensionSetting<number>(
   SettingsSection.FLINK,
 );
 /** Default location for displaying Flink statement results (editor area or bottom panel). */
-export const FLINK_STATEMENT_RESULTS_DEFAULT_LOCATION = new ExtensionSetting<"editor" | "panel">(
+export const STATEMENT_RESULTS_LOCATION = new ExtensionSetting<"editor" | "panel">(
   "confluent.flink.statementResults.defaultLocation",
   SettingsSection.FLINK,
 );
