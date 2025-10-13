@@ -77,6 +77,7 @@ import { initializeFlinkLanguageClientManager } from "./flinkSql/flinkLanguageCl
 import { FlinkStatementManager } from "./flinkSql/flinkStatementManager";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, EXTENSION_OUTPUT_CHANNEL, Logger } from "./logging";
+import { FlinkStatementResultsPanelProvider } from "./panelProviders/flinkStatementResults";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { createLocalConnection, getLocalConnection } from "./sidecar/connections/local";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -210,6 +211,18 @@ async function _activateExtension(
   const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
+
+  const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
+  const flinkStatementResultsPanelRegistration = vscode.window.registerWebviewViewProvider(
+    "confluent-flink-statement-results-panel",
+    flinkStatementResultsPanelProvider,
+    {
+      webviewOptions: {
+        retainContextWhenHidden: true, // keep webview state when panel is collapsed/hidden
+      },
+    },
+  );
+
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProvider,
     topicViewProvider,
@@ -217,6 +230,8 @@ async function _activateExtension(
     supportViewProvider,
     statementsViewProvider,
     artifactsViewProvider,
+    flinkStatementResultsPanelProvider,
+    flinkStatementResultsPanelRegistration,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
