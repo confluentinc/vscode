@@ -31,6 +31,7 @@ import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkArtifactCommands } from "./commands/flinkArtifacts";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import { registerFlinkDatabaseViewCommands } from "./commands/flinkDatabaseView";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerFlinkUDFCommands } from "./commands/flinkUDFs";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
@@ -256,6 +257,7 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerFlinkDatabaseViewCommands(),
     ...registerFlinkUDFCommands(),
     ...registerDocumentCommands(),
     ...registerSearchCommands(),
@@ -434,10 +436,10 @@ async function setupContextValues() {
     SCHEMA_URI_SCHEME,
     MESSAGE_URI_SCHEME,
   ]);
-  // set the initial Flink artifacts view mode to "Artifacts" so the UDF mode toggle is visible
+  // set the initial Flink database view mode to "Relations"
   const flinkViewMode = setContextValue(
     ContextValues.flinkDatabaseViewMode,
-    FlinkDatabaseViewProviderMode.Artifacts,
+    FlinkDatabaseViewProviderMode.Relations,
   );
 
   // Default to Docker daemon not being available until proven otherwise

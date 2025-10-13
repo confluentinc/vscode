@@ -182,12 +182,6 @@ export class FlinkRelationColumn {
     this.isPersisted = props.isPersisted;
     this.isHidden = props.isHidden;
     this.metadataKey = props.metadataKey;
-
-    if (this.fullDataType.startsWith("ROW<")) {
-      logger.info(
-        `Column ${this.name} in relation ${this.relationName} has complex ROW type: ${this.fullDataType}`,
-      );
-    }
   }
 
   get id(): string {

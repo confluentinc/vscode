@@ -469,6 +469,13 @@
         "enablement": "confluent.flinkDatabaseViewMode != 'UDFs'"
       },
       {
+        "command": "confluent.flinkdatabase.setRelationsViewMode",
+        "title": "Switch to Flink Relations",
+        "icon": "$(confluent-code)",
+        "category": "Confluent: Flink Database View",
+        "enablement": "confluent.flinkDatabaseViewMode != 'relations'"
+      },
+      {
         "command": "confluent.flinkStatementResults",
         "icon": "$(confluent-view-messages)",
         "title": "View Flink Statement Results",
@@ -1378,6 +1385,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.flinkdatabase.setRelationsViewMode",
+          "when": "false"
+        },
+        {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
           "when": "false"
         },
@@ -2089,12 +2100,16 @@
       ],
       "confluent.flinkdatabase.viewMode": [
         {
-          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "command": "confluent.flinkdatabase.setRelationsViewMode",
           "group": "viewMode@1"
         },
         {
           "command": "confluent.flinkdatabase.setUDFsViewMode",
           "group": "viewMode@2"
+        },
+        {
+          "command": "confluent.flinkdatabase.setArtifactsViewMode",
+          "group": "viewMode@13"
         }
       ]
     },
