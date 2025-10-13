@@ -22,8 +22,15 @@ export abstract class ViewProviderDelegate<
   /** The most recent results from fetchChildren() */
   children: T[] = [];
 
-  /** Returns the most recent results from fetchChildren() */
-  getChildren(parent?: T): T[] {
+  /**
+   * Return the children of this element for populating the tree view.
+   *
+   * @param element The parent element to get children for, or undefined to get root-level children.
+   * @return The children of the given element, or all root-level children if no element is provided.
+   * */
+  // element may be unused in some implementations, but needed in others.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getChildren(element?: T): T[] {
     return this.children;
   }
 
