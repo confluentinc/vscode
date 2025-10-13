@@ -108,7 +108,7 @@ export async function confirmActionOnStatement(
     message,
     {
       modal: true,
-      detail: detail,
+      detail,
     },
     confirmationOption,
   );
