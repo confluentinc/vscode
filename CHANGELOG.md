@@ -10,6 +10,13 @@ All notable changes to this extension will be documented in this file.
   statements not currently executing.
 - New "Stop Statement Execution" context menu command in the Flink Statements view, only offerred
   for currently executing statements.
+- New setting
+  [`confluent.flink.statementResults.defaultLocation`](vscode://settings/confluent.flink.statementResults.defaultLocation)
+  to control where Flink statement results are shown after being submitted:
+  - "editor" (default): opens results in new editor tabs, allowing multiple result sets to be open
+    simultaneously
+  - "panel": opens results in the panel area, allowing only one result set to be visible at a time,
+    but less intrusive than opening a new editor tab
 
 ### Changed
 
