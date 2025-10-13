@@ -1,9 +1,11 @@
 import { ObservableScope } from "inertial";
 import * as vscode from "vscode";
+import { STATEMENT_RESULTS_LOCATION } from "../../extensionSettings/constants";
 import { FlinkStatementResultsManager } from "../../flinkSql/flinkStatementResultsManager";
 import { FlinkStatementWebviewPanelCache } from "../../flinkSql/statementUtils";
 import { Logger } from "../../logging";
 import { FlinkStatement } from "../../models/flinkStatement";
+import { FlinkStatementResultsPanelProvider } from "../../panelProviders/flinkStatementResults";
 import { getSidecar } from "../../sidecar";
 import { handleWebviewMessage } from "../../webview/comms/comms";
 
@@ -12,22 +14,34 @@ export const DEFAULT_RESULT_LIMIT = 100_000;
 /** Cache of statement result webviews by env/statement name. */
 export const statementResultsViewCache = new FlinkStatementWebviewPanelCache();
 
-const logger = new Logger("commands.flinkStatements");
+const logger = new Logger("commands.utils.statements");
+
 /**
- * Handles the display of Flink statement results in a webview panel.
- * Creates or finds an existing panel, sets up the results manager and message handler.
+ * Handles the display of Flink statement results in either the editor area or the panel area.
+ * Creates or finds an existing panel/view, sets up the results manager and message handler.
  *
  * @param statement - The Flink statement to display results for
  */
-
 export async function openFlinkStatementResultsView(statement: FlinkStatement | undefined) {
-  if (!statement) return;
-
   if (!(statement instanceof FlinkStatement)) {
-    logger.error("handleFlinkStatementResults", "statement is not an instance of FlinkStatement");
+    logger.error("statement is not an instance of FlinkStatement");
     return;
   }
 
+  if (STATEMENT_RESULTS_LOCATION.value === "panel") {
+    return openFlinkStatementResultsInPanel(statement);
+  } else {
+    return openFlinkStatementResultsInEditor(statement);
+  }
+}
+
+/**
+ * Open Flink statement results in the editor area as a webview panel document.
+ * This is the original/default behavior that allows multiple results to be open simultaneously.
+ *
+ * @param statement - The Flink statement to display results for
+ */
+async function openFlinkStatementResultsInEditor(statement: FlinkStatement) {
   const [panel, cached] = statementResultsViewCache.getPanelForStatement(statement);
   if (cached) {
     // Existing panel for this statement found, just reveal it.
@@ -77,6 +91,15 @@ export async function openFlinkStatementResultsView(statement: FlinkStatement | 
     handler.dispose();
     os.dispose();
   });
+}
+
+/**
+ * Open Flink statement results in the bottom panel area as a webview view, replacing any existing
+ * results currently visible in the panel.
+ */
+async function openFlinkStatementResultsInPanel(statement: FlinkStatement) {
+  const provider = FlinkStatementResultsPanelProvider.getInstance();
+  await provider.showStatementResults(statement);
 }
 
 /**
