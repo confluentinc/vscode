@@ -91,19 +91,25 @@ export async function confirmActionOnStatement(
   statement: FlinkStatement,
 ): Promise<boolean> {
   let message: string;
+  let detail: string;
   let confirmationOption: string;
 
   if (action === "stop") {
-    message = `Are you sure you want to stop Flink statement ${statement.name}? This will halt its processing but retain its definition.`;
+    message = `Are you sure you want to stop Flink statement ${statement.name}?`;
+    detail = "This will halt its processing but retain its definition.";
     confirmationOption = "Stop Statement";
   } else {
-    message = `Are you sure you want to delete Flink statement ${statement.name}? This action is irreversible and will remove the statement permanently.`;
+    message = `Are you sure you want to delete Flink statement ${statement.name}?`;
+    detail = "This action is irreversible and will remove the statement permanently.";
     confirmationOption = "Delete Statement";
   }
 
   const answer = await vscode.window.showWarningMessage(
     message,
-    { modal: true },
+    {
+      modal: true,
+      detail: detail,
+    },
     confirmationOption,
   );
   if (answer !== confirmationOption) {
