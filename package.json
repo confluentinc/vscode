@@ -1013,7 +1013,7 @@
             ],
             "markdownEnumDescriptions": [
               "Open Flink statement results in the **editor area** as new document tabs (allows multiple results open simultaneously).",
-              "Open Flink statement results in the **bottom panel area** (shows one result at a time, less intrusive)."
+              "Open Flink statement results in the **bottom panel area** (shows one result at a time)."
             ],
             "description": "Default location for displaying Flink statement results."
           }
