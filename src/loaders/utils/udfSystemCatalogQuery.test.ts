@@ -1,15 +1,19 @@
 import * as assert from "assert";
 
-import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../tests/unit/testResources";
-import { makeUdfFunctionRow, makeUdfParameterRow } from "../../tests/unit/testResources/makeUdfRow";
+import { TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER } from "../../../tests/unit/testResources";
+import {
+  makeUdfFunctionRow,
+  makeUdfParameterRow,
+} from "../../../tests/unit/testResources/makeUdfRow";
+import { FlinkUdfParameter } from "../../models/flinkSystemCatalog";
 import {
   getUdfSystemCatalogQuery,
   RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
-} from "./ccloudResourceLoaderUtils";
+} from "./udfSystemCatalogQuery";
 
-describe("loaders/ccloudResourceLoaderUtils.ts", () => {
+describe("loaders/utils/ccloudResourceLoaderUtils.ts", () => {
   describe("getUdfSystemCatalogQuery()", () => {
     // This function is trivial, just returns a constant string with the cluster ID filled in twice.
     // Ensure is mentioned twice. Only E2E / clicktesting can prove that the query is otherwise sound.
@@ -193,7 +197,7 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 1);
-      const paramOptionality = udfs[0].parameters.map((p) => p.isOptional);
+      const paramOptionality = udfs[0].parameters.map((p: FlinkUdfParameter) => p.isOptional);
       assert.deepStrictEqual(paramOptionality, [true, false]);
     });
 
@@ -206,7 +210,7 @@ describe("loaders/ccloudResourceLoaderUtils.ts", () => {
       ];
       const udfs = transformUdfSystemCatalogRows(TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER, rows);
       assert.strictEqual(udfs.length, 1);
-      const paramDataTypes = udfs[0].parameters.map((p) => p.dataType);
+      const paramDataTypes = udfs[0].parameters.map((p: FlinkUdfParameter) => p.dataType);
       assert.deepStrictEqual(paramDataTypes, ["INT", "STRING", "BOOLEAN"]);
     });
 

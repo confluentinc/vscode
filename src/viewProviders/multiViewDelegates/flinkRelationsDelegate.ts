@@ -5,31 +5,34 @@ import {
   parseRelationsAndColumnsSystemCatalogQueryResponse,
   RawRelationsAndColumnsRow,
 } from "../../loaders/utils/relationsAndColumnsSystemCatalogQuery";
-import { Logger } from "../../logging";
-import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkSystemCatalog";
+import { FlinkRelation, FlinkRelationColumn } from "../../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { ViewProviderDelegate } from "../baseModels/multiViewBase";
 import { FlinkDatabaseViewProviderMode } from "./constants";
 
-const logger = new Logger("flinkUDFsDelegate");
+export type FlinkRelationElements = FlinkRelation | FlinkRelationColumn;
 
-export class FlinkUDFsDelegate extends ViewProviderDelegate<
+export class FlinkRelationsDelegate extends ViewProviderDelegate<
   FlinkDatabaseViewProviderMode,
   CCloudFlinkDbKafkaCluster,
-  FlinkUdf
+  FlinkRelationElements
 > {
-  readonly mode = FlinkDatabaseViewProviderMode.UDFs;
-  readonly viewTitle = "Flink UDFs (Preview)";
-  readonly loadingMessage = "Loading Flink UDFs...";
+  readonly mode = FlinkDatabaseViewProviderMode.Relations;
+  readonly viewTitle = "Flink Relations (Preview)";
+  readonly loadingMessage = "Loading Flink Relations...";
 
-  async fetchChildren(
-    database: CCloudFlinkDbKafkaCluster,
-    forceDeepRefresh: boolean,
-  ): Promise<FlinkUdf[]> {
+  /** Returns the most recent results from fetchChildren() */
+  getChildren(parent?: FlinkRelation): FlinkRelationElements[] {
+    if (parent) {
+      return parent.columns;
+    }
+    return this.children;
+  }
+
+  async fetchChildren(database: CCloudFlinkDbKafkaCluster): Promise<FlinkRelationElements[]> {
     this.children = [];
 
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
-    this.children = await ccloudResourceLoader.getFlinkUDFs(database, forceDeepRefresh);
 
     // temp block
     const query = getRelationsAndColumnsSystemCatalogQuery(database);
@@ -38,16 +41,14 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
         query,
         database,
       );
-    const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
-
-    logger.info("relationsAndColumns:", JSON.stringify(relations, null, 2));
+    this.children = parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
 
     // end temp block
 
     return this.children;
   }
 
-  getTreeItem(element: FlinkUdf): TreeItem {
-    return new FlinkUdfTreeItem(element);
+  getTreeItem(element: FlinkRelationElements): TreeItem {
+    return element.getTreeItem();
   }
 }
