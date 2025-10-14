@@ -171,4 +171,74 @@ describe("commands/utils/udfRegistration", () => {
       assert.deepStrictEqual(result, []);
     });
   });
+
+  describe("promptForFunctionNames", () => {
+    it("returns registrations for each selected class + trims input", async () => {
+      const classInfos: jarInspector.JarClassInfo[] = [
+        { className: "com.acme.FooUdf", simpleName: "FooUdf" },
+        { className: "com.acme.BarUdf", simpleName: "BarUdf" },
+      ];
+
+      const showInputStub = sandbox
+        .stub(vscode.window, "showInputBox")
+        .onFirstCall()
+        .resolves("foo_fn")
+        .onSecondCall()
+        .resolves("  bar_fn  "); //intentional whitespace
+
+      const result = await promptForFunctionNames(classInfos);
+
+      sinon.assert.calledTwice(showInputStub);
+      const expected: UdfRegistrationData[] = [
+        { classInfo: classInfos[0], functionName: "foo_fn" },
+        { classInfo: classInfos[1], functionName: "bar_fn" },
+      ];
+      assert.deepStrictEqual(result, expected);
+    });
+
+    it("skips classes when user cancels input while keeping any other names entered", async () => {
+      const classInfos: jarInspector.JarClassInfo[] = [
+        { className: "com.acme.Foo", simpleName: "Foo" },
+        { className: "com.acme.Bar", simpleName: "Bar" },
+        { className: "com.acme.Baz", simpleName: "Baz" },
+      ];
+
+      const showInputStub = sandbox
+        .stub(vscode.window, "showInputBox")
+        // First class simpulate user Esc
+        .onFirstCall()
+        .resolves(undefined)
+        // Second input provided
+        .onSecondCall()
+        .resolves("bar")
+        // Third cancelled/Esc
+        .onThirdCall()
+        .resolves(undefined);
+
+      const result = await promptForFunctionNames(classInfos);
+
+      sinon.assert.calledThrice(showInputStub);
+      const expected: UdfRegistrationData[] = [{ classInfo: classInfos[1], functionName: "bar" }];
+      assert.deepStrictEqual(result, expected);
+    });
+
+    it("returns empty array when user cancels all inputs", async () => {
+      const classInfos: jarInspector.JarClassInfo[] = [
+        { className: "c.A", simpleName: "A" },
+        { className: "c.B", simpleName: "B" },
+      ];
+
+      const showInputStub = sandbox
+        .stub(vscode.window, "showInputBox")
+        .onFirstCall()
+        .resolves(undefined)
+        .onSecondCall()
+        .resolves(undefined);
+
+      const result = await promptForFunctionNames(classInfos);
+
+      sinon.assert.calledTwice(showInputStub);
+      assert.deepStrictEqual(result, []);
+    });
+  });
 });
