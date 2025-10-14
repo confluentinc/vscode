@@ -149,6 +149,7 @@ export class FlinkRelationColumn {
   /** Is the column hidden (not normally visible)? */
   readonly isHidden: boolean;
   readonly isArray: boolean;
+  readonly comment: string | null;
 
   /** If a metadata column, what Kafka topic metadata key does it map to? */
   readonly metadataKey: string | null;
@@ -165,6 +166,7 @@ export class FlinkRelationColumn {
       | "isPersisted"
       | "isHidden"
       | "metadataKey"
+      | "comment"
     > & {
       isArray?: boolean;
     },
@@ -178,6 +180,7 @@ export class FlinkRelationColumn {
     this.isPersisted = props.isPersisted;
     this.isHidden = props.isHidden;
     this.metadataKey = props.metadataKey;
+    this.comment = props.comment ?? null;
     this.isArray = props.isArray ?? false;
   }
 
@@ -310,6 +313,7 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
       | "isHidden"
       | "metadataKey"
       | "isArray"
+      | "comment"
     > & {
       columns: FlinkRelationColumn[];
     },
@@ -348,6 +352,7 @@ export class MapFlinkRelationColumn extends FlinkRelationColumn {
       | "isHidden"
       | "metadataKey"
       | "isArray"
+      | "comment"
     > & {
       keyColumn: FlinkRelationColumn;
       valueColumn: FlinkRelationColumn;

@@ -30,43 +30,68 @@ describe("relation_column_parser.ts", () => {
         "CHAR(1)",
         "CHAR(10)",
         "VARCHAR(255)",
+        "TIMESTAMP(3) WITH LOCAL TIME ZONE",
       ]) {
-        it(type, () => {
-          const col = relationColumnFactory({
-            ...fieldDefaults,
-            name: "my_col",
-            fullDataType: type,
+        for (const comment of ["comment here", ""]) {
+          it(`${type} comment: ${comment}`, () => {
+            let fdtWithComment = type;
+            if (comment) {
+              fdtWithComment = `${type} '${comment}'`;
+            }
+            const col = relationColumnFactory({
+              ...fieldDefaults,
+              name: "my_col",
+              fullDataType: fdtWithComment,
+              comment: null,
+            });
+            assert.ok(
+              col instanceof FlinkRelationColumn &&
+                !(col instanceof CompositeFlinkRelationColumn) &&
+                !(col instanceof MapFlinkRelationColumn),
+              "Is simple FlinkRelationColumn",
+            );
+            assert.strictEqual(col.name, "my_col", "Name");
+            assert.strictEqual(col.simpleDataType, type, "Simple data type");
+            assert.strictEqual(col.fullDataType, type, "Full data type");
+            assert.strictEqual(col.isNullable, false, "Nullable");
+            assert.strictEqual(col.isArray, false, "Is not an array");
+            if (comment) {
+              assert.strictEqual(col.comment, comment, "Comment");
+            } else {
+              assert.strictEqual(col.comment, null, "Comment null");
+            }
           });
-          assert.ok(
-            col instanceof FlinkRelationColumn &&
-              !(col instanceof CompositeFlinkRelationColumn) &&
-              !(col instanceof MapFlinkRelationColumn),
-          );
-          assert.strictEqual(col.name, "my_col");
-          assert.strictEqual(col.simpleDataType, type);
-          assert.strictEqual(col.fullDataType, type);
-          assert.strictEqual(col.isNullable, false);
-          assert.strictEqual(col.isArray, false);
-        });
 
-        it(`ARRAY of ${type}`, () => {
-          const col = relationColumnFactory({
-            ...fieldDefaults,
-            name: "my_col",
-            fullDataType: `ARRAY<${type}>`,
+          it(`ARRAY of ${type}, comment ${comment}`, () => {
+            let fdtWithComment = `Array<${type}>`;
+            if (comment) {
+              fdtWithComment = `${fdtWithComment} '${comment}'`;
+            }
+
+            const col = relationColumnFactory({
+              ...fieldDefaults,
+              name: "array_my_col",
+              fullDataType: fdtWithComment,
+              comment: null,
+            });
+            assert.ok(
+              col instanceof FlinkRelationColumn &&
+                !(col instanceof MapFlinkRelationColumn) &&
+                !(col instanceof CompositeFlinkRelationColumn),
+              "Is FlinkRelationColumn",
+            );
+            assert.strictEqual(col.isArray, true, "Is array");
+            assert.strictEqual(col.name, "array_my_col", "Name");
+            assert.strictEqual(col.simpleDataType, type, "Simple data type");
+            assert.strictEqual(col.simpleTypeWithArray, `ARRAY<${type}>`, "Data type");
+            assert.strictEqual(col.isNullable, false, "Nullable");
+            if (comment) {
+              assert.strictEqual(col.comment, comment);
+            } else {
+              assert.strictEqual(col.comment, null);
+            }
           });
-          assert.ok(
-            col instanceof FlinkRelationColumn &&
-              !(col instanceof MapFlinkRelationColumn) &&
-              !(col instanceof CompositeFlinkRelationColumn),
-            "Is FlinkRelationColumn",
-          );
-          assert.strictEqual(col.isArray, true, "Is array");
-          assert.strictEqual(col.name, "my_col", "Name");
-          assert.strictEqual(col.simpleDataType, type, "Simple data type");
-          assert.strictEqual(col.simpleTypeWithArray, `ARRAY<${type}>`, "Data type");
-          assert.strictEqual(col.isNullable, false, "Nullable");
-        });
+        }
       }
     });
 
@@ -76,6 +101,7 @@ describe("relation_column_parser.ts", () => {
           ...fieldDefaults,
           name: "my_row",
           fullDataType: "ROW<`f1` INT, `f2` STRING>",
+          comment: null,
         });
         assert.ok(
           col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
@@ -101,6 +127,7 @@ describe("relation_column_parser.ts", () => {
           ...fieldDefaults,
           name: "my_row",
           fullDataType: "ROW<`f1` INT NOT NULL, `f2` STRING NULL>",
+          comment: null,
         });
         assert.ok(
           col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
@@ -128,6 +155,7 @@ describe("relation_column_parser.ts", () => {
           ...fieldDefaults,
           name: "my_row",
           fullDataType: "ROW<`f1` INT, `f2` ARRAY<STRING>>",
+          comment: null,
         });
         assert.ok(
           col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
@@ -158,6 +186,7 @@ describe("relation_column_parser.ts", () => {
           ...fieldDefaults,
           name: "my_row",
           fullDataType: "ROW<`f1` INT, `f2` ARRAY<STRING> NULL>",
+          comment: null,
         });
         assert.ok(
           col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
@@ -191,6 +220,7 @@ describe("relation_column_parser.ts", () => {
           ...fieldDefaults,
           name: "my_row_array",
           fullDataType: "ARRAY<ROW<`f1` INT, `f2` STRING NULL>>",
+          comment: null,
         });
         assert.ok(
           col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
@@ -215,6 +245,7 @@ describe("relation_column_parser.ts", () => {
           ...fieldDefaults,
           name: "my_row_array",
           fullDataType: "ARRAY<ROW<`f1` INT, `f2` STRING NULL>> NULL",
+          comment: null,
         });
         assert.ok(
           col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),

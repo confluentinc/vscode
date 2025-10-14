@@ -173,6 +173,7 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
           isPersisted: row.columnIsPersisted === "YES",
           isHidden: row.columnIsHidden === "YES",
           metadataKey: row.columnMetadataKey,
+          comment: null, // INFORMATION_SCHEMA.COLUMNS does not have a comment field, grr.
         }),
       );
     }

@@ -19,13 +19,22 @@ export function relationColumnFactory(
     | "isPersisted"
     | "isHidden"
     | "metadataKey"
+    | "comment"
   > & {
     isArray?: boolean;
   },
 ): FlinkRelationColumn {
   if (!isCompositeType(props.fullDataType)) {
-    // Simple scalar type – no recursive parsing required.
-    return new FlinkRelationColumn(props);
+    // may need to parse out comment or null-ability, but otherwise simple
+    const parser = new TypeParser(props.fullDataType);
+    const parsed = parser.parseType();
+    return new FlinkRelationColumn({
+      ...props,
+      fullDataType: parsed.text,
+      comment: props.comment || parsed.comment,
+      isNullable: props.isNullable || parsed.nullable,
+      isArray: props.isArray || parsed.kind === ParsedKind.Array,
+    });
   }
 
   try {
@@ -40,6 +49,7 @@ export function relationColumnFactory(
           name: field.name,
           fullDataType: field.typeText,
           isNullable: field.nullable,
+          comment: field.comment ?? null,
           distributionKeyNumber: null,
           isGenerated: props.isGenerated,
           isPersisted: props.isPersisted,
@@ -68,6 +78,7 @@ export function relationColumnFactory(
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: parsed.key.kind === ParsedKind.Array,
+        comment: null,
       });
       const valueCol = relationColumnFactory({
         relationName: `${props.relationName}.${props.name}`,
@@ -80,6 +91,7 @@ export function relationColumnFactory(
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: parsed.value.kind === ParsedKind.Array,
+        comment: null,
       });
       return new MapFlinkRelationColumn({
         ...props,
@@ -103,6 +115,7 @@ export function relationColumnFactory(
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: true,
+        comment: parsed.comment ?? null,
       });
     } else {
       throw new Error(`Unhandled parsed type kind: ${parsed.kind}`);
@@ -127,6 +140,7 @@ interface ParsedTypeBase {
   kind: ParsedKind;
   nullable: boolean;
   text: string; // Canonical text (no comments, no trailing NULL marker)
+  comment: string | null; // Optional comment if present
 }
 
 interface ParsedPrimitive extends ParsedTypeBase {
@@ -201,6 +215,47 @@ class TypeParser {
     return this.parsePrimitive(start);
   }
 
+  private parsePrimitive(typeStart: number): ParsedPrimitive {
+    // Collect chars until one of: ',', '>', end, comment start, or nullable marker at top-level of primitive.
+    let parenDepth = 0;
+    while (!this.eof()) {
+      const ch = this.current();
+      if (ch === "(") {
+        parenDepth++;
+      } else if (ch === ")") {
+        parenDepth = Math.max(0, parenDepth - 1);
+      } else if (parenDepth === 0) {
+        if (ch === "," || ch === ">") {
+          break;
+        }
+        // Check for stop marker ahead (space + NULL / NOT NULL or open single quote for comment)
+        if (this.isAtNullableOrCommentBoundary()) {
+          break;
+        }
+      }
+      this.pos++;
+    }
+    const text = this.input.substring(typeStart, this.pos).trimEnd();
+
+    // look for nullability
+    this.skipWs();
+    const nullable = this.parseNullability();
+
+    // Now look for trailing optional comment
+    this.skipWs();
+    let comment: string | null = null;
+    if (this.current() === "'") {
+      comment = this.parseQuotedComment();
+      this.skipWs();
+    }
+    return {
+      kind: ParsedKind.Primitive,
+      nullable: nullable,
+      comment,
+      text,
+    };
+  }
+
   private parseRow(typeStart: number): ParsedRow {
     // Consume ROW<
     this.expectWord("ROW");
@@ -219,47 +274,24 @@ class TypeParser {
     }
     this.expectChar(">");
 
-    // handle trailing NULL / NOT NULL for the row type itself
+    // handle possible NULL / NOT NULL after ROW<...>
     this.skipWs();
-    const save = this.pos;
-    const nextWord = this.peekWordUpper();
-    if (nextWord === "NULL") {
-      this.consumeWord();
-      // Mark row type nullable
-      this.skipWs();
-      const text = this.input.substring(typeStart, this.pos);
-      return {
-        kind: ParsedKind.Row,
-        fields,
-        nullable: true,
-        text,
-      };
-    } else if (nextWord === "NOT") {
-      this.consumeWord();
-      this.skipWs();
-      if (this.peekWordUpper() === "NULL") {
-        this.consumeWord();
-        // Mark row type not nullable
-        this.skipWs();
-        const text = this.input.substring(typeStart, this.pos);
-        return {
-          kind: ParsedKind.Row,
-          fields,
-          nullable: false,
-          text,
-        };
-      } else {
-        this.pos = save;
-      }
-    }
+    const nullable = this.parseNullability();
 
-    // Default: row type not nullable
+    // Handle optional comment the nullability.
+    this.skipWs();
+    let comment: string | null = null;
+    if (this.current() === "'") {
+      comment = this.parseQuotedComment();
+      this.skipWs();
+    }
 
     const text = this.input.substring(typeStart, this.pos);
     return {
       kind: ParsedKind.Row,
       fields,
-      nullable: false, // Row nullability (as a type) is handled outside field spec; rarely used inline
+      comment,
+      nullable, // Row nullability (as a type) is handled outside field spec; rarely used inline
       text,
     };
   }
@@ -274,32 +306,16 @@ class TypeParser {
     const typeText = this.input.substring(typeStart, typeEnd);
 
     this.skipWs();
+
+    // Possible NULL / NOT NULL after field type
+    const nullable = this.parseNullability();
+
+    // Possible comment after field type and nullability
+    this.skipWs();
     let comment: string | undefined;
     if (this.current() === "'") {
       comment = this.parseQuotedComment();
       this.skipWs();
-    }
-
-    // Nullability spec:
-    // - NULL => nullable
-    // - NOT NULL => not nullable
-    // - absent => default NOT NULL
-    let nullable = false;
-    const nextWord = this.peekWordUpper();
-    if (nextWord === "NULL") {
-      this.consumeWord();
-      nullable = true;
-    } else if (nextWord === "NOT") {
-      const save = this.pos;
-      this.consumeWord(); // NOT
-      this.skipWs();
-      if (this.peekWordUpper() === "NULL") {
-        this.consumeWord(); // NULL
-        nullable = false;
-      } else {
-        // Roll back if it wasn't NOT NULL (edge case)
-        this.pos = save;
-      }
     }
 
     return {
@@ -323,11 +339,24 @@ class TypeParser {
     this.skipWs();
     this.expectChar(">");
     const text = this.input.substring(typeStart, this.pos);
+
+    // Handle optional NULL / NOT NULL for the map type itself
+    const nullable = this.parseNullability();
+
+    // Optional comment after MAP<...>
+    this.skipWs();
+    let comment: string | null = null;
+    if (this.current() === "'") {
+      comment = this.parseQuotedComment();
+      this.skipWs();
+    }
+
     return {
       kind: ParsedKind.Map,
       key,
       value,
-      nullable: false,
+      comment,
+      nullable,
       text,
     };
   }
@@ -337,111 +366,48 @@ class TypeParser {
     this.expectChar("<");
     this.skipWs();
     const element = this.parseType();
-    this.skipWs();
+
     // Optional element-level NULL / NOT NULL inside ARRAY<...>
-    const save = this.pos;
-    const nextWord = this.peekWordUpper();
-    if (nextWord === "NULL") {
-      // Mark element nullable
-      this.consumeWord();
+    const elemNullable = this.parseNullability();
+    if (elemNullable) {
+      // Rebuild element text to include NULL marker if present
+      const elemText = this.input.substring(typeStart, this.pos).trimEnd();
       element.nullable = true;
-      this.skipWs();
-    } else if (nextWord === "NOT") {
-      this.consumeWord();
-      this.skipWs();
-      if (this.peekWordUpper() === "NULL") {
-        this.consumeWord();
-        element.nullable = false;
-        this.skipWs();
-      } else {
-        this.pos = save;
-      }
+      element.text = elemText;
     }
+
+    this.skipWs();
     this.expectChar(">");
 
     // Handle trailing NULL / NOT NULL for the array type itself
     this.skipWs();
-    const arrSave = this.pos;
-    const arrNextWord = this.peekWordUpper();
-    if (arrNextWord === "NULL") {
-      this.consumeWord();
-      // Mark array type nullable
+    const nullable = this.parseNullability();
+
+    // Optional comment after ARRAY<...>
+    this.skipWs();
+    let comment: string | null = null;
+    if (this.current() === "'") {
+      comment = this.parseQuotedComment();
       this.skipWs();
-      const text = this.input.substring(typeStart, this.pos);
-      return {
-        kind: ParsedKind.Array,
-        element,
-        nullable: true,
-        text,
-      };
-    } else if (arrNextWord === "NOT") {
-      this.consumeWord();
-      this.skipWs();
-      if (this.peekWordUpper() === "NULL") {
-        this.consumeWord();
-        // Mark array type not nullable
-        this.skipWs();
-        const text = this.input.substring(typeStart, this.pos);
-        return {
-          kind: ParsedKind.Array,
-          element,
-          nullable: false,
-          text,
-        };
-      } else {
-        this.pos = arrSave;
-      }
     }
 
-    // Default: array type not nullable
     const text = this.input.substring(typeStart, this.pos);
     return {
       kind: ParsedKind.Array,
       element,
-      nullable: false,
+      nullable,
       text,
+      comment: comment,
     };
   }
 
-  private parsePrimitive(typeStart: number): ParsedPrimitive {
-    // Collect chars until one of: ',', '>', end, comment start, or nullable marker at top-level of primitive.
-    let parenDepth = 0;
-    while (!this.eof()) {
-      const ch = this.current();
-      if (ch === "(") {
-        parenDepth++;
-      } else if (ch === ")") {
-        parenDepth = Math.max(0, parenDepth - 1);
-      } else if (parenDepth === 0) {
-        if (ch === "," || ch === ">") {
-          break;
-        }
-        if (ch === "'") {
-          // Start of comment after type
-          break;
-        }
-        // Check for nullable marker ahead (space + NULL / NOT NULL)
-        if (this.isAtNullableBoundary()) {
-          break;
-        }
-      }
-      this.pos++;
-    }
-    const text = this.input.substring(typeStart, this.pos).trimEnd();
-    return {
-      kind: ParsedKind.Primitive,
-      nullable: false,
-      text,
-    };
-  }
-
-  private isAtNullableBoundary(): boolean {
+  private isAtNullableOrCommentBoundary(): boolean {
     // Look ahead skipping spaces; if next word is NULL or NOT -> boundary
     const save = this.pos;
     this.skipWsInline();
     const w = this.peekWordUpper();
     this.pos = save;
-    return w === "NULL" || w === "NOT";
+    return w === "NULL" || w === "NOT" || w === "'"; // also stop at comment start
   }
 
   /* --------------------------- Low-level utilities -------------------------- */
@@ -486,7 +452,15 @@ class TypeParser {
 
   private peekWordUpper(): string {
     let i = this.pos;
+    // Skip leading whitespace
     while (i < this.length && /\s/.test(this.input[i])) i++;
+
+    if (this.input[i] === "'") {
+      // Comment start identifier, return it. Counts as its own word.
+      return "'";
+    }
+
+    // Consume word
     let j = i;
     while (j < this.length && /[A-Za-z_]/.test(this.input[j])) j++;
     return this.input.substring(i, j).toUpperCase();
@@ -514,6 +488,29 @@ class TypeParser {
     const name = this.input.substring(start, this.pos);
     this.pos++; // consume closing backtick
     return name;
+  }
+
+  private parseNullability(): boolean {
+    this.skipWs();
+    const save = this.pos;
+    let nullable = false;
+    const nextWord = this.peekWordUpper();
+    if (nextWord === "NULL") {
+      this.consumeWord();
+      this.skipWs();
+      nullable = true;
+    } else if (nextWord === "NOT") {
+      this.consumeWord();
+      this.skipWs();
+      if (this.peekWordUpper() === "NULL") {
+        this.consumeWord();
+        this.skipWs();
+        nullable = false;
+      } else {
+        this.pos = save;
+      }
+    }
+    return nullable;
   }
 
   private parseQuotedComment(): string {
