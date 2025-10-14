@@ -24,22 +24,19 @@ export function relationColumnFactory(
     isArray?: boolean;
   },
 ): FlinkRelationColumn {
-  if (!isCompositeType(props.fullDataType)) {
-    // may need to parse out comment or null-ability, but otherwise simple
-    const parser = new TypeParser(props.fullDataType);
-    const parsed = parser.parseType();
-    return new FlinkRelationColumn({
-      ...props,
-      fullDataType: parsed.text,
-      comment: props.comment || parsed.comment,
-      isNullable: props.isNullable || parsed.nullable,
-      isArray: props.isArray || parsed.kind === ParsedKind.Array,
-    });
-  }
-
   try {
     const parser = new TypeParser(props.fullDataType);
     const parsed = parser.parseType();
+
+    if (!isCompositeType(props.fullDataType)) {
+      return new FlinkRelationColumn({
+        ...props,
+        fullDataType: parsed.text,
+        comment: props.comment || parsed.comment,
+        isNullable: props.isNullable || parsed.nullable,
+        isArray: props.isArray || parsed.kind === ParsedKind.Array,
+      });
+    }
 
     if (parsed.kind === ParsedKind.Row) {
       const columns: FlinkRelationColumn[] = parsed.fields.map((field) =>
@@ -62,6 +59,9 @@ export function relationColumnFactory(
       return new CompositeFlinkRelationColumn({
         ...props,
         isArray: props.isArray === true,
+        fullDataType: parsed.text,
+        comment: props.comment || parsed.comment,
+        isNullable: props.isNullable || parsed.nullable,
         columns,
       });
     }

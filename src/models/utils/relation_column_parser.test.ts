@@ -34,7 +34,7 @@ const primitiveDataTypes = [
   "TIMESTAMP(3) WITHOUT TIME ZONE",
 ];
 
-const possibleComments = ["this is a comment", "this comment has ''embedded'' quotes", ""];
+const possibleComments = ["'this is a comment'", "'this comment has ''embedded'' quotes'", ""];
 
 const nullabilitiyStrings = ["", "NULL", "NOT NULL"];
 
@@ -54,19 +54,20 @@ describe("relation_column_parser.ts", () => {
         for (const comment of possibleComments) {
           for (const toplevelNullability of nullabilitiyStrings) {
             it(`${type} nullability: ${toplevelNullability} comment: ${comment}`, () => {
-              let fdtWithComment = type;
+              let text = type;
 
               if (toplevelNullability !== "") {
-                fdtWithComment = `${fdtWithComment} ${toplevelNullability}`;
+                text = `${text} ${toplevelNullability}`;
               }
 
-              if (comment) {
-                fdtWithComment = `${fdtWithComment} '${comment}'`;
+              if (comment !== "") {
+                text = `${text} ${comment}`;
               }
+
               const col = relationColumnFactory({
                 ...fieldDefaults,
                 name: "my_col",
-                fullDataType: fdtWithComment,
+                fullDataType: text,
                 comment: null,
               });
               assert.ok(
@@ -91,16 +92,21 @@ describe("relation_column_parser.ts", () => {
               }
             });
 
-            it(`ARRAY of ${type}, comment ${comment}`, () => {
-              let fdtWithComment = `Array<${type}>`;
-              if (comment) {
-                fdtWithComment = `${fdtWithComment} '${comment}'`;
+            it(`ARRAY of ${type}, comment ${comment}, array nullability ${toplevelNullability}`, () => {
+              let text = `Array<${type}>`;
+
+              if (toplevelNullability !== "") {
+                text = `${text} ${toplevelNullability}`;
+              }
+
+              if (comment !== "") {
+                text = `${text} ${comment}`;
               }
 
               const col = relationColumnFactory({
                 ...fieldDefaults,
                 name: "array_my_col",
-                fullDataType: fdtWithComment,
+                fullDataType: text,
                 comment: null,
               });
               assert.ok(
@@ -113,7 +119,11 @@ describe("relation_column_parser.ts", () => {
               assert.strictEqual(col.name, "array_my_col", "Name");
               assert.strictEqual(col.simpleDataType, type, "Simple data type");
               assert.strictEqual(col.simpleTypeWithArray, `ARRAY<${type}>`, "Data type");
-              assert.strictEqual(col.isNullable, false, "Nullable");
+              assert.strictEqual(
+                col.isNullable,
+                expectedNullability(toplevelNullability),
+                "Nullable",
+              );
               if (comment) {
                 assert.strictEqual(col.comment, expectedComment(comment), "Comment preserved");
               } else {
@@ -210,39 +220,56 @@ describe("relation_column_parser.ts", () => {
         assert.strictEqual(col.columns[1].isNullable, false, "Field 2 nullable");
       });
 
-      it("Row with nested array field, itself nullable", () => {
-        // f2 is a nullable array of (not nullable) strings.
-        const col = relationColumnFactory({
-          ...fieldDefaults,
-          name: "my_row",
-          fullDataType: "ROW<`f1` INT, `f2` ARRAY<STRING> NULL>",
-          comment: null,
-        });
-        assert.ok(
-          col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
-          "Is CompositeFlinkRelationColumn",
-        );
-        assert.strictEqual(col.name, "my_row", "Name");
-        assert.strictEqual(
-          col.fullDataType,
-          "ROW<`f1` INT, `f2` ARRAY<STRING> NULL>",
-          "Full data type",
-        );
-        assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
-        assert.strictEqual(col.isArray, false, "Is array");
-        assert.strictEqual(col.columns.length, 2, "Field count");
-        assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
-        assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
-        assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
-        assert.strictEqual(
-          col.columns[1].simpleTypeWithArray,
-          "ARRAY<STRING>",
-          "Field 2 data type",
-        );
-        assert.strictEqual(col.columns[1].isArray, true, "Field 2 is array");
-        assert.strictEqual(col.columns[1].simpleDataType, "STRING", "Field 2 simple data type");
-        assert.strictEqual(col.columns[1].isNullable, true, "Field 2 nullable");
-      });
+      for (const rowComment of possibleComments) {
+        for (const fieldComment of possibleComments) {
+          it(`Row with nested array field, itself nullable, comment on the field: ${fieldComment}, comment on row: ${rowComment}`, () => {
+            // A row with two fields, the second of which is a nullable array which may have a comment.
+            // The row itself is implicitly not null but may have a comment.
+            const fullDataType = `ROW<\`f1\` INT, \`f2\` ARRAY<STRING> NULL ${fieldComment}> ${rowComment}`;
+            const col = relationColumnFactory({
+              ...fieldDefaults,
+              name: "my_row",
+              fullDataType: fullDataType,
+              comment: null, // none provided from outside
+            });
+            assert.ok(
+              col instanceof CompositeFlinkRelationColumn &&
+                !(col instanceof MapFlinkRelationColumn),
+              "Is CompositeFlinkRelationColumn",
+            );
+            assert.strictEqual(col.name, "my_row", "Name");
+            assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
+            assert.strictEqual(col.isArray, false, "row is array");
+            assert.strictEqual(col.isNullable, false, "row is nullable");
+            if (rowComment) {
+              assert.strictEqual(col.comment, expectedComment(rowComment), "Row Comment");
+            } else {
+              assert.strictEqual(col.comment, null, "Row Comment null");
+            }
+            assert.strictEqual(col.columns.length, 2, "Field count");
+            assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
+            assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
+            assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
+            assert.strictEqual(
+              col.columns[1].simpleTypeWithArray,
+              "ARRAY<STRING>",
+              "Field 2 data type",
+            );
+            assert.strictEqual(col.columns[1].isArray, true, "Field 2 is array");
+            assert.strictEqual(col.columns[1].simpleDataType, "STRING", "Field 2 simple data type");
+            assert.strictEqual(col.columns[1].isNullable, true, "Field 2 nullable");
+            if (fieldComment) {
+              assert.strictEqual(
+                col.columns[1].comment,
+                expectedComment(fieldComment),
+                "Field Comment",
+              );
+            } else {
+              assert.strictEqual(col.columns[1].comment, null, "Comment null");
+            }
+          });
+        }
+      }
 
       it("Array of rows", () => {
         // An array of rows, each with two fields, the second of which is nullable.
@@ -300,7 +327,15 @@ describe("relation_column_parser.ts", () => {
 
 function expectedComment(comment: string): string {
   // replace doubled single quotes with single quotes
-  return comment.replace(/''/g, "'");
+  let retval = comment.replace(/''/g, "'");
+  // trim single quotes off start and end
+  if (retval.startsWith("'")) {
+    retval = retval.substring(1);
+  }
+  if (retval.endsWith("'")) {
+    retval = retval.substring(0, retval.length - 1);
+  }
+  return retval;
 }
 
 function expectedNullability(nullability: string): boolean {
