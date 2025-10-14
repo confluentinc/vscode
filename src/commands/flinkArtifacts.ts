@@ -57,6 +57,13 @@ export async function uploadArtifactCommand(
       async (progress) => {
         const response = await executeArtifactUpload(params, progress);
         if (response) {
+          logUsage(UserEvent.FlinkArtifactAction, {
+            action: "upload",
+            status: "succeeded",
+            kind: "CloudProviderUpload",
+            cloud: params.cloud,
+            region: params.region,
+          });
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
             {
