@@ -55,14 +55,13 @@ export async function handleWithProgressForUploadArtifact(
       cloud: params?.cloud,
       region: params?.region,
     });
-    const buttonHandlers = {
-      [viewArtifactsButton]: async () => {
-        await setFlinkArtifactsViewModeCommand();
-      },
-    };
     void showInfoNotificationWithButtons(
       `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-      buttonHandlers,
+      {
+        [viewArtifactsButton]: async () => {
+          await setFlinkArtifactsViewModeCommand();
+        },
+      },
     );
   } else {
     void showWarningNotificationWithButtons(
