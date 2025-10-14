@@ -25,11 +25,7 @@ export async function inspectJarClasses(file: Uri): Promise<JarClassInfo[]> {
       (f) => f.endsWith(".class") && !f.includes("$") && !f.startsWith("META-INF/"),
     );
     const infos: JarClassInfo[] = classFiles.map((filePath) => {
-      const className = filePath
-        // JAR/ZIP specs mandate forward slashes
-        .replace(/\\/g, "/") // still, defensively normalize back -> forward slashes
-        .replace(/\.class$/, "")
-        .replace(/\//g, ".");
+      const className = filePath.replace(/\.class$/, "").replace(/\//g, ".");
       const simpleName = className.split(".").pop() || className;
       return { className, simpleName };
     });
