@@ -2,10 +2,15 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import * as emitters from "../../emitters";
+import { CCloudResourceLoader } from "../../loaders";
+import * as notifications from "../../notifications";
 import * as jarInspector from "../../utils/jarInspector";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import {
   detectClassesAndRegisterUDFs,
   promptForFunctionNames,
+  registerMultipleUdfs,
   selectClassesForUdfRegistration,
   UdfRegistrationData,
 } from "./udfRegistration";
@@ -169,6 +174,104 @@ describe("commands/utils/udfRegistration", () => {
 
       sinon.assert.calledTwice(showInputStub);
       assert.deepStrictEqual(result, []);
+    });
+  });
+
+  describe("registerMultipleUdfs", () => {
+    const exampleDatabase = { provider: "aws", region: "us-east-1" } as any; // minimal shape for tests
+
+    function makeRegistration(name: string): UdfRegistrationData {
+      return {
+        classInfo: { className: `com.acme.${name}Class`, simpleName: `${name}Class` },
+        functionName: name,
+      };
+    }
+
+    let withProgressStub: sinon.SinonStub;
+    let getDbStub: sinon.SinonStub;
+    let loaderStub: sinon.SinonStub;
+    let infoNotifStub: sinon.SinonStub;
+    let errorMsgStub: sinon.SinonStub;
+    let fireStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      withProgressStub = sandbox
+        .stub(vscode.window, "withProgress")
+        .callsFake(async (_opts: any, task: any) => task({ report: () => {} }));
+
+      // Stub database provider singleton
+      getDbStub = sandbox
+        .stub(FlinkDatabaseViewProvider, "getInstance")
+        .returns({ database: exampleDatabase } as unknown as FlinkDatabaseViewProvider);
+
+      // Stub resource loader
+      loaderStub = sandbox.stub(CCloudResourceLoader, "getInstance").returns({
+        executeBackgroundFlinkStatement: sandbox.stub().resolves(undefined),
+      } as unknown as CCloudResourceLoader);
+
+      infoNotifStub = sandbox.stub(notifications, "showInfoNotificationWithButtons").resolves();
+      errorMsgStub = sandbox.stub(vscode.window, "showErrorMessage").resolves(undefined);
+      fireStub = sandbox.stub(emitters.udfsChanged, "fire");
+    });
+
+    it("throws when artifactId missing", async () => {
+      await assert.rejects(
+        () => registerMultipleUdfs([makeRegistration("foo")]),
+        /Artifact ID is required/,
+      );
+    });
+
+    it("throws when no database selected", async () => {
+      getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
+      await assert.rejects(
+        () => registerMultipleUdfs([makeRegistration("foo")], "artifact123"),
+        /No Flink database selected/,
+      );
+    });
+
+    it("throws when registrations empty", async () => {
+      await assert.rejects(() => registerMultipleUdfs([], "artifact123"), /No UDF registrations/);
+    });
+
+    it("registers each UDF successfully and shows success notification", async () => {
+      const regs = [makeRegistration("foo"), makeRegistration("bar")];
+
+      await registerMultipleUdfs(regs, "artifact123");
+
+      sinon.assert.calledOnce(withProgressStub);
+      const execStub = loaderStub.returnValues[0]
+        .executeBackgroundFlinkStatement as sinon.SinonStub;
+      sinon.assert.callCount(execStub, 2);
+      sinon.assert.calledOnce(fireStub);
+      sinon.assert.calledOnce(infoNotifStub);
+      const successArg = infoNotifStub.firstCall.args[0] as string;
+      assert.match(successArg, /All 2 UDF\(s\) registered successfully/);
+      assert.match(successArg, /foo, bar/);
+      sinon.assert.notCalled(errorMsgStub);
+    });
+
+    it("handles partial failures, showing both success and error notifications", async () => {
+      const regs = [makeRegistration("okFn"), makeRegistration("failFn")];
+      const execStub = sandbox
+        .stub()
+        .onFirstCall()
+        .resolves(undefined)
+        .onSecondCall()
+        .rejects(new Error("boom failure"));
+      loaderStub.returns({
+        executeBackgroundFlinkStatement: execStub,
+      } as unknown as CCloudResourceLoader);
+
+      await registerMultipleUdfs(regs, "artifact123");
+
+      sinon.assert.calledOnce(infoNotifStub);
+      const infoMsg = infoNotifStub.firstCall.args[0] as string;
+      assert.match(infoMsg, /1 of 2 UDF\(s\) registered successfully/);
+      assert.match(infoMsg, /okFn/);
+      sinon.assert.calledOnce(errorMsgStub);
+      const errorMsg = errorMsgStub.firstCall.args[0] as string;
+      assert.match(errorMsg, /Failed to register 1 UDF/);
+      assert.match(errorMsg, /failFn: boom failure/);
     });
   });
 });
