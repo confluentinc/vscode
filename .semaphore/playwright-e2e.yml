@@ -115,6 +115,20 @@ blocks:
               $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
               vault login -no-print token=$token
             }
+          # Check if Docker is available for @local tests
+          - |
+            Write-Output "Checking Docker availability..."
+            try {
+              $dockerVersion = docker --version 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                Write-Output "Docker is available: $dockerVersion"
+                make load-cached-docker-images
+              } else {
+                Write-Output "Docker is not available. @local tests will be skipped."
+              }
+            } catch {
+              Write-Output "Docker is not available. @local tests will be skipped."
+            }
           # Windows version of make setup-test-env
           - |
             $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
@@ -138,12 +152,12 @@ blocks:
           commands:
             - npm ci --prefer-offline --include=dev
             - npx playwright install
-            # Windows version of test-playwright-e2e
+            # Windows version of test-playwright-e2e, but exclude @local tests until Docker is available
             - |
               if ("$Env:TEST_SUITE_TAG" -ne "" -and "$Env:TEST_SUITE_TAG" -ne "TEST_SUITE_TAG") {
-                npx gulp e2e -t "$Env:TEST_SUITE_TAG"
+                npx gulp e2e -t "$Env:TEST_SUITE_TAG" -x "@local"
               } else {
-                npx gulp e2e
+                npx gulp e2e -x "@local"
               }
           env_vars: *e2e-env-vars
           matrix: *e2e-matrix
@@ -152,6 +166,16 @@ blocks:
           commands:
             - Remove-Item .env -ErrorAction SilentlyContinue
             - make ci-bin-sem-cache-store
+            # Cache Docker images if Docker is available
+            - |
+              try {
+                docker --version 2>$null | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                  make cache-docker-images
+                }
+              } catch {
+                Write-Output "Docker not available, skipping Docker image caching"
+              }
             # Windows version of store-test-results-to-semaphore and merge-blob-reports
             - |
               Write-Output "Publishing test results to Semaphore..."
@@ -166,6 +190,16 @@ blocks:
               Write-Output "Merging blob reports..."
               if (Test-Path "blob-report") {
                   npx playwright merge-reports --reporter html ./blob-report
+                  $VSCODE_VERSION = $Env:VSCODE_VERSION
+                  if ([string]::IsNullOrEmpty($Env:TEST_SUITE_TAG) -or $Env:TEST_SUITE_TAG -eq "TEST_SUITE_TAG") {
+                      $TEST_SUITE_NAME = "all"
+                  } else {
+                      $TEST_SUITE_NAME = $Env:TEST_SUITE_TAG -replace '@', ''
+                  }
+                  $FILENAME = "playwright-report-win32-x64-vscode-$VSCODE_VERSION--$TEST_SUITE_NAME.zip"
+                  Write-Output "Creating artifact: $FILENAME"
+                  Compress-Archive -Path playwright-report -DestinationPath $FILENAME -Force
+                  artifact push workflow $FILENAME --destination "playwright-reports/$FILENAME" --force
               } else {
                   Write-Output "No blob-report directory found, skipping merge"
               }
