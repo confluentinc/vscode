@@ -1,11 +1,8 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { Logger } from "../logging";
 import { CustomMarkdownString, IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
-
-const logger = new Logger("models.FlinkSystemCatalog");
 
 export class FlinkUdfParameter {
   name: string;
@@ -139,8 +136,6 @@ export class FlinkRelationColumn {
   readonly relationName: string;
   /** Name of the column */
   readonly name: string;
-  /** SQL data type of the column */
-  readonly dataType: string;
   /** Full SQL data type of the column. */
   readonly fullDataType: string;
   /** Is the column nullable? */
@@ -153,6 +148,7 @@ export class FlinkRelationColumn {
   readonly isPersisted: boolean;
   /** Is the column hidden (not normally visible)? */
   readonly isHidden: boolean;
+  readonly isArray: boolean;
 
   /** If a metadata column, what Kafka topic metadata key does it map to? */
   readonly metadataKey: string | null;
@@ -162,7 +158,6 @@ export class FlinkRelationColumn {
       FlinkRelationColumn,
       | "relationName"
       | "name"
-      | "dataType"
       | "fullDataType"
       | "isNullable"
       | "distributionKeyNumber"
@@ -170,11 +165,12 @@ export class FlinkRelationColumn {
       | "isPersisted"
       | "isHidden"
       | "metadataKey"
-    >,
+    > & {
+      isArray?: boolean;
+    },
   ) {
     this.relationName = props.relationName;
     this.name = props.name;
-    this.dataType = props.dataType;
     this.fullDataType = props.fullDataType;
     this.isNullable = props.isNullable;
     this.distributionKeyNumber = props.distributionKeyNumber;
@@ -182,6 +178,7 @@ export class FlinkRelationColumn {
     this.isPersisted = props.isPersisted;
     this.isHidden = props.isHidden;
     this.metadataKey = props.metadataKey;
+    this.isArray = props.isArray ?? false;
   }
 
   get id(): string {
@@ -189,18 +186,14 @@ export class FlinkRelationColumn {
   }
 
   get simpleDataType(): string {
-    let type = this.dataType;
+    let type = this.fullDataType;
 
-    // if is an array, strip off the ARRAY<> to get to the inner type
-    if (type.startsWith("ARRAY<")) {
-      type = type.substring(6, this.dataType.length - 1).trim();
-    }
     // if is a ROW<...> type, just return "ROW"
     if (type.startsWith("ROW<")) {
       return "ROW";
     }
 
-    return this.dataType;
+    return type;
   }
 
   get connectionId(): ConnectionId {
@@ -211,25 +204,19 @@ export class FlinkRelationColumn {
     return ConnectionType.Ccloud;
   }
 
-  /** Is this column an array type? */
-  get isArray(): boolean {
-    return this.dataType.startsWith("ARRAY<");
-  }
-
-  /** Return the basic datatype sans ARRAY<> decoration. */
-  get typeWithoutArray(): string {
+  /** Return the simple datatype with possible ARRAY<> decoration. */
+  get simpleTypeWithArray(): string {
     if (this.isArray) {
-      // ARRAY<type> -> type
-      return this.dataType.substring(6, this.dataType.length - 1).trim();
+      return `ARRAY<${this.simpleDataType}>`;
     }
-    return this.dataType;
+    return this.simpleDataType;
   }
 
   searchableText(): string {
     const parts = [];
 
     parts.push(this.name);
-    parts.push(this.dataType);
+    parts.push(this.simpleTypeWithArray);
     if (this.metadataKey) {
       parts.push(this.metadataKey);
     }
@@ -265,7 +252,7 @@ export class FlinkRelationColumn {
 
     if (this.isArray) {
       tooltip.addField("Array", "Yes");
-      tooltip.addField("Array Type", this.typeWithoutArray);
+      tooltip.addField("Array Type", this.simpleTypeWithArray);
     }
 
     if (this.distributionKeyNumber !== null) {
@@ -287,7 +274,7 @@ export class FlinkRelationColumn {
 
   /** Returns a single line representation of this column, for use within the containing relation's tooltip */
   tooltipLine(): string {
-    const parts: string[] = [`${this.name}: ${formatSqlType(this.dataType)}`];
+    const parts: string[] = [`${this.name}: ${formatSqlType(this.simpleDataType)}`];
     if (!this.isNullable) {
       parts.push("NOT NULL");
     } else {
@@ -315,7 +302,6 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
       FlinkRelationColumn,
       | "relationName"
       | "name"
-      | "dataType"
       | "fullDataType"
       | "isNullable"
       | "distributionKeyNumber"
@@ -323,6 +309,7 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
       | "isPersisted"
       | "isHidden"
       | "metadataKey"
+      | "isArray"
     > & {
       columns: FlinkRelationColumn[];
     },
@@ -341,106 +328,54 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
   }
 }
 
-export function relationColumnFactory(
-  props: Pick<
-    FlinkRelationColumn,
-    | "relationName"
-    | "name"
-    | "dataType"
-    | "fullDataType"
-    | "isNullable"
-    | "distributionKeyNumber"
-    | "isGenerated"
-    | "isPersisted"
-    | "isHidden"
-    | "metadataKey"
-  >,
-): FlinkRelationColumn {
-  if (!props.fullDataType.startsWith("ROW<") && !props.fullDataType.startsWith("ARRAY<ROW<")) {
-    return new FlinkRelationColumn(props);
+/**
+ * Composite column representing a MAP<K,V>. Children are synthetic and named 'key' and 'value'.
+ */
+export class MapFlinkRelationColumn extends FlinkRelationColumn {
+  readonly keyColumn: FlinkRelationColumn;
+  readonly valueColumn: FlinkRelationColumn;
+
+  constructor(
+    props: Pick<
+      FlinkRelationColumn,
+      | "relationName"
+      | "name"
+      | "fullDataType"
+      | "isNullable"
+      | "distributionKeyNumber"
+      | "isGenerated"
+      | "isPersisted"
+      | "isHidden"
+      | "metadataKey"
+      | "isArray"
+    > & {
+      keyColumn: FlinkRelationColumn;
+      valueColumn: FlinkRelationColumn;
+    },
+  ) {
+    super(props);
+    this.keyColumn = props.keyColumn;
+    this.valueColumn = props.valueColumn;
   }
 
-  let fullDataType = props.fullDataType;
-  // Is this an array of rows?
-  if (fullDataType.startsWith("ARRAY<")) {
-    // Strip off leading "ARRAY<" and trailing ">" to get to the ROW<>
-    fullDataType = fullDataType.substring(6, fullDataType.length - 1).trim();
+  /** Convenience accessor returning both synthetic children. */
+  get columns(): FlinkRelationColumn[] {
+    return [this.keyColumn, this.valueColumn];
   }
 
-  // Parse sub-columns out of the fullDataType, which should be in the form:
-  // ROW<`field1` TYPE1 [NOT] NULL, `field2` TYPE2 TYPE1 [NOT] NULL, ...>
-  // Strip off the leading "ROW<" and trailing ">" first.
-  const inner = fullDataType.substring(4, fullDataType.length - 1).trim();
-  const columns: FlinkRelationColumn[] = [];
-
-  let current = "";
-  let angleBrackets = 0;
-  let inBackticks = false;
-
-  for (let i = 0; i < inner.length; i++) {
-    const char = inner[i];
-    if (char === "<" && !inBackticks) {
-      angleBrackets++;
-    } else if (char === ">" && !inBackticks) {
-      angleBrackets--;
-    }
-
-    if (char === "," && angleBrackets === 0 && !inBackticks) {
-      // End of current column definition
-      // Grab out the name, type, and nullability
-      const { name, dataType, isNullable } = (() => {
-        const parts = current.trim().split(/\s+/);
-        if (parts.length < 2) {
-          throw new Error(`Invalid column definition: ${current}`);
-        }
-        const colName = parts[0].replace(/`/g, ""); // remove backticks
-        const typeParts = [];
-        let isNullable = true;
-        for (let j = 1; j < parts.length; j++) {
-          const p = parts[j];
-          if (p.toUpperCase() === "NOT") {
-            if (j + 1 < parts.length && parts[j + 1].toUpperCase() === "NULL") {
-              isNullable = false;
-              j++; // skip next part as it's NULL
-            }
-          } else if (p.toUpperCase() === "NULL") {
-            isNullable = true;
-          } else {
-            typeParts.push(p);
-          }
-        }
-        return { name: colName, dataType: typeParts.join(" "), isNullable };
-      })();
-
-      const col = relationColumnFactory({
-        relationName: `${props.relationName}.${props.name}`,
-        distributionKeyNumber: null,
-        isGenerated: props.isGenerated,
-        isPersisted: props.isPersisted,
-        isHidden: props.isHidden,
-        metadataKey: null,
-        fullDataType: dataType,
-        name: name,
-        dataType: dataType,
-        isNullable: isNullable,
-      });
-      logger.info(
-        `Parsed sub-column ${col.name} of type ${col.dataType} (nullable: ${col.isNullable})`,
-      );
-      columns.push(col);
-      current = "";
-    } else {
-      current += char;
-    }
+  getTreeItem(): TreeItem {
+    const item = super.getTreeItem();
+    item.collapsibleState = TreeItemCollapsibleState.Collapsed;
+    return item;
   }
-
-  return new CompositeFlinkRelationColumn({ ...props, columns });
 }
 
 /** Type of a Flink relation (table or view). */
 export enum FlinkRelationType {
   BaseTable = "BASE_TABLE",
-  View = "VIEW",
+  EXTERNAL_TABLE = "EXTERNAL_TABLE", // e.g. external-system JDBC-linked read-only tables
+  View = "VIEW", // SQL views.
+  SYSTEM_TABLE = "SYSTEM_TABLE", // e.g. $error tables
 }
 
 /**
@@ -526,7 +461,7 @@ export class FlinkRelation {
     }
     for (const col of this.columns) {
       parts.push(col.name);
-      parts.push(col.dataType);
+      parts.push(col.simpleDataType);
       if (col.metadataKey) {
         parts.push(col.metadataKey);
       }
