@@ -6,6 +6,36 @@ import {
 } from "../flinkSystemCatalog";
 import { relationColumnFactory } from "./relation_column_parser";
 
+const primitiveDataTypes = [
+  "BOOLEAN",
+  "BYTES",
+  "VARBINARY",
+  "VARBINARY(255)",
+  "TINYINT",
+  "SMALLINT",
+  "INT",
+  "BIGINT",
+  "FLOAT",
+  "DOUBLE",
+  "DECIMAL",
+  "DECIMAL(5)",
+  "DECIMAL(10, 2)",
+  "INTERVAL DAY",
+  "INTERVAL DAY TO SECOND",
+  "INTERVAL DAY(p1) TO MINUTE",
+  "INTERVAL MINUTE",
+  "NUMERIC",
+  "CHAR",
+  "CHAR(1)",
+  "CHAR(10)",
+  "VARCHAR(255)",
+  "STRING",
+  "TIMESTAMP(3) WITH LOCAL TIME ZONE",
+  "TIMESTAMP(3) WITHOUT TIME ZONE",
+];
+
+const possibleComments = ["this is a comment", "this comment has ''embedded'' quotes", ""];
+
 describe("relation_column_parser.ts", () => {
   const fieldDefaults = {
     relationName: "my_table",
@@ -18,21 +48,8 @@ describe("relation_column_parser.ts", () => {
   };
   describe("relationColumnFactory()", () => {
     describe("simple types and arrays thereof", () => {
-      for (const type of [
-        "BOOLEAN",
-        "TINYINT",
-        "SMALLINT",
-        "INT",
-        "BIGINT",
-        "FLOAT",
-        "DOUBLE",
-        "DECIMAL(10, 2)",
-        "CHAR(1)",
-        "CHAR(10)",
-        "VARCHAR(255)",
-        "TIMESTAMP(3) WITH LOCAL TIME ZONE",
-      ]) {
-        for (const comment of ["comment here", ""]) {
+      for (const type of primitiveDataTypes) {
+        for (const comment of possibleComments) {
           it(`${type} comment: ${comment}`, () => {
             let fdtWithComment = type;
             if (comment) {
@@ -56,7 +73,7 @@ describe("relation_column_parser.ts", () => {
             assert.strictEqual(col.isNullable, false, "Nullable");
             assert.strictEqual(col.isArray, false, "Is not an array");
             if (comment) {
-              assert.strictEqual(col.comment, comment, "Comment");
+              assert.strictEqual(col.comment, expectedComment(comment), "Comment");
             } else {
               assert.strictEqual(col.comment, null, "Comment null");
             }
@@ -86,9 +103,9 @@ describe("relation_column_parser.ts", () => {
             assert.strictEqual(col.simpleTypeWithArray, `ARRAY<${type}>`, "Data type");
             assert.strictEqual(col.isNullable, false, "Nullable");
             if (comment) {
-              assert.strictEqual(col.comment, comment);
+              assert.strictEqual(col.comment, expectedComment(comment), "Comment preserved");
             } else {
-              assert.strictEqual(col.comment, null);
+              assert.strictEqual(col.comment, null, "Comment null");
             }
           });
         }
@@ -267,3 +284,8 @@ describe("relation_column_parser.ts", () => {
     });
   });
 });
+
+function expectedComment(comment: string): string {
+  // replace doubled single quotes with single quotes
+  return comment.replace(/''/g, "'");
+}
