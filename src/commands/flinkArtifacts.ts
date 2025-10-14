@@ -81,14 +81,12 @@ export async function uploadArtifactCommand(
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
         if (response) {
           const viewArtifactsButton = "View Artifacts";
-          void vscode.window.showInformationMessage(
+          const result = await vscode.window.showInformationMessage(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
             viewArtifactsButton,
           );
-
-          if (viewArtifactsButton) {
-            // User clicked "View Artifacts" button
-            await highlightArtifact(response.display_name);
+          if (result === viewArtifactsButton) {
+            await setFlinkArtifactsViewModeCommand();
           }
         } else {
           void showWarningNotificationWithButtons(
@@ -177,21 +175,6 @@ export async function setFlinkArtifactsViewModeCommand() {
   );
 }
 
-export async function highlightArtifact(artifactDisplayName: string) {
-  const message = `Opening Flink Artifact view with ${artifactDisplayName}.`;
-
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Window,
-      title: message,
-      cancellable: false,
-    },
-    async () => {
-      await vscode.commands.executeCommand("confluent.highlightArtifact");
-    },
-  );
-}
-
 export function registerFlinkArtifactCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
@@ -200,6 +183,5 @@ export function registerFlinkArtifactCommands(): vscode.Disposable[] {
       "confluent.flinkdatabase.setArtifactsViewMode",
       setFlinkArtifactsViewModeCommand,
     ),
-    registerCommandWithLogging("confluent.highlightArtifact", highlightArtifact),
   ];
 }
