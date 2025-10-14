@@ -1,6 +1,12 @@
-import { Uri, window } from "vscode";
+import { ProgressLocation, Uri, window } from "vscode";
+import { udfsChanged } from "../../emitters";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
+import { showInfoNotificationWithButtons } from "../../notifications";
+import { flinkDatabaseQuickpick } from "../../quickpicks/kafkaClusters";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { validateUdfInput } from "./uploadArtifactOrUDF";
 
 const logger = new Logger("commands.flinkUDFs/udfRegistration");
@@ -87,4 +93,120 @@ export async function promptForFunctionNames(
     }
   }
   return registrations;
+}
+
+/**
+ * Registers multiple UDFs from the provided registration data.
+ * @param artifact The artifact containing the UDF implementations
+ * @param registrations Array of UDF registration data
+ */
+export async function registerMultipleUdfs(
+  registrations: UdfRegistrationData[],
+  artifactId?: string,
+) {
+  if (!artifactId) {
+    throw new Error("Artifact ID is required to register UDFs.");
+  }
+  if (registrations.length === 0) {
+    throw new Error("No UDF registrations to process.");
+  }
+
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  let selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database || undefined;
+  if (!selectedFlinkDatabase) {
+    selectedFlinkDatabase = await flinkDatabaseQuickpick(
+      undefined,
+      "Select the Flink database (Kafka cluster) where you want to register the UDFs",
+    );
+    if (!selectedFlinkDatabase) {
+      throw new Error("No Flink database selected.");
+    }
+  }
+
+  await window.withProgress(
+    {
+      location: ProgressLocation.Notification,
+      title: `Registering ${registrations.length} UDF(s)`,
+      cancellable: false,
+    },
+    async (progress) => {
+      const successfulRegistrations: string[] = [];
+      const failedRegistrations: Array<{ functionName: string; error: string }> = [];
+
+      for (let i = 0; i < registrations.length; i++) {
+        const registration = registrations[i];
+        const progressMessage = `Registering ${registration.functionName} (${i + 1}/${registrations.length})...`;
+        progress.report({ message: progressMessage });
+
+        try {
+          logger.debug(
+            `Registering UDF: ${registration.functionName} -> ${registration.classInfo.className}`,
+          );
+
+          await ccloudResourceLoader.executeBackgroundFlinkStatement(
+            `CREATE FUNCTION \`${registration.functionName}\` AS '${registration.classInfo.className}' USING JAR 'confluent-artifact://${artifactId}';`,
+            selectedFlinkDatabase,
+            {
+              timeout: 60000, // 60 second timeout
+            },
+          );
+          successfulRegistrations.push(registration.functionName);
+
+          logUsage(UserEvent.FlinkUDFAction, {
+            action: "created",
+            status: "succeeded",
+            cloud: selectedFlinkDatabase.provider,
+            region: selectedFlinkDatabase.region,
+          });
+        } catch (error) {
+          logger.error(`Failed to register UDF ${registration.functionName}:`, error);
+
+          let errorMessage = "Unknown error";
+          if (error instanceof Error) {
+            // Extract error detail; thrown by src/loaders/ccloudResourceLoader.ts -> doExecuteBackgroundFlinkStatement
+            const flinkDetail = error.message.split("Error detail:")[1]?.trim();
+            errorMessage = flinkDetail || error.message;
+          }
+
+          failedRegistrations.push({
+            functionName: registration.functionName,
+            error: errorMessage,
+          });
+
+          logUsage(UserEvent.FlinkUDFAction, {
+            action: "created",
+            status: "failed",
+            cloud: selectedFlinkDatabase.provider,
+            region: selectedFlinkDatabase.region,
+          });
+        }
+      }
+
+      // Update the UDFs list in cache and refresh view
+      progress.report({ message: "Updating UDF view" });
+      udfsChanged.fire(selectedFlinkDatabase);
+
+      // Show summary notification(s) to user
+      if (successfulRegistrations.length > 0) {
+        const successMessage =
+          successfulRegistrations.length === registrations.length
+            ? `All ${successfulRegistrations.length} UDF(s) registered successfully!`
+            : `${successfulRegistrations.length} of ${registrations.length} UDF(s) registered successfully.`;
+
+        void showInfoNotificationWithButtons(
+          `${successMessage} Functions: ${successfulRegistrations.join(", ")}`,
+        );
+      }
+
+      if (failedRegistrations.length > 0) {
+        const errorDetails = failedRegistrations
+          .map((f) => `${f.functionName}: ${f.error}`)
+          .join("; ");
+
+        void window.showErrorMessage(
+          `Failed to register ${failedRegistrations.length} UDF(s): ${errorDetails}`,
+        );
+      }
+    },
+  );
 }
