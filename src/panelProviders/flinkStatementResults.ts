@@ -33,7 +33,7 @@ export class FlinkStatementResultsPanelProvider
   extends DisposableCollection
   implements WebviewViewProvider, Disposable
 {
-  private currentStatement?: FlinkStatement;
+  currentStatement?: FlinkStatement;
 
   // for webview handling:
   private extensionUri: Uri;

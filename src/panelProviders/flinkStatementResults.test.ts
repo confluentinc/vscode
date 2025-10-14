@@ -35,7 +35,7 @@ describe("panelProviders/flinkStatementResults.ts", () => {
 
     beforeEach(() => {
       provider = FlinkStatementResultsPanelProvider.getInstance();
-      provider["currentStatement"] = testStatement;
+      provider.currentStatement = testStatement;
       // don't actually generate HTML from the template in these tests
       getStatementResultsHtmlStub = sandbox.stub();
       provider["getStatementResultsHtml"] = getStatementResultsHtmlStub;
@@ -71,7 +71,7 @@ describe("panelProviders/flinkStatementResults.ts", () => {
       });
 
       it("should exit early when currentStatement isn't set", async () => {
-        provider["currentStatement"] = undefined;
+        provider.currentStatement = undefined;
         // this shouldn't happen because resolveWebviewView won't be called until a statement's
         // results have been requested, but guard against it anyway
 
@@ -85,7 +85,7 @@ describe("panelProviders/flinkStatementResults.ts", () => {
           name: "test-statement",
           phase: Phase.RUNNING,
         });
-        provider["currentStatement"] = testStatement;
+        provider.currentStatement = testStatement;
 
         await provider.resolveWebviewView(stubbedWebviewView);
 
@@ -114,7 +114,7 @@ describe("panelProviders/flinkStatementResults.ts", () => {
       });
 
       it("should set the current statement", async () => {
-        assert.strictEqual(provider["currentStatement"], testStatement);
+        assert.strictEqual(provider.currentStatement, testStatement);
 
         const newStatement = createFlinkStatement({
           name: "new-statement",
@@ -124,7 +124,7 @@ describe("panelProviders/flinkStatementResults.ts", () => {
         await provider.showStatementResults(newStatement);
 
         // shouldn't be testStatement anymore
-        assert.strictEqual(provider["currentStatement"], newStatement);
+        assert.strictEqual(provider.currentStatement, newStatement);
       });
 
       it("should set the context value and focus the panel when .view hasn't been set yet", async () => {
