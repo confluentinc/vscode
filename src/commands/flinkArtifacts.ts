@@ -19,7 +19,6 @@ import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import {
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
-  openFlinkArtifactsView,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
 
@@ -82,12 +81,13 @@ export async function uploadArtifactCommand(
         const response = await uploadArtifactToCCloud(params, uploadUrl.upload_id!);
         if (response) {
           const viewArtifactsButton = "View Artifacts";
-          const result = await vscode.window.showInformationMessage(
+          void vscode.window.showInformationMessage(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
             viewArtifactsButton,
           );
 
-          if (result === viewArtifactsButton) {
+          if (viewArtifactsButton) {
+            // User clicked "View Artifacts" button
             await highlightArtifact(response.display_name);
           }
         } else {
@@ -178,7 +178,7 @@ export async function setFlinkArtifactsViewModeCommand() {
 }
 
 export async function highlightArtifact(artifactDisplayName: string) {
-  const message = `Opening Flink Artifact the Artifacts view with ${artifactDisplayName}.`;
+  const message = `Opening Flink Artifact view with ${artifactDisplayName}.`;
 
   await vscode.window.withProgress(
     {
@@ -187,7 +187,7 @@ export async function highlightArtifact(artifactDisplayName: string) {
       cancellable: false,
     },
     async () => {
-      await openFlinkArtifactsView();
+      await vscode.commands.executeCommand("confluent.highlightArtifact");
     },
   );
 }

@@ -2059,11 +2059,6 @@
           "group": "z_openInCloud"
         },
         {
-          "command": "confluent.highlightArtifact",
-          "when": "view == confluent-flink-database && viewItem =~ /.*-flink-artifact$/",
-          "group": "inline@1"
-        },
-        {
           "command": "confluent.artifacts.startGuidedUdfCreation",
           "when": "view == confluent-flink-database && confluent.flinkDatabaseViewMode == 'artifacts'",
           "group": "z_openInCloud"

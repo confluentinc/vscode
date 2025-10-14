@@ -333,7 +333,3 @@ export async function executeCreateFunction(
   const createdMsg = `${userInput.functionName} function created successfully.`;
   void showInfoNotificationWithButtons(createdMsg);
 }
-
-export async function openFlinkArtifactsView(): Promise<void> {
-  await vscode.commands.executeCommand("confluent.highlightArtifact");
-}
