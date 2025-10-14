@@ -41,8 +41,6 @@ export class FlinkStatementResultsPanelProvider
   private resultsManager?: FlinkStatementResultsManager;
   private observableScope?: ReturnType<typeof ObservableScope>;
 
-  protected disposables: Disposable[] = [];
-
   constructor() {
     super();
     const context: ExtensionContext = getExtensionContext();
