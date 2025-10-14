@@ -14,6 +14,7 @@ import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import {
   showErrorNotificationWithButtons,
   showInfoNotificationWithButtons,
+  showWarningNotificationWithButtons,
 } from "../notifications";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
@@ -55,6 +56,7 @@ export async function uploadArtifactCommand(
       },
       async (progress) => {
         const response = await executeArtifactUpload(params, progress);
+        const viewArtifactsButton = "View Artifacts";
         if (response) {
           logUsage(UserEvent.FlinkArtifactAction, {
             action: "upload",
@@ -63,13 +65,15 @@ export async function uploadArtifactCommand(
             cloud: params.cloud,
             region: params.region,
           });
+          const buttonHandlers = {
+            [viewArtifactsButton]: async () => {
+              await setFlinkArtifactsViewModeCommand();
+            },
+          };
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
-            viewArtifactsButton,
+            buttonHandlers,
           );
-          if (result === viewArtifactsButton) {
-            await setFlinkArtifactsViewModeCommand();
-          }
         } else {
           void showWarningNotificationWithButtons(
             `Artifact upload completed, but no response was returned from Confluent Cloud.`,
