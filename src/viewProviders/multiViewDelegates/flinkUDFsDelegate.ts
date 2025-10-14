@@ -1,10 +1,5 @@
 import { TreeItem } from "vscode";
 import { CCloudResourceLoader } from "../../loaders";
-import {
-  getRelationsAndColumnsSystemCatalogQuery,
-  parseRelationsAndColumnsSystemCatalogQueryResponse,
-  RawRelationsAndColumnsRow,
-} from "../../loaders/utils/relationsAndColumnsSystemCatalogQuery";
 import { Logger } from "../../logging";
 import { FlinkUdf, FlinkUdfTreeItem } from "../../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
@@ -30,19 +25,6 @@ export class FlinkUDFsDelegate extends ViewProviderDelegate<
 
     const ccloudResourceLoader = CCloudResourceLoader.getInstance();
     this.children = await ccloudResourceLoader.getFlinkUDFs(database, forceDeepRefresh);
-
-    // temp block
-    const query = getRelationsAndColumnsSystemCatalogQuery(database);
-    const relationsAndColumns =
-      await ccloudResourceLoader.executeBackgroundFlinkStatement<RawRelationsAndColumnsRow>(
-        query,
-        database,
-      );
-    const relations = parseRelationsAndColumnsSystemCatalogQueryResponse(relationsAndColumns);
-
-    logger.info("relationsAndColumns:", JSON.stringify(relations, null, 2));
-
-    // end temp block
 
     return this.children;
   }
