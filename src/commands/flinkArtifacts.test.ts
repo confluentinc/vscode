@@ -7,7 +7,11 @@ import {
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseApiVersionEnum,
   PresignedUploadUrlArtifactV1PresignedUrl200ResponseKindEnum,
 } from "../clients/flinkArtifacts/models/PresignedUploadUrlArtifactV1PresignedUrl200Response";
-import { registerFlinkArtifactCommands, uploadArtifactCommand } from "./flinkArtifacts";
+import {
+  handleWithProgressForUploadArtifact,
+  registerFlinkArtifactCommands,
+  uploadArtifactCommand,
+} from "./flinkArtifacts";
 import * as commands from "./index";
 import * as artifactUploadForm from "./utils/artifactUploadForm";
 import * as uploadArtifact from "./utils/uploadArtifactOrUDF";
@@ -188,6 +192,41 @@ describe("flinkArtifacts", () => {
 
       sinon.assert.calledOnce(createArtifactStub);
       sinon.assert.calledWithExactly(createArtifactStub, mockParams, mockUploadId);
+    });
+  });
+  describe("handleWithProgressForUploadArtifact", () => {
+    it("should report progress correctly through all steps", async () => {
+      const mockCreateResponse = {
+        display_name: "test-artifact",
+        cloud: "Azure",
+        region: "australiaeast",
+        environment: " env-123456",
+      };
+
+      const params = { ...mockParams };
+      const uploadUrl = { ...mockPresignedUrlResponse };
+
+      const progressReports: { message: string; increment?: number }[] = [];
+      const mockProgress: vscode.Progress<{ message: string; increment?: number }> = {
+        report: (info) => {
+          progressReports.push(info);
+        },
+      };
+
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+      sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
+      sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
+
+      await handleWithProgressForUploadArtifact(params, mockProgress);
+
+      // Verify that progress was reported for each step
+      sinon.assert.match(progressReports.length, 3);
+      sinon.assert.match(progressReports[0].message, "Requesting presigned upload URL...");
+      sinon.assert.match(
+        progressReports[1].message,
+        "Uploading artifact binary to cloud storage...",
+      );
+      sinon.assert.match(progressReports[2].message, "Adding artifact to Confluent Cloud...");
     });
   });
 });
