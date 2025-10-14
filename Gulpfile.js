@@ -903,7 +903,7 @@ export function e2eRun(done) {
     "tests/e2e/playwright.config.ts",
     "tests/e2e",
     ...(testFilter ? ["-g", testFilter] : []),
-    ...(testExcludeFilter ? ["-gv", `!${testExcludeFilter}`] : []),
+    ...(testExcludeFilter ? ["-gv", testExcludeFilter] : []),
   ];
   console.log("Running command: npx", command.join(" "));
 
