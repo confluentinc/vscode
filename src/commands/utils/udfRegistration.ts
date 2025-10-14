@@ -163,8 +163,7 @@ export async function registerMultipleUdfs(
 
           let errorMessage = "Unknown error";
           if (error instanceof Error) {
-            // FIXME NC verify/update this AI suggestion for error handling
-            // Extract meaningful error detail from Flink error messages
+            // Extract error detail; thrown by src/loaders/ccloudResourceLoader.ts -> doExecuteBackgroundFlinkStatement
             const flinkDetail = error.message.split("Error detail:")[1]?.trim();
             errorMessage = flinkDetail || error.message;
           }
