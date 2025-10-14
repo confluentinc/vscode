@@ -41,8 +41,6 @@ import {
  * If not provided, the user will be prompted for all necessary information.
  */
 
-export async function handleUploadArtifact() {}
-
 export async function handleWithProgressForUploadArtifact(
   params: ArtifactUploadParams | undefined,
   progress: vscode.Progress<{ message?: string; increment?: number }>,
@@ -208,6 +206,9 @@ export async function setFlinkArtifactsViewModeCommand() {
   );
 }
 
+/**
+ * Registers the Flink Artifact commands with logging.
+ */
 export function registerFlinkArtifactCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.uploadArtifact", uploadArtifactCommand),
