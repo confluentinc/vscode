@@ -8,7 +8,6 @@ import {
 import { ContextValues, setContextValue } from "../context/values";
 import { artifactsChanged, flinkDatabaseViewMode } from "../emitters";
 import { logError } from "../errors";
-import { Logger } from "../logging";
 import { FlinkArtifact } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
@@ -27,7 +26,7 @@ import {
   handleUploadToCloudProvider,
   uploadArtifactToCCloud,
 } from "./utils/uploadArtifactOrUDF";
-const logger = new Logger("commands/flinkArtifacts");
+
 /**
  * Orchestrates the sub-functions to complete the artifact upload process.
  * Logs error and shows a user notification if sub-functions fail.
