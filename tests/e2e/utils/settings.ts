@@ -32,6 +32,7 @@ const DEFAULT_EDITOR_SETTINGS = {
   "editor.acceptSuggestionOnEnter": "off",
   // this prevents VS Code from converting the `http` to `https` in `$schema` URIs:
   "editor.linkedEditing": false,
+  "confluent.flink.artifacts": true,
 };
 
 const DEFAULT_SETTINGS = { ...DEFAULT_EDITOR_SETTINGS, ...DEFAULT_UI_SETTINGS };
