@@ -893,6 +893,8 @@ export function e2eRun(done) {
 
   // Get <test-name> argument after 'npx gulp e2e -t <test-name>'
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
+  // Get <test-name> argument after 'npx gulp e2e -x <test-name>' to exclude tests with a matching name
+  const testExcludeFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-x");
 
   const command = [
     "playwright",
@@ -901,6 +903,7 @@ export function e2eRun(done) {
     "tests/e2e/playwright.config.ts",
     "tests/e2e",
     ...(testFilter ? ["-g", testFilter] : []),
+    ...(testExcludeFilter ? ["-gv", `!${testExcludeFilter}`] : []),
   ];
   console.log("Running command: npx", command.join(" "));
 
