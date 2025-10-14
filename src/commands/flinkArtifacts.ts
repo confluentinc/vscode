@@ -68,7 +68,10 @@ export async function uploadArtifactCommand(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
             {
               "Register UDFs": async () => {
-                await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+                await detectClassesAndRegisterUDFs(
+                  { selectedFile: params.selectedFile },
+                  response.id,
+                );
               },
             },
           );
