@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import * as emitters from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import * as notifications from "../../notifications";
+import * as kafkaClusterQuickpicks from "../../quickpicks/kafkaClusters"; // added
 import * as jarInspector from "../../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import {
@@ -223,10 +224,14 @@ describe("commands/utils/udfRegistration", () => {
 
     it("throws when no database selected", async () => {
       getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
+      const qpStub = sandbox
+        .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
+        .resolves(undefined); // user did not select a db
       await assert.rejects(
         () => registerMultipleUdfs([makeRegistration("foo")], "artifact123"),
         /No Flink database selected/,
       );
+      sinon.assert.calledOnce(qpStub);
     });
 
     it("throws when registrations empty", async () => {
@@ -272,6 +277,19 @@ describe("commands/utils/udfRegistration", () => {
       const errorMsg = errorMsgStub.firstCall.args[0] as string;
       assert.match(errorMsg, /Failed to register 1 UDF/);
       assert.match(errorMsg, /failFn: boom failure/);
+    });
+    it("calls the flinkdatbaseQuickpick function when no database is selected", async () => {
+      getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
+
+      // Stub the quickpick to return a database so registration proceeds
+      const qpStub = sandbox
+        .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
+        .resolves(exampleDatabase);
+
+      const regs = [makeRegistration("foo")];
+      await registerMultipleUdfs(regs, "artifact123");
+
+      sinon.assert.calledOnce(qpStub);
     });
   });
 });
