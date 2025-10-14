@@ -1011,6 +1011,19 @@
             "description": "Maximum number of concurrent polling requests for non-terminal Flink statements.",
             "minimum": 1,
             "maximum": 10
+          },
+          "confluent.flink.statementResults.defaultLocation": {
+            "type": "string",
+            "default": "editor",
+            "enum": [
+              "editor",
+              "panel"
+            ],
+            "markdownEnumDescriptions": [
+              "Open Flink statement results in the **editor area** as a new document tab (allows multiple results open simultaneously).",
+              "Open Flink statement results in the **bottom panel area** (show results for one executing statement at a time)."
+            ],
+            "description": "Default location for displaying Flink statement results."
           }
         }
       },
@@ -1102,6 +1115,13 @@
           "title": "Confluent",
           "icon": "resources/confluent-logo.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "confluent-panel",
+          "title": "Confluent",
+          "icon": "resources/confluent-logo.svg"
+        }
       ]
     },
     "views": {
@@ -1143,6 +1163,15 @@
           "id": "confluent-support",
           "name": "Support",
           "icon": "$(confluent-logo)"
+        }
+      ],
+      "confluent-panel": [
+        {
+          "id": "confluent-flink-statement-results-panel",
+          "name": "Flink Statement Results",
+          "when": "confluent.flinkStatementResults.panelActive",
+          "icon": "$(confluent-logo)",
+          "type": "webview"
         }
       ]
     },
