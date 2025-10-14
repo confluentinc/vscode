@@ -36,6 +36,8 @@ const primitiveDataTypes = [
 
 const possibleComments = ["this is a comment", "this comment has ''embedded'' quotes", ""];
 
+const nullabilitiyStrings = ["", "NULL", "NOT NULL"];
+
 describe("relation_column_parser.ts", () => {
   const fieldDefaults = {
     relationName: "my_table",
@@ -50,64 +52,75 @@ describe("relation_column_parser.ts", () => {
     describe("simple types and arrays thereof", () => {
       for (const type of primitiveDataTypes) {
         for (const comment of possibleComments) {
-          it(`${type} comment: ${comment}`, () => {
-            let fdtWithComment = type;
-            if (comment) {
-              fdtWithComment = `${type} '${comment}'`;
-            }
-            const col = relationColumnFactory({
-              ...fieldDefaults,
-              name: "my_col",
-              fullDataType: fdtWithComment,
-              comment: null,
-            });
-            assert.ok(
-              col instanceof FlinkRelationColumn &&
-                !(col instanceof CompositeFlinkRelationColumn) &&
-                !(col instanceof MapFlinkRelationColumn),
-              "Is simple FlinkRelationColumn",
-            );
-            assert.strictEqual(col.name, "my_col", "Name");
-            assert.strictEqual(col.simpleDataType, type, "Simple data type");
-            assert.strictEqual(col.fullDataType, type, "Full data type");
-            assert.strictEqual(col.isNullable, false, "Nullable");
-            assert.strictEqual(col.isArray, false, "Is not an array");
-            if (comment) {
-              assert.strictEqual(col.comment, expectedComment(comment), "Comment");
-            } else {
-              assert.strictEqual(col.comment, null, "Comment null");
-            }
-          });
+          for (const toplevelNullability of nullabilitiyStrings) {
+            it(`${type} nullability: ${toplevelNullability} comment: ${comment}`, () => {
+              let fdtWithComment = type;
 
-          it(`ARRAY of ${type}, comment ${comment}`, () => {
-            let fdtWithComment = `Array<${type}>`;
-            if (comment) {
-              fdtWithComment = `${fdtWithComment} '${comment}'`;
-            }
+              if (toplevelNullability !== "") {
+                fdtWithComment = `${fdtWithComment} ${toplevelNullability}`;
+              }
 
-            const col = relationColumnFactory({
-              ...fieldDefaults,
-              name: "array_my_col",
-              fullDataType: fdtWithComment,
-              comment: null,
+              if (comment) {
+                fdtWithComment = `${fdtWithComment} '${comment}'`;
+              }
+              const col = relationColumnFactory({
+                ...fieldDefaults,
+                name: "my_col",
+                fullDataType: fdtWithComment,
+                comment: null,
+              });
+              assert.ok(
+                col instanceof FlinkRelationColumn &&
+                  !(col instanceof CompositeFlinkRelationColumn) &&
+                  !(col instanceof MapFlinkRelationColumn),
+                "Is simple FlinkRelationColumn",
+              );
+              assert.strictEqual(col.name, "my_col", "Name");
+              assert.strictEqual(col.simpleDataType, type, "Simple data type");
+              assert.strictEqual(col.fullDataType, type, "Full data type");
+              assert.strictEqual(
+                col.isNullable,
+                expectedNullability(toplevelNullability),
+                "Nullable",
+              );
+              assert.strictEqual(col.isArray, false, "Is not an array");
+              if (comment) {
+                assert.strictEqual(col.comment, expectedComment(comment), "Comment");
+              } else {
+                assert.strictEqual(col.comment, null, "Comment null");
+              }
             });
-            assert.ok(
-              col instanceof FlinkRelationColumn &&
-                !(col instanceof MapFlinkRelationColumn) &&
-                !(col instanceof CompositeFlinkRelationColumn),
-              "Is FlinkRelationColumn",
-            );
-            assert.strictEqual(col.isArray, true, "Is array");
-            assert.strictEqual(col.name, "array_my_col", "Name");
-            assert.strictEqual(col.simpleDataType, type, "Simple data type");
-            assert.strictEqual(col.simpleTypeWithArray, `ARRAY<${type}>`, "Data type");
-            assert.strictEqual(col.isNullable, false, "Nullable");
-            if (comment) {
-              assert.strictEqual(col.comment, expectedComment(comment), "Comment preserved");
-            } else {
-              assert.strictEqual(col.comment, null, "Comment null");
-            }
-          });
+
+            it(`ARRAY of ${type}, comment ${comment}`, () => {
+              let fdtWithComment = `Array<${type}>`;
+              if (comment) {
+                fdtWithComment = `${fdtWithComment} '${comment}'`;
+              }
+
+              const col = relationColumnFactory({
+                ...fieldDefaults,
+                name: "array_my_col",
+                fullDataType: fdtWithComment,
+                comment: null,
+              });
+              assert.ok(
+                col instanceof FlinkRelationColumn &&
+                  !(col instanceof MapFlinkRelationColumn) &&
+                  !(col instanceof CompositeFlinkRelationColumn),
+                "Is FlinkRelationColumn",
+              );
+              assert.strictEqual(col.isArray, true, "Is array");
+              assert.strictEqual(col.name, "array_my_col", "Name");
+              assert.strictEqual(col.simpleDataType, type, "Simple data type");
+              assert.strictEqual(col.simpleTypeWithArray, `ARRAY<${type}>`, "Data type");
+              assert.strictEqual(col.isNullable, false, "Nullable");
+              if (comment) {
+                assert.strictEqual(col.comment, expectedComment(comment), "Comment preserved");
+              } else {
+                assert.strictEqual(col.comment, null, "Comment null");
+              }
+            });
+          }
         }
       }
     });
@@ -288,4 +301,12 @@ describe("relation_column_parser.ts", () => {
 function expectedComment(comment: string): string {
   // replace doubled single quotes with single quotes
   return comment.replace(/''/g, "'");
+}
+
+function expectedNullability(nullability: string): boolean {
+  if (nullability === "NULL") {
+    return true;
+  } else {
+    return false;
+  }
 }
