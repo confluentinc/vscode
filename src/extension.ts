@@ -204,7 +204,6 @@ async function _activateExtension(
   context.subscriptions.push(settingsListener);
 
   // set up the different view providers
-
   const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
@@ -212,16 +211,8 @@ async function _activateExtension(
   const artifactsViewProvider = FlinkDatabaseViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
 
+  // ...and any panel view providers
   const flinkStatementResultsPanelProvider = FlinkStatementResultsPanelProvider.getInstance();
-  const flinkStatementResultsPanelRegistration = vscode.window.registerWebviewViewProvider(
-    "confluent-flink-statement-results-panel",
-    flinkStatementResultsPanelProvider,
-    {
-      webviewOptions: {
-        retainContextWhenHidden: true, // keep webview state when panel is collapsed/hidden
-      },
-    },
-  );
 
   const viewProviderDisposables: vscode.Disposable[] = [
     resourceViewProvider,
@@ -231,7 +222,6 @@ async function _activateExtension(
     statementsViewProvider,
     artifactsViewProvider,
     flinkStatementResultsPanelProvider,
-    flinkStatementResultsPanelRegistration,
   ];
   logger.info("View providers initialized");
   // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update

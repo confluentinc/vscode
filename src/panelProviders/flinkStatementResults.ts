@@ -8,6 +8,7 @@ import {
   type Webview,
   type WebviewView,
   type WebviewViewProvider,
+  window,
 } from "vscode";
 import { DEFAULT_RESULT_LIMIT } from "../commands/utils/statements";
 import { getExtensionContext } from "../context/extension";
@@ -49,7 +50,19 @@ export class FlinkStatementResultsPanelProvider
       // extension context required for looking up extension URI
       throw new ExtensionContextNotSetError("FlinkStatementResultsPanelProvider");
     }
+
     this.extensionUri = context.extensionUri;
+
+    const viewProviderRegistration = window.registerWebviewViewProvider(
+      "confluent-flink-statement-results-panel",
+      this,
+      {
+        webviewOptions: {
+          retainContextWhenHidden: true, // keep webview state when panel is collapsed/hidden
+        },
+      },
+    );
+    this.disposables.push(viewProviderRegistration);
   }
 
   private static instance: FlinkStatementResultsPanelProvider | null = null;
