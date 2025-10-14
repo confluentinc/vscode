@@ -816,11 +816,6 @@
         "icon": "$(cloud-upload)",
         "title": "Upload Flink Artifact to Confluent Cloud",
         "category": "Confluent: Flink Artifacts"
-      },
-      {
-        "command": "confluent.highlightArtifact",
-        "title": "Highlight Artifact",
-        "category": "Confluent: Flink Artifacts"
       }
     ],
     "configuration": [
