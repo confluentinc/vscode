@@ -61,9 +61,9 @@ export async function uploadArtifactCommand(
           void showInfoNotificationWithButtons(
             `Artifact "${response.display_name}" uploaded successfully to Confluent Cloud.`,
             {
-              "Register UDFs": () => {
+              "Register UDFs": async () => {
                 /* Call register prompt */
-                void detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
+                await detectClassesAndRegisterUDFs({ selectedFile: params.selectedFile });
                 logger.debug(`User wants to register UDFs for artifact: ${params.artifactName}`);
               },
             },
