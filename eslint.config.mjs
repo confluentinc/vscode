@@ -42,6 +42,8 @@ export default [
       "@typescript-eslint/no-redeclare": "error",
       // require awaiting or .then() chaining for promises
       "@typescript-eslint/no-floating-promises": "warn",
+      // suggest type imports where possible
+      "@typescript-eslint/consistent-type-imports": "warn",
       // ignore line endings between Windows and Unix
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
