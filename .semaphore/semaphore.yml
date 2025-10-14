@@ -176,6 +176,11 @@ blocks:
           env_vars:
             - name: VSCODE_VERSION
               value: stable
+        - name: "Playwright: E2E Smoke Tests (VS Code)"
+          commands:
+            - npm ci --prefer-offline --include=dev
+            - npx playwright install
+            - npx gulp test-playwright-e2e -- TEST_SUITE=@smoke
       epilogue:
         always:
           commands:
