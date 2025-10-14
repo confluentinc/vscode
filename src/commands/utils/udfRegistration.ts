@@ -11,7 +11,10 @@ import { validateUdfInput } from "./uploadArtifactOrUDF";
 
 const logger = new Logger("commands.utils.udfRegistration");
 
-export async function detectClassesAndRegisterUDFs(params: { selectedFile: Uri }) {
+export async function detectClassesAndRegisterUDFs(
+  params: { selectedFile: Uri },
+  artifactId?: string,
+) {
   const classNames = await inspectJarClasses(params.selectedFile);
   if (classNames && classNames.length > 0) {
     logger.debug(`Found ${classNames.length} classes in the JAR file.`);
@@ -25,7 +28,11 @@ export async function detectClassesAndRegisterUDFs(params: { selectedFile: Uri }
     if (!registrations || registrations.length === 0) {
       return; // User cancelled or provided no function names
     }
-    logger.debug(`User provided ${registrations.length} function names.`);
+    try {
+      await registerMultipleUdfs(registrations, artifactId);
+    } catch (error) {
+      logger.error("Error during UDF registration:", error);
+    }
   } else {
     logger.debug("No Java classes found in JAR file.");
   }
