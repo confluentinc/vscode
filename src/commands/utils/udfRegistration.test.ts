@@ -73,6 +73,33 @@ describe("commands/utils/udfRegistration", () => {
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.notCalled(quickPickStub);
     });
+
+    it("exits quietly when no function names are provided in user input", async () => {
+      const testUri = vscode.Uri.file("/tmp/functions.jar");
+      const jarClasses: jarInspector.JarClassInfo[] = [
+        { className: "org.example.AlphaFn", simpleName: "AlphaFn" },
+        { className: "org.example.BetaFn", simpleName: "BetaFn" },
+      ];
+      const inspectStub = sandbox.stub(jarInspector, "inspectJarClasses").resolves(jarClasses);
+      const quickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves([
+        { label: "AlphaFn", description: "org.example.AlphaFn", classInfo: jarClasses[0] },
+        { label: "BetaFn", description: "org.example.BetaFn", classInfo: jarClasses[1] },
+      ] as any);
+      // user cancels input for each function name so promptForFunctionNames yields []
+      const inputStub = sandbox
+        .stub(vscode.window, "showInputBox")
+        .onFirstCall()
+        .resolves(undefined)
+        .onSecondCall()
+        .resolves(undefined);
+
+      const result = await detectClassesAndRegisterUDFs({ selectedFile: testUri });
+
+      sinon.assert.calledOnce(inspectStub);
+      sinon.assert.calledOnce(quickPickStub);
+      sinon.assert.calledTwice(inputStub);
+      sinon.assert.match(result, undefined);
+    });
   });
 
   describe("promptForFunctionNames", () => {
