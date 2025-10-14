@@ -22,6 +22,7 @@ global_job_config:
   prologue:
     commands:
       - checkout
+      - make ci-bin-sem-cache-restore
 
 blocks:
   - name: "Linux x64: Playwright E2E Tests"
@@ -32,7 +33,6 @@ blocks:
           type: s1-prod-ubuntu24-04-amd64-1
       prologue: &e2e-prologue
         commands:
-          - make ci-bin-sem-cache-restore
           - make load-cached-docker-images
           - |
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
@@ -44,7 +44,7 @@ blocks:
         - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
           commands:
             - make test-playwright-e2e TEST_SUITE="$TEST_SUITE_TAG"
-          env_vars:
+          env_vars: &e2e-env-vars
             - name: FORCE_COLOR
               value: "1"
             - name: TERM
@@ -55,7 +55,7 @@ blocks:
           # - if TEST_SUITE is a single tag or empty, it creates one job
           # - if TEST_SUITE is "@ccloud|@direct", it creates two parallel jobs: one for @ccloud and one for @direct
           # (see https://docs.semaphoreci.com/reference/pipeline-yaml#matrix-in-jobs)
-          matrix:
+          matrix: &e2e-matrix
             - env_var: TEST_SUITE_TAG
               values: "%{{parameters.TEST_SUITE | splitList \"|\"}}"
       epilogue: &e2e-epilogue
@@ -76,6 +76,133 @@ blocks:
       prologue: *e2e-prologue
       jobs: *e2e-jobs
       epilogue: *e2e-epilogue
+
+  - name: "Windows x64: Playwright E2E Tests"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-windows
+      prologue:
+        commands:
+          - $Env:PATH += ";C:\Program Files\Git\bin"
+          - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+          # Ensure npm and npx are available
+          - npm --version
+          - npx --version
+          - choco install gh -y
+          - $Env:PATH += ";C:\Program Files\GitHub CLI\"
+          - gh --version
+          - |
+            if (Test-Path "$HOME/.gh-token") {
+              $Env:GH_TOKEN = Get-Content "$HOME/.gh-token" -Raw | ForEach-Object { $_.Trim() }
+              if ([string]::IsNullOrEmpty($Env:GH_TOKEN)) {
+                  Write-Error "Token file exists but is empty"
+                  exit 1
+              }
+              gh config set prompt disabled
+              $Env:GH_TOKEN | gh auth login --with-token
+              gh auth status
+            } else {
+                Write-Error "Token file not found at $HOME/.gh-token"
+                exit 1
+            }
+          - |
+            if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
+              Write-Output "Skipping Vault setup for Semaphore CI"
+            } else {
+              $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+              $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              vault login -no-print token=$token
+            }
+          # Check if Docker is available for @local tests
+          - |
+            Write-Output "Checking Docker availability..."
+            try {
+              $dockerVersion = docker --version 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                Write-Output "Docker is available: $dockerVersion"
+                make load-cached-docker-images
+              } else {
+                Write-Output "Docker is not available. @local tests will be skipped."
+              }
+            } catch {
+              Write-Output "Docker is not available. @local tests will be skipped."
+            }
+          # Windows version of make setup-test-env
+          - |
+            $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+            Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
+            $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
+            $E2E_KAFKA_API_KEY = $(vault kv get -field=E2E_KAFKA_API_KEY v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_KAFKA_API_KEY=$E2E_KAFKA_API_KEY"
+            $E2E_KAFKA_API_SECRET = $(vault kv get -field=E2E_KAFKA_API_SECRET v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_KAFKA_API_SECRET=$E2E_KAFKA_API_SECRET"
+            $E2E_SR_API_KEY = $(vault kv get -field=E2E_SR_API_KEY v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_SR_API_KEY=$E2E_SR_API_KEY"
+            $E2E_SR_API_SECRET = $(vault kv get -field=E2E_SR_API_SECRET v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_SR_API_SECRET=$E2E_SR_API_SECRET"
+            $E2E_SR_URL = $(vault kv get -field=E2E_SR_URL v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_SR_URL=$E2E_SR_URL"
+            $E2E_KAFKA_BOOTSTRAP_SERVERS = $(vault kv get -field=E2E_KAFKA_BOOTSTRAP_SERVERS v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_KAFKA_BOOTSTRAP_SERVERS=$E2E_KAFKA_BOOTSTRAP_SERVERS"
+      jobs:
+        - name: "Playwright: E2E Tests (VS Code ${{parameters.VSCODE_VERSION}})"
+          commands:
+            - npm ci --prefer-offline --include=dev
+            - npx playwright install
+            # Windows version of test-playwright-e2e, but exclude @local tests until Docker is available
+            - |
+              if ("$Env:TEST_SUITE_TAG" -ne "" -and "$Env:TEST_SUITE_TAG" -ne "TEST_SUITE_TAG") {
+                npx gulp e2e -t "$Env:TEST_SUITE_TAG" -x "@local"
+              } else {
+                npx gulp e2e -x "@local"
+              }
+          env_vars: *e2e-env-vars
+          matrix: *e2e-matrix
+      epilogue:
+        always:
+          commands:
+            - Remove-Item .env -ErrorAction SilentlyContinue
+            - make ci-bin-sem-cache-store
+            # Cache Docker images if Docker is available
+            - |
+              try {
+                docker --version 2>$null | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                  make cache-docker-images
+                }
+              } catch {
+                Write-Output "Docker not available, skipping Docker image caching"
+              }
+            # Windows version of store-test-results-to-semaphore and merge-blob-reports
+            - |
+              Write-Output "Publishing test results to Semaphore..."
+              $TestResultE2EFile = Join-Path -Path $PWD -ChildPath "TEST-result-e2e.xml"
+              if (Test-Path $TestResultE2EFile) {
+                  Write-Output "Publishing E2E test results from $TestResultE2EFile"
+                  test-results publish $TestResultE2EFile --name "E2E Tests" --force
+              } else {
+                  Write-Output "E2E test results not found at $TestResultE2EFile"
+              }
+            - |
+              Write-Output "Merging blob reports..."
+              if (Test-Path "blob-report") {
+                  npx playwright merge-reports --reporter html ./blob-report
+                  $VSCODE_VERSION = $Env:VSCODE_VERSION
+                  if ([string]::IsNullOrEmpty($Env:TEST_SUITE_TAG) -or $Env:TEST_SUITE_TAG -eq "TEST_SUITE_TAG") {
+                      $TEST_SUITE_NAME = "all"
+                  } else {
+                      $TEST_SUITE_NAME = $Env:TEST_SUITE_TAG -replace '@', ''
+                  }
+                  $FILENAME = "playwright-report-win32-x64-vscode-$VSCODE_VERSION--$TEST_SUITE_NAME.zip"
+                  Write-Output "Creating artifact: $FILENAME"
+                  Compress-Archive -Path playwright-report -DestinationPath $FILENAME -Force
+                  artifact push workflow $FILENAME --destination "playwright-reports/$FILENAME" --force
+              } else {
+                  Write-Output "No blob-report directory found, skipping merge"
+              }
 
 after_pipeline:
   task:
