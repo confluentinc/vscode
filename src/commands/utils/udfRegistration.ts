@@ -3,6 +3,7 @@ import { udfsChanged } from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { showInfoNotificationWithButtons } from "../../notifications";
+import { flinkDatabaseQuickpick } from "../../quickpicks/kafkaClusters";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
@@ -106,15 +107,22 @@ export async function registerMultipleUdfs(
   if (!artifactId) {
     throw new Error("Artifact ID is required to register UDFs.");
   }
-  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
-  const selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database;
-  if (!selectedFlinkDatabase) {
-    // FIXME NC handle this case - allow DB selection? since this flow can be started outside of Flink DB view
-    throw new Error("No Flink database selected.");
-  }
   if (registrations.length === 0) {
     throw new Error("No UDF registrations to process.");
   }
+
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  let selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database || undefined;
+  if (!selectedFlinkDatabase) {
+    selectedFlinkDatabase = await flinkDatabaseQuickpick(
+      undefined,
+      "Select the Flink database (Kafka cluster) where you want to register the UDFs",
+    );
+    if (!selectedFlinkDatabase) {
+      throw new Error("No Flink database selected.");
+    }
+  }
+
   await window.withProgress(
     {
       location: ProgressLocation.Notification,
