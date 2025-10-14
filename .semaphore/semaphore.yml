@@ -180,7 +180,7 @@ blocks:
           commands:
             - npm ci --prefer-offline --include=dev
             - npx playwright install
-            - npx gulp test-playwright-e2e -- TEST_SUITE=@smoke
+            - npx gulp e2e -t "@smoke"
       epilogue:
         always:
           commands:
