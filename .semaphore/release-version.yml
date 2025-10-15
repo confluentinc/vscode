@@ -48,8 +48,14 @@ blocks:
                 echo "ERROR: package.json version contains a micro-version or prerelease segment ($PKG_VERSION) but IS_PRERELEASE is false. Aborting."
                 exit 1
               fi
-            # Adjust RELEASE_NAME for prereleases, if necessary
+            # Ensure RELEASE_NAME is set and adjust for prereleases, if necessary
             - |
+              if [ -n "$RELEASE_NAME" ] && [ "$RELEASE_NAME" != "RELEASE_NAME" ]; then
+                echo "Using provided RELEASE_NAME: $RELEASE_NAME"
+              else
+                VERSION=$(cat .versions/next.txt)
+                RELEASE_NAME="v$VERSION"
+              fi
               if [ "$IS_PRERELEASE" = "true" ]; then
                 if [[ "$RELEASE_NAME" != *"-pre"* ]]; then
                   RELEASE_NAME="${RELEASE_NAME}-pre"
