@@ -6,7 +6,7 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_FLINK_DB_KAFKA_CLUSTER,
 } from "../../../tests/unit/testResources";
-import * as loaders from "../../loaders";
+import type * as loaders from "../../loaders";
 import { CloudProvider } from "../../models/resource";
 import * as regionsQuickPick from "../../quickpicks/cloudProviderRegions";
 import * as environmentsQuickPick from "../../quickpicks/environments";

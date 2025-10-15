@@ -2,12 +2,14 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
 import { StubbedWorkspaceConfiguration } from "../../../tests/stubs/workspaceConfiguration";
-import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
+import type { ContainerInspectResponse, ContainerSummary } from "../../clients/docker";
+import { ResponseError } from "../../clients/docker";
 import { LOCAL_KAFKA_IMAGE, LOCAL_SCHEMA_REGISTRY_IMAGE } from "../../extensionSettings/constants";
 import { Logger } from "../../logging";
 import * as dockerContainers from "../containers";
 import * as dockerImages from "../images";
-import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
+import type { LocalResourceContainer } from "./base";
+import { LocalResourceWorkflow } from "./base";
 import { ConfluentLocalWorkflow } from "./confluent-local";
 import { registerLocalResourceWorkflows } from "./workflowInitialization";
 

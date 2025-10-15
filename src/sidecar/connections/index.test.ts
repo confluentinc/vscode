@@ -5,8 +5,8 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
+import type { Connection } from "../../clients/sidecar";
 import {
-  Connection,
   ConnectionFromJSON,
   ConnectionSpecToJSON,
   ConnectionsResourceApi,
@@ -19,7 +19,7 @@ import {
   tryToGetConnection,
   tryToUpdateConnection,
 } from ".";
-import { SidecarHandle } from "..";
+import type { SidecarHandle } from "..";
 import { getSidecarStub } from "../../../tests/stubs/sidecar";
 
 describe("sidecar/connections/index.ts", () => {

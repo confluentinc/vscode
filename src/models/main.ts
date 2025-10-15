@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { ISearchable } from "./resource";
+import type { ISearchable } from "./resource";
 
 /** Anything with an `id` string property */
 export interface IdItem {

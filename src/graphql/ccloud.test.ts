@@ -4,7 +4,7 @@ import * as sinon from "sinon";
 import { getShowErrorNotificationWithButtonsStub } from "../../tests/stubs/notifications";
 import { getSidecarStub } from "../../tests/stubs/sidecar";
 
-import { SidecarHandle } from "../sidecar";
+import type { SidecarHandle } from "../sidecar";
 import { getCCloudResources } from "./ccloud";
 
 describe("ccloud.ts getCCloudResources()", () => {

@@ -1,5 +1,6 @@
-import { Uri, Position as VSPosition, Range as VSRange } from "vscode";
-import {
+import type { Uri } from "vscode";
+import { Position as VSPosition, Range as VSRange } from "vscode";
+import type {
   BaseASTNode,
   JSONSchema,
   Position as LSPosition,

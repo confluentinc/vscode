@@ -1,13 +1,14 @@
 import * as assert from "assert";
 import "mocha";
 import * as sinon from "sinon";
-import { Tail } from "tail";
+import type { Tail } from "tail";
 import * as errors from "../errors";
 import * as fsWrappers from "../utils/fsWrappers";
 import { SidecarFatalError } from "./errors";
 import * as sidecarLogging from "./logging";
 import { SidecarManager } from "./sidecarManager";
-import { SidecarLogFormat, SidecarOutputs, SidecarStartupFailureReason } from "./types";
+import type { SidecarLogFormat, SidecarOutputs } from "./types";
+import { SidecarStartupFailureReason } from "./types";
 import * as utils from "./utils";
 
 describe("sidecarManager.ts", () => {

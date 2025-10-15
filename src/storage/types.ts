@@ -1,6 +1,7 @@
+import type { Memento } from "vscode";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExtensionContext, Memento } from "vscode";
-import { UriMetadataKeys } from "./constants";
+import { ExtensionContext } from "vscode";
+import type { UriMetadataKeys } from "./constants";
 
 /** Record that uses any {@link UriMetadataKeys} value for its keys.  */
 export type UriMetadata = Partial<Record<UriMetadataKeys, any>>;

@@ -5,9 +5,9 @@ import {
   makeUdfFunctionRow,
   makeUdfParameterRow,
 } from "../../../tests/unit/testResources/makeUdfRow";
+import type { RawUdfSystemCatalogRow } from "./udfSystemCatalogQuery";
 import {
   getUdfSystemCatalogQuery,
-  RawUdfSystemCatalogRow,
   sortUdfSystemCatalogRows,
   transformUdfSystemCatalogRows,
 } from "./udfSystemCatalogQuery";

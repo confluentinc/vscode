@@ -9,15 +9,14 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { CustomMarkdownString } from "./main";
-import {
+import type {
   ConnectionId,
-  connectionIdToType,
   EnvironmentId,
   IResourceBase,
-  isCCloud,
   ISchemaRegistryResource,
   ISearchable,
 } from "./resource";
+import { connectionIdToType, isCCloud } from "./resource";
 
 export abstract class SchemaRegistry
   extends Data

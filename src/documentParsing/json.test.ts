@@ -1,7 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { BaseASTNode, Position as LSPosition, TextDocument } from "vscode-json-languageservice";
+import type {
+  BaseASTNode,
+  Position as LSPosition,
+  TextDocument,
+} from "vscode-json-languageservice";
 import * as validateDocument from "../diagnostics/validateDocument";
 import * as fileUtils from "../utils/file";
 import { convertToVSPosition, createRange, getRangeForDocument } from "./json";

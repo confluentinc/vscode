@@ -1,10 +1,10 @@
 import { commands } from "vscode";
 import { SubjectNameStrategy } from "../../diagnostics/produceMessage";
 import { USE_TOPIC_NAME_STRATEGY } from "../../extensionSettings/constants";
-import { ResourceLoader } from "../../loaders";
-import { Subject } from "../../models/schema";
-import { SchemaRegistry } from "../../models/schemaRegistry";
-import { KafkaTopic } from "../../models/topic";
+import type { ResourceLoader } from "../../loaders";
+import type { Subject } from "../../models/schema";
+import type { SchemaRegistry } from "../../models/schemaRegistry";
+import type { KafkaTopic } from "../../models/topic";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   showErrorNotificationWithButtons,

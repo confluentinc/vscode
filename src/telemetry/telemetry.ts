@@ -1,6 +1,7 @@
-import * as vscode from "vscode";
-import { UserInfo } from "../clients/sidecar/models/UserInfo";
-import { logUsage, UserEvent } from "./events";
+import type * as vscode from "vscode";
+import type { UserInfo } from "../clients/sidecar/models/UserInfo";
+import type { UserEvent } from "./events";
+import { logUsage } from "./events";
 
 /** Given authenticated session and/or userInfo, clean the data & send an Identify event to Segment via TelemetryLogger
  * @param eventName - The event name to be sent to Segment as a follow up per docs: "follow the Identify call with a Track event that records what caused the user to be identified"

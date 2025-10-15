@@ -1,22 +1,23 @@
-import { Scope, Signal } from "inertial";
+import type { Scope, Signal } from "inertial";
 import * as vscode from "vscode";
-import {
-  FetchError,
+import type {
   GetSqlv1StatementResult200Response,
   SqlV1ResultSchema,
   SqlV1StatementResultResults,
   StatementResultsSqlV1Api,
   StatementsSqlV1Api,
 } from "../clients/flinkSql";
+import { FetchError } from "../clients/flinkSql";
 import { showJsonPreview } from "../documentProviders/message";
 import { isResponseError, isResponseErrorWithStatus, logError } from "../errors";
 import { CCloudResourceLoader } from "../loaders/ccloudResourceLoader";
 import { Logger } from "../logging";
-import { FlinkStatement } from "../models/flinkStatement";
+import type { FlinkStatement } from "../models/flinkStatement";
 import { showErrorNotificationWithButtons } from "../notifications";
-import { SidecarHandle } from "../sidecar";
-import { ViewMode } from "./flinkStatementResultColumns";
-import { StatementResultsRow, parseResults } from "./flinkStatementResults";
+import type { SidecarHandle } from "../sidecar";
+import type { ViewMode } from "./flinkStatementResultColumns";
+import type { StatementResultsRow } from "./flinkStatementResults";
+import { parseResults } from "./flinkStatementResults";
 import { extractPageToken } from "./utils";
 
 const logger = new Logger("flink-statement-results");

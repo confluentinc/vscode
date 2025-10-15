@@ -1,11 +1,5 @@
-import {
-  Disposable,
-  env,
-  InputBoxValidationMessage,
-  InputBoxValidationSeverity,
-  Uri,
-  window,
-} from "vscode";
+import type { Disposable, InputBoxValidationMessage } from "vscode";
+import { env, InputBoxValidationSeverity, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { UriEventHandler } from "../uriHandler";

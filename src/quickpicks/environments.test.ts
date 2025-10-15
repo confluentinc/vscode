@@ -6,7 +6,7 @@ import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/f
 import { IconNames } from "../constants";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { EnvironmentId } from "../models/resource";
+import type { EnvironmentId } from "../models/resource";
 import * as connections from "../sidecar/connections/ccloud";
 import { ccloudEnvironmentQuickPick, flinkCcloudEnvironmentQuickPick } from "./environments";
 

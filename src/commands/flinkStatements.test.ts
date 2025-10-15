@@ -2,7 +2,7 @@ import assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 
-import { TextDocument } from "vscode-json-languageservice";
+import type { TextDocument } from "vscode-json-languageservice";
 import { eventEmitterStubs } from "../../tests/stubs/emitters";
 import { getStubbedCCloudResourceLoader } from "../../tests/stubs/resourceLoaders";
 import {
@@ -15,10 +15,11 @@ import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatem
 import * as flinkCodeLens from "../codelens/flinkSqlProvider";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
 import * as statementUtils from "../flinkSql/statementUtils";
-import { CCloudResourceLoader } from "../loaders";
+import type { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
-import { FlinkStatement, Phase } from "../models/flinkStatement";
-import { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
+import type { FlinkStatement } from "../models/flinkStatement";
+import { Phase } from "../models/flinkStatement";
+import type { CCloudFlinkDbKafkaCluster } from "../models/kafkaCluster";
 import * as notifications from "../notifications";
 import { UriMetadataKeys } from "../storage/constants";
 import { ResourceManager } from "../storage/resourceManager";

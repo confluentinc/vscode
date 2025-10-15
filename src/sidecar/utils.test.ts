@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as errorsModule from "../errors";
 import * as notifications from "../notifications";
-import { NotificationButtons } from "../notifications";
+import type { NotificationButtons } from "../notifications";
 import * as eventsModule from "../telemetry/events";
 import { WriteableTmpDir } from "../utils/file";
 import { MOMENTARY_PAUSE_MS } from "./constants";

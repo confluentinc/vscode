@@ -1,4 +1,4 @@
-import { SecretStorage } from "vscode";
+import type { SecretStorage } from "vscode";
 import { Logger } from "../../logging";
 import { SecretStorageKeys } from "../constants";
 import { mapToString } from "../resourceManager";

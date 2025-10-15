@@ -1,5 +1,8 @@
 import { ObservableScope } from "inertial";
-import { ScaffoldV1TemplateOption, ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import type {
+  ScaffoldV1TemplateOption,
+  ScaffoldV1TemplateSpec,
+} from "../clients/scaffoldingService";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";

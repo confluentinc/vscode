@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { ConnectedState, Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
+import type { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
+import { ConnectedState } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated, stableCCloudConnectedState } from "../emitters";
 import { Logger } from "../logging";

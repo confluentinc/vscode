@@ -11,7 +11,7 @@ import { TEST_DIRECT_CONNECTION_ID } from "../../tests/unit/testResources/connec
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as directGraphQl from "../graphql/direct";
 import { DirectEnvironment } from "../models/environment";
-import { EnvironmentId } from "../models/resource";
+import type { EnvironmentId } from "../models/resource";
 import { DirectResourceLoader } from "./directResourceLoader";
 
 describe("DirectResourceLoader", () => {

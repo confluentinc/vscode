@@ -1,5 +1,6 @@
-import { Disposable, lm } from "vscode";
-import { BaseLanguageModelTool } from "./base";
+import type { Disposable } from "vscode";
+import { lm } from "vscode";
+import type { BaseLanguageModelTool } from "./base";
 import { CreateProjectTool } from "./createProject";
 import { GetConnectionsTool } from "./getConnections";
 import { GetDockerContainersTool } from "./getDockerContainers";

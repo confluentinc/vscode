@@ -1,15 +1,14 @@
 import { MarkdownString } from "vscode";
-import {
+import type {
   CCloudStatus,
-  ConnectedState,
   Connection,
-  ConnectionType,
   KafkaClusterConfig,
   KafkaClusterStatus,
   LocalConfig,
   SchemaRegistryConfig,
   SchemaRegistryStatus,
 } from "../../clients/sidecar";
+import { ConnectedState, ConnectionType } from "../../clients/sidecar";
 import { ContextValues, getContextValue } from "../../context/values";
 
 /** Create a string representation of a {@link Connection} object. */

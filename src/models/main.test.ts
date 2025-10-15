@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
-import { ContainerTreeItem, IdItem } from "./main";
-import { ISearchable } from "./resource";
+import type { IdItem } from "./main";
+import { ContainerTreeItem } from "./main";
+import type { ISearchable } from "./resource";
 
 /** Mock class to be used as a child of a {@link ContainerTreeItem} for testing. */
 class MockContainerChild implements IdItem, ISearchable {
