@@ -1,6 +1,7 @@
 import { Uri, window } from "vscode";
 import { Logger } from "../../logging";
 import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
+import { validateUdfInput } from "./uploadArtifactOrUDF";
 
 const logger = new Logger("commands.utils.udfRegistration");
 
@@ -14,8 +15,13 @@ export async function detectClassesAndRegisterUDFs(params: { selectedFile: Uri }
       return; // User cancelled or selected no classes
     }
     logger.debug(`User selected ${selectedClasses.length} classes for UDF registration.`);
+    const registrations = await promptForFunctionNames(selectedClasses);
+    if (!registrations || registrations.length === 0) {
+      return; // User cancelled or provided no function names
+    }
+    logger.debug(`User provided ${registrations.length} function names.`);
   } else {
-    logger.debug("No Java classes selected.");
+    logger.debug("No Java classes found in JAR file.");
   }
 }
 /**
@@ -40,4 +46,45 @@ export async function selectClassesForUdfRegistration(
   });
 
   return selectedItems?.map((item) => item.classInfo);
+}
+export interface UdfRegistrationData {
+  /** The class to register as a UDF */
+  classInfo: JarClassInfo;
+  /** The function name to use for the UDF */
+  functionName: string;
+}
+/**
+ * Prompts the user for function names for each selected class.
+ * @param selectedClasses The classes selected for UDF registration
+ * @returns Promise that resolves to UDF registration data or undefined if cancelled
+ */
+export async function promptForFunctionNames(
+  selectedClasses: JarClassInfo[],
+): Promise<UdfRegistrationData[] | undefined> {
+  const registrations: UdfRegistrationData[] = [];
+  const functionNameRegex = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+
+  for (const classInfo of selectedClasses) {
+    // Generate a default function name based on the simple class name
+    let defaultFunctionName = classInfo.simpleName.toLowerCase().replace(/\W/g, "_");
+
+    const functionName = await window.showInputBox({
+      title: `Function Name for ${classInfo.simpleName}`,
+      prompt: `Enter a function name for class "${classInfo.className}"`,
+      value: defaultFunctionName,
+      validateInput: (value) => validateUdfInput(value, functionNameRegex),
+      ignoreFocusOut: true,
+    });
+
+    if (functionName === undefined) {
+      // User cancelled name input; continue to other classes but don't push undefined name to registrations
+      continue;
+    } else {
+      registrations.push({
+        classInfo,
+        functionName: functionName.trim(),
+      });
+    }
+  }
+  return registrations;
 }
