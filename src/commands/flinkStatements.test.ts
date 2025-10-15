@@ -13,7 +13,7 @@ import {
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { createFlinkStatement } from "../../tests/unit/testResources/flinkStatement";
 import * as flinkCodeLens from "../codelens/flinkSqlProvider";
-import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import { FLINK_SQL_LANGUAGE_ID } from "../flinkSql/constants";
 import * as statementUtils from "../flinkSql/statementUtils";
 import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
@@ -45,6 +45,7 @@ describe("commands/flinkStatements.ts", () => {
 
   describe("viewStatementSqlCommand", () => {
     let getCatalogDatabaseFromMetadataStub: sinon.SinonStub;
+    let openTextDocumentStub: sinon.SinonStub;
     let showTextDocumentStub: sinon.SinonStub;
     let setUriMetadataStub: sinon.SinonStub;
 
@@ -53,6 +54,7 @@ describe("commands/flinkStatements.ts", () => {
         flinkCodeLens,
         "getCatalogDatabaseFromMetadata",
       );
+      openTextDocumentStub = sandbox.stub(vscode.workspace, "openTextDocument");
       showTextDocumentStub = sandbox.stub(vscode.window, "showTextDocument");
       setUriMetadataStub = sandbox.stub(ResourceManager.getInstance(), "setUriMetadata");
     });
@@ -67,7 +69,7 @@ describe("commands/flinkStatements.ts", () => {
       assert.strictEqual(result, undefined);
     });
 
-    it("should open a read-only document for a FlinkStatement", async () => {
+    it("should open an untitled document for a FlinkStatement", async () => {
       const testPool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       const testEnv = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
@@ -79,11 +81,17 @@ describe("commands/flinkStatements.ts", () => {
         catalog: testEnv,
         database: TEST_CCLOUD_KAFKA_CLUSTER,
       });
+      const testSqlStatement = "SELECT * FROM my_test_flink_statement_table";
+      const testDoc = {
+        language: FLINK_SQL_LANGUAGE_ID,
+        content: testSqlStatement,
+        uri: vscode.Uri.parse("untitled:SELECT1"),
+      } as unknown as TextDocument;
+      openTextDocumentStub.resolves(testDoc);
 
       const statement = createFlinkStatement({
-        sqlStatement: "SELECT * FROM my_test_flink_statement_table",
+        sqlStatement: testSqlStatement,
       });
-      const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
 
       await viewStatementSqlCommand(statement);
 
@@ -103,11 +111,11 @@ describe("commands/flinkStatements.ts", () => {
 
       sinon.assert.calledOnce(showTextDocumentStub);
       const document: TextDocument = showTextDocumentStub.firstCall.args[0];
-      assert.strictEqual(document.uri.toString(), uri.toString());
+      assert.strictEqual(vscode.Uri.parse(document.uri).scheme, "untitled");
       sinon.assert.calledWithExactly(showTextDocumentStub, document, { preview: false });
     });
 
-    it("should set Uri metadata before opening the document", async () => {
+    it("should set Uri metadata before showing the document", async () => {
       const testPool = TEST_CCLOUD_FLINK_COMPUTE_POOL;
       const testEnv = new CCloudEnvironment({
         ...TEST_CCLOUD_ENVIRONMENT,
@@ -119,18 +127,29 @@ describe("commands/flinkStatements.ts", () => {
         catalog: testEnv,
         database: TEST_CCLOUD_KAFKA_CLUSTER,
       });
+      const testSqlStatement = "SELECT * FROM my_test_flink_statement_table";
+      const testDoc = {
+        language: FLINK_SQL_LANGUAGE_ID,
+        content: testSqlStatement,
+        uri: vscode.Uri.parse("untitled:SELECT1"),
+      } as unknown as TextDocument;
+      openTextDocumentStub.resolves(testDoc);
 
       const statement = createFlinkStatement({
-        sqlStatement: "SELECT * FROM my_test_flink_statement_table",
+        sqlStatement: testSqlStatement,
       });
-      const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
 
       await viewStatementSqlCommand(statement);
 
+      sinon.assert.calledOnce(openTextDocumentStub);
+      sinon.assert.calledOnceWithExactly(openTextDocumentStub, {
+        language: FLINK_SQL_LANGUAGE_ID,
+        content: statement.sqlStatement,
+      });
       sinon.assert.calledOnce(setUriMetadataStub);
       const callArgs = setUriMetadataStub.firstCall.args;
       assert.strictEqual(callArgs.length, 2);
-      assert.strictEqual(callArgs[0].toString(), uri.toString());
+      assert.strictEqual(callArgs[0].toString(), testDoc.uri.toString());
       assert.deepStrictEqual(callArgs[1], {
         [UriMetadataKeys.FLINK_COMPUTE_POOL_ID]: statement.computePoolId,
         [UriMetadataKeys.FLINK_CATALOG_ID]: TEST_CCLOUD_ENVIRONMENT.id,
@@ -138,6 +157,7 @@ describe("commands/flinkStatements.ts", () => {
         [UriMetadataKeys.FLINK_DATABASE_ID]: TEST_CCLOUD_KAFKA_CLUSTER.id,
         [UriMetadataKeys.FLINK_DATABASE_NAME]: statement.database,
       });
+      sinon.assert.callOrder(openTextDocumentStub, setUriMetadataStub, showTextDocumentStub);
     });
   });
 
