@@ -130,6 +130,24 @@ export class FlinkUdf implements IResourceBase, IdItem, ISearchable {
   }
 }
 
+export type FlinkRelationColumnProps = Pick<
+  FlinkRelationColumn,
+  | "relationName"
+  | "name"
+  | "fullDataType"
+  | "distributionKeyNumber"
+  | "isGenerated"
+  | "isPersisted"
+  | "isHidden"
+  | "metadataKey"
+  | "comment"
+> & {
+  isNullable?: boolean;
+  isArray?: boolean;
+  isArrayMemberNullable?: boolean;
+  arrayDimensions?: number;
+};
+
 /** Represents a column of a Flink table or view. */
 export class FlinkRelationColumn {
   /** Name of the containing relation */
@@ -151,33 +169,18 @@ export class FlinkRelationColumn {
   readonly isArray: boolean;
   /** If the column is an array, are the array members themselves nullable? */
   readonly isArrayMemberNullable: boolean;
+  /** If the column is an array, how many dimensions does it have? */
+  readonly arrayDimensions: number | null;
   readonly comment: string | null;
 
   /** If a metadata column, what Kafka topic metadata key does it map to? */
   readonly metadataKey: string | null;
 
-  constructor(
-    props: Pick<
-      FlinkRelationColumn,
-      | "relationName"
-      | "name"
-      | "fullDataType"
-      | "isNullable"
-      | "distributionKeyNumber"
-      | "isGenerated"
-      | "isPersisted"
-      | "isHidden"
-      | "metadataKey"
-      | "comment"
-    > & {
-      isArray?: boolean;
-      isArrayMemberNullable?: boolean;
-    },
-  ) {
+  constructor(props: FlinkRelationColumnProps) {
     this.relationName = props.relationName;
     this.name = props.name;
     this.fullDataType = props.fullDataType;
-    this.isNullable = props.isNullable;
+    this.isNullable = props.isNullable === true;
     this.distributionKeyNumber = props.distributionKeyNumber;
     this.isGenerated = props.isGenerated;
     this.isPersisted = props.isPersisted;
@@ -189,6 +192,7 @@ export class FlinkRelationColumn {
       throw new Error("isArrayMemberNullable cannot be true if isArray is false");
     }
     this.isArrayMemberNullable = props.isArrayMemberNullable ?? false;
+    this.arrayDimensions = props.arrayDimensions ?? null;
   }
 
   get id(): string {
@@ -203,6 +207,11 @@ export class FlinkRelationColumn {
       return "ROW";
     }
 
+    // if is a MAP<...> type, just return "MAP"
+    if (type.startsWith("MAP<")) {
+      return "MAP";
+    }
+
     return type;
   }
 
@@ -214,10 +223,18 @@ export class FlinkRelationColumn {
     return ConnectionType.Ccloud;
   }
 
-  /** Return the simple datatype with possible ARRAY<> decoration. */
+  /** Return the simple datatype with possible ARRAY<> wrappings(s). */
   get simpleTypeWithArray(): string {
     if (this.isArray) {
-      return `ARRAY<${this.simpleDataType}>`;
+      const parts = [];
+      for (let i = 0; i < (this.arrayDimensions ?? 1); i++) {
+        parts.push("ARRAY<");
+      }
+      parts.push(this.simpleDataType);
+      for (let i = 0; i < (this.arrayDimensions ?? 1); i++) {
+        parts.push(">");
+      }
+      return parts.join("");
     }
     return this.simpleDataType;
   }
@@ -257,7 +274,9 @@ export class FlinkRelationColumn {
   get formattedSimpleDataType(): string {
     let desc = formatSqlType(this.simpleDataType);
     if (this.isArray) {
-      desc += "[]";
+      for (let i = 0; i < (this.arrayDimensions ?? 1); i++) {
+        desc += "[]";
+      }
     }
     return desc;
   }
@@ -340,21 +359,7 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
   readonly columns: FlinkRelationColumn[];
 
   constructor(
-    props: Pick<
-      FlinkRelationColumn,
-      | "relationName"
-      | "name"
-      | "fullDataType"
-      | "isNullable"
-      | "distributionKeyNumber"
-      | "isGenerated"
-      | "isPersisted"
-      | "isHidden"
-      | "metadataKey"
-      | "isArray"
-      | "isArrayMemberNullable"
-      | "comment"
-    > & {
+    props: FlinkRelationColumnProps & {
       columns: FlinkRelationColumn[];
     },
   ) {
@@ -380,21 +385,7 @@ export class MapFlinkRelationColumn extends FlinkRelationColumn {
   readonly valueColumn: FlinkRelationColumn;
 
   constructor(
-    props: Pick<
-      FlinkRelationColumn,
-      | "relationName"
-      | "name"
-      | "fullDataType"
-      | "isNullable"
-      | "distributionKeyNumber"
-      | "isGenerated"
-      | "isPersisted"
-      | "isHidden"
-      | "metadataKey"
-      | "isArray"
-      | "isArrayMemberNullable"
-      | "comment"
-    > & {
+    props: FlinkRelationColumnProps & {
       keyColumn: FlinkRelationColumn;
       valueColumn: FlinkRelationColumn;
     },

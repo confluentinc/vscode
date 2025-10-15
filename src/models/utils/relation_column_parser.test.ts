@@ -9,21 +9,10 @@ import { relationColumnFactory } from "./relation_column_parser";
 const primitiveDataTypes = [
   "BOOLEAN",
   "BYTES",
-  "VARBINARY",
-  "VARBINARY(255)",
-  "TINYINT",
-  "SMALLINT",
-  "INT",
-  "BIGINT",
-  "FLOAT",
-  "DOUBLE",
-  "DECIMAL",
-  "DECIMAL(5)",
   "DECIMAL(10, 2)",
   "INTERVAL DAY",
   "INTERVAL DAY TO SECOND",
   "INTERVAL DAY(p1) TO MINUTE",
-  "INTERVAL MINUTE",
   "NUMERIC",
   "CHAR",
   "CHAR(1)",
@@ -41,7 +30,6 @@ const nullabilitiyStrings = ["", "NULL", "NOT NULL"];
 describe("relation_column_parser.ts", () => {
   const fieldDefaults = {
     relationName: "my_table",
-    isNullable: false,
     distributionKeyNumber: null,
     isGenerated: false,
     isPersisted: true,
@@ -220,6 +208,28 @@ describe("relation_column_parser.ts", () => {
         assert.strictEqual(col.columns[1].isNullable, false, "Field 2 nullable");
       });
 
+      it("Row with nested ROW field", () => {
+        const col = relationColumnFactory({
+          ...fieldDefaults,
+          name: "my_row",
+          fullDataType:
+            "ROW<`f1` INT, `f2` ROW<`sf1` STRING, `sf2` INT> NULL 'inner f2 row comment'> 'outer row comment'",
+          comment: null,
+        });
+
+        assert.ok(
+          col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
+          "Is CompositeFlinkRelationColumn",
+        );
+
+        assert.strictEqual(col.columns[0].simpleDataType, "INT", "f1 type");
+        assert.strictEqual(col.columns[0].isNullable, false, "f1 nullability");
+        assert.strictEqual(col.columns[1].simpleDataType, "ROW", "f2 type");
+        assert.strictEqual(col.columns[1].isNullable, true, "f2 nullability");
+        assert.strictEqual(col.columns[1].comment, "inner f2 row comment", "f2 row comment");
+        assert.strictEqual(col.comment, "outer row comment");
+      });
+
       for (const rowComment of possibleComments) {
         for (const fieldComment of possibleComments) {
           it(`Row with nested array field, itself nullable, comment on the field: ${fieldComment}, comment on row: ${rowComment}`, () => {
@@ -274,47 +284,131 @@ describe("relation_column_parser.ts", () => {
       for (const individualRowNullable of nullabilitiyStrings) {
         for (const f2Nullable of nullabilitiyStrings) {
           for (const f2Comment of possibleComments) {
-            it(`Array of rows, f2 row member null string: ${f2Nullable}, row nullable: ${individualRowNullable}`, () => {
-              // An array of rows, each with two fields, the second of which may be nullable.
-              const fullDataType = `ARRAY<ROW<\`f1\` INT, \`f2\` STRING ${f2Nullable} ${f2Comment}> ${individualRowNullable}>`;
-              const col = relationColumnFactory({
-                ...fieldDefaults,
-                name: "my_row_array",
-                fullDataType: fullDataType,
-                comment: null,
+            for (const rowComment of possibleComments) {
+              it(`Array of rows, f2 row member null string: ${f2Nullable}, f2 comment ${f2Comment}, row nullable: ${individualRowNullable}, row comment ${rowComment}`, () => {
+                // An array of rows, each with two fields, the second of which may be nullable.
+                const fullDataType = `ARRAY<ROW<\`f1\` INT, \`f2\` STRING ${f2Nullable} ${f2Comment}> ${individualRowNullable} ${rowComment}>`;
+                const col = relationColumnFactory({
+                  ...fieldDefaults,
+                  name: "my_row_array",
+                  fullDataType: fullDataType,
+                  comment: null,
+                });
+                assert.ok(
+                  col instanceof CompositeFlinkRelationColumn &&
+                    !(col instanceof MapFlinkRelationColumn),
+                  "Is CompositeFlinkRelationColumn",
+                );
+                assert.strictEqual(col.name, "my_row_array", "Name");
+                assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
+                assert.strictEqual(col.isArray, true, "Is array");
+                assert.strictEqual(
+                  col.isArrayMemberNullable,
+                  expectedNullability(individualRowNullable),
+                  "whole row member is nullable",
+                );
+                assert.strictEqual(col.isNullable, false, "array as a whole is nullable");
+                assert.strictEqual(col.simpleTypeWithArray, "ARRAY<ROW>", "simpleTypeWithArray");
+                assert.strictEqual(col.comment, expectedComment(rowComment), "Row Comment");
+                assert.strictEqual(col.columns.length, 2, "Field count");
+                assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
+                assert.strictEqual(col.columns[0].fullDataType, "INT", "Field 1 data type");
+                assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
+                assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
+                assert.strictEqual(col.columns[1].fullDataType, "STRING", "Field 2 data type");
+                assert.strictEqual(
+                  col.columns[1].isNullable,
+                  expectedNullability(f2Nullable),
+                  "Field 2 nullable",
+                );
+                assert.strictEqual(
+                  col.columns[1].comment,
+                  expectedComment(f2Comment),
+                  "Field 2 comment",
+                );
               });
-              assert.ok(
-                col instanceof CompositeFlinkRelationColumn &&
-                  !(col instanceof MapFlinkRelationColumn),
-                "Is CompositeFlinkRelationColumn",
-              );
-              assert.strictEqual(col.name, "my_row_array", "Name");
-              assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
-              assert.strictEqual(col.isArray, true, "Is array");
-              assert.strictEqual(
-                col.isArrayMemberNullable,
-                expectedNullability(individualRowNullable),
-                "whole row member is nullable",
-              );
-              assert.strictEqual(col.isNullable, false, "array as a whole is nullable");
-              assert.strictEqual(col.simpleTypeWithArray, "ARRAY<ROW>", "simpleTypeWithArray");
-              assert.strictEqual(col.columns.length, 2, "Field count");
-              assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
-              assert.strictEqual(col.columns[0].fullDataType, "INT", "Field 1 data type");
-              assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
-              assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
-              assert.strictEqual(col.columns[1].fullDataType, "STRING", "Field 2 data type");
-              assert.strictEqual(
-                col.columns[1].isNullable,
-                expectedNullability(f2Nullable),
-                "Field 2 nullable",
-              );
-              assert.strictEqual(
-                col.columns[1].comment,
-                expectedComment(f2Comment),
-                "Field 2 comment",
-              );
+            }
+          }
+        }
+      }
+    });
+
+    describe("Multidimensional arrays", () => {
+      for (const arrayNullability of nullabilitiyStrings) {
+        for (const scalarNullability of nullabilitiyStrings) {
+          it(`Array of array of INT: scalar nullable: ${scalarNullability}; array nullability ${arrayNullability}`, () => {
+            const col = relationColumnFactory({
+              ...fieldDefaults,
+              name: "my_2d_array",
+              fullDataType: `ARRAY<ARRAY<INT ${scalarNullability}>> ${arrayNullability}`,
+              comment: null,
             });
+            assert.ok(
+              col instanceof FlinkRelationColumn &&
+                !(col instanceof CompositeFlinkRelationColumn) &&
+                !(col instanceof MapFlinkRelationColumn),
+              "Is FlinkRelationColumn",
+            );
+            assert.strictEqual(col.name, "my_2d_array", "Name");
+            assert.strictEqual(col.simpleDataType, "INT", "Simple data type");
+            assert.strictEqual(col.formattedSimpleDataType, "INT[][]", "simpleTypeWithArray");
+            assert.strictEqual(col.simpleTypeWithArray, "ARRAY<ARRAY<INT>>", "simpleTypeWithArray");
+            assert.strictEqual(col.isArray, true, "is array");
+            assert.strictEqual(
+              col.isArrayMemberNullable,
+              expectedNullability(scalarNullability),
+              "array member nullable",
+            );
+            assert.strictEqual(col.arrayDimensions, 2, "array dimensions");
+            assert.strictEqual(
+              col.isNullable,
+              expectedNullability(arrayNullability),
+              "top level array nullable",
+            );
+          });
+        }
+      }
+    });
+
+    describe("Maps", () => {
+      const memberTypes = ["STRING", "INT"];
+      for (const mapNullability of nullabilitiyStrings) {
+        for (const keyNullability of nullabilitiyStrings) {
+          for (const valueNullability of nullabilitiyStrings) {
+            for (const keyType of memberTypes) {
+              for (const valueType of memberTypes) {
+                it(`Map<${keyType} ${keyNullability}, ${valueType} ${valueNullability}> with nullability ${mapNullability}`, () => {
+                  const col = relationColumnFactory({
+                    ...fieldDefaults,
+                    name: "my_map",
+                    fullDataType: `MAP<${keyType} ${keyNullability}, ${valueType} ${valueNullability}> ${mapNullability}`,
+                    comment: null,
+                  });
+                  assert.ok(col instanceof MapFlinkRelationColumn, "Is MapFlinkRelationColumn");
+                  assert.strictEqual(col.name, "my_map", "Name");
+                  assert.strictEqual(col.simpleDataType, "MAP", "Simple data type");
+                  assert.strictEqual(col.isArray, false, "is not array");
+                  assert.strictEqual(
+                    col.isNullable,
+                    expectedNullability(mapNullability),
+                    "map nullable",
+                  );
+                  assert.strictEqual(col.keyColumn.simpleDataType, keyType, "key type");
+                  assert.strictEqual(
+                    col.keyColumn.isNullable,
+                    expectedNullability(keyNullability),
+                    "key nullability",
+                  );
+
+                  assert.strictEqual(col.valueColumn.simpleDataType, valueType, "value type");
+                  assert.strictEqual(
+                    col.valueColumn.isNullable,
+                    expectedNullability(valueNullability),
+                    "value nullability",
+                  );
+                });
+              }
+            }
           }
         }
       }

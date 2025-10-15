@@ -2,52 +2,76 @@ import { Logger } from "../../logging";
 import {
   CompositeFlinkRelationColumn,
   FlinkRelationColumn,
+  FlinkRelationColumnProps,
   MapFlinkRelationColumn,
 } from "../flinkSystemCatalog";
 
 const logger = new Logger("relation-column-parser");
 
-type ConstructorArgs = Pick<
-  FlinkRelationColumn,
-  | "relationName"
-  | "name"
-  | "fullDataType"
-  | "isNullable"
-  | "distributionKeyNumber"
-  | "isGenerated"
-  | "isPersisted"
-  | "isHidden"
-  | "metadataKey"
-  | "comment"
-> & {
-  isArray?: boolean;
-  isArrayMemberNullable?: boolean;
-};
-
-export function relationColumnFactory(props: ConstructorArgs): FlinkRelationColumn {
+/**
+ * Factory that produces the correct FlinkRelationColumn subclass for a parsed type definition.
+ * Arrays are unwrapped iteratively (counting dimensions) so nested ARRAY<ARRAY<...>> is handled
+ * without recursive re-parsing. The innermost non-array ParsedType then falls through to the
+ * existing primitive / row / map logic while retaining array metadata.
+ */
+export function relationColumnFactory(props: FlinkRelationColumnProps): FlinkRelationColumn {
   try {
     const parser = new TypeParser(props.fullDataType);
-    const parsed = parser.parseType();
+    let parsed = parser.parseType();
 
-    if (!isCompositeType(props.fullDataType)) {
+    // ------------------ ARRAY Unwrapping (iterative) ------------------
+    let arrayDimensions = 0;
+    let isArray = props.isArray === true;
+    let arrayMemberNullable = props.isArrayMemberNullable === true;
+    // Track outermost array nullability/comment only once (similar to prior behavior).
+    let topArrayNullable: boolean | undefined;
+    let topArrayComment: string | null | undefined;
+
+    if (parsed.kind === ParsedKind.Array) {
+      isArray = true;
+      while (parsed.kind === ParsedKind.Array) {
+        arrayDimensions++;
+        // Capture first (outermost) array nullability & comment for consistency.
+        if (topArrayNullable === undefined) {
+          topArrayNullable = parsed.nullable;
+        }
+        if (topArrayComment === undefined && parsed.comment) {
+          topArrayComment = parsed.comment;
+        }
+        // Member nullability refers to innermost element immediate children.
+        arrayMemberNullable = parsed.element.nullable;
+        parsed = parsed.element; // Tunnel into element
+      }
+    }
+
+    // Decide final nullability: prefer explicit prop, else outer array (if any), else parsed.
+    const finalNullable =
+      props.isNullable !== undefined
+        ? props.isNullable
+        : topArrayNullable !== undefined
+          ? topArrayNullable
+          : parsed.nullable;
+
+    const finalComment = props.comment || topArrayComment || parsed.comment;
+
+    // Primitive (possibly array-wrapped)
+    if (parsed.kind === ParsedKind.Primitive) {
       return new FlinkRelationColumn({
         ...props,
         fullDataType: parsed.text,
-        comment: props.comment || parsed.comment,
-        isNullable: props.isNullable || parsed.nullable,
-        isArray: props.isArray || parsed.kind === ParsedKind.Array,
-        isArrayMemberNullable: props.isArrayMemberNullable || false,
+        comment: finalComment,
+        isNullable: finalNullable,
+        isArray: isArray,
+        isArrayMemberNullable: arrayMemberNullable,
+        arrayDimensions,
       });
-    }
-
-    if (parsed.kind === ParsedKind.Row) {
+    } else if (parsed.kind === ParsedKind.Row) {
       const columns: FlinkRelationColumn[] = parsed.fields.map((field) =>
         relationColumnFactory({
           relationName: `${props.relationName}.${props.name}`,
           // Synthetic relation name chain preserves hierarchy
           name: field.name,
           fullDataType: field.typeText,
-          isNullable: field.nullable,
           comment: field.comment ?? null,
           distributionKeyNumber: null,
           isGenerated: props.isGenerated,
@@ -55,21 +79,29 @@ export function relationColumnFactory(props: ConstructorArgs): FlinkRelationColu
           isHidden: props.isHidden,
           metadataKey: null,
           isArray: field.type.kind === ParsedKind.Array,
+          isArrayMemberNullable:
+            field.type.kind === ParsedKind.Array
+              ? (field.type as ParsedArray).element.nullable
+              : false,
+          arrayDimensions:
+            field.type.kind === ParsedKind.Array
+              ? countArrayDimensions(field.type as ParsedArray)
+              : 0,
         }),
       );
 
       return new CompositeFlinkRelationColumn({
         ...props,
-        isArray: props.isArray === true,
-        isArrayMemberNullable: props.isArrayMemberNullable === true,
         fullDataType: parsed.text,
-        comment: props.comment || parsed.comment,
-        isNullable: props.isNullable,
+        comment: finalComment,
+        isNullable: finalNullable,
+        isArray: isArray,
+        isArrayMemberNullable: arrayMemberNullable,
+        arrayDimensions,
         columns,
       });
-    }
-
-    if (parsed.kind === ParsedKind.Map) {
+    } else {
+      // Must be a map.
       const keyCol = relationColumnFactory({
         relationName: `${props.relationName}.${props.name}`,
         name: "key",
@@ -81,6 +113,14 @@ export function relationColumnFactory(props: ConstructorArgs): FlinkRelationColu
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: parsed.key.kind === ParsedKind.Array,
+        isArrayMemberNullable:
+          parsed.key.kind === ParsedKind.Array
+            ? (parsed.key as ParsedArray).element.nullable
+            : false,
+        arrayDimensions:
+          parsed.key.kind === ParsedKind.Array
+            ? countArrayDimensions(parsed.key as ParsedArray)
+            : 0,
         comment: null,
       });
       const valueCol = relationColumnFactory({
@@ -94,46 +134,44 @@ export function relationColumnFactory(props: ConstructorArgs): FlinkRelationColu
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: parsed.value.kind === ParsedKind.Array,
-        isArrayMemberNullable: false,
+        isArrayMemberNullable:
+          parsed.value.kind === ParsedKind.Array
+            ? (parsed.value as ParsedArray).element.nullable
+            : false,
+        arrayDimensions:
+          parsed.value.kind === ParsedKind.Array
+            ? countArrayDimensions(parsed.value as ParsedArray)
+            : 0,
         comment: null,
       });
+
       return new MapFlinkRelationColumn({
         ...props,
         keyColumn: keyCol,
         valueColumn: valueCol,
-        isArray: props.isArray === true,
-        isArrayMemberNullable: props.isArrayMemberNullable === true,
+        isNullable: finalNullable,
+        fullDataType: parsed.text,
+        comment: finalComment,
+        isArray: isArray,
+        isArrayMemberNullable: arrayMemberNullable,
+        arrayDimensions,
       });
-    }
-
-    if (parsed.kind === ParsedKind.Array) {
-      // Recursively parse the element type so that ARRAY<ROW<...>>, ARRAY<MAP<...>> or nested ARRAYs
-      // correctly build their internal composite / map structures before we wrap them.
-      const newProps = {
-        relationName: `${props.relationName}.${props.name}`,
-        name: props.name,
-        fullDataType: parsed.element.text,
-
-        distributionKeyNumber: null,
-        isGenerated: props.isGenerated,
-        isPersisted: props.isPersisted,
-        isHidden: props.isHidden,
-        metadataKey: null,
-        isArray: true,
-        isNullable: parsed.nullable, // the overall array nullability
-        isArrayMemberNullable: parsed.element.nullable, // are the array members nullable?
-        comment: parsed.comment ?? null,
-      };
-
-      return relationColumnFactory(newProps);
-    } else {
-      throw new Error(`Unhandled parsed type kind: ${parsed.kind}`);
     }
   } catch (e) {
     logger.error(`Failed to parse complex type '${props.fullDataType}': ${(e as Error).message}`);
-    // Fall back to simple behavior to avoid total failure.
     return new FlinkRelationColumn(props);
   }
+}
+
+// Helper to count nested array dimensions for a ParsedArray chain.
+function countArrayDimensions(arr: ParsedArray): number {
+  let dims = 0;
+  let current: ParsedType = arr;
+  while (current.kind === ParsedKind.Array) {
+    dims++;
+    current = current.element;
+  }
+  return dims;
 }
 
 /* ----------------------------- Parsing Section ----------------------------- */
@@ -181,19 +219,6 @@ interface ParsedRow extends ParsedTypeBase {
 }
 
 type ParsedType = ParsedPrimitive | ParsedArray | ParsedMap | ParsedRow;
-
-/**
- * Returns true if the type string contains composite constructs we must parse.
- */
-function isCompositeType(t: string): boolean {
-  const upper = t.toUpperCase();
-  return (
-    upper.includes("ROW<") ||
-    upper.includes("MAP<") ||
-    upper.includes("ARRAY<") ||
-    upper.includes("MULTISET<")
-  );
-}
 
 /**
  * Recursive descent parser for Flink style complex types.
