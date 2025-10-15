@@ -2099,7 +2099,7 @@
         {
           "command": "confluent.testInspectJar",
           "group": "confluent@2",
-          "when": "resourceExtname == .jar"
+          "when": "isDevelopment && resourceExtname == .jar"
         }
       ],
       "confluent.flinkdatabase.viewMode": [

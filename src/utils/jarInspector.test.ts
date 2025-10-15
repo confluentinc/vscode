@@ -1,6 +1,5 @@
 import assert from "assert";
 import fs from "fs";
-import { describe, it } from "mocha";
 import os from "os";
 import path from "path";
 import { Uri } from "vscode";
@@ -47,39 +46,24 @@ describe("utils/jarInspector", () => {
     const original = fs.readFileSync(jarPath);
     // Keep only first 10 bytes – invalid central directory
     fs.writeFileSync(jarPath, original.subarray(0, 10));
-    let threw = false;
-    try {
-      await inspectJarClasses(Uri.file(jarPath));
-    } catch (err) {
-      threw = true;
-      assert.match((err as Error).message, /Unable to inspect JAR file/i);
-    }
-    assert.ok(threw);
+    await assert.rejects(async () => await inspectJarClasses(Uri.file(jarPath)), {
+      message: /Unable to inspect JAR file/i,
+    });
   });
 
   it("throws for non .jar extension", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "jarInspectorTest-"));
     const fakePath = path.join(tmpDir, "notAJar.txt");
     fs.writeFileSync(fakePath, "data");
-    let threw = false;
-    try {
-      await listJarContents(fakePath);
-    } catch (e) {
-      threw = true;
-      assert.match((e as Error).message, /does not have \.jar extension/i);
-    }
-    assert.ok(threw);
+    await assert.rejects(async () => await listJarContents(fakePath), {
+      message: /does not have \.jar extension/i,
+    });
   });
 
   it("throws when file is unreadable or missing", async () => {
     const missing = path.join(os.tmpdir(), "jarInspectorTest-missing", "missing.jar");
-    let threw = false;
-    try {
-      await listJarContents(missing);
-    } catch (e) {
-      threw = true;
-      assert.match((e as Error).message, /JAR file not readable/i);
-    }
-    assert.ok(threw);
+    await assert.rejects(async () => await listJarContents(missing), {
+      message: /JAR file not readable/i,
+    });
   });
 });

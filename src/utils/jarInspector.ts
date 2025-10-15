@@ -12,7 +12,7 @@ export interface JarClassInfo {
   simpleName: string;
 }
 
-const logger = new Logger("utils/jarInspector");
+const logger = new Logger("utils.jarInspector");
 /**
  * Inspect a JAR file and extract Java class names.
  * Filters out inner classes and META-INF resources.
