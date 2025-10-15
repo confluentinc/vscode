@@ -7,23 +7,24 @@ import {
 
 const logger = new Logger("relation-column-parser");
 
-export function relationColumnFactory(
-  props: Pick<
-    FlinkRelationColumn,
-    | "relationName"
-    | "name"
-    | "fullDataType"
-    | "isNullable"
-    | "distributionKeyNumber"
-    | "isGenerated"
-    | "isPersisted"
-    | "isHidden"
-    | "metadataKey"
-    | "comment"
-  > & {
-    isArray?: boolean;
-  },
-): FlinkRelationColumn {
+type ConstructorArgs = Pick<
+  FlinkRelationColumn,
+  | "relationName"
+  | "name"
+  | "fullDataType"
+  | "isNullable"
+  | "distributionKeyNumber"
+  | "isGenerated"
+  | "isPersisted"
+  | "isHidden"
+  | "metadataKey"
+  | "comment"
+> & {
+  isArray?: boolean;
+  isArrayMemberNullable?: boolean;
+};
+
+export function relationColumnFactory(props: ConstructorArgs): FlinkRelationColumn {
   try {
     const parser = new TypeParser(props.fullDataType);
     const parsed = parser.parseType();
@@ -35,6 +36,7 @@ export function relationColumnFactory(
         comment: props.comment || parsed.comment,
         isNullable: props.isNullable || parsed.nullable,
         isArray: props.isArray || parsed.kind === ParsedKind.Array,
+        isArrayMemberNullable: props.isArrayMemberNullable || false,
       });
     }
 
@@ -59,9 +61,10 @@ export function relationColumnFactory(
       return new CompositeFlinkRelationColumn({
         ...props,
         isArray: props.isArray === true,
+        isArrayMemberNullable: props.isArrayMemberNullable === true,
         fullDataType: parsed.text,
         comment: props.comment || parsed.comment,
-        isNullable: props.isNullable || parsed.nullable,
+        isNullable: props.isNullable,
         columns,
       });
     }
@@ -91,6 +94,7 @@ export function relationColumnFactory(
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: parsed.value.kind === ParsedKind.Array,
+        isArrayMemberNullable: false,
         comment: null,
       });
       return new MapFlinkRelationColumn({
@@ -98,25 +102,30 @@ export function relationColumnFactory(
         keyColumn: keyCol,
         valueColumn: valueCol,
         isArray: props.isArray === true,
+        isArrayMemberNullable: props.isArrayMemberNullable === true,
       });
     }
 
     if (parsed.kind === ParsedKind.Array) {
       // Recursively parse the element type so that ARRAY<ROW<...>>, ARRAY<MAP<...>> or nested ARRAYs
       // correctly build their internal composite / map structures before we wrap them.
-      return relationColumnFactory({
+      const newProps = {
         relationName: `${props.relationName}.${props.name}`,
         name: props.name,
         fullDataType: parsed.element.text,
-        isNullable: parsed.nullable,
+
         distributionKeyNumber: null,
         isGenerated: props.isGenerated,
         isPersisted: props.isPersisted,
         isHidden: props.isHidden,
         metadataKey: null,
         isArray: true,
+        isNullable: parsed.nullable, // the overall array nullability
+        isArrayMemberNullable: parsed.element.nullable, // are the array members nullable?
         comment: parsed.comment ?? null,
-      });
+      };
+
+      return relationColumnFactory(newProps);
     } else {
       throw new Error(`Unhandled parsed type kind: ${parsed.kind}`);
     }

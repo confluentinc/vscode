@@ -271,61 +271,61 @@ describe("relation_column_parser.ts", () => {
         }
       }
 
-      it("Array of rows", () => {
-        // An array of rows, each with two fields, the second of which is nullable.
-        const col = relationColumnFactory({
-          ...fieldDefaults,
-          name: "my_row_array",
-          fullDataType: "ARRAY<ROW<`f1` INT, `f2` STRING NULL>>",
-          comment: null,
-        });
-        assert.ok(
-          col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
-          "Is CompositeFlinkRelationColumn",
-        );
-        assert.strictEqual(col.name, "my_row_array", "Name");
-        assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
-        assert.strictEqual(col.isArray, true, "Is array");
-        assert.strictEqual(col.simpleTypeWithArray, "ARRAY<ROW>", "simpleTypeWithArray");
-        assert.strictEqual(col.columns.length, 2, "Field count");
-        assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
-        assert.strictEqual(col.columns[0].fullDataType, "INT", "Field 1 data type");
-        assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
-        assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
-        assert.strictEqual(col.columns[1].fullDataType, "STRING", "Field 2 data type");
-        assert.strictEqual(col.columns[1].isNullable, true, "Field 2 nullable");
-      });
-
-      it("Array of rows, the array itself nullable", () => {
-        // A nullable array of rows, each with two fields, the second of which is nullable.
-        const col = relationColumnFactory({
-          ...fieldDefaults,
-          name: "my_row_array",
-          fullDataType: "ARRAY<ROW<`f1` INT, `f2` STRING NULL>> NULL",
-          comment: null,
-        });
-        assert.ok(
-          col instanceof CompositeFlinkRelationColumn && !(col instanceof MapFlinkRelationColumn),
-          "Is CompositeFlinkRelationColumn",
-        );
-        assert.strictEqual(col.name, "my_row_array", "Name");
-        assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
-        assert.strictEqual(col.isArray, true, "Is array");
-        assert.strictEqual(col.simpleTypeWithArray, "ARRAY<ROW>", "simpleTypeWithArray");
-        assert.strictEqual(col.isNullable, true, "Is nullable");
-        assert.strictEqual(col.columns.length, 2, "Field count");
-        assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
-        assert.strictEqual(col.columns[0].fullDataType, "INT", "Field 1 data type");
-        assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
-        assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
-        assert.strictEqual(col.columns[1].fullDataType, "STRING", "Field 2 data type");
-        assert.strictEqual(col.columns[1].isNullable, true, "Field 2 nullable");
-      });
+      for (const individualRowNullable of nullabilitiyStrings) {
+        for (const f2Nullable of nullabilitiyStrings) {
+          for (const f2Comment of possibleComments) {
+            it(`Array of rows, f2 row member null string: ${f2Nullable}, row nullable: ${individualRowNullable}`, () => {
+              // An array of rows, each with two fields, the second of which may be nullable.
+              const fullDataType = `ARRAY<ROW<\`f1\` INT, \`f2\` STRING ${f2Nullable} ${f2Comment}> ${individualRowNullable}>`;
+              const col = relationColumnFactory({
+                ...fieldDefaults,
+                name: "my_row_array",
+                fullDataType: fullDataType,
+                comment: null,
+              });
+              assert.ok(
+                col instanceof CompositeFlinkRelationColumn &&
+                  !(col instanceof MapFlinkRelationColumn),
+                "Is CompositeFlinkRelationColumn",
+              );
+              assert.strictEqual(col.name, "my_row_array", "Name");
+              assert.strictEqual(col.simpleDataType, "ROW", "Simple data type");
+              assert.strictEqual(col.isArray, true, "Is array");
+              assert.strictEqual(
+                col.isArrayMemberNullable,
+                expectedNullability(individualRowNullable),
+                "whole row member is nullable",
+              );
+              assert.strictEqual(col.isNullable, false, "array as a whole is nullable");
+              assert.strictEqual(col.simpleTypeWithArray, "ARRAY<ROW>", "simpleTypeWithArray");
+              assert.strictEqual(col.columns.length, 2, "Field count");
+              assert.strictEqual(col.columns[0].name, "f1", "Field 1 name");
+              assert.strictEqual(col.columns[0].fullDataType, "INT", "Field 1 data type");
+              assert.strictEqual(col.columns[0].isNullable, false, "Field 1 nullable");
+              assert.strictEqual(col.columns[1].name, "f2", "Field 2 name");
+              assert.strictEqual(col.columns[1].fullDataType, "STRING", "Field 2 data type");
+              assert.strictEqual(
+                col.columns[1].isNullable,
+                expectedNullability(f2Nullable),
+                "Field 2 nullable",
+              );
+              assert.strictEqual(
+                col.columns[1].comment,
+                expectedComment(f2Comment),
+                "Field 2 comment",
+              );
+            });
+          }
+        }
+      }
     });
   });
 });
 
-function expectedComment(comment: string): string {
+function expectedComment(comment: string): string | null {
+  if (comment === "") {
+    return null;
+  }
   // replace doubled single quotes with single quotes
   let retval = comment.replace(/''/g, "'");
   // trim single quotes off start and end

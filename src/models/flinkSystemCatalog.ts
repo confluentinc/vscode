@@ -138,7 +138,7 @@ export class FlinkRelationColumn {
   readonly name: string;
   /** Full SQL data type of the column. */
   readonly fullDataType: string;
-  /** Is the column nullable? */
+  /** Is the overall column nullable? */
   readonly isNullable: boolean;
   /** If part of distribution key, what number in the key is it? (1-based) */
   readonly distributionKeyNumber: number | null;
@@ -149,6 +149,8 @@ export class FlinkRelationColumn {
   /** Is the column hidden (not normally visible)? */
   readonly isHidden: boolean;
   readonly isArray: boolean;
+  /** If the column is an array, are the array members themselves nullable? */
+  readonly isArrayMemberNullable: boolean;
   readonly comment: string | null;
 
   /** If a metadata column, what Kafka topic metadata key does it map to? */
@@ -169,6 +171,7 @@ export class FlinkRelationColumn {
       | "comment"
     > & {
       isArray?: boolean;
+      isArrayMemberNullable?: boolean;
     },
   ) {
     this.relationName = props.relationName;
@@ -182,6 +185,10 @@ export class FlinkRelationColumn {
     this.metadataKey = props.metadataKey;
     this.comment = props.comment ?? null;
     this.isArray = props.isArray ?? false;
+    if (props.isArrayMemberNullable && !this.isArray) {
+      throw new Error("isArrayMemberNullable cannot be true if isArray is false");
+    }
+    this.isArrayMemberNullable = props.isArrayMemberNullable ?? false;
   }
 
   get id(): string {
@@ -345,6 +352,7 @@ export class CompositeFlinkRelationColumn extends FlinkRelationColumn {
       | "isHidden"
       | "metadataKey"
       | "isArray"
+      | "isArrayMemberNullable"
       | "comment"
     > & {
       columns: FlinkRelationColumn[];
@@ -384,6 +392,7 @@ export class MapFlinkRelationColumn extends FlinkRelationColumn {
       | "isHidden"
       | "metadataKey"
       | "isArray"
+      | "isArrayMemberNullable"
       | "comment"
     > & {
       keyColumn: FlinkRelationColumn;
