@@ -3,6 +3,7 @@ import {
   FlinkRelation,
   FlinkRelationColumn,
   FlinkRelationType,
+  toRelationType,
 } from "../../models/flinkSystemCatalog";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
 import { relationColumnFactory } from "../../models/utils/relation_column_parser";
@@ -30,6 +31,7 @@ export function getRelationsAndColumnsSystemCatalogQuery(
     CAST(NULL AS STRING) as \`columnDataType\`,
     CAST(NULL AS STRING) as \`columnFullDataType\`,
     CAST(NULL AS STRING) as \`columnIsNullable\`,
+    CAST(NULL AS STRING) as \`columnComment\`,
     CAST(NULL AS INT) as \`columnDistributionKeyNumber\`,
     CAST(NULL AS STRING) as \`columnIsGenerated\`,
     CAST(NULL AS STRING) as \`columnIsPersisted\`,
@@ -58,6 +60,7 @@ export function getRelationsAndColumnsSystemCatalogQuery(
     \`DATA_TYPE\` as \`columnDataType\`,
     \`FULL_DATA_TYPE\` as \`columnFullDataType\`,
     \`IS_NULLABLE\` as \`columnIsNullable\`,
+    \`COMMENT\` as \`columnComment\`,
     \`DISTRIBUTION_ORDINAL_POSITION\` as \`columnDistributionKeyNumber\`,
     \`IS_GENERATED\` as \`columnIsGenerated\`,
     \`IS_PERSISTED\` as \`columnIsPersisted\`,
@@ -66,7 +69,8 @@ export function getRelationsAndColumnsSystemCatalogQuery(
     \`METADATA_KEY\` as \`columnMetadataKey\`
     from \`INFORMATION_SCHEMA\`.\`COLUMNS\`
     where
-        \`TABLE_SCHEMA_ID\` = '${database.id}'`;
+        \`TABLE_SCHEMA_ID\` = '${database.id}'
+`;
 }
 
 type StringBoolean = "YES" | "NO";
@@ -75,7 +79,7 @@ export interface RawRelationRow {
   rowType: "relation";
   relationName: string;
   relationComment: string | null;
-  relationType: "BASE_TABLE" | "VIEW";
+  relationType: string;
   relationDistributionBucketCount: number;
   relationIsDistributed: StringBoolean;
   relationIsWatermarked: StringBoolean;
@@ -88,6 +92,7 @@ export interface RawRelationRow {
   columnDataType: null;
   columnFullDataType: null;
   columnIsNullable: null;
+  columnComment: null;
   columnDistributionKeyNumber: null;
   columnIsGenerated: null;
   columnIsPersisted: null;
@@ -113,6 +118,7 @@ export interface RawColumnRow {
   columnDataType: string;
   columnFullDataType: string;
   columnIsNullable: StringBoolean;
+  columnComment: string | null;
   columnDistributionKeyNumber: number | null;
   columnIsGenerated: StringBoolean;
   columnIsPersisted: StringBoolean;
@@ -144,8 +150,7 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
       const newRelation: FlinkRelation = new FlinkRelation({
         name: row.relationName,
         comment: row.relationComment,
-        type:
-          row.relationType === "BASE_TABLE" ? FlinkRelationType.BaseTable : FlinkRelationType.View,
+        type: toRelationType(row.relationType),
         distributionBucketCount: row.relationDistributionBucketCount,
         isDistributed: row.relationIsDistributed === "YES",
         isWatermarked: row.relationIsWatermarked === "YES",
@@ -173,13 +178,14 @@ export function parseRelationsAndColumnsSystemCatalogQueryResponse(
           isPersisted: row.columnIsPersisted === "YES",
           isHidden: row.columnIsHidden === "YES",
           metadataKey: row.columnMetadataKey,
-          comment: null, // INFORMATION_SCHEMA.COLUMNS does not have a comment field, grr.
+          comment: row.columnComment,
         }),
       );
     }
   }
 
-  return relations;
+  // For now (Oct 2025), until they become actually readable, filter out system tables.
+  return relations.filter((r) => r.type !== FlinkRelationType.SystemTable);
 }
 
 /**

@@ -237,15 +237,39 @@ export class FlinkRelationColumn {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.None);
-    item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with column specific icon when available
+    // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with column specific icon when available
     item.id = this.id;
     item.contextValue = "ccloud-flink-column";
     item.tooltip = this.getToolTip();
-    item.description = formatSqlType(this.simpleDataType);
-    if (this.isArray) {
-      item.description += "[]";
-    }
+    item.description = this.treeItemDescription;
+
     return item;
+  }
+
+  /** A terse easy to read overview of the field's data type */
+  get formattedSimpleDataType(): string {
+    let desc = formatSqlType(this.simpleDataType);
+    if (this.isArray) {
+      desc += "[]";
+    }
+    return desc;
+  }
+
+  /** Make a nice overview of the column type, nullability, comment prefix */
+  get treeItemDescription(): string {
+    let desc = this.formattedSimpleDataType;
+    if (!this.isNullable) {
+      desc += " NOT NULL";
+    }
+
+    if (this.comment) {
+      // append the first 30 chars, and if more, append "..."
+      const shortComment =
+        this.comment.length > 30 ? this.comment.substring(0, 30) + "..." : this.comment;
+      desc += ` - ${shortComment}`;
+    }
+
+    return desc;
   }
 
   getToolTip(): CustomMarkdownString {
@@ -382,12 +406,32 @@ export class MapFlinkRelationColumn extends FlinkRelationColumn {
   }
 }
 
-/** Type of a Flink relation (table or view). */
+/** Type of a Flink relation (table, view, system or external table). */
 export enum FlinkRelationType {
-  BaseTable = "BASE_TABLE",
-  EXTERNAL_TABLE = "EXTERNAL_TABLE", // e.g. external-system JDBC-linked read-only tables
+  /** A CCloud Kafka-topic-based table */
+  BaseTable = "BASE TABLE",
+  /** A SQL View */
   View = "VIEW", // SQL views.
-  SYSTEM_TABLE = "SYSTEM_TABLE", // e.g. $error tables
+  /** An external system table, such as via JDBC, probably read-only */
+  ExternalTable = "EXTERNAL TABLE",
+  /** Flink-managed tables, such as $error and system catalog tables. Read-only. */
+  SystemTable = "SYSTEM TABLE",
+}
+
+/** Convert string spelling of a relation type to its enum. */
+export function toRelationType(type: string): FlinkRelationType {
+  switch (type) {
+    case "BASE TABLE":
+      return FlinkRelationType.BaseTable;
+    case "VIEW":
+      return FlinkRelationType.View;
+    case "SYSTEM TABLE":
+      return FlinkRelationType.SystemTable;
+    case "EXTERNAL TABLE":
+      return FlinkRelationType.ExternalTable;
+    default:
+      throw new Error(`Unknown relation type: ${type}`);
+  }
 }
 
 /**
@@ -399,7 +443,7 @@ export class FlinkRelation {
   readonly name: string;
   /** Optional comment / description */
   readonly comment: string | null;
-  /** Relation type (base table or view) */
+  /** Relation type */
   readonly type: FlinkRelationType;
   /** Number of distribution buckets if distributed */
   readonly distributionBucketCount: number;
@@ -484,7 +528,7 @@ export class FlinkRelation {
 
   getTreeItem(): TreeItem {
     const item = new TreeItem(this.name, TreeItemCollapsibleState.Collapsed);
-    item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with table/view specific icons when available
+    // item.iconPath = new ThemeIcon(IconNames.FLINK_FUNCTION); // TODO replace with table/view specific icons when available
     item.id = this.name;
     item.contextValue = `ccloud-flink-relation-${this.isView ? "view" : "table"}`;
     item.tooltip = this.getToolTip();
