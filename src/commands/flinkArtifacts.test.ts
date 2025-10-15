@@ -65,13 +65,10 @@ describe("flinkArtifacts", () => {
       cloud: "Azure",
     };
 
-    const params = { ...mockParams };
-    const uploadUrl = { ...mockPresignedUrlResponse };
-
     let showErrorStub: sinon.SinonStub;
 
     beforeEach(() => {
-      sandbox.stub(vscode.window, "showOpenDialog").resolves([params.selectedFile]);
+      sandbox.stub(vscode.window, "showOpenDialog").resolves([mockParams.selectedFile]);
       showErrorStub = getShowErrorNotificationWithButtonsStub(sandbox);
     });
 
@@ -97,8 +94,8 @@ describe("flinkArtifacts", () => {
     });
 
     it("should show error notification with custom error message when Error has message property", async () => {
-      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
 
       const customErrorMessage = "Custom error message from Error instance";
@@ -113,8 +110,8 @@ describe("flinkArtifacts", () => {
     });
 
     it("should show custom clarification error when 500 status code is returned for invalid JAR file", async () => {
-      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
 
       sandbox
@@ -131,8 +128,8 @@ describe("flinkArtifacts", () => {
     });
 
     it("should error for other status codes", async () => {
-      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(params);
-      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
+      sandbox.stub(artifactUploadForm, "artifactUploadQuickPickForm").resolves(mockParams);
+      sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(mockPresignedUrlResponse);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
 
       sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").rejects(
