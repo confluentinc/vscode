@@ -3,7 +3,10 @@ import { udfsChanged } from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
 import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
-import { showInfoNotificationWithButtons } from "../../notifications";
+import {
+  showErrorNotificationWithButtons,
+  showInfoNotificationWithButtons,
+} from "../../notifications";
 import { flinkDatabaseQuickpick } from "../../quickpicks/kafkaClusters";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
@@ -58,7 +61,7 @@ export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId
       reportRegistrationResults(registrations.length, results);
     } catch (error) {
       logger.error("Error during UDF registration:", error);
-      void window.showErrorMessage(
+      void showErrorNotificationWithButtons(
         `Error during UDF registration: ${error instanceof Error ? error.message : error}`,
       );
     }
@@ -82,7 +85,7 @@ export async function selectClassesForUdfRegistration(
 
   const selectedItems = await window.showQuickPick(quickPickItems, {
     title: "Select Classes to Register as UDFs",
-    placeHolder: "Choose which classes from the JAR should be registered as User-Defined Functions",
+    placeHolder: "Select classes to register as UDFs",
     canPickMany: true,
     ignoreFocusOut: true,
   });
@@ -244,11 +247,15 @@ function reportRegistrationResults(
   { successes, failures }: RegistrationResults,
 ) {
   if (successes.length > 0) {
-    const successMessage =
-      successes.length === requestedCount
-        ? `All ${successes.length} UDF(s) registered successfully!`
-        : `${successes.length} of ${requestedCount} UDF(s) registered successfully.`;
-
+    const allSuccessful = successes.length === requestedCount;
+    let successMessage;
+    if (allSuccessful) {
+      if (requestedCount === 1) {
+        successMessage = `UDF registered successfully!`;
+      } else successMessage = `All ${successes.length} UDF(s) registered successfully!`;
+    } else {
+      successMessage = `${successes.length} of ${requestedCount} UDF(s) registered successfully.`;
+    }
     void showInfoNotificationWithButtons(`${successMessage} Functions: ${successes.join(", ")}`);
   }
 

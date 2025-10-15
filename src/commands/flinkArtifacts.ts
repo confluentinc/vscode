@@ -21,6 +21,7 @@ import { FlinkDatabaseViewProviderMode } from "../viewProviders/multiViewDelegat
 import { artifactUploadQuickPickForm } from "./utils/artifactUploadForm";
 import { detectClassesAndRegisterUDFs } from "./utils/udfRegistration";
 import {
+  ArtifactUploadParams,
   buildUploadErrorMessage,
   getPresignedUploadUrl,
   handleUploadToCloudProvider,
@@ -94,7 +95,7 @@ export async function uploadArtifactCommand(
  * Throws on failure so the caller (upload command) can handle error telemetry + notification.
  */
 async function executeArtifactUpload(
-  params: Awaited<ReturnType<typeof artifactUploadQuickPickForm>>,
+  params: ArtifactUploadParams,
   progress: vscode.Progress<{ message?: string; increment?: number }>,
 ): Promise<CreateArtifactV1FlinkArtifact201Response | undefined> {
   if (!params) return;
