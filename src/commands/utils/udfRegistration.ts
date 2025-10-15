@@ -1,25 +1,67 @@
-import { Uri, window } from "vscode";
+import { ProgressLocation, Uri, window } from "vscode";
+import { udfsChanged } from "../../emitters";
+import { CCloudResourceLoader } from "../../loaders";
 import { Logger } from "../../logging";
+import { CCloudFlinkDbKafkaCluster } from "../../models/kafkaCluster";
+import { showInfoNotificationWithButtons } from "../../notifications";
+import { flinkDatabaseQuickpick } from "../../quickpicks/kafkaClusters";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
+import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import { validateUdfInput } from "./uploadArtifactOrUDF";
 
 const logger = new Logger("commands.utils.udfRegistration");
+export interface UdfRegistrationData {
+  /** The class to register as a UDF */
+  classInfo: JarClassInfo;
+  /** The function name to use for the UDF */
+  functionName: string;
+}
+// internal for ease of passing it down a level
+interface ProgressReporter {
+  report(value: { message?: string; increment?: number }): void;
+}
 
-export async function detectClassesAndRegisterUDFs(params: { selectedFile: Uri }) {
-  const classNames = await inspectJarClasses(params.selectedFile);
+// internal for reuse in multiple functions along the way
+interface RegistrationResults {
+  successes: string[];
+  failures: Array<{ functionName: string; error: string }>;
+}
+
+/**
+ * Detects classes in the selected JAR file, prompts the user to select classes & provide function names,
+ * and calls the appropriate methods to register each one as a UDF.
+ * @param artifactFile The selected JAR file URI
+ * @param artifactId The artifact ID where the UDFs originate
+ */
+export async function detectClassesAndRegisterUDFs(artifactFile: Uri, artifactId?: string) {
+  if (!artifactId) {
+    throw new Error("Artifact ID is required to register UDFs.");
+  }
+
+  const classNames = await inspectJarClasses(artifactFile);
   if (classNames && classNames.length > 0) {
-    logger.debug(`Found ${classNames.length} classes in the JAR file.`);
+    logger.trace(`Found ${classNames.length} classes in the JAR file.`);
 
     const selectedClasses = await selectClassesForUdfRegistration(classNames);
     if (!selectedClasses || selectedClasses.length === 0) {
       return; // User cancelled or selected no classes
     }
-    logger.debug(`User selected ${selectedClasses.length} classes for UDF registration.`);
+    logger.trace(`User selected ${selectedClasses.length} classes for UDF registration.`);
     const registrations = await promptForFunctionNames(selectedClasses);
     if (!registrations || registrations.length === 0) {
       return; // User cancelled or provided no function names
     }
-    logger.debug(`User provided ${registrations.length} function names.`);
+
+    try {
+      const results = await registerMultipleUdfs(registrations, artifactId);
+      reportRegistrationResults(registrations.length, results);
+    } catch (error) {
+      logger.error("Error during UDF registration:", error);
+      void window.showErrorMessage(
+        `Error during UDF registration: ${error instanceof Error ? error.message : error}`,
+      );
+    }
   } else {
     logger.debug("No Java classes found in JAR file.");
   }
@@ -46,12 +88,6 @@ export async function selectClassesForUdfRegistration(
   });
 
   return selectedItems?.map((item) => item.classInfo);
-}
-export interface UdfRegistrationData {
-  /** The class to register as a UDF */
-  classInfo: JarClassInfo;
-  /** The function name to use for the UDF */
-  functionName: string;
 }
 /**
  * Prompts the user for function names for each selected class.
@@ -87,4 +123,137 @@ export async function promptForFunctionNames(
     }
   }
   return registrations;
+}
+
+/**
+ * Registers multiple UDFs from the provided registration data & selected Flink database
+ * Opens a progress notification during the process and displays progress updates from inner `executeUdfRegistrations`
+ * @param artifact The artifact containing the UDF implementations
+ * @param registrations Array of UDF registration information
+ * @returns RegistrationResults containing successes and failures
+ */
+export async function registerMultipleUdfs(
+  registrations: UdfRegistrationData[],
+  artifactId: string,
+): Promise<RegistrationResults> {
+  let selectedFlinkDatabase = FlinkDatabaseViewProvider.getInstance().database || undefined;
+  if (!selectedFlinkDatabase) {
+    selectedFlinkDatabase = await flinkDatabaseQuickpick(
+      undefined,
+      "Select the Flink database (Kafka cluster) where you want to register the UDFs",
+    );
+    if (!selectedFlinkDatabase) {
+      throw new Error("No Flink database selected.");
+    }
+  }
+
+  return await window.withProgress(
+    {
+      location: ProgressLocation.Notification,
+      title: `Registering ${registrations.length} UDF(s)`,
+      cancellable: false,
+    },
+    async (progress) => {
+      return await executeUdfRegistrations(
+        registrations,
+        artifactId,
+        selectedFlinkDatabase,
+        progress,
+      );
+    },
+  );
+}
+
+/**
+ * Executes the UDF registration statement for each UDF in sequence
+ * Reports progress to parent `window.withProgress`
+ * @returns RegistrationResults containing successes and failures
+ */
+async function executeUdfRegistrations(
+  registrations: UdfRegistrationData[],
+  artifactId: string,
+  selectedFlinkDatabase: CCloudFlinkDbKafkaCluster,
+  progress: ProgressReporter,
+): Promise<RegistrationResults> {
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+
+  const successes: string[] = [];
+  const failures: Array<{ functionName: string; error: string }> = [];
+
+  for (let i = 0; i < registrations.length; i++) {
+    const registration = registrations[i];
+    progress.report({
+      message: `Registering ${registration.functionName} (${i + 1}/${registrations.length})...`,
+    });
+
+    try {
+      logger.debug(
+        `Registering UDF: ${registration.functionName} -> ${registration.classInfo.className}`,
+      );
+
+      await ccloudResourceLoader.executeBackgroundFlinkStatement(
+        `CREATE FUNCTION \`${registration.functionName}\` AS '${registration.classInfo.className}' USING JAR 'confluent-artifact://${artifactId}';`,
+        selectedFlinkDatabase,
+        {
+          timeout: 60000,
+        },
+      );
+      successes.push(registration.functionName);
+
+      logUsage(UserEvent.FlinkUDFAction, {
+        action: "created",
+        status: "succeeded",
+        cloud: selectedFlinkDatabase.provider,
+        region: selectedFlinkDatabase.region,
+      });
+    } catch (error) {
+      logger.error(`Failed to register UDF ${registration.functionName}:`, error);
+
+      let errorMessage = "Unknown error";
+      if (error instanceof Error) {
+        const flinkDetail = error.message.split("Error detail:")[1]?.trim();
+        errorMessage = flinkDetail || error.message;
+      }
+
+      failures.push({
+        functionName: registration.functionName,
+        error: errorMessage,
+      });
+
+      logUsage(UserEvent.FlinkUDFAction, {
+        action: "created",
+        status: "failed",
+        cloud: selectedFlinkDatabase.provider,
+        region: selectedFlinkDatabase.region,
+      });
+    }
+  }
+
+  progress.report({ message: "Updating UDF view" });
+  udfsChanged.fire(selectedFlinkDatabase);
+  return { successes, failures };
+}
+
+/** Takes success/failure reports from registration, formats messaging, & sends to the user via notifications
+ * @param requestedCount The total number of UDFs user selected for registration
+ * @param successes Array of successfully registered function names
+ * @param failures Array of failures with function names and error messages
+ */
+function reportRegistrationResults(
+  requestedCount: number,
+  { successes, failures }: RegistrationResults,
+) {
+  if (successes.length > 0) {
+    const successMessage =
+      successes.length === requestedCount
+        ? `All ${successes.length} UDF(s) registered successfully!`
+        : `${successes.length} of ${requestedCount} UDF(s) registered successfully.`;
+
+    void showInfoNotificationWithButtons(`${successMessage} Functions: ${successes.join(", ")}`);
+  }
+
+  if (failures.length > 0) {
+    const errorDetails = failures.map((f) => `${f.functionName}: ${f.error}`).join("; ");
+    void window.showErrorMessage(`Failed to register ${failures.length} UDF(s): ${errorDetails}`);
+  }
 }
