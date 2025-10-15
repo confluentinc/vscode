@@ -195,23 +195,37 @@ describe("flinkArtifacts", () => {
     });
   });
   describe("handleWithProgressForUploadArtifact", () => {
+    let withProgressStub: sinon.SinonStub;
+    const mockCreateResponse = {
+      display_name: "test-artifact",
+      cloud: "Azure",
+      region: "australiaeast",
+      environment: " env-123456",
+    };
+
+    const mockProgress = {
+      report: sandbox.stub(),
+    } as vscode.Progress<unknown>;
+    const params = { ...mockParams };
+    const uploadUrl = { ...mockPresignedUrlResponse };
+
+    beforeEach(() => {
+      withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
+        const mockToken = {} as vscode.CancellationToken;
+        return Promise.resolve(callback(mockProgress, mockToken));
+      });
+    });
+
     it("should report progress correctly through all steps", async () => {
-      const mockCreateResponse = {
-        display_name: "test-artifact",
-        cloud: "Azure",
-        region: "australiaeast",
-        environment: " env-123456",
-      };
-
-      const params = { ...mockParams };
-      const uploadUrl = { ...mockPresignedUrlResponse };
-
-      const progressReports: { message: string; increment?: number }[] = [];
-      const mockProgress: vscode.Progress<{ message: string; increment?: number }> = {
-        report: (info) => {
-          progressReports.push(info);
-        },
-      };
+      const progressReportStub = sandbox.stub();
+      withProgressStub.callsFake(async (options, callback) => {
+        return await callback(
+          {
+            report: progressReportStub,
+          },
+          {} as vscode.CancellationToken,
+        );
+      });
 
       sandbox.stub(uploadArtifact, "getPresignedUploadUrl").resolves(uploadUrl);
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
@@ -219,14 +233,18 @@ describe("flinkArtifacts", () => {
 
       await handleWithProgressForUploadArtifact(params, mockProgress);
 
-      // Verify that progress was reported for each step
-      sinon.assert.match(progressReports.length, 3);
-      sinon.assert.match(progressReports[0].message, "Requesting presigned upload URL...");
-      sinon.assert.match(
-        progressReports[1].message,
-        "Uploading artifact binary to cloud storage...",
-      );
-      sinon.assert.match(progressReports[2].message, "Adding artifact to Confluent Cloud...");
+      sinon.assert.calledOnce(withProgressStub);
+
+      sinon.assert.calledThrice(progressReportStub);
+      sinon.assert.calledWithMatch(progressReportStub.getCall(0), {
+        message: sinon.match(/Requesting presigned upload URL/),
+      });
+      sinon.assert.calledWithMatch(progressReportStub.getCall(1), {
+        message: sinon.match(/Uploading artifact binary to cloud storage/),
+      });
+      sinon.assert.calledWithMatch(progressReportStub.getCall(2), {
+        message: sinon.match(/Adding artifact to Confluent Cloud/),
+      });
     });
   });
 });
