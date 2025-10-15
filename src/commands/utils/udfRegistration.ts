@@ -2,7 +2,7 @@ import { Uri, window } from "vscode";
 import { Logger } from "../../logging";
 import { inspectJarClasses, JarClassInfo } from "../../utils/jarInspector";
 
-const logger = new Logger("commands.flinkUDFs/udfRegistration");
+const logger = new Logger("commands.utils.udfRegistration");
 
 export async function detectClassesAndRegisterUDFs(params: { selectedFile: Uri }) {
   const classNames = await inspectJarClasses(params.selectedFile);
