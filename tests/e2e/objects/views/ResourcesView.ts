@@ -85,6 +85,17 @@ export class ResourcesView extends View {
   }
 
   /**
+   * Alternative approach: Find clusters that are followed by compute pool items with lfcp IDs.
+   * This accounts for cases where compute pools appear as sibling elements rather than children.
+   */
+  get flinkableCcloudKafkaClustersByProximity(): Locator {
+    // Find cluster elements that have sibling compute pool elements with lfcp IDs
+    return this.ccloudKafkaClusters.filter({
+      has: this.page.locator("..").locator("span.label-description").filter({ hasText: /^lfcp/ }),
+    });
+  }
+
+  /**
    * Locator for local Kafka cluster tree items.
    * Only visible when the {@link localItem "Local" item} is expanded.
    */

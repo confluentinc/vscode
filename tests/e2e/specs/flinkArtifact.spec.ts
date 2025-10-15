@@ -16,11 +16,7 @@ test.describe("Flink Artifacts", { tag: [Tag.CCloud, Tag.FlinkArtifacts] }, () =
     // Use existing page object models for common interactions
     const artifactsView = new ArtifactsView(page);
     // NOTE: might have to be done differently, but right here all I want is to confirm the tab exists
-    await artifactsView.loadArtifacts(
-      ConnectionType.Ccloud,
-      SelectFlinkDatabase.FromResourcesView,
-      "azure-cluster",
-    );
+    await artifactsView.loadArtifacts(SelectFlinkDatabase.FromResourcesView);
     await artifactsView.clickArtifactsView();
     await expect(artifactsView.header).toHaveAttribute("aria-expanded", "true");
     // Check that we have artifacts loaded (at least one)

@@ -9,9 +9,6 @@ export enum SelectFlinkDatabase {
   FromArtifactsViewButton = "Artifacts view nav action",
 }
 
-const TEST_ENV_NAME = "flink-testing-env";
-const TEST_COMPUTE_POOL_NAME = "azure-pool";
-const TEST_KAFKA_CLUSTER_NAME = "azure-cluster";
 /**
  * Object representing the "Artifacts tree view"
  * {@link https://code.visualstudio.com/api/ux-guidelines/views#tree-views view} in the "Confluent"
@@ -22,23 +19,13 @@ export class ArtifactsView extends View {
     super(page, /Artifacts.*Section/);
   }
 
-  // <a class="action-label codicon codicon-cloud-upload" role="button" aria-label="Upload Flink Artifact to Confluent Cloud" tabindex="-1"></a>
-  /** Click the "Create Artifact" nav action in the view title area. */
-  async clickCreateArtifact(): Promise<void> {
-    // is the the codicon the nav action?
-    await this.clickNavAction("Create Artifact");
-  }
-
-  async clickSelectKafkaClusterAsFlinkDatabase(): Promise<void> {
-    await this.clickNavAction("Select Kafka Cluster as Flink Database");
-  }
   /** Get all (root-level) artifact items in the view. */
   get artifacts(): Locator {
     return this.treeItems;
   }
 
   async clickArtifactsView(): Promise<void> {
-    // eventually might want to switch on entrypoints, but also maybe not for the general resources view
+    // Note: eventually might want to switch on entrypoints
     const artifactsView = new ArtifactsView(this.page);
     await artifactsView.header.click();
 
@@ -46,30 +33,35 @@ export class ArtifactsView extends View {
     await expect(this.body).toBeVisible();
   }
 
-  get ccloudKafkaClusters(): Locator {
-    // Search from the entire page instead of just this view's tree items
-    return this.page
-      .locator('[role="treeitem"]')
-      .filter({ has: this.page.locator(".codicon-confluent-kafka-cluster") })
-      .and(this.page.locator("[aria-level='3'][aria-label^='CCLOUD connection: Kafka Cluster']"));
-  }
-
-  async loadArtifacts(
-    connectionType: ConnectionType,
-    entrypoint: SelectFlinkDatabase,
-    clusterLabel?: string | RegExp,
-  ): Promise<void> {
-    const resourcesView = new ResourcesView(this.page);
-    // First, expand the CCloud env
-    await expect(resourcesView.ccloudEnvironments).not.toHaveCount(0);
-    await resourcesView.ccloudEnvironments.getByText(TEST_ENV_NAME).click();
-    // TODO: add second entrypoint option to select from the Artifacts view button
+  async loadArtifacts(entrypoint: SelectFlinkDatabase): Promise<void> {
     switch (entrypoint) {
       case SelectFlinkDatabase.FromResourcesView: {
-        let kafkaClusters: Locator;
-        kafkaClusters = this.ccloudKafkaClusters;
+        const resourcesView = new ResourcesView(this.page);
 
-        const kafkaClusterItem = kafkaClusters.filter({ hasText: clusterLabel });
+        // First, ensure the connection environment is expanded to see environments
+        await resourcesView.expandConnectionEnvironment(ConnectionType.Ccloud);
+
+        // Get all environments and expand them to see their clusters
+        const environments = resourcesView.ccloudEnvironments;
+        const envCount = await environments.count();
+
+        // Expand all environments to reveal their child clusters
+        for (let i = 0; i < envCount; i++) {
+          const env = environments.nth(i);
+          const isExpanded = await env.getAttribute("aria-expanded");
+
+          if (isExpanded !== "true") {
+            await env.click();
+            // Wait for expansion to complete
+            await expect(env).toHaveAttribute("aria-expanded", "true");
+          }
+        }
+
+        // Now find and click on the actual Kafka cluster that has Flink compute pools
+        const kafkaClusters = resourcesView.flinkableCcloudKafkaClustersByProximity;
+
+        const kafkaClusterItem = kafkaClusters.first();
+
         await expect(kafkaClusterItem).toBeVisible();
         const clusterItem = new KafkaClusterItem(this.page, kafkaClusterItem);
         await clusterItem.selectAsFlinkDatabase();
