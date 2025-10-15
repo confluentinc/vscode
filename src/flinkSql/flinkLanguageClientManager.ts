@@ -12,7 +12,6 @@ import { LanguageClient } from "vscode-languageclient/node";
 import { CloseEvent, ErrorEvent, MessageEvent, WebSocket } from "ws";
 import { getCatalogDatabaseFromMetadata } from "../codelens/flinkSqlProvider";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { FLINKSTATEMENT_URI_SCHEME } from "../documentProviders/flinkStatement";
 import { ccloudConnected, uriMetadataSet } from "../emitters";
 import { logError } from "../errors";
 import { FLINK_CONFIG_COMPUTE_POOL, FLINK_CONFIG_DATABASE } from "../extensionSettings/constants";
@@ -114,10 +113,9 @@ export class FlinkLanguageClientManager extends DisposableCollection {
 
   /** Should we consider language serving for this sort of document URI? */
   isAppropriateUri(uri: Uri): boolean {
-    // Just not FLINKSTATEMENT_URI_SCHEME, the one used for readonly statements
-    // downloaded from the Flink Statements view. Be happy with, say,
-    // "file" or "untitled" schemes.
-    return uri.scheme !== FLINKSTATEMENT_URI_SCHEME;
+    // only basic "untitled" (unsaved) documents or "file" (saved) documents,
+    // not any unrelated ("output") and/or read-only schemes
+    return ["file", "untitled"].includes(uri.scheme);
   }
 
   /** Set up to track the appropriate documents open at instance construction (extension startup) time. */
