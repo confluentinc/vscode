@@ -62,7 +62,8 @@ blocks:
                   RELEASE_NAME="${RELEASE_NAME}-pre"
                 fi
               fi
-            - artifact push workflow RELEASE_NAME.txt --destination RELEASE_NAME.txt --content "$RELEASE_NAME" --force
+            - echo "$RELEASE_NAME" > RELEASE_NAME.txt
+            - artifact push workflow RELEASE_NAME.txt --force
   - name: "Delete GitHub Release and Tag"
     dependencies: ["Parameter Verification"]
     task:
