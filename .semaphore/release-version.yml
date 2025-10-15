@@ -22,6 +22,7 @@ global_job_config:
       - |
           if [ -n "$TARGET_BRANCH" ]; then
             git fetch origin "$TARGET_BRANCH:$TARGET_BRANCH"
+            git checkout "$TARGET_BRANCH"
           else
             git fetch --all
           fi
