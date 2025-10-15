@@ -205,11 +205,16 @@ describe("flinkArtifacts", () => {
     const uploadUrl = { ...mockPresignedUrlResponse };
 
     let mockProgress: vscode.Progress<unknown>;
+    let withProgressStub: sinon.SinonStub;
 
     beforeEach(() => {
       mockProgress = {
         report: sandbox.stub(),
       } as vscode.Progress<unknown>;
+      withProgressStub = sandbox.stub(vscode.window, "withProgress").callsFake((_, callback) => {
+        const mockToken = {} as vscode.CancellationToken;
+        return Promise.resolve(callback(mockProgress, mockToken));
+      });
     });
 
     it("should report progress correctly through all steps", async () => {
@@ -217,7 +222,9 @@ describe("flinkArtifacts", () => {
       sandbox.stub(uploadArtifact, "handleUploadToCloudProvider").resolves();
       sandbox.stub(uploadArtifact, "uploadArtifactToCCloud").resolves(mockCreateResponse);
 
-      await handleWithProgressForUploadArtifact(params, mockProgress);
+      await handleWithProgressForUploadArtifact(params);
+
+      sinon.assert.calledOnce(withProgressStub);
 
       const progressReportStub = mockProgress.report as sinon.SinonStub;
       sinon.assert.calledThrice(progressReportStub);
