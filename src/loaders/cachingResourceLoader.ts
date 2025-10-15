@@ -7,8 +7,8 @@ import { Subject } from "../models/schema";
 import { SchemaRegistry, SchemaRegistryType } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getResourceManager } from "../storage/resourceManager";
-import { correlateTopicsWithSchemaSubjects, fetchTopics } from "./loaderUtils";
 import { ResourceLoader } from "./resourceLoader";
+import { correlateTopicsWithSchemaSubjects, fetchTopics } from "./utils/loaderUtils";
 
 const logger = new Logger("cachingResourceLoader");
 
