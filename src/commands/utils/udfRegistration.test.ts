@@ -1,11 +1,10 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-
 import * as emitters from "../../emitters";
 import { CCloudResourceLoader } from "../../loaders";
 import * as notifications from "../../notifications";
-import * as kafkaClusterQuickpicks from "../../quickpicks/kafkaClusters"; // added
+import * as kafkaClusterQuickpicks from "../../quickpicks/kafkaClusters";
 import * as jarInspector from "../../utils/jarInspector";
 import { FlinkDatabaseViewProvider } from "../../viewProviders/flinkDatabase";
 import {
@@ -56,14 +55,13 @@ describe("commands/utils/udfRegistration", () => {
       const jarClasses: jarInspector.JarClassInfo[] = [
         { className: "org.example.FlinkFn", simpleName: "FlinkFn" },
       ];
-
       const inspectStub = sandbox.stub(jarInspector, "inspectJarClasses").resolves(jarClasses);
       const quickPickStub = sandbox
         .stub(vscode.window, "showQuickPick")
         // Simulate user cancelling w/o selection
         .resolves(undefined as any);
 
-      await detectClassesAndRegisterUDFs({ selectedFile: testUri });
+      await detectClassesAndRegisterUDFs(testUri, "artifact123");
 
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
@@ -74,7 +72,7 @@ describe("commands/utils/udfRegistration", () => {
       const inspectStub = sandbox.stub(jarInspector, "inspectJarClasses").resolves([]);
       const quickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves(undefined as any);
 
-      await detectClassesAndRegisterUDFs({ selectedFile: testUri });
+      await detectClassesAndRegisterUDFs(testUri, "artifact123");
 
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.notCalled(quickPickStub);
@@ -91,20 +89,17 @@ describe("commands/utils/udfRegistration", () => {
         { label: "AlphaFn", description: "org.example.AlphaFn", classInfo: jarClasses[0] },
         { label: "BetaFn", description: "org.example.BetaFn", classInfo: jarClasses[1] },
       ] as any);
-      // user cancels input for each function name so promptForFunctionNames yields []
-      const inputStub = sandbox
+      sandbox
         .stub(vscode.window, "showInputBox")
         .onFirstCall()
         .resolves(undefined)
         .onSecondCall()
         .resolves(undefined);
 
-      const result = await detectClassesAndRegisterUDFs({ selectedFile: testUri });
-
+      const result = await detectClassesAndRegisterUDFs(testUri, "artifact123");
       sinon.assert.calledOnce(inspectStub);
       sinon.assert.calledOnce(quickPickStub);
-      sinon.assert.calledTwice(inputStub);
-      sinon.assert.match(result, undefined);
+      assert.strictEqual(result, undefined);
     });
   });
 
@@ -179,15 +174,13 @@ describe("commands/utils/udfRegistration", () => {
   });
 
   describe("registerMultipleUdfs", () => {
-    const exampleDatabase = { provider: "aws", region: "us-east-1" } as any; // minimal shape for tests
-
+    const exampleDatabase = { provider: "aws", region: "us-east-1" } as any;
     function makeRegistration(name: string): UdfRegistrationData {
       return {
         classInfo: { className: `com.acme.${name}Class`, simpleName: `${name}Class` },
         functionName: name,
       };
     }
-
     let withProgressStub: sinon.SinonStub;
     let getDbStub: sinon.SinonStub;
     let loaderStub: sinon.SinonStub;
@@ -198,28 +191,16 @@ describe("commands/utils/udfRegistration", () => {
     beforeEach(() => {
       withProgressStub = sandbox
         .stub(vscode.window, "withProgress")
-        .callsFake(async (_opts: any, task: any) => task({ report: () => {} }));
-
-      // Stub database provider singleton
+        .callsFake(async (_o: any, task: any) => task({ report: () => {} }));
       getDbStub = sandbox
         .stub(FlinkDatabaseViewProvider, "getInstance")
         .returns({ database: exampleDatabase } as unknown as FlinkDatabaseViewProvider);
-
-      // Stub resource loader
       loaderStub = sandbox.stub(CCloudResourceLoader, "getInstance").returns({
         executeBackgroundFlinkStatement: sandbox.stub().resolves(undefined),
       } as unknown as CCloudResourceLoader);
-
       infoNotifStub = sandbox.stub(notifications, "showInfoNotificationWithButtons").resolves();
       errorMsgStub = sandbox.stub(vscode.window, "showErrorMessage").resolves(undefined);
       fireStub = sandbox.stub(emitters.udfsChanged, "fire");
-    });
-
-    it("throws when artifactId missing", async () => {
-      await assert.rejects(
-        () => registerMultipleUdfs([makeRegistration("foo")]),
-        /Artifact ID is required/,
-      );
     });
 
     it("throws when no database selected", async () => {
@@ -234,28 +215,28 @@ describe("commands/utils/udfRegistration", () => {
       sinon.assert.calledOnce(qpStub);
     });
 
-    it("throws when registrations empty", async () => {
-      await assert.rejects(() => registerMultipleUdfs([], "artifact123"), /No UDF registrations/);
+    it("returns empty results when registrations empty", async () => {
+      const result = await registerMultipleUdfs([], "artifact123");
+      sinon.assert.calledOnce(withProgressStub);
+      assert.deepStrictEqual(result, { successes: [], failures: [] });
+      sinon.assert.calledOnce(fireStub);
+      sinon.assert.notCalled(infoNotifStub);
+      sinon.assert.notCalled(errorMsgStub);
     });
 
-    it("registers each UDF successfully and shows success notification", async () => {
+    it("registers each UDF successfully returning successes", async () => {
       const regs = [makeRegistration("foo"), makeRegistration("bar")];
-
-      await registerMultipleUdfs(regs, "artifact123");
-
+      const result = await registerMultipleUdfs(regs, "artifact123");
       sinon.assert.calledOnce(withProgressStub);
       const execStub = loaderStub.returnValues[0]
         .executeBackgroundFlinkStatement as sinon.SinonStub;
       sinon.assert.callCount(execStub, 2);
       sinon.assert.calledOnce(fireStub);
-      sinon.assert.calledOnce(infoNotifStub);
-      const successArg = infoNotifStub.firstCall.args[0] as string;
-      assert.match(successArg, /All 2 UDF\(s\) registered successfully/);
-      assert.match(successArg, /foo, bar/);
-      sinon.assert.notCalled(errorMsgStub);
+      assert.deepStrictEqual(result.successes, ["foo", "bar"]);
+      assert.deepStrictEqual(result.failures, []);
     });
 
-    it("handles partial failures, showing both success and error notifications", async () => {
+    it("handles partial failures returning mixed results", async () => {
       const regs = [makeRegistration("okFn"), makeRegistration("failFn")];
       const execStub = sandbox
         .stub()
@@ -267,28 +248,18 @@ describe("commands/utils/udfRegistration", () => {
         executeBackgroundFlinkStatement: execStub,
       } as unknown as CCloudResourceLoader);
 
-      await registerMultipleUdfs(regs, "artifact123");
-
-      sinon.assert.calledOnce(infoNotifStub);
-      const infoMsg = infoNotifStub.firstCall.args[0] as string;
-      assert.match(infoMsg, /1 of 2 UDF\(s\) registered successfully/);
-      assert.match(infoMsg, /okFn/);
-      sinon.assert.calledOnce(errorMsgStub);
-      const errorMsg = errorMsgStub.firstCall.args[0] as string;
-      assert.match(errorMsg, /Failed to register 1 UDF/);
-      assert.match(errorMsg, /failFn: boom failure/);
+      const result = await registerMultipleUdfs(regs, "artifact123");
+      assert.deepStrictEqual(result.successes, ["okFn"]);
+      assert.strictEqual(result.failures.length, 1);
+      assert.strictEqual(result.failures[0].functionName, "failFn");
     });
-    it("calls the flinkdatbaseQuickpick function when no database is selected", async () => {
-      getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
 
-      // Stub the quickpick to return a database so registration proceeds
+    it("calls the flinkDatabaseQuickpick function when no database is selected", async () => {
+      getDbStub.returns({ database: undefined } as unknown as FlinkDatabaseViewProvider);
       const qpStub = sandbox
         .stub(kafkaClusterQuickpicks, "flinkDatabaseQuickpick")
         .resolves(exampleDatabase);
-
-      const regs = [makeRegistration("foo")];
-      await registerMultipleUdfs(regs, "artifact123");
-
+      await registerMultipleUdfs([makeRegistration("foo")], "artifact123");
       sinon.assert.calledOnce(qpStub);
     });
   });
