@@ -223,6 +223,9 @@ export class FlinkRelationColumn {
     if (this.metadataKey) {
       parts.push(this.metadataKey);
     }
+    if (this.comment) {
+      parts.push(this.comment);
+    }
 
     return parts.join(" ");
   }
@@ -270,6 +273,10 @@ export class FlinkRelationColumn {
       tooltip.addField("Metadata Column", `Yes, maps to key: ${this.metadataKey}`);
     } else {
       tooltip.addField("Metadata Column", "No");
+    }
+
+    if (this.comment) {
+      tooltip.addField("Comment", this.comment);
     }
 
     return tooltip;
