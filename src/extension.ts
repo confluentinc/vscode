@@ -91,6 +91,7 @@ import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { UriEventHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
+import { inspectJarClasses } from "./utils/jarInspector";
 import { RefreshableTreeViewProvider } from "./viewProviders/baseModels/base";
 import { FlinkDatabaseViewProvider } from "./viewProviders/flinkDatabase";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
@@ -267,6 +268,7 @@ async function _activateExtension(
     ...registerFlinkArtifactCommands(),
     ...registerNewResourceViewCommands(),
     ...registerUriCommands(),
+    registerCommandWithLogging("confluent.testInspectJar", inspectJarClasses), // TEMP DO NOT MERGE
   ];
   logger.info("Commands registered");
 
