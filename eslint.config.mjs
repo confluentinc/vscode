@@ -91,6 +91,8 @@ export default [
       "playwright/no-wait-for-selector": "error",
       "playwright/no-force-option": "error",
       "playwright/no-useless-await": "error",
+      // suggest type imports where possible
+      "@typescript-eslint/consistent-type-imports": "warn",
     },
   },
   prettier,
