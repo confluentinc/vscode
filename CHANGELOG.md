@@ -29,6 +29,8 @@ All notable changes to this extension will be documented in this file.
 - Submitted Flink statements now allow you to choose your own statement name prefix (or to leave
   generic). Set your prefix using preference:
   [`confluent.flink.statementPrefix`](vscode://settings/confluent.flink.statementPrefix).
+- Clicking a statement from the Flink Statements view will now open an editable document instead of
+  a read-only preview document. This allows users to more easily edit and resubmit statements.
 
 ### Fixed
 
